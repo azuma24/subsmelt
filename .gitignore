@@ -1,0 +1,11 @@
+node_modules/
+dist/
+config/
+data/
+.bg-shell/
+.claude/
+*.tar
+*.tar.gz
+*.tgz
+.env
+.DS_Store
