@@ -17,16 +17,19 @@ import {
   getJobs,
   getJob,
   resetJob,
+  resetJobs,
   forceJob,
+  forceJobs,
   forceAllJobs,
   deleteJob,
+  deleteJobs,
   clearJobs,
   getLogs,
   clearLogs,
   pinJob,
   reorderJobs,
 } from "./db.js";
-import { scanFolder, listSubfolders, MEDIA_DIR } from "./scanner.js";
+import { scanFolder, listSubfolders, listFolderTree, MEDIA_DIR } from "./scanner.js";
 import {
   processQueue,
   isQueueRunning,
@@ -117,6 +120,10 @@ app.get("/api/subfolders", (_req, res) => {
   res.json({ subfolders: listSubfolders() });
 });
 
+app.get("/api/folders/tree", (_req, res) => {
+  res.json({ root: listFolderTree() });
+});
+
 // ======== Scanner ========
 app.post("/api/scan", (_req, res) => {
   try {
@@ -172,12 +179,34 @@ app.post("/api/jobs/:id/retry", (req, res) => {
   res.json({ ok: true });
 });
 
+app.post("/api/jobs/retry-selected", (req, res) => {
+  const rawIds = (req.body as { ids?: unknown })?.ids;
+  if (!Array.isArray(rawIds)) return res.status(400).json({ error: "ids must be an array" });
+
+  const ids = rawIds.filter((v): v is number => typeof v === "number" && Number.isInteger(v));
+  const updated = resetJobs(ids);
+  logger.info("queue", `Reset ${updated} selected error jobs to pending`);
+  if (updated > 0) setTimeout(() => processQueue(), 100);
+  res.json({ ok: true, updated });
+});
+
 app.post("/api/jobs/:id/force", (req, res) => {
   const id = parseInt(req.params.id, 10);
   forceJob(id);
   logger.info("queue", `Job #${id} marked for force re-translate`, id);
   setTimeout(() => processQueue(), 100);
   res.json({ ok: true });
+});
+
+app.post("/api/jobs/force-selected", (req, res) => {
+  const rawIds = (req.body as { ids?: unknown })?.ids;
+  if (!Array.isArray(rawIds)) return res.status(400).json({ error: "ids must be an array" });
+
+  const ids = rawIds.filter((v): v is number => typeof v === "number" && Number.isInteger(v));
+  const updated = forceJobs(ids);
+  logger.info("queue", `Marked ${updated} selected jobs for force re-translate`);
+  if (updated > 0) setTimeout(() => processQueue(), 100);
+  res.json({ ok: true, updated });
 });
 
 app.post("/api/jobs/:id/pin", (req, res) => {
@@ -204,6 +233,16 @@ app.post("/api/jobs/force-all", (_req, res) => {
 app.delete("/api/jobs/:id", (req, res) => {
   deleteJob(parseInt(req.params.id, 10));
   res.json({ ok: true });
+});
+
+app.post("/api/jobs/delete-selected", (req, res) => {
+  const rawIds = (req.body as { ids?: unknown })?.ids;
+  if (!Array.isArray(rawIds)) return res.status(400).json({ error: "ids must be an array" });
+
+  const ids = rawIds.filter((v): v is number => typeof v === "number" && Number.isInteger(v));
+  const deleted = deleteJobs(ids);
+  logger.info("queue", `Deleted ${deleted} selected pending jobs from queue`);
+  res.json({ ok: true, deleted });
 });
 
 app.post("/api/jobs/clear", (_req, res) => {

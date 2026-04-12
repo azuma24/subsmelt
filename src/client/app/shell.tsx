@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LANGUAGES, NAV_ITEMS } from "./constants";
+import { NAV_ITEMS } from "./constants";
 import { StatusPill } from "../ui/primitives";
 
 interface DesktopSidebarProps {
@@ -12,8 +12,6 @@ interface DesktopSidebarProps {
   modelName: string;
   watcherRunning: boolean;
   currentPath: string;
-  onLanguageChange: (code: string) => void;
-  currentLanguage: string;
 }
 
 export function DesktopSidebar({
@@ -24,8 +22,6 @@ export function DesktopSidebar({
   modelName,
   watcherRunning,
   currentPath,
-  onLanguageChange,
-  currentLanguage,
 }: DesktopSidebarProps) {
   const { t } = useTranslation();
   return (
@@ -60,17 +56,6 @@ export function DesktopSidebar({
           <SidebarStatus label={t(watcherRunning ? "app.watcherActive" : "app.watcherInactive")} dot={watcherRunning ? "bg-emerald-500" : "bg-gray-600"} collapsed={collapsed} />
         </div>
         {!collapsed && modelName && <div className="rounded-xl border border-gray-800 bg-gray-950/60 p-3 text-[11px] text-gray-500 truncate" title={modelName}>{modelName}</div>}
-        <div className={`flex ${collapsed ? "flex-col" : "flex-row"} gap-1.5 flex-wrap`}>
-          {LANGUAGES.map((lang) => (
-            <button
-              key={lang.code}
-              onClick={() => onLanguageChange(lang.code)}
-              className={`text-[10px] px-2 py-1 rounded-lg transition-colors ${currentLanguage === lang.code ? "bg-blue-600 text-white" : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"}`}
-            >
-              {lang.label}
-            </button>
-          ))}
-        </div>
       </div>
     </nav>
   );

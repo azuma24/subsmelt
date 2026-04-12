@@ -34,6 +34,8 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   api_type: "openai",
   scan_mode: "recursive",
   scan_folders: "",
+  scan_exclude_folders: "",
+  scan_profiles: "[]",
   temperature: "0.7",
   chunk_size: "20",
   context_window: "5",

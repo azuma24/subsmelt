@@ -10,7 +10,7 @@ import { DesktopSidebar, MobileBottomNav, TopStatusBar } from "./app/shell";
 import { DashboardPage } from "./features/dashboard";
 import { LogsPage } from "./features/logs/LogsPage";
 import { JobDetailPage } from "./features/jobs/JobDetailPage";
-import { TasksPage } from "./features/tasks/TasksPage";
+import { TranslationLanguagesPage } from "./features/tasks/TasksPage";
 import { SettingsPage } from "./features/settings/SettingsPage";
 
 export default function App() {
@@ -25,7 +25,7 @@ export default function App() {
 
 function AppInner() {
   const { addToast } = useToast();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const jobsQuery = useJobsQuery();
@@ -75,8 +75,6 @@ function AppInner() {
           modelName={modelName}
           watcherRunning={watcherRunning}
           currentPath={location.pathname}
-          onLanguageChange={(code) => i18n.changeLanguage(code)}
-          currentLanguage={i18n.language}
         />
       )}
       <div className="flex min-w-0 flex-1 flex-col">
@@ -84,7 +82,7 @@ function AppInner() {
         <main className={`flex-1 overflow-auto ${isMobile ? "pb-24" : ""}`}>
           <Routes>
             <Route path="/" element={<DashboardPage isMobile={isMobile} />} />
-            <Route path="/tasks" element={<TasksPage isMobile={isMobile} />} />
+            <Route path="/tasks" element={<TranslationLanguagesPage isMobile={isMobile} />} />
             <Route path="/settings" element={<SettingsPage isMobile={isMobile} />} />
             <Route path="/logs" element={<LogsPage isMobile={isMobile} />} />
             <Route path="/jobs/:id" element={<JobDetailPage />} />

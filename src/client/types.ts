@@ -58,6 +58,19 @@ export interface ScanResult {
   totalSubtitles: number;
 }
 
+export interface FolderNode {
+  name: string;
+  path: string;
+  counts: {
+    videos: number;
+    subtitles: number;
+    pendingJobs: number;
+    completeJobs: number;
+    errorJobs: number;
+  };
+  children: FolderNode[];
+}
+
 export interface PreviewLine {
   index: number;
   original: string;

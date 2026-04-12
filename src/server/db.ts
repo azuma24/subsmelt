@@ -119,10 +119,40 @@ export function resetJob(id: number) {
   ).run(id);
 }
 
+export function resetJobs(ids: number[]) {
+  const cleanIds = Array.from(new Set(ids.filter((id) => Number.isInteger(id) && id > 0)));
+  if (cleanIds.length === 0) return 0;
+
+  const stmt = db.prepare(
+    "UPDATE jobs SET status = 'pending', completed_cues = 0, error = NULL, duration_seconds = NULL, updated_at = datetime('now') WHERE id = ? AND status = 'error'"
+  );
+  let updated = 0;
+  const tx = db.transaction(() => {
+    for (const id of cleanIds) updated += stmt.run(id).changes;
+  });
+  tx();
+  return updated;
+}
+
 export function forceJob(id: number) {
   db.prepare(
     "UPDATE jobs SET status = 'pending', force = 1, completed_cues = 0, error = NULL, duration_seconds = NULL, updated_at = datetime('now') WHERE id = ?"
   ).run(id);
+}
+
+export function forceJobs(ids: number[]) {
+  const cleanIds = Array.from(new Set(ids.filter((id) => Number.isInteger(id) && id > 0)));
+  if (cleanIds.length === 0) return 0;
+
+  const stmt = db.prepare(
+    "UPDATE jobs SET status = 'pending', force = 1, completed_cues = 0, error = NULL, duration_seconds = NULL, updated_at = datetime('now') WHERE id = ? AND status IN ('done', 'skipped')"
+  );
+  let updated = 0;
+  const tx = db.transaction(() => {
+    for (const id of cleanIds) updated += stmt.run(id).changes;
+  });
+  tx();
+  return updated;
 }
 
 export function forceAllJobs() {
@@ -149,6 +179,21 @@ export function reorderJobs(jobIds: number[]) {
 
 export function deleteJob(id: number) {
   db.prepare("DELETE FROM jobs WHERE id = ?").run(id);
+}
+
+export function deleteJobs(ids: number[]) {
+  const cleanIds = Array.from(new Set(ids.filter((id) => Number.isInteger(id) && id > 0)));
+  if (cleanIds.length === 0) return 0;
+
+  const stmt = db.prepare("DELETE FROM jobs WHERE id = ? AND status = 'pending'");
+  let deleted = 0;
+  const tx = db.transaction(() => {
+    for (const id of cleanIds) {
+      deleted += stmt.run(id).changes;
+    }
+  });
+  tx();
+  return deleted;
 }
 
 export function clearJobs() {

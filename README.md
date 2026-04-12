@@ -76,9 +76,9 @@ Open **Settings** in the web UI. Choose your API type and enter your endpoint UR
 
 Click **↻ Fetch models** to load available models, then **Test Connection** to verify.
 
-### 3. Add target languages
+### 3. Add translation targets
 
-Open **Languages**. Use the quick-add presets (繁中, 日本語, 한국어, etc.) or create custom tasks. Each task defines:
+Open **Translations**. Use the quick-add presets (繁中, 日本語, 한국어, etc.) or create custom translation targets. Each target defines:
 
 - Source language (e.g. English)
 - Target language (e.g. Traditional Chinese (Taiwan))

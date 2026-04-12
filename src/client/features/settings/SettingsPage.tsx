@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
 import { useSettingsQuery } from "../../hooks";
-import { DEFAULT_PROMPT } from "../../app/constants";
+import { DEFAULT_PROMPT, LANGUAGES } from "../../app/constants";
 import { useToast } from "../../components/Toast";
 import { ActionButton, Field, SettingsSection } from "../../ui/primitives";
 import { MediaSourcesPanel } from "./MediaSourcesPanel";
@@ -12,7 +12,7 @@ const str = (v: unknown, fallback = ""): string => (typeof v === "string" ? v : 
 const bool = (v: unknown): boolean => Boolean(v);
 
 export function SettingsPage({ isMobile }: { isMobile: boolean }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { addToast } = useToast();
   const settingsQuery = useSettingsQuery();
   const [settings, setSettings] = useState<Record<string, unknown>>({});
@@ -24,6 +24,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   const [models, setModels] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
   const [apiType, setApiType] = useState<"openai" | "lmstudio">("openai");
+  const currentLanguage = LANGUAGES.find((lang) => i18n.language === lang.code || i18n.language.startsWith(`${lang.code}-`))?.code || "en";
 
   useEffect(() => {
     if (settingsQuery.data) setSettings(settingsQuery.data);
@@ -36,6 +37,17 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
 
   const updateAndSave = async (key: string, value: unknown) => {
     const next = { ...settings, [key]: value };
+    setSettings(next);
+    try {
+      await api.saveSettings(next);
+      setDirty(false);
+    } catch {
+      setDirty(true);
+    }
+  };
+
+  const updateManyAndSave = async (updates: Record<string, unknown>) => {
+    const next = { ...settings, ...updates };
     setSettings(next);
     try {
       await api.saveSettings(next);
@@ -111,6 +123,22 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
       </section>
 
       <div className="space-y-6">
+        <SettingsSection title={t("settings.interface.title")} description={t("settings.interface.description")}>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-300">{t("settings.interface.language")}</label>
+            <select
+              value={currentLanguage}
+              onChange={(e) => i18n.changeLanguage(e.target.value)}
+              className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200"
+            >
+              {LANGUAGES.map((lang) => (
+                <option key={lang.code} value={lang.code}>{lang.label}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-[10px] text-gray-600">{t("settings.interface.languageHint")}</p>
+          </div>
+        </SettingsSection>
+
         <SettingsSection title={t("settings.llmConnection.title")} description={t("settings.llmConnection.description")}>
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-300">{t("settings.llmConnection.apiType")}</label>
@@ -206,8 +234,17 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
             mediaDir={str(settings._media_dir, "/media")}
             scanMode={str(settings.scan_mode, "recursive")}
             scanFolders={str(settings.scan_folders)}
+            scanExcludeFolders={str(settings.scan_exclude_folders)}
+            scanProfiles={str(settings.scan_profiles, "[]")}
             onScanModeChange={(mode) => updateAndSave("scan_mode", mode)}
             onScanFoldersChange={(folders) => updateAndSave("scan_folders", folders)}
+            onScanExcludeFoldersChange={(folders) => updateAndSave("scan_exclude_folders", folders)}
+            onScanScopeChange={(scope) => updateManyAndSave({
+              scan_mode: scope.scanMode,
+              scan_folders: scope.scanFolders,
+              scan_exclude_folders: scope.scanExcludeFolders,
+            })}
+            onScanProfilesChange={(profiles) => updateAndSave("scan_profiles", profiles)}
           />
           <label className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl bg-gray-800/50 p-4">
             <div>

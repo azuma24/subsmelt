@@ -1,4 +1,4 @@
-import type { JobPreview, JobRow, LogEntry, QueueStatus, ScanResult, Task } from "./types";
+import type { FolderNode, JobPreview, JobRow, LogEntry, QueueStatus, ScanResult, Task } from "./types";
 
 const BASE = "/api";
 
@@ -30,6 +30,9 @@ export const deleteTask = (id: number) =>
 
 // Scanner
 export const scanFolder = () => fetchJSON<ScanResult>("/scan", { method: "POST" });
+export const previewScan = () => fetchJSON<ScanResult>("/scan/preview");
+export const getSubfolders = () => fetchJSON<{ subfolders: string[] }>("/subfolders");
+export const getFolderTree = () => fetchJSON<{ root: FolderNode }>("/folders/tree");
 
 // Jobs
 export const getJobs = () =>
@@ -38,8 +41,23 @@ export const retryJob = (id: number) =>
   fetchJSON(`/jobs/${id}/retry`, { method: "POST" });
 export const forceJob = (id: number) =>
   fetchJSON(`/jobs/${id}/force`, { method: "POST" });
+export const retryJobsApi = (ids: number[]) =>
+  fetchJSON<{ ok: boolean; updated: number }>("/jobs/retry-selected", {
+    method: "POST",
+    body: JSON.stringify({ ids }),
+  });
+export const forceJobsApi = (ids: number[]) =>
+  fetchJSON<{ ok: boolean; updated: number }>("/jobs/force-selected", {
+    method: "POST",
+    body: JSON.stringify({ ids }),
+  });
 export const deleteJobApi = (id: number) =>
   fetchJSON(`/jobs/${id}`, { method: "DELETE" });
+export const deleteJobsApi = (ids: number[]) =>
+  fetchJSON<{ ok: boolean; deleted: number }>("/jobs/delete-selected", {
+    method: "POST",
+    body: JSON.stringify({ ids }),
+  });
 export const clearJobs = () =>
   fetchJSON("/jobs/clear", { method: "POST" });
 export const pinJob = (id: number) =>

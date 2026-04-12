@@ -12,10 +12,20 @@ interface JobCardMobileProps {
   currentJobId: number | null;
   expandedErrors: Set<number>;
   setExpandedErrors: Dispatch<SetStateAction<Set<number>>>;
+  selected: boolean;
+  onToggleSelected: (jobId: number) => void;
   onPreview: (jobId: number) => void;
 }
 
-export function JobCardMobile({ job, currentJobId, expandedErrors, setExpandedErrors, onPreview }: JobCardMobileProps) {
+export function JobCardMobile({
+  job,
+  currentJobId,
+  expandedErrors,
+  setExpandedErrors,
+  selected,
+  onToggleSelected,
+  onPreview,
+}: JobCardMobileProps) {
   const { t } = useTranslation();
   const { addToast } = useToast();
   const retryMutation = useMutationWithInvalidation((id: number) => api.retryJob(id));
@@ -24,13 +34,25 @@ export function JobCardMobile({ job, currentJobId, expandedErrors, setExpandedEr
   const isActive = currentJobId === job.id;
   const hasError = job.status === "error" && job.error;
   const expanded = expandedErrors.has(job.id);
+  const isPending = job.status === "pending";
 
   return (
-    <div className={`rounded-2xl border p-4 ${isActive ? "border-blue-700/40 bg-blue-900/10" : "border-gray-800 bg-gray-950/60"}`}>
+    <div className={`rounded-2xl border p-4 ${isActive ? "border-blue-700/40 bg-blue-900/10" : selected ? "border-blue-700/40 bg-blue-950/20" : "border-gray-800 bg-gray-950/60"}`}>
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="truncate text-sm font-medium text-gray-200">{job.srt_path.split("/").pop()}</div>
-          <div className="mt-1 text-xs text-gray-500">{job.target_lang} • {job.lang_code}</div>
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          {isPending && (
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={() => onToggleSelected(job.id)}
+              className="mt-1 h-4 w-4 shrink-0 accent-blue-500"
+              aria-label={t("dashboard.col.select")}
+            />
+          )}
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium text-gray-200">{job.srt_path.split("/").pop()}</div>
+            <div className="mt-1 text-xs text-gray-500">{job.target_lang} • {job.lang_code}</div>
+          </div>
         </div>
         <StatusBadge job={job} compact />
       </div>
