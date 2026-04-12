@@ -255,7 +255,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
                 <>
                   <ActionButton variant="success" onClick={handleRunAll} disabled={pendingJobs.length === 0}>{t("dashboard.runAll")}</ActionButton>
                   <ActionButton
-                    variant="primary"
+                    variant="success"
                     onClick={handleRunSelected}
                     disabled={selectedPendingCount === 0 || startSelectedMutation.isPending}
                   >
@@ -383,7 +383,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
                     type="button"
                     onClick={handleRunSelected}
                     disabled={startSelectedMutation.isPending}
-                    className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white disabled:opacity-50"
+                    className="rounded-lg bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
                   >
                     {t("dashboard.runSelected", { count: selectedPendingCount })}
                   </button>
