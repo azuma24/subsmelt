@@ -254,11 +254,13 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
               {!queueRunning ? (
                 <>
                   <ActionButton variant="success" onClick={handleRunAll} disabled={pendingJobs.length === 0}>{t("dashboard.runAll")}</ActionButton>
-                  {selectedPendingCount > 0 && (
-                    <ActionButton variant="primary" onClick={handleRunSelected}>
-                      {t("dashboard.runSelected", { count: selectedPendingCount })}
-                    </ActionButton>
-                  )}
+                  <ActionButton
+                    variant="primary"
+                    onClick={handleRunSelected}
+                    disabled={selectedPendingCount === 0 || startSelectedMutation.isPending}
+                  >
+                    {t("dashboard.runSelected", { count: selectedPendingCount })}
+                  </ActionButton>
                 </>
               ) : (
                 <ActionButton variant="danger" onClick={handleStop}>{t("dashboard.stop")}</ActionButton>
