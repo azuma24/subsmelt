@@ -45,6 +45,18 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   video_extensions: ".mkv,.mp4,.avi,.m4v,.ts,.wmv,.mov",
   subtitle_extensions: ".srt,.ass,.ssa,.vtt",
   additional_context: "",
+  // --- Transcription (Whisper backend) ---
+  whisper_enabled: "0",
+  whisper_endpoint: "http://localhost:9000",
+  whisper_api_key: "",
+  whisper_model: "large-v3-turbo",
+  whisper_language: "",
+  whisper_task: "transcribe",
+  whisper_output_format: "srt",
+  whisper_vad_enabled: "1",
+  whisper_uvr_enabled: "0",
+  whisper_uvr_model: "UVR-MDX-NET-Inst_HQ_3.onnx",
+  auto_translate_after_transcribe: "0",
   prompt: `// You are a professional subtitle translator.
 // You will only receive subtitles and are only required to translate, no need for any replies.
 // Note: {{additional}}

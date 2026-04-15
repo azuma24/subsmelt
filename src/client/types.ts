@@ -96,3 +96,48 @@ export interface LogEntry {
   job_id: number | null;
   meta: string | null;
 }
+
+export interface TranscriptionJob {
+  id: number;
+  kind: string;                 // 'transcribe' | 'download'
+  video_path: string | null;
+  output_path: string | null;
+  output_format: string | null;
+  model_kind: string | null;
+  model_name: string | null;
+  status: string;               // pending|running|done|error|cancelled
+  stage: string | null;
+  progress: number;
+  error: string | null;
+  whisper_task_id: string | null;
+  options_json: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WhisperHealth {
+  ok: boolean;
+  auth_required: boolean;
+  device: string;
+  compute_type: string;
+  max_concurrent: number;
+  media_dir: string;
+  models_dir: string;
+  gpu_name: string | null;
+  cuda_available: boolean;
+  vram_free_bytes: number | null;
+}
+
+export interface WhisperModelEntry {
+  name: string;
+  path?: string;
+  size_bytes?: number;
+  repo_id?: string;
+  size_hint?: string;
+  description?: string;
+}
+
+export interface WhisperModelsResponse {
+  whisper: { cached: WhisperModelEntry[]; catalog: WhisperModelEntry[] };
+  uvr: { cached: WhisperModelEntry[]; catalog: WhisperModelEntry[] };
+}

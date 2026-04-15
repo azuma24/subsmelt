@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "./api";
-import type { JobPreview, LogEntry, QueueStatus, Task } from "./types";
+import type { JobPreview, LogEntry, QueueStatus, Task, TranscriptionJob } from "./types";
 
 export type SSEEventName =
   | "job:progress"
@@ -11,7 +11,12 @@ export type SSEEventName =
   | "queue:finished"
   | "queue:stopped"
   | "scan:complete"
-  | "job:stopped";
+  | "job:stopped"
+  | "transcription:start"
+  | "transcription:progress"
+  | "transcription:done"
+  | "transcription:error"
+  | "transcription:cancelled";
 
 export type SSEEventHandler = (type: SSEEventName, data: Record<string, unknown>) => void;
 
@@ -92,6 +97,11 @@ const SSE_EVENT_NAMES: readonly SSEEventName[] = [
   "queue:stopped",
   "scan:complete",
   "job:stopped",
+  "transcription:start",
+  "transcription:progress",
+  "transcription:done",
+  "transcription:error",
+  "transcription:cancelled",
 ];
 
 export function useSSE(onEvent?: SSEEventHandler) {
@@ -110,11 +120,19 @@ export function useSSE(onEvent?: SSEEventHandler) {
       queryClient.invalidateQueries({ queryKey: ["logs"] });
     };
 
+    const refreshTranscriptions = () => {
+      queryClient.invalidateQueries({ queryKey: ["transcription-jobs"] });
+    };
+
     const bind = (name: SSEEventName) => {
       es.addEventListener(name, (e) => {
         const data = JSON.parse((e as MessageEvent).data) as Record<string, unknown>;
         onEventRef.current?.(name, data);
-        refresh();
+        if (name.startsWith("transcription:")) {
+          refreshTranscriptions();
+        } else {
+          refresh();
+        }
       });
     };
 
@@ -130,4 +148,12 @@ export function useMutationWithInvalidation<TData = unknown, TVars = void>(
 ) {
   const invalidate = useInvalidateApp();
   return useMutation({ mutationFn: fn, onSuccess: invalidate });
+}
+
+export function useTranscriptionJobsQuery() {
+  return useQuery<{ jobs: TranscriptionJob[] }>({
+    queryKey: ["transcription-jobs"],
+    queryFn: () => api.listTranscriptionJobs(),
+    refetchInterval: 10_000,
+  });
 }

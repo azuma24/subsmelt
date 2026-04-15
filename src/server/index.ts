@@ -42,6 +42,17 @@ import { testConnection, parseSubtitle } from "./translator.js";
 import { logger } from "./logger.js";
 import { addSSEClient, broadcast } from "./sse.js";
 import { startWatcher, stopWatcher, isWatcherRunning, restartWatcher } from "./watcher.js";
+import {
+  cancelTranscription,
+  deleteTranscription,
+  enqueueModelDownload,
+  enqueueTranscription,
+  listTranscriptions,
+  resumeTranscriptionPollers,
+  retryTranscription,
+  WhisperClientError,
+} from "./transcription-queue.js";
+import { whisperClient } from "./whisper-client.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -407,6 +418,126 @@ app.post("/api/test-connection", async (_req, res) => {
   res.json(result);
 });
 
+// ======== Transcription (Whisper backend) ========
+
+function respondWithWhisperError(res: express.Response, err: unknown, fallback = 502) {
+  if (err instanceof WhisperClientError) {
+    return res.status(err.status || fallback).json({ error: err.message });
+  }
+  const message = err instanceof Error ? err.message : String(err);
+  return res.status(fallback).json({ error: message });
+}
+
+app.post("/api/transcribe", (req, res) => {
+  const body = req.body as { video_path?: string; video_paths?: string[] };
+  const paths = Array.isArray(body.video_paths)
+    ? body.video_paths.filter((p): p is string => typeof p === "string" && p.length > 0)
+    : body.video_path
+    ? [body.video_path]
+    : [];
+  if (paths.length === 0) return res.status(400).json({ error: "video_path(s) required" });
+  const created = paths.map((p) => enqueueTranscription(p));
+  res.json({ ok: true, jobs: created });
+});
+
+app.get("/api/transcription/jobs", (req, res) => {
+  const kind = typeof req.query.kind === "string" ? req.query.kind : undefined;
+  const status = typeof req.query.status === "string" ? req.query.status : undefined;
+  res.json({ jobs: listTranscriptions({ kind, status }) });
+});
+
+app.get("/api/transcription/jobs/:id", (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const job = listTranscriptions().find((j) => j.id === id);
+  if (!job) return res.status(404).json({ error: "Transcription job not found" });
+  res.json(job);
+});
+
+app.post("/api/transcription/jobs/:id/cancel", async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  try {
+    await cancelTranscription(id);
+    res.json({ ok: true });
+  } catch (err) {
+    respondWithWhisperError(res, err, 400);
+  }
+});
+
+app.post("/api/transcription/jobs/:id/retry", async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  try {
+    const job = await retryTranscription(id);
+    res.json({ ok: true, job });
+  } catch (err) {
+    respondWithWhisperError(res, err, 400);
+  }
+});
+
+app.delete("/api/transcription/jobs/:id", (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  deleteTranscription(id);
+  res.json({ ok: true });
+});
+
+app.post("/api/transcription/test", async (_req, res) => {
+  try {
+    const health = await whisperClient.health();
+    res.json({ ok: true, health });
+  } catch (err) {
+    respondWithWhisperError(res, err);
+  }
+});
+
+app.get("/api/transcription/models", async (_req, res) => {
+  try {
+    const models = await whisperClient.listModels();
+    res.json(models);
+  } catch (err) {
+    respondWithWhisperError(res, err);
+  }
+});
+
+app.post("/api/transcription/models/download", (req, res) => {
+  const { kind, name } = req.body as { kind?: string; name?: string };
+  if (kind !== "whisper" && kind !== "uvr") {
+    return res.status(400).json({ error: "kind must be 'whisper' or 'uvr'" });
+  }
+  if (!name || typeof name !== "string") {
+    return res.status(400).json({ error: "name is required" });
+  }
+  try {
+    const job = enqueueModelDownload(kind, name);
+    res.json({ ok: true, job });
+  } catch (err) {
+    respondWithWhisperError(res, err, 400);
+  }
+});
+
+app.delete("/api/transcription/models/:kind/:name(*)", async (req, res) => {
+  const kind = req.params.kind;
+  const name = req.params.name;
+  if (kind !== "whisper" && kind !== "uvr") {
+    return res.status(400).json({ error: "kind must be 'whisper' or 'uvr'" });
+  }
+  try {
+    await whisperClient.deleteModel(kind, name);
+    res.json({ ok: true });
+  } catch (err) {
+    respondWithWhisperError(res, err);
+  }
+});
+
+app.post("/api/transcription/rotate-key", async (_req, res) => {
+  try {
+    const result = await whisperClient.rotateApiKey();
+    // Persist the rotated key so we remain authenticated.
+    setSetting("whisper_api_key", result.api_key);
+    res.json({ ok: true, apiKey: result.api_key });
+  } catch (err) {
+    respondWithWhisperError(res, err);
+  }
+});
+
 // ======== Health ========
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, queueRunning: isQueueRunning(), watcherRunning: isWatcherRunning() });
@@ -436,4 +567,12 @@ app.listen(PORT, "0.0.0.0", () => {
   const interval = parseInt(getSetting("auto_scan_interval") || "0", 10);
   if (interval > 0) startAutoScan(interval, scanFolder);
   if (getSetting("watch_enabled") === "1") startWatcher();
+  // Re-attach pollers to any transcription jobs that were mid-flight on the
+  // Whisper backend when we restarted.
+  try {
+    resumeTranscriptionPollers();
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.warn("transcribe", `Failed to resume transcription pollers: ${message}`);
+  }
 });

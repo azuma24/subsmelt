@@ -7,6 +7,7 @@ import { DEFAULT_PROMPT, LANGUAGES } from "../../app/constants";
 import { useToast } from "../../components/Toast";
 import { ActionButton, Field, SettingsSection } from "../../ui/primitives";
 import { MediaSourcesPanel } from "./MediaSourcesPanel";
+import { TranscriptionSettingsPanel } from "../transcription/TranscriptionSettingsPanel";
 
 const str = (v: unknown, fallback = ""): string => (typeof v === "string" ? v : fallback);
 const bool = (v: unknown): boolean => Boolean(v);
@@ -271,6 +272,13 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
           </div>
           <Field label={t("settings.sources.autoScanInterval")} value={str(settings.auto_scan_interval, "0")} onChange={(v) => update("auto_scan_interval", v)} help={t("settings.sources.autoScanIntervalHint")} />
         </SettingsSection>
+
+        <TranscriptionSettingsPanel
+          settings={settings}
+          update={update}
+          updateAndSave={updateAndSave}
+          isMobile={isMobile}
+        />
       </div>
 
       <p className="pt-2 text-center text-[11px] text-gray-600">

@@ -1,0 +1,38 @@
+# Docker Compose overlay for the subsmelt-whisper GPU backend.
+#
+# Run with:
+#     docker compose -f docker-compose.yml -f docker-compose.whisper.yml up --build
+#
+# Requires the NVIDIA Container Toolkit on the host.
+services:
+  whisper:
+    build:
+      context: ./backend-whisper
+    container_name: subsmelt-whisper
+    ports:
+      - "9000:9000"
+    volumes:
+      # IMPORTANT: this must be the SAME absolute path that subsmelt mounts as
+      # its MEDIA_DIR. Subsmelt sends paths by value over the wire, so if the
+      # path doesn't resolve the same way inside this container, transcription
+      # will fail with "video_path not found".
+      - /path/to/movies:/media/movies
+      - /path/to/anime:/media/anime
+      - /path/to/tv:/media/tv
+      # Model cache (persists across restarts so we don't re-download).
+      - ./whisper-models:/models
+      # config.ini + tasks.db + first-run.log
+      - ./whisper-config:/config
+    environment:
+      - TZ=America/New_York
+      # Uncomment to pre-set / override (otherwise config.ini is authoritative):
+      # - API_KEY=
+      # - DEVICE=cuda
+      # - COMPUTE_TYPE=float16
+      # - MAX_CONCURRENT=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
+    restart: unless-stopped

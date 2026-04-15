@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "subsmelt-whisper"
+version = "0.1.0"
+description = "Audio-to-text transcription backend for subsmelt."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+license = { text = "MIT" }
+
+[project.scripts]
+subsmelt-whisper = "subsmelt_whisper.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["subsmelt_whisper*"]

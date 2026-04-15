@@ -1,0 +1,24 @@
+# Core API server
+fastapi>=0.110.0,<1.0.0
+uvicorn[standard]>=0.27.0,<1.0.0
+pydantic>=2.6.0,<3.0.0
+python-multipart>=0.0.9
+
+# Transcription
+faster-whisper>=1.0.0
+ctranslate2>=4.0.0
+
+# Voice-activity detection
+onnxruntime>=1.17.0
+silero-vad>=4.0.0
+
+# Vocal / instrumental separation (UVR-style)
+audio-separator[gpu]>=0.21.0
+
+# Audio I/O
+ffmpeg-python>=0.2.0
+soundfile>=0.12.1
+numpy>=1.26.0
+
+# CLI niceties
+typer>=0.12.0

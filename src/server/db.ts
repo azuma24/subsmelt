@@ -46,11 +46,45 @@ db.exec(`
   )
 `);
 
+// --- Schema: Transcription jobs ---
+//
+// Single table serves two kinds:
+//   kind='transcribe'  — video → subtitle
+//   kind='download'    — pre-pulling a model from the Whisper backend
+// Progress / stage / error plumbing is shared so SSE + UI code stays uniform.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS transcription_jobs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL DEFAULT 'transcribe',
+    video_path TEXT,
+    output_path TEXT,
+    output_format TEXT,
+    model_kind TEXT,
+    model_name TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    stage TEXT,
+    progress REAL NOT NULL DEFAULT 0,
+    error TEXT,
+    whisper_task_id TEXT,
+    options_json TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  )
+`);
+
 // Wire up logger
 setLogDb(db);
 
 // On startup, reset stuck "translating" jobs
 db.prepare("UPDATE jobs SET status = 'pending', updated_at = datetime('now') WHERE status = 'translating'").run();
+
+// Reset any transcription jobs that were mid-flight when the process died — the
+// remote Whisper backend is the source of truth and we'll re-sync from it, but
+// any jobs that never even left our side should go back to pending.
+db.prepare(
+  "UPDATE transcription_jobs SET status = 'pending', updated_at = datetime('now') " +
+    "WHERE status = 'running' AND whisper_task_id IS NULL"
+).run();
 
 // --- Jobs ---
 
@@ -198,6 +232,117 @@ export function deleteJobs(ids: number[]) {
 
 export function clearJobs() {
   db.prepare("DELETE FROM jobs").run();
+}
+
+// --- Transcription jobs ---
+
+export interface TranscriptionJobRow {
+  id: number;
+  kind: string;
+  video_path: string | null;
+  output_path: string | null;
+  output_format: string | null;
+  model_kind: string | null;
+  model_name: string | null;
+  status: string;
+  stage: string | null;
+  progress: number;
+  error: string | null;
+  whisper_task_id: string | null;
+  options_json: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export function createTranscriptionJob(job: {
+  kind: string;
+  video_path?: string | null;
+  output_path?: string | null;
+  output_format?: string | null;
+  model_kind?: string | null;
+  model_name?: string | null;
+  options_json?: string | null;
+}) {
+  return db
+    .prepare(
+      `INSERT INTO transcription_jobs
+         (kind, video_path, output_path, output_format, model_kind, model_name, options_json, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`
+    )
+    .run(
+      job.kind,
+      job.video_path ?? null,
+      job.output_path ?? null,
+      job.output_format ?? null,
+      job.model_kind ?? null,
+      job.model_name ?? null,
+      job.options_json ?? null
+    );
+}
+
+export function getTranscriptionJob(id: number): TranscriptionJobRow | undefined {
+  return db
+    .prepare("SELECT * FROM transcription_jobs WHERE id = ?")
+    .get(id) as TranscriptionJobRow | undefined;
+}
+
+export function listTranscriptionJobs(filter?: { kind?: string; status?: string; limit?: number }): TranscriptionJobRow[] {
+  let sql = "SELECT * FROM transcription_jobs WHERE 1=1";
+  const vals: unknown[] = [];
+  if (filter?.kind) {
+    sql += " AND kind = ?";
+    vals.push(filter.kind);
+  }
+  if (filter?.status) {
+    sql += " AND status = ?";
+    vals.push(filter.status);
+  }
+  sql += " ORDER BY created_at DESC LIMIT ?";
+  vals.push(filter?.limit ?? 200);
+  return db.prepare(sql).all(...vals) as TranscriptionJobRow[];
+}
+
+export function listActiveTranscriptionJobs(): TranscriptionJobRow[] {
+  return db
+    .prepare(
+      "SELECT * FROM transcription_jobs WHERE status IN ('pending','running') ORDER BY created_at ASC"
+    )
+    .all() as TranscriptionJobRow[];
+}
+
+export function updateTranscriptionJob(
+  id: number,
+  updates: Partial<{
+    status: string;
+    stage: string | null;
+    progress: number;
+    error: string | null;
+    whisper_task_id: string | null;
+  }>
+) {
+  const sets: string[] = ["updated_at = datetime('now')"];
+  const vals: unknown[] = [];
+  for (const [k, v] of Object.entries(updates)) {
+    if (v !== undefined) {
+      sets.push(`${k} = ?`);
+      vals.push(v);
+    }
+  }
+  vals.push(id);
+  db.prepare(`UPDATE transcription_jobs SET ${sets.join(", ")} WHERE id = ?`).run(...vals);
+}
+
+export function deleteTranscriptionJob(id: number) {
+  db.prepare("DELETE FROM transcription_jobs WHERE id = ?").run(id);
+}
+
+export function findActiveTranscriptionForVideo(videoPath: string): TranscriptionJobRow | undefined {
+  return db
+    .prepare(
+      "SELECT * FROM transcription_jobs WHERE video_path = ? AND kind = 'transcribe' " +
+        "AND status IN ('pending','running') ORDER BY created_at DESC LIMIT 1"
+    )
+    .get(videoPath) as TranscriptionJobRow | undefined;
 }
 
 // --- Logs ---

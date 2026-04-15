@@ -1,0 +1,11 @@
+.venv/
+build/
+dist/
+bin/
+*.egg-info/
+__pycache__/
+*.pyc
+.pytest_cache/
+config/
+tasks.db
+first-run.log

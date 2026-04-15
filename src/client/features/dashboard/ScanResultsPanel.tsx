@@ -1,7 +1,9 @@
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import type { JobRow, ScannedFile, TaskStatus } from "../../types";
+import type { JobRow, ScannedFile, TaskStatus, TranscriptionJob } from "../../types";
 import { STATUS_ICON } from "../../app/constants";
+import { useTranscriptionJobsQuery } from "../../hooks";
+import { TranscribeButton } from "../transcription/TranscribeButton";
 
 export type ScanFilter = "all" | "new" | "missing" | "orphans";
 
@@ -65,6 +67,18 @@ export function ScanResultsPanel({
   newJobsCount,
 }: ScanResultsPanelProps) {
   const { t } = useTranslation();
+
+  const transcriptionJobsQuery = useTranscriptionJobsQuery();
+  const transcriptionByVideo = useMemo(() => {
+    const map = new Map<string, TranscriptionJob>();
+    for (const job of transcriptionJobsQuery.data?.jobs || []) {
+      if (job.kind !== "transcribe" || !job.video_path) continue;
+      // Keep the most recent per video_path.
+      const existing = map.get(job.video_path);
+      if (!existing || existing.updated_at < job.updated_at) map.set(job.video_path, job);
+    }
+    return map;
+  }, [transcriptionJobsQuery.data]);
 
   const filteredFiles = useMemo(() => {
     const query = search.toLowerCase();
@@ -168,6 +182,7 @@ export function ScanResultsPanel({
                         jobsById={jobsById}
                         selectedIds={selectedIds}
                         setSelectedIds={setSelectedIds}
+                        transcriptionByVideo={transcriptionByVideo}
                       />
                     ))}
                   </div>
@@ -186,14 +201,19 @@ function CompactScanFileRow({
   jobsById,
   selectedIds,
   setSelectedIds,
+  transcriptionByVideo,
 }: {
   file: ScannedFile;
   jobsById: Map<number, JobRow>;
   selectedIds: Set<number>;
   setSelectedIds: Dispatch<SetStateAction<Set<number>>>;
+  transcriptionByVideo: Map<string, TranscriptionJob>;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const activeTranscription = file.videoPath
+    ? transcriptionByVideo.get(file.videoPath)
+    : undefined;
   const hasNew = file.subtitles.some((sub) => sub.tasks.some((task) => {
     const status = getTaskStatus(task, jobsById);
     return status === "new" || status === "pending";
@@ -244,6 +264,9 @@ function CompactScanFileRow({
             </div>
           </div>
         </button>
+        {file.videoPath && file.subtitles.length === 0 && (
+          <TranscribeButton videoPath={file.videoPath} activeJob={activeTranscription} compact />
+        )}
         <button type="button" onClick={() => setOpen(!open)} className="text-xs text-gray-500">{open ? t("app.scanHide") : t("app.scanDetails")}</button>
       </div>
       {open && (
