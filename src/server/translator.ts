@@ -331,9 +331,11 @@ async function translateSingle(
     generateText({
       model: ai(opts.model),
       temperature: opts.temperature,
-      system: opts.systemPrompt + "\nReturn only JSON object: {\"result\":\"...\"}.",
+      system:
+        opts.systemPrompt +
+        "\nReturn plain translated text only. No explanations, no markdown.",
       prompt:
-        "Translate the following subtitle. Return ONLY JSON object with key 'result'.\n\n" +
+        "Translate the following subtitle line and return only the translated text.\n\n" +
         JSON.stringify(subtitle),
       maxRetries: 0,
       abortSignal,
@@ -345,7 +347,7 @@ async function translateSingle(
   const single = coerceSingleTranslation(parsed, rawText);
   if (single) return single;
 
-  throw new Error("Model did not return a usable single subtitle translation payload");
+  throw new Error("Model returned empty single-line translation text");
 }
 
 async function analyzeSubtitlesForContext(
@@ -700,6 +702,7 @@ async function retryTranslate<T>(
         msg.includes("no object generated") ||
         msg.includes("did not match schema") ||
         msg.includes("validation") ||
+        msg.includes("empty single-line translation") ||
         error?.status >= 429;
       if (!isRetryable) throw error;
       const backoff =
