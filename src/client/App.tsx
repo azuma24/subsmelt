@@ -58,7 +58,7 @@ function AppInner() {
     if (type === "queue:stopped") addToast(t("dashboard.toast.queueStopped"), "info");
   });
 
-  const queueRunning = jobsQuery.data?.queueRunning || false;
+  const queueRunning = Boolean(queueQuery.data?.running ?? jobsQuery.data?.queueRunning ?? false);
   const errorCount = jobsQuery.data?.jobs?.filter((j: JobRow) => j.status === "error").length || 0;
   const modelName = typeof settingsQuery.data?.model === "string" ? settingsQuery.data.model : "";
   const watcherRunning =

@@ -119,9 +119,13 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
 }
 
 function hasIssue(line: PreviewLine): boolean {
-  const isUntranslated = line.original && !line.translated;
-  const isSuspiciousShort = line.translated && line.original.length > 20 && line.translated.length < line.original.length * 0.2;
-  const isSuspiciousLong = line.translated && line.translated.length > line.original.length * 3;
+  const original = line.original?.trim() || "";
+  const translated = line.translated?.trim() || "";
+
+  const isUntranslated = original.length > 0 && translated.length === 0;
+  const isSuspiciousShort = translated.length > 0 && original.length > 35 && translated.length < original.length * 0.12;
+  const isSuspiciousLong = translated.length > 0 && translated.length > original.length * 4;
+
   return Boolean(isUntranslated || isSuspiciousShort || isSuspiciousLong);
 }
 
