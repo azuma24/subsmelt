@@ -16,6 +16,18 @@ interface JobsTableDesktopProps {
   selectedIds: Set<number>;
   setSelectedIds: Dispatch<SetStateAction<Set<number>>>;
   onPreview: (jobId: number) => void;
+  onOpenLogs: (jobId: number) => void;
+}
+
+function classifyErrorReason(error: string | null): string {
+  if (!error) return "unknown";
+  const text = error.toLowerCase();
+  if (text.includes("timed out") || text.includes("timeout")) return "timeout";
+  if (text.includes("connection") || text.includes("econnrefused") || text.includes("network")) return "endpoint";
+  if (text.includes("rate limit") || text.includes("429")) return "rate-limit";
+  if (text.includes("schema") || text.includes("validation")) return "schema";
+  if (text.includes("not found") || text.includes("404")) return "not-found";
+  return "other";
 }
 
 export function JobsTableDesktop({
@@ -26,12 +38,14 @@ export function JobsTableDesktop({
   selectedIds,
   setSelectedIds,
   onPreview,
+  onOpenLogs,
 }: JobsTableDesktopProps) {
   const { t } = useTranslation();
   const { addToast } = useToast();
   const retryMutation = useMutationWithInvalidation((id: number) => api.retryJob(id));
   const forceMutation = useMutationWithInvalidation((id: number) => api.forceJob(id));
   const pinMutation = useMutationWithInvalidation((id: number) => api.pinJob(id));
+  const unpinMutation = useMutationWithInvalidation((id: number) => api.unpinJob(id));
   const deleteMutation = useMutationWithInvalidation((id: number) => api.deleteJobApi(id));
 
   const pendingIds = jobs.filter((j) => j.status === "pending").map((j) => j.id);
@@ -108,6 +122,7 @@ export function JobsTableDesktop({
             const isErrorExpanded = expandedErrors.has(job.id);
             const isPending = job.status === "pending";
             const isSelected = selectedIds.has(job.id);
+            const reason = hasError ? classifyErrorReason(job.error) : null;
             return (
               <Fragment key={job.id}>
                 <tr className={isActive ? "bg-blue-900/5" : isSelected ? "bg-blue-900/10" : "hover:bg-gray-800/30"}>
@@ -126,6 +141,9 @@ export function JobsTableDesktop({
                   <td className="px-4 py-3 text-gray-400 text-xs">{job.target_lang}<br /><span className="text-gray-600">{job.lang_code}</span></td>
                   <td className="px-4 py-3">
                     <StatusBadge job={job} />
+                    {reason && (
+                      <span className="ml-2 rounded-full bg-red-900/30 px-2 py-0.5 text-[10px] text-red-200">{t(`dashboard.errorReason.${reason}`)}</span>
+                    )}
                     {hasError && (
                       <button
                         onClick={() => setExpandedErrors((s) => { const n = new Set(s); if (isErrorExpanded) n.delete(job.id); else n.add(job.id); return n; })}
@@ -139,10 +157,16 @@ export function JobsTableDesktop({
                   <td className="px-4 py-3 text-[10px] text-gray-600">{job.duration_seconds ? formatDur(job.duration_seconds) : ""}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1.5">
-                      {isPending && <MiniBtn onClick={() => pinMutation.mutate(job.id)}>{t("dashboard.action.pin")}</MiniBtn>}
+                      {isPending && job.priority > 0 && (
+                        <MiniBtn onClick={() => unpinMutation.mutate(job.id)}>{t("dashboard.action.unpin")}</MiniBtn>
+                      )}
+                      {isPending && job.priority <= 0 && (
+                        <MiniBtn onClick={() => pinMutation.mutate(job.id)}>{t("dashboard.action.pin")}</MiniBtn>
+                      )}
                       {(job.status === "done" || job.status === "translating") && <MiniBtn onClick={() => onPreview(job.id)}>{t("dashboard.action.preview")}</MiniBtn>}
                       {job.status === "error" && <MiniBtn color="yellow" onClick={() => { retryMutation.mutate(job.id); addToast(t("dashboard.toast.jobRetrying"), "info"); }}>{t("dashboard.action.retry")}</MiniBtn>}
                       {(job.status === "done" || job.status === "skipped") && <MiniBtn onClick={() => { forceMutation.mutate(job.id); addToast(t("dashboard.toast.retranslating"), "info"); }}>{t("dashboard.action.retranslate")}</MiniBtn>}
+                      {job.status === "error" && <MiniBtn onClick={() => onOpenLogs(job.id)}>{t("dashboard.action.logs")}</MiniBtn>}
                       <NavLink to={`/jobs/${job.id}`} className="rounded-lg bg-gray-800 px-2 py-1 text-[11px] text-gray-300">{t("dashboard.action.details")}</NavLink>
                       <button
                         onClick={() => handleDelete(job.id)}

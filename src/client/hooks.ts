@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "./api";
-import type { JobPreview, LogEntry, QueueStatus, Task } from "./types";
+import type { JobPreview, LlmHealth, LogEntry, QueueStatus, Task } from "./types";
 
 export type SSEEventName =
   | "job:progress"
@@ -45,10 +45,10 @@ export function useJobsQuery() {
   });
 }
 
-export function useLogsQuery(level?: string, category?: string) {
+export function useLogsQuery(level?: string, category?: string, jobId?: number | null) {
   return useQuery<LogEntry[]>({
-    queryKey: ["logs", level, category],
-    queryFn: () => api.getLogs({ level: level || undefined, category: category || undefined, limit: 300 }),
+    queryKey: ["logs", level, category, jobId ?? null],
+    queryFn: () => api.getLogs({ level: level || undefined, category: category || undefined, jobId: typeof jobId === "number" ? jobId : undefined, limit: 300 }),
     refetchInterval: 3_000,
   });
 }
@@ -58,6 +58,15 @@ export function useQueueStatusQuery() {
     queryKey: ["queue-status"],
     queryFn: api.getQueueStatus,
     refetchInterval: 5_000,
+  });
+}
+
+export function useLlmHealthQuery(enabled = true) {
+  return useQuery<LlmHealth>({
+    queryKey: ["llm-health"],
+    queryFn: api.getLlmHealth,
+    enabled,
+    refetchInterval: enabled ? 15_000 : false,
   });
 }
 

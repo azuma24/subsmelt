@@ -86,12 +86,14 @@
     },
     "action": {
       "pin": "置顶",
+      "unpin": "取消置顶",
       "preview": "预览",
       "retry": "重试",
       "retranslate": "重新翻译",
       "details": "详细信息",
       "open": "打开",
-      "delete": "删除"
+      "delete": "删除",
+      "logs": "Logs"
     },
     "toast": {
       "scanComplete": "扫描完成：{{total}} 个字幕，{{newJobs}} 个新任务",
@@ -142,7 +144,17 @@
       "colTranslated": "译文",
       "untranslated": "未翻译",
       "copyTSV": "全部复制（TSV）",
-      "lines": "{{name}} → {{lang}} • {{count}} 行"
+      "lines": "{{name}} → {{lang}} • {{count}} 行",
+      "showOnlyChanged": "Show only changed",
+      "showOnlyIssues": "Show only issues",
+      "nextIssue": "Jump to next issue",
+      "noIssues": "No issues found in current filter",
+      "copyContext": "Copy context",
+      "copyPlot": "Copy plot summary",
+      "copyGlossary": "Copy glossary",
+      "copiedContext": "Context copied",
+      "copiedPlot": "Plot summary copied",
+      "copiedGlossary": "Glossary copied"
     },
     "stat": {
       "pending": "等待中",
@@ -151,7 +163,43 @@
       "errors": "错误"
     },
     "noJobsEmpty": "暂无任务。",
-    "noJobsHint": "点击「扫描文件夹」以搜索字幕文件。"
+    "noJobsHint": "点击「扫描文件夹」以搜索字幕文件。",
+    "errorReason": {
+      "timeout": "Timeout",
+      "endpoint": "Endpoint",
+      "rate-limit": "Rate limit",
+      "schema": "Schema mismatch",
+      "not-found": "Not found",
+      "other": "Other",
+      "unknown": "Unknown"
+    },
+    "quickStart": {
+      "llmTitle": "LLM connection",
+      "tasksTitle": "Translation targets",
+      "mediaTitle": "Media discovered",
+      "queueTitle": "Queue status",
+      "llmHint": "Configure endpoint and model.",
+      "tasksHint": "Add at least one enabled translation target.",
+      "mediaHint": "Run scan to discover subtitle files.",
+      "queueRunning": "Queue is running.",
+      "queueIdle": "Queue is idle.",
+      "openSettings": "Open Settings",
+      "openTranslations": "Open Translations",
+      "scanNow": "Scan now",
+      "runQueue": "Run queue",
+      "stopQueue": "Stop queue",
+      "done": "Ready"
+    },
+    "quickCounts": "Pending {{pending}} • Errors {{errors}} • Done {{done}}",
+    "emptyJobsHint": "Try scanning folders, then use the sticky actions to run pending jobs.",
+    "scanConfirm": {
+      "title": "Confirm scan and queue",
+      "summary": "Found {{subtitles}} subtitle files. {{jobs}} new jobs will be created.",
+      "topFolders": "Top affected folders",
+      "none": "No folder summary available",
+      "proceed": "Proceed"
+    },
+    "emptyScanHint": "Try changing scan/search filters or run Scan Folders again."
   },
   "translation_languages": {
     "title": "翻译",
@@ -162,6 +210,8 @@
     "sourceLang": "源语言",
     "targetLang": "翻译目标",
     "outputPattern": "输出文件名格式",
+    "outputFormat": "输出格式",
+    "outputFormatHelp": "选择输出字幕扩展名，SubSmelt 会按该格式生成字幕。",
     "langCode": "语言代码",
     "langCodeHelp": "用于输出文件名的短代码，只能使用字母和数字。",
     "patternHelp": "{{name}} = 源文件名，{{lang_code}} = 上方代码，{{ext}} = 原始扩展名",
@@ -187,7 +237,9 @@
     "toast": {
       "created": "已创建翻译：{{lang}}",
       "updated": "翻译已更新",
-      "deleted": "翻译已删除"
+      "deleted": "翻译已删除",
+      "bulkUpdated": "Updated {{count}} translations",
+      "bulkFormatUpdated": "Updated {{count}} translations to .{{format}}"
     },
     "confirm": {
       "deleteTitle": "删除翻译",
@@ -198,7 +250,17 @@
       "targetRequired": "目标语言为必填",
       "langCodeRequired": "语言代码为必填",
       "patternRequired": "输出格式为必填"
-    }
+    },
+    "bulk": {
+      "title": "{{count}} selected",
+      "enable": "Enable selected",
+      "disable": "Disable selected",
+      "setFormat": "Set {{format}}",
+      "clearSelection": "Clear selection"
+    },
+    "formatMismatch": "Pattern extension ({{detected}}) does not match selected format ({{selected}}).",
+    "fixPattern": "Fix pattern extension",
+    "resetRecommended": "Reset to recommended pattern"
   },
   "settings": {
     "title": "设置",
@@ -234,7 +296,15 @@
       "noModelsFound": "未找到可用的模型",
       "modelPlaceholder": "Qwen/Qwen2.5-72B-Instruct",
       "endpointPlaceholderOpenAI": "http://192.168.1.18:8000/v1",
-      "endpointPlaceholderLMStudio": "http://192.168.1.25:1234/api/v1"
+      "endpointPlaceholderLMStudio": "http://192.168.1.25:1234/api/v1",
+      "healthTitle": "Connection health",
+      "healthEndpoint": "Endpoint",
+      "healthModelConfigured": "Model configured",
+      "healthModelAvailable": "Model available",
+      "healthReason": "Reason",
+      "healthOk": "OK",
+      "healthFail": "Fail",
+      "healthMissing": "Missing"
     },
     "translationEngine": {
       "title": "翻译引擎",
@@ -363,7 +433,11 @@
       "translate": "翻译",
       "queue": "队列",
       "system": "系统"
-    }
+    },
+    "filteredByJob": "Filtered by Job #{{id}}",
+    "jobId": "Job ID",
+    "clearJobFilter": "Clear job filter",
+    "noLogsForJob": "No logs for this job yet."
   },
   "app": {
     "queueRunning": "队列运行中",

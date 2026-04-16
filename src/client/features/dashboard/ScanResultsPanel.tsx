@@ -146,7 +146,7 @@ export function ScanResultsPanel({
         />
       </div>
       <div className="max-h-[50vh] overflow-y-auto">
-        {groups.length === 0 && <div className="px-4 py-6 text-center text-gray-500 text-sm">{t("app.scanNoMatch")}</div>}
+        {groups.length === 0 && <div className="px-4 py-6 text-center text-gray-500 text-sm"><div>{t("app.scanNoMatch")}</div><div className="mt-1 text-xs text-gray-600">{t("dashboard.emptyScanHint")}</div></div>}
         <div className="divide-y divide-gray-800/50">
           {groups.map(([group, groupFiles]) => {
             const expanded = expandedGroups.has(group);
@@ -248,6 +248,17 @@ function CompactScanFileRow({
       </div>
       {open && (
         <div className="px-4 pb-4">
+          <div className="mb-2 flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="rounded-full border border-gray-700 bg-gray-900/70 px-2 py-1 text-xs text-gray-300 hover:text-white"
+              aria-label={t("common.close")}
+              title={t("common.close")}
+            >
+              ×
+            </button>
+          </div>
           {file.subtitles.length === 0 && file.videoName && <div className="text-xs text-yellow-600">{t("dashboard.noSubtitleFound")}</div>}
           {file.subtitles.map((sub, j) => (
             <div key={j} className="mt-2 rounded-2xl bg-gray-900/60 p-3">

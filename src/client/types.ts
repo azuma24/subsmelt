@@ -21,6 +21,7 @@ export interface JobRow {
   target_lang: string;
   lang_code: string;
   force: number;
+  analysis_context?: string | null;
 }
 
 export interface QueueStatus {
@@ -83,6 +84,7 @@ export interface JobPreview {
   targetLang: string;
   srtPath: string;
   outputPath: string;
+  analysis?: string;
   totalLines: number;
   lines: PreviewLine[];
 }
@@ -95,4 +97,16 @@ export interface LogEntry {
   message: string;
   job_id: number | null;
   meta: string | null;
+}
+
+export interface LlmHealth {
+  ok: boolean;
+  endpointReachable: boolean;
+  modelConfigured: boolean;
+  modelAvailable: boolean;
+  model?: string;
+  modelCount?: number;
+  status?: number;
+  reason?: string;
+  message?: string;
 }

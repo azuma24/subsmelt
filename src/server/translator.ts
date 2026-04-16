@@ -15,6 +15,89 @@ function getAi({ apiKey, apiHost }: { apiKey: string; apiHost: string }) {
   });
 }
 
+function tryJsonParse(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function sanitizeSecrets(text: string): string {
+  return text
+    .replace(/sk-[A-Za-z0-9_-]{8,}/g, "sk-***")
+    .replace(/(Bearer\s+)[A-Za-z0-9._-]+/gi, "$1***")
+    .replace(/("api[_-]?key"\s*:\s*")[^"]+("?)/gi, "$1***$2");
+}
+
+function truncate(text: string, max = 600): string {
+  if (text.length <= max) return text;
+  return `${text.slice(0, max)}…`;
+}
+
+function toSnippet(value: unknown, max = 600): string | undefined {
+  if (value == null) return undefined;
+  if (typeof value === "string") return truncate(sanitizeSecrets(value), max);
+  try {
+    return truncate(sanitizeSecrets(JSON.stringify(value)), max);
+  } catch {
+    return truncate(String(value), max);
+  }
+}
+
+export interface TranslationErrorDiagnostics {
+  message: string;
+  status?: number;
+  code?: string;
+  causeMessage?: string;
+  responseSnippet?: string;
+}
+
+export function summarizeTranslationError(error: unknown): TranslationErrorDiagnostics {
+  const err = error as any;
+  const status: number | undefined =
+    typeof err?.status === "number"
+      ? err.status
+      : typeof err?.statusCode === "number"
+      ? err.statusCode
+      : typeof err?.response?.status === "number"
+      ? err.response.status
+      : undefined;
+
+  const code = typeof err?.code === "string" ? err.code : undefined;
+
+  const causeMessage =
+    typeof err?.cause?.message === "string"
+      ? sanitizeSecrets(err.cause.message)
+      : undefined;
+
+  const responseBodyRaw =
+    err?.responseBody ?? err?.response?.body ?? err?.body ?? err?.data ?? err?.cause?.responseBody;
+
+  const parsed =
+    typeof responseBodyRaw === "string" ? tryJsonParse(responseBodyRaw) ?? responseBodyRaw : responseBodyRaw;
+  const responseSnippet = toSnippet(parsed);
+
+  const baseMessage =
+    typeof err?.message === "string" && err.message.trim().length > 0
+      ? sanitizeSecrets(err.message.trim())
+      : "Unknown translation error";
+
+  const parts = [
+    status ? `HTTP ${status}` : null,
+    code ? `code=${code}` : null,
+    baseMessage,
+  ].filter(Boolean);
+
+  return {
+    message: parts.join(" | "),
+    status,
+    code,
+    causeMessage,
+    responseSnippet,
+  };
+}
+
 export function splitIntoChunks(array: any[], by = 20) {
   const chunks: any[][] = [];
   let chunk: any[] = [];
@@ -151,6 +234,66 @@ async function translateSingle(
   return object.result;
 }
 
+async function analyzeSubtitlesForContext(
+  subtitles: string[],
+  opts: {
+    apiKey: string;
+    apiHost: string;
+    model: string;
+    lang: string;
+    temperature?: number;
+  }
+): Promise<string> {
+  if (!opts.model || subtitles.length === 0) return "";
+
+  const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost });
+  const temperature = opts.temperature ?? 0.3;
+
+  try {
+    const result = await generateText({
+      model: ai(opts.model),
+      temperature,
+      system: `# System Prompt
+
+You are a subtitle content analyst assisting a translation and glossary extraction system.
+
+## Task
+Analyze subtitle samples and return two outputs:
+1. **Plot Summary**
+   - Language: ${opts.lang}
+   - Length: 5–10 sentences
+   - Must be clear, coherent, and written in natural ${opts.lang}
+   - Avoid literal stitching of subtitles
+
+2. **Glossary**
+   - Up to 50 items
+   - Include rare words, character names, places, organizations, fictional elements, or jargon
+   - Each entry should include:
+     - term (required)
+     - description (required)
+     - category (optional: person, place, organization, jargon, fictional, other)
+     - preferredTranslation (optional)
+     - notes (optional)
+
+## Output format
+Use exactly this markdown structure:
+### 📝 Plot Summary
+<summary text>
+
+### 📚 Glossary
+- term: ... | description: ... | category: ... | preferredTranslation: ... | notes: ...`,
+      prompt:
+        `Produce plot summary in ${opts.lang} and glossary from this subtitle sample:\n` +
+        subtitles.join("\n"),
+      maxRetries: 2,
+    });
+
+    return result.text?.trim() || "";
+  } catch {
+    return "";
+  }
+}
+
 export function parseSubtitle(fileContent: string, fileExtension: string) {
   if (["srt", "vtt"].includes(fileExtension)) {
     return parseSync(fileContent);
@@ -173,49 +316,230 @@ export function parseSubtitle(fileContent: string, fileExtension: string) {
   throw new Error(`Unsupported extension: ${fileExtension}`);
 }
 
+type CueLike = {
+  type?: string;
+  data?: {
+    text?: string;
+    translatedText?: string;
+    start?: number | string;
+    end?: number | string;
+  };
+};
+
+function parseAssTimestampToMs(value: string): number {
+  const m = value.trim().match(/^(\d+):(\d{1,2}):(\d{1,2})[.,](\d{1,3})$/);
+  if (!m) return 0;
+  const h = Number(m[1] || 0);
+  const min = Number(m[2] || 0);
+  const sec = Number(m[3] || 0);
+  const frac = m[4] || "0";
+  const ms = frac.length === 1 ? Number(frac) * 100 : frac.length === 2 ? Number(frac) * 10 : Number(frac.slice(0, 3));
+  return (((h * 60 + min) * 60) + sec) * 1000 + ms;
+}
+
+function normalizeTimeToMs(value: number | string | undefined): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return 0;
+  const trimmed = value.trim();
+  if (!trimmed) return 0;
+  if (/^\d+$/.test(trimmed)) return Number(trimmed);
+  if (/^\d{2}:\d{2}:\d{2}[,.]\d{3}$/.test(trimmed)) {
+    const normalized = trimmed.replace(",", ".");
+    const [hh, mm, ssMs] = normalized.split(":");
+    const [ss, ms] = ssMs.split(".");
+    return (((Number(hh) * 60 + Number(mm)) * 60) + Number(ss)) * 1000 + Number(ms);
+  }
+  return parseAssTimestampToMs(trimmed);
+}
+
+function toAssTimestamp(value: number | string | undefined): string {
+  if (typeof value === "string" && /^\d+:\d{1,2}:\d{1,2}[.,]\d{1,3}$/.test(value.trim())) {
+    const normalized = value.trim().replace(",", ".");
+    const [h, m, secFrac] = normalized.split(":");
+    const [sec, frac = "0"] = secFrac.split(".");
+    const centis = (frac + "00").slice(0, 2);
+    return `${Number(h)}:${m.padStart(2, "0")}:${sec.padStart(2, "0")}.${centis}`;
+  }
+
+  const ms = Math.max(0, normalizeTimeToMs(value));
+  const totalCentis = Math.floor(ms / 10);
+  const centis = totalCentis % 100;
+  const totalSeconds = Math.floor(totalCentis / 100);
+  const seconds = totalSeconds % 60;
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  const minutes = totalMinutes % 60;
+  const hours = Math.floor(totalMinutes / 60);
+  return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}.${String(centis).padStart(2, "0")}`;
+}
+
+function buildAssDocumentFromCues(cues: CueLike[]): any[] {
+  const dialogues = cues.map((cue) => ({
+    key: "Dialogue",
+    value: {
+      Layer: "0",
+      Start: toAssTimestamp(cue?.data?.start),
+      End: toAssTimestamp(cue?.data?.end),
+      Style: "Default",
+      Name: "",
+      MarginL: "0",
+      MarginR: "0",
+      MarginV: "0",
+      Effect: "",
+      Text: String(cue?.data?.translatedText || cue?.data?.text || "").replace(/\r?\n/g, "\\N"),
+    },
+  }));
+
+  return [
+    {
+      section: "Script Info",
+      body: [
+        { key: "Title", value: "SubSmelt Translation" },
+        { key: "ScriptType", value: "v4.00+" },
+        { key: "Collisions", value: "Normal" },
+        { key: "PlayResX", value: "1920" },
+        { key: "PlayResY", value: "1080" },
+        { key: "WrapStyle", value: "0" },
+      ],
+    },
+    {
+      section: "V4+ Styles",
+      body: [
+        {
+          key: "Format",
+          value: [
+            "Name",
+            "Fontname",
+            "Fontsize",
+            "PrimaryColour",
+            "SecondaryColour",
+            "OutlineColour",
+            "BackColour",
+            "Bold",
+            "Italic",
+            "Underline",
+            "StrikeOut",
+            "ScaleX",
+            "ScaleY",
+            "Spacing",
+            "Angle",
+            "BorderStyle",
+            "Outline",
+            "Shadow",
+            "Alignment",
+            "MarginL",
+            "MarginR",
+            "MarginV",
+            "Encoding",
+          ],
+        },
+        {
+          key: "Style",
+          value: {
+            Name: "Default",
+            Fontname: "Arial",
+            Fontsize: "48",
+            PrimaryColour: "&H00FFFFFF",
+            SecondaryColour: "&H000000FF",
+            OutlineColour: "&H00000000",
+            BackColour: "&H64000000",
+            Bold: "0",
+            Italic: "0",
+            Underline: "0",
+            StrikeOut: "0",
+            ScaleX: "100",
+            ScaleY: "100",
+            Spacing: "0",
+            Angle: "0",
+            BorderStyle: "1",
+            Outline: "2",
+            Shadow: "0",
+            Alignment: "2",
+            MarginL: "20",
+            MarginR: "20",
+            MarginV: "20",
+            Encoding: "1",
+          },
+        },
+      ],
+    },
+    {
+      section: "Events",
+      body: [
+        {
+          key: "Format",
+          value: [
+            "Layer",
+            "Start",
+            "End",
+            "Style",
+            "Name",
+            "MarginL",
+            "MarginR",
+            "MarginV",
+            "Effect",
+            "Text",
+          ],
+        },
+        ...dialogues,
+      ],
+    },
+  ];
+}
+
 export function saveTranslated(
   outputPath: string,
   parsedSubtitle: any,
-  fileExtension: string
+  outputExtension: string,
+  cues: CueLike[]
 ) {
   let newSubtitle: string;
+  const ext = outputExtension.toLowerCase();
 
-  if (["srt", "vtt"].includes(fileExtension)) {
-    const format = fileExtension === "vtt" ? "WebVTT" : "SRT";
+  if (["srt", "vtt"].includes(ext)) {
+    const format = ext === "vtt" ? "WebVTT" : "SRT";
     newSubtitle = stringifySync(
-      parsedSubtitle.map((x: any) => ({
-        type: x.type,
+      cues.map((x: CueLike) => ({
+        type: "cue",
         data: {
           ...x.data,
-          text: x.data.translatedText || x.data.text,
+          start: normalizeTimeToMs(x?.data?.start),
+          end: normalizeTimeToMs(x?.data?.end),
+          text: x?.data?.translatedText || x?.data?.text || "",
         },
       })),
       { format }
     );
-  } else if (["ass", "ssa"].includes(fileExtension)) {
-    const { full, events } = parsedSubtitle;
-    let dialogueIndex = 0;
-    newSubtitle = assStringify(
-      full.map((x: any) => {
-        if (x.section === "Events") {
-          x.body = x.body.map((line: any) => {
-            if (line.key === "Dialogue") {
-              const currentEvent = events[dialogueIndex++];
-              const translatedText =
-                currentEvent?.data?.translatedText || line.value.Text;
+  } else if (["ass", "ssa"].includes(ext)) {
+    const hasAssStructure =
+      parsedSubtitle &&
+      typeof parsedSubtitle === "object" &&
+      !Array.isArray(parsedSubtitle) &&
+      Array.isArray(parsedSubtitle.full);
+
+    if (hasAssStructure) {
+      let dialogueIndex = 0;
+      newSubtitle = assStringify(
+        parsedSubtitle.full.map((section: any) => {
+          if (section.section !== "Events" || !Array.isArray(section.body)) return section;
+          return {
+            ...section,
+            body: section.body.map((line: any) => {
+              if (line.key !== "Dialogue") return line;
+              const cue = cues[dialogueIndex++];
+              const translatedText = cue?.data?.translatedText || cue?.data?.text || line.value?.Text || "";
               return {
                 key: "Dialogue",
                 value: { ...line.value, Text: translatedText },
               };
-            }
-            return line;
-          });
-        }
-        return x;
-      })
-    );
+            }),
+          };
+        })
+      );
+    } else {
+      newSubtitle = assStringify(buildAssDocumentFromCues(cues));
+    }
   } else {
-    throw new Error(`Unsupported extension: ${fileExtension}`);
+    throw new Error(`Unsupported extension: ${ext}`);
   }
 
   // Ensure output directory exists
@@ -284,12 +608,14 @@ export interface TranslateFileOptions {
   contextSize: number;
   onProgress?: (completed: number, total: number) => void;
   onRetry?: (attempt: number, error: any, backoff: number) => void;
+  onAnalysis?: (analysis: string) => void;
 }
 
 export async function translateFile(opts: TranslateFileOptions): Promise<void> {
-  const ext = path.extname(opts.srtPath).slice(1).toLowerCase();
+  const sourceExt = path.extname(opts.srtPath).slice(1).toLowerCase();
+  const outputExt = path.extname(opts.outputPath).slice(1).toLowerCase() || sourceExt;
   const content = fs.readFileSync(opts.srtPath, "utf8");
-  const parsed = parseSubtitle(content, ext);
+  const parsed = parseSubtitle(content, sourceExt);
 
   let subtitle: any[];
   if (Array.isArray(parsed)) {
@@ -305,9 +631,28 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
 
   opts.onProgress?.(0, totalCues);
 
+  const allTexts = subtitle
+    .map((cue: any) => (cue?.data ? String(cue.data.text || "") : ""))
+    .map((text: string) => text.replace(/\n/g, " ").trim())
+    .filter((text: string) => text.length > 0);
+
+  let effectiveAdditional = opts.additional;
+  const analysis = await analyzeSubtitlesForContext(allTexts, {
+    apiKey: opts.apiKey,
+    apiHost: opts.apiHost,
+    model: opts.model,
+    lang: opts.lang,
+    temperature: 0.3,
+  });
+
+  if (analysis) {
+    effectiveAdditional = `${effectiveAdditional ? `${effectiveAdditional}\n\n` : ""}[Context]\n${analysis}`;
+    opts.onAnalysis?.(analysis);
+  }
+
   const systemPrompt = opts.prompt
     .replaceAll("{{lang}}", opts.lang)
-    .replaceAll("{{additional}}", opts.additional);
+    .replaceAll("{{additional}}", effectiveAdditional);
 
   const indexMap = new Map<any, number>();
   subtitle.forEach((cue, idx) => indexMap.set(cue, idx));
@@ -401,7 +746,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
 
     // Partial save
     try {
-      saveTranslated(opts.outputPath, parsed, ext);
+      saveTranslated(opts.outputPath, parsed, outputExt, subtitle);
     } catch {}
   }
 
@@ -428,7 +773,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   }
 
   // Final write
-  saveTranslated(opts.outputPath, parsed, ext);
+  saveTranslated(opts.outputPath, parsed, outputExt, subtitle);
 }
 
 /** Test LLM connection by translating a simple phrase */

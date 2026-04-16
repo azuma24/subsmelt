@@ -27,6 +27,7 @@ import {
   getLogs,
   clearLogs,
   pinJob,
+  unpinJob,
   reorderJobs,
 } from "./db.js";
 import { scanFolder, listSubfolders, listFolderTree, MEDIA_DIR } from "./scanner.js";
@@ -216,6 +217,13 @@ app.post("/api/jobs/:id/pin", (req, res) => {
   res.json({ ok: true });
 });
 
+app.post("/api/jobs/:id/unpin", (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  unpinJob(id);
+  logger.info("queue", `Job #${id} unpinned`, id);
+  res.json({ ok: true });
+});
+
 app.post("/api/jobs/reorder", (req, res) => {
   const { jobIds } = req.body;
   if (!Array.isArray(jobIds)) return res.status(400).json({ error: "jobIds must be an array" });
@@ -297,6 +305,7 @@ app.get("/api/jobs/:id/preview", (req, res) => {
       srtPath: job.srt_path,
       outputPath: job.output_path,
       targetLang: task?.target_lang || "",
+      analysis: job.analysis_context || "",
       totalLines: lines.length,
       lines,
     });
@@ -352,11 +361,13 @@ app.get("/api/watcher/status", (_req, res) => {
 
 // ======== Logs ========
 app.get("/api/logs", (req, res) => {
-  const { level, category, limit, offset } = req.query;
+  const { level, category, job_id, limit, offset } = req.query;
+  const parsedJobId = typeof job_id === "string" ? parseInt(job_id, 10) : NaN;
   res.json(
     getLogs({
       level: level as string | undefined,
       category: category as string | undefined,
+      jobId: Number.isFinite(parsedJobId) ? parsedJobId : undefined,
       limit: limit ? parseInt(limit as string, 10) : 100,
       offset: offset ? parseInt(offset as string, 10) : 0,
     })
@@ -367,6 +378,72 @@ app.delete("/api/logs", (_req, res) => {
   clearLogs();
   logger.info("system", "Logs cleared");
   res.json({ ok: true });
+});
+
+app.get("/api/llm-health", async (_req, res) => {
+  const settings = getAllSettings();
+  const endpoint = (settings.llm_endpoint || "").replace(/\/+$/, "");
+  const model = settings.model || "";
+  const apiKey = settings.api_key || "";
+
+  if (!endpoint) {
+    return res.json({
+      ok: false,
+      endpointReachable: false,
+      modelConfigured: Boolean(model),
+      modelAvailable: false,
+      reason: "endpoint-missing",
+    });
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    const resp = await fetch(`${endpoint}/models`, {
+      headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!resp.ok) {
+      return res.json({
+        ok: false,
+        endpointReachable: false,
+        modelConfigured: Boolean(model),
+        modelAvailable: false,
+        status: resp.status,
+        reason: `http-${resp.status}`,
+      });
+    }
+
+    const data = await resp.json() as any;
+    const models: string[] = (data?.data || data?.models || [])
+      .map((m: any) => m.id || m.name || m)
+      .filter((m: any) => typeof m === "string");
+
+    const modelConfigured = Boolean(model);
+    const modelAvailable = modelConfigured ? models.includes(model) : false;
+
+    return res.json({
+      ok: modelConfigured && modelAvailable,
+      endpointReachable: true,
+      modelConfigured,
+      modelAvailable,
+      model,
+      modelCount: models.length,
+      reason: modelConfigured ? (modelAvailable ? "ok" : "model-missing") : "model-not-configured",
+    });
+  } catch (error: any) {
+    clearTimeout(timeout);
+    return res.json({
+      ok: false,
+      endpointReachable: false,
+      modelConfigured: Boolean(model),
+      modelAvailable: false,
+      reason: error?.name === "AbortError" ? "timeout" : "network-error",
+      message: error?.message || "unknown",
+    });
+  }
 });
 
 // ======== List Models ========
