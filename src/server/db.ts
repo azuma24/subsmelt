@@ -25,12 +25,19 @@ db.exec(`
     total_cues INTEGER DEFAULT 0,
     completed_cues INTEGER DEFAULT 0,
     error TEXT,
+    analysis_context TEXT,
     duration_seconds REAL,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now')),
     UNIQUE(srt_path, task_id)
   )
 `);
+
+// Schema migration for existing DBs
+const jobColumns = db.prepare("PRAGMA table_info(jobs)").all() as Array<{ name: string }>;
+if (!jobColumns.some((c) => c.name === "analysis_context")) {
+  db.exec("ALTER TABLE jobs ADD COLUMN analysis_context TEXT");
+}
 
 // --- Schema: Logs ---
 
@@ -76,6 +83,7 @@ export function updateJob(
     total_cues: number;
     completed_cues: number;
     error: string | null;
+    analysis_context: string | null;
     duration_seconds: number;
     force: number;
   }>
@@ -167,6 +175,10 @@ export function pinJob(id: number) {
   db.prepare("UPDATE jobs SET priority = ?, updated_at = datetime('now') WHERE id = ?").run(newPriority, id);
 }
 
+export function unpinJob(id: number) {
+  db.prepare("UPDATE jobs SET priority = 0, updated_at = datetime('now') WHERE id = ?").run(id);
+}
+
 export function reorderJobs(jobIds: number[]) {
   const stmt = db.prepare("UPDATE jobs SET priority = ?, updated_at = datetime('now') WHERE id = ?");
   const tx = db.transaction(() => {
@@ -205,6 +217,7 @@ export function clearJobs() {
 export function getLogs(opts?: {
   level?: string;
   category?: string;
+  jobId?: number;
   limit?: number;
   offset?: number;
 }) {
@@ -218,6 +231,10 @@ export function getLogs(opts?: {
   if (opts?.category) {
     sql += " AND category = ?";
     vals.push(opts.category);
+  }
+  if (typeof opts?.jobId === "number" && Number.isFinite(opts.jobId)) {
+    sql += " AND job_id = ?";
+    vals.push(opts.jobId);
   }
 
   sql += " ORDER BY id DESC";

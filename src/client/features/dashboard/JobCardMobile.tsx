@@ -15,6 +15,18 @@ interface JobCardMobileProps {
   selected: boolean;
   onToggleSelected: (jobId: number) => void;
   onPreview: (jobId: number) => void;
+  onOpenLogs: (jobId: number) => void;
+}
+
+function classifyErrorReason(error: string | null): string {
+  if (!error) return "unknown";
+  const text = error.toLowerCase();
+  if (text.includes("timed out") || text.includes("timeout")) return "timeout";
+  if (text.includes("connection") || text.includes("econnrefused") || text.includes("network")) return "endpoint";
+  if (text.includes("rate limit") || text.includes("429")) return "rate-limit";
+  if (text.includes("schema") || text.includes("validation")) return "schema";
+  if (text.includes("not found") || text.includes("404")) return "not-found";
+  return "other";
 }
 
 export function JobCardMobile({
@@ -25,6 +37,7 @@ export function JobCardMobile({
   selected,
   onToggleSelected,
   onPreview,
+  onOpenLogs,
 }: JobCardMobileProps) {
   const { t } = useTranslation();
   const { addToast } = useToast();
@@ -35,6 +48,7 @@ export function JobCardMobile({
   const hasError = job.status === "error" && job.error;
   const expanded = expandedErrors.has(job.id);
   const isPending = job.status === "pending";
+  const reason = hasError ? classifyErrorReason(job.error) : null;
 
   return (
     <div className={`rounded-2xl border p-4 ${isActive ? "border-blue-700/40 bg-blue-900/10" : selected ? "border-blue-700/40 bg-blue-950/20" : "border-gray-800 bg-gray-950/60"}`}>
@@ -45,13 +59,14 @@ export function JobCardMobile({
               type="checkbox"
               checked={selected}
               onChange={() => onToggleSelected(job.id)}
-              className="mt-1 h-4 w-4 shrink-0 accent-blue-500"
+              className="mt-1 h-5 w-5 shrink-0 accent-blue-500"
               aria-label={t("dashboard.col.select")}
             />
           )}
           <div className="min-w-0">
             <div className="truncate text-sm font-medium text-gray-200">{job.srt_path.split("/").pop()}</div>
             <div className="mt-1 text-xs text-gray-500">{job.target_lang} • {job.lang_code}</div>
+            {reason && <div className="mt-1 inline-flex rounded-full bg-red-900/30 px-2 py-0.5 text-[10px] text-red-200">{t(`dashboard.errorReason.${reason}`)}</div>}
           </div>
         </div>
         <StatusBadge job={job} compact />
@@ -80,6 +95,15 @@ export function JobCardMobile({
           <NavLink to={`/jobs/${job.id}`} className="rounded-2xl bg-gray-800 px-4 py-3 text-center text-sm font-medium text-gray-200">{t("dashboard.action.open")}</NavLink>
         )}
       </div>
+      {job.status === "error" && (
+        <button
+          type="button"
+          onClick={() => onOpenLogs(job.id)}
+          className="mt-2 w-full rounded-2xl border border-gray-700 bg-gray-800 px-4 py-3 text-center text-xs font-medium text-gray-200"
+        >
+          {t("dashboard.action.logs")}
+        </button>
+      )}
     </div>
   );
 }

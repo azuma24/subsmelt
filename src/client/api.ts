@@ -1,4 +1,4 @@
-import type { FolderNode, JobPreview, JobRow, LogEntry, QueueStatus, ScanResult, Task } from "./types";
+import type { FolderNode, JobPreview, JobRow, LlmHealth, LogEntry, QueueStatus, ScanResult, Task } from "./types";
 
 const BASE = "/api";
 
@@ -62,6 +62,8 @@ export const clearJobs = () =>
   fetchJSON("/jobs/clear", { method: "POST" });
 export const pinJob = (id: number) =>
   fetchJSON(`/jobs/${id}/pin`, { method: "POST" });
+export const unpinJob = (id: number) =>
+  fetchJSON(`/jobs/${id}/unpin`, { method: "POST" });
 export const getJobPreview = (id: number) => fetchJSON<JobPreview>(`/jobs/${id}/preview`);
 
 // Queue
@@ -81,12 +83,14 @@ export const stopWatcher = () => fetchJSON("/watcher/stop", { method: "POST" });
 export const getLogs = (params?: {
   level?: string;
   category?: string;
+  jobId?: number;
   limit?: number;
   offset?: number;
 }) => {
   const q = new URLSearchParams();
   if (params?.level) q.set("level", params.level);
   if (params?.category) q.set("category", params.category);
+  if (typeof params?.jobId === "number") q.set("job_id", String(params.jobId));
   if (params?.limit) q.set("limit", String(params.limit));
   if (params?.offset) q.set("offset", String(params.offset));
   return fetchJSON<LogEntry[]>(`/logs?${q.toString()}`);
@@ -96,3 +100,6 @@ export const clearLogsApi = () => fetchJSON("/logs", { method: "DELETE" });
 // Connection test
 export const testConnection = () =>
   fetchJSON<{ ok: boolean; message: string }>("/test-connection", { method: "POST" });
+
+export const getLlmHealth = () =>
+  fetchJSON<LlmHealth>("/llm-health");

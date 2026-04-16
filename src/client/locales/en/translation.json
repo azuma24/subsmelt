@@ -86,12 +86,14 @@
     },
     "action": {
       "pin": "Pin",
+      "unpin": "Unpin",
       "preview": "Preview",
       "retry": "Retry",
       "retranslate": "Re-translate",
       "details": "Details",
       "open": "Open",
-      "delete": "Delete"
+      "delete": "Delete",
+      "logs": "Logs"
     },
     "toast": {
       "scanComplete": "Scan complete: {{total}} subtitles, {{newJobs}} new jobs",
@@ -142,7 +144,17 @@
       "colTranslated": "Translated",
       "untranslated": "untranslated",
       "copyTSV": "Copy All (TSV)",
-      "lines": "{{name}} → {{lang}} • {{count}} lines"
+      "lines": "{{name}} → {{lang}} • {{count}} lines",
+      "showOnlyChanged": "Show only changed",
+      "showOnlyIssues": "Show only issues",
+      "nextIssue": "Jump to next issue",
+      "noIssues": "No issues found in current filter",
+      "copyContext": "Copy context",
+      "copyPlot": "Copy plot summary",
+      "copyGlossary": "Copy glossary",
+      "copiedContext": "Context copied",
+      "copiedPlot": "Plot summary copied",
+      "copiedGlossary": "Glossary copied"
     },
     "stat": {
       "pending": "Pending",
@@ -151,7 +163,43 @@
       "errors": "Errors"
     },
     "noJobsEmpty": "No jobs yet.",
-    "noJobsHint": "Click <strong>Scan Folders</strong> to discover subtitle files."
+    "noJobsHint": "Click <strong>Scan Folders</strong> to discover subtitle files.",
+    "errorReason": {
+      "timeout": "Timeout",
+      "endpoint": "Endpoint",
+      "rate-limit": "Rate limit",
+      "schema": "Schema mismatch",
+      "not-found": "Not found",
+      "other": "Other",
+      "unknown": "Unknown"
+    },
+    "quickStart": {
+      "llmTitle": "LLM connection",
+      "tasksTitle": "Translation targets",
+      "mediaTitle": "Media discovered",
+      "queueTitle": "Queue status",
+      "llmHint": "Configure endpoint and model.",
+      "tasksHint": "Add at least one enabled translation target.",
+      "mediaHint": "Run scan to discover subtitle files.",
+      "queueRunning": "Queue is running.",
+      "queueIdle": "Queue is idle.",
+      "openSettings": "Open Settings",
+      "openTranslations": "Open Translations",
+      "scanNow": "Scan now",
+      "runQueue": "Run queue",
+      "stopQueue": "Stop queue",
+      "done": "Ready"
+    },
+    "quickCounts": "Pending {{pending}} • Errors {{errors}} • Done {{done}}",
+    "emptyJobsHint": "Try scanning folders, then use the sticky actions to run pending jobs.",
+    "scanConfirm": {
+      "title": "Confirm scan and queue",
+      "summary": "Found {{subtitles}} subtitle files. {{jobs}} new jobs will be created.",
+      "topFolders": "Top affected folders",
+      "none": "No folder summary available",
+      "proceed": "Proceed"
+    },
+    "emptyScanHint": "Try changing scan/search filters or run Scan Folders again."
   },
   "translation_languages": {
     "title": "Translations",
@@ -162,6 +210,8 @@
     "sourceLang": "Source language",
     "targetLang": "Target translation",
     "outputPattern": "Output Filename Pattern",
+    "outputFormat": "Output format",
+    "outputFormatHelp": "Pick the final subtitle file extension. SubSmelt will generate that subtitle format.",
     "langCode": "Language Code",
     "langCodeHelp": "Short code for the output filename. Letters and numbers only.",
     "patternHelp": "{{name}} = source stem, {{lang_code}} = code above, {{ext}} = original extension",
@@ -187,7 +237,9 @@
     "toast": {
       "created": "Created translation: {{lang}}",
       "updated": "Translation updated",
-      "deleted": "Translation deleted"
+      "deleted": "Translation deleted",
+      "bulkUpdated": "Updated {{count}} translations",
+      "bulkFormatUpdated": "Updated {{count}} translations to .{{format}}"
     },
     "confirm": {
       "deleteTitle": "Delete translation",
@@ -198,7 +250,17 @@
       "targetRequired": "Target language is required",
       "langCodeRequired": "Language code is required",
       "patternRequired": "Output pattern is required"
-    }
+    },
+    "bulk": {
+      "title": "{{count}} selected",
+      "enable": "Enable selected",
+      "disable": "Disable selected",
+      "setFormat": "Set {{format}}",
+      "clearSelection": "Clear selection"
+    },
+    "formatMismatch": "Pattern extension ({{detected}}) does not match selected format ({{selected}}).",
+    "fixPattern": "Fix pattern extension",
+    "resetRecommended": "Reset to recommended pattern"
   },
   "settings": {
     "title": "Settings",
@@ -234,7 +296,15 @@
       "noModelsFound": "No models found",
       "modelPlaceholder": "Qwen/Qwen2.5-72B-Instruct",
       "endpointPlaceholderOpenAI": "http://192.168.1.18:8000/v1",
-      "endpointPlaceholderLMStudio": "http://192.168.1.25:1234/api/v1"
+      "endpointPlaceholderLMStudio": "http://192.168.1.25:1234/api/v1",
+      "healthTitle": "Connection health",
+      "healthEndpoint": "Endpoint",
+      "healthModelConfigured": "Model configured",
+      "healthModelAvailable": "Model available",
+      "healthReason": "Reason",
+      "healthOk": "OK",
+      "healthFail": "Fail",
+      "healthMissing": "Missing"
     },
     "translationEngine": {
       "title": "Translation Engine",
@@ -363,7 +433,11 @@
       "translate": "Translate",
       "queue": "Queue",
       "system": "System"
-    }
+    },
+    "filteredByJob": "Filtered by Job #{{id}}",
+    "jobId": "Job ID",
+    "clearJobFilter": "Clear job filter",
+    "noLogsForJob": "No logs for this job yet."
   },
   "app": {
     "queueRunning": "Queue running",

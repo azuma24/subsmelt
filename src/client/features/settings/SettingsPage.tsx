@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
-import { useSettingsQuery } from "../../hooks";
+import { useLlmHealthQuery, useSettingsQuery } from "../../hooks";
 import { DEFAULT_PROMPT, LANGUAGES } from "../../app/constants";
 import { useToast } from "../../components/Toast";
 import { ActionButton, Field, SettingsSection } from "../../ui/primitives";
@@ -15,6 +15,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   const { t, i18n } = useTranslation();
   const { addToast } = useToast();
   const settingsQuery = useSettingsQuery();
+  const llmHealthQuery = useLlmHealthQuery(Boolean(str(settingsQuery.data?.llm_endpoint)));
   const [settings, setSettings] = useState<Record<string, unknown>>({});
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -129,7 +130,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
             <select
               value={currentLanguage}
               onChange={(e) => i18n.changeLanguage(e.target.value)}
-              className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200"
+              className="w-full md:max-w-[22rem] rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200"
             >
               {LANGUAGES.map((lang) => (
                 <option key={lang.code} value={lang.code}>{lang.label}</option>
@@ -142,7 +143,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
         <SettingsSection title={t("settings.llmConnection.title")} description={t("settings.llmConnection.description")}>
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-300">{t("settings.llmConnection.apiType")}</label>
-            <select value={apiType} onChange={(e) => { const next = e.target.value as "openai" | "lmstudio"; setApiType(next); const base = str(settings.llm_endpoint).replace(/\/(v1|api\/v1)\/?$/, ""); if (base) update("llm_endpoint", base + (next === "lmstudio" ? "/api/v1" : "/v1")); }} className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200">
+            <select value={apiType} onChange={(e) => { const next = e.target.value as "openai" | "lmstudio"; setApiType(next); const base = str(settings.llm_endpoint).replace(/\/(v1|api\/v1)\/?$/, ""); if (base) update("llm_endpoint", base + (next === "lmstudio" ? "/api/v1" : "/v1")); }} className="w-full md:max-w-[22rem] rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200">
               <option value="openai">{t("settings.llmConnection.apiTypeOpenAI")}</option>
               <option value="lmstudio">{t("settings.llmConnection.apiTypeLMStudio")}</option>
             </select>
@@ -184,7 +185,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
               </button>
             </div>
             {models.length > 0 ? (
-              <select value={str(settings.model)} onChange={(e) => update("model", e.target.value)} className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200">
+              <select value={str(settings.model)} onChange={(e) => update("model", e.target.value)} className="w-full md:max-w-[22rem] rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200">
                 <option value="">{t("settings.llmConnection.selectModel")}</option>
                 {models.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
@@ -207,6 +208,15 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
                     : t("settings.llmConnection.testFailed", { message: testResult.message })}
               </span>
             )}
+          </div>
+          <div className="rounded-2xl border border-gray-800 bg-gray-950/40 p-3">
+            <div className="mb-2 text-xs font-semibold text-gray-400">{t("settings.llmConnection.healthTitle")}</div>
+            <div className="flex flex-wrap gap-2 text-[11px]">
+              <span className={`rounded-full px-2 py-1 ${llmHealthQuery.data?.endpointReachable ? "bg-green-900/30 text-green-200" : "bg-red-900/30 text-red-200"}`}>{t("settings.llmConnection.healthEndpoint")}: {llmHealthQuery.data?.endpointReachable ? t("settings.llmConnection.healthOk") : t("settings.llmConnection.healthFail")}</span>
+              <span className={`rounded-full px-2 py-1 ${llmHealthQuery.data?.modelConfigured ? "bg-blue-900/30 text-blue-200" : "bg-gray-800 text-gray-300"}`}>{t("settings.llmConnection.healthModelConfigured")}: {llmHealthQuery.data?.modelConfigured ? t("settings.llmConnection.healthOk") : t("settings.llmConnection.healthMissing")}</span>
+              <span className={`rounded-full px-2 py-1 ${llmHealthQuery.data?.modelAvailable ? "bg-green-900/30 text-green-200" : "bg-yellow-900/30 text-yellow-200"}`}>{t("settings.llmConnection.healthModelAvailable")}: {llmHealthQuery.data?.modelAvailable ? t("settings.llmConnection.healthOk") : t("settings.llmConnection.healthMissing")}</span>
+              {llmHealthQuery.data?.reason && <span className="rounded-full bg-gray-800 px-2 py-1 text-gray-300">{t("settings.llmConnection.healthReason")}: {llmHealthQuery.data.reason}</span>}
+            </div>
           </div>
         </SettingsSection>
 

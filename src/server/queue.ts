@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { getJobs, updateJob, getJob } from "./db.js";
 import { getAllSettings, getTask, getSetting } from "./config.js";
-import { translateFile } from "./translator.js";
+import { summarizeTranslationError, translateFile } from "./translator.js";
 import { logger } from "./logger.js";
 import { broadcast } from "./sse.js";
 
@@ -60,7 +60,7 @@ export async function processQueue(onlyIds?: number[]) {
       const targetLang = task?.target_lang || "";
 
       logger.info("queue", `Started: ${srtName} → ${langCode} (job #${job.id})`, job.id);
-      updateJob(job.id, { status: "translating", error: null });
+      updateJob(job.id, { status: "translating", error: null, analysis_context: null });
       broadcast("job:start", { jobId: job.id, srtName, langCode });
 
       const settings = getAllSettings();
@@ -94,11 +94,27 @@ export async function processQueue(onlyIds?: number[]) {
             });
           },
           onRetry: (attempt, error, backoff) => {
+            const diagnostics = summarizeTranslationError(error);
             logger.warn(
               "translate",
-              `Retry ${attempt}/5: ${error?.message || "unknown"} (backoff ${backoff}ms)`,
-              job.id
+              `Retry ${attempt}/5: ${diagnostics.message} (backoff ${backoff}ms)`,
+              job.id,
+              {
+                stage: "translate_retry",
+                status: diagnostics.status,
+                code: diagnostics.code,
+                responseSnippet: diagnostics.responseSnippet,
+                causeMessage: diagnostics.causeMessage,
+              }
             );
+          },
+          onAnalysis: (analysis) => {
+            updateJob(job.id, { analysis_context: analysis });
+            logger.info("translate", `Context prepared for ${srtName} (${langCode})`, job.id, {
+              stage: "context_analysis",
+              preview: analysis.slice(0, 300),
+            });
+            broadcast("job:analysis", { jobId: job.id, analysis, srtName });
           },
         });
 
@@ -125,17 +141,39 @@ export async function processQueue(onlyIds?: number[]) {
           broadcast("job:stopped", { jobId: job.id, srtName });
           break;
         }
+
+        const diagnostics = summarizeTranslationError(error);
+        const compactError = summarizeJobErrorForStorage(
+          diagnostics.message,
+          diagnostics.responseSnippet,
+          diagnostics.causeMessage,
+        );
+
         logger.error(
           "translate",
-          `Failed: ${srtName} → ${langCode}: ${error.message}`,
-          job.id
+          `Failed: ${srtName} → ${langCode}: ${diagnostics.message}`,
+          job.id,
+          {
+            stage: "translate_failure",
+            status: diagnostics.status,
+            code: diagnostics.code,
+            responseSnippet: diagnostics.responseSnippet,
+            causeMessage: diagnostics.causeMessage,
+            endpoint: sanitizeEndpoint(settings.llm_endpoint || "http://localhost:8000/v1"),
+            model: settings.model || "",
+            chunkSize: parseInt(settings.chunk_size || "20", 10),
+            contextSize: parseInt(settings.context_window || "5", 10),
+            temperature: parseFloat(settings.temperature || "0.7"),
+            srtPath: job.srt_path,
+            outputPath: job.output_path,
+          }
         );
         updateJob(job.id, {
           status: "error",
-          error: error.message || "Unknown error",
+          error: compactError,
           duration_seconds: durationSeconds,
         });
-        broadcast("job:error", { jobId: job.id, error: error.message, srtName });
+        broadcast("job:error", { jobId: job.id, error: compactError, srtName });
       }
 
       currentJobId = null;
@@ -160,6 +198,18 @@ function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m}m ${s}s`;
+}
+
+function sanitizeEndpoint(endpoint: string): string {
+  return endpoint.replace(/:\/\/[^@\s]+@/, "://***@");
+}
+
+function summarizeJobErrorForStorage(base: string, responseSnippet?: string, causeMessage?: string): string {
+  const lines = [base];
+  if (responseSnippet) lines.push(`response: ${responseSnippet}`);
+  if (causeMessage) lines.push(`cause: ${causeMessage}`);
+  const combined = lines.join("\n");
+  return combined.length > 2000 ? `${combined.slice(0, 2000)}…` : combined;
 }
 
 // Auto-scan timer
