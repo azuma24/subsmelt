@@ -14,8 +14,11 @@ export function LogsPage({ isMobile }: { isMobile: boolean }) {
   const { addToast } = useToast();
   const { confirm } = useConfirm();
   const [params, setParams] = useSearchParams();
-  const initialJobId = Number(params.get("job") || "");
-  const [jobIdFilter, setJobIdFilter] = useState<number | null>(Number.isFinite(initialJobId) ? initialJobId : null);
+  const initialJobParam = params.get("job");
+  const parsedInitialJobId = initialJobParam ? Number(initialJobParam) : NaN;
+  const [jobIdFilter, setJobIdFilter] = useState<number | null>(
+    Number.isInteger(parsedInitialJobId) && parsedInitialJobId > 0 ? parsedInitialJobId : null
+  );
   const [level, setLevel] = useState("");
   const [category, setCategory] = useState("");
   const [search, setSearch] = useState("");
@@ -30,12 +33,15 @@ export function LogsPage({ isMobile }: { isMobile: boolean }) {
   }, [chronologicalLogs.length, follow]);
 
   useEffect(() => {
-    if (jobIdFilter) {
-      setParams((prev) => {
-        prev.set("job", String(jobIdFilter));
-        return prev;
-      });
-    }
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (typeof jobIdFilter === "number" && Number.isInteger(jobIdFilter) && jobIdFilter > 0) {
+        next.set("job", String(jobIdFilter));
+      } else {
+        next.delete("job");
+      }
+      return next;
+    }, { replace: true });
   }, [jobIdFilter, setParams]);
 
   const handleClear = async () => {
@@ -67,10 +73,23 @@ export function LogsPage({ isMobile }: { isMobile: boolean }) {
           <select value={level} onChange={(e) => setLevel(e.target.value)} className="rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-300"><option value="">{t("logs.level.all")}</option><option value="info">{t("logs.level.info")}</option><option value="warn">{t("logs.level.warn")}</option><option value="error">{t("logs.level.error")}</option></select>
           <select value={category} onChange={(e) => setCategory(e.target.value)} className="rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-300"><option value="">{t("logs.category.all")}</option><option value="scan">{t("logs.category.scan")}</option><option value="translate">{t("logs.category.translate")}</option><option value="queue">{t("logs.category.queue")}</option><option value="system">{t("logs.category.system")}</option></select>
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("logs.search")} className="min-w-0 flex-1 rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200" />
-          <input type="number" value={jobIdFilter || ""} onChange={(e) => setJobIdFilter(e.target.value ? Number(e.target.value) : null)} placeholder={t("logs.jobId")}
-            className="w-28 rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200" />
-          {jobIdFilter && (
-            <button onClick={() => { setJobIdFilter(null); params.delete("job"); setParams(params); }} className="rounded-xl bg-gray-800 px-3 py-2 text-xs text-gray-300">
+          <input
+            type="number"
+            value={jobIdFilter ?? ""}
+            onChange={(e) => {
+              const raw = e.target.value.trim();
+              if (!raw) {
+                setJobIdFilter(null);
+                return;
+              }
+              const next = Number(raw);
+              setJobIdFilter(Number.isInteger(next) && next > 0 ? next : null);
+            }}
+            placeholder={t("logs.jobId")}
+            className="w-28 rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200"
+          />
+          {typeof jobIdFilter === "number" && jobIdFilter > 0 && (
+            <button onClick={() => setJobIdFilter(null)} className="rounded-xl bg-gray-800 px-3 py-2 text-xs text-gray-300">
               {t("logs.clearJobFilter")}
             </button>
           )}
