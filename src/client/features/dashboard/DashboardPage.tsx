@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
-import { useJobsQuery, useMutationWithInvalidation, useSettingsQuery, useTasksQuery } from "../../hooks";
+import { useJobsQuery, useMutationWithInvalidation, useQueueStatusQuery, useSettingsQuery, useTasksQuery } from "../../hooks";
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmModal";
 import type { JobRow, ScannedFile } from "../../types";
@@ -49,6 +49,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const jobsQuery = useJobsQuery();
   const tasksQuery = useTasksQuery();
   const settingsQuery = useSettingsQuery();
+  const queueStatusQuery = useQueueStatusQuery();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [scanResult, setScanResult] = useState<ScannedFile[] | null>(null);
   const [scanListFilter, setScanListFilter] = useState<ScanFilter>("all");
@@ -74,8 +75,8 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const forceSelectedMutation = useMutationWithInvalidation((ids: number[]) => api.forceJobsApi(ids));
 
   const jobs: JobRow[] = jobsQuery.data?.jobs || [];
-  const queueRunning = jobsQuery.data?.queueRunning || false;
-  const currentJobId = jobsQuery.data?.currentJobId ?? null;
+  const queueRunning = Boolean(queueStatusQuery.data?.running ?? jobsQuery.data?.queueRunning ?? false);
+  const currentJobId = queueStatusQuery.data?.currentJobId ?? jobsQuery.data?.currentJobId ?? null;
   const settings = settingsQuery.data || {};
   const mediaDir = str(settings._media_dir, "/media");
   const autoTranslate = str(settings.auto_translate, "1") === "1";

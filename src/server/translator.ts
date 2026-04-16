@@ -23,6 +23,26 @@ function tryJsonParse(value: string): unknown {
   }
 }
 
+const REQUEST_TIMEOUT_MS = Math.max(
+  5_000,
+  Number.parseInt(process.env.TRANSLATION_REQUEST_TIMEOUT_MS || "45000", 10) || 45_000
+);
+
+async function withAbortTimeout<T>(run: (signal: AbortSignal) => Promise<T>, timeoutMs = REQUEST_TIMEOUT_MS): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await run(controller.signal);
+  } catch (error: any) {
+    if (error?.name === "AbortError") {
+      throw new Error(`Request timeout after ${timeoutMs}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function sanitizeSecrets(text: string): string {
   return text
     .replace(/sk-[A-Za-z0-9_-]{8,}/g, "sk-***")
@@ -145,35 +165,41 @@ async function translateChunk(
   } as const;
 
   try {
-    await generateText({
-      model: ai(opts.model),
-      temperature: opts.temperature,
-      tools,
-      toolChoice: "required",
-      system:
-        opts.systemPrompt +
-        "\nReturn ONLY using the tool, do not include any extra text.",
-      prompt:
-        "Translate the following subtitles. Return the result via the tool as an array of strings with the exact same length and order as input.\n\n" +
-        JSON.stringify(subtitles),
-      maxRetries: 2,
-    });
+    await withAbortTimeout((abortSignal) =>
+      generateText({
+        model: ai(opts.model),
+        temperature: opts.temperature,
+        tools,
+        toolChoice: "required",
+        system:
+          opts.systemPrompt +
+          "\nReturn ONLY using the tool, do not include any extra text.",
+        prompt:
+          "Translate the following subtitles. Return the result via the tool as an array of strings with the exact same length and order as input.\n\n" +
+          JSON.stringify(subtitles),
+        maxRetries: 0,
+        abortSignal,
+      })
+    );
 
     if (toolResult && Array.isArray(toolResult)) return toolResult;
   } catch {
     // fall through to generateObject
   }
 
-  const { object } = await generateObject({
-    model: ai(opts.model),
-    temperature: opts.temperature,
-    schema: z.array(z.string().describe("The translated subtitles")),
-    prompt:
-      opts.systemPrompt +
-      "\nOutput must be valid json. Respond with a JSON object that matches the schema. Return only JSON.\n\n" +
-      JSON.stringify(subtitles),
-    maxRetries: 3,
-  });
+  const { object } = await withAbortTimeout((abortSignal) =>
+    generateObject({
+      model: ai(opts.model),
+      temperature: opts.temperature,
+      schema: z.array(z.string().describe("The translated subtitles")),
+      prompt:
+        opts.systemPrompt +
+        "\nOutput must be valid json. Respond with a JSON object that matches the schema. Return only JSON.\n\n" +
+        JSON.stringify(subtitles),
+      maxRetries: 0,
+      abortSignal,
+    })
+  );
   return object;
 }
 
@@ -202,35 +228,41 @@ async function translateSingle(
   } as const;
 
   try {
-    await generateText({
-      model: ai(opts.model),
-      temperature: opts.temperature,
-      tools,
-      toolChoice: "required",
-      system:
-        opts.systemPrompt +
-        "\nReturn ONLY using the tool, do not include any extra text.",
-      prompt:
-        "Translate the following subtitle. Return the result via the tool as plain text only.\n\n" +
-        JSON.stringify(subtitle),
-      maxRetries: 2,
-    });
+    await withAbortTimeout((abortSignal) =>
+      generateText({
+        model: ai(opts.model),
+        temperature: opts.temperature,
+        tools,
+        toolChoice: "required",
+        system:
+          opts.systemPrompt +
+          "\nReturn ONLY using the tool, do not include any extra text.",
+        prompt:
+          "Translate the following subtitle. Return the result via the tool as plain text only.\n\n" +
+          JSON.stringify(subtitle),
+        maxRetries: 0,
+        abortSignal,
+      })
+    );
 
     if (typeof toolResult === "string") return toolResult;
   } catch {
     // fall through
   }
 
-  const { object } = await generateObject({
-    model: ai(opts.model),
-    temperature: opts.temperature,
-    schema: z.object({ result: z.string() }),
-    prompt:
-      opts.systemPrompt +
-      "\nOutput must be valid json. Respond with a JSON object that matches the schema. Return only JSON.\n\n" +
-      JSON.stringify(subtitle),
-    maxRetries: 3,
-  });
+  const { object } = await withAbortTimeout((abortSignal) =>
+    generateObject({
+      model: ai(opts.model),
+      temperature: opts.temperature,
+      schema: z.object({ result: z.string() }),
+      prompt:
+        opts.systemPrompt +
+        "\nOutput must be valid json. Respond with a JSON object that matches the schema. Return only JSON.\n\n" +
+        JSON.stringify(subtitle),
+      maxRetries: 0,
+      abortSignal,
+    })
+  );
   return object.result;
 }
 
@@ -250,10 +282,11 @@ async function analyzeSubtitlesForContext(
   const temperature = opts.temperature ?? 0.3;
 
   try {
-    const result = await generateText({
-      model: ai(opts.model),
-      temperature,
-      system: `# System Prompt
+    const result = await withAbortTimeout((abortSignal) =>
+      generateText({
+        model: ai(opts.model),
+        temperature,
+        system: `# System Prompt
 
 You are a subtitle content analyst assisting a translation and glossary extraction system.
 
@@ -282,11 +315,13 @@ Use exactly this markdown structure:
 
 ### 📚 Glossary
 - term: ... | description: ... | category: ... | preferredTranslation: ... | notes: ...`,
-      prompt:
-        `Produce plot summary in ${opts.lang} and glossary from this subtitle sample:\n` +
-        subtitles.join("\n"),
-      maxRetries: 2,
-    });
+        prompt:
+          `Produce plot summary in ${opts.lang} and glossary from this subtitle sample:\n` +
+          subtitles.join("\n"),
+        maxRetries: 0,
+        abortSignal,
+      })
+    );
 
     return result.text?.trim() || "";
   } catch {
