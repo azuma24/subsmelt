@@ -71,6 +71,7 @@ export async function processQueue(onlyIds?: number[]) {
         await translateFile({
           srtPath: job.srt_path,
           outputPath: job.output_path,
+          outputFormat: task?.output_format,
           apiKey: settings.api_key || "",
           apiHost: settings.llm_endpoint || "http://localhost:8000/v1",
           model: settings.model || "",

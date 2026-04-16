@@ -161,6 +161,8 @@
     "noTasksHint": "使用上方快速新增按鈕，或點擊「+ 新增翻譯」。",
     "sourceLang": "來源語言",
     "targetLang": "翻譯目標",
+    "outputFormat": "輸出格式",
+    "outputFormatHelp": "選擇翻譯輸出檔案的字幕格式。",
     "outputPattern": "輸出檔名格式",
     "langCode": "語言代碼",
     "langCodeHelp": "用於輸出檔名的短代碼，只能使用字母和數字。",

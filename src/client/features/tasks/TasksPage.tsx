@@ -5,7 +5,7 @@ import { useTasksQuery, useMutationWithInvalidation } from "../../hooks";
 import type { Task } from "../../types";
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmModal";
-import { PRESETS } from "../../app/constants";
+import { PRESETS, SUBTITLE_FORMATS } from "../../app/constants";
 import { ActionButton, EmptyHint, Field } from "../../ui/primitives";
 
 interface UpdateTaskVars {
@@ -30,7 +30,7 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
   const handleSave = async () => {
     if (!editing || !editing.target_lang || !editing.lang_code) return;
     if (isNew) {
-      await createMutation.mutateAsync({ source_lang: editing.source_lang || "English", target_lang: editing.target_lang, output_pattern: editing.output_pattern || "{{name}}.{{lang_code}}.srt", lang_code: editing.lang_code });
+      await createMutation.mutateAsync({ source_lang: editing.source_lang || "English", target_lang: editing.target_lang, output_pattern: editing.output_pattern || "{{name}}.{{lang_code}}.srt", output_format: editing.output_format || "srt", lang_code: editing.lang_code });
       if (editing.prompt_override) {
         const allTasks = await api.getTasks();
         const newest = allTasks[allTasks.length - 1];
@@ -55,7 +55,7 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
   };
 
   const openNew = (preset?: typeof PRESETS[number]) => {
-    setEditing({ source_lang: "English", target_lang: preset?.target_lang || "", output_pattern: preset?.output_pattern || "{{name}}.{{lang_code}}.srt", lang_code: preset?.lang_code || "", prompt_override: "" });
+    setEditing({ source_lang: "English", target_lang: preset?.target_lang || "", output_pattern: preset?.output_pattern || "{{name}}.{{lang_code}}.srt", output_format: preset?.output_format || "srt", lang_code: preset?.lang_code || "", prompt_override: "" });
     setIsNew(true);
     setShowPromptOverride(false);
   };
@@ -63,7 +63,7 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
   const langCodeError = editing?.lang_code && /[^a-zA-Z0-9\-_]/.test(editing.lang_code) ? t("translation_languages.langCodeError") : "";
   const patternError = editing?.output_pattern && !editing.output_pattern.includes("{{name}}") ? t("translation_languages.patternError") : "";
   const canSave = editing?.target_lang && editing?.lang_code && !langCodeError && !patternError;
-  const previewExample = editing?.output_pattern ? editing.output_pattern.replace("{{name}}", "The.Matrix.1999").replace("{{lang_code}}", editing.lang_code || "xx").replace("{{ext}}", "srt") : "";
+  const previewExample = editing?.output_pattern ? editing.output_pattern.replace("{{name}}", "The.Matrix.1999").replace("{{lang_code}}", editing.lang_code || "xx").replace("{{ext}}", editing.output_format || "srt") : "";
 
   return (
     <div className="mx-auto max-w-[1200px] space-y-6 p-4 md:p-6">
@@ -87,7 +87,7 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 text-sm font-medium text-gray-200"><span>{task.source_lang}</span><span className="text-gray-600">→</span><span>{task.target_lang}</span></div>
                 <div className="mt-2 space-y-2 text-xs text-gray-500">
-                  <div className="font-mono rounded-xl bg-gray-800 px-2 py-1 inline-block">{task.output_pattern}</div>
+                  <div className="flex items-center gap-2"><span className="font-mono rounded-xl bg-gray-800 px-2 py-1 inline-block">{task.output_pattern}</span><span className="rounded-lg bg-blue-900/30 px-2 py-0.5 text-[10px] font-mono font-medium text-blue-400">.{task.output_format || "srt"}</span></div>
                   <div>{t("translation_languages.langCodeLabel", { code: task.lang_code })}</div>
                   {task.prompt_override && <div className="text-blue-400">{t("translation_languages.customPrompt")}</div>}
                 </div>
@@ -112,6 +112,15 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
                 <Field label={t("translation_languages.sourceLang")} value={editing.source_lang || ""} onChange={(v) => setEditing({ ...editing, source_lang: v })} placeholder="English" />
                 <Field label={t("translation_languages.targetLang")} value={editing.target_lang || ""} onChange={(v) => setEditing({ ...editing, target_lang: v })} placeholder="Traditional Chinese (Taiwan)" required />
                 <Field label={t("translation_languages.langCode")} value={editing.lang_code || ""} onChange={(v) => setEditing({ ...editing, lang_code: v })} placeholder="chi" error={langCodeError} help={t("translation_languages.langCodeHelp")} required />
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-300">{t("translation_languages.outputFormat")}</label>
+                  <div className="flex gap-2">
+                    {SUBTITLE_FORMATS.map((fmt) => (
+                      <button key={fmt} type="button" onClick={() => { const cur = editing.output_pattern || ""; const updated = cur.replace(/\.(srt|vtt|ass|ssa)$/i, `.${fmt}`); setEditing({ ...editing, output_format: fmt, output_pattern: updated !== cur ? updated : cur }); }} className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-mono font-medium transition-colors ${(editing.output_format || "srt") === fmt ? "bg-blue-600 text-white ring-1 ring-blue-500" : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200"}`}>.{fmt}</button>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-[10px] text-gray-600">{t("translation_languages.outputFormatHelp")}</p>
+                </div>
                 <Field label={t("translation_languages.outputPattern")} value={editing.output_pattern || ""} onChange={(v) => setEditing({ ...editing, output_pattern: v })} placeholder="{{name}}.{{lang_code}}.srt" error={patternError} help={t("translation_languages.patternHelp")} />
                 {previewExample && <div className="rounded-2xl bg-gray-800 p-3 text-xs font-mono"><div className="text-gray-500">{t("translation_languages.previewSource")} <span className="text-gray-400">The.Matrix.1999.en.srt</span></div><div className="mt-1 text-gray-500">{t("translation_languages.previewOutput")} <span className="text-green-400">{previewExample}</span></div></div>}
                 {!showPromptOverride ? <button onClick={() => setShowPromptOverride(true)} className="text-xs text-blue-400">{t("translation_languages.addPromptOverride")}</button> : <div><div className="mb-1 flex items-center justify-between"><label className="text-sm font-medium text-gray-300">{t("translation_languages.promptOverride")}</label><button onClick={() => { setShowPromptOverride(false); setEditing({ ...editing, prompt_override: "" }); }} className="text-[10px] text-gray-600">{t("translation_languages.removePromptOverride")}</button></div><textarea value={editing.prompt_override || ""} onChange={(e) => setEditing({ ...editing, prompt_override: e.target.value })} rows={5} placeholder={t("translation_languages.promptOverridePlaceholder")} className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-2 text-xs text-gray-200 font-mono" /><p className="mt-1 text-[10px] text-gray-600">{t("translation_languages.promptOverrideHint")}</p></div>}

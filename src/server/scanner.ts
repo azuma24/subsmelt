@@ -352,7 +352,8 @@ export function scanFolder(createJobs = true): ScanResult {
     const isOutputFile = enabledTasks.some((task: any) => {
       // Check against every possible base stem in the same directory
       // by testing if removing the task suffix yields a valid source file
-      const testPattern = applyPattern(task.output_pattern, "TEST_MARKER", task.lang_code, extNoDot);
+      const testExt = task.output_format || extNoDot;
+      const testPattern = applyPattern(task.output_pattern, "TEST_MARKER", task.lang_code, testExt);
       const outputStem = path.basename(testPattern, path.extname(testPattern));
       const suffix = outputStem.replace("TEST_MARKER", "");
       if (!suffix) return false;
@@ -392,7 +393,8 @@ export function scanFolder(createJobs = true): ScanResult {
 
     // For each enabled task, compute output and check status
     for (const task of enabledTasks) {
-      const outputName = applyPattern(task.output_pattern, baseStem, task.lang_code, extNoDot);
+      const outputExt = task.output_format || extNoDot;
+      const outputName = applyPattern(task.output_pattern, baseStem, task.lang_code, outputExt);
       const outputPath = path.join(dir, outputName);
       const outputExists = fs.existsSync(outputPath);
 

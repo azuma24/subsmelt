@@ -161,6 +161,8 @@
     "noTasksHint": "上のクイック追加ボタンを使うか、「+ 翻訳を追加」をクリックしてください。",
     "sourceLang": "ソース言語",
     "targetLang": "翻訳ターゲット",
+    "outputFormat": "出力形式",
+    "outputFormatHelp": "翻訳出力ファイルの字幕形式を選択してください。",
     "outputPattern": "出力ファイル名パターン",
     "langCode": "言語コード",
     "langCodeHelp": "出力ファイル名の短いコード。英数字のみ使用可能。",

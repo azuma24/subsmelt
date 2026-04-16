@@ -13,6 +13,7 @@ interface TranslationTask {
   source_lang: string;
   target_lang: string;
   output_pattern: string;
+  output_format: string;
   lang_code: string;
   enabled: number;
   prompt_override: string;
@@ -62,6 +63,7 @@ const DEFAULT_TASK: TranslationTask = {
   source_lang: "English",
   target_lang: "Traditional Chinese (Taiwan)",
   output_pattern: "{{name}}.chi.srt",
+  output_format: "srt",
   lang_code: "chi",
   enabled: 1,
   prompt_override: "",
@@ -78,6 +80,11 @@ function loadConfig(): ConfigData {
       // Merge defaults for any missing settings
       data.settings = { ...DEFAULT_SETTINGS, ...data.settings };
       if (!data.tasks) data.tasks = [DEFAULT_TASK];
+      // Migrate existing tasks: add output_format if missing
+      data.tasks = data.tasks.map((t) => ({
+        ...t,
+        output_format: t.output_format || "srt",
+      }));
       if (!data._next_task_id) data._next_task_id = Math.max(0, ...data.tasks.map((t) => t.id)) + 1;
       return data;
     }
@@ -139,6 +146,7 @@ export function createTask(task: {
   source_lang: string;
   target_lang: string;
   output_pattern: string;
+  output_format?: string;
   lang_code: string;
 }): { lastInsertRowid: number } {
   const id = _config._next_task_id++;
@@ -147,6 +155,7 @@ export function createTask(task: {
     source_lang: task.source_lang,
     target_lang: task.target_lang,
     output_pattern: task.output_pattern,
+    output_format: task.output_format || "srt",
     lang_code: task.lang_code,
     enabled: 1,
     prompt_override: "",
@@ -163,6 +172,7 @@ export function updateTask(
     source_lang: string;
     target_lang: string;
     output_pattern: string;
+    output_format: string;
     lang_code: string;
     enabled: number;
     prompt_override: string;

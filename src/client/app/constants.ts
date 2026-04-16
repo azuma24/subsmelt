@@ -30,15 +30,17 @@ export const STATUS_LABEL_KEY: Record<string, string> = {
   new: "dashboard.status.new",
 };
 
+export const SUBTITLE_FORMATS = ["srt", "vtt", "ass", "ssa"] as const;
+
 export const PRESETS = [
-  { label: "繁體中文", target_lang: "Traditional Chinese (Taiwan)", lang_code: "chi", output_pattern: "{{name}}.chi.srt" },
-  { label: "日本語", target_lang: "Japanese", lang_code: "jpn", output_pattern: "{{name}}.jpn.srt" },
-  { label: "한국어", target_lang: "Korean", lang_code: "kor", output_pattern: "{{name}}.kor.srt" },
-  { label: "Español", target_lang: "Spanish", lang_code: "spa", output_pattern: "{{name}}.spa.srt" },
-  { label: "Français", target_lang: "French", lang_code: "fra", output_pattern: "{{name}}.fra.srt" },
-  { label: "Deutsch", target_lang: "German", lang_code: "deu", output_pattern: "{{name}}.deu.srt" },
-  { label: "Português", target_lang: "Portuguese", lang_code: "por", output_pattern: "{{name}}.por.srt" },
-  { label: "简体中文", target_lang: "Simplified Chinese", lang_code: "chs", output_pattern: "{{name}}.chs.srt" },
+  { label: "繁體中文", target_lang: "Traditional Chinese (Taiwan)", lang_code: "chi", output_pattern: "{{name}}.chi.srt", output_format: "srt" },
+  { label: "日本語", target_lang: "Japanese", lang_code: "jpn", output_pattern: "{{name}}.jpn.srt", output_format: "srt" },
+  { label: "한국어", target_lang: "Korean", lang_code: "kor", output_pattern: "{{name}}.kor.srt", output_format: "srt" },
+  { label: "Español", target_lang: "Spanish", lang_code: "spa", output_pattern: "{{name}}.spa.srt", output_format: "srt" },
+  { label: "Français", target_lang: "French", lang_code: "fra", output_pattern: "{{name}}.fra.srt", output_format: "srt" },
+  { label: "Deutsch", target_lang: "German", lang_code: "deu", output_pattern: "{{name}}.deu.srt", output_format: "srt" },
+  { label: "Português", target_lang: "Portuguese", lang_code: "por", output_pattern: "{{name}}.por.srt", output_format: "srt" },
+  { label: "简体中文", target_lang: "Simplified Chinese", lang_code: "chs", output_pattern: "{{name}}.chs.srt", output_format: "srt" },
 ] as const;
 
 export const DEFAULT_PROMPT = `// You are a professional subtitle translator.

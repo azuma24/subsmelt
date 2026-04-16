@@ -3,6 +3,7 @@ export interface Task {
   source_lang: string;
   target_lang: string;
   output_pattern: string;
+  output_format: string;
   lang_code: string;
   enabled: number;
   prompt_override: string;

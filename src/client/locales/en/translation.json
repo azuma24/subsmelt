@@ -161,6 +161,8 @@
     "noTasksHint": "Use the quick-add buttons above or click + Add Translation.",
     "sourceLang": "Source language",
     "targetLang": "Target translation",
+    "outputFormat": "Output Format",
+    "outputFormatHelp": "Select the subtitle format for the translated output file.",
     "outputPattern": "Output Filename Pattern",
     "langCode": "Language Code",
     "langCodeHelp": "Short code for the output filename. Letters and numbers only.",

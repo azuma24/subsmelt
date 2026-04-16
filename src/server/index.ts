@@ -91,12 +91,13 @@ app.post("/api/settings", (req, res) => {
 app.get("/api/tasks", (_req, res) => res.json(getTasks()));
 
 app.post("/api/tasks", (req, res) => {
-  const { source_lang, target_lang, output_pattern, lang_code } = req.body;
+  const { source_lang, target_lang, output_pattern, output_format, lang_code } = req.body;
   if (!target_lang || !lang_code) return res.status(400).json({ error: "target_lang and lang_code are required" });
   const result = createTask({
     source_lang: source_lang || "English",
     target_lang,
     output_pattern: output_pattern || "{{name}}.{{lang_code}}.srt",
+    output_format: output_format || "srt",
     lang_code,
   });
   logger.info("system", `Created translation task: ${target_lang} (${lang_code})`);
