@@ -52,6 +52,48 @@ function extractJsonFromText(value: string): unknown {
   return null;
 }
 
+function stripMarkdownFences(value: string): string {
+  const trimmed = value.trim();
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  if (fenced?.[1]) return fenced[1].trim();
+  return trimmed;
+}
+
+function coerceTranslatedArray(parsed: unknown): string[] | null {
+  if (Array.isArray(parsed) && parsed.every((item) => typeof item === "string")) {
+    return parsed;
+  }
+  if (parsed && typeof parsed === "object") {
+    const obj = parsed as Record<string, unknown>;
+    const candidates = [obj.translated, obj.result, obj.results, obj.translations];
+    for (const value of candidates) {
+      if (Array.isArray(value) && value.every((item) => typeof item === "string")) {
+        return value as string[];
+      }
+    }
+  }
+  return null;
+}
+
+function coerceSingleTranslation(parsed: unknown, rawText: string): string | null {
+  if (typeof parsed === "string" && parsed.trim()) return parsed.trim();
+  if (parsed && typeof parsed === "object") {
+    const obj = parsed as Record<string, unknown>;
+    const candidates = [obj.result, obj.translated, obj.translation, obj.text];
+    for (const value of candidates) {
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+  }
+
+  const cleaned = stripMarkdownFences(rawText);
+  if (!cleaned) return null;
+
+  const quoted = cleaned.match(/^"([\s\S]*)"$/);
+  if (quoted?.[1]) return quoted[1].trim();
+
+  return cleaned;
+}
+
 const REQUEST_TIMEOUT_MS = Math.max(
   5_000,
   Number.parseInt(process.env.TRANSLATION_REQUEST_TIMEOUT_MS || "45000", 10) || 45_000
@@ -232,11 +274,10 @@ async function translateChunk(
   );
 
   const parsed = extractJsonFromText(textResult.text || "");
-  if (Array.isArray(parsed) && parsed.every((item) => typeof item === "string")) {
-    return parsed;
-  }
+  const translated = coerceTranslatedArray(parsed);
+  if (translated) return translated;
 
-  throw new Error("Model did not return a valid JSON array of translated subtitles");
+  throw new Error("Model did not return a valid translated array payload");
 }
 
 async function translateSingle(
@@ -299,12 +340,12 @@ async function translateSingle(
     })
   );
 
-  const parsed = extractJsonFromText(textResult.text || "");
-  if (parsed && typeof parsed === "object" && typeof (parsed as any).result === "string") {
-    return (parsed as any).result;
-  }
+  const rawText = textResult.text || "";
+  const parsed = extractJsonFromText(rawText);
+  const single = coerceSingleTranslation(parsed, rawText);
+  if (single) return single;
 
-  throw new Error("Model did not return a valid JSON object for single subtitle translation");
+  throw new Error("Model did not return a usable single subtitle translation payload");
 }
 
 async function analyzeSubtitlesForContext(
