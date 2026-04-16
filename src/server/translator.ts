@@ -4,7 +4,7 @@ import { parseSync, stringifySync } from "subtitle";
 import assParser from "ass-parser";
 import assStringify from "ass-stringify";
 import { z } from "zod";
-import { generateObject, generateText, tool } from "ai";
+import { generateText, tool } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 function getAi({ apiKey, apiHost }: { apiKey: string; apiHost: string }) {
@@ -21,6 +21,35 @@ function tryJsonParse(value: string): unknown {
   } catch {
     return null;
   }
+}
+
+function extractJsonFromText(value: string): unknown {
+  const direct = tryJsonParse(value);
+  if (direct != null) return direct;
+
+  const fenced = value.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenced?.[1]) {
+    const parsedFence = tryJsonParse(fenced[1].trim());
+    if (parsedFence != null) return parsedFence;
+  }
+
+  const startObj = value.indexOf("{");
+  const endObj = value.lastIndexOf("}");
+  if (startObj >= 0 && endObj > startObj) {
+    const maybeObj = value.slice(startObj, endObj + 1);
+    const parsedObj = tryJsonParse(maybeObj);
+    if (parsedObj != null) return parsedObj;
+  }
+
+  const startArr = value.indexOf("[");
+  const endArr = value.lastIndexOf("]");
+  if (startArr >= 0 && endArr > startArr) {
+    const maybeArr = value.slice(startArr, endArr + 1);
+    const parsedArr = tryJsonParse(maybeArr);
+    if (parsedArr != null) return parsedArr;
+  }
+
+  return null;
 }
 
 const REQUEST_TIMEOUT_MS = Math.max(
@@ -187,20 +216,27 @@ async function translateChunk(
     // fall through to generateObject
   }
 
-  const { object } = await withAbortTimeout((abortSignal) =>
-    generateObject({
+  const textResult = await withAbortTimeout((abortSignal) =>
+    generateText({
       model: ai(opts.model),
       temperature: opts.temperature,
-      schema: z.array(z.string().describe("The translated subtitles")),
-      prompt:
+      system:
         opts.systemPrompt +
-        "\nOutput must be valid json. Respond with a JSON object that matches the schema. Return only JSON.\n\n" +
+        "\nReturn only JSON array of strings. No markdown, no prose.",
+      prompt:
+        "Translate the following subtitles. Return ONLY a JSON array of translated strings with the exact same length and order as input.\n\n" +
         JSON.stringify(subtitles),
       maxRetries: 0,
       abortSignal,
     })
   );
-  return object;
+
+  const parsed = extractJsonFromText(textResult.text || "");
+  if (Array.isArray(parsed) && parsed.every((item) => typeof item === "string")) {
+    return parsed;
+  }
+
+  throw new Error("Model did not return a valid JSON array of translated subtitles");
 }
 
 async function translateSingle(
@@ -250,20 +286,25 @@ async function translateSingle(
     // fall through
   }
 
-  const { object } = await withAbortTimeout((abortSignal) =>
-    generateObject({
+  const textResult = await withAbortTimeout((abortSignal) =>
+    generateText({
       model: ai(opts.model),
       temperature: opts.temperature,
-      schema: z.object({ result: z.string() }),
+      system: opts.systemPrompt + "\nReturn only JSON object: {\"result\":\"...\"}.",
       prompt:
-        opts.systemPrompt +
-        "\nOutput must be valid json. Respond with a JSON object that matches the schema. Return only JSON.\n\n" +
+        "Translate the following subtitle. Return ONLY JSON object with key 'result'.\n\n" +
         JSON.stringify(subtitle),
       maxRetries: 0,
       abortSignal,
     })
   );
-  return object.result;
+
+  const parsed = extractJsonFromText(textResult.text || "");
+  if (parsed && typeof parsed === "object" && typeof (parsed as any).result === "string") {
+    return (parsed as any).result;
+  }
+
+  throw new Error("Model did not return a valid JSON object for single subtitle translation");
 }
 
 async function analyzeSubtitlesForContext(
