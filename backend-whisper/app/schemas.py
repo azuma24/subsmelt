@@ -8,6 +8,12 @@ OutputFormat = Literal["srt", "vtt", "txt"]
 PostAction = Literal["transcribe_only", "transcribe_and_translate"]
 
 
+class SubtitleQualityOptions(BaseModel):
+    max_line_length: int | None = None
+    max_subtitle_duration: float | None = None
+    merge_short_segments: bool = False
+
+
 class TranscribeRequest(BaseModel):
     input_path: str
     output_format: OutputFormat = "srt"
@@ -18,6 +24,7 @@ class TranscribeRequest(BaseModel):
     use_vad: bool = True
     post_action: PostAction = "transcribe_only"
     allow_unsafe: bool = False
+    subtitle_quality: SubtitleQualityOptions | None = None
 
 
 class HealthResponse(BaseModel):

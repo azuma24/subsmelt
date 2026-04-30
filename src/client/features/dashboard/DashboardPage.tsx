@@ -3,10 +3,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
-import { useJobsQuery, useMutationWithInvalidation, useQueueStatusQuery, useSettingsQuery, useTasksQuery } from "../../hooks";
+import { useJobsQuery, useMutationWithInvalidation, useQueueStatusQuery, useSettingsQuery, useTasksQuery, useTranscriptionHistoryQuery } from "../../hooks";
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmModal";
-import type { JobRow, ScannedFile, TranscribePostAction } from "../../types";
+import type { JobRow, ScannedFile, TranscribePostAction, TranscriptionHistoryEntry } from "../../types";
 import { ActionButton, EmptyHint, StatCard } from "../../ui/primitives";
 import { ActiveJobCard } from "./ActiveJobCard";
 import { JobsTableDesktop } from "./JobsTableDesktop";
@@ -50,6 +50,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const tasksQuery = useTasksQuery();
   const settingsQuery = useSettingsQuery();
   const queueStatusQuery = useQueueStatusQuery();
+  const transcriptionHistoryQuery = useTranscriptionHistoryQuery(true, 8);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [scanResult, setScanResult] = useState<ScannedFile[] | null>(null);
   const [scanListFilter, setScanListFilter] = useState<ScanFilter>("all");
@@ -75,6 +76,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const retrySelectedMutation = useMutationWithInvalidation((ids: number[]) => api.retryJobsApi(ids));
   const forceSelectedMutation = useMutationWithInvalidation((ids: number[]) => api.forceJobsApi(ids));
   const transcribeMutation = useMutationWithInvalidation((payload: { videoPath: string; postAction: TranscribePostAction }) => api.transcribeVideo(payload));
+  const retryTranscriptionMutation = useMutationWithInvalidation((id: string) => api.retryTranscriptionAttempt(id));
 
   const jobs: JobRow[] = jobsQuery.data?.jobs || [];
   const queueRunning = Boolean(queueStatusQuery.data?.running ?? jobsQuery.data?.queueRunning ?? false);
@@ -87,6 +89,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const enabledTaskCount = tasks.filter((x) => x.enabled === 1).length;
   const hasLlmConfig = Boolean(str(settings.llm_endpoint)) && Boolean(str(settings.model));
   const transcriptionEnabled = str(settings.transcription_enabled, "0") === "1";
+  const transcriptionAttempts = transcriptionHistoryQuery.data?.attempts || [];
 
   const pendingJobs = jobs.filter((j) => j.status === "pending");
   const selectedPendingCount = pendingJobs.filter((j) => selectedIds.has(j.id)).length;
@@ -294,6 +297,23 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
     }
   };
 
+  const handleRetryTranscription = async (attempt: TranscriptionHistoryEntry) => {
+    setTranscribingPath(attempt.inputPath);
+    try {
+      const result = await retryTranscriptionMutation.mutateAsync(attempt.id);
+      if (result.scanResult?.files) {
+        setScanResult(result.scanResult.files);
+        setScanResultMode(attempt.postAction === "transcribe_and_translate" ? "queued" : "preview");
+        expandInterestingScanGroups(result.scanResult.files);
+      }
+      addToast("Transcription retried.", "success");
+    } catch (e: unknown) {
+      addToast(`Retry failed: ${getErrorMessage(e)}`, "error");
+    } finally {
+      setTranscribingPath(null);
+    }
+  };
+
   const toggleSelectedJob = (id: number) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -394,6 +414,54 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
           <StatCard label={t("dashboard.stat.done")} value={doneJobs.length} color="text-green-400" />
           <StatCard label={t("dashboard.stat.errors")} value={errorJobs.length} color="text-red-400" />
         </section>
+
+        {transcriptionEnabled && (
+          <section className="rounded-3xl border border-gray-800 bg-gray-900/80 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-white">Recent transcriptions</h2>
+                <p className="text-xs text-gray-500">History is JSON-backed and safe to keep outside the jobs queue.</p>
+              </div>
+              <span className="text-[11px] text-gray-500">{transcriptionAttempts.length} shown</span>
+            </div>
+            {transcriptionAttempts.length === 0 ? (
+              <div className="mt-3 text-sm text-gray-500">No transcription attempts yet.</div>
+            ) : (
+              <div className="mt-3 space-y-2">
+                {transcriptionAttempts.map((attempt) => {
+                  const title = attempt.inputPath.split(/[\\/]/).pop() || attempt.inputPath;
+                  const activeRetry = transcribingPath === attempt.inputPath && retryTranscriptionMutation.isPending;
+                  return (
+                    <div key={attempt.id} className="flex flex-col gap-3 rounded-2xl border border-gray-800 bg-gray-950/50 p-3 md:flex-row md:items-center md:justify-between">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium text-gray-200">{title}</div>
+                        <div className="mt-1 text-xs text-gray-500">
+                          {attempt.model} • {attempt.language} • {attempt.outputFormat.toUpperCase()} • {attempt.postAction === "transcribe_and_translate" ? "queue translate" : "transcribe only"}
+                        </div>
+                        <div className="mt-1 text-xs text-gray-500">
+                          {attempt.status === "failed" ? (attempt.errorSummary || "Transcription failed") : attempt.finishedAt || attempt.startedAt}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`rounded-full px-3 py-1 text-[11px] ${attempt.status === "succeeded" ? "bg-green-900/30 text-green-300" : attempt.status === "failed" ? "bg-red-900/30 text-red-300" : "bg-blue-900/30 text-blue-300"}`}>
+                          {attempt.status}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRetryTranscription(attempt)}
+                          disabled={activeRetry || transcribeMutation.isPending}
+                          className="rounded-lg bg-gray-800 px-3 py-2 text-xs font-medium text-gray-200 disabled:opacity-40"
+                        >
+                          {activeRetry ? "Retrying…" : "Retry"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="overflow-hidden rounded-3xl border border-gray-800 bg-gray-900/80">
           <div className="space-y-3 border-b border-gray-800 px-4 py-3">

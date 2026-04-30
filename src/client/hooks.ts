@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "./api";
-import type { JobPreview, LlmHealth, LogEntry, QueueStatus, Task, TranscriptionHealth } from "./types";
+import type { JobPreview, LlmHealth, LogEntry, QueueStatus, Task, TranscriptionHealth, TranscriptionHistoryEntry } from "./types";
 
 export type SSEEventName =
   | "job:progress"
@@ -79,6 +79,15 @@ export function useTranscriptionHealthQuery(enabled = true) {
   });
 }
 
+export function useTranscriptionHistoryQuery(enabled = true, limit = 10) {
+  return useQuery<{ attempts: TranscriptionHistoryEntry[] }>({
+    queryKey: ["transcription-history", limit],
+    queryFn: () => api.getTranscriptionHistory(limit),
+    enabled,
+    refetchInterval: enabled ? 10_000 : false,
+  });
+}
+
 export function useJobPreview(jobId: number | null) {
   return useQuery<JobPreview>({
     queryKey: ["job-preview", jobId],
@@ -96,6 +105,7 @@ export function useInvalidateApp() {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["settings"] });
       queryClient.invalidateQueries({ queryKey: ["logs"] });
+      queryClient.invalidateQueries({ queryKey: ["transcription-history"] });
     },
     [queryClient]
   );
@@ -126,6 +136,7 @@ export function useSSE(onEvent?: SSEEventHandler) {
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       queryClient.invalidateQueries({ queryKey: ["queue-status"] });
       queryClient.invalidateQueries({ queryKey: ["logs"] });
+      queryClient.invalidateQueries({ queryKey: ["transcription-history"] });
     };
 
     const bind = (name: SSEEventName) => {
