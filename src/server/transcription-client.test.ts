@@ -1,0 +1,109 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {
+  assertMediaPathAllowed,
+  applyPreflightPolicy,
+  buildTranscriptionRequest,
+  normalizeTranscriptionBackendUrl,
+  transcribePostActionValues,
+} from "./transcription-client.js";
+
+test("assertMediaPathAllowed accepts files under the media root", () => {
+  assert.equal(assertMediaPathAllowed("/media/anime/Episode 01.mkv", "/media"), "/media/anime/Episode 01.mkv");
+});
+
+test("assertMediaPathAllowed rejects paths outside the media root", () => {
+  assert.throws(() => assertMediaPathAllowed("/etc/passwd", "/media"), /outside media directory/);
+  assert.throws(() => assertMediaPathAllowed("/media-not-really/video.mkv", "/media"), /outside media directory/);
+});
+
+test("normalizeTranscriptionBackendUrl trims trailing slashes", () => {
+  assert.equal(normalizeTranscriptionBackendUrl("http://whisper-backend:8001///"), "http://whisper-backend:8001");
+});
+
+test("buildTranscriptionRequest keeps whisper behavior app-owned", () => {
+  const request = buildTranscriptionRequest({
+    videoPath: "/media/anime/Episode 01.mkv",
+    mediaDir: "/media",
+    settings: {
+      transcription_model: "base",
+      transcription_device: "cpu",
+      transcription_compute_type: "int8",
+      transcription_language: "ja",
+      transcription_use_vad: "1",
+      transcription_output_format: "vtt",
+    },
+    postAction: "transcribe_and_translate",
+  });
+
+  assert.deepEqual(request, {
+    input_path: "/media/anime/Episode 01.mkv",
+    output_format: "vtt",
+    model: "base",
+    language: "ja",
+    device: "cpu",
+    compute_type: "int8",
+    use_vad: true,
+    post_action: "transcribe_and_translate",
+  });
+});
+
+test("transcribe post action values remain restricted", () => {
+  assert.deepEqual(transcribePostActionValues, ["transcribe_only", "transcribe_and_translate"]);
+});
+
+test("applyPreflightPolicy downgrades low-RAM requests when configured", async () => {
+  const calls: unknown[] = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+    calls.push(JSON.parse(String(init?.body)));
+    const body = calls.length === 1
+      ? { ok: false, safe: false, code: "insufficient_ram", availableRamMb: 4096, requiredRamMb: 8192, suggestedModel: "small" }
+      : { ok: true, safe: true, code: "ok" };
+    return Response.json(body);
+  }) as typeof fetch;
+  try {
+    const request = await applyPreflightPolicy(
+      "http://whisper-backend:8001",
+      {
+        input_path: "/media/Episode.mkv",
+        output_format: "srt",
+        model: "medium",
+        language: "auto",
+        device: "cpu",
+        compute_type: "int8",
+        use_vad: true,
+        post_action: "transcribe_only",
+      },
+      { transcription_low_ram_behavior: "downgrade" },
+    );
+    assert.equal(request.model, "small");
+    assert.equal(calls.length, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("applyPreflightPolicy sends explicit unsafe override only for run_anyway", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => Response.json({ ok: false, safe: false, code: "insufficient_ram", availableRamMb: 1024, requiredRamMb: 4096 })) as typeof fetch;
+  try {
+    const request = await applyPreflightPolicy(
+      "http://whisper-backend:8001",
+      {
+        input_path: "/media/Episode.mkv",
+        output_format: "srt",
+        model: "small",
+        language: "auto",
+        device: "cpu",
+        compute_type: "int8",
+        use_vad: true,
+        post_action: "transcribe_only",
+      },
+      { transcription_low_ram_behavior: "run_anyway" },
+    );
+    assert.equal(request.allow_unsafe, true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

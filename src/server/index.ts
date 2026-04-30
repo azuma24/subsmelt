@@ -40,6 +40,16 @@ import {
   stopAutoScan,
 } from "./queue.js";
 import { testConnection, parseSubtitle } from "./translator.js";
+import {
+  applyPreflightPolicy,
+  buildTranscriptionRequest,
+  fetchTranscriptionHealth,
+  preflightTranscription,
+  transcribePostActionValues,
+  transcribeWithBackend,
+  type TranscribePostAction,
+  type TranscriptionOutputFormat,
+} from "./transcription-client.js";
 import { logger } from "./logger.js";
 import { addSSEClient, broadcast } from "./sse.js";
 import { startWatcher, stopWatcher, isWatcherRunning, restartWatcher } from "./watcher.js";
@@ -126,9 +136,40 @@ app.get("/api/folders/tree", (_req, res) => {
 });
 
 // ======== Scanner ========
-app.post("/api/scan", (_req, res) => {
+app.post("/api/scan", async (_req, res) => {
   try {
-    const result = scanFolder(true);
+    let result = scanFolder(true);
+    const settings = getAllSettings();
+    const behavior = settings.transcription_missing_subtitle_behavior || "ask";
+    const backendUrl = getTranscriptionBackendUrl(settings);
+    if (settings.transcription_enabled === "1" && backendUrl && behavior !== "ask") {
+      const postAction: TranscribePostAction = behavior === "auto_transcribe_and_translate" ? "transcribe_and_translate" : "transcribe_only";
+      const missingVideos = result.files
+        .filter((file) => file.videoPath && file.subtitles.length === 0)
+        .map((file) => file.videoPath as string);
+      const maxConcurrent = Math.max(1, Math.min(4, parseInt(settings.transcription_max_concurrent || "1", 10) || 1));
+      for (let i = 0; i < missingVideos.length; i += maxConcurrent) {
+        const batch = missingVideos.slice(i, i + maxConcurrent);
+        await Promise.all(batch.map(async (videoPath) => {
+          try {
+            const request = buildTranscriptionRequest({ videoPath, mediaDir: MEDIA_DIR, settings, postAction });
+            const checkedRequest = await applyPreflightPolicy(backendUrl, request, settings);
+            const transcribed = await transcribeWithBackend(backendUrl, checkedRequest);
+            logger.info("system", `Auto-transcribed ${path.basename(videoPath)} → ${transcribed.subtitle_path || "subtitle output"}`);
+          } catch (error: any) {
+            const message = error?.message || String(error);
+            if (settings.transcription_low_ram_behavior === "skip" && message.startsWith("Transcription skipped:")) {
+              logger.info("system", `Skipped auto-transcription for ${path.basename(videoPath)}: ${message}`);
+              return;
+            }
+            throw error;
+          }
+        }));
+      }
+      if (missingVideos.length > 0) {
+        result = scanFolder(postAction === "transcribe_and_translate");
+      }
+    }
     if (result.newJobs > 0 && getSetting("auto_translate") === "1") {
       setTimeout(() => processQueue(), 100);
     }
@@ -446,6 +487,82 @@ app.get("/api/llm-health", async (_req, res) => {
   }
 });
 
+// ======== Speech-to-text / transcription ========
+function getTranscriptionBackendUrl(settings = getAllSettings()): string {
+  return (settings.transcription_backend_url || process.env.WHISPER_BACKEND_URL || "").replace(/\/+$/, "");
+}
+
+app.get("/api/transcribe/health", async (_req, res) => {
+  const settings = getAllSettings();
+  const backendUrl = getTranscriptionBackendUrl(settings);
+  if (!backendUrl) {
+    return res.json({ ok: false, endpointReachable: false, reason: "endpoint-missing" });
+  }
+  try {
+    const health = await fetchTranscriptionHealth(backendUrl);
+    return res.json({ ok: true, endpointReachable: true, backendUrl, health });
+  } catch (error: any) {
+    return res.json({ ok: false, endpointReachable: false, backendUrl, reason: "network-error", message: error?.message || "unknown" });
+  }
+});
+
+app.post("/api/transcribe/preflight", async (req, res) => {
+  const settings = getAllSettings();
+  const backendUrl = getTranscriptionBackendUrl(settings);
+  if (!backendUrl) return res.status(400).json({ error: "Transcription backend URL is not configured" });
+  const videoPath = typeof req.body?.videoPath === "string" ? req.body.videoPath : "";
+  if (!videoPath) return res.status(400).json({ error: "videoPath is required" });
+  try {
+    const request = buildTranscriptionRequest({
+      videoPath,
+      mediaDir: MEDIA_DIR,
+      settings,
+      outputFormat: req.body?.outputFormat as TranscriptionOutputFormat | undefined,
+      postAction: req.body?.postAction as TranscribePostAction | undefined,
+    });
+    const result = await preflightTranscription(backendUrl, request);
+    return res.json(result);
+  } catch (error: any) {
+    return res.status(400).json({ error: error?.message || "Transcription preflight failed" });
+  }
+});
+
+app.post("/api/transcribe", async (req, res) => {
+  const settings = getAllSettings();
+  if (settings.transcription_enabled !== "1") return res.status(400).json({ error: "Speech-to-text is disabled in settings" });
+  const backendUrl = getTranscriptionBackendUrl(settings);
+  if (!backendUrl) return res.status(400).json({ error: "Transcription backend URL is not configured" });
+  const videoPath = typeof req.body?.videoPath === "string" ? req.body.videoPath : "";
+  if (!videoPath) return res.status(400).json({ error: "videoPath is required" });
+  const requestedPostAction = req.body?.postAction as TranscribePostAction | undefined;
+  const postAction = requestedPostAction && transcribePostActionValues.includes(requestedPostAction) ? requestedPostAction : "transcribe_only";
+
+  try {
+    const request = buildTranscriptionRequest({
+      videoPath,
+      mediaDir: MEDIA_DIR,
+      settings,
+      outputFormat: req.body?.outputFormat as TranscriptionOutputFormat | undefined,
+      postAction,
+    });
+    const checkedRequest = await applyPreflightPolicy(backendUrl, request, settings);
+    const result = await transcribeWithBackend(backendUrl, checkedRequest);
+    logger.info("system", `Transcribed ${path.basename(videoPath)} → ${result.subtitle_path || "subtitle output"}`);
+
+    let scanResult: ReturnType<typeof scanFolder> | null = null;
+    if (postAction === "transcribe_and_translate") {
+      scanResult = scanFolder(true);
+      if (scanResult.newJobs > 0) setTimeout(() => processQueue(), 100);
+    }
+
+    const { ok: _backendOk, ...transcriptionResult } = result as { ok?: boolean } & Record<string, unknown>;
+    return res.json({ ok: true, ...transcriptionResult, postAction, scanResult });
+  } catch (error: any) {
+    logger.error("system", `Transcription failed: ${error?.message || error}`);
+    return res.status(400).json({ error: error?.message || "Transcription failed" });
+  }
+});
+
 // ======== List Models ========
 app.get("/api/models", async (_req, res) => {
   const settings = getAllSettings();
@@ -500,6 +617,7 @@ app.listen(PORT, "0.0.0.0", () => {
     llm_endpoint: process.env.LLM_ENDPOINT,
     api_key: process.env.API_KEY,
     model: process.env.MODEL,
+    transcription_backend_url: process.env.WHISPER_BACKEND_URL,
   };
   for (const [key, value] of Object.entries(envOverrides)) {
     if (value !== undefined && value !== "") setSetting(key, value);

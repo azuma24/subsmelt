@@ -110,3 +110,30 @@ export interface LlmHealth {
   reason?: string;
   message?: string;
 }
+
+export type TranscribePostAction = "transcribe_only" | "transcribe_and_translate";
+
+export interface TranscribeRequest {
+  videoPath: string;
+  outputFormat?: "srt" | "vtt" | "txt";
+  postAction?: TranscribePostAction;
+}
+
+export interface TranscribeResponse {
+  ok: boolean;
+  subtitle_path?: string;
+  language?: string;
+  segments?: number;
+  duration_seconds?: number;
+  postAction?: TranscribePostAction;
+  scanResult?: ScanResult | null;
+}
+
+export interface TranscriptionHealth {
+  ok: boolean;
+  endpointReachable: boolean;
+  backendUrl?: string;
+  reason?: string;
+  message?: string;
+  health?: unknown;
+}

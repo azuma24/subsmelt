@@ -21,8 +21,9 @@ One subtitle file. Multiple language outputs. Fully automated.
 - **Smart skipping** — Already-translated files are detected and skipped automatically
 - **Queue management** — Priority pinning, force re-translate, graceful stop, resumes on restart
 - **Supported formats** — `.srt`, `.vtt`, `.ass`, `.ssa`
+- **Optional speech-to-text** — Connect to a faster-whisper backend to generate source subtitles when videos have none
 - **Multi-language UI** — Interface available in English, 繁體中文, 简体中文, and 日本語
-- **Single container** — No external services, no database server; just one Docker image
+- **Simple core container** — No database server; optional transcription runs as a separate add-on or external service
 
 ---
 
@@ -94,6 +95,26 @@ On the **Dashboard**, click **Scan Folders**. The file tree shows every video, i
 
 Enable the **File Watcher** in Settings. New subtitle files are detected and queued within seconds — no manual scanning needed.
 
+### Optional: generate subtitles with speech-to-text
+
+SubSmelt does not require Whisper. By default it stays lightweight and translates existing subtitle files.
+
+If you want video/audio → source subtitle generation, point **Settings → Speech-to-text** at any compatible local transcription backend. The bundled faster-whisper add-on is optional:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.whisper.yml up -d
+```
+
+Then set the backend URL in the web UI to:
+
+```text
+http://whisper-backend:8001
+```
+
+Keep media mounts identical between SubSmelt and the backend. If SubSmelt sees `/media/anime/Episode 01.mkv`, the whisper backend must be able to read that exact same path.
+
+Recommended CPU defaults are `small`, `cpu`, `int8`, VAD enabled, and max concurrency `1`. SubSmelt runs a preflight check before transcription so low-RAM systems can warn, downgrade, skip, or block safely depending on your setting.
+
 ---
 
 ## Volumes
@@ -118,6 +139,7 @@ Enable the **File Watcher** in Settings. New subtitle files are detected and que
 | `LLM_ENDPOINT` | — | Override LLM endpoint on startup |
 | `API_KEY` | — | Override API key on startup |
 | `MODEL` | — | Override model name on startup |
+| `WHISPER_BACKEND_URL` | — | Optional speech-to-text backend URL override; behavior settings live in the web UI |
 
 ---
 

@@ -44,6 +44,17 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   auto_translate: "1",
   video_extensions: ".mkv,.mp4,.avi,.m4v,.ts,.wmv,.mov",
   subtitle_extensions: ".srt,.ass,.ssa,.vtt",
+  transcription_enabled: "0",
+  transcription_backend_url: "",
+  transcription_model: "small",
+  transcription_device: "cpu",
+  transcription_compute_type: "int8",
+  transcription_language: "auto",
+  transcription_use_vad: "1",
+  transcription_output_format: "srt",
+  transcription_missing_subtitle_behavior: "ask",
+  transcription_low_ram_behavior: "ask",
+  transcription_max_concurrent: "1",
   additional_context: "",
   prompt: `// You are a professional subtitle translator.
 // You will only receive subtitles and are only required to translate, no need for any replies.
