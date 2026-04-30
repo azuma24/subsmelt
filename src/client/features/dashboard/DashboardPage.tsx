@@ -70,6 +70,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const [targetFilter, setTargetFilter] = useState("all");
   const [scanPlan, setScanPlan] = useState<ScanPlan | null>(null);
   const [transcriptionProgressByPath, setTranscriptionProgressByPath] = useState<Record<string, ManualTranscriptionProgress>>({});
+  const [transcribingPath, setTranscribingPath] = useState<string | null>(null);
 
   const scanPreviewMutation = useMutationWithInvalidation(() => api.previewScan());
   const scanMutation = useMutationWithInvalidation(() => api.scanFolder());
