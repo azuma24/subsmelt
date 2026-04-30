@@ -282,6 +282,25 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
             placeholder="http://whisper-backend:8001"
             help="Use http://whisper-backend:8001 for the optional compose backend, or point to your own local faster-whisper server."
           />
+          <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
+            <Field
+              label="Backend path map: from"
+              value={str(settings.transcription_path_map_from)}
+              onChange={(v) => update("transcription_path_map_from", v)}
+              placeholder="/media"
+              help="Optional. Leave both mapping fields blank for the default same-path setup."
+            />
+            <Field
+              label="Backend path map: to"
+              value={str(settings.transcription_path_map_to)}
+              onChange={(v) => update("transcription_path_map_to", v)}
+              placeholder="/mnt/media"
+              help="When set, Subsmelt validates the local path under MEDIA_DIR first, then sends the rewritten absolute path to the backend."
+            />
+          </div>
+          <div className="rounded-2xl border border-gray-800 bg-gray-950/50 p-3 text-[11px] leading-relaxed text-gray-400">
+            Example: if Subsmelt sees <span className="font-mono text-gray-200">/media/anime/Episode 01.mkv</span> but your external backend mounts the same files at <span className="font-mono text-gray-200">/srv/media/anime/Episode 01.mkv</span>, set <span className="font-mono text-gray-200">from=/media</span> and <span className="font-mono text-gray-200">to=/srv/media</span>.
+          </div>
           <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-300">Model</label>

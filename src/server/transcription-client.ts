@@ -14,6 +14,8 @@ export interface TranscriptionSettings {
   transcription_use_vad?: string;
   transcription_output_format?: string;
   transcription_low_ram_behavior?: string;
+  transcription_path_map_from?: string;
+  transcription_path_map_to?: string;
 }
 
 export interface BuildTranscriptionRequestOptions {
@@ -83,6 +85,47 @@ export function assertMediaPathAllowed(inputPath: string, mediaDir: string): str
   return resolved;
 }
 
+function assertAbsoluteFilesystemPrefix(rawPath: string, label: string): string {
+  const trimmed = rawPath.trim();
+  if (!trimmed) throw new Error(`${label} is required when transcription path mapping is enabled`);
+  if (!path.isAbsolute(trimmed)) throw new Error(`${label} must be an absolute filesystem path`);
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) || trimmed.includes("@")) {
+    throw new Error(`${label} must be an absolute filesystem path without credentials or URLs`);
+  }
+
+  const segments = trimmed.split(/[\\/]+/).filter(Boolean);
+  if (segments.includes(".") || segments.includes("..")) {
+    throw new Error(`${label} must not contain traversal segments`);
+  }
+
+  return path.resolve(trimmed);
+}
+
+function mapPathForBackend(inputPath: string, settings: TranscriptionSettings): string {
+  const rawFrom = settings.transcription_path_map_from?.trim() ?? "";
+  const rawTo = settings.transcription_path_map_to?.trim() ?? "";
+  if (!rawFrom && !rawTo) return inputPath;
+  if (!rawFrom || !rawTo) {
+    throw new Error("Both transcription path mapping fields are required when path mapping is enabled");
+  }
+
+  const fromPrefix = assertAbsoluteFilesystemPrefix(rawFrom, "transcription_path_map_from");
+  const toPrefix = assertAbsoluteFilesystemPrefix(rawTo, "transcription_path_map_to");
+  if (inputPath !== fromPrefix && !inputPath.startsWith(`${fromPrefix}${path.sep}`)) {
+    throw new Error(`Transcription input does not match configured mapping prefix: ${inputPath}`);
+  }
+
+  const relativeSuffix = path.relative(fromPrefix, inputPath);
+  const mappedPath = relativeSuffix ? path.join(toPrefix, relativeSuffix) : toPrefix;
+  if (!path.isAbsolute(mappedPath)) {
+    throw new Error("Mapped transcription path must be an absolute filesystem path");
+  }
+  if (mappedPath !== toPrefix && !mappedPath.startsWith(`${toPrefix}${path.sep}`)) {
+    throw new Error("Mapped transcription path escapes the configured backend prefix");
+  }
+  return mappedPath;
+}
+
 function setting(raw: string | undefined, fallback: string): string {
   const value = typeof raw === "string" ? raw.trim() : "";
   return value || fallback;
@@ -102,12 +145,13 @@ function lowRamBehavior(raw: string | undefined): LowRamBehavior {
 }
 
 export function buildTranscriptionRequest(options: BuildTranscriptionRequestOptions): BackendTranscriptionRequest {
-  const inputPath = assertMediaPathAllowed(options.videoPath, options.mediaDir);
+  const localInputPath = assertMediaPathAllowed(options.videoPath, options.mediaDir);
+  const backendInputPath = mapPathForBackend(localInputPath, options.settings);
   const requestedAction = options.postAction ?? "transcribe_only";
   const postAction = transcribePostActionValues.includes(requestedAction) ? requestedAction : "transcribe_only";
 
   return {
-    input_path: inputPath,
+    input_path: backendInputPath,
     output_format: options.outputFormat ?? outputFormat(options.settings.transcription_output_format, "srt"),
     model: setting(options.settings.transcription_model, "small"),
     language: setting(options.settings.transcription_language, "auto"),

@@ -48,6 +48,60 @@ test("buildTranscriptionRequest keeps whisper behavior app-owned", () => {
   });
 });
 
+test("buildTranscriptionRequest keeps the original media path when no mapping is configured", () => {
+  const request = buildTranscriptionRequest({
+    videoPath: "/media/tv/Show/Episode 02.mkv",
+    mediaDir: "/media",
+    settings: {},
+  });
+
+  assert.equal(request.input_path, "/media/tv/Show/Episode 02.mkv");
+});
+
+test("buildTranscriptionRequest rewrites only the backend path when a mapping is configured", () => {
+  const request = buildTranscriptionRequest({
+    videoPath: "/media/anime/Season 1/Episode 03.mkv",
+    mediaDir: "/media",
+    settings: {
+      transcription_path_map_from: "/media",
+      transcription_path_map_to: "/srv/media-library",
+    },
+  });
+
+  assert.equal(request.input_path, "/srv/media-library/anime/Season 1/Episode 03.mkv");
+});
+
+test("buildTranscriptionRequest still rejects source paths outside the media root even when mapping is configured", () => {
+  assert.throws(() => buildTranscriptionRequest({
+    videoPath: "/other-share/anime/Episode 04.mkv",
+    mediaDir: "/media",
+    settings: {
+      transcription_path_map_from: "/media",
+      transcription_path_map_to: "/srv/media-library",
+    },
+  }), /outside media directory/);
+});
+
+test("buildTranscriptionRequest rejects unsafe mapping configuration and traversal-ish mapped results", () => {
+  assert.throws(() => buildTranscriptionRequest({
+    videoPath: "/media/anime/Episode 05.mkv",
+    mediaDir: "/media",
+    settings: {
+      transcription_path_map_from: "/media",
+      transcription_path_map_to: "http://user:pass@backend/share",
+    },
+  }), /must be an absolute filesystem path/);
+
+  assert.throws(() => buildTranscriptionRequest({
+    videoPath: "/media/anime/Episode 05.mkv",
+    mediaDir: "/media",
+    settings: {
+      transcription_path_map_from: "/media/../media",
+      transcription_path_map_to: "/srv/media-library",
+    },
+  }), /must not contain traversal segments/);
+});
+
 test("transcribe post action values remain restricted", () => {
   assert.deepEqual(transcribePostActionValues, ["transcribe_only", "transcribe_and_translate"]);
 });
