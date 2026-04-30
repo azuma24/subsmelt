@@ -50,6 +50,7 @@ import {
   type TranscribePostAction,
   type TranscriptionOutputFormat,
 } from "./transcription-client.js";
+import { summarizeTranscriptionError, transcriptionHistory } from "./transcription-history.js";
 import { logger } from "./logger.js";
 import { addSSEClient, broadcast } from "./sse.js";
 import { startWatcher, stopWatcher, isWatcherRunning, restartWatcher } from "./watcher.js";
@@ -492,6 +493,63 @@ function getTranscriptionBackendUrl(settings = getAllSettings()): string {
   return (settings.transcription_backend_url || process.env.WHISPER_BACKEND_URL || "").replace(/\/+$/, "");
 }
 
+async function runTranscriptionAttempt(opts: {
+  videoPath: string;
+  postAction: TranscribePostAction;
+  outputFormat?: TranscriptionOutputFormat;
+  settings?: Record<string, string>;
+}) {
+  const settings = opts.settings || getAllSettings();
+  const backendUrl = getTranscriptionBackendUrl(settings);
+  if (settings.transcription_enabled !== "1") throw new Error("Speech-to-text is disabled in settings");
+  if (!backendUrl) throw new Error("Transcription backend URL is not configured");
+
+  const request = buildTranscriptionRequest({
+    videoPath: opts.videoPath,
+    mediaDir: MEDIA_DIR,
+    settings,
+    outputFormat: opts.outputFormat,
+    postAction: opts.postAction,
+  });
+  const outputExt = request.output_format;
+  const outputPath = `${opts.videoPath.slice(0, -path.extname(opts.videoPath).length)}.${outputExt}`;
+  const attempt = transcriptionHistory.startAttempt({
+    inputPath: request.input_path,
+    outputPath,
+    model: request.model,
+    language: request.language,
+    outputFormat: request.output_format,
+    postAction: request.post_action,
+    subtitleQuality: request.subtitle_quality,
+  });
+
+  try {
+    const startedAtMs = Date.parse(attempt.startedAt);
+    const checkedRequest = await applyPreflightPolicy(backendUrl, request, settings);
+    const result = await transcribeWithBackend(backendUrl, checkedRequest);
+    const finishedAt = new Date().toISOString();
+    const durationSeconds = typeof result.duration_seconds === "number"
+      ? result.duration_seconds
+      : Number.isFinite(startedAtMs)
+        ? Math.max(0, (Date.now() - startedAtMs) / 1000)
+        : null;
+    transcriptionHistory.finishAttempt(attempt.id, {
+      status: "succeeded",
+      finishedAt,
+      durationSeconds,
+    });
+    return { attemptId: attempt.id, result };
+  } catch (error: unknown) {
+    const summary = summarizeTranscriptionError(error);
+    transcriptionHistory.finishAttempt(attempt.id, {
+      status: "failed",
+      finishedAt: new Date().toISOString(),
+      errorSummary: summary,
+    });
+    throw new Error(summary);
+  }
+}
+
 app.get("/api/transcribe/health", async (_req, res) => {
   const settings = getAllSettings();
   const backendUrl = getTranscriptionBackendUrl(settings);
@@ -530,26 +588,50 @@ app.post("/api/transcribe/preflight", async (req, res) => {
   }
 });
 
+app.get("/api/transcribe/history", (req, res) => {
+  const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : 20;
+  res.json({ attempts: transcriptionHistory.listRecent(Number.isFinite(limit) ? limit : 20) });
+});
+
+app.post("/api/transcribe/history/:id/retry", async (req, res) => {
+  const attempt = transcriptionHistory.get(req.params.id);
+  if (!attempt) return res.status(404).json({ error: "Transcription attempt not found" });
+  try {
+    const { result, attemptId } = await runTranscriptionAttempt({
+      videoPath: attempt.inputPath,
+      postAction: attempt.postAction,
+      outputFormat: attempt.outputFormat,
+    });
+    logger.info("system", `Retried transcription ${path.basename(attempt.inputPath)} → ${result.subtitle_path || "subtitle output"}`);
+
+    let scanResult: ReturnType<typeof scanFolder> | null = null;
+    if (attempt.postAction === "transcribe_and_translate") {
+      scanResult = scanFolder(true);
+      if (scanResult.newJobs > 0) setTimeout(() => processQueue(), 100);
+    }
+
+    const { ok: _backendOk, ...transcriptionResult } = result as { ok?: boolean } & Record<string, unknown>;
+    return res.json({ ok: true, attemptId, ...transcriptionResult, postAction: attempt.postAction, scanResult });
+  } catch (error: any) {
+    logger.error("system", `Transcription retry failed: ${error?.message || error}`);
+    return res.status(400).json({ error: error?.message || "Transcription retry failed" });
+  }
+});
+
 app.post("/api/transcribe", async (req, res) => {
   const settings = getAllSettings();
-  if (settings.transcription_enabled !== "1") return res.status(400).json({ error: "Speech-to-text is disabled in settings" });
-  const backendUrl = getTranscriptionBackendUrl(settings);
-  if (!backendUrl) return res.status(400).json({ error: "Transcription backend URL is not configured" });
   const videoPath = typeof req.body?.videoPath === "string" ? req.body.videoPath : "";
   if (!videoPath) return res.status(400).json({ error: "videoPath is required" });
   const requestedPostAction = req.body?.postAction as TranscribePostAction | undefined;
   const postAction = requestedPostAction && transcribePostActionValues.includes(requestedPostAction) ? requestedPostAction : "transcribe_only";
 
   try {
-    const request = buildTranscriptionRequest({
+    const { result, attemptId } = await runTranscriptionAttempt({
       videoPath,
-      mediaDir: MEDIA_DIR,
-      settings,
-      outputFormat: req.body?.outputFormat as TranscriptionOutputFormat | undefined,
       postAction,
+      outputFormat: req.body?.outputFormat as TranscriptionOutputFormat | undefined,
+      settings,
     });
-    const checkedRequest = await applyPreflightPolicy(backendUrl, request, settings);
-    const result = await transcribeWithBackend(backendUrl, checkedRequest);
     logger.info("system", `Transcribed ${path.basename(videoPath)} → ${result.subtitle_path || "subtitle output"}`);
 
     let scanResult: ReturnType<typeof scanFolder> | null = null;
@@ -559,7 +641,7 @@ app.post("/api/transcribe", async (req, res) => {
     }
 
     const { ok: _backendOk, ...transcriptionResult } = result as { ok?: boolean } & Record<string, unknown>;
-    return res.json({ ok: true, ...transcriptionResult, postAction, scanResult });
+    return res.json({ ok: true, attemptId, ...transcriptionResult, postAction, scanResult });
   } catch (error: any) {
     logger.error("system", `Transcription failed: ${error?.message || error}`);
     return res.status(400).json({ error: error?.message || "Transcription failed" });

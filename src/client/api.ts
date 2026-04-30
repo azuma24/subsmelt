@@ -1,4 +1,4 @@
-import type { FolderNode, JobPreview, JobRow, LlmHealth, LogEntry, QueueStatus, ScanResult, Task, TranscribeRequest, TranscribeResponse, TranscriptionHealth } from "./types";
+import type { FolderNode, JobPreview, JobRow, LlmHealth, LogEntry, QueueStatus, ScanResult, Task, TranscribeRequest, TranscribeResponse, TranscriptionHealth, TranscriptionHistoryEntry } from "./types";
 
 const BASE = "/api";
 
@@ -111,3 +111,7 @@ export const preflightTranscription = (payload: TranscribeRequest) =>
   fetchJSON("/transcribe/preflight", { method: "POST", body: JSON.stringify(payload) });
 export const transcribeVideo = (payload: TranscribeRequest) =>
   fetchJSON<TranscribeResponse>("/transcribe", { method: "POST", body: JSON.stringify(payload) });
+export const getTranscriptionHistory = (limit = 10) =>
+  fetchJSON<{ attempts: TranscriptionHistoryEntry[] }>(`/transcribe/history?limit=${limit}`);
+export const retryTranscriptionAttempt = (id: string) =>
+  fetchJSON<TranscribeResponse>(`/transcribe/history/${id}/retry`, { method: "POST" });

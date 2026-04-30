@@ -23,7 +23,8 @@ def run_faster_whisper(request: TranscribeRequest, input_path: Path) -> Transcri
         language = None if request.language == "auto" else request.language
         segments_iter, info = model.transcribe(str(audio_path), language=language, vad_filter=request.use_vad)
         segments = list(segments_iter)
-        count = write_transcript(segments, output_path, request.output_format)
+        max_line_length = request.subtitle_quality.max_line_length if request.subtitle_quality else None
+        count = write_transcript(segments, output_path, request.output_format, max_line_length=max_line_length)
         detected_language = getattr(info, "language", None) or language or request.language
         duration = getattr(info, "duration", None)
         return TranscribeResponse(
@@ -38,5 +39,6 @@ def run_faster_whisper(request: TranscribeRequest, input_path: Path) -> Transcri
 def fake_transcribe_for_tests(input_path: Path, request: TranscribeRequest) -> TranscribeResponse:
     output_path = output_path_for(input_path, request.language, request.output_format)
     segment = SimpleNamespace(start=0.0, end=1.5, text="Test transcription")
-    count = write_transcript([segment], output_path, request.output_format)
+    max_line_length = request.subtitle_quality.max_line_length if request.subtitle_quality else None
+    count = write_transcript([segment], output_path, request.output_format, max_line_length=max_line_length)
     return TranscribeResponse(ok=True, subtitle_path=str(output_path), language=request.language, segments=count, duration_seconds=1.5)

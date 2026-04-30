@@ -88,7 +88,7 @@ test("buildTranscriptionRequest rejects unsafe mapping configuration and travers
     mediaDir: "/media",
     settings: {
       transcription_path_map_from: "/media",
-      transcription_path_map_to: "http://user:pass@backend/share",
+      transcription_path_map_to: "http://user:***@backend/share",
     },
   }), /must be an absolute filesystem path/);
 
@@ -100,6 +100,27 @@ test("buildTranscriptionRequest rejects unsafe mapping configuration and travers
       transcription_path_map_to: "/srv/media-library",
     },
   }), /must not contain traversal segments/);
+});
+
+test("buildTranscriptionRequest includes subtitle polish options from settings", () => {
+  const request = buildTranscriptionRequest({
+    videoPath: "/media/anime/Episode 02.mkv",
+    mediaDir: "/media",
+    settings: {
+      transcription_model: "small",
+      transcription_language: "en",
+      transcription_output_format: "srt",
+      transcription_max_line_length: "32",
+      transcription_max_subtitle_duration: "5.5",
+      transcription_merge_short_segments: "1",
+    },
+  });
+
+  assert.deepEqual(request.subtitle_quality, {
+    max_line_length: 32,
+    max_subtitle_duration: 5.5,
+    merge_short_segments: true,
+  });
 });
 
 test("transcribe post action values remain restricted", () => {

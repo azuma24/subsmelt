@@ -119,8 +119,29 @@ export interface TranscribeRequest {
   postAction?: TranscribePostAction;
 }
 
+export interface TranscriptionHistoryEntry {
+  id: string;
+  inputPath: string;
+  outputPath: string;
+  model: string;
+  language: string;
+  outputFormat: "srt" | "vtt" | "txt";
+  postAction: TranscribePostAction;
+  status: "running" | "succeeded" | "failed";
+  startedAt: string;
+  finishedAt: string | null;
+  durationSeconds: number | null;
+  errorSummary: string | null;
+  subtitleQuality?: {
+    max_line_length?: number;
+    max_subtitle_duration?: number;
+    merge_short_segments?: boolean;
+  } | null;
+}
+
 export interface TranscribeResponse {
   ok: boolean;
+  attemptId?: string;
   subtitle_path?: string;
   language?: string;
   segments?: number;

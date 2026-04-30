@@ -16,6 +16,9 @@ export interface TranscriptionSettings {
   transcription_low_ram_behavior?: string;
   transcription_path_map_from?: string;
   transcription_path_map_to?: string;
+  transcription_max_line_length?: string;
+  transcription_max_subtitle_duration?: string;
+  transcription_merge_short_segments?: string;
 }
 
 export interface BuildTranscriptionRequestOptions {
@@ -36,6 +39,13 @@ export interface BackendTranscriptionRequest {
   use_vad: boolean;
   post_action: TranscribePostAction;
   allow_unsafe?: boolean;
+  subtitle_quality?: TranscriptionSubtitleQualityOptions;
+}
+
+export interface TranscriptionSubtitleQualityOptions {
+  max_line_length?: number;
+  max_subtitle_duration?: number;
+  merge_short_segments?: boolean;
 }
 
 export interface BackendPreflightResponse {
@@ -144,11 +154,40 @@ function lowRamBehavior(raw: string | undefined): LowRamBehavior {
   return raw === "downgrade" || raw === "skip" || raw === "run_anyway" ? raw : "ask";
 }
 
+function intSetting(raw: string | undefined): number | undefined {
+  const value = Number.parseInt((raw || "").trim(), 10);
+  return Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+function floatSetting(raw: string | undefined): number | undefined {
+  const value = Number.parseFloat((raw || "").trim());
+  return Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+function subtitleQualitySettings(settings: TranscriptionSettings): TranscriptionSubtitleQualityOptions | undefined {
+  const maxLineLength = intSetting(settings.transcription_max_line_length);
+  const maxSubtitleDuration = floatSetting(settings.transcription_max_subtitle_duration);
+  const mergeShortSegments = boolSetting(settings.transcription_merge_short_segments, false);
+  if (
+    maxLineLength === undefined &&
+    maxSubtitleDuration === undefined &&
+    !mergeShortSegments
+  ) {
+    return undefined;
+  }
+  return {
+    ...(maxLineLength !== undefined ? { max_line_length: maxLineLength } : {}),
+    ...(maxSubtitleDuration !== undefined ? { max_subtitle_duration: maxSubtitleDuration } : {}),
+    ...(mergeShortSegments ? { merge_short_segments: true } : {}),
+  };
+}
+
 export function buildTranscriptionRequest(options: BuildTranscriptionRequestOptions): BackendTranscriptionRequest {
   const localInputPath = assertMediaPathAllowed(options.videoPath, options.mediaDir);
   const backendInputPath = mapPathForBackend(localInputPath, options.settings);
   const requestedAction = options.postAction ?? "transcribe_only";
   const postAction = transcribePostActionValues.includes(requestedAction) ? requestedAction : "transcribe_only";
+  const subtitleQuality = subtitleQualitySettings(options.settings);
 
   return {
     input_path: backendInputPath,
@@ -159,6 +198,7 @@ export function buildTranscriptionRequest(options: BuildTranscriptionRequestOpti
     compute_type: setting(options.settings.transcription_compute_type, "int8"),
     use_vad: boolSetting(options.settings.transcription_use_vad, true),
     post_action: postAction,
+    ...(subtitleQuality ? { subtitle_quality: subtitleQuality } : {}),
   };
 }
 

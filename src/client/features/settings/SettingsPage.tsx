@@ -334,6 +334,22 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
             <Field label="Compute type" value={str(settings.transcription_compute_type, "int8")} onChange={(v) => update("transcription_compute_type", v)} help="Use int8 for CPU." />
             <Field label="Max concurrent" value={str(settings.transcription_max_concurrent, "1")} onChange={(v) => update("transcription_max_concurrent", v)} type="number" help="Keep this at 1 for CPU." />
           </div>
+          <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
+            <Field label="Max line length" value={str(settings.transcription_max_line_length, "42")} onChange={(v) => update("transcription_max_line_length", v)} type="number" help="Wrap subtitle text at roughly this many characters per line." />
+            <Field label="Max subtitle duration" value={str(settings.transcription_max_subtitle_duration, "6")} onChange={(v) => update("transcription_max_subtitle_duration", v)} type="number" help="Passed to the backend for future segment polishing; kept lightweight in core." />
+            <label className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl bg-gray-800/50 p-4">
+              <div>
+                <p className="text-sm font-medium text-gray-300">Merge short segments</p>
+                <p className="mt-0.5 text-[10px] text-gray-500">Stored and sent to the backend, but kept conservative unless the backend can merge safely.</p>
+              </div>
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 shrink-0 accent-blue-500"
+                checked={str(settings.transcription_merge_short_segments, "0") === "1"}
+                onChange={(e) => update("transcription_merge_short_segments", e.target.checked ? "1" : "0")}
+              />
+            </label>
+          </div>
           <label className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl bg-gray-800/50 p-4">
             <div>
               <p className="text-sm font-medium text-gray-300">Use VAD</p>
