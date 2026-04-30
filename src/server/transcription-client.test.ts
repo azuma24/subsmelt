@@ -5,6 +5,7 @@ import {
   applyPreflightPolicy,
   buildTranscriptionRequest,
   normalizeTranscriptionBackendUrl,
+  localTranscriptionOutputPath,
   transcribePostActionValues,
 } from "./transcription-client.js";
 
@@ -171,6 +172,25 @@ test("buildTranscriptionRequest sends supported advanced STT options without ena
     speaker_diarization: false,
     bgm_separation: false,
   });
+});
+
+test("buildTranscriptionRequest rejects invalid STT JSON settings instead of silently using global defaults", () => {
+  assert.throws(() => buildTranscriptionRequest({
+    videoPath: "/media/anime/Episode 08.mkv",
+    mediaDir: "/media",
+    settings: { transcription_folder_defaults: "[{not json]" },
+  }), /Invalid transcription_folder_defaults JSON/);
+
+  assert.throws(() => buildTranscriptionRequest({
+    videoPath: "/media/anime/Episode 08.mkv",
+    mediaDir: "/media",
+    settings: { transcription_advanced_stt: "{not json}" },
+  }), /Invalid transcription_advanced_stt JSON/);
+});
+
+test("localTranscriptionOutputPath mirrors backend language suffix output naming", () => {
+  assert.equal(localTranscriptionOutputPath("/media/anime/Episode 07.mkv", "ja", "vtt"), "/media/anime/Episode 07.ja.vtt");
+  assert.equal(localTranscriptionOutputPath("/media/anime/Episode 07.mkv", "auto", "srt"), "/media/anime/Episode 07.srt");
 });
 
 test("transcribe post action values remain restricted", () => {

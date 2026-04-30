@@ -1,10 +1,19 @@
 import unittest
-from types import SimpleNamespace
 
-from app.schemas import AdvancedSttOptions, TranscribeRequest
-from app.transcribe import faster_whisper_transcribe_kwargs, unsupported_advanced_features
+try:
+    from app.schemas import AdvancedSttOptions, TranscribeRequest
+    from app.transcribe import faster_whisper_transcribe_kwargs, unsupported_advanced_features
+except ModuleNotFoundError as exc:  # pragma: no cover - local host may not have backend deps installed
+    AdvancedSttOptions = None
+    TranscribeRequest = None
+    faster_whisper_transcribe_kwargs = None
+    unsupported_advanced_features = None
+    IMPORT_ERROR = exc
+else:
+    IMPORT_ERROR = None
 
 
+@unittest.skipIf(IMPORT_ERROR is not None, f"backend optional dependencies unavailable: {IMPORT_ERROR}")
 class AdvancedOptionsTests(unittest.TestCase):
     def test_supported_advanced_options_become_faster_whisper_kwargs(self):
         request = TranscribeRequest(
