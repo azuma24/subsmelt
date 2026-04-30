@@ -641,7 +641,7 @@ app.post("/api/transcribe", async (req, res) => {
     }
 
     const { ok: _backendOk, ...transcriptionResult } = result as { ok?: boolean } & Record<string, unknown>;
-    return res.json({ ok: true, attemptId, ...transcriptionResult, postAction, scanResult });
+    return res.json({ ok: true, attemptId, stage: "complete", ...transcriptionResult, postAction, scanResult });
   } catch (error: any) {
     logger.error("system", `Transcription failed: ${error?.message || error}`);
     return res.status(400).json({ error: error?.message || "Transcription failed" });

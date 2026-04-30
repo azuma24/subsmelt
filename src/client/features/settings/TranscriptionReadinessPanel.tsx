@@ -173,6 +173,7 @@ export function TranscriptionReadinessPanel({
       <div className="mt-3 rounded-xl border border-gray-800 bg-gray-950/60 p-3 text-xs text-gray-400">
         Current request defaults: <span className="text-gray-200">{selectedModel}</span> on <span className="text-gray-200">{selectedDevice}</span> / <span className="text-gray-200">{selectedComputeType}</span>, output <span className="text-gray-200">{selectedOutput.toUpperCase()}</span>.
         {health?.message && <span className="ml-1 text-yellow-300">Backend message: {health.message}</span>}
+        <div className="mt-2 text-yellow-200">First transcription runs can stay quiet for a while while the model downloads or warms up.</div>
       </div>
     </div>
   );

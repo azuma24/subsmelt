@@ -112,6 +112,7 @@ export interface LlmHealth {
 }
 
 export type TranscribePostAction = "transcribe_only" | "transcribe_and_translate";
+export type ManualTranscriptionStage = "preflighting" | "transcribing" | "queueing" | "complete" | "skipped" | "failed";
 
 export interface TranscribeRequest {
   videoPath: string;
@@ -139,9 +140,23 @@ export interface TranscriptionHistoryEntry {
   } | null;
 }
 
+export interface TranscriptionPreflightResponse {
+  ok?: boolean;
+  safe?: boolean;
+  code?: string;
+  availableRamMb?: number;
+  requiredRamMb?: number;
+  recommendedRamMb?: number;
+  suggestedModel?: string | null;
+  ffmpegAvailable?: boolean;
+  diskAvailableMb?: number;
+  requiredDiskMb?: number;
+}
+
 export interface TranscribeResponse {
   ok: boolean;
   attemptId?: string;
+  stage?: Extract<ManualTranscriptionStage, "complete">;
   subtitle_path?: string;
   language?: string;
   segments?: number;
