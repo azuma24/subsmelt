@@ -111,7 +111,14 @@ Then set the backend URL in the web UI to:
 http://whisper-backend:8001
 ```
 
-Keep media mounts identical between SubSmelt and the backend. If SubSmelt sees `/media/anime/Episode 01.mkv`, the whisper backend must be able to read that exact same path.
+Default setup: keep media mounts identical between SubSmelt and the backend. If SubSmelt sees `/media/anime/Episode 01.mkv`, the whisper backend should read that exact same path.
+
+Optional advanced setup: if an external/LAN/backend-whisper host mounts the same files at a different absolute prefix, leave SubSmelt’s own `MEDIA_DIR` unchanged and set **Speech-to-text → Backend path map** in Settings:
+
+- `from`: the absolute prefix SubSmelt sees locally, such as `/media`
+- `to`: the absolute prefix the backend can read, such as `/srv/media`
+
+SubSmelt still validates the original video path under `MEDIA_DIR` first. Only the path sent to the backend is rewritten, and the mapped result must stay an absolute filesystem path.
 
 Recommended CPU defaults are `small`, `cpu`, `int8`, VAD enabled, and max concurrency `1`. SubSmelt runs a preflight check before transcription so low-RAM systems can warn, downgrade, skip, or block safely depending on your setting.
 
@@ -122,6 +129,14 @@ SUBSMELT_WHISPER_FAKE=1 docker compose -f docker-compose.yml -f docker-compose.w
 ```
 
 Keep the media mounts identical in both compose files so the backend sees the same absolute paths as SubSmelt. In fake mode, `/health`, `/preflight`, and `/transcribe` work without downloading any model weights. See [backend-whisper/README.md](./backend-whisper/README.md) for `curl` examples.
+
+If you want an NVIDIA GPU backend, add the optional overlay:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.whisper.yml -f docker-compose.whisper.gpu.yml up -d
+```
+
+After the backend is up, set the speech-to-text device in the web UI to `cuda` only if your faster-whisper image advertises CUDA support.
 
 ---
 
@@ -172,6 +187,20 @@ docker run -d \
   -v /path/to/media:/media \
   -e TZ=Asia/Taipei \
   subsmelt:latest
+```
+
+Docker builds are host-native by default. On Apple Silicon, ARM hosts build ARM images; on x86 hosts they build x86 images.
+
+If you specifically need an `linux/amd64` image from a non-x86 machine, use `buildx` explicitly instead of forcing that platform in the default compose files:
+
+```bash
+docker buildx build --platform linux/amd64 -t subsmelt:latest .
+```
+
+For the optional Whisper backend image:
+
+```bash
+docker buildx build --platform linux/amd64 -t subsmelt-whisper:latest ./backend-whisper
 ```
 
 ---

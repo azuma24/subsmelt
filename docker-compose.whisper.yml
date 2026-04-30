@@ -12,7 +12,9 @@ services:
     environment:
       - SUBSMELT_WHISPER_FAKE=${SUBSMELT_WHISPER_FAKE:-0}
     volumes:
-      # Keep these media paths identical to the subsmelt service.
+      # Default mode: keep these media paths identical to the subsmelt service.
+      # If an external/LAN backend must mount media somewhere else, keep Subsmelt on /media
+      # and configure the optional path-mapping fields in Settings instead.
       - /path/to/movies:/media/movies
       - /path/to/anime:/media/anime
       - /path/to/tv:/media/tv

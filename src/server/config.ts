@@ -55,6 +55,8 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   transcription_missing_subtitle_behavior: "ask",
   transcription_low_ram_behavior: "ask",
   transcription_max_concurrent: "1",
+  transcription_path_map_from: "",
+  transcription_path_map_to: "",
   additional_context: "",
   prompt: `// You are a professional subtitle translator.
 // You will only receive subtitles and are only required to translate, no need for any replies.
