@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
-import { useLlmHealthQuery, useSettingsQuery } from "../../hooks";
+import { useLlmHealthQuery, useSettingsQuery, useTranscriptionHealthQuery } from "../../hooks";
 import { DEFAULT_PROMPT, LANGUAGES } from "../../app/constants";
 import { useToast } from "../../components/Toast";
 import { ActionButton, Field, SettingsSection } from "../../ui/primitives";
 import { MediaSourcesPanel } from "./MediaSourcesPanel";
+import { TranscriptionReadinessPanel } from "./TranscriptionReadinessPanel";
 
 const str = (v: unknown, fallback = ""): string => (typeof v === "string" ? v : fallback);
 const bool = (v: unknown): boolean => Boolean(v);
@@ -17,6 +18,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   const settingsQuery = useSettingsQuery();
   const llmHealthQuery = useLlmHealthQuery(Boolean(str(settingsQuery.data?.llm_endpoint)));
   const [settings, setSettings] = useState<Record<string, unknown>>({});
+  const transcriptionHealthQuery = useTranscriptionHealthQuery(Boolean(str(settings.transcription_backend_url)));
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -344,6 +346,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
               </select>
             </div>
           </div>
+          <TranscriptionReadinessPanel settings={settings} healthQuery={transcriptionHealthQuery} dirty={dirty} />
           <div className={`flex ${isMobile ? "flex-col" : "items-center"} gap-3`}>
             <ActionButton variant="ghost" onClick={handleTranscriptionTest}>{testingTranscription ? t("app.testing") : "Test speech-to-text"}</ActionButton>
             {transcriptionTestResult && (
