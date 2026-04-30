@@ -13,6 +13,11 @@ import { JobsTableDesktop } from "./JobsTableDesktop";
 import { JobCardMobile } from "./JobCardMobile";
 import { PreviewOverlay } from "./PreviewOverlay";
 import { ScanResultsPanel, getScanGroupName, type ScanFilter } from "./ScanResultsPanel";
+import {
+  createManualTranscriptionProgress,
+  transitionManualTranscriptionProgress,
+  type ManualTranscriptionProgress,
+} from "./transcription-progress";
 
 type ScanResultMode = "preview" | "queued";
 
@@ -64,7 +69,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const [folderFilter, setFolderFilter] = useState("all");
   const [targetFilter, setTargetFilter] = useState("all");
   const [scanPlan, setScanPlan] = useState<ScanPlan | null>(null);
-  const [transcribingPath, setTranscribingPath] = useState<string | null>(null);
+  const [transcriptionProgressByPath, setTranscriptionProgressByPath] = useState<Record<string, ManualTranscriptionProgress>>({});
 
   const scanPreviewMutation = useMutationWithInvalidation(() => api.previewScan());
   const scanMutation = useMutationWithInvalidation(() => api.scanFolder());
@@ -270,10 +275,38 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
     addToast(t("dashboard.toast.forceSelectedStarted", { count: result.updated }), "info");
   };
 
+  const updateTranscriptionProgress = (
+    videoPath: string,
+    updater: ManualTranscriptionProgress | ((current: ManualTranscriptionProgress) => ManualTranscriptionProgress),
+  ) => {
+    setTranscriptionProgressByPath((prev) => {
+      const current = prev[videoPath];
+      if (!current) return prev;
+      const next = typeof updater === "function"
+        ? (updater as (current: ManualTranscriptionProgress) => ManualTranscriptionProgress)(current)
+        : updater;
+      return { ...prev, [videoPath]: next };
+    });
+  };
+
   const handleTranscribe = async (videoPath: string, postAction: TranscribePostAction) => {
-    setTranscribingPath(videoPath);
+    setTranscriptionProgressByPath((prev) => ({
+      ...prev,
+      [videoPath]: createManualTranscriptionProgress(postAction),
+    }));
     try {
+      await api.preflightTranscription({ videoPath, postAction });
+      updateTranscriptionProgress(videoPath, (current) =>
+        transitionManualTranscriptionProgress(current, { type: "preflight-passed" }),
+      );
+
       const result = await transcribeMutation.mutateAsync({ videoPath, postAction });
+      if (postAction === "transcribe_and_translate") {
+        updateTranscriptionProgress(videoPath, (current) =>
+          transitionManualTranscriptionProgress(current, { type: "backend-finished" }),
+        );
+      }
+
       if (result.scanResult?.files) {
         setScanResult(result.scanResult.files);
         setScanResultMode(postAction === "transcribe_and_translate" ? "queued" : "preview");
@@ -284,6 +317,12 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
         setScanResultMode("preview");
         expandInterestingScanGroups(refreshed.files);
       }
+      updateTranscriptionProgress(videoPath, (current) =>
+        transitionManualTranscriptionProgress(
+          current,
+          postAction === "transcribe_and_translate" ? { type: "scan-queued" } : { type: "backend-finished" },
+        ),
+      );
       addToast(
         postAction === "transcribe_and_translate"
           ? "Transcription complete. Translation jobs were queued."
@@ -291,9 +330,11 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
         "success",
       );
     } catch (e: unknown) {
-      addToast(`Transcription failed: ${getErrorMessage(e)}`, "error");
-    } finally {
-      setTranscribingPath(null);
+      const message = getErrorMessage(e);
+      updateTranscriptionProgress(videoPath, (current) =>
+        transitionManualTranscriptionProgress(current, { type: "error", message }),
+      );
+      addToast(`Transcription failed: ${message}`, "error");
     }
   };
 
@@ -647,7 +688,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
             onQueueAll={handleScan}
             onTranscribe={handleTranscribe}
             transcriptionEnabled={transcriptionEnabled}
-            transcribingPath={transcribingPath}
+            transcriptionProgressByPath={transcriptionProgressByPath}
             isQueueing={scanMutation.isPending}
             newJobsCount={scanResult.flatMap((file) => file.subtitles.flatMap((sub) => sub.tasks)).filter((task) => task.status === "new").length}
           />
