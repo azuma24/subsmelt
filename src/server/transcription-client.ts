@@ -210,18 +210,24 @@ function subtitleQualitySettings(settings: TranscriptionSettings, folderDefaults
   };
 }
 
-function parseJsonObject<T>(raw: string | undefined, fallback: T): T {
+function parseJsonObject<T>(raw: string | undefined, fallback: T, label = "JSON setting"): T {
   if (!raw || !raw.trim()) return fallback;
   try {
     const parsed = JSON.parse(raw) as unknown;
     return parsed && typeof parsed === "object" ? parsed as T : fallback;
   } catch {
-    return fallback;
+    throw new Error(`Invalid ${label} JSON`);
   }
 }
 
+export function localTranscriptionOutputPath(inputPath: string, language: string, outputFormat: TranscriptionOutputFormat): string {
+  const parsed = path.parse(inputPath);
+  const suffix = !language || language === "auto" ? outputFormat : `${language}.${outputFormat}`;
+  return path.join(parsed.dir, `${parsed.name}.${suffix}`);
+}
+
 function matchingFolderDefaults(inputPath: string, mediaDir: string, settings: TranscriptionSettings): TranscriptionFolderDefaults | undefined {
-  const entries = parseJsonObject<unknown>(settings.transcription_folder_defaults, []);
+  const entries = parseJsonObject<unknown>(settings.transcription_folder_defaults, [], "transcription_folder_defaults");
   if (!Array.isArray(entries)) return undefined;
 
   const mediaRoot = path.resolve(mediaDir);
@@ -239,7 +245,7 @@ function matchingFolderDefaults(inputPath: string, mediaDir: string, settings: T
 }
 
 function advancedSttOptions(settings: TranscriptionSettings, folderDefaults?: TranscriptionFolderDefaults): TranscriptionAdvancedOptions | undefined {
-  const globalOptions = parseJsonObject<TranscriptionAdvancedOptions>(settings.transcription_advanced_stt, {});
+  const globalOptions = parseJsonObject<TranscriptionAdvancedOptions>(settings.transcription_advanced_stt, {}, "transcription_advanced_stt");
   const merged: TranscriptionAdvancedOptions = { ...globalOptions, ...(folderDefaults?.advanced_options || {}) };
   const beamSize = intSetting(merged.beam_size);
   const patience = floatSetting(merged.patience);
