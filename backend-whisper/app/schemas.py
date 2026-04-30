@@ -27,6 +27,7 @@ class HealthResponse(BaseModel):
     total_ram_mb: int = Field(alias="totalRamMb")
     available_ram_mb: int = Field(alias="availableRamMb")
     capabilities: dict
+    model_cache: dict | None = Field(default=None, alias="modelCache")
 
     class Config:
         populate_by_name = True
@@ -43,6 +44,7 @@ class PreflightResponse(BaseModel):
     ffmpeg_available: bool = Field(alias="ffmpegAvailable")
     disk_available_mb: int = Field(alias="diskAvailableMb")
     required_disk_mb: int = Field(alias="requiredDiskMb")
+    model_cache: dict | None = Field(default=None, alias="modelCache")
 
     class Config:
         populate_by_name = True

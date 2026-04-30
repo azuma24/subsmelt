@@ -72,12 +72,16 @@ export function TranscriptionReadinessPanel({
   const health = healthQuery.data;
   const backendHealth = health?.health;
   const capabilities = backendHealth?.capabilities;
-  const requirements = modelRequirements(selectedModel);
+  const cacheInfo = backendHealth?.modelCache;
+  const requirements = {
+    required: cacheInfo?.requiredRamMb ?? modelRequirements(selectedModel).required,
+    recommended: cacheInfo?.recommendedRamMb ?? modelRequirements(selectedModel).recommended,
+  };
   const availableRamMb = backendHealth?.availableRamMb;
   const ramKnown = typeof availableRamMb === "number" && availableRamMb > 0;
   const ramMeetsRequired = ramKnown ? availableRamMb >= requirements.required : undefined;
   const ramMeetsRecommended = ramKnown ? availableRamMb >= requirements.recommended : undefined;
-  const suggestedModel = ramMeetsRequired === false ? suggestCpuModel(availableRamMb) : null;
+  const suggestedModel = cacheInfo?.suggestedModel ?? (ramMeetsRequired === false ? suggestCpuModel(availableRamMb) : null);
   const models = capabilities?.models;
   const outputFormats = capabilities?.outputFormats;
   const selectedModelAdvertised = models?.length ? models.includes(selectedModel) : undefined;
@@ -148,6 +152,21 @@ export function TranscriptionReadinessPanel({
             {selectedModelAdvertised === false && <div className="text-yellow-300">Selected model is not advertised by this backend.</div>}
             {selectedOutputAdvertised === false && <div className="text-yellow-300">Selected output format is not advertised by this backend.</div>}
           </div>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-gray-800 bg-gray-900/50 p-3">
+        <div className="text-xs font-semibold text-gray-300">Model cache</div>
+        <div className="mt-2 space-y-1 text-xs text-gray-400">
+          <div>Selected model: <span className="text-gray-200">{cacheInfo?.model || selectedModel}</span></div>
+          <div>Configured cache root: <span className="text-gray-200 break-all">{cacheInfo?.cacheRoot || "unknown"}</span></div>
+          <div>Detected cache path: <span className="text-gray-200 break-all">{cacheInfo?.cachePath || "not found"}</span></div>
+          <div>Status: <span className="text-gray-200">
+            {cacheInfo?.cached === true ? "cached" : cacheInfo?.cached === false ? "not cached yet" : "unknown"}
+          </span></div>
+          {cacheInfo?.warning && <div className={cacheInfo.cached ? "text-blue-300" : "text-yellow-300"}>{cacheInfo.warning}</div>}
+          {cacheInfo?.firstRunDownloadExpected && <div className="text-yellow-300">First run may spend extra time downloading model weights before transcription starts.</div>}
+          {!cacheInfo && <div className="text-gray-500">Cache details will appear when the backend reports health for the selected model.</div>}
         </div>
       </div>
 

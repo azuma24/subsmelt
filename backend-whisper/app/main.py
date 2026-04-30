@@ -3,8 +3,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 
+from .model_cache import describe_model_cache
 from .preflight import (
     assert_path_under_media,
     available_ram_mb,
@@ -35,12 +36,14 @@ def capabilities() -> dict:
 
 
 @app.get("/health", response_model=HealthResponse, response_model_by_alias=True)
-def health() -> HealthResponse:
+def health(model: str = Query(default="small")) -> HealthResponse:
+    free_ram = available_ram_mb()
     return HealthResponse(
         ffmpeg=ffmpeg_available(),
         total_ram_mb=total_ram_mb(),
-        available_ram_mb=available_ram_mb(),
+        available_ram_mb=free_ram,
         capabilities=capabilities(),
+        model_cache=describe_model_cache(model, free_ram),
     )
 
 
@@ -48,6 +51,7 @@ def preflight_result(request: TranscribeRequest) -> PreflightResponse:
     input_path = assert_path_under_media(request.input_path, MEDIA_ROOT)
     free_ram = available_ram_mb()
     safety = evaluate_model_safety(request.model, free_ram)
+    model_cache = describe_model_cache(request.model, free_ram)
     ffmpeg_ok = ffmpeg_available()
     disk_mb = disk_free_mb(input_path.parent if input_path.exists() else Path(MEDIA_ROOT))
     input_size_mb = int(input_path.stat().st_size / 1024 / 1024) if input_path.exists() else 0
@@ -70,6 +74,7 @@ def preflight_result(request: TranscribeRequest) -> PreflightResponse:
         ffmpeg_available=ffmpeg_ok,
         disk_available_mb=disk_mb,
         required_disk_mb=disk_safety["required_disk_mb"],
+        model_cache=model_cache,
     )
 
 

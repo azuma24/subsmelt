@@ -495,11 +495,14 @@ function getTranscriptionBackendUrl(settings = getAllSettings()): string {
 app.get("/api/transcribe/health", async (_req, res) => {
   const settings = getAllSettings();
   const backendUrl = getTranscriptionBackendUrl(settings);
+  const selectedModel = typeof settings.transcription_model === "string" && settings.transcription_model.trim()
+    ? settings.transcription_model.trim()
+    : "small";
   if (!backendUrl) {
     return res.json({ ok: false, endpointReachable: false, reason: "endpoint-missing" });
   }
   try {
-    const health = await fetchTranscriptionHealth(backendUrl);
+    const health = await fetchTranscriptionHealth(backendUrl, selectedModel);
     return res.json({ ok: true, endpointReachable: true, backendUrl, health });
   } catch (error: any) {
     return res.json({ ok: false, endpointReachable: false, backendUrl, reason: "network-error", message: error?.message || "unknown" });
