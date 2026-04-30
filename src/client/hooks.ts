@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "./api";
-import type { JobPreview, LlmHealth, LogEntry, QueueStatus, Task } from "./types";
+import type { JobPreview, LlmHealth, LogEntry, QueueStatus, Task, TranscriptionHealth } from "./types";
 
 export type SSEEventName =
   | "job:progress"
@@ -65,6 +65,15 @@ export function useLlmHealthQuery(enabled = true) {
   return useQuery<LlmHealth>({
     queryKey: ["llm-health"],
     queryFn: api.getLlmHealth,
+    enabled,
+    refetchInterval: enabled ? 15_000 : false,
+  });
+}
+
+export function useTranscriptionHealthQuery(enabled = true) {
+  return useQuery<TranscriptionHealth>({
+    queryKey: ["transcription-health"],
+    queryFn: api.getTranscriptionHealth,
     enabled,
     refetchInterval: enabled ? 15_000 : false,
   });

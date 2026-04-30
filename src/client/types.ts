@@ -135,5 +135,16 @@ export interface TranscriptionHealth {
   backendUrl?: string;
   reason?: string;
   message?: string;
-  health?: unknown;
+  health?: {
+    ffmpeg?: boolean;
+    totalRamMb?: number;
+    availableRamMb?: number;
+    capabilities?: {
+      models?: string[];
+      devices?: string[];
+      computeTypes?: string[];
+      outputFormats?: string[];
+      vad?: boolean;
+    };
+  };
 }
