@@ -220,6 +220,22 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-300">{t("settings.llmConnection.temperatureLabel")}: <span className="font-mono text-blue-400">{str(settings.temperature, "0.7")}</span></label>
             <input type="range" min="0" max="2" step="0.1" value={str(settings.temperature, "0.7")} onChange={(e) => update("temperature", e.target.value)} className="w-full accent-blue-500" />
+            <p className="mt-2 text-xs leading-relaxed text-gray-400">{t("settings.llmConnection.temperatureHelp")}</p>
+            <div className="mt-3 rounded-xl border border-gray-800 bg-gray-950/60 p-3 text-xs text-gray-300 space-y-2">
+              <div className="font-semibold text-blue-300">Qwen3.6-35B-A3B recommended presets</div>
+              <ul className="list-disc space-y-1 pl-5 text-gray-400">
+                <li>Thinking, general: temperature=1.0, top_p=0.95, top_k=20, min_p=0.0, presence_penalty=1.5, repetition_penalty=1.0</li>
+                <li>Thinking, precise coding: temperature=0.6, top_p=0.95, top_k=20, min_p=0.0, presence_penalty=0.0, repetition_penalty=1.0</li>
+                <li>Instruct (non-thinking), general: temperature=0.7, top_p=0.8, top_k=20, min_p=0.0, presence_penalty=1.5, repetition_penalty=1.0</li>
+                <li>Instruct (non-thinking), reasoning: temperature=1.0, top_p=0.95, top_k=20, min_p=0.0, presence_penalty=1.5, repetition_penalty=1.0</li>
+              </ul>
+              <p className="text-gray-400">
+                Qwen3.6 thinks by default. For direct output on OpenAI-compatible endpoints (vLLM/SGLang), pass
+                <span className="font-mono text-gray-300"> chat_template_kwargs: {`{ enable_thinking: false }`} </span>
+                in extra_body. To preserve reasoning traces between turns, use
+                <span className="font-mono text-gray-300"> chat_template_kwargs: {`{ preserve_thinking: true }`} </span>.
+              </p>
+            </div>
           </div>
           <div className={`flex ${isMobile ? "flex-col" : "items-center"} gap-3`}>
             <ActionButton variant="ghost" onClick={handleTest}>{testing ? t("app.testing") : t("app.testConnection")}</ActionButton>
