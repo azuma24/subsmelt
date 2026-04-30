@@ -523,6 +523,7 @@ async function runTranscriptionAttempt(opts: {
     outputFormat: request.output_format,
     postAction: request.post_action,
     subtitleQuality: request.subtitle_quality,
+    advancedOptions: request.advanced_options,
   });
 
   try {

@@ -55,6 +55,8 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   transcription_max_line_length: "42",
   transcription_max_subtitle_duration: "6",
   transcription_merge_short_segments: "0",
+  transcription_folder_defaults: "[]",
+  transcription_advanced_stt: "{}",
   transcription_missing_subtitle_behavior: "ask",
   transcription_low_ram_behavior: "ask",
   transcription_max_concurrent: "1",

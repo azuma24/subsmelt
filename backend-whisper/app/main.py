@@ -32,6 +32,15 @@ def capabilities() -> dict:
         "computeTypes": ["int8", "float32"],
         "outputFormats": ["srt", "vtt", "txt"],
         "vad": True,
+        "advancedOptions": {
+            "beamSize": True,
+            "patience": True,
+            "conditionOnPreviousText": True,
+            "wordTimestamps": True,
+            "initialPrompt": True,
+            "speakerDiarization": False,
+            "bgmSeparation": False,
+        },
     }
 
 

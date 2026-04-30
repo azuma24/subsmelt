@@ -14,6 +14,16 @@ class SubtitleQualityOptions(BaseModel):
     merge_short_segments: bool = False
 
 
+class AdvancedSttOptions(BaseModel):
+    beam_size: int | None = None
+    patience: float | None = None
+    condition_on_previous_text: bool | None = None
+    word_timestamps: bool | None = None
+    initial_prompt: str | None = None
+    speaker_diarization: bool = False
+    bgm_separation: bool = False
+
+
 class TranscribeRequest(BaseModel):
     input_path: str
     output_format: OutputFormat = "srt"
@@ -25,6 +35,7 @@ class TranscribeRequest(BaseModel):
     post_action: PostAction = "transcribe_only"
     allow_unsafe: bool = False
     subtitle_quality: SubtitleQualityOptions | None = None
+    advanced_options: AdvancedSttOptions | None = None
 
 
 class HealthResponse(BaseModel):
