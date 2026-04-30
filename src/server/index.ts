@@ -514,7 +514,9 @@ async function runTranscriptionAttempt(opts: {
   const outputExt = request.output_format;
   const outputPath = `${opts.videoPath.slice(0, -path.extname(opts.videoPath).length)}.${outputExt}`;
   const attempt = transcriptionHistory.startAttempt({
-    inputPath: request.input_path,
+    // Store the local SubSmelt media path so history retries re-run through
+    // MEDIA_DIR validation and optional backend path mapping correctly.
+    inputPath: opts.videoPath,
     outputPath,
     model: request.model,
     language: request.language,
