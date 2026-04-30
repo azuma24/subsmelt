@@ -115,6 +115,14 @@ Keep media mounts identical between SubSmelt and the backend. If SubSmelt sees `
 
 Recommended CPU defaults are `small`, `cpu`, `int8`, VAD enabled, and max concurrency `1`. SubSmelt runs a preflight check before transcription so low-RAM systems can warn, downgrade, skip, or block safely depending on your setting.
 
+For a no-download smoke test of the optional backend wiring, run the whisper overlay with fake mode enabled:
+
+```bash
+SUBSMELT_WHISPER_FAKE=1 docker compose -f docker-compose.yml -f docker-compose.whisper.yml up -d --build
+```
+
+Keep the media mounts identical in both compose files so the backend sees the same absolute paths as SubSmelt. In fake mode, `/health`, `/preflight`, and `/transcribe` work without downloading any model weights. See [backend-whisper/README.md](./backend-whisper/README.md) for `curl` examples.
+
 ---
 
 ## Volumes

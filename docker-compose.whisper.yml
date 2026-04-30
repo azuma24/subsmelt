@@ -9,6 +9,8 @@ services:
     container_name: subsmelt-whisper
     ports:
       - "8001:8001"
+    environment:
+      - SUBSMELT_WHISPER_FAKE=${SUBSMELT_WHISPER_FAKE:-0}
     volumes:
       # Keep these media paths identical to the subsmelt service.
       - /path/to/movies:/media/movies

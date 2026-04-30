@@ -47,6 +47,17 @@ export interface BackendPreflightResponse {
   ffmpegAvailable?: boolean;
   diskAvailableMb?: number;
   requiredDiskMb?: number;
+  modelCache?: {
+    model?: string;
+    cached?: boolean | null;
+    cacheRoot?: string;
+    cachePath?: string | null;
+    firstRunDownloadExpected?: boolean;
+    requiredRamMb?: number;
+    recommendedRamMb?: number;
+    suggestedModel?: string | null;
+    warning?: string;
+  };
 }
 
 export interface BackendTranscriptionResponse {
@@ -121,10 +132,11 @@ function backendErrorMessage(body: unknown, status: number): string {
   return `Transcription backend returned HTTP ${status}`;
 }
 
-export async function fetchTranscriptionHealth(backendUrl: string): Promise<unknown> {
+export async function fetchTranscriptionHealth(backendUrl: string, model?: string): Promise<unknown> {
   const url = normalizeTranscriptionBackendUrl(backendUrl);
   if (!url) throw new Error("Transcription backend URL is not configured");
-  const response = await fetch(`${url}/health`);
+  const qs = model ? `?${new URLSearchParams({ model }).toString()}` : "";
+  const response = await fetch(`${url}/health${qs}`);
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(backendErrorMessage(body, response.status));
   return body;

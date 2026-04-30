@@ -139,6 +139,17 @@ export interface TranscriptionHealth {
     ffmpeg?: boolean;
     totalRamMb?: number;
     availableRamMb?: number;
+    modelCache?: {
+      model?: string;
+      cached?: boolean | null;
+      cacheRoot?: string;
+      cachePath?: string | null;
+      firstRunDownloadExpected?: boolean;
+      requiredRamMb?: number;
+      recommendedRamMb?: number;
+      suggestedModel?: string | null;
+      warning?: string;
+    };
     capabilities?: {
       models?: string[];
       devices?: string[];
