@@ -1,0 +1,21 @@
+services:
+  subsmelt:
+    environment:
+      # Optional wiring only. Model/language/VAD/automation stay in the web Settings UI.
+      - WHISPER_BACKEND_URL=http://whisper-backend:8001
+
+  whisper-backend:
+    build: ./backend-whisper
+    container_name: subsmelt-whisper
+    ports:
+      - "8001:8001"
+    volumes:
+      # Keep these media paths identical to the subsmelt service.
+      - /path/to/movies:/media/movies
+      - /path/to/anime:/media/anime
+      - /path/to/tv:/media/tv
+      # Persist downloaded faster-whisper models outside the image.
+      - ./models/whisper:/models
+      # Optional scratch/output access if needed by future features.
+      - ./data:/app/data
+    restart: unless-stopped

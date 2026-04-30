@@ -6,7 +6,7 @@ import { getErrorMessage } from "../../lib";
 import { useJobsQuery, useMutationWithInvalidation, useQueueStatusQuery, useSettingsQuery, useTasksQuery } from "../../hooks";
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmModal";
-import type { JobRow, ScannedFile } from "../../types";
+import type { JobRow, ScannedFile, TranscribePostAction } from "../../types";
 import { ActionButton, EmptyHint, StatCard } from "../../ui/primitives";
 import { ActiveJobCard } from "./ActiveJobCard";
 import { JobsTableDesktop } from "./JobsTableDesktop";
@@ -63,6 +63,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const [folderFilter, setFolderFilter] = useState("all");
   const [targetFilter, setTargetFilter] = useState("all");
   const [scanPlan, setScanPlan] = useState<ScanPlan | null>(null);
+  const [transcribingPath, setTranscribingPath] = useState<string | null>(null);
 
   const scanPreviewMutation = useMutationWithInvalidation(() => api.previewScan());
   const scanMutation = useMutationWithInvalidation(() => api.scanFolder());
@@ -73,6 +74,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const deleteSelectedMutation = useMutationWithInvalidation((ids: number[]) => api.deleteJobsApi(ids));
   const retrySelectedMutation = useMutationWithInvalidation((ids: number[]) => api.retryJobsApi(ids));
   const forceSelectedMutation = useMutationWithInvalidation((ids: number[]) => api.forceJobsApi(ids));
+  const transcribeMutation = useMutationWithInvalidation((payload: { videoPath: string; postAction: TranscribePostAction }) => api.transcribeVideo(payload));
 
   const jobs: JobRow[] = jobsQuery.data?.jobs || [];
   const queueRunning = Boolean(queueStatusQuery.data?.running ?? jobsQuery.data?.queueRunning ?? false);
@@ -84,6 +86,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const taskCount = tasks.length;
   const enabledTaskCount = tasks.filter((x) => x.enabled === 1).length;
   const hasLlmConfig = Boolean(str(settings.llm_endpoint)) && Boolean(str(settings.model));
+  const transcriptionEnabled = str(settings.transcription_enabled, "0") === "1";
 
   const pendingJobs = jobs.filter((j) => j.status === "pending");
   const selectedPendingCount = pendingJobs.filter((j) => selectedIds.has(j.id)).length;
@@ -262,6 +265,33 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
 
     const result = await forceSelectedMutation.mutateAsync(visibleRetranslatableIds);
     addToast(t("dashboard.toast.forceSelectedStarted", { count: result.updated }), "info");
+  };
+
+  const handleTranscribe = async (videoPath: string, postAction: TranscribePostAction) => {
+    setTranscribingPath(videoPath);
+    try {
+      const result = await transcribeMutation.mutateAsync({ videoPath, postAction });
+      if (result.scanResult?.files) {
+        setScanResult(result.scanResult.files);
+        setScanResultMode(postAction === "transcribe_and_translate" ? "queued" : "preview");
+        expandInterestingScanGroups(result.scanResult.files);
+      } else {
+        const refreshed = await scanPreviewMutation.mutateAsync();
+        setScanResult(refreshed.files);
+        setScanResultMode("preview");
+        expandInterestingScanGroups(refreshed.files);
+      }
+      addToast(
+        postAction === "transcribe_and_translate"
+          ? "Transcription complete. Translation jobs were queued."
+          : "Transcription complete. Source subtitle was generated.",
+        "success",
+      );
+    } catch (e: unknown) {
+      addToast(`Transcription failed: ${getErrorMessage(e)}`, "error");
+    } finally {
+      setTranscribingPath(null);
+    }
   };
 
   const toggleSelectedJob = (id: number) => {
@@ -547,6 +577,9 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
             setSelectedIds={setSelectedIds}
             mode={scanResultMode}
             onQueueAll={handleScan}
+            onTranscribe={handleTranscribe}
+            transcriptionEnabled={transcriptionEnabled}
+            transcribingPath={transcribingPath}
             isQueueing={scanMutation.isPending}
             newJobsCount={scanResult.flatMap((file) => file.subtitles.flatMap((sub) => sub.tasks)).filter((task) => task.status === "new").length}
           />

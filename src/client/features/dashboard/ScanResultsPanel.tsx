@@ -2,6 +2,7 @@ import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import type { JobRow, ScannedFile, TaskStatus } from "../../types";
 import { STATUS_ICON } from "../../app/constants";
+import type { TranscribePostAction } from "../../types";
 
 export type ScanFilter = "all" | "new" | "missing" | "orphans";
 
@@ -18,6 +19,9 @@ interface ScanResultsPanelProps {
   setSelectedIds: Dispatch<SetStateAction<Set<number>>>;
   mode: "preview" | "queued";
   onQueueAll: () => void;
+  onTranscribe?: (videoPath: string, postAction: TranscribePostAction) => void;
+  transcriptionEnabled?: boolean;
+  transcribingPath?: string | null;
   isQueueing: boolean;
   newJobsCount: number;
 }
@@ -61,6 +65,9 @@ export function ScanResultsPanel({
   setSelectedIds,
   mode,
   onQueueAll,
+  onTranscribe,
+  transcriptionEnabled = false,
+  transcribingPath = null,
   isQueueing,
   newJobsCount,
 }: ScanResultsPanelProps) {
@@ -168,6 +175,9 @@ export function ScanResultsPanel({
                         jobsById={jobsById}
                         selectedIds={selectedIds}
                         setSelectedIds={setSelectedIds}
+                        onTranscribe={onTranscribe}
+                        transcriptionEnabled={transcriptionEnabled}
+                        transcribingPath={transcribingPath}
                       />
                     ))}
                   </div>
@@ -186,11 +196,17 @@ function CompactScanFileRow({
   jobsById,
   selectedIds,
   setSelectedIds,
+  onTranscribe,
+  transcriptionEnabled,
+  transcribingPath,
 }: {
   file: ScannedFile;
   jobsById: Map<number, JobRow>;
   selectedIds: Set<number>;
   setSelectedIds: Dispatch<SetStateAction<Set<number>>>;
+  onTranscribe?: (videoPath: string, postAction: TranscribePostAction) => void;
+  transcriptionEnabled: boolean;
+  transcribingPath: string | null;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -204,6 +220,7 @@ function CompactScanFileRow({
   const selectedPendingCount = pendingJobIds.filter((id) => selectedIds.has(id)).length;
   const allPendingSelected = pendingJobIds.length > 0 && selectedPendingCount === pendingJobIds.length;
   const somePendingSelected = selectedPendingCount > 0 && !allPendingSelected;
+  const isTranscribing = Boolean(file.videoPath && transcribingPath === file.videoPath);
 
   const togglePendingJobs = () => {
     setSelectedIds((prev) => {
@@ -259,7 +276,33 @@ function CompactScanFileRow({
               ×
             </button>
           </div>
-          {file.subtitles.length === 0 && file.videoName && <div className="text-xs text-yellow-600">{t("dashboard.noSubtitleFound")}</div>}
+          {file.subtitles.length === 0 && file.videoName && (
+            <div className="space-y-2 rounded-2xl border border-yellow-900/30 bg-yellow-950/10 p-3">
+              <div className="text-xs text-yellow-600">{t("dashboard.noSubtitleFound")}</div>
+              {transcriptionEnabled && file.videoPath && onTranscribe ? (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={isTranscribing}
+                    onClick={() => onTranscribe(file.videoPath as string, "transcribe_only")}
+                    className="rounded-lg bg-gray-800 px-3 py-2 text-xs font-medium text-gray-200 disabled:opacity-50"
+                  >
+                    {isTranscribing ? "Transcribing…" : "Transcribe"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isTranscribing}
+                    onClick={() => onTranscribe(file.videoPath as string, "transcribe_and_translate")}
+                    className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white disabled:opacity-50"
+                  >
+                    {isTranscribing ? "Working…" : "Transcribe + Translate"}
+                  </button>
+                </div>
+              ) : (
+                <div className="text-[11px] text-gray-500">Enable speech-to-text in Settings to generate subtitles from this video.</div>
+              )}
+            </div>
+          )}
           {file.subtitles.map((sub, j) => (
             <div key={j} className="mt-2 rounded-2xl bg-gray-900/60 p-3">
               <div className="text-xs text-gray-300">{sub.srtName}</div>

@@ -1,4 +1,4 @@
-import type { FolderNode, JobPreview, JobRow, LlmHealth, LogEntry, QueueStatus, ScanResult, Task } from "./types";
+import type { FolderNode, JobPreview, JobRow, LlmHealth, LogEntry, QueueStatus, ScanResult, Task, TranscribeRequest, TranscribeResponse, TranscriptionHealth } from "./types";
 
 const BASE = "/api";
 
@@ -103,3 +103,11 @@ export const testConnection = () =>
 
 export const getLlmHealth = () =>
   fetchJSON<LlmHealth>("/llm-health");
+
+// Speech-to-text
+export const getTranscriptionHealth = () =>
+  fetchJSON<TranscriptionHealth>("/transcribe/health");
+export const preflightTranscription = (payload: TranscribeRequest) =>
+  fetchJSON("/transcribe/preflight", { method: "POST", body: JSON.stringify(payload) });
+export const transcribeVideo = (payload: TranscribeRequest) =>
+  fetchJSON<TranscribeResponse>("/transcribe", { method: "POST", body: JSON.stringify(payload) });
