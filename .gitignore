@@ -2,6 +2,7 @@ node_modules/
 dist/
 config/
 data/
+models/
 .bg-shell/
 .claude/
 *.tar
