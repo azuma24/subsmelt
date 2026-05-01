@@ -22,6 +22,8 @@ One subtitle file. Multiple language outputs. Fully automated.
 - **Queue management** — Priority pinning, force re-translate, graceful stop, resumes on restart
 - **Supported formats** — `.srt`, `.vtt`, `.ass`, `.ssa`
 - **Optional speech-to-text** — Connect to a faster-whisper backend to generate source subtitles when videos have none
+- **Per-folder STT defaults** — Override model, language, output format, subtitle quality, and advanced options for specific folders
+- **STT history and retry** — Review recent transcription attempts, retry failed jobs, and keep output paths aligned with generated subtitles
 - **Multi-language UI** — Interface available in English, 繁體中文, 简体中文, and 日本語
 - **Simple core container** — No database server; optional transcription runs as a separate add-on or external service
 
@@ -122,6 +124,43 @@ SubSmelt still validates the original video path under `MEDIA_DIR` first. Only t
 
 Recommended CPU defaults are `small`, `cpu`, `int8`, VAD enabled, and max concurrency `1`. SubSmelt runs a preflight check before transcription so low-RAM systems can warn, downgrade, skip, or block safely depending on your setting.
 
+Speech-to-text settings live in the web UI, not Docker env. You can configure:
+
+| Setting | What it controls |
+|---------|------------------|
+| Model / device / compute | Faster-whisper model, CPU/GPU device, and compute type such as `int8` |
+| Language / output format | Auto-detect or explicit source language, plus `.srt`, `.vtt`, or `.txt` output |
+| Missing-subtitle behavior | Ask first, auto-transcribe, or auto-transcribe and queue translation |
+| Low-RAM behavior | Ask, downgrade, skip, or run anyway after preflight |
+| Subtitle quality | Max line length, max subtitle duration, and short-segment merging |
+| Per-folder defaults | Folder-specific overrides; the longest matching folder path wins |
+| Advanced STT options | Lightweight faster-whisper knobs such as beam size, patience, word timestamps, and initial prompt |
+
+Example per-folder defaults JSON:
+
+```json
+[
+  { "path": "/media/anime", "language": "ja", "model": "small", "output_format": "vtt" },
+  { "path": "/media/lectures", "language": "en", "model": "medium", "advanced_options": { "beam_size": 7, "initial_prompt": "Technical lecture audio." } }
+]
+```
+
+Example advanced STT options JSON:
+
+```json
+{
+  "beam_size": 5,
+  "patience": 1.2,
+  "condition_on_previous_text": false,
+  "word_timestamps": true,
+  "initial_prompt": "Clear speech with occasional technical terms."
+}
+```
+
+Heavy options such as speaker diarization and BGM separation are explicit capability flags. The bundled lightweight backend reports them as unsupported instead of silently pulling large extra dependencies into the core app.
+
+Generated source subtitle names match scanner expectations: auto language writes `Movie.srt`; explicit languages write names such as `Movie.ja.vtt`. The transcription history stores the local media path so retries continue to work even when backend path mapping is enabled.
+
 For a no-download smoke test of the optional backend wiring, run the whisper overlay with fake mode enabled:
 
 ```bash
@@ -214,6 +253,7 @@ docker buildx build --platform linux/amd64 -t subsmelt-whisper:latest ./backend-
 | Frontend | React 18, Vite, Tailwind CSS |
 | Real-time | Server-Sent Events |
 | Translation | Vercel AI SDK |
+| Optional STT | Python FastAPI sidecar + faster-whisper |
 | File watch | chokidar |
 | i18n | i18next |
 | Container | Single Dockerfile, no external services |
