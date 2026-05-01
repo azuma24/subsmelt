@@ -1,12 +1,61 @@
+# Dependencies and builds
 node_modules/
 dist/
+
+# Runtime app state
 config/
 data/
 models/
+
+# Local smoke-test media, generated subtitles, test DBs/logs/configs
+.media-test/
+
+# Local agent/tool state
 .bg-shell/
 .claude/
+
+# Local env files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# SQLite/runtime DB files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Python backend caches / local virtualenvs
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Coverage/test output
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+
+# Archives and OS/editor noise
 *.tar
 *.tar.gz
 *.tgz
-.env
 .DS_Store
+.AppleDouble
+.LSOverride
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
