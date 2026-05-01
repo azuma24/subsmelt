@@ -44,6 +44,7 @@ import {
   applyPreflightPolicy,
   buildTranscriptionRequest,
   fetchTranscriptionHealth,
+  localTranscriptionOutputPath,
   preflightTranscription,
   transcribePostActionValues,
   transcribeWithBackend,
@@ -511,8 +512,7 @@ async function runTranscriptionAttempt(opts: {
     outputFormat: opts.outputFormat,
     postAction: opts.postAction,
   });
-  const outputExt = request.output_format;
-  const outputPath = `${opts.videoPath.slice(0, -path.extname(opts.videoPath).length)}.${outputExt}`;
+  const outputPath = localTranscriptionOutputPath(opts.videoPath, request.language, request.output_format);
   const attempt = transcriptionHistory.startAttempt({
     // Store the local SubSmelt media path so history retries re-run through
     // MEDIA_DIR validation and optional backend path mapping correctly.
@@ -523,6 +523,7 @@ async function runTranscriptionAttempt(opts: {
     outputFormat: request.output_format,
     postAction: request.post_action,
     subtitleQuality: request.subtitle_quality,
+    advancedOptions: request.advanced_options,
   });
 
   try {

@@ -138,6 +138,15 @@ export interface TranscriptionHistoryEntry {
     max_subtitle_duration?: number;
     merge_short_segments?: boolean;
   } | null;
+  advancedOptions?: {
+    beam_size?: number;
+    patience?: number;
+    condition_on_previous_text?: boolean;
+    word_timestamps?: boolean;
+    initial_prompt?: string;
+    speaker_diarization?: boolean;
+    bgm_separation?: boolean;
+  } | null;
 }
 
 export interface TranscriptionPreflightResponse {
@@ -192,6 +201,15 @@ export interface TranscriptionHealth {
       computeTypes?: string[];
       outputFormats?: string[];
       vad?: boolean;
+      advancedOptions?: {
+        beamSize?: boolean;
+        patience?: boolean;
+        conditionOnPreviousText?: boolean;
+        wordTimestamps?: boolean;
+        initialPrompt?: boolean;
+        speakerDiarization?: boolean;
+        bgmSeparation?: boolean;
+      };
     };
   };
 }

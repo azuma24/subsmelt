@@ -350,6 +350,30 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
               />
             </label>
           </div>
+          <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-300">Per-folder STT defaults</label>
+              <textarea
+                value={str(settings.transcription_folder_defaults, "[]")}
+                onChange={(e) => update("transcription_folder_defaults", e.target.value)}
+                rows={7}
+                placeholder={'[{"path":"/media/anime","language":"ja","model":"small"}]'}
+                className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 font-mono text-xs text-gray-200"
+              />
+              <p className="mt-1 text-[10px] leading-relaxed text-gray-500">JSON array. Longest matching folder wins. Supported keys: path, model, language, output_format, device, compute_type, use_vad, max_line_length, max_subtitle_duration, merge_short_segments, advanced_options.</p>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-300">Advanced STT options</label>
+              <textarea
+                value={str(settings.transcription_advanced_stt, "{}")}
+                onChange={(e) => update("transcription_advanced_stt", e.target.value)}
+                rows={7}
+                placeholder={'{"beam_size":5,"word_timestamps":true,"initial_prompt":"Lecture audio"}'}
+                className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 font-mono text-xs text-gray-200"
+              />
+              <p className="mt-1 text-[10px] leading-relaxed text-gray-500">Lightweight faster-whisper options are passed through. Speaker diarization and background-music separation are opt-in backend capabilities; this backend reports them clearly if unavailable instead of pulling heavy dependencies into core.</p>
+            </div>
+          </div>
           <label className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl bg-gray-800/50 p-4">
             <div>
               <p className="text-sm font-medium text-gray-300">Use VAD</p>

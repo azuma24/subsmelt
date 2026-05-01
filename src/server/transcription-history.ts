@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { TranscribePostAction, TranscriptionOutputFormat, TranscriptionSubtitleQualityOptions } from "./transcription-client.js";
+import type { TranscribePostAction, TranscriptionAdvancedOptions, TranscriptionOutputFormat, TranscriptionSubtitleQualityOptions } from "./transcription-client.js";
 
 const DATA_DIR = process.env.DATA_DIR || "./data";
 const HISTORY_FILE = path.join(DATA_DIR, "transcription-history.json");
@@ -22,6 +22,7 @@ export interface TranscriptionHistoryEntry {
   durationSeconds: number | null;
   errorSummary: string | null;
   subtitleQuality?: TranscriptionSubtitleQualityOptions | null;
+  advancedOptions?: TranscriptionAdvancedOptions | null;
 }
 
 interface StartAttemptInput {
@@ -32,6 +33,7 @@ interface StartAttemptInput {
   outputFormat: TranscriptionOutputFormat;
   postAction: TranscribePostAction;
   subtitleQuality?: TranscriptionSubtitleQualityOptions | null;
+  advancedOptions?: TranscriptionAdvancedOptions | null;
   startedAt?: string;
 }
 
@@ -107,6 +109,7 @@ export class TranscriptionHistoryStore {
       durationSeconds: null,
       errorSummary: null,
       subtitleQuality: input.subtitleQuality ?? null,
+      advancedOptions: input.advancedOptions ?? null,
     };
     const entries = this.read();
     entries.unshift(entry);

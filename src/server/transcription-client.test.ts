@@ -5,6 +5,7 @@ import {
   applyPreflightPolicy,
   buildTranscriptionRequest,
   normalizeTranscriptionBackendUrl,
+  localTranscriptionOutputPath,
   transcribePostActionValues,
 } from "./transcription-client.js";
 
@@ -121,6 +122,75 @@ test("buildTranscriptionRequest includes subtitle polish options from settings",
     max_subtitle_duration: 5.5,
     merge_short_segments: true,
   });
+});
+
+test("buildTranscriptionRequest applies the longest matching per-folder defaults before global defaults", () => {
+  const request = buildTranscriptionRequest({
+    videoPath: "/media/anime/Season 2/Episode 07.mkv",
+    mediaDir: "/media",
+    settings: {
+      transcription_model: "small",
+      transcription_language: "auto",
+      transcription_use_vad: "1",
+      transcription_folder_defaults: JSON.stringify([
+        { path: "/media/anime", model: "base", language: "ja", use_vad: false },
+        { path: "/media/anime/Season 2", model: "medium", language: "ja", output_format: "vtt", max_line_length: 30 },
+      ]),
+    },
+  });
+
+  assert.equal(request.model, "medium");
+  assert.equal(request.language, "ja");
+  assert.equal(request.output_format, "vtt");
+  assert.equal(request.use_vad, true, "folder defaults should only override keys they explicitly set");
+  assert.deepEqual(request.subtitle_quality, { max_line_length: 30 });
+});
+
+test("buildTranscriptionRequest sends supported advanced STT options without enabling unsupported heavy features by default", () => {
+  const request = buildTranscriptionRequest({
+    videoPath: "/media/lectures/Talk 01.mkv",
+    mediaDir: "/media",
+    settings: {
+      transcription_advanced_stt: JSON.stringify({
+        beam_size: 7,
+        patience: 1.2,
+        condition_on_previous_text: false,
+        word_timestamps: true,
+        initial_prompt: "Technical conference audio.",
+        speaker_diarization: false,
+        bgm_separation: false,
+      }),
+    },
+  });
+
+  assert.deepEqual(request.advanced_options, {
+    beam_size: 7,
+    patience: 1.2,
+    condition_on_previous_text: false,
+    word_timestamps: true,
+    initial_prompt: "Technical conference audio.",
+    speaker_diarization: false,
+    bgm_separation: false,
+  });
+});
+
+test("buildTranscriptionRequest rejects invalid STT JSON settings instead of silently using global defaults", () => {
+  assert.throws(() => buildTranscriptionRequest({
+    videoPath: "/media/anime/Episode 08.mkv",
+    mediaDir: "/media",
+    settings: { transcription_folder_defaults: "[{not json]" },
+  }), /Invalid transcription_folder_defaults JSON/);
+
+  assert.throws(() => buildTranscriptionRequest({
+    videoPath: "/media/anime/Episode 08.mkv",
+    mediaDir: "/media",
+    settings: { transcription_advanced_stt: "{not json}" },
+  }), /Invalid transcription_advanced_stt JSON/);
+});
+
+test("localTranscriptionOutputPath mirrors backend language suffix output naming", () => {
+  assert.equal(localTranscriptionOutputPath("/media/anime/Episode 07.mkv", "ja", "vtt"), "/media/anime/Episode 07.ja.vtt");
+  assert.equal(localTranscriptionOutputPath("/media/anime/Episode 07.mkv", "auto", "srt"), "/media/anime/Episode 07.srt");
 });
 
 test("transcribe post action values remain restricted", () => {
