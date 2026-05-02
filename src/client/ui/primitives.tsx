@@ -16,12 +16,13 @@ export function StatusPill({ label, tone, truncate = false }: { label: string; t
 interface ActionButtonProps {
   children: ReactNode;
   onClick: () => void;
+  className?: string;
   variant?: "primary" | "success" | "danger" | "ghost" | "warning";
   disabled?: boolean;
   busy?: boolean;
 }
 
-export function ActionButton({ children, onClick, variant = "primary", disabled = false, busy = false }: ActionButtonProps) {
+export function ActionButton({ children, onClick, className = "", variant = "primary", disabled = false, busy = false }: ActionButtonProps) {
   const cls = {
     primary: "bg-blue-600 hover:bg-blue-700 text-white",
     success: "bg-green-600 hover:bg-green-700 text-white",
@@ -29,7 +30,7 @@ export function ActionButton({ children, onClick, variant = "primary", disabled 
     ghost: "bg-gray-800 hover:bg-gray-700 text-gray-200",
     warning: "bg-yellow-700 hover:bg-yellow-600 text-yellow-100",
   }[variant];
-  return <button onClick={onClick} disabled={disabled || busy} className={`min-h-[44px] rounded-2xl px-4 py-3 text-sm font-medium leading-6 transition-colors disabled:opacity-50 ${cls}`}>{children}</button>;
+  return <button onClick={onClick} disabled={disabled || busy} className={`min-h-[44px] rounded-2xl px-4 py-3 text-sm font-medium leading-6 transition-colors disabled:cursor-not-allowed disabled:opacity-50 disabled:saturate-50 ${cls} ${className}`}>{children}</button>;
 }
 
 export function StatCard({ label, value, color }: { label: string; value: number; color: string }) {

@@ -6,6 +6,7 @@ const css = readFileSync("src/client/index.css", "utf8");
 const app = readFileSync("src/client/App.tsx", "utf8");
 const shell = readFileSync("src/client/app/shell.tsx", "utf8");
 const primitives = readFileSync("src/client/ui/primitives.tsx", "utf8");
+const dashboard = readFileSync("src/client/features/dashboard/DashboardPage.tsx", "utf8");
 
 test("global typography uses readable app font and line-height defaults", () => {
   assert.match(css, /font-family:\s*ui-sans-serif/);
@@ -24,4 +25,11 @@ test("shared controls avoid tiny helper text and preserve touch-friendly targets
   assert.doesNotMatch(primitives, /text-\[10px\]/);
   assert.match(primitives, /min-h-\[44px\]/);
   assert.match(primitives, /leading-6/);
+});
+
+test("dashboard hero uses intentional desktop action grouping", () => {
+  assert.match(dashboard, /aria-label=\{t\("dashboard\.hero\.scanActions"\)\}/);
+  assert.match(dashboard, /md:grid-cols-2/);
+  assert.match(dashboard, /xl:min-w-\[34rem\]/);
+  assert.match(dashboard, /md:col-span-2/);
 });

@@ -401,35 +401,41 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
     <div className="mx-auto max-w-[1400px] space-y-6 p-4 md:p-6">
       <div className="space-y-6">
         <section className="rounded-3xl border border-gray-800 bg-gradient-to-br from-gray-900 to-gray-950 p-5 md:p-6">
-          <div className={`flex ${isMobile ? "flex-col gap-4" : "items-start justify-between gap-4"}`}>
-            <div>
+          <div className={`flex ${isMobile ? "flex-col gap-5" : "items-start justify-between gap-8"}`}>
+            <div className="min-w-0 flex-1">
               <h1 className="text-2xl font-semibold tracking-tight">SubSmelt</h1>
-              <p className="mt-2 max-w-2xl text-sm text-gray-400">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-400">
                 {autoTranslate ? t("dashboard.scanAutoTranslateOn") : t("dashboard.scanAutoTranslateOff")}
               </p>
             </div>
-            <div className={`flex ${isMobile ? "grid grid-cols-2 gap-2" : "flex-wrap gap-2"}`}>
-              <ActionButton variant="ghost" onClick={handlePreviewScan} busy={scanPreviewMutation.isPending} disabled={scanMutation.isPending}>
+            <div
+              aria-label={t("dashboard.hero.scanActions")}
+              className={`grid w-full gap-2 ${isMobile ? "grid-cols-2" : "md:grid-cols-2 xl:min-w-[34rem] xl:max-w-[34rem]"}`}
+            >
+              <ActionButton className="w-full" variant="ghost" onClick={handlePreviewScan} busy={scanPreviewMutation.isPending} disabled={scanMutation.isPending}>
                 {scanPreviewMutation.isPending ? t("dashboard.previewing") : t("dashboard.previewScan")}
               </ActionButton>
-              <ActionButton onClick={handleScan} busy={scanMutation.isPending} disabled={scanPreviewMutation.isPending}>
+              <ActionButton className="w-full" onClick={handleScan} busy={scanMutation.isPending} disabled={scanPreviewMutation.isPending}>
                 {scanMutation.isPending ? t("dashboard.scanning") : t("dashboard.scanFolders")}
               </ActionButton>
-              {!queueRunning ? (
-                <>
-                  <ActionButton variant="success" onClick={handleRunAll} disabled={pendingJobs.length === 0}>{t("dashboard.runAll")}</ActionButton>
-                  <ActionButton
-                    variant="success"
-                    onClick={handleRunSelected}
-                    disabled={selectedPendingCount === 0 || startSelectedMutation.isPending}
-                  >
-                    {t("dashboard.runSelected", { count: selectedPendingCount })}
-                  </ActionButton>
-                </>
-              ) : (
-                <ActionButton variant="danger" onClick={handleStop}>{t("dashboard.stop")}</ActionButton>
-              )}
-              {jobs.length > 0 && <ActionButton variant="ghost" onClick={handleClearAll}>{t("dashboard.clearAll")}</ActionButton>}
+              <div className="grid grid-cols-2 gap-2 md:col-span-2">
+                {!queueRunning ? (
+                  <>
+                    <ActionButton className="w-full" variant="success" onClick={handleRunAll} disabled={pendingJobs.length === 0}>{t("dashboard.runAll")}</ActionButton>
+                    <ActionButton
+                      className="w-full"
+                      variant="success"
+                      onClick={handleRunSelected}
+                      disabled={selectedPendingCount === 0 || startSelectedMutation.isPending}
+                    >
+                      {t("dashboard.runSelected", { count: selectedPendingCount })}
+                    </ActionButton>
+                  </>
+                ) : (
+                  <ActionButton className="col-span-2 w-full" variant="danger" onClick={handleStop}>{t("dashboard.stop")}</ActionButton>
+                )}
+              </div>
+              {jobs.length > 0 && <ActionButton className="md:col-span-2 w-full" variant="ghost" onClick={handleClearAll}>{t("dashboard.clearAll")}</ActionButton>}
             </div>
           </div>
 

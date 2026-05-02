@@ -201,7 +201,10 @@
       "none": "No folder summary available",
       "proceed": "Proceed"
     },
-    "emptyScanHint": "Try changing scan/search filters or run Scan Folders again."
+    "emptyScanHint": "Try changing scan/search filters or run Scan Folders again.",
+    "hero": {
+      "scanActions": "Scan and queue actions"
+    }
   },
   "translation_languages": {
     "title": "Translations",
