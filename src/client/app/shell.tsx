@@ -31,7 +31,7 @@ export function DesktopSidebar({
         {!collapsed && (
           <div className="min-w-0">
             <h1 className="text-sm font-semibold text-white leading-tight">SubSmelt</h1>
-            <p className="text-[10px] font-mono text-gray-500 leading-tight">v{__APP_VERSION__}</p>
+            <p className="font-mono text-[11px] leading-tight text-gray-400">v{__APP_VERSION__}</p>
           </div>
         )}
       </div>
@@ -55,7 +55,7 @@ export function DesktopSidebar({
           <SidebarStatus label={t(queueRunning ? "app.queueRunning" : "app.queueIdle")} dot={queueRunning ? "bg-green-500 animate-pulse" : "bg-gray-600"} collapsed={collapsed} />
           <SidebarStatus label={t(watcherRunning ? "app.watcherActive" : "app.watcherInactive")} dot={watcherRunning ? "bg-emerald-500" : "bg-gray-600"} collapsed={collapsed} />
         </div>
-        {!collapsed && modelName && <div className="rounded-xl border border-gray-800 bg-gray-950/60 p-3 text-[11px] text-gray-500 truncate" title={modelName}>{modelName}</div>}
+        {!collapsed && modelName && <div className="truncate rounded-xl border border-gray-800 bg-gray-950/60 p-3 text-xs text-gray-400" title={modelName}>{modelName}</div>}
       </div>
     </nav>
   );
@@ -65,7 +65,7 @@ function SidebarStatus({ label, dot, collapsed }: { label: string; dot: string; 
   return (
     <div className="flex items-center gap-2 rounded-xl bg-gray-950/60 border border-gray-800 px-3 py-2">
       <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${dot}`} />
-      {!collapsed && <span className="text-[11px] text-gray-500 truncate">{label}</span>}
+      {!collapsed && <span className="truncate text-xs text-gray-400">{label}</span>}
     </div>
   );
 }
@@ -74,7 +74,7 @@ export function TopStatusBar({ queueRunning, watcherRunning, modelName }: { queu
   const { t } = useTranslation();
   return (
     <div className="sticky top-0 z-20 border-b border-gray-800/80 bg-gray-950/90 backdrop-blur">
-      <div className="flex items-center gap-2 overflow-x-auto px-4 py-3 text-xs text-gray-400">
+      <div className="flex items-center gap-2 overflow-x-auto px-4 py-3.5 text-sm text-gray-300 sm:px-6">
         <StatusPill label={t(queueRunning ? "app.queueRunning" : "app.queueIdle")} tone={queueRunning ? "green" : "gray"} />
         <StatusPill label={t(watcherRunning ? "app.watcherActive" : "app.watcherInactive")} tone={watcherRunning ? "emerald" : "gray"} />
         {modelName && <StatusPill label={modelName} tone="blue" truncate />}
@@ -87,14 +87,14 @@ export function MobileBottomNav({ currentPath }: { currentPath: string }) {
   const { t } = useTranslation();
   return (
     <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-800 bg-gray-950/95 backdrop-blur md:hidden">
-      <div className="grid grid-cols-4 gap-1 p-2">
+      <div className="grid grid-cols-4 gap-1 px-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2">
         {NAV_ITEMS.map((item) => {
           const active = currentPath === item.path;
           return (
             <NavLink
               key={item.path}
               to={item.path}
-              className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] ${active ? "bg-blue-600/15 text-white" : "text-gray-500"}`}
+              className={`flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-xs ${active ? "bg-blue-600/15 text-white" : "text-gray-400"}`}
             >
               <span className="text-base">{item.icon}</span>
               <span>{t(item.labelKey)}</span>

@@ -65,7 +65,7 @@ function AppInner() {
     Boolean(queueQuery.data?.watcherRunning) || Boolean(settingsQuery.data?._watcher_running);
 
   return (
-    <div className="flex h-screen bg-gray-950 text-gray-100">
+    <div className="flex h-dvh min-h-dvh bg-gray-950 text-gray-100">
       {!isMobile && (
         <DesktopSidebar
           collapsed={sidebarCollapsed}
