@@ -1,4 +1,5 @@
 import type { UseQueryResult } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import type { TranscriptionHealth } from "../../types";
 import { ActionButton } from "../../ui/primitives";
 
@@ -15,14 +16,14 @@ const MODEL_RAM_MB: Record<string, { required: number; recommended: number }> = 
 
 const str = (v: unknown, fallback = ""): string => (typeof v === "string" ? v : fallback);
 
-function formatMb(value?: number): string {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return "unknown";
+function formatMb(value?: number, unknownLabel = "unknown"): string {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return unknownLabel;
   if (value >= 1024) return `${(value / 1024).toFixed(value >= 10 * 1024 ? 0 : 1)} GB`;
   return `${Math.round(value)} MB`;
 }
 
-function list(values?: string[]): string {
-  return values?.length ? values.join(", ") : "unknown";
+function list(values: string[] | undefined, unknownLabel: string): string {
+  return values?.length ? values.join(", ") : unknownLabel;
 }
 
 function modelRequirements(model: string) {
@@ -62,6 +63,8 @@ export function TranscriptionReadinessPanel({
   healthQuery: UseQueryResult<TranscriptionHealth>;
   dirty: boolean;
 }) {
+  const { t } = useTranslation();
+  const unknownLabel = t("settings.transcription.readiness.unknown");
   const enabled = str(settings.transcription_enabled, "0") === "1";
   const backendUrl = str(settings.transcription_backend_url);
   const configured = Boolean(backendUrl);
@@ -88,92 +91,92 @@ export function TranscriptionReadinessPanel({
   const selectedOutputAdvertised = outputFormats?.length ? outputFormats.includes(selectedOutput) : undefined;
 
   const summary = !enabled
-    ? "Speech-to-text is disabled. Subsmelt will continue translating existing subtitles without a Whisper backend."
+    ? t("settings.transcription.readiness.disabledSummary")
     : !configured
-      ? "Add a backend URL to enable local transcription readiness checks. Whisper is optional and not required by the main app."
+      ? t("settings.transcription.readiness.needsBackendSummary")
       : healthQuery.isLoading
-        ? "Checking the saved transcription backend…"
+        ? t("settings.transcription.readiness.checkingSummary")
         : health?.ok
-          ? "Ready to transcribe with the configured optional backend."
-          : "Backend is configured but not reachable yet. Check that the optional whisper service is running and the URL is saved.";
+          ? t("settings.transcription.readiness.readySummary")
+          : t("settings.transcription.readiness.unreachableSummary");
 
   return (
     <div className="rounded-2xl border border-gray-800 bg-gray-950/45 p-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <div className="text-sm font-semibold text-gray-200">Transcription readiness</div>
+          <div className="text-sm font-semibold text-gray-200">{t("settings.transcription.readiness.title")}</div>
           <p className="mt-1 text-xs leading-relaxed text-gray-400">{summary}</p>
           {dirty && configured && (
-            <p className="mt-1 text-[10px] text-yellow-300">Save settings before refreshing readiness so the backend health check uses the latest URL/options.</p>
+            <p className="mt-1 text-[10px] text-yellow-300">{t("settings.transcription.readiness.saveBeforeRefresh")}</p>
           )}
         </div>
         <ActionButton variant="ghost" onClick={() => healthQuery.refetch()} disabled={!configured || healthQuery.isFetching}>
-          {healthQuery.isFetching ? "Refreshing…" : "Refresh readiness"}
+          {healthQuery.isFetching ? t("settings.transcription.readiness.refreshing") : t("settings.transcription.readiness.refresh")}
         </ActionButton>
       </div>
 
       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <StatusBadge label="Feature" state={enabled ? "ok" : "info"} detail={enabled ? "Enabled" : "Disabled"} />
-        <StatusBadge label="Backend URL" state={configured ? "ok" : "warn"} detail={configured ? backendUrl : "Not configured"} />
+        <StatusBadge label={t("settings.transcription.readiness.feature")} state={enabled ? "ok" : "info"} detail={enabled ? t("settings.transcription.readiness.enabled") : t("settings.transcription.readiness.disabled")} />
+        <StatusBadge label={t("settings.transcription.readiness.backendUrl")} state={configured ? "ok" : "warn"} detail={configured ? backendUrl : t("settings.transcription.readiness.notConfigured")} />
         <StatusBadge
-          label="Backend reachability"
+          label={t("settings.transcription.readiness.backendReachability")}
           state={!configured ? "info" : health?.endpointReachable ? "ok" : "fail"}
-          detail={!configured ? "Skipped" : health?.endpointReachable ? "Reachable" : health?.reason === "endpoint-missing" ? "Missing URL" : "Not reachable"}
+          detail={!configured ? t("settings.transcription.readiness.skipped") : health?.endpointReachable ? t("settings.transcription.readiness.reachable") : health?.reason === "endpoint-missing" ? t("settings.transcription.readiness.missingUrl") : t("settings.transcription.readiness.notReachable")}
         />
         <StatusBadge
-          label="ffmpeg"
+          label={t("settings.transcription.readiness.ffmpeg")}
           state={!health?.endpointReachable ? "info" : backendHealth?.ffmpeg ? "ok" : "fail"}
-          detail={!health?.endpointReachable ? "Unknown" : backendHealth?.ffmpeg ? "Available" : "Missing"}
+          detail={!health?.endpointReachable ? unknownLabel : backendHealth?.ffmpeg ? t("settings.transcription.readiness.available") : t("settings.transcription.readiness.missing")}
         />
       </div>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-gray-800 bg-gray-900/50 p-3">
-          <div className="text-xs font-semibold text-gray-300">CPU RAM fit</div>
+          <div className="text-xs font-semibold text-gray-300">{t("settings.transcription.readiness.cpuRamFit")}</div>
           <div className="mt-2 space-y-1 text-xs text-gray-400">
-            <div>Available / total: <span className="text-gray-200">{formatMb(availableRamMb)} / {formatMb(backendHealth?.totalRamMb)}</span></div>
-            <div>Selected model: <span className="text-gray-200">{selectedModel}</span></div>
-            <div>Recommended for CPU: <span className="text-gray-200">{formatMb(requirements.recommended)}</span> (minimum {formatMb(requirements.required)})</div>
-            {ramMeetsRecommended === true && <div className="text-green-300">RAM meets the CPU recommendation for this model.</div>}
-            {ramMeetsRequired === true && ramMeetsRecommended === false && <div className="text-yellow-300">RAM meets the minimum but is below the recommendation; expect slower or less reliable runs.</div>}
-            {ramMeetsRequired === false && <div className="text-red-300">RAM is below the minimum for {selectedModel}.{suggestedModel ? ` Consider ${suggestedModel}.` : " Consider a smaller model or skip transcription."}</div>}
-            {!ramKnown && <div className="text-gray-500">RAM details will appear when the backend reports health.</div>}
+            <div>{t("settings.transcription.readiness.availableTotal")}: <span className="text-gray-200">{formatMb(availableRamMb, unknownLabel)} / {formatMb(backendHealth?.totalRamMb, unknownLabel)}</span></div>
+            <div>{t("settings.transcription.readiness.selectedModel")}: <span className="text-gray-200">{selectedModel}</span></div>
+            <div>{t("settings.transcription.readiness.recommendedCpu")}: <span className="text-gray-200">{formatMb(requirements.recommended, unknownLabel)}</span> ({t("settings.transcription.readiness.minimum")} {formatMb(requirements.required, unknownLabel)})</div>
+            {ramMeetsRecommended === true && <div className="text-green-300">{t("settings.transcription.readiness.ramRecommended")}</div>}
+            {ramMeetsRequired === true && ramMeetsRecommended === false && <div className="text-yellow-300">{t("settings.transcription.readiness.ramMinimumOnly")}</div>}
+            {ramMeetsRequired === false && <div className="text-red-300">{t("settings.transcription.readiness.ramBelowMinimum", { model: selectedModel, suggestedModel })}</div>}
+            {!ramKnown && <div className="text-gray-500">{t("settings.transcription.readiness.ramDetailsPending")}</div>}
           </div>
         </div>
 
         <div className="rounded-2xl border border-gray-800 bg-gray-900/50 p-3">
-          <div className="text-xs font-semibold text-gray-300">Backend capabilities</div>
+          <div className="text-xs font-semibold text-gray-300">{t("settings.transcription.readiness.backendCapabilities")}</div>
           <div className="mt-2 space-y-1 text-xs text-gray-400">
-            <div>Models: <span className="text-gray-200">{list(models)}</span></div>
-            <div>Output formats: <span className="text-gray-200">{list(outputFormats)}</span></div>
-            <div>Devices: <span className="text-gray-200">{list(capabilities?.devices)}</span></div>
-            <div>Compute types: <span className="text-gray-200">{list(capabilities?.computeTypes)}</span></div>
-            <div>VAD: <span className="text-gray-200">{capabilities?.vad === undefined ? "unknown" : capabilities.vad ? "supported" : "not advertised"}</span></div>
-            {selectedModelAdvertised === false && <div className="text-yellow-300">Selected model is not advertised by this backend.</div>}
-            {selectedOutputAdvertised === false && <div className="text-yellow-300">Selected output format is not advertised by this backend.</div>}
+            <div>{t("settings.transcription.readiness.models")}: <span className="text-gray-200">{list(models, unknownLabel)}</span></div>
+            <div>{t("settings.transcription.readiness.outputFormats")}: <span className="text-gray-200">{list(outputFormats, unknownLabel)}</span></div>
+            <div>{t("settings.transcription.readiness.devices")}: <span className="text-gray-200">{list(capabilities?.devices, unknownLabel)}</span></div>
+            <div>{t("settings.transcription.readiness.computeTypes")}: <span className="text-gray-200">{list(capabilities?.computeTypes, unknownLabel)}</span></div>
+            <div>{t("settings.transcription.readiness.vad")}: <span className="text-gray-200">{capabilities?.vad === undefined ? unknownLabel : capabilities.vad ? t("settings.transcription.readiness.supported") : t("settings.transcription.readiness.notAdvertised")}</span></div>
+            {selectedModelAdvertised === false && <div className="text-yellow-300">{t("settings.transcription.readiness.modelNotAdvertised")}</div>}
+            {selectedOutputAdvertised === false && <div className="text-yellow-300">{t("settings.transcription.readiness.outputNotAdvertised")}</div>}
           </div>
         </div>
       </div>
 
       <div className="mt-4 rounded-2xl border border-gray-800 bg-gray-900/50 p-3">
-        <div className="text-xs font-semibold text-gray-300">Model cache</div>
+        <div className="text-xs font-semibold text-gray-300">{t("settings.transcription.readiness.modelCache")}</div>
         <div className="mt-2 space-y-1 text-xs text-gray-400">
-          <div>Selected model: <span className="text-gray-200">{cacheInfo?.model || selectedModel}</span></div>
-          <div>Configured cache root: <span className="text-gray-200 break-all">{cacheInfo?.cacheRoot || "unknown"}</span></div>
-          <div>Detected cache path: <span className="text-gray-200 break-all">{cacheInfo?.cachePath || "not found"}</span></div>
-          <div>Status: <span className="text-gray-200">
-            {cacheInfo?.cached === true ? "cached" : cacheInfo?.cached === false ? "not cached yet" : "unknown"}
+          <div>{t("settings.transcription.readiness.selectedModel")}: <span className="text-gray-200">{cacheInfo?.model || selectedModel}</span></div>
+          <div>{t("settings.transcription.readiness.cacheRoot")}: <span className="text-gray-200 break-all">{cacheInfo?.cacheRoot || unknownLabel}</span></div>
+          <div>{t("settings.transcription.readiness.cachePath")}: <span className="text-gray-200 break-all">{cacheInfo?.cachePath || t("settings.transcription.readiness.notFound")}</span></div>
+          <div>{t("settings.transcription.readiness.status")}: <span className="text-gray-200">
+            {cacheInfo?.cached === true ? t("settings.transcription.readiness.cached") : cacheInfo?.cached === false ? t("settings.transcription.readiness.notCachedYet") : unknownLabel}
           </span></div>
           {cacheInfo?.warning && <div className={cacheInfo.cached ? "text-blue-300" : "text-yellow-300"}>{cacheInfo.warning}</div>}
-          {cacheInfo?.firstRunDownloadExpected && <div className="text-yellow-300">First run may spend extra time downloading model weights before transcription starts.</div>}
-          {!cacheInfo && <div className="text-gray-500">Cache details will appear when the backend reports health for the selected model.</div>}
+          {cacheInfo?.firstRunDownloadExpected && <div className="text-yellow-300">{t("settings.transcription.readiness.firstRunDownload")}</div>}
+          {!cacheInfo && <div className="text-gray-500">{t("settings.transcription.readiness.cachePending")}</div>}
         </div>
       </div>
 
       <div className="mt-3 rounded-xl border border-gray-800 bg-gray-950/60 p-3 text-xs text-gray-400">
-        Current request defaults: <span className="text-gray-200">{selectedModel}</span> on <span className="text-gray-200">{selectedDevice}</span> / <span className="text-gray-200">{selectedComputeType}</span>, output <span className="text-gray-200">{selectedOutput.toUpperCase()}</span>.
-        {health?.message && <span className="ml-1 text-yellow-300">Backend message: {health.message}</span>}
-        <div className="mt-2 text-yellow-200">First transcription runs can stay quiet for a while while the model downloads or warms up.</div>
+        {t("settings.transcription.readiness.currentDefaults", { model: selectedModel, device: selectedDevice, computeType: selectedComputeType, output: selectedOutput.toUpperCase() })}
+        {health?.message && <span className="ml-1 text-yellow-300">{t("settings.transcription.readiness.backendMessage", { message: health.message })}</span>}
+        <div className="mt-2 text-yellow-200">{t("settings.transcription.readiness.firstRunQuiet")}</div>
       </div>
     </div>
   );

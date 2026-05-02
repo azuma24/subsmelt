@@ -107,8 +107,8 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
       }
       const result = await api.getTranscriptionHealth();
       const message = result.ok
-        ? "Speech-to-text backend is reachable."
-        : result.message || result.reason || "Speech-to-text backend is not reachable.";
+        ? t("settings.transcription.testReachable")
+        : result.message || result.reason || t("settings.transcription.testNotReachable");
       setTranscriptionTestResult({ ok: result.ok, message });
       addToast(message, result.ok ? "success" : "error");
     } catch (e: unknown) {
@@ -262,11 +262,11 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
           </div>
         </SettingsSection>
 
-        <SettingsSection title="Speech-to-text" description="Connect Subsmelt to an optional faster-whisper-compatible backend for local subtitle generation.">
+        <SettingsSection title={t("settings.transcription.title")} description={t("settings.transcription.description")}>
           <label className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl bg-gray-800/50 p-4">
             <div>
-              <p className="text-sm font-medium text-gray-300">Enable speech-to-text</p>
-              <p className="mt-0.5 text-[10px] text-gray-500">Translates existing subtitles without this; enable only when you have a transcription backend configured.</p>
+              <p className="text-sm font-medium text-gray-300">{t("settings.transcription.enableLabel")}</p>
+              <p className="mt-0.5 text-[10px] text-gray-500">{t("settings.transcription.enableHelp")}</p>
             </div>
             <input
               type="checkbox"
@@ -276,44 +276,44 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
             />
           </label>
           <Field
-            label="Backend URL"
+            label={t("settings.transcription.backendUrl")}
             value={str(settings.transcription_backend_url)}
             onChange={(v) => update("transcription_backend_url", v)}
             placeholder="http://whisper-backend:8001"
-            help="Use http://whisper-backend:8001 for the optional compose backend, or point to your own local faster-whisper server."
+            help={t("settings.transcription.backendUrlHelp")}
           />
           <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
             <Field
-              label="Backend path map: from"
+              label={t("settings.transcription.pathMapFrom")}
               value={str(settings.transcription_path_map_from)}
               onChange={(v) => update("transcription_path_map_from", v)}
               placeholder="/media"
-              help="Optional. Leave both mapping fields blank for the default same-path setup."
+              help={t("settings.transcription.pathMapFromHelp")}
             />
             <Field
-              label="Backend path map: to"
+              label={t("settings.transcription.pathMapTo")}
               value={str(settings.transcription_path_map_to)}
               onChange={(v) => update("transcription_path_map_to", v)}
               placeholder="/mnt/media"
-              help="When set, Subsmelt validates the local path under MEDIA_DIR first, then sends the rewritten absolute path to the backend."
+              help={t("settings.transcription.pathMapToHelp")}
             />
           </div>
           <div className="rounded-2xl border border-gray-800 bg-gray-950/50 p-3 text-[11px] leading-relaxed text-gray-400">
-            Example: if Subsmelt sees <span className="font-mono text-gray-200">/media/anime/Episode 01.mkv</span> but your external backend mounts the same files at <span className="font-mono text-gray-200">/srv/media/anime/Episode 01.mkv</span>, set <span className="font-mono text-gray-200">from=/media</span> and <span className="font-mono text-gray-200">to=/srv/media</span>.
+            {t("settings.transcription.pathMapExample", { source: "/media/anime/Episode 01.mkv", target: "/srv/media/anime/Episode 01.mkv", from: "/media", to: "/srv/media" })}
           </div>
           <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-300">Model</label>
+              <label className="mb-1 block text-sm font-medium text-gray-300">{t("settings.transcription.model")}</label>
               <select value={str(settings.transcription_model, "small")} onChange={(e) => update("transcription_model", e.target.value)} className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200">
-                <option value="base">Base — faster</option>
-                <option value="small">Small — recommended</option>
-                <option value="medium">Medium — slower/better</option>
+                <option value="base">{t("settings.transcription.modelBase")}</option>
+                <option value="small">{t("settings.transcription.modelSmall")}</option>
+                <option value="medium">{t("settings.transcription.modelMedium")}</option>
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-300">Language</label>
+              <label className="mb-1 block text-sm font-medium text-gray-300">{t("settings.transcription.language")}</label>
               <select value={str(settings.transcription_language, "auto")} onChange={(e) => update("transcription_language", e.target.value)} className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200">
-                <option value="auto">Auto-detect</option>
+                <option value="auto">{t("settings.transcription.languageAuto")}</option>
                 <option value="en">English</option>
                 <option value="ja">Japanese</option>
                 <option value="zh">Chinese</option>
@@ -321,7 +321,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-300">Output</label>
+              <label className="mb-1 block text-sm font-medium text-gray-300">{t("settings.transcription.output")}</label>
               <select value={str(settings.transcription_output_format, "srt")} onChange={(e) => update("transcription_output_format", e.target.value)} className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200">
                 <option value="srt">SRT</option>
                 <option value="vtt">VTT</option>
@@ -330,17 +330,17 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
             </div>
           </div>
           <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
-            <Field label="Device" value={str(settings.transcription_device, "cpu")} onChange={(v) => update("transcription_device", v)} help="CPU is the safe default. External backends may support cuda." />
-            <Field label="Compute type" value={str(settings.transcription_compute_type, "int8")} onChange={(v) => update("transcription_compute_type", v)} help="Use int8 for CPU." />
-            <Field label="Max concurrent" value={str(settings.transcription_max_concurrent, "1")} onChange={(v) => update("transcription_max_concurrent", v)} type="number" help="Keep this at 1 for CPU." />
+            <Field label={t("settings.transcription.device")} value={str(settings.transcription_device, "cpu")} onChange={(v) => update("transcription_device", v)} help={t("settings.transcription.deviceHelp")} />
+            <Field label={t("settings.transcription.computeType")} value={str(settings.transcription_compute_type, "int8")} onChange={(v) => update("transcription_compute_type", v)} help={t("settings.transcription.computeTypeHelp")} />
+            <Field label={t("settings.transcription.maxConcurrent")} value={str(settings.transcription_max_concurrent, "1")} onChange={(v) => update("transcription_max_concurrent", v)} type="number" help={t("settings.transcription.maxConcurrentHelp")} />
           </div>
           <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
-            <Field label="Max line length" value={str(settings.transcription_max_line_length, "42")} onChange={(v) => update("transcription_max_line_length", v)} type="number" help="Wrap subtitle text at roughly this many characters per line." />
-            <Field label="Max subtitle duration" value={str(settings.transcription_max_subtitle_duration, "6")} onChange={(v) => update("transcription_max_subtitle_duration", v)} type="number" help="Passed to the backend for future segment polishing; kept lightweight in core." />
+            <Field label={t("settings.transcription.maxLineLength")} value={str(settings.transcription_max_line_length, "42")} onChange={(v) => update("transcription_max_line_length", v)} type="number" help={t("settings.transcription.maxLineLengthHelp")} />
+            <Field label={t("settings.transcription.maxSubtitleDuration")} value={str(settings.transcription_max_subtitle_duration, "6")} onChange={(v) => update("transcription_max_subtitle_duration", v)} type="number" help={t("settings.transcription.maxSubtitleDurationHelp")} />
             <label className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl bg-gray-800/50 p-4">
               <div>
-                <p className="text-sm font-medium text-gray-300">Merge short segments</p>
-                <p className="mt-0.5 text-[10px] text-gray-500">Stored and sent to the backend, but kept conservative unless the backend can merge safely.</p>
+                <p className="text-sm font-medium text-gray-300">{t("settings.transcription.mergeShortSegments")}</p>
+                <p className="mt-0.5 text-[10px] text-gray-500">{t("settings.transcription.mergeShortSegmentsHelp")}</p>
               </div>
               <input
                 type="checkbox"
@@ -352,7 +352,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
           </div>
           <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-300">Per-folder STT defaults</label>
+              <label className="mb-1 block text-sm font-medium text-gray-300">{t("settings.transcription.folderDefaults")}</label>
               <textarea
                 value={str(settings.transcription_folder_defaults, "[]")}
                 onChange={(e) => update("transcription_folder_defaults", e.target.value)}
@@ -360,10 +360,10 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
                 placeholder={'[{"path":"/media/anime","language":"ja","model":"small"}]'}
                 className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 font-mono text-xs text-gray-200"
               />
-              <p className="mt-1 text-[10px] leading-relaxed text-gray-500">JSON array. Longest matching folder wins. Supported keys: path, model, language, output_format, device, compute_type, use_vad, max_line_length, max_subtitle_duration, merge_short_segments, advanced_options.</p>
+              <p className="mt-1 text-[10px] leading-relaxed text-gray-500">{t("settings.transcription.folderDefaultsHelp")}</p>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-300">Advanced STT options</label>
+              <label className="mb-1 block text-sm font-medium text-gray-300">{t("settings.transcription.advancedOptions")}</label>
               <textarea
                 value={str(settings.transcription_advanced_stt, "{}")}
                 onChange={(e) => update("transcription_advanced_stt", e.target.value)}
@@ -371,13 +371,13 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
                 placeholder={'{"beam_size":5,"word_timestamps":true,"initial_prompt":"Lecture audio"}'}
                 className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 font-mono text-xs text-gray-200"
               />
-              <p className="mt-1 text-[10px] leading-relaxed text-gray-500">Lightweight faster-whisper options are passed through. Speaker diarization and background-music separation are opt-in backend capabilities; this backend reports them clearly if unavailable instead of pulling heavy dependencies into core.</p>
+              <p className="mt-1 text-[10px] leading-relaxed text-gray-500">{t("settings.transcription.advancedOptionsHelp")}</p>
             </div>
           </div>
           <label className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl bg-gray-800/50 p-4">
             <div>
-              <p className="text-sm font-medium text-gray-300">Use VAD</p>
-              <p className="mt-0.5 text-[10px] text-gray-500">Recommended to reduce silence/noise hallucinations.</p>
+              <p className="text-sm font-medium text-gray-300">{t("settings.transcription.useVad")}</p>
+              <p className="mt-0.5 text-[10px] text-gray-500">{t("settings.transcription.useVadHelp")}</p>
             </div>
             <input
               type="checkbox"
@@ -388,26 +388,26 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
           </label>
           <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-300">When subtitles are missing</label>
+              <label className="mb-1 block text-sm font-medium text-gray-300">{t("settings.transcription.missingSubtitleBehavior")}</label>
               <select value={str(settings.transcription_missing_subtitle_behavior, "ask")} onChange={(e) => update("transcription_missing_subtitle_behavior", e.target.value)} className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200">
-                <option value="ask">Ask me</option>
-                <option value="auto_transcribe">Auto-transcribe</option>
-                <option value="auto_transcribe_and_translate">Auto-transcribe + translate</option>
+                <option value="ask">{t("settings.transcription.missingAsk")}</option>
+                <option value="auto_transcribe">{t("settings.transcription.missingAutoTranscribe")}</option>
+                <option value="auto_transcribe_and_translate">{t("settings.transcription.missingAutoTranscribeTranslate")}</option>
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-300">When RAM is low</label>
+              <label className="mb-1 block text-sm font-medium text-gray-300">{t("settings.transcription.lowRamBehavior")}</label>
               <select value={str(settings.transcription_low_ram_behavior, "ask")} onChange={(e) => update("transcription_low_ram_behavior", e.target.value)} className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200">
-                <option value="ask">Ask me</option>
-                <option value="downgrade">Auto-switch to smaller model</option>
-                <option value="skip">Skip transcription</option>
-                <option value="run_anyway">Run anyway</option>
+                <option value="ask">{t("settings.transcription.lowRamAsk")}</option>
+                <option value="downgrade">{t("settings.transcription.lowRamDowngrade")}</option>
+                <option value="skip">{t("settings.transcription.lowRamSkip")}</option>
+                <option value="run_anyway">{t("settings.transcription.lowRamRunAnyway")}</option>
               </select>
             </div>
           </div>
           <TranscriptionReadinessPanel settings={settings} healthQuery={transcriptionHealthQuery} dirty={dirty} />
           <div className={`flex ${isMobile ? "flex-col" : "items-center"} gap-3`}>
-            <ActionButton variant="ghost" onClick={handleTranscriptionTest}>{testingTranscription ? t("app.testing") : "Test speech-to-text"}</ActionButton>
+            <ActionButton variant="ghost" onClick={handleTranscriptionTest}>{testingTranscription ? t("app.testing") : t("settings.transcription.testButton")}</ActionButton>
             {transcriptionTestResult && (
               <span className={`text-sm ${transcriptionTestResult.ok ? "text-green-400" : "text-red-400"}`}>{transcriptionTestResult.message}</span>
             )}

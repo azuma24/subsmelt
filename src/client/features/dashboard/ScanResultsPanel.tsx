@@ -65,22 +65,22 @@ function stageTone(stage: ManualTranscriptionStage): string {
   }
 }
 
-function stageText(progress: ManualTranscriptionProgress): string {
+function stageText(progress: ManualTranscriptionProgress, t: (key: string) => string): string {
   switch (progress.stage) {
     case "preflighting":
-      return "Preflighting transcription settings…";
+      return t("scan.transcription.preflighting");
     case "transcribing":
-      return "Transcribing audio… This can take a while on first model download.";
+      return t("scan.transcription.transcribing");
     case "queueing":
-      return "Queueing translation jobs…";
+      return t("scan.transcription.queueing");
     case "complete":
       return progress.postAction === "transcribe_and_translate"
-        ? "Complete. Translation jobs were queued."
-        : "Complete. Subtitle generated.";
+        ? t("scan.transcription.completeQueued")
+        : t("scan.transcription.completeSubtitle");
     case "skipped":
-      return progress.message || "Transcription skipped.";
+      return progress.message || t("scan.transcription.skipped");
     case "failed":
-      return progress.message || "Transcription failed.";
+      return progress.message || t("scan.transcription.failed");
   }
 }
 
@@ -291,7 +291,7 @@ function CompactScanFileRow({
               {missing && <span className="rounded-full bg-yellow-900/20 px-2 py-0.5 text-yellow-300">{t("app.scanMissingSubtitles")}</span>}
               {orphan && <span className="rounded-full bg-gray-800 px-2 py-0.5 text-gray-300">{t("app.scanOrphan")}</span>}
               <span>{t("app.subtitleCount", { count: file.subtitles.length })}</span>
-              {progress && <span className={stageTone(progress.stage)}>{stageText(progress)}</span>}
+              {progress && <span className={stageTone(progress.stage)}>{stageText(progress, t)}</span>}
             </div>
           </div>
         </button>
@@ -321,7 +321,7 @@ function CompactScanFileRow({
                     onClick={() => onTranscribe(file.videoPath as string, "transcribe_only")}
                     className="rounded-lg bg-gray-800 px-3 py-2 text-xs font-medium text-gray-200 disabled:opacity-50"
                   >
-                    {progress?.postAction === "transcribe_only" && isBusy ? "Working…" : "Transcribe"}
+                    {progress?.postAction === "transcribe_only" && isBusy ? t("scan.transcription.working") : t("scan.transcription.transcribe")}
                   </button>
                   <button
                     type="button"
@@ -329,16 +329,16 @@ function CompactScanFileRow({
                     onClick={() => onTranscribe(file.videoPath as string, "transcribe_and_translate")}
                     className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white disabled:opacity-50"
                   >
-                    {progress?.postAction === "transcribe_and_translate" && isBusy ? "Working…" : "Transcribe + Translate"}
+                    {progress?.postAction === "transcribe_and_translate" && isBusy ? t("scan.transcription.working") : t("scan.transcription.transcribeTranslate")}
                   </button>
                   {progress && (
                     <div className={`text-[11px] ${stageTone(progress.stage)}`}>
-                      {stageText(progress)}
+                      {stageText(progress, t)}
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="text-[11px] text-gray-500">Enable speech-to-text in Settings to generate subtitles from this video.</div>
+                <div className="text-[11px] text-gray-500">{t("scan.transcription.enableHint")}</div>
               )}
             </div>
           )}
