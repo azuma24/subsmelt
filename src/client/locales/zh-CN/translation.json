@@ -19,7 +19,8 @@
     "error": "错误",
     "success": "成功",
     "confirm": "确认",
-    "reset": "重置为默认值"
+    "reset": "重置为默认值",
+    "close": "关闭"
   },
   "dashboard": {
     "title": "仪表板",
@@ -154,7 +155,8 @@
       "copyGlossary": "Copy glossary",
       "copiedContext": "Context copied",
       "copiedPlot": "Plot summary copied",
-      "copiedGlossary": "Glossary copied"
+      "copiedGlossary": "Glossary copied",
+      "copyFailed": "复制失败"
     },
     "stat": {
       "pending": "等待中",

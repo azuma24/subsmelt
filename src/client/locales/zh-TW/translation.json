@@ -19,7 +19,8 @@
     "error": "錯誤",
     "success": "成功",
     "confirm": "確認",
-    "reset": "重設為預設值"
+    "reset": "重設為預設值",
+    "close": "關閉"
   },
   "dashboard": {
     "title": "儀表板",
@@ -154,7 +155,8 @@
       "copyGlossary": "Copy glossary",
       "copiedContext": "Context copied",
       "copiedPlot": "Plot summary copied",
-      "copiedGlossary": "Glossary copied"
+      "copiedGlossary": "Glossary copied",
+      "copyFailed": "複製失敗"
     },
     "stat": {
       "pending": "等待中",

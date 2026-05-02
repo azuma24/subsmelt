@@ -19,7 +19,8 @@
     "error": "Error",
     "success": "Success",
     "confirm": "Confirm",
-    "reset": "Reset to default"
+    "reset": "Reset to default",
+    "close": "Close"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -154,7 +155,8 @@
       "copyGlossary": "Copy glossary",
       "copiedContext": "Context copied",
       "copiedPlot": "Plot summary copied",
-      "copiedGlossary": "Glossary copied"
+      "copiedGlossary": "Glossary copied",
+      "copyFailed": "Copy failed"
     },
     "stat": {
       "pending": "Pending",

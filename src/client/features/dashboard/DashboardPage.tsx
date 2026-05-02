@@ -6,6 +6,7 @@ import { getErrorMessage } from "../../lib";
 import { useJobsQuery, useMutationWithInvalidation, useQueueStatusQuery, useSettingsQuery, useTasksQuery, useTranscriptionHistoryQuery } from "../../hooks";
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmModal";
+import { ModalShell } from "../../components/ModalShell";
 import type { JobRow, ScannedFile, TranscribePostAction, TranscriptionHistoryEntry } from "../../types";
 import { ActionButton, EmptyHint, StatCard } from "../../ui/primitives";
 import { ActiveJobCard } from "./ActiveJobCard";
@@ -707,31 +708,33 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
       )}
 
       {scanPlan && (
-        <div className="fixed inset-0 z-50 bg-black/70 p-4" onClick={() => setScanPlan(null)}>
-          <div className="mx-auto mt-16 w-full max-w-xl rounded-3xl border border-gray-700 bg-gray-900 p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-2 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setScanPlan(null)}
-                className="rounded-full border border-gray-700 bg-gray-800 px-2 py-1 text-sm text-gray-300 hover:text-white"
-                aria-label={t("common.close")}
-                title={t("common.close")}
-              >
-                ×
-              </button>
-            </div>
-            <h3 className="text-lg font-semibold text-white">{t("dashboard.scanConfirm.title")}</h3>
-            <p className="mt-2 text-sm text-gray-400">{t("dashboard.scanConfirm.summary", { subtitles: scanPlan.totalSubtitles, jobs: scanPlan.newJobs })}</p>
-            <div className="mt-3 rounded-xl bg-gray-800/60 p-3">
-              <div className="text-xs text-gray-500">{t("dashboard.scanConfirm.topFolders")}</div>
-              <div className="mt-1 text-sm text-gray-200">{scanPlan.topFolders.length > 0 ? scanPlan.topFolders.join(", ") : t("dashboard.scanConfirm.none")}</div>
-            </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <button onClick={() => setScanPlan(null)} className="rounded-xl bg-gray-800 px-3 py-2 text-sm text-gray-300">{t("common.cancel")}</button>
-              <button onClick={confirmQueueScan} className="rounded-xl bg-blue-600 px-3 py-2 text-sm font-medium text-white">{t("dashboard.scanConfirm.proceed")}</button>
-            </div>
+        <ModalShell
+          title={t("dashboard.scanConfirm.title")}
+          onClose={() => setScanPlan(null)}
+          overlayClassName="fixed inset-0 z-50 bg-black/70 p-4"
+          panelClassName="mx-auto mt-16 w-full max-w-xl rounded-3xl border border-gray-700 bg-gray-900 p-6"
+        >
+          <div className="mb-2 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setScanPlan(null)}
+              className="rounded-full border border-gray-700 bg-gray-800 px-2 py-1 text-sm text-gray-300 hover:text-white"
+              aria-label={t("common.close")}
+              title={t("common.close")}
+            >
+              ×
+            </button>
           </div>
-        </div>
+          <p className="mt-2 text-sm text-gray-400">{t("dashboard.scanConfirm.summary", { subtitles: scanPlan.totalSubtitles, jobs: scanPlan.newJobs })}</p>
+          <div className="mt-3 rounded-xl bg-gray-800/60 p-3">
+            <div className="text-xs text-gray-500">{t("dashboard.scanConfirm.topFolders")}</div>
+            <div className="mt-1 text-sm text-gray-200">{scanPlan.topFolders.length > 0 ? scanPlan.topFolders.join(", ") : t("dashboard.scanConfirm.none")}</div>
+          </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <button onClick={() => setScanPlan(null)} className="rounded-xl bg-gray-800 px-3 py-2 text-sm text-gray-300">{t("common.cancel")}</button>
+            <button onClick={confirmQueueScan} className="rounded-xl bg-blue-600 px-3 py-2 text-sm font-medium text-white">{t("dashboard.scanConfirm.proceed")}</button>
+          </div>
+        </ModalShell>
       )}
 
       {isMobile && (

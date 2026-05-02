@@ -2,6 +2,8 @@ import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useJobPreview } from "../../hooks";
 import { formatTimecode } from "../../lib";
+import { copyText } from "../../lib/clipboard";
+import { ModalShell } from "../../components/ModalShell";
 import { useToast } from "../../components/Toast";
 import type { PreviewLine } from "../../types";
 
@@ -51,24 +53,39 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
     }
   };
 
+  const handleCopy = async (text: string, successMessage: string) => {
+    const result = await copyText(text);
+    if (result.ok) {
+      addToast(successMessage, "success");
+      return;
+    }
+    addToast(t("dashboard.preview.copyFailed"), "error");
+  };
+
+  const title = previewData?.srtPath?.split("/").pop() || t("dashboard.action.preview");
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 p-0 md:p-4" onClick={onClose}>
-      <div className={`mx-auto flex h-full ${isMobile ? "w-full" : "max-w-6xl items-center justify-center"}`}>
-        <div className={`flex w-full flex-col overflow-hidden border border-gray-700 bg-gray-900 ${isMobile ? "h-full rounded-none" : "max-h-[90vh] rounded-3xl"}`} onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-between gap-4 border-b border-gray-800 px-5 py-4">
-            <div className="min-w-0">
-              <h3 className="truncate text-base font-semibold">{previewData?.srtPath?.split("/").pop() || t("dashboard.action.preview")}</h3>
-              {previewData?.targetLang && <p className="text-xs text-gray-500">→ {previewData.targetLang} • {filteredLines.length}</p>}
-            </div>
-            <input
-              type="text"
-              value={previewSearch}
-              onChange={(e) => setPreviewSearch(e.target.value)}
-              placeholder={t("dashboard.preview.search")}
-              className="w-40 rounded-xl border border-gray-700 bg-gray-800 px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-blue-500 md:w-56"
-            />
-            <button onClick={onClose} className="text-lg text-gray-400 hover:text-white">×</button>
+    <ModalShell
+      title={title}
+      onClose={onClose}
+      overlayClassName="fixed inset-0 z-50 bg-black/70 p-0 md:p-4"
+      panelClassName={`mx-auto flex h-full w-full flex-col overflow-hidden border border-gray-700 bg-gray-900 ${isMobile ? "rounded-none" : "max-w-6xl rounded-3xl md:max-h-[90vh]"}`}
+    >
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex items-center justify-between gap-4 border-b border-gray-800 px-5 py-4">
+          <div className="min-w-0">
+            {previewData?.targetLang && <p className="text-xs text-gray-500">→ {previewData.targetLang} • {filteredLines.length}</p>}
           </div>
+          <input
+            type="text"
+            value={previewSearch}
+            onChange={(e) => setPreviewSearch(e.target.value)}
+            placeholder={t("dashboard.preview.search")}
+            aria-label={t("dashboard.preview.search")}
+            className="w-40 rounded-xl border border-gray-700 bg-gray-800 px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-blue-500 md:w-56"
+          />
+          <button onClick={onClose} aria-label={t("common.close")} className="text-lg text-gray-400 hover:text-white">×</button>
+        </div>
           <div className="border-b border-gray-800 px-4 py-2">
             <div className="flex flex-wrap gap-2 text-xs">
               <button onClick={() => setShowOnlyChanged((v) => !v)} className={`rounded-lg px-2 py-1 ${showOnlyChanged ? "bg-blue-700 text-white" : "bg-gray-800 text-gray-300"}`}>{t("dashboard.preview.showOnlyChanged")}</button>
@@ -83,9 +100,9 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
                 <div className="mb-2 text-xs uppercase tracking-wide text-gray-500">Context / Plot Summary / Glossary</div>
                 <pre className="whitespace-pre-wrap text-xs text-gray-200 leading-relaxed">{previewData.analysis}</pre>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                  <button onClick={() => { navigator.clipboard.writeText(previewData.analysis || ""); addToast(t("dashboard.preview.copiedContext"), "success"); }} className="rounded-lg bg-gray-800 px-2 py-1 text-gray-200">{t("dashboard.preview.copyContext")}</button>
-                  <button onClick={() => { navigator.clipboard.writeText(plot || ""); addToast(t("dashboard.preview.copiedPlot"), "success"); }} className="rounded-lg bg-gray-800 px-2 py-1 text-gray-200">{t("dashboard.preview.copyPlot")}</button>
-                  <button onClick={() => { navigator.clipboard.writeText(glossary || ""); addToast(t("dashboard.preview.copiedGlossary"), "success"); }} className="rounded-lg bg-gray-800 px-2 py-1 text-gray-200">{t("dashboard.preview.copyGlossary")}</button>
+                  <button onClick={() => handleCopy(previewData.analysis || "", t("dashboard.preview.copiedContext"))} className="rounded-lg bg-gray-800 px-2 py-1 text-gray-200">{t("dashboard.preview.copyContext")}</button>
+                  <button onClick={() => handleCopy(plot || "", t("dashboard.preview.copiedPlot"))} className="rounded-lg bg-gray-800 px-2 py-1 text-gray-200">{t("dashboard.preview.copyPlot")}</button>
+                  <button onClick={() => handleCopy(glossary || "", t("dashboard.preview.copiedGlossary"))} className="rounded-lg bg-gray-800 px-2 py-1 text-gray-200">{t("dashboard.preview.copyGlossary")}</button>
                 </div>
               </div>
             )}
@@ -103,8 +120,7 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
               <button
                 onClick={() => {
                   const tsv = filteredLines.map((l) => `${l.index}\t${l.original}\t${l.translated}`).join("\n");
-                  navigator.clipboard.writeText(tsv);
-                  addToast(t("dashboard.toast.copiedTSV"), "success");
+                  void handleCopy(tsv, t("dashboard.toast.copiedTSV"));
                 }}
                 className="rounded-xl border border-gray-700 px-3 py-2 text-xs text-gray-400 hover:text-gray-200"
               >
@@ -112,9 +128,8 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
               </button>
             </div>
           )}
-        </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 

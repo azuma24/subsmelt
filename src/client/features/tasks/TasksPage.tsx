@@ -5,6 +5,7 @@ import { useTasksQuery, useMutationWithInvalidation } from "../../hooks";
 import type { Task } from "../../types";
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmModal";
+import { ModalShell } from "../../components/ModalShell";
 import { PRESETS } from "../../app/constants";
 import { ActionButton, EmptyHint, Field } from "../../ui/primitives";
 
@@ -194,11 +195,13 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
       </section>
 
       {editing && (
-        <div className="fixed inset-0 z-50 bg-black/70 p-0 md:p-4" onClick={() => { setEditing(null); setIsNew(false); }}>
-          <div className="mx-auto flex h-full items-center justify-center">
-            <div className={`w-full border border-gray-700 bg-gray-900 ${isMobile ? "h-full rounded-none overflow-y-auto p-4" : "max-w-xl rounded-3xl p-6"}`} onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-lg font-semibold">{isNew ? t("translation_languages.addModal") : t("translation_languages.editModal")}</h3>
-              <div className="mt-4 space-y-4">
+        <ModalShell
+          title={isNew ? t("translation_languages.addModal") : t("translation_languages.editModal")}
+          onClose={() => { setEditing(null); setIsNew(false); }}
+          overlayClassName="fixed inset-0 z-50 bg-black/70 p-0 md:p-4"
+          panelClassName={`mx-auto flex w-full flex-col border border-gray-700 bg-gray-900 ${isMobile ? "h-full rounded-none overflow-y-auto p-4" : "mt-8 max-w-xl rounded-3xl p-6"}`}
+        >
+          <div className="mt-4 space-y-4">
                 <Field label={t("translation_languages.sourceLang")} value={editing.source_lang || ""} onChange={(v) => setEditing({ ...editing, source_lang: v })} placeholder="English" />
                 <Field label={t("translation_languages.targetLang")} value={editing.target_lang || ""} onChange={(v) => setEditing({ ...editing, target_lang: v })} placeholder="Traditional Chinese (Taiwan)" required />
                 <Field label={t("translation_languages.langCode")} value={editing.lang_code || ""} onChange={(v) => setEditing({ ...editing, lang_code: v })} placeholder="chi" error={langCodeError} help={t("translation_languages.langCodeHelp")} required />
@@ -241,14 +244,12 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
                 </div>
                 {previewExample && <div className="rounded-2xl bg-gray-800 p-3 text-xs font-mono"><div className="text-gray-500">{t("translation_languages.previewSource")} <span className="text-gray-400">The.Matrix.1999.en.srt</span></div><div className="mt-1 text-gray-500">{t("translation_languages.previewOutput")} <span className="text-green-400">{previewExample}</span></div></div>}
                 {!showPromptOverride ? <button onClick={() => setShowPromptOverride(true)} className="text-xs text-blue-400">{t("translation_languages.addPromptOverride")}</button> : <div><div className="mb-1 flex items-center justify-between"><label className="text-sm font-medium text-gray-300">{t("translation_languages.promptOverride")}</label><button onClick={() => { setShowPromptOverride(false); setEditing({ ...editing, prompt_override: "" }); }} className="text-[10px] text-gray-600">{t("translation_languages.removePromptOverride")}</button></div><textarea value={editing.prompt_override || ""} onChange={(e) => setEditing({ ...editing, prompt_override: e.target.value })} rows={5} placeholder={t("translation_languages.promptOverridePlaceholder")} className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-2 text-xs text-gray-200 font-mono" /><p className="mt-1 text-[10px] text-gray-600">{t("translation_languages.promptOverrideHint")}</p></div>}
-              </div>
-              <div className={`mt-6 flex gap-3 ${isMobile ? "sticky bottom-0 bg-gray-900 pt-4" : "justify-end"}`}>
-                <button onClick={() => { setEditing(null); setIsNew(false); }} className="flex-1 md:flex-none px-4 py-3 text-sm text-gray-400">{t("common.cancel")}</button>
-                <button onClick={handleSave} disabled={!canSave} className="flex-1 md:flex-none rounded-2xl bg-blue-600 px-4 py-3 text-sm font-medium disabled:opacity-50">{isNew ? t("translation_languages.create") : t("common.save")}</button>
-              </div>
-            </div>
           </div>
-        </div>
+          <div className={`mt-6 flex gap-3 ${isMobile ? "sticky bottom-0 bg-gray-900 pt-4" : "justify-end"}`}>
+            <button onClick={() => { setEditing(null); setIsNew(false); }} className="flex-1 md:flex-none px-4 py-3 text-sm text-gray-400">{t("common.cancel")}</button>
+            <button onClick={handleSave} disabled={!canSave} className="flex-1 md:flex-none rounded-2xl bg-blue-600 px-4 py-3 text-sm font-medium disabled:opacity-50">{isNew ? t("translation_languages.create") : t("common.save")}</button>
+          </div>
+        </ModalShell>
       )}
     </div>
   );

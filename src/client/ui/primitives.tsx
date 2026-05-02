@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { JobRow } from "../types";
 import { STATUS_ICON, STATUS_LABEL_KEY } from "../app/constants";
@@ -42,7 +42,22 @@ export function StatusBadge({ job, compact = false }: { job: JobRow; compact?: b
 }
 
 export function ProgressSmall({ pct, large = false }: { pct: number; large?: boolean }) {
-  return <div className="flex items-center gap-2"><div className={`rounded-full bg-gray-800 ${large ? "h-3" : "h-1.5"} flex-1`}><div className={`rounded-full bg-blue-500 ${large ? "h-3" : "h-1.5"}`} style={{ width: `${pct}%` }} /></div><span className="text-[10px] text-gray-500">{pct}%</span></div>;
+  const boundedPct = Math.max(0, Math.min(100, Math.round(pct)));
+  return (
+    <div className="flex items-center gap-2">
+      <div
+        className={`rounded-full bg-gray-800 ${large ? "h-3" : "h-1.5"} flex-1`}
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={boundedPct}
+        aria-label={`${boundedPct}%`}
+      >
+        <div className={`rounded-full bg-blue-500 ${large ? "h-3" : "h-1.5"}`} style={{ width: `${boundedPct}%` }} />
+      </div>
+      <span className="text-[10px] text-gray-500">{boundedPct}%</span>
+    </div>
+  );
 }
 
 export function MiniBtn({ children, onClick, color = "default" }: { children: ReactNode; onClick: () => void; color?: string }) {
@@ -51,7 +66,31 @@ export function MiniBtn({ children, onClick, color = "default" }: { children: Re
 }
 
 export function Field({ label, value, onChange, placeholder, help, error, type = "text", required }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; help?: string; error?: string; type?: string; required?: boolean }) {
-  return <div><label className="mb-1 block text-sm font-medium text-gray-300">{label} {required && <span className="text-red-400">*</span>}</label><input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={`w-full rounded-2xl border px-3 py-3 text-sm text-gray-200 ${error ? "border-red-600 bg-gray-800" : "border-gray-700 bg-gray-800"}`} />{error && <p className="mt-1 text-[10px] text-red-400">{error}</p>}{help && !error && <p className="mt-1 text-[10px] text-gray-600">{help}</p>}</div>;
+  const inputId = useId();
+  const helpId = `${inputId}-help`;
+  const errorId = `${inputId}-error`;
+  const describedBy = error ? errorId : help ? helpId : undefined;
+
+  return (
+    <div>
+      <label htmlFor={inputId} className="mb-1 block text-sm font-medium text-gray-300">
+        {label} {required && <span className="text-red-400">*</span>}
+      </label>
+      <input
+        id={inputId}
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-invalid={Boolean(error)}
+        aria-describedby={describedBy}
+        required={required}
+        className={`w-full rounded-2xl border px-3 py-3 text-sm text-gray-200 ${error ? "border-red-600 bg-gray-800" : "border-gray-700 bg-gray-800"}`}
+      />
+      {error && <p id={errorId} className="mt-1 text-[10px] text-red-400">{error}</p>}
+      {help && !error && <p id={helpId} className="mt-1 text-[10px] text-gray-600">{help}</p>}
+    </div>
+  );
 }
 
 export function EmptyHint({ text, subtext }: { text: string; subtext?: string }) {

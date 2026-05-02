@@ -19,7 +19,8 @@
     "error": "エラー",
     "success": "成功",
     "confirm": "確認",
-    "reset": "デフォルトに戻す"
+    "reset": "デフォルトに戻す",
+    "close": "閉じる"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -154,7 +155,8 @@
       "copyGlossary": "Copy glossary",
       "copiedContext": "Context copied",
       "copiedPlot": "Plot summary copied",
-      "copiedGlossary": "Glossary copied"
+      "copiedGlossary": "Glossary copied",
+      "copyFailed": "コピーに失敗しました"
     },
     "stat": {
       "pending": "待機中",
