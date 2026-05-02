@@ -30,17 +30,17 @@ export function useIsMobile() {
 }
 
 export function useSettingsQuery() {
-  return useQuery({ queryKey: ["settings"], queryFn: api.getSettings, staleTime: 30_000 });
+  return useQuery({ queryKey: ["settings"], queryFn: ({ signal }) => api.getSettings({ signal }), staleTime: 30_000 });
 }
 
 export function useTasksQuery() {
-  return useQuery<Task[]>({ queryKey: ["tasks"], queryFn: api.getTasks, staleTime: 10_000 });
+  return useQuery<Task[]>({ queryKey: ["tasks"], queryFn: ({ signal }) => api.getTasks({ signal }), staleTime: 10_000 });
 }
 
 export function useJobsQuery() {
   return useQuery({
     queryKey: ["jobs"],
-    queryFn: api.getJobs,
+    queryFn: ({ signal }) => api.getJobs({ signal }),
     refetchInterval: 10_000,
   });
 }
@@ -48,7 +48,7 @@ export function useJobsQuery() {
 export function useLogsQuery(level?: string, category?: string, jobId?: number | null) {
   return useQuery<LogEntry[]>({
     queryKey: ["logs", level, category, jobId ?? null],
-    queryFn: () => api.getLogs({ level: level || undefined, category: category || undefined, jobId: typeof jobId === "number" ? jobId : undefined, limit: 300 }),
+    queryFn: ({ signal }) => api.getLogs({ level: level || undefined, category: category || undefined, jobId: typeof jobId === "number" ? jobId : undefined, limit: 300 }, { signal }),
     refetchInterval: 3_000,
   });
 }
@@ -56,7 +56,7 @@ export function useLogsQuery(level?: string, category?: string, jobId?: number |
 export function useQueueStatusQuery() {
   return useQuery<QueueStatus>({
     queryKey: ["queue-status"],
-    queryFn: api.getQueueStatus,
+    queryFn: ({ signal }) => api.getQueueStatus({ signal }),
     refetchInterval: 5_000,
   });
 }
@@ -64,7 +64,7 @@ export function useQueueStatusQuery() {
 export function useLlmHealthQuery(enabled = true) {
   return useQuery<LlmHealth>({
     queryKey: ["llm-health"],
-    queryFn: api.getLlmHealth,
+    queryFn: ({ signal }) => api.getLlmHealth({ signal }),
     enabled,
     refetchInterval: enabled ? 15_000 : false,
   });
@@ -73,7 +73,7 @@ export function useLlmHealthQuery(enabled = true) {
 export function useTranscriptionHealthQuery(enabled = true) {
   return useQuery<TranscriptionHealth>({
     queryKey: ["transcription-health"],
-    queryFn: api.getTranscriptionHealth,
+    queryFn: ({ signal }) => api.getTranscriptionHealth({ signal }),
     enabled,
     refetchInterval: enabled ? 15_000 : false,
   });
@@ -82,7 +82,7 @@ export function useTranscriptionHealthQuery(enabled = true) {
 export function useTranscriptionHistoryQuery(enabled = true, limit = 10) {
   return useQuery<{ attempts: TranscriptionHistoryEntry[] }>({
     queryKey: ["transcription-history", limit],
-    queryFn: () => api.getTranscriptionHistory(limit),
+    queryFn: ({ signal }) => api.getTranscriptionHistory(limit, { signal }),
     enabled,
     refetchInterval: enabled ? 10_000 : false,
   });
@@ -91,7 +91,7 @@ export function useTranscriptionHistoryQuery(enabled = true, limit = 10) {
 export function useJobPreview(jobId: number | null) {
   return useQuery<JobPreview>({
     queryKey: ["job-preview", jobId],
-    queryFn: () => api.getJobPreview(jobId as number),
+    queryFn: ({ signal }) => api.getJobPreview(jobId as number, { signal }),
     enabled: jobId !== null,
   });
 }

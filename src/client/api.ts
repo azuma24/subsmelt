@@ -2,25 +2,50 @@ import type { FolderNode, JobPreview, JobRow, LlmHealth, LogEntry, QueueStatus, 
 
 const BASE = "/api";
 
-async function fetchJSON<T = unknown>(url: string, opts?: RequestInit): Promise<T> {
+type JsonErrorBody = { error?: unknown; message?: unknown };
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly url: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+export async function fetchJSON<T = unknown>(url: string, opts: RequestInit = {}): Promise<T> {
+  const headers = new Headers(opts.headers);
+  if (opts.body !== undefined && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
   const res = await fetch(`${BASE}${url}`, {
-    headers: { "Content-Type": "application/json" },
     ...opts,
+    headers,
   });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `HTTP ${res.status}`);
+    const body = (await res.json().catch(() => ({}))) as JsonErrorBody;
+    const message = typeof body.error === "string"
+      ? body.error
+      : typeof body.message === "string"
+        ? body.message
+        : `HTTP ${res.status}`;
+    throw new ApiError(message, res.status, url);
   }
   return res.json() as Promise<T>;
 }
 
+type FetchOpts = Pick<RequestInit, "signal">;
+
 // Settings
-export const getSettings = () => fetchJSON<Record<string, unknown>>("/settings");
-export const saveSettings = (settings: Record<string, unknown>) =>
-  fetchJSON("/settings", { method: "POST", body: JSON.stringify(settings) });
+export const getSettings = (opts?: FetchOpts) => fetchJSON<Record<string, unknown>>("/settings", opts);
+export const saveSettings = (settings: Record<string, unknown>, opts?: FetchOpts) =>
+  fetchJSON("/settings", { ...opts, method: "POST", body: JSON.stringify(settings) });
 
 // Tasks
-export const getTasks = () => fetchJSON<Task[]>("/tasks");
+export const getTasks = (opts?: FetchOpts) => fetchJSON<Task[]>("/tasks", opts);
 export const createTask = (payload: Partial<Task>) =>
   fetchJSON<Task>("/tasks", { method: "POST", body: JSON.stringify(payload) });
 export const updateTask = (id: number, payload: Partial<Task>) =>
@@ -30,13 +55,13 @@ export const deleteTask = (id: number) =>
 
 // Scanner
 export const scanFolder = () => fetchJSON<ScanResult>("/scan", { method: "POST" });
-export const previewScan = () => fetchJSON<ScanResult>("/scan/preview");
-export const getSubfolders = () => fetchJSON<{ subfolders: string[] }>("/subfolders");
-export const getFolderTree = () => fetchJSON<{ root: FolderNode }>("/folders/tree");
+export const previewScan = (opts?: FetchOpts) => fetchJSON<ScanResult>("/scan/preview", opts);
+export const getSubfolders = (opts?: FetchOpts) => fetchJSON<{ subfolders: string[] }>("/subfolders", opts);
+export const getFolderTree = (opts?: FetchOpts) => fetchJSON<{ root: FolderNode }>("/folders/tree", opts);
 
 // Jobs
-export const getJobs = () =>
-  fetchJSON<{ jobs: JobRow[]; queueRunning: boolean; currentJobId: number | null }>("/jobs");
+export const getJobs = (opts?: FetchOpts) =>
+  fetchJSON<{ jobs: JobRow[]; queueRunning: boolean; currentJobId: number | null }>("/jobs", opts);
 export const retryJob = (id: number) =>
   fetchJSON(`/jobs/${id}/retry`, { method: "POST" });
 export const forceJob = (id: number) =>
@@ -64,7 +89,7 @@ export const pinJob = (id: number) =>
   fetchJSON(`/jobs/${id}/pin`, { method: "POST" });
 export const unpinJob = (id: number) =>
   fetchJSON(`/jobs/${id}/unpin`, { method: "POST" });
-export const getJobPreview = (id: number) => fetchJSON<JobPreview>(`/jobs/${id}/preview`);
+export const getJobPreview = (id: number, opts?: FetchOpts) => fetchJSON<JobPreview>(`/jobs/${id}/preview`, opts);
 
 // Queue
 export const startQueue = (ids?: number[]) =>
@@ -73,7 +98,7 @@ export const startQueue = (ids?: number[]) =>
     body: JSON.stringify(ids && ids.length > 0 ? { ids } : {}),
   });
 export const stopQueue = () => fetchJSON("/queue/stop", { method: "POST" });
-export const getQueueStatus = () => fetchJSON<QueueStatus>("/queue/status");
+export const getQueueStatus = (opts?: FetchOpts) => fetchJSON<QueueStatus>("/queue/status", opts);
 
 // Watcher
 export const startWatcher = () => fetchJSON("/watcher/start", { method: "POST" });
@@ -86,14 +111,14 @@ export const getLogs = (params?: {
   jobId?: number;
   limit?: number;
   offset?: number;
-}) => {
+}, opts?: FetchOpts) => {
   const q = new URLSearchParams();
   if (params?.level) q.set("level", params.level);
   if (params?.category) q.set("category", params.category);
   if (typeof params?.jobId === "number") q.set("job_id", String(params.jobId));
   if (params?.limit) q.set("limit", String(params.limit));
   if (params?.offset) q.set("offset", String(params.offset));
-  return fetchJSON<LogEntry[]>(`/logs?${q.toString()}`);
+  return fetchJSON<LogEntry[]>(`/logs?${q.toString()}`, opts);
 };
 export const clearLogsApi = () => fetchJSON("/logs", { method: "DELETE" });
 
@@ -101,17 +126,17 @@ export const clearLogsApi = () => fetchJSON("/logs", { method: "DELETE" });
 export const testConnection = () =>
   fetchJSON<{ ok: boolean; message: string }>("/test-connection", { method: "POST" });
 
-export const getLlmHealth = () =>
-  fetchJSON<LlmHealth>("/llm-health");
+export const getLlmHealth = (opts?: FetchOpts) =>
+  fetchJSON<LlmHealth>("/llm-health", opts);
 
 // Speech-to-text
-export const getTranscriptionHealth = () =>
-  fetchJSON<TranscriptionHealth>("/transcribe/health");
+export const getTranscriptionHealth = (opts?: FetchOpts) =>
+  fetchJSON<TranscriptionHealth>("/transcribe/health", opts);
 export const preflightTranscription = (payload: TranscribeRequest) =>
   fetchJSON<TranscriptionPreflightResponse>("/transcribe/preflight", { method: "POST", body: JSON.stringify(payload) });
 export const transcribeVideo = (payload: TranscribeRequest) =>
   fetchJSON<TranscribeResponse>("/transcribe", { method: "POST", body: JSON.stringify(payload) });
-export const getTranscriptionHistory = (limit = 10) =>
-  fetchJSON<{ attempts: TranscriptionHistoryEntry[] }>(`/transcribe/history?limit=${limit}`);
+export const getTranscriptionHistory = (limit = 10, opts?: FetchOpts) =>
+  fetchJSON<{ attempts: TranscriptionHistoryEntry[] }>(`/transcribe/history?limit=${limit}`, opts);
 export const retryTranscriptionAttempt = (id: string) =>
   fetchJSON<TranscribeResponse>(`/transcribe/history/${id}/retry`, { method: "POST" });
