@@ -122,6 +122,67 @@ const SSE_EVENT_NAMES: readonly SSEEventName[] = [
   "job:stopped",
 ];
 
+type QueryKey = readonly unknown[];
+
+const stringifyQueryKey = (queryKey: QueryKey): string => JSON.stringify(queryKey);
+
+export function parseSSEData(raw: string): Record<string, unknown> {
+  try {
+    const data = JSON.parse(raw) as unknown;
+    return typeof data === "object" && data !== null && !Array.isArray(data) ? data as Record<string, unknown> : {};
+  } catch {
+    return {};
+  }
+}
+
+export function getSSEInvalidationKeys(name: SSEEventName): QueryKey[] {
+  switch (name) {
+    case "job:progress":
+    case "job:start":
+      return [["jobs"], ["queue-status"]];
+    case "job:done":
+    case "job:error":
+    case "job:stopped":
+    case "queue:finished":
+    case "queue:stopped":
+      return [["jobs"], ["queue-status"], ["logs"], ["transcription-history"]];
+    case "scan:complete":
+      return [["jobs"], ["queue-status"], ["logs"], ["settings"], ["transcription-history"]];
+  }
+}
+
+export function createDebouncedInvalidator(
+  invalidate: (queryKey: QueryKey) => void,
+  delayMs = 300,
+) {
+  const pending = new Map<string, QueryKey>();
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  const flush = () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    const keys = Array.from(pending.values());
+    pending.clear();
+    keys.forEach(invalidate);
+  };
+
+  return {
+    schedule(queryKeys: QueryKey[]) {
+      queryKeys.forEach((queryKey) => pending.set(stringifyQueryKey(queryKey), queryKey));
+      if (timer) return;
+      timer = setTimeout(flush, delayMs);
+    },
+    flush,
+    cancel() {
+      if (timer) clearTimeout(timer);
+      timer = null;
+      pending.clear();
+    },
+  };
+}
+
 export function useSSE(onEvent?: SSEEventHandler) {
   const queryClient = useQueryClient();
   const onEventRef = useRef(onEvent);
@@ -132,25 +193,28 @@ export function useSSE(onEvent?: SSEEventHandler) {
 
   useEffect(() => {
     const es = new EventSource("/api/events");
-    const refresh = () => {
-      queryClient.invalidateQueries({ queryKey: ["jobs"] });
-      queryClient.invalidateQueries({ queryKey: ["queue-status"] });
-      queryClient.invalidateQueries({ queryKey: ["logs"] });
-      queryClient.invalidateQueries({ queryKey: ["transcription-history"] });
+    const invalidator = createDebouncedInvalidator((queryKey) => {
+      queryClient.invalidateQueries({ queryKey });
+    });
+    const refresh = (name?: SSEEventName) => {
+      invalidator.schedule(name ? getSSEInvalidationKeys(name) : [["jobs"], ["queue-status"], ["logs"], ["transcription-history"]]);
     };
 
     const bind = (name: SSEEventName) => {
       es.addEventListener(name, (e) => {
-        const data = JSON.parse((e as MessageEvent).data) as Record<string, unknown>;
+        const data = parseSSEData((e as MessageEvent).data);
         onEventRef.current?.(name, data);
-        refresh();
+        refresh(name);
       });
     };
 
     SSE_EVENT_NAMES.forEach(bind);
-    es.onerror = refresh;
+    es.onerror = () => refresh();
 
-    return () => es.close();
+    return () => {
+      invalidator.cancel();
+      es.close();
+    };
   }, [queryClient]);
 }
 
