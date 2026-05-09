@@ -722,6 +722,7 @@ export interface TranslateFileOptions {
   model: string;
   prompt: string;
   lang: string;
+  sourceLang?: string;
   additional: string;
   temperature: number;
   chunkSize: number;
@@ -729,6 +730,24 @@ export interface TranslateFileOptions {
   onProgress?: (completed: number, total: number) => void;
   onRetry?: (attempt: number, error: any, backoff: number) => void;
   onAnalysis?: (analysis: string) => void;
+}
+
+export function isAutomaticSourceLanguage(sourceLang?: string): boolean {
+  const normalized = (sourceLang || "").trim().toLowerCase();
+  return !normalized || normalized === "automatic" || normalized === "auto" || normalized === "auto-detect" || normalized === "detect";
+}
+
+export function buildTranslationSystemPrompt(opts: { prompt: string; lang: string; sourceLang?: string; additional: string }): string {
+  const sourceInstruction = isAutomaticSourceLanguage(opts.sourceLang)
+    ? "Source subtitle language: detect automatically from the input cues. Translate every subtitle into the target language."
+    : `Source subtitle language: ${opts.sourceLang}. Translate every subtitle into the target language.`;
+
+  const renderedPrompt = opts.prompt
+    .replaceAll("{{source_lang}}", isAutomaticSourceLanguage(opts.sourceLang) ? "automatically detected" : opts.sourceLang || "automatically detected")
+    .replaceAll("{{lang}}", opts.lang)
+    .replaceAll("{{additional}}", opts.additional);
+
+  return `${sourceInstruction}\n\n${renderedPrompt}`;
 }
 
 export async function translateFile(opts: TranslateFileOptions): Promise<void> {
@@ -770,9 +789,12 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     opts.onAnalysis?.(analysis);
   }
 
-  const systemPrompt = opts.prompt
-    .replaceAll("{{lang}}", opts.lang)
-    .replaceAll("{{additional}}", effectiveAdditional);
+  const systemPrompt = buildTranslationSystemPrompt({
+    prompt: opts.prompt,
+    lang: opts.lang,
+    sourceLang: opts.sourceLang,
+    additional: effectiveAdditional,
+  });
 
   const indexMap = new Map<any, number>();
   subtitle.forEach((cue, idx) => indexMap.set(cue, idx));

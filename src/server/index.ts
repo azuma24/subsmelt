@@ -4,6 +4,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
+  AUTO_SOURCE_LANGUAGE,
   getAllSettings,
   setSetting,
   getSetting,
@@ -107,7 +108,7 @@ app.post("/api/tasks", (req, res) => {
   const { source_lang, target_lang, output_pattern, lang_code } = req.body;
   if (!target_lang || !lang_code) return res.status(400).json({ error: "target_lang and lang_code are required" });
   const result = createTask({
-    source_lang: source_lang || "English",
+    source_lang: source_lang || AUTO_SOURCE_LANGUAGE,
     target_lang,
     output_pattern: output_pattern || "{{name}}.{{lang_code}}.srt",
     lang_code,

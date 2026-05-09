@@ -25,6 +25,8 @@ interface ConfigData {
   _next_task_id: number;
 }
 
+export const AUTO_SOURCE_LANGUAGE = "Automatic";
+
 // --- Defaults ---
 
 const DEFAULT_SETTINGS: Record<string, string> = {
@@ -64,11 +66,12 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   transcription_path_map_to: "",
   additional_context: "",
   prompt: `// You are a professional subtitle translator.
-// You will only receive subtitles and are only required to translate, no need for any replies.
+// You will receive subtitle text in an automatically detected source language.
+// Translate all subtitles into {{lang}}.
 // Note: {{additional}}
 // Do not merge sentences, translate them individually.
 // Return the translated subtitles in the same order and length as the input.
-// 1. Parse the input subtitles
+// 1. Detect the input subtitle language
 // 2. Translate the input subtitles into {{lang}}
 // 3. Convert names into {{lang}}
 // 4. Paraphrase the translated subtitles into more fluent sentences
@@ -77,10 +80,10 @@ const DEFAULT_SETTINGS: Record<string, string> = {
 
 const DEFAULT_TASK: TranslationTask = {
   id: 1,
-  source_lang: "English",
-  target_lang: "Traditional Chinese (Taiwan)",
-  output_pattern: "{{name}}.chi.srt",
-  lang_code: "chi",
+  source_lang: AUTO_SOURCE_LANGUAGE,
+  target_lang: "English",
+  output_pattern: "{{name}}.eng.srt",
+  lang_code: "eng",
   enabled: 1,
   prompt_override: "",
   created_at: new Date().toISOString(),
@@ -96,6 +99,10 @@ function loadConfig(): ConfigData {
       // Merge defaults for any missing settings
       data.settings = { ...DEFAULT_SETTINGS, ...data.settings };
       if (!data.tasks) data.tasks = [DEFAULT_TASK];
+      data.tasks = data.tasks.map((task) => ({
+        ...task,
+        source_lang: !task.source_lang || task.source_lang === "English" ? AUTO_SOURCE_LANGUAGE : task.source_lang,
+      }));
       if (!data._next_task_id) data._next_task_id = Math.max(0, ...data.tasks.map((t) => t.id)) + 1;
       return data;
     }

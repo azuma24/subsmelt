@@ -31,6 +31,7 @@ export const STATUS_LABEL_KEY: Record<string, string> = {
 };
 
 export const PRESETS = [
+  { label: "English", target_lang: "English", lang_code: "eng", output_pattern: "{{name}}.eng.srt" },
   { label: "繁體中文", target_lang: "Traditional Chinese (Taiwan)", lang_code: "chi", output_pattern: "{{name}}.chi.srt" },
   { label: "日本語", target_lang: "Japanese", lang_code: "jpn", output_pattern: "{{name}}.jpn.srt" },
   { label: "한국어", target_lang: "Korean", lang_code: "kor", output_pattern: "{{name}}.kor.srt" },
@@ -42,11 +43,12 @@ export const PRESETS = [
 ] as const;
 
 export const DEFAULT_PROMPT = `// You are a professional subtitle translator.
-// You will only receive subtitles and are only required to translate, no need for any replies.
+// You will receive subtitle text in an automatically detected source language.
+// Translate all subtitles into {{lang}}.
 // Note: {{additional}}
 // Do not merge sentences, translate them individually.
 // Return the translated subtitles in the same order and length as the input.
-// 1. Parse the input subtitles
+// 1. Detect the input subtitle language
 // 2. Translate the input subtitles into {{lang}}
 // 3. Convert names into {{lang}}
 // 4. Paraphrase the translated subtitles into more fluent sentences
