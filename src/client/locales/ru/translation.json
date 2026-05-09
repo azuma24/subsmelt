@@ -2,6 +2,7 @@
   "nav": {
     "dashboard": "Панель",
     "languages": "Переводы",
+    "translations": "Переводы",
     "logs": "Журналы",
     "settings": "Настройки"
   },

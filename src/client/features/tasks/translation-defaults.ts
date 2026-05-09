@@ -9,6 +9,29 @@ export const DEFAULT_TARGET_LANG = "English";
 export const DEFAULT_LANG_CODE = "eng";
 export const DEFAULT_OUTPUT_PATTERN = "{{name}}.{{lang_code}}.srt";
 
+export const LANGUAGE_OPTIONS = PRESETS.map((preset) => ({
+  value: preset.lang_code,
+  label: `${preset.label} · ${preset.lang_code}`,
+  targetLang: preset.target_lang,
+  outputPattern: preset.output_pattern,
+}));
+
+export function getTranslationPresetByLangCode(langCode?: string) {
+  return PRESETS.find((preset) => preset.lang_code === langCode);
+}
+
+export function applyTranslationPreset(draft: Partial<Task>, langCode: string): Partial<Task> {
+  const preset = getTranslationPresetByLangCode(langCode);
+  if (!preset) return draft;
+  return {
+    ...draft,
+    source_lang: AUTO_SOURCE_LANG,
+    target_lang: preset.target_lang,
+    lang_code: preset.lang_code,
+    output_pattern: preset.output_pattern,
+  };
+}
+
 export function inferOutputFormat(pattern?: string): OutputFormat {
   const normalized = (pattern || "").toLowerCase().trim();
   const extMatch = normalized.match(/\.(srt|vtt|ass|ssa)$/);

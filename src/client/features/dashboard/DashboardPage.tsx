@@ -379,7 +379,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
       title: t("dashboard.quickStart.tasksTitle"),
       hint: enabledTaskCount > 0 ? t("dashboard.quickStart.done") : t("dashboard.quickStart.tasksHint"),
       action: t("dashboard.quickStart.openTranslations"),
-      onClick: () => navigate("/tasks"),
+      onClick: () => navigate("/translations"),
     },
     {
       done: pendingJobs.length > 0 || doneJobs.length > 0 || activeJobs.length > 0,

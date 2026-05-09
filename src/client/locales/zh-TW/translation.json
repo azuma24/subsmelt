@@ -2,6 +2,7 @@
   "nav": {
     "dashboard": "儀表板",
     "languages": "翻譯",
+    "translations": "翻譯",
     "logs": "日誌",
     "settings": "設定"
   },

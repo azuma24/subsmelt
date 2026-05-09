@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { useTasksQuery, useMutationWithInvalidation } from "../../hooks";
@@ -11,8 +11,10 @@ import { ActionButton, EmptyHint, Field } from "../../ui/primitives";
 import {
   AUTO_SOURCE_LANG,
   DEFAULT_OUTPUT_PATTERN,
+  LANGUAGE_OPTIONS,
   OUTPUT_FORMATS,
   applyOutputFormat,
+  applyTranslationPreset,
   createDefaultTranslationDraft,
   inferOutputFormat,
   type OutputFormat,
@@ -126,6 +128,18 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
         .replace("{{lang_code}}", editing.lang_code || "xx")
         .replaceAll("{{ext}}", selectedOutputFormat)
     : "";
+  const modalLanguageOptions = useMemo(() => {
+    if (!editing?.lang_code || LANGUAGE_OPTIONS.some((option) => option.value === editing.lang_code)) return LANGUAGE_OPTIONS;
+    return [
+      {
+        value: editing.lang_code,
+        label: `${editing.target_lang || editing.lang_code} · ${editing.lang_code}`,
+        targetLang: editing.target_lang || editing.lang_code,
+        outputPattern: editing.output_pattern || DEFAULT_OUTPUT_PATTERN,
+      },
+      ...LANGUAGE_OPTIONS,
+    ];
+  }, [editing?.lang_code, editing?.output_pattern, editing?.target_lang]);
 
   const bulkCounts = useMemo(() => ({
     enabled: selectedTasks.filter((x) => x.enabled === 1).length,
@@ -200,8 +214,29 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
                   <div className="inline-flex rounded-full bg-blue-950/60 px-3 py-1 text-sm font-semibold text-blue-100">{t("translation_languages.sourceAutoBadge")}</div>
                   <p className="mt-2 text-xs text-gray-500">{t("translation_languages.sourceAutoHelp")}</p>
                 </div>
-                <Field label={t("translation_languages.targetLang")} value={editing.target_lang || ""} onChange={(v) => setEditing({ ...editing, target_lang: v })} placeholder="English" required />
-                <Field label={t("translation_languages.langCode")} value={editing.lang_code || ""} onChange={(v) => setEditing({ ...editing, lang_code: v })} placeholder="eng" error={langCodeError} help={t("translation_languages.langCodeHelp")} required />
+                <SelectField
+                  label={t("translation_languages.targetLang")}
+                  value={editing.lang_code || ""}
+                  onChange={(langCode) => {
+                    const next = applyTranslationPreset(editing, langCode);
+                    setEditing(next);
+                    setSelectedOutputFormat(inferOutputFormat(next.output_pattern));
+                  }}
+                  options={modalLanguageOptions.map((option) => ({ value: option.value, label: option.targetLang }))}
+                  required
+                />
+                <SelectField
+                  label={t("translation_languages.langCode")}
+                  value={editing.lang_code || ""}
+                  onChange={(langCode) => {
+                    const next = applyTranslationPreset(editing, langCode);
+                    setEditing(next);
+                    setSelectedOutputFormat(inferOutputFormat(next.output_pattern));
+                  }}
+                  options={modalLanguageOptions.map((option) => ({ value: option.value, label: option.label }))}
+                  help={t("translation_languages.langCodeHelp")}
+                  required
+                />
                 <div>
                   <div className="mb-2 text-sm font-medium text-gray-300">{t("translation_languages.outputFormat")}</div>
                   <div className="flex flex-wrap gap-2">
@@ -248,6 +283,37 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
           </div>
         </ModalShell>
       )}
+    </div>
+  );
+}
+
+interface SelectFieldOption {
+  value: string;
+  label: string;
+}
+
+function SelectField({ label, value, onChange, options, help, required }: { label: string; value: string; onChange: (v: string) => void; options: SelectFieldOption[]; help?: string; required?: boolean }) {
+  const selectId = useId();
+  const helpId = `${selectId}-help`;
+
+  return (
+    <div>
+      <label htmlFor={selectId} className="mb-1 block text-sm font-medium text-gray-300">
+        {label} {required && <span className="text-red-400">*</span>}
+      </label>
+      <select
+        id={selectId}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-describedby={help ? helpId : undefined}
+        required={required}
+        className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-base leading-6 text-gray-100 md:text-sm"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>{option.label}</option>
+        ))}
+      </select>
+      {help && <p id={helpId} className="mt-1 text-xs leading-5 text-gray-400">{help}</p>}
     </div>
   );
 }

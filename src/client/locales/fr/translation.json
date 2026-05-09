@@ -2,6 +2,7 @@
   "nav": {
     "dashboard": "Tableau de bord",
     "languages": "Traductions",
+    "translations": "Traductions",
     "logs": "Journaux",
     "settings": "Paramètres"
   },

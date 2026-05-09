@@ -2,6 +2,7 @@
   "nav": {
     "dashboard": "ダッシュボード",
     "languages": "翻訳",
+    "translations": "翻訳",
     "logs": "ログ",
     "settings": "設定"
   },

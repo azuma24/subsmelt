@@ -2,6 +2,7 @@
   "nav": {
     "dashboard": "แดชบอร์ด",
     "languages": "การแปล",
+    "translations": "การแปล",
     "logs": "บันทึก",
     "settings": "การตั้งค่า"
   },

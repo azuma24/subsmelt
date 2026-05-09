@@ -2,6 +2,7 @@
   "nav": {
     "dashboard": "Panel",
     "languages": "Traducciones",
+    "translations": "Traducciones",
     "logs": "Registros",
     "settings": "Configuración"
   },

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ToastProvider, useToast } from "./components/Toast";
 import { ConfirmProvider } from "./components/ConfirmModal";
@@ -89,7 +89,8 @@ function AppInner() {
         <main className={`flex-1 overflow-auto ${isMobile ? "pb-24" : ""}`}>
           <Routes>
             <Route path="/" element={<DashboardPage isMobile={isMobile} />} />
-            <Route path="/tasks" element={<TranslationLanguagesPage isMobile={isMobile} />} />
+            <Route path="/translations" element={<TranslationLanguagesPage isMobile={isMobile} />} />
+            <Route path="/tasks" element={<Navigate to="/translations" replace />} />
             <Route path="/settings" element={<SettingsPage isMobile={isMobile} />} />
             <Route path="/logs" element={<LogsPage isMobile={isMobile} />} />
             <Route path="/jobs/:id" element={<JobDetailPage />} />
