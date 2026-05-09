@@ -1,8 +1,20 @@
 export const LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "zh-TW", label: "繁體中文" },
-  { code: "zh-CN", label: "简体中文" },
-  { code: "ja", label: "日本語" },
+  { code: "en", label: "English", dir: "ltr" },
+  { code: "zh-TW", label: "繁體中文", dir: "ltr" },
+  { code: "zh-CN", label: "简体中文", dir: "ltr" },
+  { code: "ja", label: "日本語", dir: "ltr" },
+  { code: "es", label: "Español", dir: "ltr" },
+  { code: "ko", label: "한국어", dir: "ltr" },
+  { code: "fr", label: "Français", dir: "ltr" },
+  { code: "de", label: "Deutsch", dir: "ltr" },
+  { code: "pt-BR", label: "Português (Brasil)", dir: "ltr" },
+  { code: "it", label: "Italiano", dir: "ltr" },
+  { code: "ru", label: "Русский", dir: "ltr" },
+  { code: "ar", label: "العربية", dir: "rtl" },
+  { code: "hi", label: "हिन्दी", dir: "ltr" },
+  { code: "id", label: "Bahasa Indonesia", dir: "ltr" },
+  { code: "vi", label: "Tiếng Việt", dir: "ltr" },
+  { code: "th", label: "ไทย", dir: "ltr" },
 ] as const;
 
 export const NAV_ITEMS = [

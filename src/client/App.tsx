@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ToastProvider, useToast } from "./components/Toast";
@@ -7,6 +7,7 @@ import { formatDur } from "./lib";
 import { useIsMobile, useJobsQuery, useQueueStatusQuery, useSSE, useSettingsQuery } from "./hooks";
 import type { JobRow } from "./types";
 import { DesktopSidebar, MobileBottomNav, TopStatusBar } from "./app/shell";
+import { LANGUAGES } from "./app/constants";
 import { DashboardPage } from "./features/dashboard";
 import { LogsPage } from "./features/logs/LogsPage";
 import { JobDetailPage } from "./features/jobs/JobDetailPage";
@@ -25,7 +26,7 @@ export default function App() {
 
 function AppInner() {
   const { addToast } = useToast();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isMobile = useIsMobile();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const jobsQuery = useJobsQuery();
@@ -63,6 +64,12 @@ function AppInner() {
   const modelName = typeof settingsQuery.data?.model === "string" ? settingsQuery.data.model : "";
   const watcherRunning =
     Boolean(queueQuery.data?.watcherRunning) || Boolean(settingsQuery.data?._watcher_running);
+
+  useEffect(() => {
+    const current = LANGUAGES.find((lang) => i18n.language === lang.code || i18n.language.startsWith(`${lang.code}-`));
+    document.documentElement.dir = current?.dir || "ltr";
+    document.documentElement.lang = current?.code || "en";
+  }, [i18n.language]);
 
   return (
     <div className="flex h-dvh min-h-dvh bg-gray-950 text-gray-100">

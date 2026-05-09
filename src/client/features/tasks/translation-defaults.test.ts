@@ -9,7 +9,7 @@ import {
   applyOutputFormat,
   createDefaultTranslationDraft,
 } from "./translation-defaults";
-import { PRESETS } from "../../app/constants";
+import { LANGUAGES, PRESETS } from "../../app/constants";
 
 test("new translation drafts default to automatic source detection and English output", () => {
   const draft = createDefaultTranslationDraft();
@@ -44,7 +44,7 @@ test("English is available as a one-click Automatic → English target", () => {
 
 test("automatic source detection copy is localized in all bundled locales", () => {
   const requiredKeys = ["sourceAutoBadge", "sourceAutoHelp", "targetLang"];
-  for (const locale of ["en", "ja", "zh-CN", "zh-TW"]) {
+  for (const { code: locale } of LANGUAGES) {
     const raw = readFileSync(`src/client/locales/${locale}/translation.json`, "utf8");
     const data = JSON.parse(raw);
     for (const key of requiredKeys) {

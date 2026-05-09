@@ -2,8 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { LANGUAGES } from "../app/constants";
 
-const localeDirs = ["en", "ja", "zh-CN", "zh-TW"];
+const localeDirs = LANGUAGES.map((lang) => lang.code);
 
 const requiredTranscriptionKeys = [
   "settings.transcription.title",
