@@ -86,7 +86,7 @@ export function JobsTableDesktop({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="w-full min-w-[820px] text-sm">
         <thead className="bg-gray-800/30 text-gray-500 text-xs">
           <tr>
             <th className="px-3 py-3 w-8">
@@ -137,7 +137,7 @@ export function JobsTableDesktop({
                       />
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-300 max-w-[240px] truncate" title={job.srt_path}>{srtName}</td>
+                  <td className="px-4 py-3 text-gray-300 max-w-[280px] truncate" title={job.srt_path}>{srtName}</td>
                   <td className="px-4 py-3 text-gray-400 text-xs">{job.target_lang}<br /><span className="text-gray-600">{job.lang_code}</span></td>
                   <td className="px-4 py-3">
                     <StatusBadge job={job} />

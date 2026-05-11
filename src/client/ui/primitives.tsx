@@ -30,7 +30,7 @@ export function ActionButton({ children, onClick, className = "", variant = "pri
     ghost: "bg-gray-800 hover:bg-gray-700 text-gray-200",
     warning: "bg-yellow-700 hover:bg-yellow-600 text-yellow-100",
   }[variant];
-  return <button onClick={onClick} disabled={disabled || busy} className={`min-h-[44px] rounded-2xl px-4 py-3 text-sm font-medium leading-6 transition-colors disabled:cursor-not-allowed disabled:opacity-50 disabled:saturate-50 ${cls} ${className}`}>{children}</button>;
+  return <button onClick={onClick} disabled={disabled || busy} className={`min-h-[44px] rounded-2xl px-4 py-3 text-center text-sm font-medium leading-5 transition-colors disabled:cursor-not-allowed disabled:opacity-50 disabled:saturate-50 ${cls} ${className}`}>{children}</button>;
 }
 
 export function StatCard({ label, value, color }: { label: string; value: number; color: string }) {

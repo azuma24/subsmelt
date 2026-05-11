@@ -401,16 +401,16 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
     <div className="mx-auto max-w-[1400px] space-y-6 p-4 md:p-6">
       <div className="space-y-6">
         <section className="rounded-3xl border border-gray-800 bg-gradient-to-br from-gray-900 to-gray-950 p-5 md:p-6">
-          <div className={`flex ${isMobile ? "flex-col gap-5" : "items-start justify-between gap-8"}`}>
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between xl:gap-8">
             <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-semibold tracking-tight">SubSmelt</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-400">
+              <h1 className="text-balance text-2xl font-semibold tracking-tight">SubSmelt</h1>
+              <p className="mt-2 max-w-2xl text-pretty text-sm leading-6 text-gray-400">
                 {autoTranslate ? t("dashboard.scanAutoTranslateOn") : t("dashboard.scanAutoTranslateOff")}
               </p>
             </div>
             <div
               aria-label={t("dashboard.hero.scanActions")}
-              className={`grid w-full gap-2 ${isMobile ? "grid-cols-2" : "md:grid-cols-2 xl:min-w-[34rem] xl:max-w-[34rem]"}`}
+              className="grid w-full gap-2 sm:grid-cols-2 xl:w-[34rem] xl:shrink-0"
             >
               <ActionButton className="w-full" variant="ghost" onClick={handlePreviewScan} busy={scanPreviewMutation.isPending} disabled={scanMutation.isPending}>
                 {scanPreviewMutation.isPending ? t("dashboard.previewing") : t("dashboard.previewScan")}
@@ -418,7 +418,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
               <ActionButton className="w-full" onClick={handleScan} busy={scanMutation.isPending} disabled={scanPreviewMutation.isPending}>
                 {scanMutation.isPending ? t("dashboard.scanning") : t("dashboard.scanFolders")}
               </ActionButton>
-              <div className="grid grid-cols-2 gap-2 md:col-span-2">
+              <div className="grid grid-cols-2 gap-2 sm:col-span-2">
                 {!queueRunning ? (
                   <>
                     <ActionButton className="w-full" variant="success" onClick={handleRunAll} disabled={pendingJobs.length === 0}>{t("dashboard.runAll")}</ActionButton>
@@ -435,11 +435,11 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
                   <ActionButton className="col-span-2 w-full" variant="danger" onClick={handleStop}>{t("dashboard.stop")}</ActionButton>
                 )}
               </div>
-              {jobs.length > 0 && <ActionButton className="md:col-span-2 w-full" variant="ghost" onClick={handleClearAll}>{t("dashboard.clearAll")}</ActionButton>}
+              {jobs.length > 0 && <ActionButton className="w-full sm:col-span-2" variant="ghost" onClick={handleClearAll}>{t("dashboard.clearAll")}</ActionButton>}
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {quickChecks.map((step, idx) => (
               <div key={idx} className={`rounded-2xl border p-3 ${step.done ? "border-green-900/40 bg-green-900/10" : "border-gray-800 bg-gray-900/40"}`}>
                 <div className="flex items-center justify-between gap-2">
@@ -457,7 +457,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
 
         {activeJob && <ActiveJobCard job={activeJob} pendingCount={pendingJobs.length} />}
 
-        <section className={`grid gap-3 ${isMobile ? "grid-cols-2" : "grid-cols-4"}`}>
+        <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <StatCard label={t("dashboard.stat.pending")} value={pendingJobs.length} color="text-yellow-400" />
           <StatCard label={t("dashboard.stat.translating")} value={activeJobs.length} color="text-blue-400" />
           <StatCard label={t("dashboard.stat.done")} value={doneJobs.length} color="text-green-400" />
@@ -514,12 +514,12 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
 
         <section className="overflow-hidden rounded-3xl border border-gray-800 bg-gray-900/80">
           <div className="space-y-3 border-b border-gray-800 px-4 py-3">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <h2 className="text-sm font-semibold text-white">{t("app.queueSectionTitle")}</h2>
-                <p className="text-xs text-gray-500">{t("app.queueSectionSubtitle")}</p>
+                <h2 className="text-balance text-sm font-semibold text-white">{t("app.queueSectionTitle")}</h2>
+                <p className="text-pretty text-xs text-gray-500">{t("app.queueSectionSubtitle")}</p>
               </div>
-              <div className="flex gap-2 overflow-x-auto">
+              <div className="flex flex-wrap gap-2 lg:justify-end">
                 {filterTabs.map((tab) => (
                   <button
                     key={tab.key}
@@ -532,13 +532,13 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
               </div>
             </div>
 
-            <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+            <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
               <label className="min-w-0">
                 <span className="mb-1 block text-[10px] uppercase tracking-wide text-gray-500">{t("dashboard.queueFilterFolder")}</span>
                 <select
                   value={folderFilter}
                   onChange={(e) => setFolderFilter(e.target.value)}
-                  className="w-full md:max-w-[20rem] rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-xs text-gray-200"
+                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-xs text-gray-200"
                 >
                   <option value="all">{t("dashboard.queueFilterAllFolders")}</option>
                   {folderOptions.map((folder) => <option key={folder} value={folder}>{folder}</option>)}
@@ -549,7 +549,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
                 <select
                   value={targetFilter}
                   onChange={(e) => setTargetFilter(e.target.value)}
-                  className="w-full md:max-w-[20rem] rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-xs text-gray-200"
+                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-xs text-gray-200"
                 >
                   <option value="all">{t("dashboard.queueFilterAllTargets")}</option>
                   {targetOptions.map((target) => <option key={target} value={target}>{target}</option>)}
@@ -568,7 +568,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
             </div>
 
             <div className="sticky top-0 z-20 -mx-4 border-y border-gray-800 bg-gray-950/90 px-4 py-2 backdrop-blur">
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={handleSelectVisiblePending}
@@ -617,7 +617,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
                 >
                   {t("dashboard.clearAll")}
                 </button>
-                <span className="ml-auto self-center text-[11px] text-gray-500">
+                <span className="w-full text-right text-[11px] text-gray-500 sm:ml-auto sm:w-auto">
                   {t("dashboard.quickCounts", { pending: pendingJobs.length, errors: visibleErrorIds.length, done: visibleDoneIds.length })}
                 </span>
               </div>

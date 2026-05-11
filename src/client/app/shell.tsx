@@ -25,11 +25,16 @@ export function DesktopSidebar({
 }: DesktopSidebarProps) {
   const { t } = useTranslation();
   return (
-    <nav className={`${collapsed ? "w-20" : "w-52"} bg-gray-900 border-r border-gray-800 flex flex-col transition-all duration-200 shrink-0`}>
+    <nav className={`${collapsed ? "w-20" : "w-20 lg:w-52"} bg-gray-900 border-r border-gray-800 flex flex-col transition-all duration-200 shrink-0`}>
       <div className="p-4 border-b border-gray-800 flex items-center gap-3">
-        <button onClick={() => setCollapsed((c) => !c)} className="h-10 w-10 rounded-2xl bg-gray-800 hover:bg-gray-700 text-lg">🎬</button>
+        <button
+          type="button"
+          onClick={() => setCollapsed((c) => !c)}
+          className="h-10 w-10 rounded-2xl bg-gray-800 hover:bg-gray-700 text-lg"
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >🎬</button>
         {!collapsed && (
-          <div className="min-w-0">
+          <div className="hidden min-w-0 lg:block">
             <h1 className="text-sm font-semibold text-white leading-tight">SubSmelt</h1>
             <p className="font-mono text-[11px] leading-tight text-gray-400">v{__APP_VERSION__}</p>
           </div>
@@ -41,9 +46,15 @@ export function DesktopSidebar({
           const isActive = currentPath === item.path;
           const showBadge = item.path === "/" && errorCount > 0;
           return (
-            <NavLink key={item.path} to={item.path} className={`w-full text-left px-3 py-3 rounded-2xl text-sm flex items-center gap-3 transition-colors relative ${isActive ? "bg-blue-600/15 text-white border border-blue-500/30" : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/60"}`}>
+            <NavLink
+              key={item.path}
+              to={item.path}
+              aria-label={t(item.labelKey)}
+              title={t(item.labelKey)}
+              className={`w-full text-left px-3 py-3 rounded-2xl text-sm flex items-center gap-3 transition-colors relative ${isActive ? "bg-blue-600/15 text-white border border-blue-500/30" : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/60"}`}
+            >
               <span className="text-lg shrink-0">{item.icon}</span>
-              {!collapsed && <span className="flex-1">{t(item.labelKey)}</span>}
+              {!collapsed && <span className="hidden flex-1 lg:inline">{t(item.labelKey)}</span>}
               {showBadge && <span className="absolute top-2 right-2 bg-red-600 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">{errorCount}</span>}
             </NavLink>
           );
@@ -55,7 +66,7 @@ export function DesktopSidebar({
           <SidebarStatus label={t(queueRunning ? "app.queueRunning" : "app.queueIdle")} dot={queueRunning ? "bg-green-500 animate-pulse" : "bg-gray-600"} collapsed={collapsed} />
           <SidebarStatus label={t(watcherRunning ? "app.watcherActive" : "app.watcherInactive")} dot={watcherRunning ? "bg-emerald-500" : "bg-gray-600"} collapsed={collapsed} />
         </div>
-        {!collapsed && modelName && <div className="truncate rounded-xl border border-gray-800 bg-gray-950/60 p-3 text-xs text-gray-400" title={modelName}>{modelName}</div>}
+        {!collapsed && modelName && <div className="hidden truncate rounded-xl border border-gray-800 bg-gray-950/60 p-3 text-xs text-gray-400 lg:block" title={modelName}>{modelName}</div>}
       </div>
     </nav>
   );
@@ -65,7 +76,7 @@ function SidebarStatus({ label, dot, collapsed }: { label: string; dot: string; 
   return (
     <div className="flex items-center gap-2 rounded-xl bg-gray-950/60 border border-gray-800 px-3 py-2">
       <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${dot}`} />
-      {!collapsed && <span className="truncate text-xs text-gray-400">{label}</span>}
+      {!collapsed && <span className="hidden truncate text-xs text-gray-400 lg:inline">{label}</span>}
     </div>
   );
 }
