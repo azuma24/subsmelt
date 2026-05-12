@@ -1,6 +1,6 @@
 {
   "name": "subsmelt",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "type": "module",
   "description": "Self-hosted batch subtitle translator using LLM",
   "license": "MIT",
