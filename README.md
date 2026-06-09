@@ -2,30 +2,48 @@
 
 **Self-hosted subtitle translator for your media library.**
 
-Point SubSmelt at your media folders and it automatically translates every subtitle file into multiple target languages using any OpenAI-compatible LLM — running entirely on your own hardware, no cloud required.
+Point SubSmelt at your media folders and it automatically translates every subtitle file into any number of target languages — using your local GPU, a home server, or a cloud API key. No subscription, no data leaving your network unless you choose it.
 
 One subtitle file. Multiple language outputs. Fully automated.
 
 ---
 
+## Why LLM translation beats traditional MT
+
+Most subtitle translation tools call a dictionary-based engine (Google Translate, DeepL) one sentence at a time. SubSmelt doesn't. It sends **whole chunks of subtitles together** to a large language model, which changes the result in several concrete ways:
+
+**Context carried across lines.** A line like *"He did it again"* is ambiguous alone. Sent alongside the surrounding five exchanges, the model reads who "he" is, what "it" refers to, and how formal the register should be — and picks the right phrasing. Traditional MT has none of that.
+
+**Character names and proper nouns stay consistent.** For files over 500 cues, SubSmelt first runs a quick analysis pass to extract recurring names, technical terms, and style notes into a glossary. Every chunk that follows sees that glossary. A character named 佐藤 doesn't become Sato in one subtitle and Satou in the next.
+
+**Tone and register are preserved.** LLMs understand that an anime character speaking in keigo should sound formal, that a slang-heavy crime drama should stay gritty, and that children's content should simplify vocabulary. A word-level MT system has no concept of register.
+
+**Natural phrasing, not word-for-word rendering.** Subtitle translation requires short, punchy lines that fit on screen. LLMs rephrase naturally to hit that constraint. Traditional MT often produces awkward literal output that has to be manually post-edited.
+
+**Reasoning models go further.** Models like Qwen3, DeepSeek-R1, and Gemini Thinking reason explicitly before committing to a translation. For ambiguous lines — idioms, wordplay, cultural references — you see higher-quality output because the model pauses to consider alternatives.
+
+The tradeoff is cost: each chunk is a real API call. SubSmelt minimises that with adaptive chunking (20 lines per call by default), parallel workers, automatic context probing, and a skip threshold that skips the analysis pass entirely for short files.
+
+---
+
 ## Features
 
-- **Multi-language output** — A single `.srt` file can generate subtitles in Traditional Chinese, Simplified Chinese, Japanese, and any other language simultaneously
-- **Any OpenAI-compatible LLM** — Works with Ollama, vLLM, GPUStack, LM Studio, OpenAI, or any server that speaks the `/v1/chat/completions` API
-- **Batch processing** — Scan your entire library at once; SubSmelt queues and processes every subtitle file automatically
+- **Multi-language output** — One `.srt` generates Traditional Chinese, Simplified Chinese, Japanese, Korean, and any other language in parallel
+- **Local or cloud LLM** — Use LM Studio, Ollama, vLLM, GPUStack on your own hardware, or connect to OpenAI, Anthropic, or Google Gemini with an API key
+- **Chunked context window** — 20-line chunks with a 5-line overlap window carry dialogue context across boundaries
+- **Automatic context analysis** — For longer files, a pre-pass extracts a glossary of names and terms injected into every chunk
+- **Adaptive parallel workers** — Probes the model's actual context window via the LM Studio native API, then auto-tunes chunk count and parallelism
+- **Batch processing** — Scans your entire library and queues every subtitle file automatically
 - **Real-time progress** — Live job progress via Server-Sent Events, no page refresh needed
 - **File watcher** — Drop a new subtitle into your media folder and it's auto-detected and queued within seconds
-- **Scan modes** — Recursive (all subfolders), root only, or hand-pick specific subfolders to scan
-- **Subtitle preview** — Side-by-side original vs translated view with full-text search and quality indicators
+- **Scan modes** — Recursive, root-only, or hand-picked subfolders
+- **Subtitle preview** — Side-by-side original vs translated view with full-text search
 - **Crash recovery** — Partial saves after each chunk; interrupted jobs resume where they left off
-- **Smart skipping** — Already-translated files are detected and skipped automatically
+- **Smart skipping** — Already-translated files are detected and skipped
 - **Queue management** — Priority pinning, force re-translate, graceful stop, resumes on restart
 - **Supported formats** — `.srt`, `.vtt`, `.ass`, `.ssa`
-- **Optional speech-to-text** — Connect to a faster-whisper backend to generate source subtitles when videos have none
-- **Per-folder STT defaults** — Override model, language, output format, subtitle quality, and advanced options for specific folders
-- **STT history and retry** — Review recent transcription attempts, retry failed jobs, and keep output paths aligned with generated subtitles
-- **Multi-language UI** — Interface available in English, 繁體中文, 简体中文, and 日本語
-- **Simple core container** — No database server; optional transcription runs as a separate add-on or external service
+- **Optional speech-to-text** — Connect a faster-whisper backend to generate source subtitles when none exist
+- **Multi-language UI** — English, 繁體中文, 简体中文, 日本語, and 13 more
 
 ---
 
@@ -47,9 +65,7 @@ services:
     restart: unless-stopped
 ```
 
-Replace `/share/Media Data/Media/downloads` with your actual media path. Change `TZ` to your timezone (e.g. `America/Los_Angeles`, `Europe/London`, `Asia/Tokyo`).
-
-Then open `http://YOUR-HOST-IP:3000` and follow the onboarding checklist.
+Replace the media path and timezone, then open `http://YOUR-HOST-IP:3000`.
 
 ---
 
@@ -57,7 +73,7 @@ Then open `http://YOUR-HOST-IP:3000` and follow the onboarding checklist.
 
 ### 1. Mount your media
 
-The app scans `/media` inside the container recursively. Mount your host folders there:
+The container scans `/media` recursively. Map your host paths there:
 
 ```yaml
 volumes:
@@ -68,114 +84,74 @@ volumes:
 
 ### 2. Configure your LLM
 
-Open **Settings** in the web UI. Choose your API type and enter your endpoint URL and model name.
+Open **Settings → LLM Connection**. Four tabs:
 
-| Provider | Endpoint Example |
-|----------|-----------------|
-| Ollama | `http://192.168.1.18:11434/v1` |
-| vLLM / GPUStack | `http://192.168.1.18:8000/v1` |
-| LM Studio | `http://192.168.1.25:1234/v1` |
-| OpenAI | `https://api.openai.com/v1` |
+| Tab | Use case |
+|-----|----------|
+| **Local** | Self-hosted endpoint — LM Studio, Ollama, vLLM, GPUStack |
+| **OpenAI** | Enter your `sk-...` key, pick `gpt-4o` or `gpt-4.1-mini` |
+| **Anthropic** | Enter your `sk-ant-...` key, pick Claude Sonnet or Haiku |
+| **Gemini** | Enter your `AIza...` key, pick `gemini-2.5-flash` or `gemini-2.5-pro` |
 
-Click **↻ Fetch models** to load available models, then **Test Connection** to verify.
+Each provider stores its key and model independently — switching tabs doesn't lose your settings for the others.
+
+For local endpoints, click **↻ Fetch models** to pull the model list, then **Test Connection** to verify.
 
 ### 3. Add translation targets
 
-Open **Translations**. Use the quick-add presets (繁中, 日本語, 한국어, etc.) or create custom translation targets. Each target defines:
-
-- Source language (e.g. English)
-- Target language (e.g. Traditional Chinese (Taiwan))
-- Output filename pattern (e.g. `{{name}}.chi.srt`)
-
-One subtitle file generates one output file per language task automatically.
+Open **Translations**. Use quick-add presets or define custom targets — source language, target language, output filename pattern (e.g. `{{name}}.chi.srt`). One input file generates one output file per enabled task.
 
 ### 4. Scan and translate
 
-On the **Dashboard**, click **Scan Folders**. The file tree shows every video, its subtitles, and the translation status per language. Click **Run All** to start.
+**Dashboard → Scan Folders**, then **Run All**. The file tree shows every video, its subtitles, and translation status per language.
 
 ### 5. Automate it
 
-Enable the **File Watcher** in Settings. New subtitle files are detected and queued within seconds — no manual scanning needed.
+Enable **File Watcher** in Settings. New subtitle files are detected and queued within seconds.
 
-### Optional: generate subtitles with speech-to-text
+---
 
-SubSmelt does not require Whisper. By default it stays lightweight and translates existing subtitle files.
+## Optional: Speech-to-Text
 
-If you want video/audio → source subtitle generation, point **Settings → Speech-to-text** at any compatible local transcription backend. The bundled faster-whisper add-on is optional:
+SubSmelt translates existing subtitle files by default. To generate source subtitles from video/audio, attach a faster-whisper backend:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.whisper.yml up -d
 ```
 
-Then set the backend URL in the web UI to:
+Then set **Settings → Speech-to-text → Backend URL** to `http://whisper-backend:8001`.
 
-```text
-http://whisper-backend:8001
-```
-
-Default setup: keep media mounts identical between SubSmelt and the backend. If SubSmelt sees `/media/anime/Episode 01.mkv`, the whisper backend should read that exact same path.
-
-Optional advanced setup: if an external/LAN/backend-whisper host mounts the same files at a different absolute prefix, leave SubSmelt’s own `MEDIA_DIR` unchanged and set **Speech-to-text → Backend path map** in Settings:
-
-- `from`: the absolute prefix SubSmelt sees locally, such as `/media`
-- `to`: the absolute prefix the backend can read, such as `/srv/media`
-
-SubSmelt still validates the original video path under `MEDIA_DIR` first. Only the path sent to the backend is rewritten, and the mapped result must stay an absolute filesystem path.
-
-Recommended CPU defaults are `small`, `cpu`, `int8`, VAD enabled, and max concurrency `1`. SubSmelt runs a preflight check before transcription so low-RAM systems can warn, downgrade, skip, or block safely depending on your setting.
-
-Speech-to-text settings live in the web UI, not Docker env. You can configure:
-
-| Setting | What it controls |
-|---------|------------------|
-| Model / device / compute | Faster-whisper model, CPU/GPU device, and compute type such as `int8` |
-| Language / output format | Auto-detect or explicit source language, plus `.srt`, `.vtt`, or `.txt` output |
-| Missing-subtitle behavior | Ask first, auto-transcribe, or auto-transcribe and queue translation |
-| Low-RAM behavior | Ask, downgrade, skip, or run anyway after preflight |
-| Subtitle quality | Max line length, max subtitle duration, and short-segment merging |
-| Per-folder defaults | Folder-specific overrides; the longest matching folder path wins |
-| Advanced STT options | Lightweight faster-whisper knobs such as beam size, patience, word timestamps, and initial prompt |
-
-Example per-folder defaults JSON:
-
-```json
-[
-  { "path": "/media/anime", "language": "ja", "model": "small", "output_format": "vtt" },
-  { "path": "/media/lectures", "language": "en", "model": "medium", "advanced_options": { "beam_size": 7, "initial_prompt": "Technical lecture audio." } }
-]
-```
-
-Example advanced STT options JSON:
-
-```json
-{
-  "beam_size": 5,
-  "patience": 1.2,
-  "condition_on_previous_text": false,
-  "word_timestamps": true,
-  "initial_prompt": "Clear speech with occasional technical terms."
-}
-```
-
-Heavy options such as speaker diarization and BGM separation are explicit capability flags. The bundled lightweight backend reports them as unsupported instead of silently pulling large extra dependencies into the core app.
-
-Generated source subtitle names match scanner expectations: auto language writes `Movie.srt`; explicit languages write names such as `Movie.ja.vtt`. The transcription history stores the local media path so retries continue to work even when backend path mapping is enabled.
-
-For a no-download smoke test of the optional backend wiring, run the whisper overlay with fake mode enabled:
-
-```bash
-SUBSMELT_WHISPER_FAKE=1 docker compose -f docker-compose.yml -f docker-compose.whisper.yml up -d --build
-```
-
-Keep the media mounts identical in both compose files so the backend sees the same absolute paths as SubSmelt. In fake mode, `/health`, `/preflight`, and `/transcribe` work without downloading any model weights. See [backend-whisper/README.md](./backend-whisper/README.md) for `curl` examples.
-
-If you want an NVIDIA GPU backend, add the optional overlay:
+For NVIDIA GPU acceleration, add the GPU overlay:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.whisper.yml -f docker-compose.whisper.gpu.yml up -d
 ```
 
-After the backend is up, set the speech-to-text device in the web UI to `cuda` only if your faster-whisper image advertises CUDA support.
+Key STT settings (all in the web UI):
+
+| Setting | What it controls |
+|---------|-----------------|
+| Model / device / compute | faster-whisper model size, CPU/GPU, `int8` / `float16` |
+| Language / output format | Auto-detect or explicit source language; `.srt`, `.vtt`, `.txt` |
+| Missing-subtitle behavior | Ask, auto-transcribe, or auto-transcribe + translate |
+| Low-RAM behavior | Ask, downgrade model, skip, or run anyway |
+| Per-folder defaults | Model, language, and quality overrides per folder path |
+
+Example per-folder config:
+
+```json
+[
+  { "path": "/media/anime", "language": "ja", "model": "small" },
+  { "path": "/media/lectures", "language": "en", "model": "medium",
+    "advanced_options": { "beam_size": 7, "initial_prompt": "Technical lecture." } }
+]
+```
+
+For a smoke test without downloading model weights:
+
+```bash
+SUBSMELT_WHISPER_FAKE=1 docker compose -f docker-compose.yml -f docker-compose.whisper.yml up -d --build
+```
 
 ---
 
@@ -183,9 +159,9 @@ After the backend is up, set the speech-to-text device in the web UI to `cuda` o
 
 | Mount | Purpose |
 |-------|---------|
-| `/app/config` | `config.json` — all settings + translation tasks. **Back this up.** |
-| `/app/data` | SQLite DB + log files. Safe to delete if queue gets stuck. |
-| `/media` | Your video + subtitle files (read/write). |
+| `/app/config` | `config.json` — all settings and translation tasks. **Back this up.** |
+| `/app/data` | SQLite DB and log files. Safe to delete if the queue gets stuck. |
+| `/media` | Your video and subtitle files (read/write). |
 
 ---
 
@@ -201,7 +177,7 @@ After the backend is up, set the speech-to-text device in the web UI to `cuda` o
 | `LLM_ENDPOINT` | — | Override LLM endpoint on startup |
 | `API_KEY` | — | Override API key on startup |
 | `MODEL` | — | Override model name on startup |
-| `WHISPER_BACKEND_URL` | — | Optional speech-to-text backend URL override; behavior settings live in the web UI |
+| `WHISPER_BACKEND_URL` | — | Optional speech-to-text backend URL |
 
 ---
 
@@ -228,18 +204,10 @@ docker run -d \
   subsmelt:latest
 ```
 
-Docker builds are host-native by default. On Apple Silicon, ARM hosts build ARM images; on x86 hosts they build x86 images.
-
-If you specifically need an `linux/amd64` image from a non-x86 machine, use `buildx` explicitly instead of forcing that platform in the default compose files:
+For a specific platform on Apple Silicon:
 
 ```bash
 docker buildx build --platform linux/amd64 -t subsmelt:latest .
-```
-
-For the optional Whisper backend image:
-
-```bash
-docker buildx build --platform linux/amd64 -t subsmelt-whisper:latest ./backend-whisper
 ```
 
 ---
@@ -252,11 +220,11 @@ docker buildx build --platform linux/amd64 -t subsmelt-whisper:latest ./backend-
 | Backend | Express, better-sqlite3 |
 | Frontend | React 18, Vite, Tailwind CSS |
 | Real-time | Server-Sent Events |
-| Translation | Vercel AI SDK |
+| Translation | Vercel AI SDK (local + OpenAI / Anthropic / Gemini) |
 | Optional STT | Python FastAPI sidecar + faster-whisper |
 | File watch | chokidar |
-| i18n | i18next |
-| Container | Single Dockerfile, no external services |
+| i18n | i18next (16 languages) |
+| Container | Single Dockerfile, no external services required |
 
 ---
 
