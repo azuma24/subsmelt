@@ -28,6 +28,8 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   const [showApiKey, setShowApiKey] = useState(false);
   const [models, setModels] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
+  const [cloudModels, setCloudModels] = useState<Record<string, string[]>>({ openai: [], anthropic: [], gemini: [] });
+  const [loadingCloudModels, setLoadingCloudModels] = useState<Record<string, boolean>>({ openai: false, anthropic: false, gemini: false });
   const [apiType, setApiType] = useState<"openai" | "lmstudio">("openai");
   const currentLanguage = LANGUAGES.find((lang) => i18n.language === lang.code || i18n.language.startsWith(`${lang.code}-`))?.code || "en";
 
@@ -272,14 +274,44 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
                 <p className="mt-1 text-[10px] text-gray-500">{t(`settings.llmConnection.provider_${p}_key_hint`)}</p>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-300">{t("settings.llmConnection.cloudModel")}</label>
-                <input
-                  type="text"
-                  value={str(settings[`cloud_model_${p}`])}
-                  onChange={(e) => update(`cloud_model_${p}`, e.target.value)}
-                  placeholder={t(`settings.llmConnection.provider_${p}_model_placeholder`)}
-                  className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200"
-                />
+                <div className="mb-1 flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-300">{t("settings.llmConnection.cloudModel")}</label>
+                  <button
+                    onClick={async () => {
+                      setLoadingCloudModels((prev) => ({ ...prev, [p]: true }));
+                      try {
+                        if (dirty) { await api.saveSettings(settings); setDirty(false); }
+                        const res = await fetch(`/api/models?provider=${p}`);
+                        const data = await res.json();
+                        if (data.models?.length) {
+                          setCloudModels((prev) => ({ ...prev, [p]: data.models }));
+                        } else {
+                          addToast(data.error || t("settings.llmConnection.noModelsFound"), "error");
+                        }
+                      } catch (e: unknown) {
+                        addToast(e instanceof Error ? e.message : String(e), "error");
+                      }
+                      setLoadingCloudModels((prev) => ({ ...prev, [p]: false }));
+                    }}
+                    className="text-[10px] text-blue-400"
+                  >
+                    {loadingCloudModels[p] ? t("common.loading") : t("settings.llmConnection.fetchModels")}
+                  </button>
+                </div>
+                {cloudModels[p].length > 0 ? (
+                  <select
+                    value={str(settings[`cloud_model_${p}`])}
+                    onChange={(e) => update(`cloud_model_${p}`, e.target.value)}
+                    className="w-full md:max-w-[22rem] rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200"
+                  >
+                    <option value="">{t("settings.llmConnection.selectModel")}</option>
+                    {cloudModels[p].map((m) => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                ) : (
+                  <div className="flex items-center gap-2 rounded-2xl border border-dashed border-gray-700 bg-gray-800/50 px-3 py-3 text-sm text-gray-500">
+                    {t("settings.llmConnection.fetchModelsHint")}
+                  </div>
+                )}
                 <p className="mt-1 text-[10px] text-gray-500">{t(`settings.llmConnection.provider_${p}_model_hint`)}</p>
               </div>
             </div>

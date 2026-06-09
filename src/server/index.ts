@@ -653,25 +653,75 @@ app.post("/api/transcribe", async (req, res) => {
 });
 
 // ======== List Models ========
-app.get("/api/models", async (_req, res) => {
+app.get("/api/models", async (req, res) => {
   const settings = getAllSettings();
-  const endpoint = (settings.llm_endpoint || "http://localhost:8000/v1").replace(/\/+$/, "");
-  const apiKey = settings.api_key || "";
-  const apiType = settings.api_type || "openai";
+  const provider = (req.query.provider as string) || "local";
+
   try {
-    // LM Studio uses /api/v1/models, OpenAI-compatible uses /v1/models
-    // We just append /models to whatever endpoint is configured
+    // ── Cloud providers ────────────────────────────────────────────────────
+    if (provider === "openai") {
+      const apiKey = settings.cloud_api_key_openai || "";
+      if (!apiKey) return res.status(400).json({ error: "No OpenAI API key configured" });
+      const resp = await fetch("https://api.openai.com/v1/models", {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+      if (!resp.ok) return res.status(resp.status).json({ error: `OpenAI returned ${resp.status}` });
+      const data = await resp.json() as any;
+      const models: string[] = (data?.data || [])
+        .map((m: any) => m.id)
+        .filter((id: string) => typeof id === "string" && (
+          id.startsWith("gpt-") || id.startsWith("o1") || id.startsWith("o3") || id.startsWith("o4")
+        ))
+        .sort();
+      return res.json({ models, provider });
+    }
+
+    if (provider === "anthropic") {
+      const apiKey = settings.cloud_api_key_anthropic || "";
+      if (!apiKey) return res.status(400).json({ error: "No Anthropic API key configured" });
+      const resp = await fetch("https://api.anthropic.com/v1/models", {
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+      });
+      if (!resp.ok) return res.status(resp.status).json({ error: `Anthropic returned ${resp.status}` });
+      const data = await resp.json() as any;
+      const models: string[] = (data?.data || [])
+        .map((m: any) => m.id)
+        .filter((id: string) => typeof id === "string")
+        .sort();
+      return res.json({ models, provider });
+    }
+
+    if (provider === "gemini") {
+      const apiKey = settings.cloud_api_key_gemini || "";
+      if (!apiKey) return res.status(400).json({ error: "No Gemini API key configured" });
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}&pageSize=100`
+      );
+      if (!resp.ok) return res.status(resp.status).json({ error: `Gemini returned ${resp.status}` });
+      const data = await resp.json() as any;
+      const models: string[] = (data?.models || [])
+        .map((m: any) => (m.name || "").replace(/^models\//, ""))
+        .filter((id: string) => typeof id === "string" && id.startsWith("gemini"))
+        .sort();
+      return res.json({ models, provider });
+    }
+
+    // ── Local / OpenAI-compatible endpoint ────────────────────────────────
+    const endpoint = (settings.llm_endpoint || "http://localhost:8000/v1").replace(/\/+$/, "");
+    const apiKey = settings.api_key || "";
     const url = endpoint + "/models";
     const resp = await fetch(url, {
       headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
     });
     if (!resp.ok) return res.status(resp.status).json({ error: `LLM returned ${resp.status}` });
     const data = await resp.json() as any;
-    // LM Studio returns { data: [...] }, OpenAI-compat same, Ollama may differ
     const models: string[] = (data?.data || data?.models || [])
       .map((m: any) => m.id || m.name || m)
       .filter((m: any) => typeof m === "string");
-    res.json({ models, apiType });
+    res.json({ models, provider: "local" });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
