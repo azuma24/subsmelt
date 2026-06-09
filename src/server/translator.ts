@@ -6,13 +6,27 @@ import assStringify from "ass-stringify";
 import { z } from "zod";
 import { generateText, tool, type ReasoningOutput } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { createOpenAI } from "@ai-sdk/openai";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
-function getAi({ apiKey, apiHost }: { apiKey: string; apiHost: string }) {
-  return createOpenAICompatible({
-    name: "openai",
-    apiKey: apiKey || "sk-dummy",
-    baseURL: apiHost,
-  });
+export type CloudProvider = "local" | "openai" | "anthropic" | "gemini";
+
+function getAi({ apiKey, apiHost, provider }: { apiKey: string; apiHost: string; provider?: CloudProvider }) {
+  switch (provider) {
+    case "openai":
+      return createOpenAI({ apiKey: apiKey || "" });
+    case "anthropic":
+      return createAnthropic({ apiKey: apiKey || "" });
+    case "gemini":
+      return createGoogleGenerativeAI({ apiKey: apiKey || "" });
+    default:
+      return createOpenAICompatible({
+        name: "openai",
+        apiKey: apiKey || "sk-dummy",
+        baseURL: apiHost,
+      });
+  }
 }
 
 // ── Dynamic model context probing ────────────────────────────────────────────
@@ -470,6 +484,7 @@ async function translateChunk(
     apiKey: string;
     apiHost: string;
     model: string;
+    provider?: CloudProvider;
     systemPrompt: string;
     temperature: number;
     abortSignal?: AbortSignal;
@@ -479,7 +494,7 @@ async function translateChunk(
     contextPromptPrefix?: string;
   }
 ): Promise<string[]> {
-  const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost });
+  const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost, provider: opts.provider });
   const timeoutMs = opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
   const prefix = opts.contextPromptPrefix || "";
 
@@ -571,6 +586,7 @@ async function translateSingle(
     apiKey: string;
     apiHost: string;
     model: string;
+    provider?: CloudProvider;
     systemPrompt: string;
     temperature: number;
     abortSignal?: AbortSignal;
@@ -578,7 +594,7 @@ async function translateSingle(
     requestTimeoutMs?: number;
   }
 ): Promise<string> {
-  const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost });
+  const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost, provider: opts.provider });
   const timeoutMs = opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
 
   let toolResult: string | null = null;
@@ -663,6 +679,7 @@ async function analyzeSubtitlesForContext(
     apiKey: string;
     apiHost: string;
     model: string;
+    provider?: CloudProvider;
     lang: string;
     temperature?: number;
     abortSignal?: AbortSignal;
@@ -693,7 +710,7 @@ async function analyzeSubtitlesForContext(
     );
   }
 
-  const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost });
+  const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost, provider: opts.provider });
   const temperature = opts.temperature ?? 0.3;
 
   try {
@@ -1056,6 +1073,8 @@ export interface TranslateFileOptions {
   apiKey: string;
   apiHost: string;
   model: string;
+  /** Cloud provider to use. When set, overrides the local endpoint with the provider's native SDK. */
+  provider?: CloudProvider;
   prompt: string;
   lang: string;
   sourceLang?: string;
@@ -1129,6 +1148,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     apiKey: opts.apiKey,
     apiHost: opts.apiHost,
     model: opts.model,
+    provider: opts.provider,
     lang: opts.lang,
     temperature: 0.3,
     abortSignal: opts.abortSignal,
@@ -1227,6 +1247,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
             apiKey: opts.apiKey,
             apiHost: opts.apiHost,
             model: opts.model,
+            provider: opts.provider,
             systemPrompt,
             temperature: attemptTemp,
             abortSignal: opts.abortSignal,
@@ -1260,6 +1281,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
               apiKey: opts.apiKey,
               apiHost: opts.apiHost,
               model: opts.model,
+              provider: opts.provider,
               systemPrompt,
               temperature: opts.temperature,
               abortSignal: opts.abortSignal,
@@ -1321,6 +1343,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
             apiKey: opts.apiKey,
             apiHost: opts.apiHost,
             model: opts.model,
+            provider: opts.provider,
             systemPrompt,
             temperature: opts.temperature,
             abortSignal: opts.abortSignal,

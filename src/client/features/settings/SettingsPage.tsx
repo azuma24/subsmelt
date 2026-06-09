@@ -167,78 +167,132 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
         </SettingsSection>
 
         <SettingsSection title={t("settings.llmConnection.title")} description={t("settings.llmConnection.description")}>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-300">{t("settings.llmConnection.apiType")}</label>
-            <select value={apiType} onChange={(e) => { const next = e.target.value as "openai" | "lmstudio"; setApiType(next); const base = str(settings.llm_endpoint).replace(/\/(v1|api\/v1)\/?$/, ""); if (base) update("llm_endpoint", base + (next === "lmstudio" ? "/api/v1" : "/v1")); }} className="w-full md:max-w-[22rem] rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200">
-              <option value="openai">{t("settings.llmConnection.apiTypeOpenAI")}</option>
-              <option value="lmstudio">{t("settings.llmConnection.apiTypeLMStudio")}</option>
-            </select>
-          </div>
-          <Field
-            label={t("settings.llmConnection.endpoint")}
-            value={str(settings.llm_endpoint)}
-            onChange={(v) => update("llm_endpoint", v)}
-            placeholder={apiType === "lmstudio" ? t("settings.llmConnection.endpointPlaceholderLMStudio") : t("settings.llmConnection.endpointPlaceholderOpenAI")}
-          />
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-300">{t("settings.llmConnection.apiKey")}</label>
-            <div className="flex gap-2">
-              <input type={showApiKey ? "text" : "password"} value={str(settings.api_key)} onChange={(e) => update("api_key", e.target.value)} placeholder={t("settings.llmConnection.apiKeyPlaceholder")} className="flex-1 rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200" />
-              <button onClick={() => setShowApiKey(!showApiKey)} className="rounded-2xl border border-gray-700 bg-gray-800 px-4 py-3 text-xs text-gray-400">{showApiKey ? "🙈" : "👁"}</button>
-            </div>
-          </div>
-          <div>
-            <div className="mb-1 flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-300">{t("settings.llmConnection.model")}</label>
+          {/* ── Tab switcher: Local vs Cloud ── */}
+          <div className="flex gap-1 rounded-2xl bg-gray-950/60 p-1 w-fit">
+            {(["local", "openai", "anthropic", "gemini"] as const).map((p) => (
               <button
-                onClick={async () => {
-                  setLoadingModels(true);
-                  try {
-                    if (dirty) { await api.saveSettings(settings); setDirty(false); }
-                    const res = await fetch("/api/models");
-                    const data = await res.json();
-                    if (data.models?.length) setModels(data.models);
-                    else addToast(data.error || t("settings.llmConnection.noModelsFound"), "error");
-                  } catch (e: unknown) {
-                    const message = e instanceof Error ? e.message : String(e);
-                    addToast(message, "error");
-                  }
-                  setLoadingModels(false);
-                }}
-                className="text-[10px] text-blue-400"
+                key={p}
+                onClick={() => update("cloud_provider", p)}
+                className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+                  str(settings.cloud_provider, "local") === p
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-400 hover:text-gray-200"
+                }`}
               >
-                {loadingModels ? t("common.loading") : t("settings.llmConnection.fetchModels")}
+                {t(`settings.llmConnection.provider_${p}`)}
               </button>
-            </div>
-            {models.length > 0 ? (
-              <select value={str(settings.model)} onChange={(e) => update("model", e.target.value)} className="w-full md:max-w-[22rem] rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200">
-                <option value="">{t("settings.llmConnection.selectModel")}</option>
-                {models.map((m) => <option key={m} value={m}>{m}</option>)}
-              </select>
-            ) : (
-              <input type="text" value={str(settings.model)} onChange={(e) => update("model", e.target.value)} placeholder={t("settings.llmConnection.modelPlaceholder")} className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200" />
-            )}
+            ))}
           </div>
+
+          {/* ── Local / self-hosted panel ── */}
+          {str(settings.cloud_provider, "local") === "local" && (
+            <>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-300">{t("settings.llmConnection.apiType")}</label>
+                <select value={apiType} onChange={(e) => { const next = e.target.value as "openai" | "lmstudio"; setApiType(next); const base = str(settings.llm_endpoint).replace(/\/(v1|api\/v1)\/?$/, ""); if (base) update("llm_endpoint", base + (next === "lmstudio" ? "/api/v1" : "/v1")); }} className="w-full md:max-w-[22rem] rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200">
+                  <option value="openai">{t("settings.llmConnection.apiTypeOpenAI")}</option>
+                  <option value="lmstudio">{t("settings.llmConnection.apiTypeLMStudio")}</option>
+                </select>
+              </div>
+              <Field
+                label={t("settings.llmConnection.endpoint")}
+                value={str(settings.llm_endpoint)}
+                onChange={(v) => update("llm_endpoint", v)}
+                placeholder={apiType === "lmstudio" ? t("settings.llmConnection.endpointPlaceholderLMStudio") : t("settings.llmConnection.endpointPlaceholderOpenAI")}
+              />
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-300">{t("settings.llmConnection.apiKey")}</label>
+                <div className="flex gap-2">
+                  <input type={showApiKey ? "text" : "password"} value={str(settings.api_key)} onChange={(e) => update("api_key", e.target.value)} placeholder={t("settings.llmConnection.apiKeyPlaceholder")} className="flex-1 rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200" />
+                  <button onClick={() => setShowApiKey(!showApiKey)} className="rounded-2xl border border-gray-700 bg-gray-800 px-4 py-3 text-xs text-gray-400">{showApiKey ? "🙈" : "👁"}</button>
+                </div>
+              </div>
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-300">{t("settings.llmConnection.model")}</label>
+                  <button
+                    onClick={async () => {
+                      setLoadingModels(true);
+                      try {
+                        if (dirty) { await api.saveSettings(settings); setDirty(false); }
+                        const res = await fetch("/api/models");
+                        const data = await res.json();
+                        if (data.models?.length) setModels(data.models);
+                        else addToast(data.error || t("settings.llmConnection.noModelsFound"), "error");
+                      } catch (e: unknown) {
+                        const message = e instanceof Error ? e.message : String(e);
+                        addToast(message, "error");
+                      }
+                      setLoadingModels(false);
+                    }}
+                    className="text-[10px] text-blue-400"
+                  >
+                    {loadingModels ? t("common.loading") : t("settings.llmConnection.fetchModels")}
+                  </button>
+                </div>
+                {models.length > 0 ? (
+                  <select value={str(settings.model)} onChange={(e) => update("model", e.target.value)} className="w-full md:max-w-[22rem] rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200">
+                    <option value="">{t("settings.llmConnection.selectModel")}</option>
+                    {models.map((m) => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                ) : (
+                  <input type="text" value={str(settings.model)} onChange={(e) => update("model", e.target.value)} placeholder={t("settings.llmConnection.modelPlaceholder")} className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200" />
+                )}
+              </div>
+              <div className="rounded-2xl border border-gray-800 bg-gray-950/40 p-3">
+                <div className="mb-2 text-xs font-semibold text-gray-400">{t("settings.llmConnection.healthTitle")}</div>
+                <div className="flex flex-wrap gap-2 text-[11px]">
+                  <span className={`rounded-full px-2 py-1 ${llmHealthQuery.data?.endpointReachable ? "bg-green-900/30 text-green-200" : "bg-red-900/30 text-red-200"}`}>{t("settings.llmConnection.healthEndpoint")}: {llmHealthQuery.data?.endpointReachable ? t("settings.llmConnection.healthOk") : t("settings.llmConnection.healthFail")}</span>
+                  <span className={`rounded-full px-2 py-1 ${llmHealthQuery.data?.modelConfigured ? "bg-blue-900/30 text-blue-200" : "bg-gray-800 text-gray-300"}`}>{t("settings.llmConnection.healthModelConfigured")}: {llmHealthQuery.data?.modelConfigured ? t("settings.llmConnection.healthOk") : t("settings.llmConnection.healthMissing")}</span>
+                  <span className={`rounded-full px-2 py-1 ${llmHealthQuery.data?.modelAvailable ? "bg-green-900/30 text-green-200" : "bg-yellow-900/30 text-yellow-200"}`}>{t("settings.llmConnection.healthModelAvailable")}: {llmHealthQuery.data?.modelAvailable ? t("settings.llmConnection.healthOk") : t("settings.llmConnection.healthMissing")}</span>
+                  {llmHealthQuery.data?.reason && <span className="rounded-full bg-gray-800 px-2 py-1 text-gray-300">{t("settings.llmConnection.healthReason")}: {llmHealthQuery.data.reason}</span>}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── Cloud provider panels ── */}
+          {(["openai", "anthropic", "gemini"] as const).map((p) => str(settings.cloud_provider, "local") === p && (
+            <div key={p} className="space-y-4">
+              <div className="rounded-2xl border border-blue-900/40 bg-blue-950/20 px-4 py-3 text-sm text-blue-200">
+                {t(`settings.llmConnection.provider_${p}_hint`)}
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-300">{t("settings.llmConnection.cloudApiKey")}</label>
+                <div className="flex gap-2">
+                  <input
+                    type={showApiKey ? "text" : "password"}
+                    value={str(settings[`cloud_api_key_${p}`])}
+                    onChange={(e) => update(`cloud_api_key_${p}`, e.target.value)}
+                    placeholder={t(`settings.llmConnection.provider_${p}_key_placeholder`)}
+                    className="flex-1 rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200"
+                  />
+                  <button onClick={() => setShowApiKey(!showApiKey)} className="rounded-2xl border border-gray-700 bg-gray-800 px-4 py-3 text-xs text-gray-400">{showApiKey ? "🙈" : "👁"}</button>
+                </div>
+                <p className="mt-1 text-[10px] text-gray-500">{t(`settings.llmConnection.provider_${p}_key_hint`)}</p>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-300">{t("settings.llmConnection.cloudModel")}</label>
+                <input
+                  type="text"
+                  value={str(settings[`cloud_model_${p}`])}
+                  onChange={(e) => update(`cloud_model_${p}`, e.target.value)}
+                  placeholder={t(`settings.llmConnection.provider_${p}_model_placeholder`)}
+                  className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200"
+                />
+                <p className="mt-1 text-[10px] text-gray-500">{t(`settings.llmConnection.provider_${p}_model_hint`)}</p>
+              </div>
+            </div>
+          ))}
+
+          {/* ── Temperature (shared) ── */}
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-300">{t("settings.llmConnection.temperatureLabel")}: <span className="font-mono text-blue-400">{str(settings.temperature, "0.7")}</span></label>
             <input type="range" min="0" max="2" step="0.1" value={str(settings.temperature, "0.7")} onChange={(e) => update("temperature", e.target.value)} className="w-full accent-blue-500" />
             <p className="mt-2 text-xs leading-relaxed text-gray-400">{t("settings.llmConnection.temperatureHelp")}</p>
-            <div className="mt-3 rounded-xl border border-gray-800 bg-gray-950/60 p-3 text-xs text-gray-300 space-y-2">
-              <div className="font-semibold text-blue-300">Qwen3.6-35B-A3B recommended presets</div>
-              <ul className="list-disc space-y-1 pl-5 text-gray-400">
-                <li>Thinking, general: temperature=1.0, top_p=0.95, top_k=20, min_p=0.0, presence_penalty=1.5, repetition_penalty=1.0</li>
-                <li>Thinking, precise coding: temperature=0.6, top_p=0.95, top_k=20, min_p=0.0, presence_penalty=0.0, repetition_penalty=1.0</li>
-                <li>Instruct (non-thinking), general: temperature=0.7, top_p=0.8, top_k=20, min_p=0.0, presence_penalty=1.5, repetition_penalty=1.0</li>
-                <li>Instruct (non-thinking), reasoning: temperature=1.0, top_p=0.95, top_k=20, min_p=0.0, presence_penalty=1.5, repetition_penalty=1.0</li>
-              </ul>
-              <p className="text-gray-400">
-                Qwen3.6 thinks by default. For direct output on OpenAI-compatible endpoints (vLLM/SGLang), pass
-                <span className="font-mono text-gray-300"> chat_template_kwargs: {`{ enable_thinking: false }`} </span>
-                in extra_body. To preserve reasoning traces between turns, use
-                <span className="font-mono text-gray-300"> chat_template_kwargs: {`{ preserve_thinking: true }`} </span>.
-              </p>
-            </div>
           </div>
+
+          {/* ── Test button (shared) ── */}
           <div className={`flex ${isMobile ? "flex-col" : "items-center"} gap-3`}>
             <ActionButton variant="ghost" onClick={handleTest}>{testing ? t("app.testing") : t("app.testConnection")}</ActionButton>
             {testResult && (
@@ -251,17 +305,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
               </span>
             )}
           </div>
-          <div className="rounded-2xl border border-gray-800 bg-gray-950/40 p-3">
-            <div className="mb-2 text-xs font-semibold text-gray-400">{t("settings.llmConnection.healthTitle")}</div>
-            <div className="flex flex-wrap gap-2 text-[11px]">
-              <span className={`rounded-full px-2 py-1 ${llmHealthQuery.data?.endpointReachable ? "bg-green-900/30 text-green-200" : "bg-red-900/30 text-red-200"}`}>{t("settings.llmConnection.healthEndpoint")}: {llmHealthQuery.data?.endpointReachable ? t("settings.llmConnection.healthOk") : t("settings.llmConnection.healthFail")}</span>
-              <span className={`rounded-full px-2 py-1 ${llmHealthQuery.data?.modelConfigured ? "bg-blue-900/30 text-blue-200" : "bg-gray-800 text-gray-300"}`}>{t("settings.llmConnection.healthModelConfigured")}: {llmHealthQuery.data?.modelConfigured ? t("settings.llmConnection.healthOk") : t("settings.llmConnection.healthMissing")}</span>
-              <span className={`rounded-full px-2 py-1 ${llmHealthQuery.data?.modelAvailable ? "bg-green-900/30 text-green-200" : "bg-yellow-900/30 text-yellow-200"}`}>{t("settings.llmConnection.healthModelAvailable")}: {llmHealthQuery.data?.modelAvailable ? t("settings.llmConnection.healthOk") : t("settings.llmConnection.healthMissing")}</span>
-              {llmHealthQuery.data?.reason && <span className="rounded-full bg-gray-800 px-2 py-1 text-gray-300">{t("settings.llmConnection.healthReason")}: {llmHealthQuery.data.reason}</span>}
-            </div>
-          </div>
         </SettingsSection>
-
         <SettingsSection title={t("settings.transcription.title")} description={t("settings.transcription.description")}>
           <label className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl bg-gray-800/50 p-4">
             <div>
