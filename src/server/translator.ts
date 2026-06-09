@@ -100,7 +100,43 @@ function coerceSingleTranslation(parsed: unknown, rawText: string): string | nul
   const quoted = cleaned.match(/^"([\s\S]*)"$/);
   if (quoted?.[1]) return quoted[1].trim();
 
+  // If cleaned text is very long it's a reasoning trace, not a translation.
+  // Return null so the caller falls through to the plain-text generateText fallback.
+  if (cleaned.length > 400) return null;
+
   return cleaned;
+}
+
+/**
+ * Extract the final translation answer from a reasoning/thinking trace.
+ * Reasoning models write long chain-of-thought before settling on a final answer.
+ * We look for the last clean quoted string (「...」 or "...") or the last
+ * non-meta line (not starting with *, -, Let, Wait, Note, Option, #).
+ * Returns null if no clean answer is found (caller falls through to text fallback).
+ */
+function extractFinalAnswerFromReasoning(reasoning: string): string | null {
+  if (!reasoning || reasoning.length < 2) return null;
+
+  // Try last 「...」 or "..." quoted block
+  const quotedMatches = [...reasoning.matchAll(/[「"]([^「」""]{1,300})[」"]/g)];
+  if (quotedMatches.length > 0) {
+    const last = quotedMatches[quotedMatches.length - 1][1].trim();
+    if (last && last.length >= 1 && last.length <= 300) return last;
+  }
+
+  // Try last non-meta line that looks like a translation (contains CJK or is short)
+  const lines = reasoning.split("\n").map((l) => l.trim()).filter(Boolean);
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i];
+    // Skip meta lines
+    if (/^[\*\-#>]/.test(line)) continue;
+    if (/^(let'?s|wait|note:|option \d|actually|final|refin|translat|source|input|context|glossary|target)/i.test(line)) continue;
+    // Must be reasonably short (subtitle line)
+    if (line.length > 300 || line.length < 1) continue;
+    return line;
+  }
+
+  return null;
 }
 
 const REQUEST_TIMEOUT_MS = Math.max(
@@ -367,9 +403,13 @@ async function translateSingle(
 
     if (typeof toolResult === "string") return toolResult;
 
-    // Qwen3 thinking models: extract single translation from reasoning
+    // Thinking models: tool_calls is empty but translation is in reasoning_content.
+    // Use extractFinalAnswerFromReasoning to pull just the final answer, not the
+    // whole chain-of-thought (which coerceSingleTranslation would return as garbage).
     const reasoning = extractReasoningText(result.reasoning) || result.text || "";
     if (reasoning) {
+      const final = extractFinalAnswerFromReasoning(reasoning);
+      if (final) return final;
       const parsed = extractJsonFromText(reasoning);
       const single = coerceSingleTranslation(parsed, reasoning);
       if (single) return single;
