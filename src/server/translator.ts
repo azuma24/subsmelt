@@ -139,6 +139,52 @@ function extractFinalAnswerFromReasoning(reasoning: string): string | null {
   return null;
 }
 
+/**
+ * Extract translations from Gemma-style numbered reasoning output.
+ * Gemma writes: 1. "source" -> 翻譯  or  1.  翻譯
+ * Returns array in order, or null if pattern not found.
+ */
+function extractNumberedTranslations(text: string, expectedCount: number): string[] | null {
+  // Match patterns like: 1. "..." -> 翻譯  or  1. 翻譯  or  1.  翻譯
+  const lines = text.split("\n");
+  const results: Map<number, string> = new Map();
+
+  for (const line of lines) {
+    // Pattern: N. "source" -> translation   OR   N. translation
+    const arrowMatch = line.match(/^\s*(\d+)\.\s+(?:"[^"]*"\s*->\s*)(.+)$/);
+    if (arrowMatch) {
+      const idx = parseInt(arrowMatch[1], 10);
+      const val = arrowMatch[2].replace(/^\s*["「]|["」]\s*$/g, "").trim();
+      if (val) results.set(idx, val);
+      continue;
+    }
+    // Pattern: N. translation (no arrow, no source quoted)
+    const simpleMatch = line.match(/^\s*(\d+)\.\s+([^"*\-].+)$/);
+    if (simpleMatch) {
+      const idx = parseInt(simpleMatch[1], 10);
+      const val = simpleMatch[2].replace(/^\s*["「]|["」]\s*$/g, "").trim();
+      // Skip meta lines
+      if (val && !/^(Note:|Wait,|Looking|Actually|However|Correct|Let'?s|Refin|Source:|Target:|Input:)/.test(val)) {
+        if (!results.has(idx)) results.set(idx, val);
+      }
+    }
+  }
+
+  if (results.size === 0) return null;
+
+  // Build ordered array — use last seen value for each index
+  const arr: string[] = [];
+  for (let i = 1; i <= Math.max(expectedCount, ...results.keys()); i++) {
+    const v = results.get(i);
+    if (v !== undefined) arr.push(v);
+  }
+
+  // Only return if we got close to the expected count
+  if (arr.length >= Math.floor(expectedCount * 0.7)) return arr;
+  return null;
+}
+
+
 const REQUEST_TIMEOUT_MS = Math.max(
   5_000,
   Number.parseInt(process.env.TRANSLATION_REQUEST_TIMEOUT_MS || "45000", 10) || 45_000
@@ -357,6 +403,17 @@ async function translateChunk(
   const translated = coerceTranslatedArray(parsed);
   if (translated) return translated;
 
+  // Gemma 4 and similar models put everything in reasoning even on the plain-text path.
+  // Try to extract a numbered list from the reasoning trace.
+  const reasoningText = extractReasoningText(textResult.reasoning) || "";
+  if (reasoningText) {
+    const fromReasoning = extractNumberedTranslations(reasoningText, subtitles.length);
+    if (fromReasoning) return fromReasoning;
+    const parsedReasoning = extractJsonFromText(reasoningText);
+    const fromReasoningArr = coerceTranslatedArray(parsedReasoning);
+    if (fromReasoningArr) return fromReasoningArr;
+  }
+
   throw new Error("Model did not return a valid translated array payload");
 }
 
@@ -446,6 +503,16 @@ async function translateSingle(
   const parsed = extractJsonFromText(rawText);
   const single = coerceSingleTranslation(parsed, rawText);
   if (single) return single;
+
+  // Gemma 4: answer is in reasoning even on the plain-text path
+  const reasoningText = extractReasoningText(textResult.reasoning) || "";
+  if (reasoningText) {
+    const final = extractFinalAnswerFromReasoning(reasoningText);
+    if (final) return final;
+    const parsedR = extractJsonFromText(reasoningText);
+    const singleR = coerceSingleTranslation(parsedR, reasoningText);
+    if (singleR) return singleR;
+  }
 
   throw new Error("Model returned empty single-line translation text");
 }
