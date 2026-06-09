@@ -108,18 +108,35 @@ const REQUEST_TIMEOUT_MS = Math.max(
   Number.parseInt(process.env.TRANSLATION_REQUEST_TIMEOUT_MS || "45000", 10) || 45_000
 );
 
-async function withAbortTimeout<T>(run: (signal: AbortSignal) => Promise<T>, timeoutMs = REQUEST_TIMEOUT_MS): Promise<T> {
+async function withAbortTimeout<T>(
+  run: (signal: AbortSignal) => Promise<T>,
+  timeoutMs = REQUEST_TIMEOUT_MS,
+  externalSignal?: AbortSignal
+): Promise<T> {
+  // If external signal is already aborted, short-circuit immediately
+  if (externalSignal?.aborted) throw new Error("STOP_REQUESTED");
+
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const timer = setTimeout(() => controller.abort("timeout"), timeoutMs);
+
+  // Forward external abort into our controller so in-flight LLM calls cancel instantly
+  const onExternalAbort = () => controller.abort(externalSignal!.reason);
+  externalSignal?.addEventListener("abort", onExternalAbort, { once: true });
+
   try {
     return await run(controller.signal);
   } catch (error: any) {
-    if (error?.name === "AbortError") {
-      throw new Error(`Request timeout after ${timeoutMs}ms`);
+    // Distinguish stop vs timeout
+    if (externalSignal?.aborted) throw new Error("STOP_REQUESTED");
+    if (error?.name === "AbortError" || error?.message === "STOP_REQUESTED") {
+      throw error?.message === "STOP_REQUESTED"
+        ? error
+        : new Error(`Request timeout after ${timeoutMs}ms`);
     }
     throw error;
   } finally {
     clearTimeout(timer);
+    externalSignal?.removeEventListener("abort", onExternalAbort);
   }
 }
 
@@ -221,6 +238,7 @@ async function translateChunk(
     model: string;
     systemPrompt: string;
     temperature: number;
+    abortSignal?: AbortSignal;
   }
 ): Promise<string[]> {
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost });
@@ -259,7 +277,9 @@ async function translateChunk(
           JSON.stringify(subtitles),
         maxRetries: 0,
         abortSignal,
-      })
+      }),
+      REQUEST_TIMEOUT_MS,
+      opts.abortSignal
     );
 
     if (toolResult && Array.isArray(toolResult)) return toolResult;
@@ -271,7 +291,8 @@ async function translateChunk(
       const fromReasoning = coerceTranslatedArray(parsed);
       if (fromReasoning) return fromReasoning;
     }
-  } catch {
+  } catch (e: any) {
+    if (e?.message === "STOP_REQUESTED") throw e;
     // fall through to generateObject
   }
 
@@ -287,7 +308,9 @@ async function translateChunk(
         JSON.stringify(subtitles),
       maxRetries: 0,
       abortSignal,
-    })
+    }),
+    REQUEST_TIMEOUT_MS,
+    opts.abortSignal
   );
 
   const parsed = extractJsonFromText(textResult.text || "");
@@ -305,6 +328,7 @@ async function translateSingle(
     model: string;
     systemPrompt: string;
     temperature: number;
+    abortSignal?: AbortSignal;
   }
 ): Promise<string> {
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost });
@@ -336,7 +360,9 @@ async function translateSingle(
           JSON.stringify(subtitle),
         maxRetries: 0,
         abortSignal,
-      })
+      }),
+      REQUEST_TIMEOUT_MS,
+      opts.abortSignal
     );
 
     if (typeof toolResult === "string") return toolResult;
@@ -348,7 +374,8 @@ async function translateSingle(
       const single = coerceSingleTranslation(parsed, reasoning);
       if (single) return single;
     }
-  } catch {
+  } catch (e: any) {
+    if (e?.message === "STOP_REQUESTED") throw e;
     // fall through
   }
 
@@ -364,7 +391,9 @@ async function translateSingle(
         JSON.stringify(subtitle),
       maxRetries: 0,
       abortSignal,
-    })
+    }),
+    REQUEST_TIMEOUT_MS,
+    opts.abortSignal
   );
 
   const rawText = textResult.text || "";
@@ -383,6 +412,7 @@ async function analyzeSubtitlesForContext(
     model: string;
     lang: string;
     temperature?: number;
+    abortSignal?: AbortSignal;
   }
 ): Promise<string> {
   if (!opts.model || subtitles.length === 0) return "";
@@ -442,11 +472,14 @@ Use exactly this markdown structure:
           sample.join("\n"),
         maxRetries: 0,
         abortSignal,
-      })
+      }),
+      REQUEST_TIMEOUT_MS,
+      opts.abortSignal
     );
 
     return result.text?.trim() || "";
-  } catch {
+  } catch (e: any) {
+    if (e?.message === "STOP_REQUESTED") throw e;
     return "";
   }
 }
@@ -733,6 +766,8 @@ async function retryTranslate<T>(
     } catch (error: any) {
       if (attempt === maxRetries) throw error;
       const msg = (error?.message || "").toLowerCase();
+      // Never retry a stop request — propagate immediately
+      if (msg === "stop_requested") throw error;
       const isRetryable =
         msg.includes("network") ||
         msg.includes("timeout") ||
@@ -769,6 +804,7 @@ export interface TranslateFileOptions {
   onProgress?: (completed: number, total: number) => void;
   onRetry?: (attempt: number, error: any, backoff: number) => void;
   onAnalysis?: (analysis: string) => void;
+  abortSignal?: AbortSignal;
 }
 
 export function isAutomaticSourceLanguage(sourceLang?: string): boolean {
@@ -821,6 +857,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     model: opts.model,
     lang: opts.lang,
     temperature: 0.3,
+    abortSignal: opts.abortSignal,
   });
 
   if (analysis) {
@@ -889,6 +926,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
             model: opts.model,
             systemPrompt,
             temperature: attemptTemp,
+            abortSignal: opts.abortSignal,
           }).then((result) => {
             if (!Array.isArray(result) || result.length !== windowText.length) {
               throw new Error("did not match schema");
@@ -900,7 +938,8 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
         1000,
         opts.onRetry
       );
-    } catch {
+    } catch (e: any) {
+      if (e?.message === "STOP_REQUESTED") throw e;
       translatedWindow = null;
     }
 
@@ -917,6 +956,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
               model: opts.model,
               systemPrompt,
               temperature: opts.temperature,
+              abortSignal: opts.abortSignal,
             }),
           5,
           1000,
@@ -975,6 +1015,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
             model: opts.model,
             systemPrompt,
             temperature: opts.temperature,
+            abortSignal: opts.abortSignal,
           }),
         5,
         1000,

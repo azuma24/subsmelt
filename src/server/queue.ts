@@ -8,6 +8,7 @@ import { broadcast } from "./sse.js";
 let isRunning = false;
 let shouldStop = false;
 let currentJobId: number | null = null;
+let jobAbortController: AbortController | null = null;
 
 export function isQueueRunning() {
   return isRunning;
@@ -20,7 +21,9 @@ export function getCurrentJobId() {
 export function requestStop() {
   if (isRunning) {
     shouldStop = true;
-    logger.info("queue", "Stop requested — will finish current job then halt");
+    // Abort the in-flight LLM request immediately — don't wait for onProgress
+    jobAbortController?.abort("stop_requested");
+    logger.info("queue", "Stop requested — aborting current LLM call");
   }
 }
 
@@ -66,6 +69,9 @@ export async function processQueue(onlyIds?: number[]) {
       const settings = getAllSettings();
       const startTime = Date.now();
 
+      // Per-job abort controller — aborted immediately by requestStop()
+      jobAbortController = new AbortController();
+
       try {
         const promptToUse = task?.prompt_override || settings.prompt || "";
         await translateFile({
@@ -82,6 +88,7 @@ export async function processQueue(onlyIds?: number[]) {
           chunkSize: parseInt(settings.chunk_size || "20", 10),
           contextSize: parseInt(settings.context_window || "5", 10),
           parallelChunks: Math.max(1, Math.min(8, parseInt(settings.parallel_chunks || "1", 10))),
+          abortSignal: jobAbortController.signal,
           onProgress: (completed, total) => {
             if (shouldStop) throw new Error("STOP_REQUESTED");
             updateJob(job.id, {
@@ -192,6 +199,7 @@ export async function processQueue(onlyIds?: number[]) {
     isRunning = false;
     shouldStop = false;
     currentJobId = null;
+    jobAbortController = null;
   }
 }
 
