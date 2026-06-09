@@ -9,6 +9,8 @@ interface ActiveJobCardProps {
 export function ActiveJobCard({ job, pendingCount }: ActiveJobCardProps) {
   const { t } = useTranslation();
   const pct = job.total_cues > 0 ? Math.round((job.completed_cues / job.total_cues) * 100) : 0;
+  // total_cues === 0 means the context analysis phase is still running
+  const isAnalysing = job.total_cues === 0;
   return (
     <section className="rounded-3xl border border-blue-800/40 bg-blue-900/10 p-5">
       <div className="flex items-center justify-between gap-4">
@@ -20,11 +22,21 @@ export function ActiveJobCard({ job, pendingCount }: ActiveJobCardProps) {
       </div>
       <div className="mt-4 flex items-center gap-3">
         <div className="h-2 flex-1 rounded-full bg-gray-800">
-          <div className="h-2 rounded-full bg-blue-500 transition-all" style={{ width: `${pct}%` }} />
+          {isAnalysing ? (
+            <div className="h-2 rounded-full bg-blue-500/50 animate-pulse w-full" />
+          ) : (
+            <div className="h-2 rounded-full bg-blue-500 transition-all" style={{ width: `${pct}%` }} />
+          )}
         </div>
-        <div className="w-16 shrink-0 text-right text-xs text-gray-400">{pct}%</div>
+        <div className="w-16 shrink-0 text-right text-xs text-gray-400">
+          {isAnalysing ? "…" : `${pct}%`}
+        </div>
       </div>
-      <div className="mt-2 text-xs text-gray-500">{t("dashboard.cues", { completed: job.completed_cues, total: job.total_cues })}</div>
+      <div className="mt-2 text-xs text-gray-500">
+        {isAnalysing
+          ? t("dashboard.analysing", "Analysing context…")
+          : t("dashboard.cues", { completed: job.completed_cues, total: job.total_cues })}
+      </div>
     </section>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "./api";
-import type { JobPreview, LlmHealth, LogEntry, QueueStatus, Task, TranscriptionHealth, TranscriptionHistoryEntry } from "./types";
+import type { Job, JobPreview, LlmHealth, LogEntry, QueueStatus, Task, TranscriptionHealth, TranscriptionHistoryEntry } from "./types";
 
 export type SSEEventName =
   | "job:progress"
@@ -204,6 +204,28 @@ export function useSSE(onEvent?: SSEEventHandler) {
       es.addEventListener(name, (e) => {
         const data = parseSSEData((e as MessageEvent).data);
         onEventRef.current?.(name, data);
+
+        // For progress events: patch the cache directly from the SSE payload so
+        // the progress bar updates immediately without waiting for a round-trip
+        // refetch. This fixes the "stuck at 0%" issue where debounced invalidation
+        // collapsed many progress events into a single late refetch.
+        if (name === "job:progress") {
+          const { jobId, completed, total } = data as { jobId?: number; completed?: number; total?: number };
+          if (typeof jobId === "number" && typeof completed === "number" && typeof total === "number") {
+            queryClient.setQueryData(["jobs"], (old: Job[] | undefined) => {
+              if (!old) return old;
+              return old.map((job) =>
+                job.id === jobId
+                  ? { ...job, completed_cues: completed, total_cues: total }
+                  : job
+              );
+            });
+            // Still invalidate queue-status so the header badge stays current
+            invalidator.schedule([["queue-status"]]);
+            return;
+          }
+        }
+
         refresh(name);
       });
     };
