@@ -190,6 +190,28 @@ const REQUEST_TIMEOUT_MS = Math.max(
   Number.parseInt(process.env.TRANSLATION_REQUEST_TIMEOUT_MS || "45000", 10) || 45_000
 );
 
+/**
+ * Normalise a generateText result so callers never need to check reasoning.
+ *
+ * Many local models (Gemma 4, Qwen3, DeepSeek-R1, …) route ALL output
+ * through reasoning_content and leave `text` empty, regardless of whether
+ * tool calls are enabled. This wrapper promotes the reasoning trace to `text`
+ * when `text` is absent, so every downstream parser sees one consistent field.
+ *
+ * The original `reasoning` field is preserved so callers that want the raw
+ * trace (e.g. extractFinalAnswerFromReasoning) can still access it.
+ */
+function normalizeResult<T extends { text?: string; reasoning?: any }>(result: T): T {
+  if (!result.text?.trim() && result.reasoning) {
+    const reasoningText = extractReasoningText(result.reasoning);
+    if (reasoningText?.trim()) {
+      return { ...result, text: reasoningText };
+    }
+  }
+  return result;
+}
+
+
 async function withAbortTimeout<T>(
   run: (signal: AbortSignal) => Promise<T>,
   timeoutMs = REQUEST_TIMEOUT_MS,
@@ -348,7 +370,7 @@ async function translateChunk(
     } as const;
 
     try {
-      const result = await withAbortTimeout((abortSignal) =>
+      const result = normalizeResult(await withAbortTimeout((abortSignal) =>
         generateText({
           model: ai(opts.model),
           temperature: opts.temperature,
@@ -365,24 +387,22 @@ async function translateChunk(
         }),
         REQUEST_TIMEOUT_MS,
         opts.abortSignal
-      );
+      ));
 
       if (toolResult && Array.isArray(toolResult)) return toolResult;
 
-      // Thinking models: tool call is empty but translation may be in reasoning
-      const reasoning = extractReasoningText(result.reasoning) || result.text || "";
-      if (reasoning) {
-        const parsed = extractJsonFromText(reasoning);
-        const fromReasoning = coerceTranslatedArray(parsed);
-        if (fromReasoning) return fromReasoning;
-      }
+      // normalizeResult promoted reasoning→text; try to parse it as an array
+      const fromText = coerceTranslatedArray(extractJsonFromText(result.text || ""));
+      if (fromText) return fromText;
+      const fromNumbered = extractNumberedTranslations(result.text || "", subtitles.length);
+      if (fromNumbered) return fromNumbered;
     } catch (e: any) {
       if (e?.message === "STOP_REQUESTED") throw e;
       // fall through to plain-text path
     }
   }
 
-  const textResult = await withAbortTimeout((abortSignal) =>
+  const textResult = normalizeResult(await withAbortTimeout((abortSignal) =>
     generateText({
       model: ai(opts.model),
       temperature: opts.temperature,
@@ -397,22 +417,15 @@ async function translateChunk(
     }),
     REQUEST_TIMEOUT_MS,
     opts.abortSignal
-  );
+  ));
 
   const parsed = extractJsonFromText(textResult.text || "");
   const translated = coerceTranslatedArray(parsed);
   if (translated) return translated;
 
-  // Gemma 4 and similar models put everything in reasoning even on the plain-text path.
-  // Try to extract a numbered list from the reasoning trace.
-  const reasoningText = extractReasoningText(textResult.reasoning) || "";
-  if (reasoningText) {
-    const fromReasoning = extractNumberedTranslations(reasoningText, subtitles.length);
-    if (fromReasoning) return fromReasoning;
-    const parsedReasoning = extractJsonFromText(reasoningText);
-    const fromReasoningArr = coerceTranslatedArray(parsedReasoning);
-    if (fromReasoningArr) return fromReasoningArr;
-  }
+  // Text may be a reasoning trace — try numbered list extraction
+  const fromNumbered = extractNumberedTranslations(textResult.text || "", subtitles.length);
+  if (fromNumbered) return fromNumbered;
 
   throw new Error("Model did not return a valid translated array payload");
 }
@@ -446,7 +459,7 @@ async function translateSingle(
     } as const;
 
     try {
-      const result = await withAbortTimeout((abortSignal) =>
+      const result = normalizeResult(await withAbortTimeout((abortSignal) =>
         generateText({
           model: ai(opts.model),
           temperature: opts.temperature,
@@ -463,17 +476,16 @@ async function translateSingle(
         }),
         REQUEST_TIMEOUT_MS,
         opts.abortSignal
-      );
+      ));
 
       if (typeof toolResult === "string") return toolResult;
 
-      // Thinking models: tool_calls is empty but translation is in reasoning_content.
-      const reasoning = extractReasoningText(result.reasoning) || result.text || "";
-      if (reasoning) {
-        const final = extractFinalAnswerFromReasoning(reasoning);
+      // normalizeResult promoted reasoning→text; extract best answer
+      const text = result.text || "";
+      if (text) {
+        const final = extractFinalAnswerFromReasoning(text);
         if (final) return final;
-        const parsed = extractJsonFromText(reasoning);
-        const single = coerceSingleTranslation(parsed, reasoning);
+        const single = coerceSingleTranslation(extractJsonFromText(text), text);
         if (single) return single;
       }
     } catch (e: any) {
@@ -482,7 +494,7 @@ async function translateSingle(
     }
   }
 
-  const textResult = await withAbortTimeout((abortSignal) =>
+  const textResult = normalizeResult(await withAbortTimeout((abortSignal) =>
     generateText({
       model: ai(opts.model),
       temperature: opts.temperature,
@@ -497,22 +509,13 @@ async function translateSingle(
     }),
     REQUEST_TIMEOUT_MS,
     opts.abortSignal
-  );
+  ));
 
   const rawText = textResult.text || "";
-  const parsed = extractJsonFromText(rawText);
-  const single = coerceSingleTranslation(parsed, rawText);
+  const final = extractFinalAnswerFromReasoning(rawText);
+  if (final) return final;
+  const single = coerceSingleTranslation(extractJsonFromText(rawText), rawText);
   if (single) return single;
-
-  // Gemma 4: answer is in reasoning even on the plain-text path
-  const reasoningText = extractReasoningText(textResult.reasoning) || "";
-  if (reasoningText) {
-    const final = extractFinalAnswerFromReasoning(reasoningText);
-    if (final) return final;
-    const parsedR = extractJsonFromText(reasoningText);
-    const singleR = coerceSingleTranslation(parsedR, reasoningText);
-    if (singleR) return singleR;
-  }
 
   throw new Error("Model returned empty single-line translation text");
 }
@@ -547,7 +550,7 @@ async function analyzeSubtitlesForContext(
   const temperature = opts.temperature ?? 0.3;
 
   try {
-    const result = await withAbortTimeout((abortSignal) =>
+    const result = normalizeResult(await withAbortTimeout((abortSignal) =>
       generateText({
         model: ai(opts.model),
         temperature,
@@ -588,7 +591,7 @@ Use exactly this markdown structure:
       }),
       REQUEST_TIMEOUT_MS,
       opts.abortSignal
-    );
+    ));
 
     return result.text?.trim() || "";
   } catch (e: any) {
