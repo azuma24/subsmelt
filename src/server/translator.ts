@@ -79,11 +79,13 @@ export async function probeModelContext(
 
     // Parallel chunks: how many chunk-sized windows fit in 40% of context.
     // Each chunk = chunkSize cues × ~30 tokens per cue (input + output buffer).
+    // Cap at 2 — beyond that, parallel requests on a single GPU thrash memory
+    // and cause timeouts faster than they save time.
     const tokensPerChunk = chunkSize * 30;
     const tokensForParallel = Math.floor(maxCtx * 0.40);
     const recommendedParallelChunks = Math.max(
       1,
-      Math.min(4, Math.floor(tokensForParallel / tokensPerChunk))
+      Math.min(2, Math.floor(tokensForParallel / tokensPerChunk))
     );
 
     return { maxContextTokens: maxCtx, recommendedParallelChunks, recommendedAnalysisLines };
@@ -473,10 +475,13 @@ async function translateChunk(
     abortSignal?: AbortSignal;
     disableToolCalls?: boolean;
     requestTimeoutMs?: number;
+    /** Optional read-only context lines prepended to the prompt. */
+    contextPromptPrefix?: string;
   }
 ): Promise<string[]> {
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost });
   const timeoutMs = opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
+  const prefix = opts.contextPromptPrefix || "";
 
   let toolResult: string[] | null = null;
 
@@ -510,7 +515,7 @@ async function translateChunk(
             opts.systemPrompt +
             "\nReturn ONLY using the tool, do not include any extra text.",
           prompt:
-            "Translate the following subtitles. Return the result via the tool as an array of strings with the exact same length and order as input.\n\n" +
+            `${prefix}Translate the following subtitles. Return the result via the tool as an array of strings with the exact same length and order as input.\n\n` +
             JSON.stringify(subtitles),
           maxRetries: 0,
           abortSignal,
@@ -540,7 +545,7 @@ async function translateChunk(
         opts.systemPrompt +
         "\nReturn only JSON array of strings. No markdown, no prose.",
       prompt:
-        "Translate the following subtitles. Return ONLY a JSON array of translated strings with the exact same length and order as input.\n\n" +
+        `${prefix}Translate the following subtitles. Return ONLY a JSON array of translated strings with the exact same length and order as input.\n\n` +
         JSON.stringify(subtitles),
       maxRetries: 0,
       abortSignal,
@@ -1116,7 +1121,11 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     .filter((text: string) => text.length > 0);
 
   let effectiveAdditional = opts.additional;
-  const analysis = await analyzeSubtitlesForContext(allTexts, {
+  // Skip context analysis for short files — YouTube clips, tech talks, interviews
+  // under 500 cues have no glossary-worthy content and the analysis call would
+  // waste tokens + inject a large blob into every chunk's system prompt.
+  const skipAnalysis = totalCues < 500;
+  const analysis = skipAnalysis ? "" : await analyzeSubtitlesForContext(allTexts, {
     apiKey: opts.apiKey,
     apiHost: opts.apiHost,
     model: opts.model,
@@ -1176,10 +1185,37 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
 
     let translatedWindow: string[] | null = null;
 
-    // Single retryTranslate call with 4 attempts, varying temperature each time.
-    // The old pattern (3 outer × 5 inner retries) could make up to 15 LLM calls
-    // per chunk — exponential backoff on top means a stuck chunk blocks a worker
-    // for 10+ minutes. 4 flat attempts is enough to handle transient failures.
+    // Build separate context prefix and core-only payload.
+    // Previously we sent the full window (core + context padding) and asked the
+    // model to translate ALL of it, then validated result.length === windowText.length.
+    // This caused systematic "did not match schema" failures because thinking models
+    // sometimes only translated the core lines (the right thing to do).
+    //
+    // New approach: send context lines as read-only "preceding/following context"
+    // in the prompt, send only core lines as the translation target.
+    // Validation is now against coreText.length (always stable).
+    const contextBefore = subtitle.slice(contextStart, coreStart)
+      .map((c: any) => c?.data ? String(c.data.text).replace(/\n/g, " ").trim() : "");
+    const contextAfter = subtitle.slice(coreEnd + 1, contextEnd + 1)
+      .map((c: any) => c?.data ? String(c.data.text).replace(/\n/g, " ").trim() : "");
+    const coreText = subtitle.slice(coreStart, coreEnd + 1)
+      .map((c: any) => c?.data ? String(c.data.text).replace(/\n/g, " ").trim() : "");
+
+    // Build context-aware prompt prefix
+    let contextPromptPrefix = "";
+    if (contextBefore.length > 0) {
+      contextPromptPrefix += `[Preceding context — DO NOT translate these]\n${contextBefore.join("\n")}\n\n`;
+    }
+    if (contextAfter.length > 0) {
+      contextPromptPrefix += `[Following context — DO NOT translate these]\n${contextAfter.join("\n")}\n\n`;
+    }
+    if (contextPromptPrefix) {
+      contextPromptPrefix += "[Translate ONLY the lines below]\n";
+    }
+
+    // Single retryTranslate call with 2 attempts.
+    // Schema failures are usually systematic (model misunderstands format), not
+    // transient — more retries waste tokens without improving success rate.
     try {
       translatedWindow = await retryTranslate(
         (attempt) => {
@@ -1187,7 +1223,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
             0.1,
             Math.min(2, opts.temperature + (attempt - 1) * 0.15 + (Math.random() - 0.5) * 0.1)
           );
-          return translateChunk(windowText, {
+          return translateChunk(coreText, {
             apiKey: opts.apiKey,
             apiHost: opts.apiHost,
             model: opts.model,
@@ -1196,14 +1232,15 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
             abortSignal: opts.abortSignal,
             disableToolCalls: opts.disableToolCalls,
             requestTimeoutMs: jobTimeoutMs,
+            contextPromptPrefix,
           }).then((result) => {
-            if (!Array.isArray(result) || result.length !== windowText.length) {
+            if (!Array.isArray(result) || result.length !== coreText.length) {
               throw new Error("did not match schema");
             }
             return result;
           });
         },
-        4,
+        2,
         1000,
         opts.onRetry
       );
@@ -1212,9 +1249,9 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       translatedWindow = null;
     }
 
-    // Single-line fallback
+    // Single-line fallback — translatedWindow is now core-only (coreText.length)
     if (!translatedWindow) {
-      translatedWindow = new Array(windowText.length).fill(null);
+      translatedWindow = new Array(coreText.length).fill(null);
       for (const idx of coreIndices) {
         const lineText = subtitle[idx]?.data?.text || "";
         const single = await retryTranslate(
@@ -1229,20 +1266,20 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
               disableToolCalls: opts.disableToolCalls,
               requestTimeoutMs: jobTimeoutMs,
             }),
-          5,
+          3,
           1000,
           opts.onRetry
         );
-        translatedWindow![idx - contextStart] = single;
+        translatedWindow![idx - coreStart] = single;
       }
     }
 
-    // Write translations back (safe: each block owns distinct cues)
+    // Write translations back — offset is now relative to coreStart
     let chunkCompleted = 0;
     for (const cue of block) {
       const idx = indexMap.get(cue) as number;
       if (typeof idx !== "number") continue;
-      const offset = idx - contextStart;
+      const offset = idx - coreStart;
       const t = translatedWindow?.[offset];
       if (cue?.data && typeof t === "string") {
         cue.data.translatedText = t;
