@@ -15,6 +15,83 @@ function getAi({ apiKey, apiHost }: { apiKey: string; apiHost: string }) {
   });
 }
 
+// ── Dynamic model context probing ────────────────────────────────────────────
+
+export interface ModelContextInfo {
+  /** Maximum context window in tokens, or null if unknown */
+  maxContextTokens: number | null;
+  /** Recommended parallel chunks based on context size */
+  recommendedParallelChunks: number;
+  /** Recommended max lines for context analysis */
+  recommendedAnalysisLines: number;
+}
+
+/**
+ * Probe the LM Studio native API (/api/v0/models) to get the active model's
+ * context window size, then derive safe defaults for analysis line cap and
+ * parallel chunk count.
+ *
+ * Falls back gracefully if the endpoint isn't LM Studio or the call fails —
+ * returns conservative defaults so any OpenAI-compatible host works.
+ */
+export async function probeModelContext(
+  apiHost: string,
+  model: string,
+  chunkSize = 20
+): Promise<ModelContextInfo> {
+  const FALLBACK: ModelContextInfo = {
+    maxContextTokens: null,
+    recommendedParallelChunks: 1,
+    recommendedAnalysisLines: 2000,
+  };
+
+  try {
+    // Strip /v1 or trailing path — LM Studio native API is at the root
+    const base = apiHost.replace(/\/v1\/?$/, "").replace(/\/$/, "");
+    const url = `${base}/api/v0/models`;
+
+    const resp = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (!resp.ok) return FALLBACK;
+
+    const json = (await resp.json()) as { data?: Array<{ id: string; max_context_length?: number }> };
+    const models = json?.data ?? [];
+    if (models.length === 0) return FALLBACK;
+
+    // Find the configured model by ID (case-insensitive prefix match)
+    const modelLower = model.toLowerCase();
+    const match =
+      models.find((m) => m.id.toLowerCase() === modelLower) ??
+      models.find((m) => m.id.toLowerCase().includes(modelLower.split("/").pop() ?? modelLower)) ??
+      models[0]; // fallback: first loaded model
+
+    const maxCtx = match?.max_context_length ?? null;
+    if (!maxCtx) return FALLBACK;
+
+    // Analysis lines: use up to 25% of context for the analysis prompt.
+    // Rough estimate: 1 subtitle line ≈ 60 chars ≈ 15 tokens.
+    // Leave ~20% headroom for system prompt + response.
+    const tokensForAnalysis = Math.floor(maxCtx * 0.20);
+    const tokensPerLine = 15;
+    const recommendedAnalysisLines = Math.max(
+      200,
+      Math.min(5000, Math.floor(tokensForAnalysis / tokensPerLine))
+    );
+
+    // Parallel chunks: how many chunk-sized windows fit in 40% of context.
+    // Each chunk = chunkSize cues × ~30 tokens per cue (input + output buffer).
+    const tokensPerChunk = chunkSize * 30;
+    const tokensForParallel = Math.floor(maxCtx * 0.40);
+    const recommendedParallelChunks = Math.max(
+      1,
+      Math.min(4, Math.floor(tokensForParallel / tokensPerChunk))
+    );
+
+    return { maxContextTokens: maxCtx, recommendedParallelChunks, recommendedAnalysisLines };
+  } catch {
+    return FALLBACK;
+  }
+}
+
 
 
 /** Extract plain text from AI SDK reasoning output (may be string or ReasoningOutput[]). */
@@ -579,15 +656,18 @@ async function analyzeSubtitlesForContext(
     lang: string;
     temperature?: number;
     abortSignal?: AbortSignal;
+    /** Dynamic cap derived from probeModelContext(). Defaults to 2000. */
+    maxAnalysisLines?: number;
   }
 ): Promise<string> {
   if (!opts.model || subtitles.length === 0) return "";
 
-  // Cap context analysis to ~800 lines sampled evenly across the file.
-  // Sending all 5000+ lines of a feature film would blow past any model's
-  // context window and silently return "". We take an evenly-spaced sample
-  // so early, mid, and late content is all represented.
-  const MAX_ANALYSIS_LINES = 800;
+  // Cap context analysis to a dynamically computed line count.
+  // probeModelContext() reads the model's actual context window from LM Studio's
+  // /api/v0/models API and derives a safe cap.  Falls back to 2000 lines for any
+  // non-LM-Studio host.  An evenly-spaced sample ensures early, mid, and late
+  // content is all represented.
+  const MAX_ANALYSIS_LINES = opts.maxAnalysisLines ?? 2000;
   let sample = subtitles;
   if (subtitles.length > MAX_ANALYSIS_LINES) {
     const step = subtitles.length / MAX_ANALYSIS_LINES;
@@ -967,6 +1047,8 @@ export interface TranslateFileOptions {
   chunkSize: number;
   contextSize: number;
   parallelChunks: number;
+  /** Dynamic analysis line cap from probeModelContext(). Falls back to 2000. */
+  maxAnalysisLines?: number;
   onProgress?: (completed: number, total: number) => void;
   onRetry?: (attempt: number, error: any, backoff: number) => void;
   onAnalysis?: (analysis: string) => void;
@@ -1025,6 +1107,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     lang: opts.lang,
     temperature: 0.3,
     abortSignal: opts.abortSignal,
+    maxAnalysisLines: opts.maxAnalysisLines,
   });
 
   if (analysis) {

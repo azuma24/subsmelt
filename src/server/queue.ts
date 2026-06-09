@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { getJobs, updateJob, getJob } from "./db.js";
 import { getAllSettings, getTask, getSetting } from "./config.js";
-import { summarizeTranslationError, translateFile } from "./translator.js";
+import { summarizeTranslationError, translateFile, probeModelContext } from "./translator.js";
 import { logger } from "./logger.js";
 import { broadcast } from "./sse.js";
 
@@ -74,20 +74,35 @@ export async function processQueue(onlyIds?: number[]) {
 
       try {
         const promptToUse = task?.prompt_override || settings.prompt || "";
+        const apiHost = settings.llm_endpoint || "http://localhost:8000/v1";
+        const model = settings.model || "";
+        const chunkSize = parseInt(settings.chunk_size || "20", 10);
+        const configuredParallel = Math.max(1, Math.min(8, parseInt(settings.parallel_chunks || "1", 10)));
+
+        // Probe model context window (LM Studio only — graceful no-op elsewhere).
+        // Uses the result to set a safe analysis line cap and parallel chunk count.
+        const ctxInfo = await probeModelContext(apiHost, model, chunkSize);
+        const parallelChunks = configuredParallel > 1
+          ? configuredParallel  // user explicitly set parallel — respect it
+          : ctxInfo.recommendedParallelChunks;
+
+        logger.info("queue", `Model context probe: maxCtx=${ctxInfo.maxContextTokens ?? "unknown"} analysisLines=${ctxInfo.recommendedAnalysisLines} parallelChunks=${parallelChunks}`, job.id, { stage: "context_probe" });
+
         await translateFile({
           srtPath: job.srt_path,
           outputPath: job.output_path,
           apiKey: settings.api_key || "",
-          apiHost: settings.llm_endpoint || "http://localhost:8000/v1",
-          model: settings.model || "",
+          apiHost,
+          model,
           prompt: promptToUse,
           lang: targetLang || "English",
           sourceLang: task?.source_lang || "Automatic",
           additional: settings.additional_context || "",
           temperature: parseFloat(settings.temperature || "0.7"),
-          chunkSize: parseInt(settings.chunk_size || "20", 10),
+          chunkSize,
           contextSize: parseInt(settings.context_window || "5", 10),
-          parallelChunks: Math.max(1, Math.min(8, parseInt(settings.parallel_chunks || "1", 10))),
+          parallelChunks,
+          maxAnalysisLines: ctxInfo.recommendedAnalysisLines,
           disableToolCalls: settings.disable_tool_calls === "1",
           abortSignal: jobAbortController.signal,
           onProgress: (completed, total) => {
