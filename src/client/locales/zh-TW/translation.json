@@ -324,7 +324,9 @@
       "chunkSize": "區塊大小",
       "chunkSizeHint": "每次 LLM 呼叫的行數。建議 15–25。越小越精確，越大越快。",
       "contextWindow": "上下文視窗",
-      "contextWindowHint": "傳送用於上下文的周圍行數。建議 3–7。越多連貫性越好，但消耗更多 token。"
+      "contextWindowHint": "傳送用於上下文的周圍行數。建議 3–7。越多連貫性越好，但消耗更多 token。",
+      "parallelChunks": "Parallel Chunks",
+      "parallelChunksHint": "Number of chunks to translate simultaneously (1–8). Higher = faster. Set to 1 to disable."
     },
     "sources": {
       "title": "來源與監控",

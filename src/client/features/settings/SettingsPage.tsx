@@ -429,6 +429,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
           <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
             <Field label={t("settings.translationEngine.chunkSize")} value={str(settings.chunk_size, "20")} onChange={(v) => update("chunk_size", v)} help={t("settings.translationEngine.chunkSizeHint")} type="number" />
             <Field label={t("settings.translationEngine.contextWindow")} value={str(settings.context_window, "5")} onChange={(v) => update("context_window", v)} help={t("settings.translationEngine.contextWindowHint")} type="number" />
+            <Field label={t("settings.translationEngine.parallelChunks")} value={str(settings.parallel_chunks, "1")} onChange={(v) => update("parallel_chunks", v)} help={t("settings.translationEngine.parallelChunksHint")} type="number" />
           </div>
         </SettingsSection>
 

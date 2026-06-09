@@ -324,7 +324,9 @@
       "chunkSize": "チャンクサイズ",
       "chunkSizeHint": "LLM呼び出しごとの行数。15〜25を推奨。小さいほど正確、大きいほど高速。",
       "contextWindow": "コンテキストウィンドウ",
-      "contextWindowHint": "コンテキスト用に送信する周辺行数。3〜7を推奨。多いほど一貫性が高いがトークンを消費。"
+      "contextWindowHint": "コンテキスト用に送信する周辺行数。3〜7を推奨。多いほど一貫性が高いがトークンを消費。",
+      "parallelChunks": "Parallel Chunks",
+      "parallelChunksHint": "Number of chunks to translate simultaneously (1–8). Higher = faster. Set to 1 to disable."
     },
     "sources": {
       "title": "ソースと監視",

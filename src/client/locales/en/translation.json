@@ -324,7 +324,9 @@
       "chunkSize": "Chunk Size",
       "chunkSizeHint": "Lines per LLM call. 15–25 recommended. Lower = more accurate, higher = faster.",
       "contextWindow": "Context Window",
-      "contextWindowHint": "Surrounding lines sent for context. 3–7 recommended. More = better coherence, more tokens."
+      "contextWindowHint": "Surrounding lines sent for context. 3–7 recommended. More = better coherence, more tokens.",
+      "parallelChunks": "Parallel Chunks",
+      "parallelChunksHint": "Number of chunks to translate simultaneously (1–8). Higher = faster but uses more LLM tokens/context in parallel. Set to 1 to disable."
     },
     "sources": {
       "title": "Sources & Monitoring",

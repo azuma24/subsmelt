@@ -4,7 +4,7 @@ import { parseSync, stringifySync } from "subtitle";
 import assParser from "ass-parser";
 import assStringify from "ass-stringify";
 import { z } from "zod";
-import { generateText, tool } from "ai";
+import { generateText, tool, type ReasoningOutput } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 function getAi({ apiKey, apiHost }: { apiKey: string; apiHost: string }) {
@@ -13,6 +13,15 @@ function getAi({ apiKey, apiHost }: { apiKey: string; apiHost: string }) {
     apiKey: apiKey || "sk-dummy",
     baseURL: apiHost,
   });
+}
+
+
+
+/** Extract plain text from AI SDK reasoning output (may be string or ReasoningOutput[]). */
+function extractReasoningText(reasoning: string | ReasoningOutput[] | undefined): string {
+  if (!reasoning) return "";
+  if (typeof reasoning === "string") return reasoning;
+  return reasoning.map((r) => ("text" in r ? r.text : "")).join("");
 }
 
 function tryJsonParse(value: string): unknown {
@@ -236,7 +245,7 @@ async function translateChunk(
   } as const;
 
   try {
-    await withAbortTimeout((abortSignal) =>
+    const result = await withAbortTimeout((abortSignal) =>
       generateText({
         model: ai(opts.model),
         temperature: opts.temperature,
@@ -254,6 +263,14 @@ async function translateChunk(
     );
 
     if (toolResult && Array.isArray(toolResult)) return toolResult;
+
+    // Qwen3 thinking models: tool call is empty but translation is in reasoning text
+    const reasoning = extractReasoningText(result.reasoning) || result.text || "";
+    if (reasoning) {
+      const parsed = extractJsonFromText(reasoning);
+      const fromReasoning = coerceTranslatedArray(parsed);
+      if (fromReasoning) return fromReasoning;
+    }
   } catch {
     // fall through to generateObject
   }
@@ -305,7 +322,7 @@ async function translateSingle(
   } as const;
 
   try {
-    await withAbortTimeout((abortSignal) =>
+    const result = await withAbortTimeout((abortSignal) =>
       generateText({
         model: ai(opts.model),
         temperature: opts.temperature,
@@ -323,6 +340,14 @@ async function translateSingle(
     );
 
     if (typeof toolResult === "string") return toolResult;
+
+    // Qwen3 thinking models: extract single translation from reasoning
+    const reasoning = extractReasoningText(result.reasoning) || result.text || "";
+    if (reasoning) {
+      const parsed = extractJsonFromText(reasoning);
+      const single = coerceSingleTranslation(parsed, reasoning);
+      if (single) return single;
+    }
   } catch {
     // fall through
   }
@@ -361,6 +386,19 @@ async function analyzeSubtitlesForContext(
   }
 ): Promise<string> {
   if (!opts.model || subtitles.length === 0) return "";
+
+  // Cap context analysis to ~800 lines sampled evenly across the file.
+  // Sending all 5000+ lines of a feature film would blow past any model's
+  // context window and silently return "". We take an evenly-spaced sample
+  // so early, mid, and late content is all represented.
+  const MAX_ANALYSIS_LINES = 800;
+  let sample = subtitles;
+  if (subtitles.length > MAX_ANALYSIS_LINES) {
+    const step = subtitles.length / MAX_ANALYSIS_LINES;
+    sample = Array.from({ length: MAX_ANALYSIS_LINES }, (_, i) =>
+      subtitles[Math.min(Math.round(i * step), subtitles.length - 1)]
+    );
+  }
 
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost });
   const temperature = opts.temperature ?? 0.3;
@@ -401,7 +439,7 @@ Use exactly this markdown structure:
 - term: ... | description: ... | category: ... | preferredTranslation: ... | notes: ...`,
         prompt:
           `Produce plot summary in ${opts.lang} and glossary from this subtitle sample:\n` +
-          subtitles.join("\n"),
+          sample.join("\n"),
         maxRetries: 0,
         abortSignal,
       })
@@ -684,14 +722,14 @@ export function saveTranslated(
 }
 
 async function retryTranslate<T>(
-  fn: () => Promise<T>,
+  fn: (attempt: number) => Promise<T>,
   maxRetries = 5,
   delay = 1000,
   onRetry?: (attempt: number, error: any, backoff: number) => void
 ): Promise<T> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      return await fn();
+      return await fn(attempt);
     } catch (error: any) {
       if (attempt === maxRetries) throw error;
       const msg = (error?.message || "").toLowerCase();
@@ -727,6 +765,7 @@ export interface TranslateFileOptions {
   temperature: number;
   chunkSize: number;
   contextSize: number;
+  parallelChunks: number;
   onProgress?: (completed: number, total: number) => void;
   onRetry?: (attempt: number, error: any, backoff: number) => void;
   onAnalysis?: (analysis: string) => void;
@@ -802,14 +841,24 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   const chunks = splitIntoChunks(subtitle, opts.chunkSize);
   let completedCues = 0;
   const contextSize = opts.contextSize;
+  const concurrency = Math.max(1, Math.min(8, opts.parallelChunks || 1));
 
-  for (const block of chunks) {
+  // Concurrency-limited chunk processor.
+  // Each slot processes chunks from the shared queue independently.
+  // Progress and partial saves are guarded by a simple mutex flag.
+  const chunkQueue = [...chunks];
+  // Promise-chain mutex: each save is serialized by chaining onto the previous one.
+  // Using a flag is NOT safe — two workers can both read `saving === false` before
+  // either sets it to true (both pass the check in the same microtask tick).
+  let saveChain = Promise.resolve();
+
+  async function processChunk(block: any[]) {
     const coreIndices = block
       .map((cue: any) => indexMap.get(cue) as number)
       .filter((n: number) => typeof n === "number")
       .sort((a: number, b: number) => a - b);
 
-    if (coreIndices.length === 0) continue;
+    if (coreIndices.length === 0) return;
 
     const coreStart = coreIndices[0];
     const coreEnd = coreIndices[coreIndices.length - 1];
@@ -823,32 +872,36 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
 
     let translatedWindow: string[] | null = null;
 
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      const attemptTemp = Math.max(
-        0.1,
-        Math.min(2, opts.temperature + (Math.random() - 0.5) * 0.4)
+    // Single retryTranslate call with 4 attempts, varying temperature each time.
+    // The old pattern (3 outer × 5 inner retries) could make up to 15 LLM calls
+    // per chunk — exponential backoff on top means a stuck chunk blocks a worker
+    // for 10+ minutes. 4 flat attempts is enough to handle transient failures.
+    try {
+      translatedWindow = await retryTranslate(
+        (attempt) => {
+          const attemptTemp = Math.max(
+            0.1,
+            Math.min(2, opts.temperature + (attempt - 1) * 0.15 + (Math.random() - 0.5) * 0.1)
+          );
+          return translateChunk(windowText, {
+            apiKey: opts.apiKey,
+            apiHost: opts.apiHost,
+            model: opts.model,
+            systemPrompt,
+            temperature: attemptTemp,
+          }).then((result) => {
+            if (!Array.isArray(result) || result.length !== windowText.length) {
+              throw new Error("did not match schema");
+            }
+            return result;
+          });
+        },
+        4,
+        1000,
+        opts.onRetry
       );
-      try {
-        const result = await retryTranslate(
-          () =>
-            translateChunk(windowText, {
-              apiKey: opts.apiKey,
-              apiHost: opts.apiHost,
-              model: opts.model,
-              systemPrompt,
-              temperature: attemptTemp,
-            }),
-          5,
-          1000,
-          opts.onRetry
-        );
-        if (Array.isArray(result) && result.length === windowText.length) {
-          translatedWindow = result;
-          break;
-        }
-      } catch {
-        // continue
-      }
+    } catch {
+      translatedWindow = null;
     }
 
     // Single-line fallback
@@ -857,7 +910,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       for (const idx of coreIndices) {
         const lineText = subtitle[idx]?.data?.text || "";
         const single = await retryTranslate(
-          () =>
+          (_) =>
             translateSingle(lineText, {
               apiKey: opts.apiKey,
               apiHost: opts.apiHost,
@@ -873,6 +926,8 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       }
     }
 
+    // Write translations back (safe: each block owns distinct cues)
+    let chunkCompleted = 0;
     for (const cue of block) {
       const idx = indexMap.get(cue) as number;
       if (typeof idx !== "number") continue;
@@ -880,24 +935,40 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       const t = translatedWindow?.[offset];
       if (cue?.data && typeof t === "string") {
         cue.data.translatedText = t;
-        completedCues++;
+        chunkCompleted++;
       }
     }
 
+    completedCues += chunkCompleted;
     opts.onProgress?.(completedCues, totalCues);
 
-    // Partial save
-    try {
-      saveTranslated(opts.outputPath, parsed, outputExt, subtitle);
-    } catch {}
+    // Partial save — serialize via promise chain to prevent concurrent file writes.
+    // Each processChunk call appends to the chain; writes never interleave.
+    saveChain = saveChain.then(() => {
+      try {
+        saveTranslated(opts.outputPath, parsed, outputExt, subtitle);
+      } catch {}
+    });
   }
+
+  // Worker: drain the shared chunk queue
+  async function worker() {
+    while (chunkQueue.length > 0) {
+      const block = chunkQueue.shift();
+      if (!block) break;
+      await processChunk(block);
+    }
+  }
+
+  // Launch `concurrency` workers in parallel
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
 
   // Fallback for untranslated
   const untranslated = subtitle.filter((l: any) => !l.data?.translatedText);
   for (const cue of untranslated) {
     if (cue?.data) {
       cue.data.translatedText = await retryTranslate(
-        () =>
+        (_) =>
           translateSingle(cue.data.text, {
             apiKey: opts.apiKey,
             apiHost: opts.apiHost,
