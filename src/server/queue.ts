@@ -152,6 +152,12 @@ export async function processQueue(onlyIds?: number[]) {
           break;
         }
 
+        // Log raw error shape to help debug "Unknown translation error" cases
+        logger.info(
+          "translate",
+          `Raw error: name=${error?.name} constructor=${error?.constructor?.name} message=${JSON.stringify(error?.message)} statusCode=${error?.statusCode ?? error?.status}`,
+          job.id
+        );
         const diagnostics = summarizeTranslationError(error);
         const compactError = summarizeJobErrorForStorage(
           diagnostics.message,
