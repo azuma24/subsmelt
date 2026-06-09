@@ -2,6 +2,11 @@
 FROM node:24-slim AS builder
 WORKDIR /app
 
+# Install build tools needed for better-sqlite3 native compilation
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY package.json package-lock.json* ./
 RUN npm install
 
@@ -16,7 +21,11 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends tzdata && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json* ./
-RUN npm install --omit=dev
+
+# Copy node_modules from builder — avoids re-running node-gyp in the slim prod image.
+# We then prune dev dependencies in-place.
+COPY --from=builder /app/node_modules ./node_modules
+RUN npm prune --omit=dev
 
 # Copy built artifacts
 COPY --from=builder /app/dist ./dist
