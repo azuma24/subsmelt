@@ -1,5 +1,5 @@
 # ---- Build Stage ----
-FROM node:22-slim AS builder
+FROM node:24-slim AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
@@ -9,7 +9,7 @@ COPY . .
 RUN npm run build
 
 # ---- Production Stage ----
-FROM node:22-slim
+FROM node:24-slim
 WORKDIR /app
 
 # Install tzdata for timezone support
