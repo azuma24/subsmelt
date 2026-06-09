@@ -42,6 +42,7 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   chunk_size: "20",
   context_window: "5",
   parallel_chunks: "1",
+  disable_tool_calls: "0",
   auto_scan_interval: "0",
   watch_enabled: "0",
   auto_translate: "1",

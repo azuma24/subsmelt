@@ -275,61 +275,65 @@ async function translateChunk(
     systemPrompt: string;
     temperature: number;
     abortSignal?: AbortSignal;
+    disableToolCalls?: boolean;
   }
 ): Promise<string[]> {
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost });
 
   let toolResult: string[] | null = null;
-  const tools = {
-    submit_translation: tool({
-      description:
-        "Provide the final translated subtitles. Keep order and length identical to input.",
-      inputSchema: z
-        .object({
-          translated: z.array(
-            z.string().describe("Translated subtitle at the same index")
-          ),
-        })
-        .strict(),
-      execute: async ({ translated }) => {
-        toolResult = translated;
-        return JSON.stringify(translated);
-      },
-    }),
-  } as const;
 
-  try {
-    const result = await withAbortTimeout((abortSignal) =>
-      generateText({
-        model: ai(opts.model),
-        temperature: opts.temperature,
-        tools,
-        toolChoice: "required",
-        system:
-          opts.systemPrompt +
-          "\nReturn ONLY using the tool, do not include any extra text.",
-        prompt:
-          "Translate the following subtitles. Return the result via the tool as an array of strings with the exact same length and order as input.\n\n" +
-          JSON.stringify(subtitles),
-        maxRetries: 0,
-        abortSignal,
+  if (!opts.disableToolCalls) {
+    const tools = {
+      submit_translation: tool({
+        description:
+          "Provide the final translated subtitles. Keep order and length identical to input.",
+        inputSchema: z
+          .object({
+            translated: z.array(
+              z.string().describe("Translated subtitle at the same index")
+            ),
+          })
+          .strict(),
+        execute: async ({ translated }) => {
+          toolResult = translated;
+          return JSON.stringify(translated);
+        },
       }),
-      REQUEST_TIMEOUT_MS,
-      opts.abortSignal
-    );
+    } as const;
 
-    if (toolResult && Array.isArray(toolResult)) return toolResult;
+    try {
+      const result = await withAbortTimeout((abortSignal) =>
+        generateText({
+          model: ai(opts.model),
+          temperature: opts.temperature,
+          tools,
+          toolChoice: "required",
+          system:
+            opts.systemPrompt +
+            "\nReturn ONLY using the tool, do not include any extra text.",
+          prompt:
+            "Translate the following subtitles. Return the result via the tool as an array of strings with the exact same length and order as input.\n\n" +
+            JSON.stringify(subtitles),
+          maxRetries: 0,
+          abortSignal,
+        }),
+        REQUEST_TIMEOUT_MS,
+        opts.abortSignal
+      );
 
-    // Qwen3 thinking models: tool call is empty but translation is in reasoning text
-    const reasoning = extractReasoningText(result.reasoning) || result.text || "";
-    if (reasoning) {
-      const parsed = extractJsonFromText(reasoning);
-      const fromReasoning = coerceTranslatedArray(parsed);
-      if (fromReasoning) return fromReasoning;
+      if (toolResult && Array.isArray(toolResult)) return toolResult;
+
+      // Thinking models: tool call is empty but translation may be in reasoning
+      const reasoning = extractReasoningText(result.reasoning) || result.text || "";
+      if (reasoning) {
+        const parsed = extractJsonFromText(reasoning);
+        const fromReasoning = coerceTranslatedArray(parsed);
+        if (fromReasoning) return fromReasoning;
+      }
+    } catch (e: any) {
+      if (e?.message === "STOP_REQUESTED") throw e;
+      // fall through to plain-text path
     }
-  } catch (e: any) {
-    if (e?.message === "STOP_REQUESTED") throw e;
-    // fall through to generateObject
   }
 
   const textResult = await withAbortTimeout((abortSignal) =>
@@ -365,58 +369,60 @@ async function translateSingle(
     systemPrompt: string;
     temperature: number;
     abortSignal?: AbortSignal;
+    disableToolCalls?: boolean;
   }
 ): Promise<string> {
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost });
 
   let toolResult: string | null = null;
-  const tools = {
-    submit_single_translation: tool({
-      description: "Provide the final translated text only.",
-      inputSchema: z.object({ result: z.string() }).strict(),
-      execute: async ({ result }) => {
-        toolResult = result;
-        return result;
-      },
-    }),
-  } as const;
 
-  try {
-    const result = await withAbortTimeout((abortSignal) =>
-      generateText({
-        model: ai(opts.model),
-        temperature: opts.temperature,
-        tools,
-        toolChoice: "required",
-        system:
-          opts.systemPrompt +
-          "\nReturn ONLY using the tool, do not include any extra text.",
-        prompt:
-          "Translate the following subtitle. Return the result via the tool as plain text only.\n\n" +
-          JSON.stringify(subtitle),
-        maxRetries: 0,
-        abortSignal,
+  if (!opts.disableToolCalls) {
+    const tools = {
+      submit_single_translation: tool({
+        description: "Provide the final translated text only.",
+        inputSchema: z.object({ result: z.string() }).strict(),
+        execute: async ({ result }) => {
+          toolResult = result;
+          return result;
+        },
       }),
-      REQUEST_TIMEOUT_MS,
-      opts.abortSignal
-    );
+    } as const;
 
-    if (typeof toolResult === "string") return toolResult;
+    try {
+      const result = await withAbortTimeout((abortSignal) =>
+        generateText({
+          model: ai(opts.model),
+          temperature: opts.temperature,
+          tools,
+          toolChoice: "required",
+          system:
+            opts.systemPrompt +
+            "\nReturn ONLY using the tool, do not include any extra text.",
+          prompt:
+            "Translate the following subtitle. Return the result via the tool as plain text only.\n\n" +
+            JSON.stringify(subtitle),
+          maxRetries: 0,
+          abortSignal,
+        }),
+        REQUEST_TIMEOUT_MS,
+        opts.abortSignal
+      );
 
-    // Thinking models: tool_calls is empty but translation is in reasoning_content.
-    // Use extractFinalAnswerFromReasoning to pull just the final answer, not the
-    // whole chain-of-thought (which coerceSingleTranslation would return as garbage).
-    const reasoning = extractReasoningText(result.reasoning) || result.text || "";
-    if (reasoning) {
-      const final = extractFinalAnswerFromReasoning(reasoning);
-      if (final) return final;
-      const parsed = extractJsonFromText(reasoning);
-      const single = coerceSingleTranslation(parsed, reasoning);
-      if (single) return single;
+      if (typeof toolResult === "string") return toolResult;
+
+      // Thinking models: tool_calls is empty but translation is in reasoning_content.
+      const reasoning = extractReasoningText(result.reasoning) || result.text || "";
+      if (reasoning) {
+        const final = extractFinalAnswerFromReasoning(reasoning);
+        if (final) return final;
+        const parsed = extractJsonFromText(reasoning);
+        const single = coerceSingleTranslation(parsed, reasoning);
+        if (single) return single;
+      }
+    } catch (e: any) {
+      if (e?.message === "STOP_REQUESTED") throw e;
+      // fall through to plain-text path
     }
-  } catch (e: any) {
-    if (e?.message === "STOP_REQUESTED") throw e;
-    // fall through
   }
 
   const textResult = await withAbortTimeout((abortSignal) =>
@@ -845,6 +851,7 @@ export interface TranslateFileOptions {
   onRetry?: (attempt: number, error: any, backoff: number) => void;
   onAnalysis?: (analysis: string) => void;
   abortSignal?: AbortSignal;
+  disableToolCalls?: boolean;
 }
 
 export function isAutomaticSourceLanguage(sourceLang?: string): boolean {
@@ -967,6 +974,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
             systemPrompt,
             temperature: attemptTemp,
             abortSignal: opts.abortSignal,
+            disableToolCalls: opts.disableToolCalls,
           }).then((result) => {
             if (!Array.isArray(result) || result.length !== windowText.length) {
               throw new Error("did not match schema");
@@ -997,6 +1005,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
               systemPrompt,
               temperature: opts.temperature,
               abortSignal: opts.abortSignal,
+              disableToolCalls: opts.disableToolCalls,
             }),
           5,
           1000,
@@ -1056,6 +1065,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
             systemPrompt,
             temperature: opts.temperature,
             abortSignal: opts.abortSignal,
+            disableToolCalls: opts.disableToolCalls,
           }),
         5,
         1000,

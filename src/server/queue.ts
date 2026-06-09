@@ -88,6 +88,7 @@ export async function processQueue(onlyIds?: number[]) {
           chunkSize: parseInt(settings.chunk_size || "20", 10),
           contextSize: parseInt(settings.context_window || "5", 10),
           parallelChunks: Math.max(1, Math.min(8, parseInt(settings.parallel_chunks || "1", 10))),
+          disableToolCalls: settings.disable_tool_calls === "1",
           abortSignal: jobAbortController.signal,
           onProgress: (completed, total) => {
             if (shouldStop) throw new Error("STOP_REQUESTED");

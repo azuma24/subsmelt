@@ -430,6 +430,12 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
             <Field label={t("settings.translationEngine.chunkSize")} value={str(settings.chunk_size, "20")} onChange={(v) => update("chunk_size", v)} help={t("settings.translationEngine.chunkSizeHint")} type="number" />
             <Field label={t("settings.translationEngine.contextWindow")} value={str(settings.context_window, "5")} onChange={(v) => update("context_window", v)} help={t("settings.translationEngine.contextWindowHint")} type="number" />
             <Field label={t("settings.translationEngine.parallelChunks")} value={str(settings.parallel_chunks, "1")} onChange={(v) => update("parallel_chunks", v)} help={t("settings.translationEngine.parallelChunksHint")} type="number" />
+            <div className="flex items-center gap-3 py-1">
+              <input type="checkbox" id="disable_tool_calls" checked={settings.disable_tool_calls === "1"} onChange={(e) => update("disable_tool_calls", e.target.checked ? "1" : "0")} className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-blue-500" />
+              <label htmlFor="disable_tool_calls" className="text-sm text-gray-300">
+                {t("settings.translationEngine.disableToolCalls", "Disable tool calls (use plain-text mode)")}
+              </label>
+            </div>
           </div>
         </SettingsSection>
 
