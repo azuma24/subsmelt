@@ -262,9 +262,10 @@ function extractNumberedTranslations(text: string, expectedCount: number): strin
 }
 
 
+/** Module-level default — overridden per-job via TranslateFileOptions.requestTimeoutMs */
 const REQUEST_TIMEOUT_MS = Math.max(
   5_000,
-  Number.parseInt(process.env.TRANSLATION_REQUEST_TIMEOUT_MS || "45000", 10) || 45_000
+  Number.parseInt(process.env.TRANSLATION_REQUEST_TIMEOUT_MS || "300000", 10) || 300_000
 );
 
 /**
@@ -471,9 +472,11 @@ async function translateChunk(
     temperature: number;
     abortSignal?: AbortSignal;
     disableToolCalls?: boolean;
+    requestTimeoutMs?: number;
   }
 ): Promise<string[]> {
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost });
+  const timeoutMs = opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
 
   let toolResult: string[] | null = null;
 
@@ -512,7 +515,7 @@ async function translateChunk(
           maxRetries: 0,
           abortSignal,
         }),
-        REQUEST_TIMEOUT_MS,
+        timeoutMs,
         opts.abortSignal
       ));
 
@@ -542,7 +545,7 @@ async function translateChunk(
       maxRetries: 0,
       abortSignal,
     }),
-    REQUEST_TIMEOUT_MS,
+    timeoutMs,
     opts.abortSignal
   ));
 
@@ -567,9 +570,11 @@ async function translateSingle(
     temperature: number;
     abortSignal?: AbortSignal;
     disableToolCalls?: boolean;
+    requestTimeoutMs?: number;
   }
 ): Promise<string> {
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost });
+  const timeoutMs = opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
 
   let toolResult: string | null = null;
 
@@ -601,7 +606,7 @@ async function translateSingle(
           maxRetries: 0,
           abortSignal,
         }),
-        REQUEST_TIMEOUT_MS,
+        timeoutMs,
         opts.abortSignal
       ));
 
@@ -634,7 +639,7 @@ async function translateSingle(
       maxRetries: 0,
       abortSignal,
     }),
-    REQUEST_TIMEOUT_MS,
+    timeoutMs,
     opts.abortSignal
   ));
 
@@ -658,9 +663,16 @@ async function analyzeSubtitlesForContext(
     abortSignal?: AbortSignal;
     /** Dynamic cap derived from probeModelContext(). Defaults to 2000. */
     maxAnalysisLines?: number;
+    /** Per-job request timeout in ms. */
+    requestTimeoutMs?: number;
   }
 ): Promise<string> {
   if (!opts.model || subtitles.length === 0) return "";
+
+  // Skip analysis for short files — YouTube clips, interviews, and tech talks
+  // under 300 lines have no glossary-worthy content. Analysis would waste tokens
+  // and inject useless context into every chunk.
+  if (subtitles.length < 300) return "";
 
   // Cap context analysis to a dynamically computed line count.
   // probeModelContext() reads the model's actual context window from LM Studio's
@@ -719,7 +731,7 @@ Use exactly this markdown structure:
         maxRetries: 0,
         abortSignal,
       }),
-      REQUEST_TIMEOUT_MS,
+      opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS,
       opts.abortSignal
     ));
 
@@ -1049,6 +1061,8 @@ export interface TranslateFileOptions {
   parallelChunks: number;
   /** Dynamic analysis line cap from probeModelContext(). Falls back to 2000. */
   maxAnalysisLines?: number;
+  /** Per-job request timeout in ms. Overrides the module default (300s). */
+  requestTimeoutMs?: number;
   onProgress?: (completed: number, total: number) => void;
   onRetry?: (attempt: number, error: any, backoff: number) => void;
   onAnalysis?: (analysis: string) => void;
@@ -1079,6 +1093,8 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   const outputExt = path.extname(opts.outputPath).slice(1).toLowerCase() || sourceExt;
   const content = fs.readFileSync(opts.srtPath, "utf8");
   const parsed = parseSubtitle(content, sourceExt);
+  // Use per-job timeout if provided, otherwise fall back to module default
+  const jobTimeoutMs = opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
 
   let subtitle: any[];
   if (Array.isArray(parsed)) {
@@ -1108,6 +1124,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     temperature: 0.3,
     abortSignal: opts.abortSignal,
     maxAnalysisLines: opts.maxAnalysisLines,
+    requestTimeoutMs: jobTimeoutMs,
   });
 
   if (analysis) {
@@ -1178,6 +1195,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
             temperature: attemptTemp,
             abortSignal: opts.abortSignal,
             disableToolCalls: opts.disableToolCalls,
+            requestTimeoutMs: jobTimeoutMs,
           }).then((result) => {
             if (!Array.isArray(result) || result.length !== windowText.length) {
               throw new Error("did not match schema");
@@ -1209,6 +1227,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
               temperature: opts.temperature,
               abortSignal: opts.abortSignal,
               disableToolCalls: opts.disableToolCalls,
+              requestTimeoutMs: jobTimeoutMs,
             }),
           5,
           1000,

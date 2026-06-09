@@ -86,7 +86,12 @@ export async function processQueue(onlyIds?: number[]) {
           ? configuredParallel  // user explicitly set parallel — respect it
           : ctxInfo.recommendedParallelChunks;
 
-        logger.info("queue", `Model context probe: maxCtx=${ctxInfo.maxContextTokens ?? "unknown"} analysisLines=${ctxInfo.recommendedAnalysisLines} parallelChunks=${parallelChunks}`, job.id, { stage: "context_probe" });
+        const requestTimeoutMs = Math.max(
+          5_000,
+          parseInt(settings.request_timeout_s || "300", 10) * 1000
+        );
+
+        logger.info("queue", `Model context probe: maxCtx=${ctxInfo.maxContextTokens ?? "unknown"} analysisLines=${ctxInfo.recommendedAnalysisLines} parallelChunks=${parallelChunks} timeoutMs=${requestTimeoutMs}`, job.id, { stage: "context_probe" });
 
         await translateFile({
           srtPath: job.srt_path,
@@ -103,6 +108,7 @@ export async function processQueue(onlyIds?: number[]) {
           contextSize: parseInt(settings.context_window || "5", 10),
           parallelChunks,
           maxAnalysisLines: ctxInfo.recommendedAnalysisLines,
+          requestTimeoutMs,
           disableToolCalls: settings.disable_tool_calls === "1",
           abortSignal: jobAbortController.signal,
           onProgress: (completed, total) => {

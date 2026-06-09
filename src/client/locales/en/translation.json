@@ -326,7 +326,9 @@
       "contextWindow": "Context Window",
       "contextWindowHint": "Surrounding lines sent for context. 3–7 recommended. More = better coherence, more tokens.",
       "parallelChunks": "Parallel Chunks",
-      "parallelChunksHint": "Number of chunks to translate simultaneously (1–8). Higher = faster but uses more LLM tokens/context in parallel. Set to 1 to disable."
+      "parallelChunksHint": "Number of chunks to translate simultaneously (1–8). Higher = faster but uses more LLM tokens/context in parallel. Set to 1 to disable.",
+      "requestTimeout": "Request Timeout (s)",
+      "requestTimeoutHint": "Max seconds to wait for a single LLM response. Increase for slow/large thinking models (e.g. 600)."
     },
     "sources": {
       "title": "Sources & Monitoring",

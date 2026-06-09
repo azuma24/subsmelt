@@ -42,6 +42,7 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   chunk_size: "20",
   context_window: "5",
   parallel_chunks: "1",
+  request_timeout_s: "300",
   disable_tool_calls: "1",
   auto_scan_interval: "0",
   watch_enabled: "0",
@@ -67,17 +68,16 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   transcription_path_map_from: "",
   transcription_path_map_to: "",
   additional_context: "",
-  prompt: `// You are a professional subtitle translator.
-// You will receive subtitle text in an automatically detected source language.
-// Translate all subtitles into {{lang}}.
-// Note: {{additional}}
-// Do not merge sentences, translate them individually.
-// Return the translated subtitles in the same order and length as the input.
-// 1. Detect the input subtitle language
-// 2. Translate the input subtitles into {{lang}}
-// 3. Convert names into {{lang}}
-// 4. Paraphrase the translated subtitles into more fluent sentences
-// 5. Use the setResult method to output the translated subtitles as string[]`,
+  prompt: `You are a professional subtitle translator.
+You will receive subtitle text in an automatically detected source language.
+Translate all subtitles into {{lang}}.
+Note: {{additional}}
+Do not merge sentences, translate them individually.
+Return the translated subtitles in the same order and length as the input.
+1. Detect the input subtitle language
+2. Translate the input subtitles into {{lang}}
+3. Convert names into {{lang}}
+4. Return only the translated text, no explanations`,
 };
 
 const DEFAULT_TASK: TranslationTask = {
