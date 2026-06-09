@@ -1,11 +1,6 @@
 # ---- Build Stage ----
-FROM node:24-slim AS builder
+FROM node:22-slim AS builder
 WORKDIR /app
-
-# Install build tools needed for better-sqlite3 native compilation
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 make g++ \
-    && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json* ./
 RUN npm install
@@ -14,7 +9,7 @@ COPY . .
 RUN npm run build
 
 # ---- Production Stage ----
-FROM node:24-slim
+FROM node:22-slim
 WORKDIR /app
 
 # Install tzdata for timezone support
@@ -22,8 +17,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends tzdata && rm -r
 
 COPY package.json package-lock.json* ./
 
-# Copy node_modules from builder — avoids re-running node-gyp in the slim prod image.
-# We then prune dev dependencies in-place.
+# Copy node_modules from builder (includes compiled better-sqlite3 native addon)
+# then prune dev dependencies without recompiling anything.
 COPY --from=builder /app/node_modules ./node_modules
 RUN npm prune --omit=dev
 
