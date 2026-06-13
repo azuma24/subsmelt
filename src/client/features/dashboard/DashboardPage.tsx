@@ -12,6 +12,7 @@ import { ActionButton, Accordion, EmptyHint, SelectionBar, StatusStrip, StatCard
 import { ActiveJobCard } from "./ActiveJobCard";
 import { JobsTableDesktop } from "./JobsTableDesktop";
 import { JobCardMobile } from "./JobCardMobile";
+import { JobDetailsDrawer } from "./JobDetailsDrawer";
 import { PreviewOverlay } from "./PreviewOverlay";
 import { ScanResultsPanel, getScanGroupName, type ScanFilter } from "./ScanResultsPanel";
 import {
@@ -67,7 +68,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const [expandedScanGroups, setExpandedScanGroups] = useState<Set<string>>(new Set());
   const [previewJobId, setPreviewJobId] = useState<number | null>(null);
   const [previewSearch, setPreviewSearch] = useState("");
-  const [expandedErrors, setExpandedErrors] = useState<Set<number>>(new Set());
+  const [detailsJob, setDetailsJob] = useState<JobRow | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [scanResultMode, setScanResultMode] = useState<ScanResultMode>("queued");
   const [folderFilter, setFolderFilter] = useState("all");
@@ -700,17 +701,16 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
                     key={job.id}
                     job={job}
                     currentJobId={currentJobId}
-                    expandedErrors={expandedErrors}
-                    setExpandedErrors={setExpandedErrors}
                     selected={selectedIds.has(job.id)}
                     onToggleSelected={toggleSelectedJob}
                     onPreview={setPreviewJobId}
                     onOpenLogs={(jobId) => navigate(`/logs?job=${jobId}`)}
+                    onOpenDetails={setDetailsJob}
                   />
                 ))}
               </div>
             ) : (
-              <JobsTableDesktop jobs={filteredJobs} currentJobId={currentJobId} expandedErrors={expandedErrors} setExpandedErrors={setExpandedErrors} selectedIds={selectedIds} setSelectedIds={setSelectedIds} onPreview={setPreviewJobId} onOpenLogs={(jobId) => navigate(`/logs?job=${jobId}`)} />
+              <JobsTableDesktop jobs={filteredJobs} currentJobId={currentJobId} selectedIds={selectedIds} setSelectedIds={setSelectedIds} onPreview={setPreviewJobId} onOpenLogs={(jobId) => navigate(`/logs?job=${jobId}`)} onOpenDetails={setDetailsJob} />
             )
           )}
 
@@ -787,6 +787,13 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
           )}
         </section>
       </div>
+
+      <JobDetailsDrawer
+        job={detailsJob}
+        open={!!detailsJob}
+        onClose={() => setDetailsJob(null)}
+        onOpenLogs={(jobId) => navigate(`/logs?job=${jobId}`)}
+      />
 
       {previewJobId !== null && (
         <PreviewOverlay

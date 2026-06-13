@@ -1,5 +1,4 @@
 import { Fragment, type Dispatch, type SetStateAction } from "react";
-import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { formatDur } from "../../lib";
@@ -11,12 +10,11 @@ import { MiniBtn, ProgressSmall, StatusBadge } from "../../ui/primitives";
 interface JobsTableDesktopProps {
   jobs: JobRow[];
   currentJobId: number | null;
-  expandedErrors: Set<number>;
-  setExpandedErrors: Dispatch<SetStateAction<Set<number>>>;
   selectedIds: Set<number>;
   setSelectedIds: Dispatch<SetStateAction<Set<number>>>;
   onPreview: (jobId: number) => void;
   onOpenLogs: (jobId: number) => void;
+  onOpenDetails: (job: JobRow) => void;
 }
 
 function classifyErrorReason(error: string | null): string {
@@ -36,12 +34,11 @@ const TD = "px-[10px] py-[9px] align-middle border-b border-[var(--border-sub)]"
 export function JobsTableDesktop({
   jobs,
   currentJobId,
-  expandedErrors,
-  setExpandedErrors,
   selectedIds,
   setSelectedIds,
   onPreview,
   onOpenLogs,
+  onOpenDetails,
 }: JobsTableDesktopProps) {
   const { t } = useTranslation();
   const { addToast } = useToast();
@@ -119,11 +116,9 @@ export function JobsTableDesktop({
           )}
           {jobs.map((job) => {
             const srtName = job.srt_path.split("/").pop() || "";
-            const srtDir = job.srt_path.slice(0, job.srt_path.length - srtName.length).replace(/\/+$/, "");
             const pct = job.total_cues > 0 ? Math.round((job.completed_cues / job.total_cues) * 100) : 0;
             const isActive = job.id === currentJobId;
             const hasError = job.status === "error" && job.error;
-            const isErrorExpanded = expandedErrors.has(job.id);
             const isPending = job.status === "pending";
             const isSelected = selectedIds.has(job.id);
             const reason = hasError ? classifyErrorReason(job.error) : null;
@@ -146,7 +141,6 @@ export function JobsTableDesktop({
                       <span className="shrink-0 text-[13px] opacity-50">📄</span>
                       <div className="min-w-0">
                         <div className="truncate text-[13px] font-medium text-[var(--text)]" title={job.srt_path}>{srtName}</div>
-                        {srtDir && <div className="truncate font-mono text-[10.5px] text-[var(--text-3)]">{srtDir}</div>}
                       </div>
                     </div>
                   </td>
@@ -155,14 +149,6 @@ export function JobsTableDesktop({
                     <StatusBadge job={job} />
                     {reason && (
                       <span className="ml-2 rounded-full bg-[var(--red-dim)] px-2 py-0.5 text-[10px] text-[var(--red)]">{t(`dashboard.errorReason.${reason}`)}</span>
-                    )}
-                    {hasError && (
-                      <button
-                        onClick={() => setExpandedErrors((s) => { const n = new Set(s); if (isErrorExpanded) n.delete(job.id); else n.add(job.id); return n; })}
-                        className="mt-1 block max-w-[220px] truncate text-left text-[11px] text-[var(--red)]/70 hover:text-[var(--red)]"
-                      >
-                        {isErrorExpanded ? "▼" : "▶"} {job.error}
-                      </button>
                     )}
                   </td>
                   <td className={`${TD} w-40`}>{job.status === "translating" ? <ProgressSmall pct={pct} /> : job.status === "done" ? <span className="text-[10px] text-[var(--text-3)]">{t("dashboard.cues", { completed: job.completed_cues, total: job.total_cues })}</span> : null}</td>
@@ -179,7 +165,10 @@ export function JobsTableDesktop({
                       {job.status === "error" && <MiniBtn color="yellow" onClick={() => { retryMutation.mutate(job.id); addToast(t("dashboard.toast.jobRetrying"), "info"); }}>{t("dashboard.action.retry")}</MiniBtn>}
                       {(job.status === "done" || job.status === "skipped") && <MiniBtn onClick={() => { forceMutation.mutate(job.id); addToast(t("dashboard.toast.retranslating"), "info"); }}>{t("dashboard.action.retranslate")}</MiniBtn>}
                       {job.status === "error" && <MiniBtn onClick={() => onOpenLogs(job.id)}>{t("dashboard.action.logs")}</MiniBtn>}
-                      <NavLink to={`/jobs/${job.id}`} className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 text-[11px] text-[var(--text-2)] hover:text-[var(--text)]">{t("dashboard.action.details")}</NavLink>
+                      <button
+                        onClick={() => onOpenDetails(job)}
+                        className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 text-[11px] text-[var(--text-2)] hover:text-[var(--text)]"
+                      >{t("dashboard.action.details")}</button>
                       <button
                         onClick={() => handleDelete(job.id)}
                         className="rounded-md px-1.5 text-[var(--text-3)] hover:text-[var(--red)]"
@@ -188,9 +177,6 @@ export function JobsTableDesktop({
                     </div>
                   </td>
                 </tr>
-                {hasError && isErrorExpanded && (
-                  <tr><td colSpan={7} className="whitespace-pre-wrap bg-[var(--red-dim)] px-4 py-3 font-mono text-[11px] text-[var(--red)]">{job.error}</td></tr>
-                )}
               </Fragment>
             );
           })}

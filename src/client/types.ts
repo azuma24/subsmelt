@@ -22,6 +22,7 @@ export interface JobRow {
   lang_code: string;
   force: number;
   analysis_context?: string | null;
+  used_connections?: string | null;
 }
 
 export interface QueueStatus {

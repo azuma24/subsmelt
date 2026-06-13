@@ -38,6 +38,9 @@ const jobColumns = db.prepare("PRAGMA table_info(jobs)").all() as Array<{ name: 
 if (!jobColumns.some((c) => c.name === "analysis_context")) {
   db.exec("ALTER TABLE jobs ADD COLUMN analysis_context TEXT");
 }
+if (!jobColumns.some((c) => c.name === "used_connections")) {
+  db.exec("ALTER TABLE jobs ADD COLUMN used_connections TEXT");
+}
 
 // --- Schema: Logs ---
 
@@ -84,6 +87,7 @@ export function updateJob(
     completed_cues: number;
     error: string | null;
     analysis_context: string | null;
+    used_connections: string | null;
     duration_seconds: number;
     force: number;
   }>
@@ -123,7 +127,7 @@ export function getJobBySrtAndTask(srtPath: string, taskId: number) {
 
 export function resetJob(id: number) {
   db.prepare(
-    "UPDATE jobs SET status = 'pending', completed_cues = 0, error = NULL, duration_seconds = NULL, updated_at = datetime('now') WHERE id = ?"
+    "UPDATE jobs SET status = 'pending', completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE id = ?"
   ).run(id);
 }
 
@@ -132,7 +136,7 @@ export function resetJobs(ids: number[]) {
   if (cleanIds.length === 0) return 0;
 
   const stmt = db.prepare(
-    "UPDATE jobs SET status = 'pending', completed_cues = 0, error = NULL, duration_seconds = NULL, updated_at = datetime('now') WHERE id = ? AND status = 'error'"
+    "UPDATE jobs SET status = 'pending', completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE id = ? AND status = 'error'"
   );
   let updated = 0;
   const tx = db.transaction(() => {
@@ -144,7 +148,7 @@ export function resetJobs(ids: number[]) {
 
 export function forceJob(id: number) {
   db.prepare(
-    "UPDATE jobs SET status = 'pending', force = 1, completed_cues = 0, error = NULL, duration_seconds = NULL, updated_at = datetime('now') WHERE id = ?"
+    "UPDATE jobs SET status = 'pending', force = 1, completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE id = ?"
   ).run(id);
 }
 
@@ -153,7 +157,7 @@ export function forceJobs(ids: number[]) {
   if (cleanIds.length === 0) return 0;
 
   const stmt = db.prepare(
-    "UPDATE jobs SET status = 'pending', force = 1, completed_cues = 0, error = NULL, duration_seconds = NULL, updated_at = datetime('now') WHERE id = ? AND status IN ('done', 'skipped')"
+    "UPDATE jobs SET status = 'pending', force = 1, completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE id = ? AND status IN ('done', 'skipped')"
   );
   let updated = 0;
   const tx = db.transaction(() => {
@@ -165,7 +169,7 @@ export function forceJobs(ids: number[]) {
 
 export function forceAllJobs() {
   db.prepare(
-    "UPDATE jobs SET status = 'pending', force = 1, completed_cues = 0, error = NULL, duration_seconds = NULL, updated_at = datetime('now') WHERE status IN ('done', 'skipped')"
+    "UPDATE jobs SET status = 'pending', force = 1, completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE status IN ('done', 'skipped')"
   ).run();
 }
 

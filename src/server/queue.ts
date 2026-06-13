@@ -64,7 +64,7 @@ export async function processQueue(onlyIds?: number[]) {
       const targetLang = task?.target_lang || "";
 
       logger.info("queue", `Started: ${srtName} → ${langCode} (job #${job.id})`, job.id);
-      updateJob(job.id, { status: "translating", error: null, analysis_context: null });
+      updateJob(job.id, { status: "translating", error: null, analysis_context: null, used_connections: null });
       broadcast("job:start", { jobId: job.id, srtName, langCode });
 
       const settings = getAllSettings();
@@ -72,6 +72,9 @@ export async function processQueue(onlyIds?: number[]) {
 
       // Per-job abort controller — aborted immediately by requestStop()
       jobAbortController = new AbortController();
+
+      const usedConnLabels: string[] = [];
+      const usedConnIds = new Set<string>();
 
       try {
         const promptToUse = task?.prompt_override || settings.prompt || "";
@@ -117,6 +120,10 @@ export async function processQueue(onlyIds?: number[]) {
           llmMode,
           onConnectionUsed: ({ id, label }) => {
             logger.info("translate", `Using LLM connection: ${label} (${id})`, job.id, { stage: "llm_connection" });
+            if (!usedConnIds.has(id)) {
+              usedConnIds.add(id);
+              usedConnLabels.push(label);
+            }
           },
           prompt: promptToUse,
           lang: targetLang || "English",
@@ -173,6 +180,7 @@ export async function processQueue(onlyIds?: number[]) {
           status: "done",
           duration_seconds: durationSeconds,
           force: 0,
+          used_connections: usedConnLabels.join(", ") || null,
         });
 
         const durStr = formatDuration(durationSeconds);
@@ -228,6 +236,7 @@ export async function processQueue(onlyIds?: number[]) {
           status: "error",
           error: compactError,
           duration_seconds: durationSeconds,
+          used_connections: usedConnLabels.length > 0 ? usedConnLabels.join(", ") : null,
         });
         broadcast("job:error", { jobId: job.id, error: compactError, srtName });
       }

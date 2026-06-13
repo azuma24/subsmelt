@@ -213,7 +213,24 @@
       "transcription": "Transcription",
       "scan": "Scan Results"
     },
-    "filtersLabel": "Filters"
+    "filtersLabel": "Filters",
+    "details": {
+      "title": "Job Details",
+      "path": "Source file",
+      "output": "Output file",
+      "target": "Target language",
+      "status": "Status",
+      "duration": "Duration",
+      "cues": "Cues",
+      "translatedBy": "Translated by",
+      "notRecorded": "Not recorded yet",
+      "jobId": "Job ID",
+      "error": "Error",
+      "analysis": "Analysis context",
+      "openLogs": "Open logs",
+      "fullPage": "Full page"
+    },
+    "analysing": "Analysing context…"
   },
   "translation_languages": {
     "title": "Translations",
@@ -359,7 +376,8 @@
       "parallelChunks": "Parallel Chunks",
       "parallelChunksHint": "Number of chunks to translate simultaneously (1–8). Higher = faster but uses more LLM tokens/context in parallel. Set to 1 to disable.",
       "requestTimeout": "Request Timeout (s)",
-      "requestTimeoutHint": "Max seconds to wait for a single LLM response. Increase for slow/large thinking models (e.g. 600)."
+      "requestTimeoutHint": "Max seconds to wait for a single LLM response. Increase for slow/large thinking models (e.g. 600).",
+      "disableToolCalls": "Disable tool calls (use plain-text mode)"
     },
     "sources": {
       "title": "Sources & Monitoring",
