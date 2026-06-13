@@ -2,6 +2,7 @@ import fs from "node:fs";
 import { getJobs, updateJob, getJob } from "./db.js";
 import { getAllSettings, getTask, getSetting } from "./config.js";
 import { summarizeTranslationError, translateFile, probeModelContext } from "./translator.js";
+import { resolveConnectionPool } from "./connections.js";
 import { logger } from "./logger.js";
 import { broadcast } from "./sse.js";
 
@@ -74,21 +75,19 @@ export async function processQueue(onlyIds?: number[]) {
 
       try {
         const promptToUse = task?.prompt_override || settings.prompt || "";
-        const cloudProvider = (settings.cloud_provider || "local") as import("./translator.js").CloudProvider;
-        const isCloud = cloudProvider !== "local";
 
-        // Derive effective endpoint, key, model from cloud provider or local config
-        const apiHost = settings.llm_endpoint || "http://localhost:8000/v1";
-        const apiKey = isCloud
-          ? (cloudProvider === "openai" ? settings.cloud_api_key_openai
-            : cloudProvider === "anthropic" ? settings.cloud_api_key_anthropic
-            : settings.cloud_api_key_gemini) || ""
-          : settings.api_key || "";
-        const model = isCloud
-          ? (cloudProvider === "openai" ? settings.cloud_model_openai
-            : cloudProvider === "anthropic" ? settings.cloud_model_anthropic
-            : settings.cloud_model_gemini) || ""
-          : settings.model || "";
+        // Resolve the LLM connection pool (single / fallback / parallel).
+        // The primary connection drives context probing + analysis; the full
+        // pool is passed to translateFile for fallback/parallel execution.
+        const { mode: llmMode, pool } = resolveConnectionPool(settings);
+        if (pool.length === 0) {
+          throw new Error("No usable LLM connection configured");
+        }
+        const primary = pool[0];
+        const apiHost = primary.apiHost || settings.llm_endpoint || "http://localhost:8000/v1";
+        const apiKey = primary.apiKey || "";
+        const model = primary.model || "";
+        logger.info("queue", `LLM mode: ${llmMode} (${pool.length} connection${pool.length === 1 ? "" : "s"})`, job.id, { stage: "llm_pool" });
 
         const chunkSize = parseInt(settings.chunk_size || "20", 10);
         const configuredParallel = Math.max(1, Math.min(8, parseInt(settings.parallel_chunks || "1", 10)));
@@ -113,7 +112,12 @@ export async function processQueue(onlyIds?: number[]) {
           apiKey,
           apiHost,
           model,
-          provider: isCloud ? cloudProvider : undefined,
+          provider: primary.provider,
+          connections: pool,
+          llmMode,
+          onConnectionUsed: ({ id, label }) => {
+            logger.info("translate", `Using LLM connection: ${label} (${id})`, job.id, { stage: "llm_connection" });
+          },
           prompt: promptToUse,
           lang: targetLang || "English",
           sourceLang: task?.source_lang || "Automatic",

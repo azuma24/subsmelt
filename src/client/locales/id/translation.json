@@ -191,7 +191,9 @@
       "scanNow": "Scan now",
       "runQueue": "Run queue",
       "stopQueue": "Stop queue",
-      "done": "Ready"
+      "done": "Ready",
+      "title": "Setup checklist",
+      "dismiss": "Dismiss"
     },
     "quickCounts": "Pending {{pending}} • Errors {{errors}} • Done {{done}}",
     "emptyJobsHint": "Try scanning folders, then use the sticky actions to run pending jobs.",
@@ -205,7 +207,13 @@
     "emptyScanHint": "Try changing scan/search filters or run Scan Folders again.",
     "hero": {
       "scanActions": "Scan and queue actions"
-    }
+    },
+    "tab": {
+      "queue": "Queue",
+      "transcription": "Transcription",
+      "scan": "Scan Results"
+    },
+    "filtersLabel": "Filters"
   },
   "translation_languages": {
     "title": "Terjemahan",
@@ -268,7 +276,8 @@
     "fixPattern": "Fix pattern extension",
     "resetRecommended": "Atur ulang ke pola yang disarankan",
     "sourceAutoBadge": "Deteksi otomatis",
-    "sourceAutoHelp": "SubSmelt meminta model mendeteksi bahasa subtitle secara otomatis, jadi Anda hanya perlu memilih bahasa keluaran."
+    "sourceAutoHelp": "SubSmelt meminta model mendeteksi bahasa subtitle secara otomatis, jadi Anda hanya perlu memilih bahasa keluaran.",
+    "quickAdd": "Quick add"
   },
   "settings": {
     "title": "Settings",
@@ -348,7 +357,9 @@
       "contextWindow": "Context Window",
       "contextWindowHint": "Surrounding lines sent for context. 3–7 recommended. More = better coherence, more tokens.",
       "parallelChunks": "Parallel Chunks",
-      "parallelChunksHint": "Number of chunks to translate simultaneously (1–8). Higher = faster. Set to 1 to disable."
+      "parallelChunksHint": "Number of chunks to translate simultaneously (1–8). Higher = faster. Set to 1 to disable.",
+      "requestTimeout": "Request Timeout (s)",
+      "requestTimeoutHint": "Max seconds to wait for a single LLM response. Increase for slow/large thinking models (e.g. 600)."
     },
     "sources": {
       "title": "Sources & Monitoring",
@@ -535,7 +546,40 @@
         "backendMessage": "Backend message: {{message}}",
         "firstRunQuiet": "First transcription runs can stay quiet for a while while the model downloads or warms up."
       }
-    }
+    },
+    "connections": {
+      "mode": "Connection mode",
+      "modeSingle": "Single",
+      "modeFallback": "Fallback",
+      "modeParallel": "Parallel",
+      "modeHelpSingle": "Use one active connection (classic behavior).",
+      "modeHelpFallback": "Try connections in order — if one fails, cascade to the next.",
+      "modeHelpParallel": "Split a job's chunks across connections to translate faster.",
+      "connectionName": "Connection name",
+      "defaultLabel": "Connection {{index}}",
+      "enabled": "Enabled",
+      "endpoint": "Endpoint",
+      "apiKey": "API key",
+      "apiKeyOptional": "API key (optional)",
+      "apiKeyPlaceholder": "API key",
+      "apiKeyPlaceholderLocal": "sk-… (if required)",
+      "model": "Model",
+      "modelPlaceholder": "Model name (or fetch the list)",
+      "test": "Test",
+      "testing": "Testing…",
+      "add": "+ Add connection",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "remove": "Remove",
+      "refused": "Connection refused",
+      "activeTitle": "Active connection"
+    },
+    "advanced": "Advanced",
+    "promptSection": "Prompt",
+    "pathMapping": "Path mapping",
+    "rawConfig": "Raw config",
+    "rawConfigHint": "JSON blobs for per-folder STT defaults and advanced options.",
+    "rawConfigOpen": "Open raw config"
   },
   "jobDetail": {
     "title": "Job #{{id}}",
@@ -576,7 +620,9 @@
     "filteredByJob": "Filtered by Job #{{id}}",
     "jobId": "Job ID",
     "clearJobFilter": "Clear job filter",
-    "noLogsForJob": "No logs for this job yet."
+    "noLogsForJob": "No logs for this job yet.",
+    "filters": "Filters",
+    "moreActions": "More actions"
   },
   "app": {
     "queueRunning": "Queue running",

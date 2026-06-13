@@ -30,6 +30,9 @@ function classifyErrorReason(error: string | null): string {
   return "other";
 }
 
+const TH = "px-[10px] py-[7px] text-left text-[10.5px] font-semibold uppercase tracking-[0.4px] text-[var(--text-3)] border-b border-[var(--border)]";
+const TD = "px-[10px] py-[9px] align-middle border-b border-[var(--border-sub)]";
+
 export function JobsTableDesktop({
   jobs,
   currentJobId,
@@ -86,13 +89,13 @@ export function JobsTableDesktop({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[820px] text-sm">
-        <thead className="bg-gray-800/30 text-gray-500 text-xs">
+      <table className="w-full min-w-[820px] border-collapse text-[13px]">
+        <thead>
           <tr>
-            <th className="px-3 py-3 w-8">
+            <th className={`${TH} w-8`}>
               <input
                 type="checkbox"
-                className="accent-blue-500"
+                className="accent-[var(--accent)]"
                 disabled={pendingIds.length === 0}
                 checked={allPendingSelected}
                 ref={(el) => {
@@ -102,20 +105,21 @@ export function JobsTableDesktop({
                 aria-label={t("dashboard.col.selectAll")}
               />
             </th>
-            <th className="px-4 py-3 text-left font-medium">{t("dashboard.col.file")}</th>
-            <th className="px-4 py-3 text-left font-medium">{t("dashboard.col.target")}</th>
-            <th className="px-4 py-3 text-left font-medium">{t("dashboard.col.status")}</th>
-            <th className="px-4 py-3 text-left font-medium">{t("dashboard.col.progress")}</th>
-            <th className="px-4 py-3 text-left font-medium">{t("dashboard.col.time")}</th>
-            <th className="px-4 py-3 text-left font-medium">{t("dashboard.col.actions")}</th>
+            <th className={TH}>{t("dashboard.col.file")}</th>
+            <th className={TH}>{t("dashboard.col.target")}</th>
+            <th className={TH}>{t("dashboard.col.status")}</th>
+            <th className={TH}>{t("dashboard.col.progress")}</th>
+            <th className={TH}>{t("dashboard.col.time")}</th>
+            <th className={TH}>{t("dashboard.col.actions")}</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-800/30">
+        <tbody>
           {jobs.length === 0 && (
-            <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-600 text-xs">{t("dashboard.noJobsMatchFilter")}</td></tr>
+            <tr><td colSpan={7} className="px-4 py-8 text-center text-[12px] text-[var(--text-3)]">{t("dashboard.noJobsMatchFilter")}</td></tr>
           )}
           {jobs.map((job) => {
             const srtName = job.srt_path.split("/").pop() || "";
+            const srtDir = job.srt_path.slice(0, job.srt_path.length - srtName.length).replace(/\/+$/, "");
             const pct = job.total_cues > 0 ? Math.round((job.completed_cues / job.total_cues) * 100) : 0;
             const isActive = job.id === currentJobId;
             const hasError = job.status === "error" && job.error;
@@ -125,38 +129,46 @@ export function JobsTableDesktop({
             const reason = hasError ? classifyErrorReason(job.error) : null;
             return (
               <Fragment key={job.id}>
-                <tr className={isActive ? "bg-blue-900/5" : isSelected ? "bg-blue-900/10" : "hover:bg-gray-800/30"}>
-                  <td className="px-3 py-3 w-8">
+                <tr className={`group ${isActive ? "bg-[var(--accent-dim)]" : isSelected ? "bg-[var(--accent-dim)]" : "hover:bg-[var(--surface-2)]"}`}>
+                  <td className={`${TD} w-8`}>
                     {isPending && (
                       <input
                         type="checkbox"
-                        className="accent-blue-500"
+                        className="accent-[var(--accent)]"
                         checked={isSelected}
                         onChange={() => toggleOne(job.id)}
                         aria-label={t("dashboard.col.select")}
                       />
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-300 max-w-[280px] truncate" title={job.srt_path}>{srtName}</td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{job.target_lang}<br /><span className="text-gray-600">{job.lang_code}</span></td>
-                  <td className="px-4 py-3">
+                  <td className={`${TD} max-w-[280px]`}>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="shrink-0 text-[13px] opacity-50">📄</span>
+                      <div className="min-w-0">
+                        <div className="truncate text-[13px] font-medium text-[var(--text)]" title={job.srt_path}>{srtName}</div>
+                        {srtDir && <div className="truncate font-mono text-[10.5px] text-[var(--text-3)]">{srtDir}</div>}
+                      </div>
+                    </div>
+                  </td>
+                  <td className={`${TD} text-[12px] text-[var(--text-2)]`}>{job.target_lang}<br /><span className="text-[var(--text-3)]">{job.lang_code}</span></td>
+                  <td className={TD}>
                     <StatusBadge job={job} />
                     {reason && (
-                      <span className="ml-2 rounded-full bg-red-900/30 px-2 py-0.5 text-[10px] text-red-200">{t(`dashboard.errorReason.${reason}`)}</span>
+                      <span className="ml-2 rounded-full bg-[var(--red-dim)] px-2 py-0.5 text-[10px] text-[var(--red)]">{t(`dashboard.errorReason.${reason}`)}</span>
                     )}
                     {hasError && (
                       <button
                         onClick={() => setExpandedErrors((s) => { const n = new Set(s); if (isErrorExpanded) n.delete(job.id); else n.add(job.id); return n; })}
-                        className="block mt-1 text-[11px] text-red-400/70 hover:text-red-400 truncate max-w-[220px] text-left"
+                        className="mt-1 block max-w-[220px] truncate text-left text-[11px] text-[var(--red)]/70 hover:text-[var(--red)]"
                       >
                         {isErrorExpanded ? "▼" : "▶"} {job.error}
                       </button>
                     )}
                   </td>
-                  <td className="px-4 py-3 w-40">{job.status === "translating" ? <ProgressSmall pct={pct} /> : job.status === "done" ? <span className="text-[10px] text-gray-600">{t("dashboard.cues", { completed: job.completed_cues, total: job.total_cues })}</span> : null}</td>
-                  <td className="px-4 py-3 text-[10px] text-gray-600">{job.duration_seconds ? formatDur(job.duration_seconds) : ""}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1.5">
+                  <td className={`${TD} w-40`}>{job.status === "translating" ? <ProgressSmall pct={pct} /> : job.status === "done" ? <span className="text-[10px] text-[var(--text-3)]">{t("dashboard.cues", { completed: job.completed_cues, total: job.total_cues })}</span> : null}</td>
+                  <td className={`${TD} font-mono text-[11.5px] text-[var(--text-2)]`}>{job.duration_seconds ? formatDur(job.duration_seconds) : ""}</td>
+                  <td className={TD}>
+                    <div className="flex flex-wrap gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
                       {isPending && job.priority > 0 && (
                         <MiniBtn onClick={() => unpinMutation.mutate(job.id)}>{t("dashboard.action.unpin")}</MiniBtn>
                       )}
@@ -167,17 +179,17 @@ export function JobsTableDesktop({
                       {job.status === "error" && <MiniBtn color="yellow" onClick={() => { retryMutation.mutate(job.id); addToast(t("dashboard.toast.jobRetrying"), "info"); }}>{t("dashboard.action.retry")}</MiniBtn>}
                       {(job.status === "done" || job.status === "skipped") && <MiniBtn onClick={() => { forceMutation.mutate(job.id); addToast(t("dashboard.toast.retranslating"), "info"); }}>{t("dashboard.action.retranslate")}</MiniBtn>}
                       {job.status === "error" && <MiniBtn onClick={() => onOpenLogs(job.id)}>{t("dashboard.action.logs")}</MiniBtn>}
-                      <NavLink to={`/jobs/${job.id}`} className="rounded-lg bg-gray-800 px-2 py-1 text-[11px] text-gray-300">{t("dashboard.action.details")}</NavLink>
+                      <NavLink to={`/jobs/${job.id}`} className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 text-[11px] text-[var(--text-2)] hover:text-[var(--text)]">{t("dashboard.action.details")}</NavLink>
                       <button
                         onClick={() => handleDelete(job.id)}
-                        className="text-gray-600 hover:text-red-400 text-xs px-1"
+                        className="rounded-md px-1.5 text-[var(--text-3)] hover:text-[var(--red)]"
                         aria-label={t("dashboard.action.delete")}
                       >×</button>
                     </div>
                   </td>
                 </tr>
                 {hasError && isErrorExpanded && (
-                  <tr><td colSpan={7} className="px-4 py-3 bg-red-950/20 text-xs text-red-300 font-mono whitespace-pre-wrap">{job.error}</td></tr>
+                  <tr><td colSpan={7} className="whitespace-pre-wrap bg-[var(--red-dim)] px-4 py-3 font-mono text-[11px] text-[var(--red)]">{job.error}</td></tr>
                 )}
               </Fragment>
             );

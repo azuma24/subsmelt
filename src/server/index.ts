@@ -41,6 +41,8 @@ import {
   stopAutoScan,
 } from "./queue.js";
 import { testConnection, parseSubtitle } from "./translator.js";
+import { resolveConnectionPool } from "./connections.js";
+import type { CloudProvider } from "./translator.js";
 import {
   applyPreflightPolicy,
   buildTranscriptionRequest,
@@ -656,11 +658,14 @@ app.post("/api/transcribe", async (req, res) => {
 app.get("/api/models", async (req, res) => {
   const settings = getAllSettings();
   const provider = (req.query.provider as string) || "local";
+  // Optional overrides so a not-yet-saved connection card can fetch its models.
+  const keyOverride = (req.query.key as string) || "";
+  const endpointOverride = (req.query.endpoint as string) || "";
 
   try {
     // ── Cloud providers ────────────────────────────────────────────────────
     if (provider === "openai") {
-      const apiKey = settings.cloud_api_key_openai || "";
+      const apiKey = keyOverride || settings.cloud_api_key_openai || "";
       if (!apiKey) return res.status(400).json({ error: "No OpenAI API key configured" });
       const resp = await fetch("https://api.openai.com/v1/models", {
         headers: { Authorization: `Bearer ${apiKey}` },
@@ -677,7 +682,7 @@ app.get("/api/models", async (req, res) => {
     }
 
     if (provider === "anthropic") {
-      const apiKey = settings.cloud_api_key_anthropic || "";
+      const apiKey = keyOverride || settings.cloud_api_key_anthropic || "";
       if (!apiKey) return res.status(400).json({ error: "No Anthropic API key configured" });
       const resp = await fetch("https://api.anthropic.com/v1/models", {
         headers: {
@@ -695,7 +700,7 @@ app.get("/api/models", async (req, res) => {
     }
 
     if (provider === "gemini") {
-      const apiKey = settings.cloud_api_key_gemini || "";
+      const apiKey = keyOverride || settings.cloud_api_key_gemini || "";
       if (!apiKey) return res.status(400).json({ error: "No Gemini API key configured" });
       const resp = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}&pageSize=100`
@@ -710,8 +715,8 @@ app.get("/api/models", async (req, res) => {
     }
 
     // ── Local / OpenAI-compatible endpoint ────────────────────────────────
-    const endpoint = (settings.llm_endpoint || "http://localhost:8000/v1").replace(/\/+$/, "");
-    const apiKey = settings.api_key || "";
+    const endpoint = (endpointOverride || settings.llm_endpoint || "http://localhost:8000/v1").replace(/\/+$/, "");
+    const apiKey = keyOverride || settings.api_key || "";
     const url = endpoint + "/models";
     const resp = await fetch(url, {
       headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
@@ -728,13 +733,29 @@ app.get("/api/models", async (req, res) => {
 });
 
 // ======== Test Connection ========
-app.post("/api/test-connection", async (_req, res) => {
+app.post("/api/test-connection", async (req, res) => {
   const settings = getAllSettings();
-  const result = await testConnection({
-    apiKey: settings.api_key || "",
-    apiHost: settings.llm_endpoint || "http://localhost:8000/v1",
-    model: settings.model || "",
-  });
+  const body = (req.body || {}) as { provider?: string; apiKey?: string; model?: string; endpoint?: string };
+
+  // If the client passes explicit connection fields (e.g. a not-yet-saved
+  // connection card), test those. Otherwise test the active connection.
+  let conn: { apiKey: string; apiHost: string; model: string; provider?: CloudProvider };
+  if (body.provider !== undefined || body.apiKey !== undefined || body.model !== undefined) {
+    conn = {
+      apiKey: body.apiKey || "",
+      apiHost: body.endpoint || settings.llm_endpoint || "http://localhost:8000/v1",
+      model: body.model || "",
+      provider: body.provider && body.provider !== "local" ? (body.provider as CloudProvider) : undefined,
+    };
+  } else {
+    const { pool } = resolveConnectionPool(settings);
+    const primary = pool[0];
+    conn = primary
+      ? { apiKey: primary.apiKey, apiHost: primary.apiHost, model: primary.model, provider: primary.provider }
+      : { apiKey: settings.api_key || "", apiHost: settings.llm_endpoint || "http://localhost:8000/v1", model: settings.model || "" };
+  }
+
+  const result = await testConnection(conn);
   if (result.ok) logger.info("system", `Connection test passed: ${result.message}`);
   else logger.error("system", `Connection test failed: ${result.message}`);
   res.json(result);

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { migrateConnectionsFromFlat } from "./connections.js";
 
 const CONFIG_DIR = process.env.CONFIG_DIR || "./config";
 const CONFIG_FILE = path.join(CONFIG_DIR, "config.json");
@@ -42,6 +43,11 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   cloud_model_openai: "gpt-4o",
   cloud_model_anthropic: "claude-3-5-sonnet-20241022",
   cloud_model_gemini: "gemini-2.5-flash",
+  // Multi-connection: JSON array of LlmConnection. Empty → migrated from the
+  // flat keys above at read time. llm_mode: single | fallback | parallel.
+  llm_connections: "",
+  llm_mode: "single",
+  active_connection_id: "",
   scan_mode: "recursive",
   scan_folders: "",
   scan_exclude_folders: "",
@@ -157,7 +163,13 @@ export function setSetting(key: string, value: string): void {
 }
 
 export function getAllSettings(): Record<string, string> {
-  return { ...DEFAULT_SETTINGS, ..._config.settings };
+  const merged = { ...DEFAULT_SETTINGS, ..._config.settings };
+  // Backfill the connections array from legacy flat keys so the client and the
+  // queue always see a populated list, even before the first multi-connection save.
+  if (!merged.llm_connections || !merged.llm_connections.trim()) {
+    merged.llm_connections = JSON.stringify(migrateConnectionsFromFlat(merged));
+  }
+  return merged;
 }
 
 // --- Translation Tasks ---

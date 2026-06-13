@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ToastProvider, useToast } from "./components/Toast";
@@ -6,7 +6,7 @@ import { ConfirmProvider } from "./components/ConfirmModal";
 import { formatDur } from "./lib";
 import { useIsMobile, useJobsQuery, useQueueStatusQuery, useSSE, useSettingsQuery } from "./hooks";
 import type { JobRow } from "./types";
-import { DesktopSidebar, MobileBottomNav, TopStatusBar } from "./app/shell";
+import { DesktopSidebar, MobileBottomNav } from "./app/shell";
 import { LANGUAGES } from "./app/constants";
 import { DashboardPage } from "./features/dashboard";
 import { LogsPage } from "./features/logs/LogsPage";
@@ -28,7 +28,6 @@ function AppInner() {
   const { addToast } = useToast();
   const { t, i18n } = useTranslation();
   const isMobile = useIsMobile();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const jobsQuery = useJobsQuery();
   const settingsQuery = useSettingsQuery();
   const queueQuery = useQueueStatusQuery();
@@ -72,11 +71,10 @@ function AppInner() {
   }, [i18n.language]);
 
   return (
-    <div className="flex h-dvh min-h-dvh bg-gray-950 text-gray-100">
+    <div className="flex h-dvh min-h-dvh bg-[var(--bg)] text-[var(--text)]">
       {!isMobile && (
         <DesktopSidebar
-          collapsed={sidebarCollapsed}
-          setCollapsed={setSidebarCollapsed}
+          collapsed={false}
           queueRunning={queueRunning}
           errorCount={errorCount}
           modelName={modelName}
@@ -85,8 +83,7 @@ function AppInner() {
         />
       )}
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopStatusBar queueRunning={queueRunning} watcherRunning={watcherRunning} modelName={modelName} />
-        <main className={`flex-1 overflow-auto ${isMobile ? "pb-24" : ""}`}>
+        <main className={`flex-1 overflow-auto ${isMobile ? "pb-[58px]" : ""}`}>
           <Routes>
             <Route path="/" element={<DashboardPage isMobile={isMobile} />} />
             <Route path="/translations" element={<TranslationLanguagesPage isMobile={isMobile} />} />

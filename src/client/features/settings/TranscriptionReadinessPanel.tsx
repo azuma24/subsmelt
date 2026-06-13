@@ -40,16 +40,16 @@ function suggestCpuModel(availableRamMb?: number): string | null {
 
 function StatusBadge({ label, state, detail }: { label: string; state: "ok" | "warn" | "fail" | "info"; detail: string }) {
   const classes = {
-    ok: "border-green-800/50 bg-green-900/25 text-green-200",
-    warn: "border-yellow-800/50 bg-yellow-900/25 text-yellow-200",
-    fail: "border-red-800/50 bg-red-900/25 text-red-200",
-    info: "border-blue-800/50 bg-blue-900/25 text-blue-200",
+    ok: "border-[var(--green-border)] bg-[var(--green-dim)] text-[var(--green)]",
+    warn: "border-[var(--yellow-border)] bg-[var(--yellow-dim)] text-[var(--yellow)]",
+    fail: "border-[var(--red-border)] bg-[var(--red-dim)] text-[var(--red)]",
+    info: "border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]",
   }[state];
 
   return (
-    <div className={`rounded-2xl border px-3 py-2 ${classes}`}>
+    <div className={`rounded-lg border px-3 py-2 ${classes}`}>
       <div className="text-[10px] uppercase tracking-wide opacity-80">{label}</div>
-      <div className="mt-0.5 text-sm font-medium">{detail}</div>
+      <div className="mt-0.5 text-[13px] font-medium">{detail}</div>
     </div>
   );
 }
@@ -101,13 +101,13 @@ export function TranscriptionReadinessPanel({
           : t("settings.transcription.readiness.unreachableSummary");
 
   return (
-    <div className="rounded-2xl border border-gray-800 bg-gray-950/45 p-4">
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <div className="text-sm font-semibold text-gray-200">{t("settings.transcription.readiness.title")}</div>
-          <p className="mt-1 text-xs leading-relaxed text-gray-400">{summary}</p>
+          <div className="text-sm font-semibold text-[var(--text)]">{t("settings.transcription.readiness.title")}</div>
+          <p className="mt-1 text-xs leading-relaxed text-[var(--text-2)]">{summary}</p>
           {dirty && configured && (
-            <p className="mt-1 text-[10px] text-yellow-300">{t("settings.transcription.readiness.saveBeforeRefresh")}</p>
+            <p className="mt-1 text-[10px] text-[var(--yellow)]">{t("settings.transcription.readiness.saveBeforeRefresh")}</p>
           )}
         </div>
         <ActionButton variant="ghost" onClick={() => healthQuery.refetch()} disabled={!configured || healthQuery.isFetching}>
@@ -131,52 +131,52 @@ export function TranscriptionReadinessPanel({
       </div>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-gray-800 bg-gray-900/50 p-3">
-          <div className="text-xs font-semibold text-gray-300">{t("settings.transcription.readiness.cpuRamFit")}</div>
-          <div className="mt-2 space-y-1 text-xs text-gray-400">
-            <div>{t("settings.transcription.readiness.availableTotal")}: <span className="text-gray-200">{formatMb(availableRamMb, unknownLabel)} / {formatMb(backendHealth?.totalRamMb, unknownLabel)}</span></div>
-            <div>{t("settings.transcription.readiness.selectedModel")}: <span className="text-gray-200">{selectedModel}</span></div>
-            <div>{t("settings.transcription.readiness.recommendedCpu")}: <span className="text-gray-200">{formatMb(requirements.recommended, unknownLabel)}</span> ({t("settings.transcription.readiness.minimum")} {formatMb(requirements.required, unknownLabel)})</div>
-            {ramMeetsRecommended === true && <div className="text-green-300">{t("settings.transcription.readiness.ramRecommended")}</div>}
-            {ramMeetsRequired === true && ramMeetsRecommended === false && <div className="text-yellow-300">{t("settings.transcription.readiness.ramMinimumOnly")}</div>}
-            {ramMeetsRequired === false && <div className="text-red-300">{t("settings.transcription.readiness.ramBelowMinimum", { model: selectedModel, suggestedModel })}</div>}
-            {!ramKnown && <div className="text-gray-500">{t("settings.transcription.readiness.ramDetailsPending")}</div>}
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+          <div className="text-xs font-semibold text-[var(--text)]">{t("settings.transcription.readiness.cpuRamFit")}</div>
+          <div className="mt-2 space-y-1 text-xs text-[var(--text-2)]">
+            <div>{t("settings.transcription.readiness.availableTotal")}: <span className="text-[var(--text)]">{formatMb(availableRamMb, unknownLabel)} / {formatMb(backendHealth?.totalRamMb, unknownLabel)}</span></div>
+            <div>{t("settings.transcription.readiness.selectedModel")}: <span className="text-[var(--text)]">{selectedModel}</span></div>
+            <div>{t("settings.transcription.readiness.recommendedCpu")}: <span className="text-[var(--text)]">{formatMb(requirements.recommended, unknownLabel)}</span> ({t("settings.transcription.readiness.minimum")} {formatMb(requirements.required, unknownLabel)})</div>
+            {ramMeetsRecommended === true && <div className="text-[var(--green)]">{t("settings.transcription.readiness.ramRecommended")}</div>}
+            {ramMeetsRequired === true && ramMeetsRecommended === false && <div className="text-[var(--yellow)]">{t("settings.transcription.readiness.ramMinimumOnly")}</div>}
+            {ramMeetsRequired === false && <div className="text-[var(--red)]">{t("settings.transcription.readiness.ramBelowMinimum", { model: selectedModel, suggestedModel })}</div>}
+            {!ramKnown && <div className="text-[var(--text-3)]">{t("settings.transcription.readiness.ramDetailsPending")}</div>}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-800 bg-gray-900/50 p-3">
-          <div className="text-xs font-semibold text-gray-300">{t("settings.transcription.readiness.backendCapabilities")}</div>
-          <div className="mt-2 space-y-1 text-xs text-gray-400">
-            <div>{t("settings.transcription.readiness.models")}: <span className="text-gray-200">{list(models, unknownLabel)}</span></div>
-            <div>{t("settings.transcription.readiness.outputFormats")}: <span className="text-gray-200">{list(outputFormats, unknownLabel)}</span></div>
-            <div>{t("settings.transcription.readiness.devices")}: <span className="text-gray-200">{list(capabilities?.devices, unknownLabel)}</span></div>
-            <div>{t("settings.transcription.readiness.computeTypes")}: <span className="text-gray-200">{list(capabilities?.computeTypes, unknownLabel)}</span></div>
-            <div>{t("settings.transcription.readiness.vad")}: <span className="text-gray-200">{capabilities?.vad === undefined ? unknownLabel : capabilities.vad ? t("settings.transcription.readiness.supported") : t("settings.transcription.readiness.notAdvertised")}</span></div>
-            {selectedModelAdvertised === false && <div className="text-yellow-300">{t("settings.transcription.readiness.modelNotAdvertised")}</div>}
-            {selectedOutputAdvertised === false && <div className="text-yellow-300">{t("settings.transcription.readiness.outputNotAdvertised")}</div>}
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+          <div className="text-xs font-semibold text-[var(--text)]">{t("settings.transcription.readiness.backendCapabilities")}</div>
+          <div className="mt-2 space-y-1 text-xs text-[var(--text-2)]">
+            <div>{t("settings.transcription.readiness.models")}: <span className="text-[var(--text)]">{list(models, unknownLabel)}</span></div>
+            <div>{t("settings.transcription.readiness.outputFormats")}: <span className="text-[var(--text)]">{list(outputFormats, unknownLabel)}</span></div>
+            <div>{t("settings.transcription.readiness.devices")}: <span className="text-[var(--text)]">{list(capabilities?.devices, unknownLabel)}</span></div>
+            <div>{t("settings.transcription.readiness.computeTypes")}: <span className="text-[var(--text)]">{list(capabilities?.computeTypes, unknownLabel)}</span></div>
+            <div>{t("settings.transcription.readiness.vad")}: <span className="text-[var(--text)]">{capabilities?.vad === undefined ? unknownLabel : capabilities.vad ? t("settings.transcription.readiness.supported") : t("settings.transcription.readiness.notAdvertised")}</span></div>
+            {selectedModelAdvertised === false && <div className="text-[var(--yellow)]">{t("settings.transcription.readiness.modelNotAdvertised")}</div>}
+            {selectedOutputAdvertised === false && <div className="text-[var(--yellow)]">{t("settings.transcription.readiness.outputNotAdvertised")}</div>}
           </div>
         </div>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-gray-800 bg-gray-900/50 p-3">
-        <div className="text-xs font-semibold text-gray-300">{t("settings.transcription.readiness.modelCache")}</div>
-        <div className="mt-2 space-y-1 text-xs text-gray-400">
-          <div>{t("settings.transcription.readiness.selectedModel")}: <span className="text-gray-200">{cacheInfo?.model || selectedModel}</span></div>
-          <div>{t("settings.transcription.readiness.cacheRoot")}: <span className="text-gray-200 break-all">{cacheInfo?.cacheRoot || unknownLabel}</span></div>
-          <div>{t("settings.transcription.readiness.cachePath")}: <span className="text-gray-200 break-all">{cacheInfo?.cachePath || t("settings.transcription.readiness.notFound")}</span></div>
-          <div>{t("settings.transcription.readiness.status")}: <span className="text-gray-200">
+      <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+        <div className="text-xs font-semibold text-[var(--text)]">{t("settings.transcription.readiness.modelCache")}</div>
+        <div className="mt-2 space-y-1 text-xs text-[var(--text-2)]">
+          <div>{t("settings.transcription.readiness.selectedModel")}: <span className="text-[var(--text)]">{cacheInfo?.model || selectedModel}</span></div>
+          <div>{t("settings.transcription.readiness.cacheRoot")}: <span className="text-[var(--text)] break-all">{cacheInfo?.cacheRoot || unknownLabel}</span></div>
+          <div>{t("settings.transcription.readiness.cachePath")}: <span className="text-[var(--text)] break-all">{cacheInfo?.cachePath || t("settings.transcription.readiness.notFound")}</span></div>
+          <div>{t("settings.transcription.readiness.status")}: <span className="text-[var(--text)]">
             {cacheInfo?.cached === true ? t("settings.transcription.readiness.cached") : cacheInfo?.cached === false ? t("settings.transcription.readiness.notCachedYet") : unknownLabel}
           </span></div>
-          {cacheInfo?.warning && <div className={cacheInfo.cached ? "text-blue-300" : "text-yellow-300"}>{cacheInfo.warning}</div>}
-          {cacheInfo?.firstRunDownloadExpected && <div className="text-yellow-300">{t("settings.transcription.readiness.firstRunDownload")}</div>}
-          {!cacheInfo && <div className="text-gray-500">{t("settings.transcription.readiness.cachePending")}</div>}
+          {cacheInfo?.warning && <div className={cacheInfo.cached ? "text-[var(--accent)]" : "text-[var(--yellow)]"}>{cacheInfo.warning}</div>}
+          {cacheInfo?.firstRunDownloadExpected && <div className="text-[var(--yellow)]">{t("settings.transcription.readiness.firstRunDownload")}</div>}
+          {!cacheInfo && <div className="text-[var(--text-3)]">{t("settings.transcription.readiness.cachePending")}</div>}
         </div>
       </div>
 
-      <div className="mt-3 rounded-xl border border-gray-800 bg-gray-950/60 p-3 text-xs text-gray-400">
+      <div className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-xs text-[var(--text-2)]">
         {t("settings.transcription.readiness.currentDefaults", { model: selectedModel, device: selectedDevice, computeType: selectedComputeType, output: selectedOutput.toUpperCase() })}
-        {health?.message && <span className="ml-1 text-yellow-300">{t("settings.transcription.readiness.backendMessage", { message: health.message })}</span>}
-        <div className="mt-2 text-yellow-200">{t("settings.transcription.readiness.firstRunQuiet")}</div>
+        {health?.message && <span className="ml-1 text-[var(--yellow)]">{t("settings.transcription.readiness.backendMessage", { message: health.message })}</span>}
+        <div className="mt-2 text-[var(--yellow)]">{t("settings.transcription.readiness.firstRunQuiet")}</div>
       </div>
     </div>
   );

@@ -99,6 +99,20 @@ export interface LogEntry {
   meta: string | null;
 }
 
+export type LlmProvider = "local" | "openai" | "anthropic" | "gemini";
+export type LlmMode = "single" | "fallback" | "parallel";
+
+export interface LlmConnection {
+  id: string;
+  label: string;
+  provider: LlmProvider;
+  apiKey: string;
+  model: string;
+  endpoint: string;
+  enabled: boolean;
+  order: number;
+}
+
 export interface LlmHealth {
   ok: boolean;
   endpointReachable: boolean;

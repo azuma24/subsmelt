@@ -229,40 +229,40 @@ export function MediaSourcesPanel({
 
   return (
     <div className="space-y-5">
-      <p className="text-sm text-gray-400">{t("settings.sources.mediaSourcesIntro")}</p>
+      <p className="text-[12px] text-[var(--text-2)]">{t("settings.sources.mediaSourcesIntro")}</p>
 
-      <div className="rounded-2xl border border-gray-800 bg-gray-950/40 p-4">
+      <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
         <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
           <div>
-            <div className="text-sm font-medium text-gray-200">{t("settings.sources.scanProfiles")}</div>
-            <p className="text-[11px] text-gray-500">{t("settings.sources.scanProfilesHint")}</p>
+            <div className="text-[13px] font-medium text-[var(--text)]">{t("settings.sources.scanProfiles")}</div>
+            <p className="text-[10.5px] text-[var(--text-3)]">{t("settings.sources.scanProfilesHint")}</p>
           </div>
           <div className="flex min-w-0 gap-2">
             <input
               value={profileName}
               onChange={(e) => setProfileName(e.target.value)}
               placeholder={t("settings.sources.profileNamePlaceholder")}
-              className="min-w-0 flex-1 rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-xs text-gray-200"
+              className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--text)] outline-none focus:border-[var(--accent)]"
             />
-            <button type="button" onClick={saveProfile} className="shrink-0 rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white">
+            <button type="button" onClick={saveProfile} className="shrink-0 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-white">
               {t("settings.sources.saveScanProfile")}
             </button>
           </div>
         </div>
         {profiles.length === 0 ? (
-          <p className="text-[11px] text-gray-600">{t("settings.sources.noScanProfiles")}</p>
+          <p className="text-[10.5px] text-[var(--text-3)]">{t("settings.sources.noScanProfiles")}</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {profiles.map((profile) => (
-              <div key={profile.id} className="flex items-center gap-2 rounded-lg border border-gray-800 bg-gray-900 px-2 py-1.5">
+              <div key={profile.id} className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2 py-[5px]">
                 <div className="min-w-0">
-                  <div className="truncate text-xs font-medium text-gray-200">{profile.name}</div>
-                  <div className="text-[10px] text-gray-500">{t(`settings.sources.profileMode.${profile.scanMode}`)}</div>
+                  <div className="truncate text-xs font-medium text-[var(--text)]">{profile.name}</div>
+                  <div className="text-[10px] text-[var(--text-3)]">{t(`settings.sources.profileMode.${profile.scanMode}`)}</div>
                 </div>
-                <button type="button" onClick={() => loadProfile(profile)} className="rounded-md bg-gray-800 px-2 py-1 text-[10px] text-gray-300 hover:bg-gray-700">
+                <button type="button" onClick={() => loadProfile(profile)} className="rounded-md border border-[var(--border)] bg-[var(--surface-3)] px-2 py-1 text-[10px] text-[var(--text-2)] hover:text-[var(--text)]">
                   {t("settings.sources.loadScanProfile")}
                 </button>
-                <button type="button" onClick={() => deleteProfile(profile.id)} className="rounded-md px-2 py-1 text-[10px] text-gray-500 hover:text-red-300">
+                <button type="button" onClick={() => deleteProfile(profile.id)} className="rounded-md px-2 py-1 text-[10px] text-[var(--text-3)] hover:text-[var(--red)]">
                   {t("common.delete")}
                 </button>
               </div>
@@ -271,46 +271,46 @@ export function MediaSourcesPanel({
         )}
       </div>
 
-      <div className="rounded-2xl border border-gray-800 bg-gray-950/40 p-4">
+      <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-sm font-medium text-gray-200">{t("settings.sources.detectedSources")}</div>
-            <div className="text-[11px] text-gray-500">
+            <div className="text-[13px] font-medium text-[var(--text)]">{t("settings.sources.detectedSources")}</div>
+            <div className="text-[10.5px] text-[var(--text-3)]">
               {loading
                 ? t("settings.sources.loadingSources")
                 : t("settings.sources.detectedCount", { count: allSubfolders.length })}
-              <span className="ml-2 font-mono text-gray-600">{mediaDir}</span>
+              <span className="ml-2 font-mono text-[var(--text-3)]">{mediaDir}</span>
             </div>
           </div>
           <button
             type="button"
             onClick={fetchSources}
             disabled={loading}
-            className="shrink-0 text-[11px] text-blue-400 hover:text-blue-300 disabled:text-gray-600"
+            className="shrink-0 text-[11px] text-[var(--accent)] hover:brightness-110 disabled:text-[var(--text-3)]"
           >
             {loading ? t("common.loading") : t("settings.sources.refreshFolders")}
           </button>
         </div>
 
-        {error && <p className="mb-2 text-[11px] text-red-400">{error}</p>}
+        {error && <p className="mb-2 text-[11px] text-[var(--red)]">{error}</p>}
 
         <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center">
           <input
             value={folderSearch}
             onChange={(e) => setFolderSearch(e.target.value)}
             placeholder={t("settings.sources.folderSearchPlaceholder")}
-            className="min-w-0 flex-1 rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-xs text-gray-200"
+            className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--text)] outline-none focus:border-[var(--accent)]"
           />
           {mode === "selected" && allSubfolders.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={selectVisibleFolders} className="rounded-lg bg-gray-800 px-3 py-2 text-[11px] text-gray-300 hover:bg-gray-700">
+              <button type="button" onClick={selectVisibleFolders} className="rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-3 py-1.5 text-[11px] text-[var(--text-2)] hover:text-[var(--text)]">
                 {t("settings.sources.selectVisibleFolders")}
               </button>
-              <button type="button" onClick={() => onScanFoldersChange("")} className="rounded-lg bg-gray-800 px-3 py-2 text-[11px] text-gray-400 hover:bg-gray-700">
+              <button type="button" onClick={() => onScanFoldersChange("")} className="rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-3 py-1.5 text-[11px] text-[var(--text-2)] hover:text-[var(--text)]">
                 {t("settings.sources.clearSelectedFolders")}
               </button>
               {excluded.length > 0 && (
-                <button type="button" onClick={() => onScanExcludeFoldersChange("")} className="rounded-lg bg-gray-800 px-3 py-2 text-[11px] text-gray-400 hover:bg-gray-700">
+                <button type="button" onClick={() => onScanExcludeFoldersChange("")} className="rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-3 py-1.5 text-[11px] text-[var(--text-2)] hover:text-[var(--text)]">
                   {t("settings.sources.clearExcludedFolders")}
                 </button>
               )}
@@ -319,13 +319,13 @@ export function MediaSourcesPanel({
         </div>
 
         {loading ? (
-          <p className="text-[11px] text-gray-500">{t("settings.sources.loadingSources")}</p>
+          <p className="text-[11px] text-[var(--text-3)]">{t("settings.sources.loadingSources")}</p>
         ) : allSubfolders.length === 0 ? (
-          <p className="text-[11px] text-gray-500">{t("settings.sources.summaryNoneDetected", { path: mediaDir })}</p>
+          <p className="text-[11px] text-[var(--text-3)]">{t("settings.sources.summaryNoneDetected", { path: mediaDir })}</p>
         ) : visibleTree.length === 0 ? (
-          <p className="text-[11px] text-gray-500">{t("settings.sources.noFoldersMatch")}</p>
+          <p className="text-[11px] text-[var(--text-3)]">{t("settings.sources.noFoldersMatch")}</p>
         ) : (
-          <div className={`${isMobile ? "max-h-80" : "max-h-96"} overflow-y-auto rounded-xl border border-gray-800 bg-gray-950/50 p-2`}>
+          <div className={`${isMobile ? "max-h-80" : "max-h-96"} overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--surface)] p-1.5`}>
             <FolderTree
               nodes={visibleTree}
               mediaDir={mediaDir}
@@ -343,12 +343,12 @@ export function MediaSourcesPanel({
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-medium text-gray-300">{t("settings.sources.scanMode")}</label>
-        <div className="space-y-2">
+        <label className="mb-2 block text-[12px] font-medium text-[var(--text-2)]">{t("settings.sources.scanMode")}</label>
+        <div>
           {scanModeOptions.map((opt) => (
             <label
               key={opt.value}
-              className="flex cursor-pointer items-start gap-3 rounded-2xl border border-gray-800 bg-gray-950/40 p-3"
+              className={`mb-[6px] flex cursor-pointer items-start gap-2.5 rounded-lg border p-[9px_11px] transition-colors ${mode === opt.value ? "border-[var(--accent-border)] bg-[var(--accent-dim)]" : "border-[var(--border)] bg-[var(--surface-2)]"}`}
             >
               <input
                 type="radio"
@@ -356,27 +356,27 @@ export function MediaSourcesPanel({
                 value={opt.value}
                 checked={mode === opt.value}
                 onChange={(e) => onScanModeChange(e.target.value)}
-                className="mt-1 accent-blue-500"
+                className="mt-0.5 accent-[var(--accent)]"
               />
               <div>
-                <div className="text-sm text-gray-200">{opt.label}</div>
-                <p className="text-[10px] text-gray-500">{opt.desc}</p>
+                <div className="text-[13px] text-[var(--text)]">{opt.label}</div>
+                <p className="text-[10px] text-[var(--text-3)]">{opt.desc}</p>
               </div>
             </label>
           ))}
         </div>
       </div>
 
-      <div className="rounded-2xl border border-gray-800 bg-gray-900/40 p-3">
-        <div className="text-[10px] uppercase tracking-wide text-gray-500">{t("settings.sources.scanSummary")}</div>
-        <div className="mt-1 text-sm text-gray-200">{summary}</div>
+      <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-[10px_12px]">
+        <div className="text-[10px] uppercase tracking-wide text-[var(--text-3)]">{t("settings.sources.scanSummary")}</div>
+        <div className="mt-1 text-[13px] text-[var(--text-2)]">{summary}</div>
       </div>
 
-      <details className="rounded-2xl border border-gray-800 bg-gray-950/40 p-3">
-        <summary className="cursor-pointer text-[11px] text-gray-400 hover:text-gray-300">
+      <details className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
+        <summary className="cursor-pointer text-[11px] text-[var(--text-2)] hover:text-[var(--text)]">
           {t("settings.sources.helpTitle")}
         </summary>
-        <p className="mt-2 whitespace-pre-line text-[11px] leading-relaxed text-gray-500">
+        <p className="mt-2 whitespace-pre-line text-[11px] leading-relaxed text-[var(--text-3)]">
           {t("settings.sources.helpBody", { path: mediaDir })}
         </p>
       </details>
@@ -478,12 +478,12 @@ function FolderTreeRow({
   return (
     <div>
       <div
-        className={`flex items-center gap-2 rounded-lg border px-2 py-2 transition-colors ${
+        className={`mb-[2px] flex items-center gap-2 rounded-[6px] border px-2 py-2 transition-colors ${
           excludedHere
-            ? "border-red-900/50 bg-red-950/20"
+            ? "border-[var(--red-border)] bg-[var(--red-dim)]"
             : checked
-              ? "border-blue-900/50 bg-blue-950/20"
-              : "border-gray-800 bg-gray-900/30"
+              ? "border-[var(--accent-border)] bg-[var(--accent-dim)]"
+              : "border-[var(--border-sub)] bg-[var(--surface-3)]"
         }`}
         style={{ paddingLeft: `${8 + depth * 18}px` }}
       >
@@ -491,10 +491,10 @@ function FolderTreeRow({
           type="button"
           onClick={toggleExpanded}
           disabled={!hasChildren}
-          className="h-6 w-6 shrink-0 rounded-md text-xs text-gray-500 hover:bg-gray-800 disabled:opacity-20"
+          className="h-6 w-6 shrink-0 rounded-md text-xs text-[var(--text-3)] hover:bg-[var(--surface-2)] disabled:opacity-20"
           aria-label={expanded ? t("settings.sources.collapseFolder") : t("settings.sources.expandFolder")}
         >
-          {hasChildren ? (expanded ? "v" : ">") : ""}
+          {hasChildren ? (expanded ? "▾" : "▸") : ""}
         </button>
         {interactive && (
           <input
@@ -504,22 +504,22 @@ function FolderTreeRow({
               if (el) el.indeterminate = mixed;
             }}
             onChange={() => onToggleIncluded(node.path)}
-            className="h-4 w-4 shrink-0 accent-blue-500"
+            className="h-4 w-4 shrink-0 accent-[var(--accent)]"
           />
         )}
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium text-gray-200">{node.name}</div>
-          <div className="truncate font-mono text-[10px] text-gray-500">{mediaDir}/{node.path}</div>
-          <div className="mt-1 flex flex-wrap gap-1.5 text-[9px] text-gray-500">
-            <span className="rounded-full bg-gray-800 px-2 py-0.5">{t("settings.sources.folderCountVideos", { count: node.counts.videos })}</span>
-            <span className="rounded-full bg-gray-800 px-2 py-0.5">{t("settings.sources.folderCountSubtitles", { count: node.counts.subtitles })}</span>
-            {node.counts.pendingJobs > 0 && <span className="rounded-full bg-yellow-900/20 px-2 py-0.5 text-yellow-300">{t("settings.sources.folderCountPending", { count: node.counts.pendingJobs })}</span>}
-            {node.counts.completeJobs > 0 && <span className="rounded-full bg-green-900/20 px-2 py-0.5 text-green-300">{t("settings.sources.folderCountComplete", { count: node.counts.completeJobs })}</span>}
-            {node.counts.errorJobs > 0 && <span className="rounded-full bg-red-900/20 px-2 py-0.5 text-red-300">{t("settings.sources.folderCountErrors", { count: node.counts.errorJobs })}</span>}
+          <div className="truncate text-[12.5px] font-medium text-[var(--text)]">{node.name}</div>
+          <div className="truncate font-mono text-[10px] text-[var(--text-3)]">{mediaDir}/{node.path}</div>
+          <div className="mt-1 flex flex-wrap gap-1 text-[9.5px] text-[var(--text-2)]">
+            <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5">{t("settings.sources.folderCountVideos", { count: node.counts.videos })}</span>
+            <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5">{t("settings.sources.folderCountSubtitles", { count: node.counts.subtitles })}</span>
+            {node.counts.pendingJobs > 0 && <span className="rounded-full border border-[var(--yellow-border)] bg-[var(--yellow-dim)] px-2 py-0.5 text-[var(--yellow)]">{t("settings.sources.folderCountPending", { count: node.counts.pendingJobs })}</span>}
+            {node.counts.completeJobs > 0 && <span className="rounded-full border border-[var(--green-border)] bg-[var(--green-dim)] px-2 py-0.5 text-[var(--green)]">{t("settings.sources.folderCountComplete", { count: node.counts.completeJobs })}</span>}
+            {node.counts.errorJobs > 0 && <span className="rounded-full border border-[var(--red-border)] bg-[var(--red-dim)] px-2 py-0.5 text-[var(--red)]">{t("settings.sources.folderCountErrors", { count: node.counts.errorJobs })}</span>}
           </div>
         </div>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-medium ${
-          excludedHere ? "bg-red-900/40 text-red-300" : checked ? "bg-blue-900/40 text-blue-300" : "bg-gray-800 text-gray-500"
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold ${
+          excludedHere ? "bg-[var(--red-dim)] text-[var(--red)]" : checked ? "bg-[var(--accent-dim)] text-[var(--accent)]" : "bg-[var(--surface)] text-[var(--text-3)]"
         }`}>
           {excludedHere ? t("settings.sources.excludedBadge") : checked ? t("settings.sources.includedBadge") : t("settings.sources.notIncludedBadge")}
         </span>
@@ -527,8 +527,8 @@ function FolderTreeRow({
           <button
             type="button"
             onClick={() => onToggleExcluded(node.path)}
-            className={`rounded-lg px-2 py-1 text-[10px] font-medium ${
-              excludedHere ? "bg-gray-800 text-gray-300 hover:bg-gray-700" : "bg-red-950/50 text-red-300 hover:bg-red-900/50"
+            className={`rounded-[5px] px-2 py-1 text-[10px] font-medium ${
+              excludedHere ? "bg-[var(--surface-3)] text-[var(--text-2)] hover:text-[var(--text)]" : "bg-[var(--red-dim)] text-[var(--red)] hover:brightness-110"
             }`}
           >
             {excludedHere ? t("settings.sources.allowFolder") : t("settings.sources.excludeFolder")}

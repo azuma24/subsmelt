@@ -122,9 +122,13 @@ export const getLogs = (params?: {
 };
 export const clearLogsApi = () => fetchJSON("/logs", { method: "DELETE" });
 
-// Connection test
-export const testConnection = () =>
-  fetchJSON<{ ok: boolean; message: string }>("/test-connection", { method: "POST" });
+// Connection test — no payload tests the active connection; a payload tests
+// the supplied (possibly unsaved) connection fields.
+export const testConnection = (payload?: { provider?: string; apiKey?: string; model?: string; endpoint?: string }) =>
+  fetchJSON<{ ok: boolean; message: string }>("/test-connection", {
+    method: "POST",
+    body: JSON.stringify(payload ?? {}),
+  });
 
 export const getLlmHealth = (opts?: FetchOpts) =>
   fetchJSON<LlmHealth>("/llm-health", opts);
