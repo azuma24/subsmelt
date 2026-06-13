@@ -7,7 +7,7 @@ import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmModal";
 import { ModalShell } from "../../components/ModalShell";
 import { PRESETS } from "../../app/constants";
-import { ActionButton, EmptyHint, Field } from "../../ui/primitives";
+import { Accordion, ActionButton, EmptyHint, Field, RowActionsMenu, SelectionBar } from "../../ui/primitives";
 import {
   AUTO_SOURCE_LANG,
   DEFAULT_OUTPUT_PATTERN,
@@ -147,72 +147,111 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
   }), [selectedTasks]);
 
   return (
-    <div className="mx-auto max-w-[1200px] space-y-6 p-4 md:p-6">
-      <section className="rounded-3xl border border-gray-800 bg-gray-900/80 p-5 md:p-6">
-        <div className={`flex ${isMobile ? "flex-col gap-4" : "items-center justify-between gap-4"}`}>
-          <div>
-            <h1 className="text-2xl font-semibold">{t("translation_languages.title")}</h1>
-          </div>
-          <ActionButton onClick={() => openNew()}>{t("translation_languages.addLanguage")}</ActionButton>
-        </div>
-        <div className="mt-5 rounded-2xl border border-gray-800 bg-gray-950/50 p-4">
-          <p className="mb-3 text-xs text-gray-500">{t("translation_languages.presets")}</p>
-          <div className="flex flex-wrap gap-2">{PRESETS.map((p) => { const exists = tasks.some((task) => task.lang_code === p.lang_code); return <button key={p.lang_code} onClick={() => !exists && openNew(p)} disabled={exists} className={`rounded-full px-3 py-2 text-xs font-medium ${exists ? "bg-gray-800 text-gray-600" : "bg-gray-800 text-gray-300 hover:bg-gray-700"}`}>{p.label} {exists && "✓"}</button>; })}</div>
-        </div>
+    <div className="flex min-h-full flex-col">
+      {/* Topbar */}
+      <div className="sticky top-0 z-30 flex h-[50px] shrink-0 items-center gap-2.5 border-b border-[var(--border)] bg-[var(--surface)] px-3.5 md:px-[18px]">
+        <span className="flex-1 text-sm font-semibold text-[var(--text)]">{t("translation_languages.title")}</span>
+        <ActionButton size="sm" onClick={() => openNew()}>{t("translation_languages.addLanguage")}</ActionButton>
+      </div>
 
-        {selectedTasks.length > 0 && (
-          <div className="mt-4 rounded-2xl border border-blue-800/40 bg-blue-900/10 p-4">
-            <div className="mb-2 text-sm font-semibold text-blue-100">{t("translation_languages.bulk.title", { count: selectedTasks.length })}</div>
-            <div className="flex flex-wrap gap-2">
-              <button onClick={() => applyBulk({ enabled: 1 })} disabled={bulkCounts.disabled === 0} className="rounded-lg bg-green-700 px-3 py-2 text-xs text-white disabled:opacity-40">{t("translation_languages.bulk.enable")}</button>
-              <button onClick={() => applyBulk({ enabled: 0 })} disabled={bulkCounts.enabled === 0} className="rounded-lg bg-gray-700 px-3 py-2 text-xs text-white disabled:opacity-40">{t("translation_languages.bulk.disable")}</button>
-              {OUTPUT_FORMATS.map((format) => (
-                <button key={format} onClick={() => applyBulkFormat(format)} className="rounded-lg bg-gray-800 px-3 py-2 text-xs text-gray-200 uppercase">{t("translation_languages.bulk.setFormat", { format })}</button>
-              ))}
-              <button onClick={clearSelection} className="ml-auto rounded-lg bg-gray-800 px-3 py-2 text-xs text-gray-300">{t("translation_languages.bulk.clearSelection")}</button>
-            </div>
+      <div className="flex-1 space-y-4 p-3.5 md:p-[18px]">
+        {/* Presets → "Quick add" collapsed accordion (L3) */}
+        <Accordion title={t("translation_languages.quickAdd")}>
+          <div className="flex flex-wrap gap-2">
+            {PRESETS.map((p) => {
+              const exists = tasks.some((task) => task.lang_code === p.lang_code);
+              return (
+                <button
+                  key={p.lang_code}
+                  onClick={() => !exists && openNew(p)}
+                  disabled={exists}
+                  className={`rounded-full px-3 py-1.5 text-xs font-medium ${exists ? "bg-[var(--surface-2)] text-[var(--text-3)]" : "bg-[var(--surface-2)] text-[var(--text-2)] hover:bg-[var(--surface-3)] hover:text-[var(--text)]"}`}
+                >
+                  {p.label} {exists && "✓"}
+                </button>
+              );
+            })}
           </div>
-        )}
-      </section>
+        </Accordion>
 
-      <section className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
-        {tasks.map((task) => (
-          <div key={task.id} className={`rounded-3xl border p-5 ${task.enabled ? "border-gray-800 bg-gray-900/80" : "border-gray-800/50 bg-gray-900/40 opacity-60"}`}>
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex min-w-0 flex-1 items-start gap-2">
-                <input type="checkbox" checked={selectedTaskIds.has(task.id)} onChange={() => toggleTaskSelected(task.id)} className="mt-1 h-4 w-4 accent-blue-500" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 text-sm font-medium text-gray-200"><span>{task.source_lang}</span><span className="text-gray-600">→</span><span>{task.target_lang}</span></div>
-                  <div className="mt-2 space-y-2 text-xs text-gray-500">
-                    <div className="font-mono rounded-xl bg-gray-800 px-2 py-1 inline-block">{task.output_pattern}</div>
-                    <div>{t("translation_languages.langCodeLabel", { code: task.lang_code })}</div>
-                    {task.prompt_override && <div className="text-blue-400">{t("translation_languages.customPrompt")}</div>}
+        {/* Bulk selection bar — appears only when tasks selected */}
+        <SelectionBar
+          count={selectedTasks.length}
+          summaryLabel={t("translation_languages.bulk.title", { count: selectedTasks.length })}
+          onClear={clearSelection}
+          clearLabel={t("translation_languages.bulk.clearSelection")}
+          isMobile={isMobile}
+        >
+          <button onClick={() => applyBulk({ enabled: 1 })} disabled={bulkCounts.disabled === 0} className="rounded-lg bg-[var(--green)] px-3 py-2 text-xs font-semibold text-black disabled:opacity-40">{t("translation_languages.bulk.enable")}</button>
+          <button onClick={() => applyBulk({ enabled: 0 })} disabled={bulkCounts.enabled === 0} className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text)] disabled:opacity-40">{t("translation_languages.bulk.disable")}</button>
+          {OUTPUT_FORMATS.map((format) => (
+            <button key={format} onClick={() => applyBulkFormat(format)} className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs uppercase text-[var(--text-2)] hover:text-[var(--text)]">{t("translation_languages.bulk.setFormat", { format })}</button>
+          ))}
+        </SelectionBar>
+
+        {/* Task grid — cards show Source→Target + enabled toggle + custom-prompt chip */}
+        <section className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+          {tasks.map((task) => (
+            <div key={task.id} className={`rounded-xl border px-[13px] py-[14px] ${task.enabled ? "border-[var(--border)] bg-[var(--surface)]" : "border-[var(--border)] bg-[var(--surface)] opacity-60"}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 flex-1 items-start gap-2">
+                  <input type="checkbox" checked={selectedTaskIds.has(task.id)} onChange={() => toggleTaskSelected(task.id)} className="mt-1 h-4 w-4 accent-[var(--accent)]" />
+                  <div className="min-w-0 flex-1">
+                    {/* L1: Source → Target */}
+                    <div className="flex items-center gap-2 text-[13px] font-medium text-[var(--text)]">
+                      <span>{task.source_lang}</span>
+                      <span className="text-[var(--text-3)]">→</span>
+                      <span>{task.target_lang}</span>
+                    </div>
+                    {/* L2: custom-prompt chip */}
+                    {task.prompt_override && (
+                      <div className="mt-1.5 text-[11px] text-[var(--accent)]">{t("translation_languages.customPrompt")}</div>
+                    )}
+                    {/* L3: output pattern hidden by default — visible in edit modal */}
+                    {/* L4: lang code hidden — visible in edit modal */}
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  {/* Enabled toggle */}
+                  <button
+                    onClick={() => updateMutation.mutate({ id: task.id, payload: { enabled: task.enabled ? 0 : 1 } })}
+                    className={`rounded-full border px-3 py-1 text-[11.5px] font-medium ${task.enabled ? "border-[var(--green-border)] bg-[var(--green-dim)] text-[var(--green)]" : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-3)]"}`}
+                  >
+                    {task.enabled ? t("translation_languages.enabled") : t("translation_languages.disabled")}
+                  </button>
+                  {/* Edit stays inline (≤2 clicks); Delete → overflow menu */}
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={() => openEdit(task)} className="text-[11px] text-[var(--text-2)] hover:text-[var(--text)]">{t("translation_languages.edit")}</button>
+                    <RowActionsMenu
+                      items={[
+                        {
+                          label: t("translation_languages.delete"),
+                          danger: true,
+                          onClick: () => handleDelete(task),
+                        },
+                      ]}
+                    />
                   </div>
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-2">
-                <button onClick={() => updateMutation.mutate({ id: task.id, payload: { enabled: task.enabled ? 0 : 1 } })} className={`rounded-full px-3 py-1.5 text-xs font-medium ${task.enabled ? "bg-green-900/30 text-green-400" : "bg-gray-800 text-gray-500"}`}>{task.enabled ? t("translation_languages.enabled") : t("translation_languages.disabled")}</button>
-                <button onClick={() => openEdit(task)} className="text-xs text-gray-400 hover:text-gray-200">{t("translation_languages.edit")}</button>
-                <button onClick={() => handleDelete(task)} className="text-xs text-gray-600 hover:text-red-400">{t("translation_languages.delete")}</button>
-              </div>
             </div>
-          </div>
-        ))}
-        {tasks.length === 0 && <div className="col-span-full"><EmptyHint text={t("translation_languages.noTasks")} subtext={t("translation_languages.noTasksHint")} /></div>}
-      </section>
+          ))}
+          {tasks.length === 0 && <div className="col-span-full"><EmptyHint text={t("translation_languages.noTasks")} subtext={t("translation_languages.noTasksHint")} /></div>}
+        </section>
+      </div>
 
       {editing && (
         <ModalShell
           title={isNew ? t("translation_languages.addModal") : t("translation_languages.editModal")}
           onClose={() => { setEditing(null); setIsNew(false); }}
           overlayClassName="fixed inset-0 z-50 bg-black/70 p-0 md:p-4"
-          panelClassName={`mx-auto flex w-full flex-col border border-gray-700 bg-gray-900 ${isMobile ? "h-full rounded-none overflow-y-auto p-4" : "mt-8 max-w-xl rounded-3xl p-6"}`}
+          panelClassName={`mx-auto flex w-full flex-col border border-[var(--border)] bg-[var(--surface)] ${isMobile ? "h-full overflow-y-auto rounded-none p-4" : "mt-8 max-w-xl rounded-xl p-6"}`}
         >
           <div className="mt-4 space-y-4">
-                <div className="rounded-2xl border border-gray-800 bg-gray-950/60 p-3">
-                  <div className="mb-1 text-sm font-medium text-gray-300">{t("translation_languages.sourceLang")}</div>
-                  <div className="inline-flex rounded-full bg-blue-950/60 px-3 py-1 text-sm font-semibold text-blue-100">{t("translation_languages.sourceAutoBadge")}</div>
-                  <p className="mt-2 text-xs text-gray-500">{t("translation_languages.sourceAutoHelp")}</p>
+                <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
+                  <div className="mb-1 text-[13px] font-medium text-[var(--text-2)]">{t("translation_languages.sourceLang")}</div>
+                  <div className="inline-flex rounded-full border border-[var(--accent-border)] bg-[var(--accent-dim)] px-3 py-1 text-[13px] font-semibold text-[var(--accent)]">{t("translation_languages.sourceAutoBadge")}</div>
+                  <p className="mt-2 text-[11px] text-[var(--text-3)]">{t("translation_languages.sourceAutoHelp")}</p>
                 </div>
                 <SelectField
                   label={t("translation_languages.targetLang")}
@@ -238,7 +277,7 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
                   required
                 />
                 <div>
-                  <div className="mb-2 text-sm font-medium text-gray-300">{t("translation_languages.outputFormat")}</div>
+                  <div className="mb-2 text-[13px] font-medium text-[var(--text-2)]">{t("translation_languages.outputFormat")}</div>
                   <div className="flex flex-wrap gap-2">
                     {OUTPUT_FORMATS.map((format) => {
                       const active = selectedOutputFormat === format;
@@ -249,20 +288,20 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
                             setSelectedOutputFormat(format);
                             setEditing({ ...editing, output_pattern: applyOutputFormat(editing.output_pattern, format) });
                           }}
-                          className={`rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wide ${active ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-300 hover:bg-gray-700"}`}
+                          className={`rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wide ${active ? "bg-[var(--accent)] text-white" : "bg-[var(--surface-2)] text-[var(--text-2)] hover:bg-[var(--surface-3)] hover:text-[var(--text)]"}`}
                         >
                           {format}
                         </button>
                       );
                     })}
                   </div>
-                  <p className="mt-1 text-[10px] text-gray-600">{t("translation_languages.outputFormatHelp")}</p>
+                  <p className="mt-1 text-[11px] text-[var(--text-3)]">{t("translation_languages.outputFormatHelp")}</p>
                 </div>
                 {hasMismatch && (
-                  <div className="rounded-2xl border border-yellow-700/40 bg-yellow-900/20 p-3 text-xs text-yellow-100">
+                  <div className="rounded-lg border border-[var(--yellow-border)] bg-[var(--yellow-dim)] p-3 text-xs text-[var(--yellow)]">
                     {t("translation_languages.formatMismatch", { selected: selectedOutputFormat, detected: patternFormat })}
                     <div>
-                      <button onClick={() => setEditing({ ...editing, output_pattern: applyOutputFormat(editing.output_pattern, selectedOutputFormat) })} className="mt-2 rounded-lg bg-yellow-700 px-2 py-1 font-medium text-white">
+                      <button onClick={() => setEditing({ ...editing, output_pattern: applyOutputFormat(editing.output_pattern, selectedOutputFormat) })} className="mt-2 rounded-lg bg-[var(--yellow)] px-2 py-1 font-medium text-black">
                         {t("translation_languages.fixPattern")}
                       </button>
                     </div>
@@ -270,16 +309,16 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
                 )}
                 <Field label={t("translation_languages.outputPattern")} value={editing.output_pattern || ""} onChange={(v) => setEditing({ ...editing, output_pattern: v })} placeholder="{{name}}.{{lang_code}}.srt" error={patternError} help={t("translation_languages.patternHelp")} />
                 <div>
-                  <button onClick={() => setEditing({ ...editing, output_pattern: `{{name}}.{{lang_code}}.${selectedOutputFormat}` })} className="rounded-lg bg-gray-800 px-2 py-1 text-[11px] text-gray-200">
+                  <button onClick={() => setEditing({ ...editing, output_pattern: `{{name}}.{{lang_code}}.${selectedOutputFormat}` })} className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[11px] text-[var(--text-2)]">
                     {t("translation_languages.resetRecommended")}
                   </button>
                 </div>
-                {previewExample && <div className="rounded-2xl bg-gray-800 p-3 text-xs font-mono"><div className="text-gray-500">{t("translation_languages.previewSource")} <span className="text-gray-400">The.Matrix.1999.srt</span></div><div className="mt-1 text-gray-500">{t("translation_languages.previewOutput")} <span className="text-green-400">{previewExample}</span></div></div>}
-                {!showPromptOverride ? <button onClick={() => setShowPromptOverride(true)} className="text-xs text-blue-400">{t("translation_languages.addPromptOverride")}</button> : <div><div className="mb-1 flex items-center justify-between"><label className="text-sm font-medium text-gray-300">{t("translation_languages.promptOverride")}</label><button onClick={() => { setShowPromptOverride(false); setEditing({ ...editing, prompt_override: "" }); }} className="text-[10px] text-gray-600">{t("translation_languages.removePromptOverride")}</button></div><textarea value={editing.prompt_override || ""} onChange={(e) => setEditing({ ...editing, prompt_override: e.target.value })} rows={5} placeholder={t("translation_languages.promptOverridePlaceholder")} className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-2 text-xs text-gray-200 font-mono" /><p className="mt-1 text-[10px] text-gray-600">{t("translation_languages.promptOverrideHint")}</p></div>}
+                {previewExample && <div className="rounded-lg bg-[var(--surface-2)] p-3 text-xs font-mono"><div className="text-[var(--text-3)]">{t("translation_languages.previewSource")} <span className="text-[var(--text-2)]">The.Matrix.1999.srt</span></div><div className="mt-1 text-[var(--text-3)]">{t("translation_languages.previewOutput")} <span className="text-[var(--green)]">{previewExample}</span></div></div>}
+                {!showPromptOverride ? <button onClick={() => setShowPromptOverride(true)} className="text-xs text-[var(--accent)]">{t("translation_languages.addPromptOverride")}</button> : <div><div className="mb-1 flex items-center justify-between"><label className="text-[13px] font-medium text-[var(--text-2)]">{t("translation_languages.promptOverride")}</label><button onClick={() => { setShowPromptOverride(false); setEditing({ ...editing, prompt_override: "" }); }} className="text-[11px] text-[var(--text-3)]">{t("translation_languages.removePromptOverride")}</button></div><textarea value={editing.prompt_override || ""} onChange={(e) => setEditing({ ...editing, prompt_override: e.target.value })} rows={5} placeholder={t("translation_languages.promptOverridePlaceholder")} className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs font-mono text-[var(--text)] outline-none focus:border-[var(--accent)]" /><p className="mt-1 text-[11px] text-[var(--text-3)]">{t("translation_languages.promptOverrideHint")}</p></div>}
           </div>
-          <div className={`mt-6 flex gap-3 ${isMobile ? "sticky bottom-0 bg-gray-900 pt-4" : "justify-end"}`}>
-            <button onClick={() => { setEditing(null); setIsNew(false); }} className="flex-1 md:flex-none px-4 py-3 text-sm text-gray-400">{t("common.cancel")}</button>
-            <button onClick={handleSave} disabled={!canSave} className="flex-1 md:flex-none rounded-2xl bg-blue-600 px-4 py-3 text-sm font-medium disabled:opacity-50">{isNew ? t("translation_languages.create") : t("common.save")}</button>
+          <div className={`mt-6 flex gap-3 ${isMobile ? "sticky bottom-0 bg-[var(--surface)] pt-4" : "justify-end"}`}>
+            <button onClick={() => { setEditing(null); setIsNew(false); }} className="flex-1 px-4 py-2.5 text-[13px] text-[var(--text-2)] md:flex-none">{t("common.cancel")}</button>
+            <button onClick={handleSave} disabled={!canSave} className="flex-1 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-[13px] font-medium text-white disabled:opacity-50 md:flex-none">{isNew ? t("translation_languages.create") : t("common.save")}</button>
           </div>
         </ModalShell>
       )}
@@ -298,8 +337,8 @@ function SelectField({ label, value, onChange, options, help, required }: { labe
 
   return (
     <div>
-      <label htmlFor={selectId} className="mb-1 block text-sm font-medium text-gray-300">
-        {label} {required && <span className="text-red-400">*</span>}
+      <label htmlFor={selectId} className="mb-1.5 block text-[12px] font-medium text-[var(--text-2)]">
+        {label} {required && <span className="text-[var(--red)]">*</span>}
       </label>
       <select
         id={selectId}
@@ -307,13 +346,13 @@ function SelectField({ label, value, onChange, options, help, required }: { labe
         onChange={(e) => onChange(e.target.value)}
         aria-describedby={help ? helpId : undefined}
         required={required}
-        className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-base leading-6 text-gray-100 md:text-sm"
+        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[13px] leading-6 text-[var(--text)] outline-none focus:border-[var(--accent)]"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>{option.label}</option>
         ))}
       </select>
-      {help && <p id={helpId} className="mt-1 text-xs leading-5 text-gray-400">{help}</p>}
+      {help && <p id={helpId} className="mt-1 text-[11.5px] leading-6 text-[var(--text-3)]">{help}</p>}
     </div>
   );
 }

@@ -2,11 +2,10 @@ import type { Dispatch, SetStateAction } from "react";
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { NAV_ITEMS } from "./constants";
-import { StatusPill } from "../ui/primitives";
 
 interface DesktopSidebarProps {
-  collapsed: boolean;
-  setCollapsed: Dispatch<SetStateAction<boolean>>;
+  collapsed?: boolean;
+  setCollapsed?: Dispatch<SetStateAction<boolean>>;
   queueRunning: boolean;
   errorCount: number;
   modelName: string;
@@ -15,8 +14,6 @@ interface DesktopSidebarProps {
 }
 
 export function DesktopSidebar({
-  collapsed,
-  setCollapsed,
   queueRunning,
   errorCount,
   modelName,
@@ -25,23 +22,24 @@ export function DesktopSidebar({
 }: DesktopSidebarProps) {
   const { t } = useTranslation();
   return (
-    <nav className={`${collapsed ? "w-20" : "w-20 lg:w-52"} bg-gray-900 border-r border-gray-800 flex flex-col transition-all duration-200 shrink-0`}>
-      <div className="p-4 border-b border-gray-800 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => setCollapsed((c) => !c)}
-          className="h-10 w-10 rounded-2xl bg-gray-800 hover:bg-gray-700 text-lg"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >🎬</button>
-        {!collapsed && (
-          <div className="hidden min-w-0 lg:block">
-            <h1 className="text-sm font-semibold text-white leading-tight">SubSmelt</h1>
-            <p className="font-mono text-[11px] leading-tight text-gray-400">v{__APP_VERSION__}</p>
-          </div>
-        )}
+    // Phase 5: auto-compact at small desktop widths (w-20 compact, lg:w-52 full)
+    <nav className="flex w-20 lg:w-52 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface)]">
+      {/* Logo row — version shown as tooltip on logo per Phase 5 */}
+      <div className="flex h-[50px] items-center gap-2.5 border-b border-[var(--border)] px-3.5">
+        <div
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] bg-gradient-to-br from-[#4493f8] to-[#a371f7] text-sm cursor-default"
+          title={`SubSmelt v${__APP_VERSION__}`}
+        >
+          🎬
+        </div>
+        {/* hidden at compact width, shown at lg */}
+        <div className="hidden min-w-0 lg:block">
+          <h1 className="text-sm font-semibold leading-tight tracking-[-0.3px] text-[var(--text)]">SubSmelt</h1>
+          {/* Version line hidden — promoted to logo tooltip */}
+        </div>
       </div>
 
-      <div className="flex-1 py-3 px-2 space-y-1">
+      <div className="flex-1 space-y-0.5 overflow-y-auto p-1.5">
         {NAV_ITEMS.map((item) => {
           const isActive = currentPath === item.path;
           const showBadge = item.path === "/" && errorCount > 0;
@@ -51,68 +49,64 @@ export function DesktopSidebar({
               to={item.path}
               aria-label={t(item.labelKey)}
               title={t(item.labelKey)}
-              className={`w-full text-left px-3 py-3 rounded-2xl text-sm flex items-center gap-3 transition-colors relative ${isActive ? "bg-blue-600/15 text-white border border-blue-500/30" : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/60"}`}
+              className={`relative flex items-center gap-2.5 rounded-lg border px-[9px] py-[7px] text-[13px] transition-colors ${isActive ? "border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]" : "border-transparent text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"}`}
             >
-              <span className="text-lg shrink-0">{item.icon}</span>
-              {!collapsed && <span className="hidden flex-1 lg:inline">{t(item.labelKey)}</span>}
-              {showBadge && <span className="absolute top-2 right-2 bg-red-600 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">{errorCount}</span>}
+              <span className="w-[18px] shrink-0 text-center text-sm">{item.icon}</span>
+              {/* Label hidden at compact width, shown at lg */}
+              <span className="hidden flex-1 lg:inline">{t(item.labelKey)}</span>
+              {showBadge && <span className="ml-auto min-w-[17px] rounded-full bg-[var(--red)] px-1.5 py-px text-center text-[9px] font-bold text-white">{errorCount}</span>}
             </NavLink>
           );
         })}
       </div>
 
-      <div className="border-t border-gray-800 p-4 space-y-3">
-        <div className="grid grid-cols-1 gap-2">
-          <SidebarStatus label={t(queueRunning ? "app.queueRunning" : "app.queueIdle")} dot={queueRunning ? "bg-green-500 animate-pulse" : "bg-gray-600"} collapsed={collapsed} />
-          <SidebarStatus label={t(watcherRunning ? "app.watcherActive" : "app.watcherInactive")} dot={watcherRunning ? "bg-emerald-500" : "bg-gray-600"} collapsed={collapsed} />
+      <div className="border-t border-[var(--border)] px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2.5">
+        {/* Queue status dot — always shown */}
+        <div className="flex items-center gap-2 px-0.5 py-1 text-[11.5px] text-[var(--text-2)]">
+          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${queueRunning ? "bg-[var(--green)] shadow-[0_0_0_3px_var(--green-dim)] animate-pulse" : "bg-[var(--text-3)]"}`} />
+          <span className="hidden lg:inline">{t(queueRunning ? "app.queueRunning" : "app.queueIdle")}</span>
         </div>
-        {!collapsed && modelName && <div className="hidden truncate rounded-xl border border-gray-800 bg-gray-950/60 p-3 text-xs text-gray-400 lg:block" title={modelName}>{modelName}</div>}
+        {/* Watcher status */}
+        <div className="flex items-center gap-2 px-0.5 py-1 text-[11.5px]">
+          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${watcherRunning ? "bg-[var(--green)]" : "bg-[var(--text-3)]"}`} />
+          <span className={`hidden lg:inline ${watcherRunning ? "text-[var(--text-2)]" : "text-[var(--text-3)]"}`}>{t(watcherRunning ? "app.watcherActive" : "app.watcherInactive")}</span>
+        </div>
+        {/* Phase 5: model-name badge demoted to tooltip — still rendered but compact */}
+        {modelName && (
+          <div
+            className="mt-1.5 hidden lg:flex items-center gap-1.5 rounded-[7px] border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1"
+            title={modelName}
+          >
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent)]" />
+            <span className="truncate font-mono text-[11px] text-[var(--text-2)]">{modelName}</span>
+          </div>
+        )}
       </div>
     </nav>
   );
 }
 
-function SidebarStatus({ label, dot, collapsed }: { label: string; dot: string; collapsed: boolean }) {
-  return (
-    <div className="flex items-center gap-2 rounded-xl bg-gray-950/60 border border-gray-800 px-3 py-2">
-      <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${dot}`} />
-      {!collapsed && <span className="hidden truncate text-xs text-gray-400 lg:inline">{label}</span>}
-    </div>
-  );
-}
-
-export function TopStatusBar({ queueRunning, watcherRunning, modelName }: { queueRunning: boolean; watcherRunning: boolean; modelName: string }) {
-  const { t } = useTranslation();
-  return (
-    <div className="sticky top-0 z-20 border-b border-gray-800/80 bg-gray-950/90 backdrop-blur">
-      <div className="flex items-center gap-2 overflow-x-auto px-4 py-3.5 text-sm text-gray-300 sm:px-6">
-        <StatusPill label={t(queueRunning ? "app.queueRunning" : "app.queueIdle")} tone={queueRunning ? "green" : "gray"} />
-        <StatusPill label={t(watcherRunning ? "app.watcherActive" : "app.watcherInactive")} tone={watcherRunning ? "emerald" : "gray"} />
-        {modelName && <StatusPill label={modelName} tone="blue" truncate />}
-      </div>
-    </div>
-  );
+export function TopStatusBar(_props: { queueRunning: boolean; watcherRunning: boolean; modelName: string }) {
+  return <></>;
 }
 
 export function MobileBottomNav({ currentPath }: { currentPath: string }) {
   const { t } = useTranslation();
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-800 bg-gray-950/95 backdrop-blur md:hidden">
-      <div className="grid grid-cols-4 gap-1 px-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2">
-        {NAV_ITEMS.map((item) => {
-          const active = currentPath === item.path;
-          return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={`flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-xs ${active ? "bg-blue-600/15 text-white" : "text-gray-400"}`}
-            >
-              <span className="text-base">{item.icon}</span>
-              <span>{t(item.labelKey)}</span>
-            </NavLink>
-          );
-        })}
-      </div>
-    </div>
+    <nav className="fixed inset-x-0 bottom-0 z-30 grid h-[58px] grid-cols-4 border-t border-[var(--border)] bg-[var(--surface)] pb-[env(safe-area-inset-bottom)] md:hidden">
+      {NAV_ITEMS.map((item) => {
+        const active = currentPath === item.path;
+        return (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            className={`flex flex-col items-center justify-center gap-1 text-[10.5px] ${active ? "text-[var(--accent)]" : "text-[var(--text-2)]"}`}
+          >
+            <span className="text-[19px]">{item.icon}</span>
+            <span>{t(item.labelKey)}</span>
+          </NavLink>
+        );
+      })}
+    </nav>
   );
 }

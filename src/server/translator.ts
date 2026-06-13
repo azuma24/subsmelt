@@ -9,6 +9,7 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import type { LlmMode, ResolvedConnection } from "./connections.js";
 
 export type CloudProvider = "local" | "openai" | "anthropic" | "gemini";
 
@@ -1092,6 +1093,15 @@ export interface TranslateFileOptions {
   onAnalysis?: (analysis: string) => void;
   abortSignal?: AbortSignal;
   disableToolCalls?: boolean;
+  /**
+   * Multi-connection pool. When provided (length ≥ 1) this overrides the single
+   * apiKey/apiHost/model/provider fields. The first entry is the primary.
+   */
+  connections?: ResolvedConnection[];
+  /** single | fallback | parallel. Defaults to "single". */
+  llmMode?: LlmMode;
+  /** Fired once per connection the moment it first produces a translation. */
+  onConnectionUsed?: (info: { id: string; label: string }) => void;
 }
 
 export function isAutomaticSourceLanguage(sourceLang?: string): boolean {
@@ -1120,6 +1130,20 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // Use per-job timeout if provided, otherwise fall back to module default
   const jobTimeoutMs = opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
 
+  // Resolve the connection pool. Falls back to the single legacy fields so
+  // existing callers (and single mode) behave exactly as before.
+  const connections: ResolvedConnection[] = (opts.connections && opts.connections.length > 0)
+    ? opts.connections
+    : [{ id: "default", label: "default", apiKey: opts.apiKey, apiHost: opts.apiHost, model: opts.model, provider: opts.provider }];
+  const llmMode: LlmMode = opts.llmMode || "single";
+  const primary = connections[0];
+  const usedConnIds = new Set<string>();
+  const markUsed = (c: ResolvedConnection) => {
+    if (usedConnIds.has(c.id)) return;
+    usedConnIds.add(c.id);
+    opts.onConnectionUsed?.({ id: c.id, label: c.label });
+  };
+
   let subtitle: any[];
   if (Array.isArray(parsed)) {
     subtitle = parsed.filter((line: any) => line.type === "cue");
@@ -1145,10 +1169,10 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // waste tokens + inject a large blob into every chunk's system prompt.
   const skipAnalysis = totalCues < 500;
   const analysis = skipAnalysis ? "" : await analyzeSubtitlesForContext(allTexts, {
-    apiKey: opts.apiKey,
-    apiHost: opts.apiHost,
-    model: opts.model,
-    provider: opts.provider,
+    apiKey: primary.apiKey,
+    apiHost: primary.apiHost,
+    model: primary.model,
+    provider: primary.provider,
     lang: opts.lang,
     temperature: 0.3,
     abortSignal: opts.abortSignal,
@@ -1171,10 +1195,104 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   const indexMap = new Map<any, number>();
   subtitle.forEach((cue, idx) => indexMap.set(cue, idx));
 
+  // ── Multi-connection helpers ────────────────────────────────────────────
+  // In parallel mode each worker is assigned a primary connection (round-robin
+  // by index); the remaining connections act as per-chunk fallbacks. In single
+  // and fallback modes the connections are tried in their listed order.
+  function connectionOrderFor(workerIndex: number): ResolvedConnection[] {
+    if (llmMode !== "parallel" || connections.length <= 1) return connections;
+    const primaryIdx = workerIndex % connections.length;
+    return [connections[primaryIdx], ...connections.filter((_, i) => i !== primaryIdx)];
+  }
+
+  async function translateChunkWithFallback(
+    coreText: string[],
+    order: ResolvedConnection[],
+    contextPromptPrefix: string
+  ): Promise<string[] | null> {
+    for (const conn of order) {
+      try {
+        const result = await retryTranslate(
+          (attempt) => {
+            const attemptTemp = Math.max(
+              0.1,
+              Math.min(2, opts.temperature + (attempt - 1) * 0.15 + (Math.random() - 0.5) * 0.1)
+            );
+            return translateChunk(coreText, {
+              apiKey: conn.apiKey,
+              apiHost: conn.apiHost,
+              model: conn.model,
+              provider: conn.provider,
+              systemPrompt,
+              temperature: attemptTemp,
+              abortSignal: opts.abortSignal,
+              disableToolCalls: opts.disableToolCalls,
+              requestTimeoutMs: jobTimeoutMs,
+              contextPromptPrefix,
+            }).then((r) => {
+              if (!Array.isArray(r) || r.length !== coreText.length) {
+                throw new Error("did not match schema");
+              }
+              return r;
+            });
+          },
+          2,
+          1000,
+          opts.onRetry
+        );
+        markUsed(conn);
+        return result;
+      } catch (e: any) {
+        if (e?.message === "STOP_REQUESTED") throw e;
+        // exhausted retries on this connection — cascade to the next
+      }
+    }
+    return null;
+  }
+
+  async function translateSingleWithFallback(
+    lineText: string,
+    order: ResolvedConnection[],
+    retries = 3
+  ): Promise<string> {
+    let lastErr: any;
+    for (const conn of order) {
+      try {
+        const r = await retryTranslate(
+          (_) =>
+            translateSingle(lineText, {
+              apiKey: conn.apiKey,
+              apiHost: conn.apiHost,
+              model: conn.model,
+              provider: conn.provider,
+              systemPrompt,
+              temperature: opts.temperature,
+              abortSignal: opts.abortSignal,
+              disableToolCalls: opts.disableToolCalls,
+              requestTimeoutMs: jobTimeoutMs,
+            }),
+          retries,
+          1000,
+          opts.onRetry
+        );
+        markUsed(conn);
+        return r;
+      } catch (e: any) {
+        if (e?.message === "STOP_REQUESTED") throw e;
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error("All LLM connections failed");
+  }
+
   const chunks = splitIntoChunks(subtitle, opts.chunkSize);
   let completedCues = 0;
   const contextSize = opts.contextSize;
-  const concurrency = Math.max(1, Math.min(8, opts.parallelChunks || 1));
+  const configuredConcurrency = Math.max(1, Math.min(8, opts.parallelChunks || 1));
+  // In parallel mode, ensure enough workers to actually exercise every connection.
+  const concurrency = llmMode === "parallel"
+    ? Math.max(1, Math.min(8, Math.max(configuredConcurrency, connections.length)))
+    : configuredConcurrency;
 
   // Concurrency-limited chunk processor.
   // Each slot processes chunks from the shared queue independently.
@@ -1185,7 +1303,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // either sets it to true (both pass the check in the same microtask tick).
   let saveChain = Promise.resolve();
 
-  async function processChunk(block: any[]) {
+  async function processChunk(block: any[], workerIndex: number) {
     const coreIndices = block
       .map((cue: any) => indexMap.get(cue) as number)
       .filter((n: number) => typeof n === "number")
@@ -1233,38 +1351,12 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       contextPromptPrefix += "[Translate ONLY the lines below]\n";
     }
 
-    // Single retryTranslate call with 2 attempts.
-    // Schema failures are usually systematic (model misunderstands format), not
-    // transient — more retries waste tokens without improving success rate.
+    // Connection order: per-worker primary (parallel) or listed order (single/fallback).
+    // Each connection gets 2 attempts via retryTranslate; on exhaustion we cascade
+    // to the next connection. Schema failures are usually systematic, not transient.
+    const connOrder = connectionOrderFor(workerIndex);
     try {
-      translatedWindow = await retryTranslate(
-        (attempt) => {
-          const attemptTemp = Math.max(
-            0.1,
-            Math.min(2, opts.temperature + (attempt - 1) * 0.15 + (Math.random() - 0.5) * 0.1)
-          );
-          return translateChunk(coreText, {
-            apiKey: opts.apiKey,
-            apiHost: opts.apiHost,
-            model: opts.model,
-            provider: opts.provider,
-            systemPrompt,
-            temperature: attemptTemp,
-            abortSignal: opts.abortSignal,
-            disableToolCalls: opts.disableToolCalls,
-            requestTimeoutMs: jobTimeoutMs,
-            contextPromptPrefix,
-          }).then((result) => {
-            if (!Array.isArray(result) || result.length !== coreText.length) {
-              throw new Error("did not match schema");
-            }
-            return result;
-          });
-        },
-        2,
-        1000,
-        opts.onRetry
-      );
+      translatedWindow = await translateChunkWithFallback(coreText, connOrder, contextPromptPrefix);
     } catch (e: any) {
       if (e?.message === "STOP_REQUESTED") throw e;
       translatedWindow = null;
@@ -1275,23 +1367,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       translatedWindow = new Array(coreText.length).fill(null);
       for (const idx of coreIndices) {
         const lineText = subtitle[idx]?.data?.text || "";
-        const single = await retryTranslate(
-          (_) =>
-            translateSingle(lineText, {
-              apiKey: opts.apiKey,
-              apiHost: opts.apiHost,
-              model: opts.model,
-              provider: opts.provider,
-              systemPrompt,
-              temperature: opts.temperature,
-              abortSignal: opts.abortSignal,
-              disableToolCalls: opts.disableToolCalls,
-              requestTimeoutMs: jobTimeoutMs,
-            }),
-          3,
-          1000,
-          opts.onRetry
-        );
+        const single = await translateSingleWithFallback(lineText, connOrder);
         translatedWindow![idx - coreStart] = single;
       }
     }
@@ -1321,38 +1397,24 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     });
   }
 
-  // Worker: drain the shared chunk queue
-  async function worker() {
+  // Worker: drain the shared chunk queue. workerIndex picks the primary
+  // connection in parallel mode.
+  async function worker(workerIndex: number) {
     while (chunkQueue.length > 0) {
       const block = chunkQueue.shift();
       if (!block) break;
-      await processChunk(block);
+      await processChunk(block, workerIndex);
     }
   }
 
   // Launch `concurrency` workers in parallel
-  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+  await Promise.all(Array.from({ length: concurrency }, (_, i) => worker(i)));
 
   // Fallback for untranslated
   const untranslated = subtitle.filter((l: any) => !l.data?.translatedText);
   for (const cue of untranslated) {
     if (cue?.data) {
-      cue.data.translatedText = await retryTranslate(
-        (_) =>
-          translateSingle(cue.data.text, {
-            apiKey: opts.apiKey,
-            apiHost: opts.apiHost,
-            model: opts.model,
-            provider: opts.provider,
-            systemPrompt,
-            temperature: opts.temperature,
-            abortSignal: opts.abortSignal,
-            disableToolCalls: opts.disableToolCalls,
-          }),
-        5,
-        1000,
-        opts.onRetry
-      );
+      cue.data.translatedText = await translateSingleWithFallback(cue.data.text, connections, 5);
       completedCues++;
       opts.onProgress?.(completedCues, totalCues);
     }
@@ -1367,6 +1429,7 @@ export async function testConnection(opts: {
   apiKey: string;
   apiHost: string;
   model: string;
+  provider?: CloudProvider;
 }): Promise<{ ok: boolean; message: string }> {
   try {
     const result = await translateSingle("Hello, how are you?", {

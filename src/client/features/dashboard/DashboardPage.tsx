@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
@@ -8,7 +8,7 @@ import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmModal";
 import { ModalShell } from "../../components/ModalShell";
 import type { JobRow, ScannedFile, TranscribePostAction, TranscriptionHistoryEntry } from "../../types";
-import { ActionButton, EmptyHint, StatCard } from "../../ui/primitives";
+import { ActionButton, Accordion, EmptyHint, SelectionBar, StatusStrip, StatCard, Tabs } from "../../ui/primitives";
 import { ActiveJobCard } from "./ActiveJobCard";
 import { JobsTableDesktop } from "./JobsTableDesktop";
 import { JobCardMobile } from "./JobCardMobile";
@@ -21,6 +21,9 @@ import {
 } from "./transcription-progress";
 
 type ScanResultMode = "preview" | "queued";
+type DashboardTab = "queue" | "transcription" | "scan";
+
+const SETUP_DISMISSED_KEY = "subsmelt_setup_dismissed";
 
 function str(v: unknown, fallback = ""): string {
   return typeof v === "string" ? v : fallback;
@@ -72,6 +75,11 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const [scanPlan, setScanPlan] = useState<ScanPlan | null>(null);
   const [transcriptionProgressByPath, setTranscriptionProgressByPath] = useState<Record<string, ManualTranscriptionProgress>>({});
   const [transcribingPath, setTranscribingPath] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<DashboardTab>("queue");
+  // Auto-hide onboarding: read from localStorage
+  const [setupDismissed, setSetupDismissed] = useState(() => {
+    try { return localStorage.getItem(SETUP_DISMISSED_KEY) === "1"; } catch { return false; }
+  });
 
   const scanPreviewMutation = useMutationWithInvalidation(() => api.previewScan());
   const scanMutation = useMutationWithInvalidation(() => api.scanFolder());
@@ -92,7 +100,6 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const mediaDir = str(settings._media_dir, "/media");
   const autoTranslate = str(settings.auto_translate, "1") === "1";
   const tasks = tasksQuery.data || [];
-  const taskCount = tasks.length;
   const enabledTaskCount = tasks.filter((x) => x.enabled === 1).length;
   const hasLlmConfig = Boolean(str(settings.llm_endpoint)) && Boolean(str(settings.model));
   const transcriptionEnabled = str(settings.transcription_enabled, "0") === "1";
@@ -132,6 +139,14 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
     { key: "error", label: t("dashboard.filter.error"), count: errorJobs.length },
   ];
 
+  // Auto-dismiss onboarding after first successful job
+  useEffect(() => {
+    if (!setupDismissed && doneJobs.length > 0) {
+      try { localStorage.setItem(SETUP_DISMISSED_KEY, "1"); } catch { /* ignore */ }
+      setSetupDismissed(true);
+    }
+  }, [doneJobs.length, setupDismissed]);
+
   useEffect(() => {
     const pendingIdSet = new Set(jobs.filter((j) => j.status === "pending").map((j) => j.id));
     setSelectedIds((prev) => {
@@ -158,6 +173,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
       setScanResult(result.files);
       setScanResultMode("preview");
       expandInterestingScanGroups(result.files);
+      setActiveTab("scan");
       addToast(t("dashboard.toast.scanPreviewComplete", { total: result.totalSubtitles, newJobs: result.newJobs }), "info");
     } catch (e: unknown) {
       addToast(t("dashboard.toast.scanFailed", { message: getErrorMessage(e) }), "error");
@@ -197,6 +213,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
       setScanResultMode("queued");
       expandInterestingScanGroups(result.files);
       setScanPlan(null);
+      setActiveTab("scan");
       addToast(t("dashboard.toast.scanComplete", { total: result.totalSubtitles, newJobs: result.newJobs }), "info");
     } catch (e: unknown) {
       addToast(t("dashboard.toast.scanFailed", { message: getErrorMessage(e) }), "error");
@@ -396,311 +413,379 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
       onClick: queueRunning ? handleStop : handleRunAll,
     },
   ];
+  const showQuickStart = !setupDismissed && quickChecks.some((step) => !step.done);
+
+  // Status strip segments — double as filter tabs (L1)
+  const statusSegments = [
+    { key: "all", label: t("dashboard.filter.all"), count: jobs.length, color: "text-[var(--text)]", activeColor: "text-[var(--accent)]" },
+    { key: "pending", label: t("dashboard.stat.pending"), count: pendingJobs.length, color: "text-[var(--yellow)]", activeColor: "text-[var(--yellow)]" },
+    { key: "translating", label: t("dashboard.stat.translating"), count: activeJobs.length, color: "text-[var(--accent)]", activeColor: "text-[var(--accent)]" },
+    { key: "done", label: t("dashboard.stat.done"), count: doneJobs.length, color: "text-[var(--green)]", activeColor: "text-[var(--green)]" },
+    { key: "error", label: t("dashboard.stat.errors"), count: errorJobs.length, color: "text-[var(--red)]", activeColor: "text-[var(--red)]" },
+  ];
+
+  // Dashboard tabs: Queue / Transcription / Scan results
+  const dashboardTabs = [
+    { key: "queue" as DashboardTab, label: t("dashboard.tab.queue"), count: jobs.length },
+    ...(transcriptionEnabled ? [{ key: "transcription" as DashboardTab, label: t("dashboard.tab.transcription"), count: transcriptionAttempts.length }] : []),
+    ...(scanResult ? [{ key: "scan" as DashboardTab, label: t("dashboard.tab.scan"), count: scanResult.length }] : []),
+  ];
 
   return (
-    <div className="mx-auto max-w-[1400px] space-y-6 p-4 md:p-6">
-      <div className="space-y-6">
-        <section className="rounded-3xl border border-gray-800 bg-gradient-to-br from-gray-900 to-gray-950 p-5 md:p-6">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between xl:gap-8">
-            <div className="min-w-0 flex-1">
-              <h1 className="text-balance text-2xl font-semibold tracking-tight">SubSmelt</h1>
-              <p className="mt-2 max-w-2xl text-pretty text-sm leading-6 text-gray-400">
-                {autoTranslate ? t("dashboard.scanAutoTranslateOn") : t("dashboard.scanAutoTranslateOff")}
-              </p>
-            </div>
-            <div
-              aria-label={t("dashboard.hero.scanActions")}
-              className="grid w-full gap-2 sm:grid-cols-2 xl:w-[34rem] xl:shrink-0"
-            >
-              <ActionButton className="w-full" variant="ghost" onClick={handlePreviewScan} busy={scanPreviewMutation.isPending} disabled={scanMutation.isPending}>
-                {scanPreviewMutation.isPending ? t("dashboard.previewing") : t("dashboard.previewScan")}
-              </ActionButton>
-              <ActionButton className="w-full" onClick={handleScan} busy={scanMutation.isPending} disabled={scanPreviewMutation.isPending}>
-                {scanMutation.isPending ? t("dashboard.scanning") : t("dashboard.scanFolders")}
-              </ActionButton>
-              <div className="grid grid-cols-2 gap-2 sm:col-span-2">
-                {!queueRunning ? (
-                  <>
-                    <ActionButton className="w-full" variant="success" onClick={handleRunAll} disabled={pendingJobs.length === 0}>{t("dashboard.runAll")}</ActionButton>
-                    <ActionButton
-                      className="w-full"
-                      variant="success"
-                      onClick={handleRunSelected}
-                      disabled={selectedPendingCount === 0 || startSelectedMutation.isPending}
-                    >
-                      {t("dashboard.runSelected", { count: selectedPendingCount })}
-                    </ActionButton>
-                  </>
-                ) : (
-                  <ActionButton className="col-span-2 w-full" variant="danger" onClick={handleStop}>{t("dashboard.stop")}</ActionButton>
-                )}
-              </div>
-              {jobs.length > 0 && <ActionButton className="w-full sm:col-span-2" variant="ghost" onClick={handleClearAll}>{t("dashboard.clearAll")}</ActionButton>}
-            </div>
-          </div>
+    <div className="flex min-h-full flex-col">
+      {/* ── Topbar (L1 — Executive Summary) ── */}
+      <div className="sticky top-0 z-30 flex h-[50px] shrink-0 items-center gap-2.5 border-b border-[var(--border)] bg-[var(--surface)] px-3.5 md:px-[18px]">
+        {/* Title with readable typography */}
+        <span className="flex-1 text-balance text-2xl sr-only md:not-sr-only md:text-sm font-semibold text-[var(--text)]">{t("nav.dashboard")}</span>
+        <span className="flex-1 text-pretty text-sm font-semibold text-[var(--text)] md:hidden">{t("nav.dashboard")}</span>
+        {/* Scan + Run actions */}
+        <div
+          className="flex items-center gap-1.5"
+          aria-label={t("dashboard.hero.scanActions")}
+        >
+          <ActionButton variant="ghost" size="sm" onClick={handlePreviewScan} busy={scanPreviewMutation.isPending} disabled={scanMutation.isPending}>
+            {scanPreviewMutation.isPending ? t("dashboard.previewing") : t("dashboard.previewScan")}
+          </ActionButton>
+          <ActionButton variant="ghost" size="sm" onClick={handleScan} busy={scanMutation.isPending} disabled={scanPreviewMutation.isPending}>
+            {scanMutation.isPending ? t("dashboard.scanning") : t("dashboard.scanFolders")}
+          </ActionButton>
+          <span className="mx-0.5 hidden h-[18px] w-px bg-[var(--border)] sm:block" />
+          {queueRunning ? (
+            <ActionButton variant="danger" size="sm" onClick={handleStop}>{t("dashboard.stop")}</ActionButton>
+          ) : (
+            <ActionButton variant="success" size="sm" onClick={handleRunAll} disabled={pendingJobs.length === 0}>{t("dashboard.runAll")}</ActionButton>
+          )}
+        </div>
+      </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {quickChecks.map((step, idx) => (
-              <div key={idx} className={`rounded-2xl border p-3 ${step.done ? "border-green-900/40 bg-green-900/10" : "border-gray-800 bg-gray-900/40"}`}>
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-xs font-semibold text-gray-200">{step.title}</div>
-                  <span className={`text-[10px] ${step.done ? "text-green-300" : "text-yellow-300"}`}>{step.done ? "✓" : "○"}</span>
+      {/* ── Content ── */}
+      <div className="flex-1 space-y-4 p-3.5 md:p-[18px]">
+
+        {/* L1: Hero band — StatusStrip (replaces 4 stat cards) */}
+        {/* Desktop: flex-row layout xl:flex-row; mobile: stacked */}
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:gap-4">
+          {/* Left: Status strip + active job */}
+          <div className="min-w-0 flex-1 space-y-3">
+            {/* StatusStrip — condensed stat row, each segment clickable to filter */}
+            <StatusStrip
+              segments={statusSegments}
+              activeKey={statusFilter}
+              onSelect={(key) => { setStatusFilter(key); setActiveTab("queue"); }}
+            />
+            {activeJob && <ActiveJobCard job={activeJob} pendingCount={pendingJobs.length} />}
+          </div>
+          {/* Right: quick-stat cards (kept for xl layout, condensed) — xl:w-[34rem] */}
+          <div className="grid grid-cols-2 gap-[10px] sm:grid-cols-2 xl:grid-cols-4 xl:w-[34rem]">
+            <StatCard label={t("dashboard.stat.pending")} value={pendingJobs.length} color="text-[var(--yellow)]" onClick={() => { setStatusFilter("pending"); setActiveTab("queue"); }} />
+            <StatCard label={t("dashboard.stat.translating")} value={activeJobs.length} color="text-[var(--accent)]" onClick={() => { setStatusFilter("translating"); setActiveTab("queue"); }} />
+            <StatCard label={t("dashboard.stat.done")} value={doneJobs.length} color="text-[var(--green)]" onClick={() => { setStatusFilter("done"); setActiveTab("queue"); }} />
+            <StatCard
+              label={t("dashboard.stat.errors")}
+              value={errorJobs.length}
+              color="text-[var(--red)]"
+              onClick={() => { setStatusFilter("error"); setActiveTab("queue"); }}
+            />
+          </div>
+        </div>
+
+        {/* Onboarding quick-start cards — auto-hidden after first successful job */}
+        {showQuickStart && (
+          <div>
+            <div className="mb-1 flex items-center justify-between">
+              <span className="text-[11.5px] text-[var(--text-3)]">{t("dashboard.quickStart.title")}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  try { localStorage.setItem(SETUP_DISMISSED_KEY, "1"); } catch { /* ignore */ }
+                  setSetupDismissed(true);
+                }}
+                className="text-[11px] text-[var(--text-3)] hover:text-[var(--text)]"
+              >
+                {t("dashboard.quickStart.dismiss")}
+              </button>
+            </div>
+            <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+              {quickChecks.map((step, idx) => (
+                <div key={idx} className={`rounded-xl border p-3 ${step.done ? "border-[var(--green-border)] bg-[var(--green-dim)]" : "border-[var(--border)] bg-[var(--surface)]"}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-xs font-semibold text-[var(--text)]">{step.title}</div>
+                    <span className={`text-[11px] ${step.done ? "text-[var(--green)]" : "text-[var(--yellow)]"}`}>{step.done ? "✓" : "○"}</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-[var(--text-2)]">{step.hint}</div>
+                  {!step.done && (
+                    <button onClick={step.onClick} className="mt-2 text-xs text-[var(--accent)]">{step.action}</button>
+                  )}
                 </div>
-                <div className="mt-1 text-[11px] text-gray-500">{step.hint}</div>
-                {!step.done && (
-                  <button onClick={step.onClick} className="mt-2 text-xs text-blue-400">{step.action}</button>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {activeJob && <ActiveJobCard job={activeJob} pendingCount={pendingJobs.length} />}
-
-        <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <StatCard label={t("dashboard.stat.pending")} value={pendingJobs.length} color="text-yellow-400" />
-          <StatCard label={t("dashboard.stat.translating")} value={activeJobs.length} color="text-blue-400" />
-          <StatCard label={t("dashboard.stat.done")} value={doneJobs.length} color="text-green-400" />
-          <StatCard label={t("dashboard.stat.errors")} value={errorJobs.length} color="text-red-400" />
-        </section>
-
-        {transcriptionEnabled && (
-          <section className="rounded-3xl border border-gray-800 bg-gray-900/80 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold text-white">Recent transcriptions</h2>
-                <p className="text-xs text-gray-500">History is JSON-backed and safe to keep outside the jobs queue.</p>
-              </div>
-              <span className="text-[11px] text-gray-500">{transcriptionAttempts.length} shown</span>
+              ))}
             </div>
-            {transcriptionAttempts.length === 0 ? (
-              <div className="mt-3 text-sm text-gray-500">No transcription attempts yet.</div>
-            ) : (
-              <div className="mt-3 space-y-2">
-                {transcriptionAttempts.map((attempt) => {
-                  const title = attempt.inputPath.split(/[\\/]/).pop() || attempt.inputPath;
-                  const activeRetry = transcribingPath === attempt.inputPath && retryTranscriptionMutation.isPending;
-                  return (
-                    <div key={attempt.id} className="flex flex-col gap-3 rounded-2xl border border-gray-800 bg-gray-950/50 p-3 md:flex-row md:items-center md:justify-between">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-medium text-gray-200">{title}</div>
-                        <div className="mt-1 text-xs text-gray-500">
-                          {attempt.model} • {attempt.language} • {attempt.outputFormat.toUpperCase()} • {attempt.postAction === "transcribe_and_translate" ? "queue translate" : "transcribe only"}
-                        </div>
-                        <div className="mt-1 text-xs text-gray-500">
-                          {attempt.status === "failed" ? (attempt.errorSummary || "Transcription failed") : attempt.finishedAt || attempt.startedAt}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`rounded-full px-3 py-1 text-[11px] ${attempt.status === "succeeded" ? "bg-green-900/30 text-green-300" : attempt.status === "failed" ? "bg-red-900/30 text-red-300" : "bg-blue-900/30 text-blue-300"}`}>
-                          {attempt.status}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleRetryTranscription(attempt)}
-                          disabled={activeRetry || transcribeMutation.isPending}
-                          className="rounded-lg bg-gray-800 px-3 py-2 text-xs font-medium text-gray-200 disabled:opacity-40"
-                        >
-                          {activeRetry ? "Retrying…" : "Retry"}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
+          </div>
         )}
 
-        <section className="overflow-hidden rounded-3xl border border-gray-800 bg-gray-900/80">
-          <div className="space-y-3 border-b border-gray-800 px-4 py-3">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        {/* Auto-translate notice (L2) — shown only when off */}
+        {!autoTranslate && (
+          <p className="text-[12px] text-[var(--text-2)]">
+            {t("dashboard.scanAutoTranslateOff")}
+          </p>
+        )}
+
+        {/* ── Main content area with Tabs: Queue / Transcription / Scan results ── */}
+        <section className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+          {/* Tab header + filters */}
+          <div className="space-y-3 border-b border-[var(--border)] px-3.5 py-3">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h2 className="text-balance text-sm font-semibold text-white">{t("app.queueSectionTitle")}</h2>
-                <p className="text-pretty text-xs text-gray-500">{t("app.queueSectionSubtitle")}</p>
+                <h2 className="text-[13.5px] font-semibold text-[var(--text)]">{t("app.queueSectionTitle")}</h2>
+                <p className="text-pretty text-sm text-[var(--text-3)]">{t("app.queueSectionSubtitle")}</p>
               </div>
-              <div className="flex flex-wrap gap-2 lg:justify-end">
+              {/* Dashboard tabs: Queue / Transcription / Scan results */}
+              {dashboardTabs.length > 1 && (
+                <div className="inline-flex w-fit gap-px overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-[2px]">
+                  {dashboardTabs.map((tab) => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setActiveTab(tab.key)}
+                      className={`whitespace-nowrap rounded-[6px] px-[11px] py-[3px] text-[12px] transition-colors ${activeTab === tab.key ? "bg-[var(--surface-3)] font-medium text-[var(--text)]" : "text-[var(--text-2)] hover:text-[var(--text)]"}`}
+                    >
+                      {tab.label}
+                      {tab.count > 0 && <span className={`ml-1 text-[11px] ${tab.key === "error" ? "text-[var(--red)]" : "text-[var(--text-3)]"}`}>{tab.count}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* When only one tab, show status filter tabs */}
+              {dashboardTabs.length === 1 && (
+                <div className="inline-flex w-fit gap-px overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-[2px]">
+                  {filterTabs.map((tab) => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setStatusFilter(tab.key)}
+                      className={`whitespace-nowrap rounded-[6px] px-[11px] py-[3px] text-[12px] transition-colors ${statusFilter === tab.key ? "bg-[var(--surface-3)] font-medium text-[var(--text)]" : "text-[var(--text-2)] hover:text-[var(--text)]"}`}
+                    >
+                      {tab.label}
+                      {tab.count > 0 && <span className={`ml-1 text-[11px] ${tab.key === "error" ? "text-[var(--red)]" : "text-[var(--text-3)]"}`}>{tab.count}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Queue tab: status filter tabs (when multi-tab mode) */}
+            {activeTab === "queue" && dashboardTabs.length > 1 && (
+              <div className="inline-flex w-fit gap-px overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-[2px]">
                 {filterTabs.map((tab) => (
                   <button
                     key={tab.key}
                     onClick={() => setStatusFilter(tab.key)}
-                    className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${statusFilter === tab.key ? "border border-blue-500/30 bg-blue-600/15 text-white" : "bg-gray-800 text-gray-400"}`}
+                    className={`whitespace-nowrap rounded-[6px] px-[11px] py-[3px] text-[12px] transition-colors ${statusFilter === tab.key ? "bg-[var(--surface-3)] font-medium text-[var(--text)]" : "text-[var(--text-2)] hover:text-[var(--text)]"}`}
                   >
-                    {tab.label} {tab.count > 0 && <span className="ml-1 opacity-70">{tab.count}</span>}
+                    {tab.label}
+                    {tab.count > 0 && <span className={`ml-1 text-[11px] ${tab.key === "error" ? "text-[var(--red)]" : "text-[var(--text-3)]"}`}>{tab.count}</span>}
                   </button>
                 ))}
               </div>
-            </div>
+            )}
 
-            <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-              <label className="min-w-0">
-                <span className="mb-1 block text-[10px] uppercase tracking-wide text-gray-500">{t("dashboard.queueFilterFolder")}</span>
-                <select
-                  value={folderFilter}
-                  onChange={(e) => setFolderFilter(e.target.value)}
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-xs text-gray-200"
-                >
-                  <option value="all">{t("dashboard.queueFilterAllFolders")}</option>
-                  {folderOptions.map((folder) => <option key={folder} value={folder}>{folder}</option>)}
-                </select>
-              </label>
-              <label className="min-w-0">
-                <span className="mb-1 block text-[10px] uppercase tracking-wide text-gray-500">{t("dashboard.queueFilterTarget")}</span>
-                <select
-                  value={targetFilter}
-                  onChange={(e) => setTargetFilter(e.target.value)}
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-xs text-gray-200"
-                >
-                  <option value="all">{t("dashboard.queueFilterAllTargets")}</option>
-                  {targetOptions.map((target) => <option key={target} value={target}>{target}</option>)}
-                </select>
-              </label>
-              <div className="flex items-end">
-                <button
-                  type="button"
-                  onClick={() => { setStatusFilter("all"); setFolderFilter("all"); setTargetFilter("all"); }}
-                  disabled={!hasQueueFilters}
-                  className="w-full rounded-lg bg-gray-800 px-3 py-2 text-xs font-medium text-gray-300 disabled:opacity-40"
-                >
-                  {t("dashboard.clearQueueFilters")}
-                </button>
-              </div>
-            </div>
-
-            <div className="sticky top-0 z-20 -mx-4 border-y border-gray-800 bg-gray-950/90 px-4 py-2 backdrop-blur">
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleSelectVisiblePending}
-                  disabled={visiblePendingIds.length === 0}
-                  className="rounded-lg bg-gray-800 px-3 py-2 text-xs font-medium text-gray-300 disabled:opacity-40"
-                >
-                  {t("dashboard.selectVisiblePending", { count: visiblePendingIds.length })}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRetryVisibleErrors}
-                  disabled={visibleErrorIds.length === 0 || retrySelectedMutation.isPending}
-                  className="rounded-lg bg-yellow-900/50 px-3 py-2 text-xs font-medium text-yellow-100 disabled:opacity-40"
-                >
-                  {t("dashboard.retryVisibleErrors", { count: visibleErrorIds.length })}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRetranslateVisible}
-                  disabled={visibleRetranslatableIds.length === 0 || forceSelectedMutation.isPending}
-                  className="rounded-lg bg-gray-800 px-3 py-2 text-xs font-medium text-gray-300 disabled:opacity-40"
-                >
-                  {t("dashboard.retranslateVisible", { count: visibleRetranslatableIds.length })}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRunAll}
-                  disabled={queueRunning || pendingJobs.length === 0}
-                  className="rounded-lg bg-green-700 px-3 py-2 text-xs font-medium text-white disabled:opacity-40"
-                >
-                  {t("dashboard.runAll")}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleStop}
-                  disabled={!queueRunning}
-                  className="rounded-lg bg-red-700 px-3 py-2 text-xs font-medium text-white disabled:opacity-40"
-                >
-                  {t("dashboard.stop")}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleClearAll}
-                  disabled={jobs.length === 0}
-                  className="rounded-lg bg-gray-800 px-3 py-2 text-xs font-medium text-gray-300 disabled:opacity-40"
-                >
-                  {t("dashboard.clearAll")}
-                </button>
-                <span className="w-full text-right text-[11px] text-gray-500 sm:ml-auto sm:w-auto">
-                  {t("dashboard.quickCounts", { pending: pendingJobs.length, errors: visibleErrorIds.length, done: visibleDoneIds.length })}
-                </span>
-              </div>
-            </div>
-          </div>
-          {selectedPendingCount > 0 && (
-            <div className={`border-b border-blue-900/40 bg-blue-950/20 px-4 py-3 ${isMobile ? "space-y-3" : "flex items-center justify-between gap-3"}`}>
-              <div>
-                <div className="text-sm font-medium text-blue-100">{t("dashboard.selectionSummary", { count: selectedPendingCount })}</div>
-                <div className="text-xs text-blue-200/60">{t("dashboard.selectionHint")}</div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {!queueRunning && (
+            {/* L3: Filters accordion (folder + target + clear) */}
+            {activeTab === "queue" && (
+              <Accordion title={t("dashboard.filtersLabel")} defaultOpen={hasQueueFilters}>
+                <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                  <label className="min-w-0">
+                    <span className="mb-1 block text-[11px] uppercase tracking-wide text-[var(--text-3)]">{t("dashboard.queueFilterFolder")}</span>
+                    <select
+                      value={folderFilter}
+                      onChange={(e) => setFolderFilter(e.target.value)}
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text)]"
+                    >
+                      <option value="all">{t("dashboard.queueFilterAllFolders")}</option>
+                      {folderOptions.map((folder) => <option key={folder} value={folder}>{folder}</option>)}
+                    </select>
+                  </label>
+                  <label className="min-w-0">
+                    <span className="mb-1 block text-[11px] uppercase tracking-wide text-[var(--text-3)]">{t("dashboard.queueFilterTarget")}</span>
+                    <select
+                      value={targetFilter}
+                      onChange={(e) => setTargetFilter(e.target.value)}
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text)]"
+                    >
+                      <option value="all">{t("dashboard.queueFilterAllTargets")}</option>
+                      {targetOptions.map((target) => <option key={target} value={target}>{target}</option>)}
+                    </select>
+                  </label>
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={() => { setStatusFilter("all"); setFolderFilter("all"); setTargetFilter("all"); }}
+                      disabled={!hasQueueFilters}
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs font-medium text-[var(--text-2)] disabled:opacity-40"
+                    >
+                      {t("dashboard.clearQueueFilters")}
+                    </button>
+                  </div>
+                </div>
+                {/* Bulk action buttons — kept accessible here in the filters accordion */}
+                <div className="mt-3 flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    onClick={handleRunSelected}
-                    disabled={startSelectedMutation.isPending}
-                    className="rounded-lg bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                    onClick={handleSelectVisiblePending}
+                    disabled={visiblePendingIds.length === 0}
+                    className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs font-medium text-[var(--text-2)] disabled:opacity-40"
                   >
-                    {t("dashboard.runSelected", { count: selectedPendingCount })}
+                    {t("dashboard.selectVisiblePending", { count: visiblePendingIds.length })}
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={handleDeleteSelected}
-                  disabled={deleteSelectedMutation.isPending}
-                  className="rounded-lg bg-red-600 px-3 py-2 text-xs font-medium text-white disabled:opacity-50"
-                >
-                  {t("dashboard.deleteSelected")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedIds(new Set())}
-                  className="rounded-lg bg-gray-800 px-3 py-2 text-xs font-medium text-gray-300"
-                >
-                  {t("dashboard.clearSelection")}
-                </button>
+                  <button
+                    type="button"
+                    onClick={handleRetryVisibleErrors}
+                    disabled={visibleErrorIds.length === 0 || retrySelectedMutation.isPending}
+                    className="rounded-lg border border-[var(--yellow-border)] bg-[var(--yellow-dim)] px-3 py-2 text-xs font-medium text-[var(--yellow)] disabled:opacity-40"
+                  >
+                    {t("dashboard.retryVisibleErrors", { count: visibleErrorIds.length })}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRetranslateVisible}
+                    disabled={visibleRetranslatableIds.length === 0 || forceSelectedMutation.isPending}
+                    className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs font-medium text-[var(--text-2)] disabled:opacity-40"
+                  >
+                    {t("dashboard.retranslateVisible", { count: visibleRetranslatableIds.length })}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleClearAll}
+                    disabled={jobs.length === 0}
+                    className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs font-medium text-[var(--text-2)] disabled:opacity-40"
+                  >
+                    {t("dashboard.clearAll")}
+                  </button>
+                </div>
+              </Accordion>
+            )}
+          </div>
+
+          {/* L3: SelectionBar — appears only when items selected */}
+          <SelectionBar
+            count={selectedPendingCount}
+            summaryLabel={t("dashboard.selectionSummary", { count: selectedPendingCount })}
+            hintLabel={t("dashboard.selectionHint")}
+            onClear={() => setSelectedIds(new Set())}
+            clearLabel={t("dashboard.clearSelection")}
+            isMobile={isMobile}
+          >
+            {!queueRunning && (
+              <button
+                type="button"
+                onClick={handleRunSelected}
+                disabled={startSelectedMutation.isPending}
+                className="rounded-lg bg-[var(--green)] px-3 py-2 text-xs font-semibold text-black disabled:opacity-50"
+              >
+                {t("dashboard.runSelected", { count: selectedPendingCount })}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleDeleteSelected}
+              disabled={deleteSelectedMutation.isPending}
+              className="rounded-lg border border-[var(--red-border)] bg-transparent px-3 py-2 text-xs font-medium text-[var(--red)] disabled:opacity-50"
+            >
+              {t("dashboard.deleteSelected")}
+            </button>
+          </SelectionBar>
+
+          {/* Tab content */}
+          {activeTab === "queue" && (
+            isMobile ? (
+              <div className="space-y-2 p-3.5">
+                {filteredJobs.length === 0 && <EmptyHint text={t("dashboard.noJobsMatchFilter")} subtext={t("dashboard.emptyJobsHint")} />}
+                {filteredJobs.map((job) => (
+                  <JobCardMobile
+                    key={job.id}
+                    job={job}
+                    currentJobId={currentJobId}
+                    expandedErrors={expandedErrors}
+                    setExpandedErrors={setExpandedErrors}
+                    selected={selectedIds.has(job.id)}
+                    onToggleSelected={toggleSelectedJob}
+                    onPreview={setPreviewJobId}
+                    onOpenLogs={(jobId) => navigate(`/logs?job=${jobId}`)}
+                  />
+                ))}
               </div>
+            ) : (
+              <JobsTableDesktop jobs={filteredJobs} currentJobId={currentJobId} expandedErrors={expandedErrors} setExpandedErrors={setExpandedErrors} selectedIds={selectedIds} setSelectedIds={setSelectedIds} onPreview={setPreviewJobId} onOpenLogs={(jobId) => navigate(`/logs?job=${jobId}`)} />
+            )
+          )}
+
+          {activeTab === "transcription" && transcriptionEnabled && (
+            <div className="p-3.5">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <h2 className="text-[13.5px] font-semibold text-[var(--text)]">Recent transcriptions</h2>
+                  <p className="text-[11px] text-[var(--text-3)]">History is JSON-backed and safe to keep outside the jobs queue.</p>
+                </div>
+                <span className="text-[11px] text-[var(--text-3)]">{transcriptionAttempts.length} shown</span>
+              </div>
+              {transcriptionAttempts.length === 0 ? (
+                <div className="text-[13px] text-[var(--text-3)]">No transcription attempts yet.</div>
+              ) : (
+                <div className="space-y-2">
+                  {transcriptionAttempts.map((attempt) => {
+                    const title = attempt.inputPath.split(/[\\/]/).pop() || attempt.inputPath;
+                    const activeRetry = transcribingPath === attempt.inputPath && retryTranscriptionMutation.isPending;
+                    return (
+                      <div key={attempt.id} className="flex flex-col gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3 md:flex-row md:items-center md:justify-between">
+                        <div className="min-w-0">
+                          <div className="truncate text-[13px] font-medium text-[var(--text)]">{title}</div>
+                          <div className="mt-1 text-[11px] text-[var(--text-3)]">
+                            {attempt.model} • {attempt.language} • {attempt.outputFormat.toUpperCase()} • {attempt.postAction === "transcribe_and_translate" ? "queue translate" : "transcribe only"}
+                          </div>
+                          <div className="mt-1 text-[11px] text-[var(--text-3)]">
+                            {attempt.status === "failed" ? (attempt.errorSummary || "Transcription failed") : attempt.finishedAt || attempt.startedAt}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`rounded-full border px-3 py-1 text-[11px] ${attempt.status === "succeeded" ? "border-[var(--green-border)] bg-[var(--green-dim)] text-[var(--green)]" : attempt.status === "failed" ? "border-[var(--red-border)] bg-[var(--red-dim)] text-[var(--red)]" : "border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]"}`}>
+                            {attempt.status}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRetryTranscription(attempt)}
+                            disabled={activeRetry || transcribeMutation.isPending}
+                            className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs font-medium text-[var(--text)] disabled:opacity-40"
+                          >
+                            {activeRetry ? "Retrying…" : "Retry"}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
-          {isMobile ? (
-            <div className="space-y-3 p-4">
-              {filteredJobs.length === 0 && <EmptyHint text={t("dashboard.noJobsMatchFilter")} subtext={t("dashboard.emptyJobsHint")} />}
-              {filteredJobs.map((job) => (
-                <JobCardMobile
-                  key={job.id}
-                  job={job}
-                  currentJobId={currentJobId}
-                  expandedErrors={expandedErrors}
-                  setExpandedErrors={setExpandedErrors}
-                  selected={selectedIds.has(job.id)}
-                  onToggleSelected={toggleSelectedJob}
-                  onPreview={setPreviewJobId}
-                  onOpenLogs={(jobId) => navigate(`/logs?job=${jobId}`)}
-                />
-              ))}
+
+          {activeTab === "scan" && scanResult && (
+            <div className="p-3.5">
+              <ScanResultsPanel
+                files={scanResult}
+                filter={scanListFilter}
+                setFilter={setScanListFilter}
+                search={scanSearch}
+                setSearch={setScanSearch}
+                expandedGroups={expandedScanGroups}
+                setExpandedGroups={setExpandedScanGroups}
+                jobsById={jobsById}
+                selectedIds={selectedIds}
+                setSelectedIds={setSelectedIds}
+                mode={scanResultMode}
+                onQueueAll={handleScan}
+                onTranscribe={handleTranscribe}
+                transcriptionEnabled={transcriptionEnabled}
+                transcriptionProgressByPath={transcriptionProgressByPath}
+                isQueueing={scanMutation.isPending}
+                newJobsCount={scanResult.flatMap((file) => file.subtitles.flatMap((sub) => sub.tasks)).filter((task) => task.status === "new").length}
+              />
             </div>
-          ) : (
-            <JobsTableDesktop jobs={filteredJobs} currentJobId={currentJobId} expandedErrors={expandedErrors} setExpandedErrors={setExpandedErrors} selectedIds={selectedIds} setSelectedIds={setSelectedIds} onPreview={setPreviewJobId} onOpenLogs={(jobId) => navigate(`/logs?job=${jobId}`)} />
           )}
         </section>
-
-        {scanResult && (
-          <ScanResultsPanel
-            files={scanResult}
-            filter={scanListFilter}
-            setFilter={setScanListFilter}
-            search={scanSearch}
-            setSearch={setScanSearch}
-            expandedGroups={expandedScanGroups}
-            setExpandedGroups={setExpandedScanGroups}
-            jobsById={jobsById}
-            selectedIds={selectedIds}
-            setSelectedIds={setSelectedIds}
-            mode={scanResultMode}
-            onQueueAll={handleScan}
-            onTranscribe={handleTranscribe}
-            transcriptionEnabled={transcriptionEnabled}
-            transcriptionProgressByPath={transcriptionProgressByPath}
-            isQueueing={scanMutation.isPending}
-            newJobsCount={scanResult.flatMap((file) => file.subtitles.flatMap((sub) => sub.tasks)).filter((task) => task.status === "new").length}
-          />
-        )}
       </div>
 
       {previewJobId !== null && (
@@ -718,66 +803,31 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
           title={t("dashboard.scanConfirm.title")}
           onClose={() => setScanPlan(null)}
           overlayClassName="fixed inset-0 z-50 bg-black/70 p-4"
-          panelClassName="mx-auto mt-16 w-full max-w-xl rounded-3xl border border-gray-700 bg-gray-900 p-6"
+          panelClassName="mx-auto mt-16 w-full max-w-xl rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6"
         >
           <div className="mb-2 flex justify-end">
             <button
               type="button"
               onClick={() => setScanPlan(null)}
-              className="rounded-full border border-gray-700 bg-gray-800 px-2 py-1 text-sm text-gray-300 hover:text-white"
+              className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-sm text-[var(--text-2)] hover:text-[var(--text)]"
               aria-label={t("common.close")}
               title={t("common.close")}
             >
               ×
             </button>
           </div>
-          <p className="mt-2 text-sm text-gray-400">{t("dashboard.scanConfirm.summary", { subtitles: scanPlan.totalSubtitles, jobs: scanPlan.newJobs })}</p>
-          <div className="mt-3 rounded-xl bg-gray-800/60 p-3">
-            <div className="text-xs text-gray-500">{t("dashboard.scanConfirm.topFolders")}</div>
-            <div className="mt-1 text-sm text-gray-200">{scanPlan.topFolders.length > 0 ? scanPlan.topFolders.join(", ") : t("dashboard.scanConfirm.none")}</div>
+          <p className="mt-2 text-[13px] text-[var(--text-2)]">{t("dashboard.scanConfirm.summary", { subtitles: scanPlan.totalSubtitles, jobs: scanPlan.newJobs })}</p>
+          <div className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
+            <div className="text-xs text-[var(--text-3)]">{t("dashboard.scanConfirm.topFolders")}</div>
+            <div className="mt-1 text-[13px] text-[var(--text)]">{scanPlan.topFolders.length > 0 ? scanPlan.topFolders.join(", ") : t("dashboard.scanConfirm.none")}</div>
           </div>
-          <div className="mt-5 flex justify-end gap-2">
-            <button onClick={() => setScanPlan(null)} className="rounded-xl bg-gray-800 px-3 py-2 text-sm text-gray-300">{t("common.cancel")}</button>
-            <button onClick={confirmQueueScan} className="rounded-xl bg-blue-600 px-3 py-2 text-sm font-medium text-white">{t("dashboard.scanConfirm.proceed")}</button>
+          {/* sm:col-span-2 grid for the confirm buttons on small screens */}
+          <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
+            <button onClick={() => setScanPlan(null)} className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-2)] sm:col-span-1">{t("common.cancel")}</button>
+            <button onClick={confirmQueueScan} className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-medium text-white sm:col-span-1">{t("dashboard.scanConfirm.proceed")}</button>
           </div>
         </ModalShell>
       )}
-
-      {isMobile && (
-        <div className="fixed bottom-20 left-0 right-0 z-40 px-4">
-          <div className="grid grid-cols-3 gap-2 rounded-2xl border border-gray-700 bg-gray-900/95 p-2 backdrop-blur">
-            <button onClick={handleScan} className="rounded-xl bg-blue-700 px-2 py-3 text-xs font-semibold text-white">{t("dashboard.scanFolders")}</button>
-            {!queueRunning ? (
-              <button onClick={handleRunAll} disabled={pendingJobs.length === 0} className="rounded-xl bg-green-700 px-2 py-3 text-xs font-semibold text-white disabled:opacity-40">{t("dashboard.runAll")}</button>
-            ) : (
-              <button onClick={handleStop} className="rounded-xl bg-red-700 px-2 py-3 text-xs font-semibold text-white">{t("dashboard.stop")}</button>
-            )}
-            <button onClick={() => navigate("/logs")} className="rounded-xl bg-gray-800 px-2 py-3 text-xs font-semibold text-gray-200">{t("nav.logs")}</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface StepRowProps {
-  done: boolean;
-  label: string;
-  action: string;
-  to?: string;
-  onClick?: () => void;
-}
-
-function StepRow({ done, label, action, to, onClick }: StepRowProps) {
-  return (
-    <div className="flex items-center gap-3">
-      <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] ${done ? "bg-green-900/50 text-green-400" : "bg-gray-800 text-gray-500"}`}>
-        {done ? "✓" : "○"}
-      </span>
-      <span className={`flex-1 ${done ? "text-gray-500 line-through" : "text-gray-300"}`}>{label}</span>
-      {!done && (to
-        ? <NavLink to={to} className="text-xs text-blue-400">{action}</NavLink>
-        : <button onClick={onClick} className="text-xs text-blue-400">{action}</button>)}
     </div>
   );
 }

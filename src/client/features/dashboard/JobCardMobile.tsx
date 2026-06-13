@@ -51,22 +51,22 @@ export function JobCardMobile({
   const reason = hasError ? classifyErrorReason(job.error) : null;
 
   return (
-    <div className={`rounded-2xl border p-4 ${isActive ? "border-blue-700/40 bg-blue-900/10" : selected ? "border-blue-700/40 bg-blue-950/20" : "border-gray-800 bg-gray-950/60"}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-1 items-start gap-3">
+    <div className={`rounded-xl border p-[11px] ${isActive ? "border-[var(--accent-border)] bg-[var(--accent-dim)]" : hasError ? "border-[var(--red-border)] bg-[var(--surface)]" : selected ? "border-[var(--accent-border)] bg-[var(--accent-dim)]" : "border-[var(--border)] bg-[var(--surface)]"}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-1 items-start gap-2.5">
           {isPending && (
             <input
               type="checkbox"
               checked={selected}
               onChange={() => onToggleSelected(job.id)}
-              className="mt-1 h-5 w-5 shrink-0 accent-blue-500"
+              className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--accent)]"
               aria-label={t("dashboard.col.select")}
             />
           )}
           <div className="min-w-0">
-            <div className="truncate text-sm font-medium text-gray-200">{job.srt_path.split("/").pop()}</div>
-            <div className="mt-1 text-xs text-gray-500">{job.target_lang} • {job.lang_code}</div>
-            {reason && <div className="mt-1 inline-flex rounded-full bg-red-900/30 px-2 py-0.5 text-[10px] text-red-200">{t(`dashboard.errorReason.${reason}`)}</div>}
+            <div className="truncate text-[13px] font-medium text-[var(--text)]">{job.srt_path.split("/").pop()}</div>
+            <div className="mt-0.5 text-[11px] text-[var(--text-2)]">{job.target_lang} · {job.lang_code}</div>
+            {reason && <div className="mt-1 inline-flex rounded-full bg-[var(--red-dim)] px-2 py-0.5 text-[10px] text-[var(--red)]">{t(`dashboard.errorReason.${reason}`)}</div>}
           </div>
         </div>
         <StatusBadge job={job} compact />
@@ -75,31 +75,31 @@ export function JobCardMobile({
       {hasError && (
         <button
           onClick={() => setExpandedErrors((s) => { const n = new Set(s); if (expanded) n.delete(job.id); else n.add(job.id); return n; })}
-          className="mt-3 text-left text-xs text-red-400/80"
+          className="mt-3 text-left text-[11px] text-[var(--red)]/80"
         >
           {expanded ? t("app.hideError") : t("app.showError")}
         </button>
       )}
-      {expanded && <div className="mt-2 rounded-xl bg-red-950/20 p-3 text-xs text-red-300 whitespace-pre-wrap">{job.error}</div>}
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      {expanded && <div className="mt-2 whitespace-pre-wrap rounded-lg bg-[var(--red-dim)] p-3 text-[11px] text-[var(--red)]">{job.error}</div>}
+      <div className="mt-3 grid grid-cols-2 gap-2">
         {(job.status === "done" || job.status === "translating") ? (
-          <ActionButton onClick={() => onPreview(job.id)}>{t("dashboard.action.preview")}</ActionButton>
+          <ActionButton size="sm" onClick={() => onPreview(job.id)}>{t("dashboard.action.preview")}</ActionButton>
         ) : (
-          <NavLink to={`/jobs/${job.id}`} className="rounded-2xl bg-gray-800 px-4 py-3 text-center text-sm font-medium text-gray-200">{t("dashboard.action.details")}</NavLink>
+          <NavLink to={`/jobs/${job.id}`} className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-center text-[12px] font-medium text-[var(--text)]">{t("dashboard.action.details")}</NavLink>
         )}
         {job.status === "error" ? (
-          <ActionButton variant="warning" onClick={() => { retryMutation.mutate(job.id); addToast(t("dashboard.toast.jobRetrying"), "info"); }}>{t("dashboard.action.retry")}</ActionButton>
+          <ActionButton size="sm" variant="warning" onClick={() => { retryMutation.mutate(job.id); addToast(t("dashboard.toast.jobRetrying"), "info"); }}>{t("dashboard.action.retry")}</ActionButton>
         ) : (job.status === "done" || job.status === "skipped") ? (
-          <ActionButton variant="ghost" onClick={() => { forceMutation.mutate(job.id); addToast(t("dashboard.toast.retranslating"), "info"); }}>{t("dashboard.action.retranslate")}</ActionButton>
+          <ActionButton size="sm" variant="ghost" onClick={() => { forceMutation.mutate(job.id); addToast(t("dashboard.toast.retranslating"), "info"); }}>{t("dashboard.action.retranslate")}</ActionButton>
         ) : (
-          <NavLink to={`/jobs/${job.id}`} className="rounded-2xl bg-gray-800 px-4 py-3 text-center text-sm font-medium text-gray-200">{t("dashboard.action.open")}</NavLink>
+          <NavLink to={`/jobs/${job.id}`} className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-center text-[12px] font-medium text-[var(--text)]">{t("dashboard.action.open")}</NavLink>
         )}
       </div>
       {job.status === "error" && (
         <button
           type="button"
           onClick={() => onOpenLogs(job.id)}
-          className="mt-2 w-full rounded-2xl border border-gray-700 bg-gray-800 px-4 py-3 text-center text-xs font-medium text-gray-200"
+          className="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-center text-[12px] font-medium text-[var(--text)]"
         >
           {t("dashboard.action.logs")}
         </button>
