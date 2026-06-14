@@ -13,6 +13,8 @@ let currentJobId: number | null = null;
 const activeJobIds = new Set<number>();
 // One AbortController per in-flight job; requestStop() aborts them all.
 const abortControllers = new Set<AbortController>();
+// Hard ceiling on concurrent translation workers (matches the per-file connection cap).
+const MAX_WORKERS = 32;
 
 export function isQueueRunning() {
   return isRunning;
@@ -46,25 +48,19 @@ export async function processQueue(onlyIds?: number[]) {
   logger.info("queue", `Queue started (${pendingCount} pending jobs${filter ? ", selected subset" : ""})`);
 
   try {
-    const { mode, pool } = resolveConnectionPool(getAllSettings());
-
-    if (mode === "parallel" && pool.length > 1) {
-      // File-level parallelism: one worker per connection, work-stealing — each
-      // worker grabs the next pending file when it goes free, translates it on
-      // its own connection (the others act as per-file fallbacks).
-      logger.info(
-        "queue",
-        `Parallel pool: ${pool.length} workers (one per connection), work-stealing across files`,
-        null,
-        { stage: "parallel_pool" }
-      );
-      await Promise.all(
-        pool.map((pinned, idx) => poolWorker(pinned, pool, idx, filter))
-      );
-    } else {
-      // Single / fallback: strictly sequential, one file at a time.
-      await runSequential(mode, filter);
-    }
+    // Adaptive worker pool: every worker re-resolves the LLM mode on each job
+    // claim, so switching Single/Fallback ⇄ Parallel takes effect mid-run without
+    // restarting the queue. One slot per configured connection (capped); a slot
+    // only processes when the current mode permits its index (see adaptiveWorker).
+    const { all } = resolveConnectionPool(getAllSettings());
+    const slots = Math.max(1, Math.min(MAX_WORKERS, all.length || 1));
+    logger.info(
+      "queue",
+      `Worker pool: up to ${slots} slot${slots === 1 ? "" : "s"} (adaptive to LLM mode)`,
+      null,
+      { stage: "worker_pool" }
+    );
+    await Promise.all(Array.from({ length: slots }, (_, i) => adaptiveWorker(i, filter)));
 
     if (shouldStop) {
       logger.info("queue", "Queue stopped by user request");
@@ -111,30 +107,45 @@ function claimNextJob(filter: Set<number> | null): any | null {
   return null;
 }
 
-/** Sequential runner for single / fallback modes — re-resolves the pool per job. */
-async function runSequential(mode: LlmMode, filter: Set<number> | null) {
-  while (!shouldStop) {
-    const job = claimNextJob(filter);
-    if (!job) break;
-    const { pool } = resolveConnectionPool(getAllSettings());
-    const stopped = await runJob(job, pool, mode);
-    if (stopped) break;
-  }
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+function hasPendingJobs(filter: Set<number> | null): boolean {
+  const all = getJobs("pending") as any[];
+  return (filter ? all.filter((j) => filter.has(j.id)) : all).length > 0;
 }
 
-/** One work-stealing worker pinned to a single connection. */
-async function poolWorker(
-  pinned: ResolvedConnection,
-  pool: ResolvedConnection[],
-  idx: number,
-  filter: Set<number> | null
-) {
+/**
+ * Adaptive worker. Each loop re-resolves the current LLM mode + pool so a mode
+ * change applies mid-run:
+ *  - parallel (pool > 1): worker `index` pins connection pool[index] and claims
+ *    the next file (work-stealing); the other connections act as per-file fallbacks.
+ *  - single / fallback: only worker 0 runs (sequential, one file at a time); the
+ *    rest idle. If the mode later widens to parallel, idle workers pick up jobs.
+ * A worker exits when the queue is drained (or stop is requested).
+ */
+async function adaptiveWorker(index: number, filter: Set<number> | null) {
   while (!shouldStop) {
+    const { mode, pool } = resolveConnectionPool(getAllSettings());
+    const parallel = mode === "parallel" && pool.length > 1;
+    const concurrency = parallel ? pool.length : 1;
+
+    if (index >= concurrency) {
+      // Not active under the current mode. Stay alive while anything is pending OR
+      // in flight, so a mid-run widen to parallel can reactivate this slot; only
+      // exit once the queue is fully drained.
+      if (!hasPendingJobs(filter) && activeJobIds.size === 0) break;
+      await delay(500);
+      continue;
+    }
+
     const job = claimNextJob(filter);
     if (!job) break;
-    // Pinned connection first; the rest are per-file fallbacks if it errors.
-    const order = [pinned, ...pool.filter((_, j) => j !== idx)];
-    const stopped = await runJob(job, order, "fallback");
+
+    const order = parallel
+      ? [pool[index], ...pool.filter((_, j) => j !== index)]
+      : pool;
+    const jobMode: LlmMode = parallel ? "fallback" : mode;
+    const stopped = await runJob(job, order, jobMode);
     if (stopped) break;
   }
 }
