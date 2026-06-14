@@ -199,12 +199,6 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
         checked={str(settings.auto_translate, "1") === "1"}
         onChange={(checked) => updateAndSave("auto_translate", checked ? "1" : "0")}
       />
-      <ToggleRow
-        title={t("settings.sources.translateWithoutVideo")}
-        description={t("settings.sources.translateWithoutVideoHint")}
-        checked={str(settings.translate_without_video, "off") === "on"}
-        onChange={(checked) => updateAndSave("translate_without_video", checked ? "on" : "off")}
-      />
       <div className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2.5">
         <div>
           <p className="text-[13px] font-medium text-[var(--text)]">{t("settings.sources.fileWatcher")}</p>
