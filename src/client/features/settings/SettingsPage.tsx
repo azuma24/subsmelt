@@ -40,6 +40,9 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   const settingsRef = useRef<Record<string, unknown>>({});
   // Serializes save POSTs so the last-issued (most complete) body is also the last write.
   const saveChainRef = useRef<Promise<unknown>>(Promise.resolve());
+  // Debounce timer for autosaved free-text fields (LLM / Engine), so typing
+  // coalesces into one POST instead of one per keystroke.
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (settingsQuery.data) {
@@ -77,6 +80,26 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
     applyNext(next);
     await persist(next);
   };
+
+  // Autosave with debounce — for LLM/Engine fields incl. free-text inputs.
+  const updateAndSaveDebounced = (key: string, value: unknown, delay = 500) => {
+    applyNext({ ...settingsRef.current, [key]: value });
+    setDirty(true);
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveTimerRef.current = null;
+      persist(settingsRef.current);
+    }, delay);
+  };
+
+  // Flush any pending debounced save on unmount so changes aren't lost on navigate.
+  useEffect(() => () => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+      persist(settingsRef.current);
+    }
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
@@ -133,12 +156,12 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   // ── LLM Connections ──
   const llmContent = (
     <>
-      <ConnectionsPanel settings={settings} update={update} addToast={addToast} isMobile={isMobile} />
+      <ConnectionsPanel settings={settings} update={updateAndSaveDebounced} addToast={addToast} isMobile={isMobile} />
       {/* Temperature moved to Advanced accordion per Phase 3 spec */}
       <Accordion title={t("settings.advanced")}>
         <div className="md:max-w-[320px]">
           <label className={labelCls}>{t("settings.llmConnection.temperatureLabel")}: <span className="font-mono text-[var(--accent)]">{str(settings.temperature, "0.7")}</span></label>
-          <input type="range" min="0" max="2" step="0.1" value={str(settings.temperature, "0.7")} onChange={(e) => update("temperature", e.target.value)} className="w-full accent-[var(--accent)]" />
+          <input type="range" min="0" max="2" step="0.1" value={str(settings.temperature, "0.7")} onChange={(e) => updateAndSaveDebounced("temperature", e.target.value)} className="w-full accent-[var(--accent)]" />
           <p className="mt-2 text-[11.5px] leading-relaxed text-[var(--text-3)]">{t("settings.llmConnection.temperatureHelp")}</p>
         </div>
       </Accordion>
@@ -154,13 +177,13 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
           <div>
             <div className="mb-1.5 flex items-center justify-between">
               <label className="text-[12px] font-medium text-[var(--text-2)]">{t("settings.translationEngine.systemPrompt")}</label>
-              <button onClick={() => update("prompt", DEFAULT_PROMPT)} className="text-[11px] text-[var(--text-3)]">{t("common.reset")}</button>
+              <button onClick={() => updateAndSaveDebounced("prompt", DEFAULT_PROMPT)} className="text-[11px] text-[var(--text-3)]">{t("common.reset")}</button>
             </div>
-            <textarea value={str(settings.prompt)} onChange={(e) => update("prompt", e.target.value)} rows={8} className={`${textareaCls} font-mono leading-relaxed`} />
+            <textarea value={str(settings.prompt)} onChange={(e) => updateAndSaveDebounced("prompt", e.target.value)} rows={8} className={`${textareaCls} font-mono leading-relaxed`} />
           </div>
           <div>
             <label className={labelCls}>{t("settings.translationEngine.additionalContext")}</label>
-            <textarea value={str(settings.additional_context)} onChange={(e) => update("additional_context", e.target.value)} rows={3} placeholder={t("settings.translationEngine.additionalContextPlaceholder")} className={textareaCls} />
+            <textarea value={str(settings.additional_context)} onChange={(e) => updateAndSaveDebounced("additional_context", e.target.value)} rows={3} placeholder={t("settings.translationEngine.additionalContextPlaceholder")} className={textareaCls} />
           </div>
         </div>
       </Accordion>
@@ -168,15 +191,15 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
       <Accordion title={t("settings.advanced")} defaultOpen>
         <div className="space-y-4">
           <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-2"} md:max-w-[480px]`}>
-            <Field label={t("settings.translationEngine.chunkSize")} value={str(settings.chunk_size, "20")} onChange={(v) => update("chunk_size", v)} help={t("settings.translationEngine.chunkSizeHint")} type="number" />
-            <Field label={t("settings.translationEngine.contextWindow")} value={str(settings.context_window, "5")} onChange={(v) => update("context_window", v)} help={t("settings.translationEngine.contextWindowHint")} type="number" />
-            <Field label={t("settings.translationEngine.parallelChunks")} value={str(settings.parallel_chunks, "1")} onChange={(v) => update("parallel_chunks", v)} help={t("settings.translationEngine.parallelChunksHint")} type="number" />
-            <Field label={t("settings.translationEngine.requestTimeout", "Request Timeout (s)")} value={str(settings.request_timeout_s, "300")} onChange={(v) => update("request_timeout_s", v)} help={t("settings.translationEngine.requestTimeoutHint", "Max seconds to wait for a single LLM response.")} type="number" />
+            <Field label={t("settings.translationEngine.chunkSize")} value={str(settings.chunk_size, "20")} onChange={(v) => updateAndSaveDebounced("chunk_size", v)} help={t("settings.translationEngine.chunkSizeHint")} type="number" />
+            <Field label={t("settings.translationEngine.contextWindow")} value={str(settings.context_window, "5")} onChange={(v) => updateAndSaveDebounced("context_window", v)} help={t("settings.translationEngine.contextWindowHint")} type="number" />
+            <Field label={t("settings.translationEngine.parallelChunks")} value={str(settings.parallel_chunks, "1")} onChange={(v) => updateAndSaveDebounced("parallel_chunks", v)} help={t("settings.translationEngine.parallelChunksHint")} type="number" />
+            <Field label={t("settings.translationEngine.requestTimeout", "Request Timeout (s)")} value={str(settings.request_timeout_s, "300")} onChange={(v) => updateAndSaveDebounced("request_timeout_s", v)} help={t("settings.translationEngine.requestTimeoutHint", "Max seconds to wait for a single LLM response.")} type="number" />
           </div>
           <ToggleRow
             title={t("settings.translationEngine.disableToolCalls", "Disable tool calls (use plain-text mode)")}
             checked={settings.disable_tool_calls === "1"}
-            onChange={(checked) => update("disable_tool_calls", checked ? "1" : "0")}
+            onChange={(checked) => updateAndSaveDebounced("disable_tool_calls", checked ? "1" : "0")}
           />
         </div>
       </Accordion>
