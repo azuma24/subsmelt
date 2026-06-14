@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
@@ -35,41 +35,53 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   const [themePref, setThemePrefState] = useState<ThemePref>(getThemePref());
   const currentLanguage = LANGUAGES.find((lang) => i18n.language === lang.code || i18n.language.startsWith(`${lang.code}-`))?.code || "en";
 
+  // Synchronous mirror of `settings` so rapid update()/updateAndSave() calls in the
+  // same tick build on each other instead of overwriting from a stale render closure.
+  const settingsRef = useRef<Record<string, unknown>>({});
+  // Serializes save POSTs so the last-issued (most complete) body is also the last write.
+  const saveChainRef = useRef<Promise<unknown>>(Promise.resolve());
+
   useEffect(() => {
-    if (settingsQuery.data) setSettings(settingsQuery.data);
+    if (settingsQuery.data) {
+      setSettings(settingsQuery.data);
+      settingsRef.current = settingsQuery.data;
+    }
   }, [settingsQuery.data]);
 
+  const applyNext = (next: Record<string, unknown>) => {
+    settingsRef.current = next;
+    setSettings(next);
+  };
+
+  const persist = (next: Record<string, unknown>) => {
+    saveChainRef.current = saveChainRef.current
+      .then(() => api.saveSettings(next))
+      .then(() => setDirty(false))
+      .catch(() => setDirty(true));
+    return saveChainRef.current;
+  };
+
   const update = (key: string, value: unknown) => {
-    setSettings((s) => ({ ...s, [key]: value }));
+    applyNext({ ...settingsRef.current, [key]: value });
     setDirty(true);
   };
 
   const updateAndSave = async (key: string, value: unknown) => {
-    const next = { ...settings, [key]: value };
-    setSettings(next);
-    try {
-      await api.saveSettings(next);
-      setDirty(false);
-    } catch {
-      setDirty(true);
-    }
+    const next = { ...settingsRef.current, [key]: value };
+    applyNext(next);
+    await persist(next);
   };
 
   const updateManyAndSave = async (updates: Record<string, unknown>) => {
-    const next = { ...settings, ...updates };
-    setSettings(next);
-    try {
-      await api.saveSettings(next);
-      setDirty(false);
-    } catch {
-      setDirty(true);
-    }
+    const next = { ...settingsRef.current, ...updates };
+    applyNext(next);
+    await persist(next);
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await api.saveSettings(settings);
+      await api.saveSettings(settingsRef.current);
       setDirty(false);
       addToast(t("settings.saved"), "success");
     } catch (e: unknown) {
@@ -84,7 +96,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
     setTranscriptionTestResult(null);
     try {
       if (dirty) {
-        await api.saveSettings(settings);
+        await api.saveSettings(settingsRef.current);
         setDirty(false);
       }
       const result = await api.getTranscriptionHealth();
@@ -137,7 +149,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   const engineContent = (
     <>
       {/* Prompt + context behind "Prompt" accordion */}
-      <Accordion title={t("settings.promptSection")}>
+      <Accordion title={t("settings.promptSection")} defaultOpen>
         <div className="space-y-4">
           <div>
             <div className="mb-1.5 flex items-center justify-between">
@@ -153,7 +165,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
         </div>
       </Accordion>
       {/* Chunk/parallel/timeout + disable tool calls → Advanced accordion */}
-      <Accordion title={t("settings.advanced")}>
+      <Accordion title={t("settings.advanced")} defaultOpen>
         <div className="space-y-4">
           <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-2"} md:max-w-[480px]`}>
             <Field label={t("settings.translationEngine.chunkSize")} value={str(settings.chunk_size, "20")} onChange={(v) => update("chunk_size", v)} help={t("settings.translationEngine.chunkSizeHint")} type="number" />

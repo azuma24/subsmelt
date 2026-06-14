@@ -60,8 +60,9 @@ test("translated strings preserve interpolation placeholders", () => {
   }
 });
 
-test("Arabic is marked RTL and other bundled locales remain LTR", () => {
+test("RTL locales are marked rtl and other bundled locales remain LTR", () => {
+  const RTL_LOCALES = new Set(["ar", "fa", "he"]);
   for (const lang of LANGUAGES) {
-    assert.equal(lang.dir, lang.code === "ar" ? "rtl" : "ltr", `${lang.code} has wrong direction`);
+    assert.equal(lang.dir, RTL_LOCALES.has(lang.code) ? "rtl" : "ltr", `${lang.code} has wrong direction`);
   }
 });

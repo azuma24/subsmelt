@@ -168,6 +168,7 @@ export function MediaSourcesPanel({
   const [profileName, setProfileName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   const fetchSources = async () => {
     setLoading(true);
@@ -186,6 +187,36 @@ export function MediaSourcesPanel({
   useEffect(() => {
     fetchSources();
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    api.getTasks().then((data) => { if (active) setTasks(data); }).catch(() => { if (active) setTasks([]); });
+    return () => { active = false; };
+  }, []);
+
+  const rules = useMemo(() => parseDirectoryRules(directoryRules), [directoryRules]);
+
+  const upsertRule = (path: string, patch: Partial<Pick<DirectoryRule, "translateWithoutVideo" | "taskIds">>) => {
+    const existing = rules.find((r) => r.path === path);
+    let next: DirectoryRule[];
+    if (existing) {
+      next = rules.map((r) => r.path === path ? { ...r, ...patch } : r);
+    } else {
+      const newRule: DirectoryRule = {
+        id: createRuleId(),
+        path,
+        enabled: true,
+        translateWithoutVideo: patch.translateWithoutVideo ?? "on",
+        taskIds: patch.taskIds ?? [],
+      };
+      next = [...rules, newRule];
+    }
+    onDirectoryRulesChange(serializeDirectoryRules(next));
+  };
+
+  const removeRuleForPath = (path: string) => {
+    onDirectoryRulesChange(serializeDirectoryRules(rules.filter((r) => r.path !== path)));
+  };
 
   const mode: ScanMode = (SCAN_MODES as string[]).includes(scanMode) ? (scanMode as ScanMode) : "recursive";
   const selected = useMemo(() => parseFolders(scanFolders), [scanFolders]);
@@ -377,6 +408,10 @@ export function MediaSourcesPanel({
               searchActive={folderSearch.trim().length > 0}
               onToggleIncluded={toggleIncludedFolder}
               onToggleExcluded={toggleExcludedFolder}
+              tasks={tasks}
+              rules={rules}
+              upsertRule={upsertRule}
+              removeRuleForPath={removeRuleForPath}
             />
           </div>
         )}
@@ -416,6 +451,7 @@ export function MediaSourcesPanel({
         folders={allSubfolders}
         rawRules={directoryRules}
         onChange={onDirectoryRulesChange}
+        tasks={tasks}
       />
 
       <details className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
@@ -430,6 +466,13 @@ export function MediaSourcesPanel({
   );
 }
 
+interface FolderTreeSharedProps {
+  tasks: Task[];
+  rules: DirectoryRule[];
+  upsertRule: (path: string, patch: Partial<Pick<DirectoryRule, "translateWithoutVideo" | "taskIds">>) => void;
+  removeRuleForPath: (path: string) => void;
+}
+
 function FolderTree({
   nodes,
   mediaDir,
@@ -441,6 +484,10 @@ function FolderTree({
   searchActive,
   onToggleIncluded,
   onToggleExcluded,
+  tasks,
+  rules,
+  upsertRule,
+  removeRuleForPath,
 }: {
   nodes: FolderNode[];
   mediaDir: string;
@@ -452,7 +499,7 @@ function FolderTree({
   searchActive: boolean;
   onToggleIncluded: (folder: string) => void;
   onToggleExcluded: (folder: string) => void;
-}) {
+} & FolderTreeSharedProps) {
   return (
     <div className="space-y-1">
       {nodes.map((node) => (
@@ -469,8 +516,111 @@ function FolderTree({
           searchActive={searchActive}
           onToggleIncluded={onToggleIncluded}
           onToggleExcluded={onToggleExcluded}
+          tasks={tasks}
+          rules={rules}
+          upsertRule={upsertRule}
+          removeRuleForPath={removeRuleForPath}
         />
       ))}
+    </div>
+  );
+}
+
+function FolderRulesEditor({
+  path,
+  rule,
+  tasks,
+  upsertRule,
+  removeRuleForPath,
+  onClose,
+}: {
+  path: string;
+  rule: DirectoryRule | undefined;
+  tasks: Task[];
+  upsertRule: (path: string, patch: Partial<Pick<DirectoryRule, "translateWithoutVideo" | "taskIds">>) => void;
+  removeRuleForPath: (path: string) => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+
+  const currentTwv: TriState = rule?.translateWithoutVideo ?? "inherit";
+  const currentTaskIds: number[] = rule?.taskIds ?? [];
+
+  const triLabel = (state: TriState): string => t(`settings.sources.dirRules.tri_${state}`);
+
+  const handleTriState = (state: TriState) => {
+    upsertRule(path, { translateWithoutVideo: state, taskIds: currentTaskIds });
+  };
+
+  const handleToggleTask = (taskId: number) => {
+    const nextIds = currentTaskIds.includes(taskId)
+      ? currentTaskIds.filter((n) => n !== taskId)
+      : [...currentTaskIds, taskId];
+    upsertRule(path, { translateWithoutVideo: currentTwv, taskIds: nextIds });
+  };
+
+  const handleRemove = () => {
+    removeRuleForPath(path);
+    onClose();
+  };
+
+  return (
+    <div className="mx-1 mb-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2.5">
+      <div className="mb-2">
+        <div className="mb-1 text-[10px] uppercase tracking-wide text-[var(--text-3)]">
+          {t("settings.sources.dirRules.videolessLabel")}
+        </div>
+        <div className="inline-flex overflow-hidden rounded-lg border border-[var(--border)]">
+          {TRI_STATES.map((state) => (
+            <button
+              key={state}
+              type="button"
+              onClick={() => handleTriState(state)}
+              className={`px-2.5 py-1 text-[11px] ${currentTwv === state ? "bg-[var(--accent)] text-white" : "bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)]"}`}
+            >
+              {triLabel(state)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-2">
+        <div className="mb-1 text-[10px] uppercase tracking-wide text-[var(--text-3)]">
+          {t("settings.sources.dirRules.languagesLabel")}
+        </div>
+        {tasks.length === 0 ? (
+          <p className="text-[10.5px] text-[var(--text-3)]">{t("settings.sources.dirRules.noTasks")}</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {tasks.map((task) => (
+              <label
+                key={task.id}
+                className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] ${currentTaskIds.includes(task.id) ? "border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]" : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)]"}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={currentTaskIds.includes(task.id)}
+                  onChange={() => handleToggleTask(task.id)}
+                  className="h-3 w-3 accent-[var(--accent)]"
+                />
+                {task.target_lang}
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {rule !== undefined && (
+        <div className="mt-1 flex justify-end">
+          <button
+            type="button"
+            onClick={handleRemove}
+            className="rounded-md px-2 py-1 text-[10px] text-[var(--text-3)] hover:text-[var(--red)]"
+          >
+            {t("common.delete")}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -487,6 +637,10 @@ function FolderTreeRow({
   searchActive,
   onToggleIncluded,
   onToggleExcluded,
+  tasks,
+  rules,
+  upsertRule,
+  removeRuleForPath,
 }: {
   node: FolderNode;
   depth: number;
@@ -499,7 +653,7 @@ function FolderTreeRow({
   searchActive: boolean;
   onToggleIncluded: (folder: string) => void;
   onToggleExcluded: (folder: string) => void;
-}) {
+} & FolderTreeSharedProps) {
   const { t } = useTranslation();
   const hasChildren = node.children.length > 0;
   const expanded = searchActive || expandedFolders.has(node.path);
@@ -512,6 +666,11 @@ function FolderTreeRow({
   const checked = included && !excludedHere;
   const mixed = (ownSelected && excludedDescendant) || (!ownSelected && selectedDescendant);
 
+  const [rulesOpen, setRulesOpen] = useState(false);
+
+  const rule = rules.find((r) => r.path === node.path);
+  const hasRule = rule !== undefined;
+
   const toggleExpanded = () => {
     setExpandedFolders((prev) => {
       const next = new Set(prev);
@@ -520,6 +679,18 @@ function FolderTreeRow({
       return next;
     });
   };
+
+  const ruleSummaryChip = (() => {
+    if (!hasRule) return null;
+    const parts: string[] = [];
+    if (rule.translateWithoutVideo !== "inherit") {
+      parts.push(`no-video: ${rule.translateWithoutVideo}`);
+    }
+    if (rule.taskIds.length > 0) {
+      parts.push(`${rule.taskIds.length} lang${rule.taskIds.length === 1 ? "" : "s"}`);
+    }
+    return parts.length > 0 ? parts.join(", ") : null;
+  })();
 
   return (
     <div>
@@ -580,7 +751,32 @@ function FolderTreeRow({
             {excludedHere ? t("settings.sources.allowFolder") : t("settings.sources.excludeFolder")}
           </button>
         )}
+        <button
+          type="button"
+          onClick={() => setRulesOpen((prev) => !prev)}
+          className={`shrink-0 rounded-[5px] border px-2 py-1 text-[10px] font-medium transition-colors ${
+            hasRule
+              ? "border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)] hover:brightness-110"
+              : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text)]"
+          }`}
+          aria-expanded={rulesOpen}
+        >
+          Rules
+          {hasRule && ruleSummaryChip !== null && (
+            <span className="ml-1 opacity-75">{ruleSummaryChip}</span>
+          )}
+        </button>
       </div>
+      {rulesOpen && (
+        <FolderRulesEditor
+          path={node.path}
+          rule={rule}
+          tasks={tasks}
+          upsertRule={upsertRule}
+          removeRuleForPath={removeRuleForPath}
+          onClose={() => setRulesOpen(false)}
+        />
+      )}
       {hasChildren && expanded && (
         <div className="mt-1 space-y-1">
           {node.children.map((child) => (
@@ -597,6 +793,10 @@ function FolderTreeRow({
               searchActive={searchActive}
               onToggleIncluded={onToggleIncluded}
               onToggleExcluded={onToggleExcluded}
+              tasks={tasks}
+              rules={rules}
+              upsertRule={upsertRule}
+              removeRuleForPath={removeRuleForPath}
             />
           ))}
         </div>
@@ -609,28 +809,28 @@ function DirectoryRulesSection({
   folders,
   rawRules,
   onChange,
+  tasks,
 }: {
   folders: string[];
   rawRules: string;
   onChange: (rules: string) => void;
+  tasks: Task[];
 }) {
   const { t } = useTranslation();
-  const [tasks, setTasks] = useState<Task[]>([]);
-
-  useEffect(() => {
-    let active = true;
-    api.getTasks().then((data) => { if (active) setTasks(data); }).catch(() => { if (active) setTasks([]); });
-    return () => { active = false; };
-  }, []);
 
   const rules = useMemo(() => parseDirectoryRules(rawRules), [rawRules]);
 
   const commit = (next: DirectoryRule[]) => onChange(serializeDirectoryRules(next));
 
   const addRule = () => {
+    // Pick the first folder (incl. root "") that doesn't already have a rule, so
+    // clicking Add twice can't create two rules for the same path.
+    const taken = new Set(rules.map((r) => r.path));
+    const path = ["", ...folders].find((p) => !taken.has(p));
+    if (path === undefined) return;
     commit([
       ...rules,
-      { id: createRuleId(), path: folders[0] || "", enabled: true, translateWithoutVideo: "on", taskIds: [] },
+      { id: createRuleId(), path, enabled: true, translateWithoutVideo: "on", taskIds: [] },
     ]);
   };
 

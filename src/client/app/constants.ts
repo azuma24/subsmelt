@@ -15,6 +15,22 @@ export const LANGUAGES = [
   { code: "id", label: "Bahasa Indonesia", dir: "ltr" },
   { code: "vi", label: "Tiếng Việt", dir: "ltr" },
   { code: "th", label: "ไทย", dir: "ltr" },
+  { code: "tr", label: "Türkçe", dir: "ltr" },
+  { code: "pl", label: "Polski", dir: "ltr" },
+  { code: "nl", label: "Nederlands", dir: "ltr" },
+  { code: "pt-PT", label: "Português (Portugal)", dir: "ltr" },
+  { code: "fa", label: "فارسی", dir: "rtl" },
+  { code: "uk", label: "Українська", dir: "ltr" },
+  { code: "el", label: "Ελληνικά", dir: "ltr" },
+  { code: "cs", label: "Čeština", dir: "ltr" },
+  { code: "ro", label: "Română", dir: "ltr" },
+  { code: "hu", label: "Magyar", dir: "ltr" },
+  { code: "sv", label: "Svenska", dir: "ltr" },
+  { code: "he", label: "עברית", dir: "rtl" },
+  { code: "fil", label: "Filipino", dir: "ltr" },
+  { code: "bn", label: "বাংলা", dir: "ltr" },
+  { code: "ms", label: "Bahasa Melayu", dir: "ltr" },
+  { code: "ta", label: "தமிழ்", dir: "ltr" },
 ] as const;
 
 export const NAV_ITEMS = [
