@@ -302,7 +302,12 @@
       "title": "इंटरफ़ेस",
       "description": "चुनें कि इस ब्राउज़र में SubSmelt कैसा दिखे।",
       "language": "भाषा",
-      "languageHint": "इस ब्राउज़र में सहेजा जाता है और तुरंत लागू होता है।"
+      "languageHint": "इस ब्राउज़र में सहेजा जाता है और तुरंत लागू होता है।",
+      "theme": "थीम",
+      "themeHint": "हल्का या गहरा इंटरफ़ेस चुनें, या अपने सिस्टम की सेटिंग का अनुसरण करें।",
+      "theme_system": "सिस्टम",
+      "theme_dark": "गहरा",
+      "theme_light": "हल्का"
     },
     "llmConnection": {
       "title": "LLM Connection",
@@ -445,7 +450,23 @@
       "autoScanInterval": "Auto-Scan Interval (minutes)",
       "autoScanIntervalHint": "Polling fallback. Set to 0 to disable. Use File Watcher for instant detection.",
       "autoTranslate": "Auto-translate new files",
-      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected."
+      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected.",
+      "translateWithoutVideo": "वीडियो के बिना सबटाइटल अनुवाद करें",
+      "translateWithoutVideoHint": "वैश्विक डिफ़ॉल्ट: चालू होने पर, जिन सबटाइटल फ़ाइलों का कोई मेल खाता वीडियो नहीं है, उनका हर जगह अनुवाद किया जाता है। डायरेक्टरी नियम इसे प्रत्येक फ़ोल्डर के लिए बदल सकते हैं।",
+      "dirRules": {
+        "title": "डायरेक्टरी नियम",
+        "hint": "प्रत्येक फ़ोल्डर के लिए अलग अनुवाद व्यवहार लागू करें। एक नियम फ़ोल्डर और उसके सभी सबफ़ोल्डर पर लागू होता है; सबसे विशिष्ट नियम प्रभावी रहता है।",
+        "addRule": "+ नियम जोड़ें",
+        "noRules": "कोई डायरेक्टरी नियम नहीं। बिना वीडियो वाले सबटाइटल का अनुवाद करने या विशिष्ट फ़ोल्डर के लिए भाषाएँ जोड़ने हेतु एक नियम जोड़ें।",
+        "enabled": "सक्रिय",
+        "allFolders": "सभी फ़ोल्डर (रूट)",
+        "videolessLabel": "वीडियो के बिना सबटाइटल अनुवाद करें",
+        "tri_inherit": "विरासत में लें",
+        "tri_on": "चालू",
+        "tri_off": "बंद",
+        "languagesLabel": "लक्ष्य भाषाएँ जोड़ें",
+        "noTasks": "अभी तक कोई अनुवाद कार्य परिभाषित नहीं किया गया है।"
+      }
     },
     "saved": "Settings saved",
     "saveFailed": "Save failed: {{message}}",

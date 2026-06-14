@@ -4,6 +4,7 @@ import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
 import { useSettingsQuery, useTranscriptionHealthQuery } from "../../hooks";
 import { DEFAULT_PROMPT, LANGUAGES } from "../../app/constants";
+import { getThemePref, setThemePref, THEME_PREFS, type ThemePref } from "../../lib/theme";
 import { useToast } from "../../components/Toast";
 import { Accordion, ActionButton, Drawer, Field, SettingsSection } from "../../ui/primitives";
 import { ConnectionsPanel } from "./ConnectionsPanel";
@@ -31,6 +32,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   const [transcriptionTestResult, setTranscriptionTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [activeSection, setActiveSection] = useState<SectionKey>("llm");
   const [rawConfigDrawerOpen, setRawConfigDrawerOpen] = useState(false);
+  const [themePref, setThemePrefState] = useState<ThemePref>(getThemePref());
   const currentLanguage = LANGUAGES.find((lang) => i18n.language === lang.code || i18n.language.startsWith(`${lang.code}-`))?.code || "en";
 
   useEffect(() => {
@@ -179,6 +181,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
         scanFolders={str(settings.scan_folders)}
         scanExcludeFolders={str(settings.scan_exclude_folders)}
         scanProfiles={str(settings.scan_profiles, "[]")}
+        directoryRules={str(settings.directory_rules, "[]")}
         onScanModeChange={(mode) => updateAndSave("scan_mode", mode)}
         onScanFoldersChange={(folders) => updateAndSave("scan_folders", folders)}
         onScanExcludeFoldersChange={(folders) => updateAndSave("scan_exclude_folders", folders)}
@@ -188,12 +191,19 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
           scan_exclude_folders: scope.scanExcludeFolders,
         })}
         onScanProfilesChange={(profiles) => updateAndSave("scan_profiles", profiles)}
+        onDirectoryRulesChange={(rules) => updateAndSave("directory_rules", rules)}
       />
       <ToggleRow
         title={t("settings.sources.autoTranslate")}
         description={t("settings.sources.autoTranslateHint")}
         checked={str(settings.auto_translate, "1") === "1"}
         onChange={(checked) => updateAndSave("auto_translate", checked ? "1" : "0")}
+      />
+      <ToggleRow
+        title={t("settings.sources.translateWithoutVideo")}
+        description={t("settings.sources.translateWithoutVideoHint")}
+        checked={str(settings.translate_without_video, "off") === "on"}
+        onChange={(checked) => updateAndSave("translate_without_video", checked ? "on" : "off")}
       />
       <div className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2.5">
         <div>
@@ -383,18 +393,37 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
 
   // ── Interface ──
   const ifaceContent = (
-    <div className="md:max-w-[240px]">
-      <label className={labelCls}>{t("settings.interface.language")}</label>
-      <select
-        value={currentLanguage}
-        onChange={(e) => i18n.changeLanguage(e.target.value)}
-        className={selectCls}
-      >
-        {LANGUAGES.map((lang) => (
-          <option key={lang.code} value={lang.code}>{lang.label}</option>
-        ))}
-      </select>
-      <p className="mt-1 text-[11.5px] text-[var(--text-3)]">{t("settings.interface.languageHint")}</p>
+    <div className="space-y-4">
+      <div className="md:max-w-[240px]">
+        <label className={labelCls}>{t("settings.interface.theme")}</label>
+        <select
+          value={themePref}
+          onChange={(e) => {
+            const next = e.target.value as ThemePref;
+            setThemePrefState(next);
+            setThemePref(next);
+          }}
+          className={selectCls}
+        >
+          {THEME_PREFS.map((pref) => (
+            <option key={pref} value={pref}>{t(`settings.interface.theme_${pref}`)}</option>
+          ))}
+        </select>
+        <p className="mt-1 text-[11.5px] text-[var(--text-3)]">{t("settings.interface.themeHint")}</p>
+      </div>
+      <div className="md:max-w-[240px]">
+        <label className={labelCls}>{t("settings.interface.language")}</label>
+        <select
+          value={currentLanguage}
+          onChange={(e) => i18n.changeLanguage(e.target.value)}
+          className={selectCls}
+        >
+          {LANGUAGES.map((lang) => (
+            <option key={lang.code} value={lang.code}>{lang.label}</option>
+          ))}
+        </select>
+        <p className="mt-1 text-[11.5px] text-[var(--text-3)]">{t("settings.interface.languageHint")}</p>
+      </div>
     </div>
   );
 

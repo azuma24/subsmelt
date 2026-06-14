@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { getSetting, getTasks } from "./config.js";
 import { createJob, getJobBySrtAndTask, getJobs } from "./db.js";
+import { parseRules, resolveDirectoryRule } from "./directory-rules.js";
 import { logger } from "./logger.js";
 
 export const MEDIA_DIR = process.env.MEDIA_DIR || "/media";
@@ -278,6 +279,18 @@ export function scanFolder(createJobs = true): ScanResult {
   const tasks = getTasks() as any[];
   const enabledTasks = tasks.filter((t: any) => t.enabled);
 
+  // Per-directory translation control.
+  const directoryRules = parseRules(getSetting("directory_rules") || "[]");
+  const globalTranslateWithoutVideo = getSetting("translate_without_video") === "on";
+  const mediaRoot = path.resolve(MEDIA_DIR);
+  // Tasks used for output-file detection: globally-enabled tasks plus any task a
+  // directory rule can attach, so a rule's already-translated outputs are recognized.
+  const ruleTaskIds = new Set<number>(directoryRules.flatMap((r) => r.taskIds));
+  const outputDetectTasks = [
+    ...enabledTasks,
+    ...tasks.filter((t: any) => ruleTaskIds.has(t.id) && !enabledTasks.some((e: any) => e.id === t.id)),
+  ];
+
   if (!fs.existsSync(MEDIA_DIR)) {
     throw new Error(`Media directory does not exist: ${MEDIA_DIR}. Check your Docker volume mounts.`);
   }
@@ -349,7 +362,7 @@ export function scanFolder(createJobs = true): ScanResult {
 
     // Check if this IS an output file from any task
     // Strategy 1: pattern-shape match (fast)
-    const isOutputFile = enabledTasks.some((task: any) => {
+    const isOutputFile = outputDetectTasks.some((task: any) => {
       // Check against every possible base stem in the same directory
       // by testing if removing the task suffix yields a valid source file
       const testPattern = applyPattern(task.output_pattern, "TEST_MARKER", task.lang_code, extNoDot);
@@ -375,6 +388,23 @@ export function scanFolder(createJobs = true): ScanResult {
       }
     }
 
+    // Resolve directory rule for this subtitle's folder.
+    const relDir = path.relative(mediaRoot, path.resolve(dir)).split(path.sep).join("/");
+    const resolved = resolveDirectoryRule(relDir, directoryRules, globalTranslateWithoutVideo);
+
+    // Orphan gate: subtitles with no companion video only translate where enabled.
+    if (videoPath === null && !resolved.translateWithoutVideo) continue;
+
+    // Effective tasks = global enabled tasks ∪ the rule's extra tasks (additive union).
+    // Rule-attached tasks apply even if globally disabled, as long as the task exists.
+    const effectiveTasks = [...enabledTasks];
+    for (const tid of resolved.extraTaskIds) {
+      if (effectiveTasks.some((t: any) => t.id === tid)) continue;
+      const extra = tasks.find((t: any) => t.id === tid);
+      if (extra) effectiveTasks.push(extra);
+    }
+    if (effectiveTasks.length === 0) continue;
+
     const groupKey = videoPath || `orphan:${srtPath}`;
     if (!grouped.has(groupKey)) {
       grouped.set(groupKey, {
@@ -390,8 +420,8 @@ export function scanFolder(createJobs = true): ScanResult {
       tasks: [],
     };
 
-    // For each enabled task, compute output and check status
-    for (const task of enabledTasks) {
+    // For each effective task, compute output and check status
+    for (const task of effectiveTasks) {
       const outputName = applyPattern(task.output_pattern, baseStem, task.lang_code, extNoDot);
       const outputPath = path.join(dir, outputName);
       const outputExists = fs.existsSync(outputPath);

@@ -52,6 +52,11 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   scan_folders: "",
   scan_exclude_folders: "",
   scan_profiles: "[]",
+  // Per-directory translation control (see directory-rules.ts).
+  // directory_rules: JSON array of DirectoryRule. translate_without_video: global
+  // baseline for subtitles that have no companion video ("on" | "off").
+  directory_rules: "[]",
+  translate_without_video: "off",
   temperature: "0.7",
   chunk_size: "20",
   context_window: "5",

@@ -302,7 +302,12 @@
       "title": "Interface",
       "description": "Escolha como o SubSmelt deve funcionar neste navegador.",
       "language": "Idioma",
-      "languageHint": "Salvo neste navegador e aplicado imediatamente."
+      "languageHint": "Salvo neste navegador e aplicado imediatamente.",
+      "theme": "Tema",
+      "themeHint": "Escolha uma interface clara ou escura, ou siga a configuração do seu sistema.",
+      "theme_system": "Sistema",
+      "theme_dark": "Escuro",
+      "theme_light": "Claro"
     },
     "llmConnection": {
       "title": "LLM Connection",
@@ -445,7 +450,23 @@
       "autoScanInterval": "Auto-Scan Interval (minutes)",
       "autoScanIntervalHint": "Polling fallback. Set to 0 to disable. Use File Watcher for instant detection.",
       "autoTranslate": "Auto-translate new files",
-      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected."
+      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected.",
+      "translateWithoutVideo": "Traduzir legendas sem vídeo",
+      "translateWithoutVideoHint": "Padrão global: quando ativado, os arquivos de legenda sem vídeo correspondente são traduzidos em todos os lugares. As regras de pasta podem substituir isso por pasta.",
+      "dirRules": {
+        "title": "Regras de pasta",
+        "hint": "Aplique um comportamento de tradução diferente por pasta. Uma regra abrange a pasta e todas as suas subpastas; a regra mais específica prevalece.",
+        "addRule": "+ Adicionar regra",
+        "noRules": "Nenhuma regra de pasta. Adicione uma para traduzir legendas sem vídeo ou incluir idiomas para pastas específicas.",
+        "enabled": "Ativa",
+        "allFolders": "Todas as pastas (raiz)",
+        "videolessLabel": "Traduzir legendas sem vídeo",
+        "tri_inherit": "Herdar",
+        "tri_on": "Ativado",
+        "tri_off": "Desativado",
+        "languagesLabel": "Adicionar idiomas de destino",
+        "noTasks": "Nenhuma tarefa de tradução definida ainda."
+      }
     },
     "saved": "Settings saved",
     "saveFailed": "Save failed: {{message}}",

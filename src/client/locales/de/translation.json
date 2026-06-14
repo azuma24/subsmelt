@@ -302,7 +302,12 @@
       "title": "Oberfläche",
       "description": "Wähle aus, wie sich SubSmelt in diesem Browser anfühlen soll.",
       "language": "Sprache",
-      "languageHint": "Wird in diesem Browser gespeichert und sofort angewendet."
+      "languageHint": "Wird in diesem Browser gespeichert und sofort angewendet.",
+      "theme": "Design",
+      "themeHint": "Wähle eine helle oder dunkle Oberfläche oder folge deiner Systemeinstellung.",
+      "theme_system": "System",
+      "theme_dark": "Dunkel",
+      "theme_light": "Hell"
     },
     "llmConnection": {
       "title": "LLM Connection",
@@ -445,7 +450,23 @@
       "autoScanInterval": "Auto-Scan Interval (minutes)",
       "autoScanIntervalHint": "Polling fallback. Set to 0 to disable. Use File Watcher for instant detection.",
       "autoTranslate": "Auto-translate new files",
-      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected."
+      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected.",
+      "translateWithoutVideo": "Untertitel ohne Video übersetzen",
+      "translateWithoutVideoHint": "Globale Voreinstellung: Wenn aktiviert, werden Untertiteldateien ohne passendes Video überall übersetzt. Verzeichnisregeln können dies pro Ordner überschreiben.",
+      "dirRules": {
+        "title": "Verzeichnisregeln",
+        "hint": "Wenden Sie pro Ordner ein anderes Übersetzungsverhalten an. Eine Regel gilt für den Ordner und alle seine Unterordner; die spezifischste Regel hat Vorrang.",
+        "addRule": "+ Regel hinzufügen",
+        "noRules": "Keine Verzeichnisregeln. Fügen Sie eine hinzu, um Untertitel ohne Video zu übersetzen oder Sprachen für bestimmte Ordner zu ergänzen.",
+        "enabled": "Aktiv",
+        "allFolders": "Alle Ordner (Stammverzeichnis)",
+        "videolessLabel": "Untertitel ohne Video übersetzen",
+        "tri_inherit": "Erben",
+        "tri_on": "Ein",
+        "tri_off": "Aus",
+        "languagesLabel": "Zielsprachen hinzufügen",
+        "noTasks": "Noch keine Übersetzungsaufgaben definiert."
+      }
     },
     "saved": "Settings saved",
     "saveFailed": "Save failed: {{message}}",

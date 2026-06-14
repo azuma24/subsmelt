@@ -302,7 +302,12 @@
       "title": "الواجهة",
       "description": "اختر طريقة ظهور SubSmelt في هذا المتصفح.",
       "language": "اللغة",
-      "languageHint": "يُحفظ في هذا المتصفح ويُطبّق فورًا."
+      "languageHint": "يُحفظ في هذا المتصفح ويُطبّق فورًا.",
+      "theme": "السمة",
+      "themeHint": "اختر واجهة فاتحة أو داكنة، أو اتبع إعداد نظامك.",
+      "theme_system": "النظام",
+      "theme_dark": "داكن",
+      "theme_light": "فاتح"
     },
     "llmConnection": {
       "title": "LLM Connection",
@@ -445,7 +450,23 @@
       "autoScanInterval": "Auto-Scan Interval (minutes)",
       "autoScanIntervalHint": "Polling fallback. Set to 0 to disable. Use File Watcher for instant detection.",
       "autoTranslate": "Auto-translate new files",
-      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected."
+      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected.",
+      "translateWithoutVideo": "ترجمة ملفات الترجمة بدون مقطع فيديو",
+      "translateWithoutVideoHint": "الإعداد الافتراضي العام: عند التفعيل، تُترجَم ملفات الترجمة التي لا يوجد لها مقطع فيديو مطابق في كل مكان. ويمكن لقواعد المجلدات تجاوز هذا الإعداد لكل مجلد على حدة.",
+      "dirRules": {
+        "title": "قواعد المجلدات",
+        "hint": "طبّق سلوك ترجمة مختلفًا لكل مجلد. تشمل القاعدة المجلد وجميع مجلداته الفرعية، وتُطبَّق القاعدة الأكثر تحديدًا.",
+        "addRule": "+ إضافة قاعدة",
+        "noRules": "لا توجد قواعد مجلدات. أضف واحدة لترجمة ملفات الترجمة التي بلا فيديو أو لإضافة لغات لمجلدات معيّنة.",
+        "enabled": "نشط",
+        "allFolders": "كل المجلدات (الجذر)",
+        "videolessLabel": "ترجمة ملفات الترجمة بدون مقطع فيديو",
+        "tri_inherit": "موروث",
+        "tri_on": "مفعّل",
+        "tri_off": "معطّل",
+        "languagesLabel": "إضافة لغات الهدف",
+        "noTasks": "لم تُحدَّد أي مهام ترجمة بعد."
+      }
     },
     "saved": "Settings saved",
     "saveFailed": "Save failed: {{message}}",

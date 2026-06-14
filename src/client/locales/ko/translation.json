@@ -302,7 +302,12 @@
       "title": "인터페이스",
       "description": "이 브라우저에서 SubSmelt가 표시되는 방식을 선택합니다.",
       "language": "언어",
-      "languageHint": "이 브라우저에 저장되고 즉시 적용됩니다."
+      "languageHint": "이 브라우저에 저장되고 즉시 적용됩니다.",
+      "theme": "테마",
+      "themeHint": "밝은 또는 어두운 인터페이스를 선택하거나 시스템 설정을 따릅니다.",
+      "theme_system": "시스템",
+      "theme_dark": "어두움",
+      "theme_light": "밝음"
     },
     "llmConnection": {
       "title": "LLM Connection",
@@ -445,7 +450,23 @@
       "autoScanInterval": "Auto-Scan Interval (minutes)",
       "autoScanIntervalHint": "Polling fallback. Set to 0 to disable. Use File Watcher for instant detection.",
       "autoTranslate": "Auto-translate new files",
-      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected."
+      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected.",
+      "translateWithoutVideo": "동영상 없이 자막 번역",
+      "translateWithoutVideoHint": "전역 기본값: 켜면 일치하는 동영상이 없는 자막 파일이 모든 곳에서 번역됩니다. 디렉터리 규칙으로 폴더별로 이를 재정의할 수 있습니다.",
+      "dirRules": {
+        "title": "디렉터리 규칙",
+        "hint": "폴더별로 다른 번역 동작을 적용합니다. 규칙은 해당 폴더와 모든 하위 폴더에 적용되며, 가장 구체적인 규칙이 우선합니다.",
+        "addRule": "+ 규칙 추가",
+        "noRules": "디렉터리 규칙이 없습니다. 동영상 없는 자막을 번역하거나 특정 폴더에 언어를 추가하려면 규칙을 추가하세요.",
+        "enabled": "활성",
+        "allFolders": "모든 폴더(루트)",
+        "videolessLabel": "동영상 없이 자막 번역",
+        "tri_inherit": "상속",
+        "tri_on": "켜짐",
+        "tri_off": "꺼짐",
+        "languagesLabel": "대상 언어 추가",
+        "noTasks": "아직 정의된 번역 작업이 없습니다."
+      }
     },
     "saved": "Settings saved",
     "saveFailed": "Save failed: {{message}}",

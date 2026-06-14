@@ -302,7 +302,12 @@
       "title": "Interfaccia",
       "description": "Scegli come deve apparire SubSmelt in questo browser.",
       "language": "Lingua",
-      "languageHint": "Salvato in questo browser e applicato subito."
+      "languageHint": "Salvato in questo browser e applicato subito.",
+      "theme": "Tema",
+      "themeHint": "Scegli un'interfaccia chiara o scura, oppure segui l'impostazione del sistema.",
+      "theme_system": "Sistema",
+      "theme_dark": "Scuro",
+      "theme_light": "Chiaro"
     },
     "llmConnection": {
       "title": "LLM Connection",
@@ -445,7 +450,23 @@
       "autoScanInterval": "Auto-Scan Interval (minutes)",
       "autoScanIntervalHint": "Polling fallback. Set to 0 to disable. Use File Watcher for instant detection.",
       "autoTranslate": "Auto-translate new files",
-      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected."
+      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected.",
+      "translateWithoutVideo": "Traduci i sottotitoli senza video",
+      "translateWithoutVideoHint": "Impostazione predefinita globale: se attiva, i file di sottotitoli senza un video corrispondente vengono tradotti ovunque. Le regole delle cartelle possono sovrascrivere questa impostazione per ogni cartella.",
+      "dirRules": {
+        "title": "Regole delle cartelle",
+        "hint": "Applica un comportamento di traduzione diverso per ogni cartella. Una regola riguarda la cartella e tutte le sue sottocartelle; prevale la regola più specifica.",
+        "addRule": "+ Aggiungi regola",
+        "noRules": "Nessuna regola delle cartelle. Aggiungine una per tradurre i sottotitoli senza video o per aggiungere lingue a cartelle specifiche.",
+        "enabled": "Attiva",
+        "allFolders": "Tutte le cartelle (radice)",
+        "videolessLabel": "Traduci i sottotitoli senza video",
+        "tri_inherit": "Eredita",
+        "tri_on": "Attivo",
+        "tri_off": "Disattivo",
+        "languagesLabel": "Aggiungi lingue di destinazione",
+        "noTasks": "Nessuna attività di traduzione ancora definita."
+      }
     },
     "saved": "Settings saved",
     "saveFailed": "Save failed: {{message}}",

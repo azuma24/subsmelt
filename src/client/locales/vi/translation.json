@@ -302,7 +302,12 @@
       "title": "Giao diện",
       "description": "Chọn cách SubSmelt hiển thị trong trình duyệt này.",
       "language": "Ngôn ngữ",
-      "languageHint": "Được lưu trong trình duyệt này và áp dụng ngay."
+      "languageHint": "Được lưu trong trình duyệt này và áp dụng ngay.",
+      "theme": "Giao diện",
+      "themeHint": "Chọn giao diện sáng hoặc tối, hoặc theo thiết lập hệ thống của bạn.",
+      "theme_system": "Hệ thống",
+      "theme_dark": "Tối",
+      "theme_light": "Sáng"
     },
     "llmConnection": {
       "title": "LLM Connection",
@@ -445,7 +450,23 @@
       "autoScanInterval": "Auto-Scan Interval (minutes)",
       "autoScanIntervalHint": "Polling fallback. Set to 0 to disable. Use File Watcher for instant detection.",
       "autoTranslate": "Auto-translate new files",
-      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected."
+      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected.",
+      "translateWithoutVideo": "Dịch phụ đề không có video",
+      "translateWithoutVideoHint": "Mặc định toàn cục: khi bật, các tệp phụ đề không có video tương ứng sẽ được dịch ở mọi nơi. Quy tắc thư mục có thể ghi đè điều này cho từng thư mục.",
+      "dirRules": {
+        "title": "Quy tắc thư mục",
+        "hint": "Áp dụng hành vi dịch khác nhau cho từng thư mục. Một quy tắc bao gồm thư mục và tất cả các thư mục con của nó; quy tắc cụ thể nhất sẽ được ưu tiên.",
+        "addRule": "+ Thêm quy tắc",
+        "noRules": "Không có quy tắc thư mục. Thêm một quy tắc để dịch phụ đề không có video hoặc thêm ngôn ngữ cho các thư mục cụ thể.",
+        "enabled": "Đang hoạt động",
+        "allFolders": "Tất cả thư mục (gốc)",
+        "videolessLabel": "Dịch phụ đề không có video",
+        "tri_inherit": "Kế thừa",
+        "tri_on": "Bật",
+        "tri_off": "Tắt",
+        "languagesLabel": "Thêm ngôn ngữ đích",
+        "noTasks": "Chưa có tác vụ dịch nào được xác định."
+      }
     },
     "saved": "Settings saved",
     "saveFailed": "Save failed: {{message}}",

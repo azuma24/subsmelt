@@ -302,7 +302,12 @@
       "title": "介面",
       "description": "選擇此瀏覽器中的 SubSmelt 顯示方式。",
       "language": "語言",
-      "languageHint": "會儲存在此瀏覽器中，並立即套用。"
+      "languageHint": "會儲存在此瀏覽器中，並立即套用。",
+      "theme": "佈景主題",
+      "themeHint": "選擇淺色或深色介面，或跟隨系統設定。",
+      "theme_system": "跟隨系統",
+      "theme_dark": "深色",
+      "theme_light": "淺色"
     },
     "llmConnection": {
       "title": "LLM 連線",
@@ -445,7 +450,23 @@
       "autoScanInterval": "自動掃描間隔（分鐘）",
       "autoScanIntervalHint": "輪詢備用方案。設為 0 可停用。建議使用上方的檔案監控以即時偵測。",
       "autoTranslate": "自動翻譯新檔案",
-      "autoTranslateHint": "啟用時，新偵測到的字幕會立即開始翻譯。關閉則只會加入佇列，之後請手動用「全部執行」或「執行選取」啟動。"
+      "autoTranslateHint": "啟用時，新偵測到的字幕會立即開始翻譯。關閉則只會加入佇列，之後請手動用「全部執行」或「執行選取」啟動。",
+      "translateWithoutVideo": "翻譯沒有影片的字幕",
+      "translateWithoutVideoHint": "全域預設：開啟後，沒有相符影片的字幕檔會在所有位置被翻譯。目錄規則可依資料夾覆寫此設定。",
+      "dirRules": {
+        "title": "目錄規則",
+        "hint": "為每個資料夾套用不同的翻譯行為。規則適用於該資料夾及其所有子資料夾；最具體的規則優先生效。",
+        "addRule": "+ 新增規則",
+        "noRules": "沒有目錄規則。新增一條以翻譯沒有影片的字幕，或為特定資料夾新增語言。",
+        "enabled": "啟用",
+        "allFolders": "所有資料夾（根目錄）",
+        "videolessLabel": "翻譯沒有影片的字幕",
+        "tri_inherit": "繼承",
+        "tri_on": "開",
+        "tri_off": "關",
+        "languagesLabel": "新增目標語言",
+        "noTasks": "尚未定義任何翻譯任務。"
+      }
     },
     "saved": "設定已儲存",
     "saveFailed": "儲存失敗：{{message}}",

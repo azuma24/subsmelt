@@ -1102,6 +1102,8 @@ export interface TranslateFileOptions {
   llmMode?: LlmMode;
   /** Fired once per connection the moment it first produces a translation. */
   onConnectionUsed?: (info: { id: string; label: string }) => void;
+  /** Fired when a connection exhausts its retries and the job cascades to the next. */
+  onConnectionError?: (info: { id: string; label: string; error: string }) => void;
 }
 
 export function isAutomaticSourceLanguage(sourceLang?: string): boolean {
@@ -1245,6 +1247,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       } catch (e: any) {
         if (e?.message === "STOP_REQUESTED") throw e;
         // exhausted retries on this connection — cascade to the next
+        opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(e?.message || e) });
       }
     }
     return null;
@@ -1280,6 +1283,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       } catch (e: any) {
         if (e?.message === "STOP_REQUESTED") throw e;
         lastErr = e;
+        opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(e?.message || e) });
       }
     }
     throw lastErr || new Error("All LLM connections failed");
@@ -1290,8 +1294,12 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   const contextSize = opts.contextSize;
   const configuredConcurrency = Math.max(1, Math.min(8, opts.parallelChunks || 1));
   // In parallel mode, ensure enough workers to actually exercise every connection.
+  // Connection-driven concurrency may exceed the single-endpoint parallel_chunks
+  // cap (8): each extra connection is a separate backend, so workers scale up to
+  // MAX_PARALLEL_CONNECTIONS distinct primaries.
+  const MAX_PARALLEL_CONNECTIONS = 32;
   const concurrency = llmMode === "parallel"
-    ? Math.max(1, Math.min(8, Math.max(configuredConcurrency, connections.length)))
+    ? Math.max(1, Math.min(MAX_PARALLEL_CONNECTIONS, Math.max(configuredConcurrency, connections.length)))
     : configuredConcurrency;
 
   // Concurrency-limited chunk processor.

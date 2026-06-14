@@ -4,8 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SubSmelt</title>
+    <script>
+      // Apply the saved theme before first paint to avoid a flash. Mirrors
+      // src/client/lib/theme.ts (pref "system" | "dark" | "light").
+      (function () {
+        try {
+          var pref = localStorage.getItem("subsmelt-theme") || "system";
+          var resolved = pref === "light" || pref === "dark"
+            ? pref
+            : (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+          document.documentElement.setAttribute("data-theme", resolved);
+        } catch (e) {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      })();
+    </script>
   </head>
-  <body class="bg-gray-950 text-gray-100">
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/client/main.tsx"></script>
   </body>

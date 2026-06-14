@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { ToastProvider, useToast } from "./components/Toast";
 import { ConfirmProvider } from "./components/ConfirmModal";
 import { formatDur } from "./lib";
+import { applyTheme, getThemePref, watchSystemTheme } from "./lib/theme";
 import { useIsMobile, useJobsQuery, useQueueStatusQuery, useSSE, useSettingsQuery } from "./hooks";
 import type { JobRow } from "./types";
 import { DesktopSidebar, MobileBottomNav } from "./app/shell";
@@ -69,6 +70,14 @@ function AppInner() {
     document.documentElement.dir = current?.dir || "ltr";
     document.documentElement.lang = current?.code || "en";
   }, [i18n.language]);
+
+  // Apply the stored theme and follow OS scheme changes while on "system".
+  useEffect(() => {
+    applyTheme(getThemePref());
+    return watchSystemTheme(() => {
+      if (getThemePref() === "system") applyTheme("system");
+    });
+  }, []);
 
   return (
     <div className="flex h-dvh min-h-dvh bg-[var(--bg)] text-[var(--text)]">

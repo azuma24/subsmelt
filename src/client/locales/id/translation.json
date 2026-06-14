@@ -302,7 +302,12 @@
       "title": "Antarmuka",
       "description": "Pilih tampilan SubSmelt di browser ini.",
       "language": "Bahasa",
-      "languageHint": "Disimpan di browser ini dan langsung diterapkan."
+      "languageHint": "Disimpan di browser ini dan langsung diterapkan.",
+      "theme": "Tema",
+      "themeHint": "Pilih tampilan terang atau gelap, atau ikuti pengaturan sistem Anda.",
+      "theme_system": "Sistem",
+      "theme_dark": "Gelap",
+      "theme_light": "Terang"
     },
     "llmConnection": {
       "title": "LLM Connection",
@@ -445,7 +450,23 @@
       "autoScanInterval": "Auto-Scan Interval (minutes)",
       "autoScanIntervalHint": "Polling fallback. Set to 0 to disable. Use File Watcher for instant detection.",
       "autoTranslate": "Auto-translate new files",
-      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected."
+      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected.",
+      "translateWithoutVideo": "Terjemahkan subtitle tanpa video",
+      "translateWithoutVideoHint": "Default global: jika aktif, berkas subtitle yang tidak memiliki video yang cocok akan diterjemahkan di mana saja. Aturan Direktori dapat menggantinya per folder.",
+      "dirRules": {
+        "title": "Aturan Direktori",
+        "hint": "Terapkan perilaku terjemahan yang berbeda per folder. Sebuah aturan mencakup folder dan semua subfoldernya; aturan yang paling spesifik yang berlaku.",
+        "addRule": "+ Tambah aturan",
+        "noRules": "Tidak ada aturan direktori. Tambahkan satu untuk menerjemahkan subtitle tanpa video atau menambahkan bahasa untuk folder tertentu.",
+        "enabled": "Aktif",
+        "allFolders": "Semua folder (root)",
+        "videolessLabel": "Terjemahkan subtitle tanpa video",
+        "tri_inherit": "Warisi",
+        "tri_on": "Nyala",
+        "tri_off": "Mati",
+        "languagesLabel": "Tambah bahasa tujuan",
+        "noTasks": "Belum ada tugas terjemahan yang ditentukan."
+      }
     },
     "saved": "Settings saved",
     "saveFailed": "Save failed: {{message}}",

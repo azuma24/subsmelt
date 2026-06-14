@@ -302,7 +302,12 @@
       "title": "Интерфейс",
       "description": "Выберите, как SubSmelt будет выглядеть в этом браузере.",
       "language": "Язык",
-      "languageHint": "Сохраняется в этом браузере и применяется сразу."
+      "languageHint": "Сохраняется в этом браузере и применяется сразу.",
+      "theme": "Тема",
+      "themeHint": "Выберите светлый или тёмный интерфейс либо следуйте настройке системы.",
+      "theme_system": "Системная",
+      "theme_dark": "Тёмная",
+      "theme_light": "Светлая"
     },
     "llmConnection": {
       "title": "LLM Connection",
@@ -445,7 +450,23 @@
       "autoScanInterval": "Auto-Scan Interval (minutes)",
       "autoScanIntervalHint": "Polling fallback. Set to 0 to disable. Use File Watcher for instant detection.",
       "autoTranslate": "Auto-translate new files",
-      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected."
+      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected.",
+      "translateWithoutVideo": "Переводить субтитры без видео",
+      "translateWithoutVideoHint": "Глобальное значение по умолчанию: если включено, файлы субтитров без соответствующего видео переводятся везде. Правила каталогов могут переопределять это для каждой папки.",
+      "dirRules": {
+        "title": "Правила каталогов",
+        "hint": "Применяйте разное поведение перевода для каждой папки. Правило распространяется на папку и все её вложенные папки; приоритет имеет наиболее конкретное правило.",
+        "addRule": "+ Добавить правило",
+        "noRules": "Нет правил каталогов. Добавьте правило, чтобы переводить субтитры без видео или добавить языки для определённых папок.",
+        "enabled": "Активно",
+        "allFolders": "Все папки (корень)",
+        "videolessLabel": "Переводить субтитры без видео",
+        "tri_inherit": "Наследовать",
+        "tri_on": "Вкл.",
+        "tri_off": "Выкл.",
+        "languagesLabel": "Добавить целевые языки",
+        "noTasks": "Задачи перевода ещё не определены."
+      }
     },
     "saved": "Settings saved",
     "saveFailed": "Save failed: {{message}}",

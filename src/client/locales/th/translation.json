@@ -302,7 +302,12 @@
       "title": "อินเทอร์เฟซ",
       "description": "เลือกวิธีที่ SubSmelt แสดงผลในเบราว์เซอร์นี้",
       "language": "ภาษา",
-      "languageHint": "บันทึกไว้ในเบราว์เซอร์นี้และนำไปใช้ทันที"
+      "languageHint": "บันทึกไว้ในเบราว์เซอร์นี้และนำไปใช้ทันที",
+      "theme": "ธีม",
+      "themeHint": "เลือกอินเทอร์เฟซแบบสว่างหรือมืด หรือใช้ตามการตั้งค่าระบบของคุณ",
+      "theme_system": "ระบบ",
+      "theme_dark": "มืด",
+      "theme_light": "สว่าง"
     },
     "llmConnection": {
       "title": "LLM Connection",
@@ -445,7 +450,23 @@
       "autoScanInterval": "Auto-Scan Interval (minutes)",
       "autoScanIntervalHint": "Polling fallback. Set to 0 to disable. Use File Watcher for instant detection.",
       "autoTranslate": "Auto-translate new files",
-      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected."
+      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected.",
+      "translateWithoutVideo": "แปลซับไตเติลที่ไม่มีวิดีโอ",
+      "translateWithoutVideoHint": "ค่าเริ่มต้นส่วนกลาง: เมื่อเปิด ไฟล์ซับไตเติลที่ไม่มีวิดีโอที่ตรงกันจะถูกแปลในทุกที่ กฎไดเรกทอรีสามารถลบล้างค่านี้ได้ในแต่ละโฟลเดอร์",
+      "dirRules": {
+        "title": "กฎไดเรกทอรี",
+        "hint": "ใช้พฤติกรรมการแปลที่แตกต่างกันในแต่ละโฟลเดอร์ กฎจะครอบคลุมโฟลเดอร์และโฟลเดอร์ย่อยทั้งหมด โดยกฎที่เฉพาะเจาะจงที่สุดจะมีผล",
+        "addRule": "+ เพิ่มกฎ",
+        "noRules": "ไม่มีกฎไดเรกทอรี เพิ่มกฎเพื่อแปลซับไตเติลที่ไม่มีวิดีโอ หรือเพิ่มภาษาสำหรับโฟลเดอร์ที่ระบุ",
+        "enabled": "ใช้งานอยู่",
+        "allFolders": "ทุกโฟลเดอร์ (ราก)",
+        "videolessLabel": "แปลซับไตเติลที่ไม่มีวิดีโอ",
+        "tri_inherit": "สืบทอด",
+        "tri_on": "เปิด",
+        "tri_off": "ปิด",
+        "languagesLabel": "เพิ่มภาษาปลายทาง",
+        "noTasks": "ยังไม่มีการกำหนดงานแปล"
+      }
     },
     "saved": "Settings saved",
     "saveFailed": "Save failed: {{message}}",

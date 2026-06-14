@@ -125,6 +125,9 @@ export async function processQueue(onlyIds?: number[]) {
               usedConnLabels.push(label);
             }
           },
+          onConnectionError: ({ id, label, error }) => {
+            logger.warn("translate", `LLM connection failed, cascading to next: ${label} (${id}) — ${error}`, job.id, { stage: "llm_connection_error" });
+          },
           prompt: promptToUse,
           lang: targetLang || "English",
           sourceLang: task?.source_lang || "Automatic",

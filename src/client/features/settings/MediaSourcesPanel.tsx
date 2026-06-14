@@ -1,9 +1,18 @@
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
-import type { FolderNode } from "../../types";
+import type { FolderNode, Task } from "../../types";
 
 type ScanMode = "recursive" | "root_only" | "selected";
+type TriState = "inherit" | "on" | "off";
+
+interface DirectoryRule {
+  id: string;
+  path: string;
+  enabled: boolean;
+  translateWithoutVideo: TriState;
+  taskIds: number[];
+}
 
 interface MediaSourcesPanelProps {
   isMobile: boolean;
@@ -12,12 +21,41 @@ interface MediaSourcesPanelProps {
   scanFolders: string;
   scanExcludeFolders: string;
   scanProfiles: string;
+  directoryRules: string;
   onScanModeChange: (mode: string) => void;
   onScanFoldersChange: (folders: string) => void;
   onScanExcludeFoldersChange: (folders: string) => void;
   onScanScopeChange: (scope: { scanMode: string; scanFolders: string; scanExcludeFolders: string }) => void;
   onScanProfilesChange: (profiles: string) => void;
+  onDirectoryRulesChange: (rules: string) => void;
 }
+
+const TRI_STATES: TriState[] = ["inherit", "on", "off"];
+
+const parseDirectoryRules = (raw: string): DirectoryRule[] => {
+  try {
+    const value = JSON.parse(raw || "[]");
+    if (!Array.isArray(value)) return [];
+    return value
+      .filter((r) => r && typeof r === "object" && typeof r.id === "string")
+      .map((r) => ({
+        id: r.id as string,
+        path: typeof r.path === "string" ? r.path.replace(/^\/+|\/+$/g, "") : "",
+        enabled: r.enabled !== false,
+        translateWithoutVideo: (TRI_STATES as string[]).includes(r.translateWithoutVideo) ? r.translateWithoutVideo as TriState : "inherit",
+        taskIds: Array.isArray(r.taskIds) ? r.taskIds.filter((n: unknown) => typeof n === "number") : [],
+      }));
+  } catch {
+    return [];
+  }
+};
+
+const serializeDirectoryRules = (rules: DirectoryRule[]): string => JSON.stringify(rules);
+
+const createRuleId = (): string =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 const SCAN_MODES: ScanMode[] = ["recursive", "root_only", "selected"];
 
@@ -115,11 +153,13 @@ export function MediaSourcesPanel({
   scanFolders,
   scanExcludeFolders,
   scanProfiles,
+  directoryRules,
   onScanModeChange,
   onScanFoldersChange,
   onScanExcludeFoldersChange,
   onScanScopeChange,
   onScanProfilesChange,
+  onDirectoryRulesChange,
 }: MediaSourcesPanelProps) {
   const { t } = useTranslation();
   const [folderRoot, setFolderRoot] = useState<FolderNode | null>(null);
@@ -372,6 +412,12 @@ export function MediaSourcesPanel({
         <div className="mt-1 text-[13px] text-[var(--text-2)]">{summary}</div>
       </div>
 
+      <DirectoryRulesSection
+        folders={allSubfolders}
+        rawRules={directoryRules}
+        onChange={onDirectoryRulesChange}
+      />
+
       <details className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
         <summary className="cursor-pointer text-[11px] text-[var(--text-2)] hover:text-[var(--text)]">
           {t("settings.sources.helpTitle")}
@@ -552,6 +598,140 @@ function FolderTreeRow({
               onToggleIncluded={onToggleIncluded}
               onToggleExcluded={onToggleExcluded}
             />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DirectoryRulesSection({
+  folders,
+  rawRules,
+  onChange,
+}: {
+  folders: string[];
+  rawRules: string;
+  onChange: (rules: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [tasks, setTasks] = useState<Task[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    api.getTasks().then((data) => { if (active) setTasks(data); }).catch(() => { if (active) setTasks([]); });
+    return () => { active = false; };
+  }, []);
+
+  const rules = useMemo(() => parseDirectoryRules(rawRules), [rawRules]);
+
+  const commit = (next: DirectoryRule[]) => onChange(serializeDirectoryRules(next));
+
+  const addRule = () => {
+    commit([
+      ...rules,
+      { id: createRuleId(), path: folders[0] || "", enabled: true, translateWithoutVideo: "on", taskIds: [] },
+    ]);
+  };
+
+  const updateRule = (id: string, patch: Partial<DirectoryRule>) => {
+    commit(rules.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  };
+
+  const removeRule = (id: string) => commit(rules.filter((r) => r.id !== id));
+
+  const toggleTask = (rule: DirectoryRule, taskId: number) => {
+    const taskIds = rule.taskIds.includes(taskId)
+      ? rule.taskIds.filter((n) => n !== taskId)
+      : [...rule.taskIds, taskId];
+    updateRule(rule.id, { taskIds });
+  };
+
+  const triLabel = (state: TriState): string => t(`settings.sources.dirRules.tri_${state}`);
+
+  return (
+    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
+      <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <div className="text-[13px] font-medium text-[var(--text)]">{t("settings.sources.dirRules.title")}</div>
+          <p className="text-[10.5px] text-[var(--text-3)]">{t("settings.sources.dirRules.hint")}</p>
+        </div>
+        <button type="button" onClick={addRule} className="shrink-0 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-white">
+          {t("settings.sources.dirRules.addRule")}
+        </button>
+      </div>
+
+      {rules.length === 0 ? (
+        <p className="text-[10.5px] text-[var(--text-3)]">{t("settings.sources.dirRules.noRules")}</p>
+      ) : (
+        <div className="space-y-2.5">
+          {rules.map((rule) => (
+            <div key={rule.id} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2.5">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <label className="flex items-center gap-1.5 text-[11px] text-[var(--text-2)]">
+                  <input
+                    type="checkbox"
+                    checked={rule.enabled}
+                    onChange={(e) => updateRule(rule.id, { enabled: e.target.checked })}
+                    className="h-3.5 w-3.5 accent-[var(--accent)]"
+                  />
+                  {t("settings.sources.dirRules.enabled")}
+                </label>
+                <select
+                  value={rule.path}
+                  onChange={(e) => updateRule(rule.id, { path: e.target.value })}
+                  className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1.5 text-xs text-[var(--text)] outline-none focus:border-[var(--accent)]"
+                >
+                  <option value="">{t("settings.sources.dirRules.allFolders")}</option>
+                  {folders.map((folder) => (
+                    <option key={folder} value={folder}>{folder}</option>
+                  ))}
+                </select>
+                <button type="button" onClick={() => removeRule(rule.id)} className="rounded-md px-2 py-1 text-[10px] text-[var(--text-3)] hover:text-[var(--red)]">
+                  {t("common.delete")}
+                </button>
+              </div>
+
+              <div className="mb-2">
+                <div className="mb-1 text-[10px] uppercase tracking-wide text-[var(--text-3)]">{t("settings.sources.dirRules.videolessLabel")}</div>
+                <div className="inline-flex overflow-hidden rounded-lg border border-[var(--border)]">
+                  {TRI_STATES.map((state) => (
+                    <button
+                      key={state}
+                      type="button"
+                      onClick={() => updateRule(rule.id, { translateWithoutVideo: state })}
+                      className={`px-2.5 py-1 text-[11px] ${rule.translateWithoutVideo === state ? "bg-[var(--accent)] text-white" : "bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)]"}`}
+                    >
+                      {triLabel(state)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-1 text-[10px] uppercase tracking-wide text-[var(--text-3)]">{t("settings.sources.dirRules.languagesLabel")}</div>
+                {tasks.length === 0 ? (
+                  <p className="text-[10.5px] text-[var(--text-3)]">{t("settings.sources.dirRules.noTasks")}</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {tasks.map((task) => (
+                      <label
+                        key={task.id}
+                        className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] ${rule.taskIds.includes(task.id) ? "border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]" : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)]"}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={rule.taskIds.includes(task.id)}
+                          onChange={() => toggleTask(rule, task.id)}
+                          className="h-3 w-3 accent-[var(--accent)]"
+                        />
+                        {task.target_lang}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           ))}
         </div>
       )}

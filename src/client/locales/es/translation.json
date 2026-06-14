@@ -302,7 +302,12 @@
       "title": "Interfaz",
       "description": "Elige cómo debe verse SubSmelt en este navegador.",
       "language": "Idioma",
-      "languageHint": "Se guarda en este navegador y se aplica inmediatamente."
+      "languageHint": "Se guarda en este navegador y se aplica inmediatamente.",
+      "theme": "Tema",
+      "themeHint": "Elige una interfaz clara u oscura, o sigue la configuración de tu sistema.",
+      "theme_system": "Sistema",
+      "theme_dark": "Oscuro",
+      "theme_light": "Claro"
     },
     "llmConnection": {
       "title": "LLM Connection",
@@ -445,7 +450,23 @@
       "autoScanInterval": "Auto-Scan Interval (minutes)",
       "autoScanIntervalHint": "Polling fallback. Set to 0 to disable. Use File Watcher for instant detection.",
       "autoTranslate": "Auto-translate new files",
-      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected."
+      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected.",
+      "translateWithoutVideo": "Traducir subtítulos sin vídeo",
+      "translateWithoutVideoHint": "Valor predeterminado global: cuando está activado, los archivos de subtítulos sin un vídeo coincidente se traducen en todas partes. Las reglas de carpeta pueden anular esto en cada carpeta.",
+      "dirRules": {
+        "title": "Reglas de carpeta",
+        "hint": "Aplica un comportamiento de traducción distinto por carpeta. Una regla cubre la carpeta y todas sus subcarpetas; prevalece la regla más específica.",
+        "addRule": "+ Añadir regla",
+        "noRules": "No hay reglas de carpeta. Añade una para traducir subtítulos sin vídeo o agregar idiomas a carpetas concretas.",
+        "enabled": "Activa",
+        "allFolders": "Todas las carpetas (raíz)",
+        "videolessLabel": "Traducir subtítulos sin vídeo",
+        "tri_inherit": "Heredar",
+        "tri_on": "Activado",
+        "tri_off": "Desactivado",
+        "languagesLabel": "Añadir idiomas de destino",
+        "noTasks": "Aún no se han definido tareas de traducción."
+      }
     },
     "saved": "Settings saved",
     "saveFailed": "Save failed: {{message}}",

@@ -302,7 +302,12 @@
       "title": "Interface",
       "description": "Choose how SubSmelt should feel across this browser.",
       "language": "Language",
-      "languageHint": "Saved in this browser and applied immediately."
+      "languageHint": "Saved in this browser and applied immediately.",
+      "theme": "Theme",
+      "themeHint": "Choose a light or dark interface, or follow your system setting.",
+      "theme_system": "System",
+      "theme_dark": "Dark",
+      "theme_light": "Light"
     },
     "llmConnection": {
       "title": "LLM Connection",
@@ -445,7 +450,23 @@
       "autoScanInterval": "Auto-Scan Interval (minutes)",
       "autoScanIntervalHint": "Polling fallback. Set to 0 to disable. Use File Watcher for instant detection.",
       "autoTranslate": "Auto-translate new files",
-      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected."
+      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected.",
+      "translateWithoutVideo": "Translate subtitles without a video",
+      "translateWithoutVideoHint": "Global default: when on, subtitle files with no matching video are translated everywhere. Directory Rules can override this per folder.",
+      "dirRules": {
+        "title": "Directory Rules",
+        "hint": "Apply different translation behavior per folder. A rule covers the folder and all its subfolders; the most specific rule wins.",
+        "addRule": "+ Add rule",
+        "noRules": "No directory rules. Add one to translate videoless subtitles or add languages for specific folders.",
+        "enabled": "Active",
+        "allFolders": "All folders (root)",
+        "videolessLabel": "Translate subtitles without a video",
+        "tri_inherit": "Inherit",
+        "tri_on": "On",
+        "tri_off": "Off",
+        "languagesLabel": "Add target languages",
+        "noTasks": "No translation tasks defined yet."
+      }
     },
     "saved": "Settings saved",
     "saveFailed": "Save failed: {{message}}",

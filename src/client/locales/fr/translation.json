@@ -302,7 +302,12 @@
       "title": "Interface",
       "description": "Choisissez l’apparence de SubSmelt dans ce navigateur.",
       "language": "Langue",
-      "languageHint": "Enregistré dans ce navigateur et appliqué immédiatement."
+      "languageHint": "Enregistré dans ce navigateur et appliqué immédiatement.",
+      "theme": "Thème",
+      "themeHint": "Choisissez une interface claire ou sombre, ou suivez le réglage de votre système.",
+      "theme_system": "Système",
+      "theme_dark": "Sombre",
+      "theme_light": "Clair"
     },
     "llmConnection": {
       "title": "LLM Connection",
@@ -445,7 +450,23 @@
       "autoScanInterval": "Auto-Scan Interval (minutes)",
       "autoScanIntervalHint": "Polling fallback. Set to 0 to disable. Use File Watcher for instant detection.",
       "autoTranslate": "Auto-translate new files",
-      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected."
+      "autoTranslateHint": "When on, newly detected subtitles start translating immediately. Turn off to just queue them and run manually with Run All or Run Selected.",
+      "translateWithoutVideo": "Traduire les sous-titres sans vidéo",
+      "translateWithoutVideoHint": "Valeur par défaut globale : lorsqu'elle est activée, les fichiers de sous-titres sans vidéo correspondante sont traduits partout. Les règles de dossier peuvent remplacer ce réglage pour chaque dossier.",
+      "dirRules": {
+        "title": "Règles de dossier",
+        "hint": "Appliquez un comportement de traduction différent selon le dossier. Une règle couvre le dossier et tous ses sous-dossiers ; la règle la plus spécifique l'emporte.",
+        "addRule": "+ Ajouter une règle",
+        "noRules": "Aucune règle de dossier. Ajoutez-en une pour traduire les sous-titres sans vidéo ou ajouter des langues à des dossiers spécifiques.",
+        "enabled": "Active",
+        "allFolders": "Tous les dossiers (racine)",
+        "videolessLabel": "Traduire les sous-titres sans vidéo",
+        "tri_inherit": "Hériter",
+        "tri_on": "Activé",
+        "tri_off": "Désactivé",
+        "languagesLabel": "Ajouter des langues cibles",
+        "noTasks": "Aucune tâche de traduction définie pour le moment."
+      }
     },
     "saved": "Settings saved",
     "saveFailed": "Save failed: {{message}}",

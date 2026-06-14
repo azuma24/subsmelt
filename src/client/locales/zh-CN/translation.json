@@ -302,7 +302,12 @@
       "title": "界面",
       "description": "选择此浏览器中的 SubSmelt 显示方式。",
       "language": "语言",
-      "languageHint": "会保存在此浏览器中，并立即应用。"
+      "languageHint": "会保存在此浏览器中，并立即应用。",
+      "theme": "主题",
+      "themeHint": "选择浅色或深色界面，或跟随系统设置。",
+      "theme_system": "跟随系统",
+      "theme_dark": "深色",
+      "theme_light": "浅色"
     },
     "llmConnection": {
       "title": "LLM 连接",
@@ -445,7 +450,23 @@
       "autoScanInterval": "自动扫描间隔（分钟）",
       "autoScanIntervalHint": "轮询备用方案。设为 0 可禁用。建议使用上方的文件监控以即时检测。",
       "autoTranslate": "自动翻译新文件",
-      "autoTranslateHint": "启用时，新检测到的字幕会立即开始翻译。关闭则只会加入队列，之后请手动用「全部运行」或「运行所选」启动。"
+      "autoTranslateHint": "启用时，新检测到的字幕会立即开始翻译。关闭则只会加入队列，之后请手动用「全部运行」或「运行所选」启动。",
+      "translateWithoutVideo": "翻译没有视频的字幕",
+      "translateWithoutVideoHint": "全局默认：开启后，没有匹配视频的字幕文件会在所有位置被翻译。目录规则可按文件夹覆盖此设置。",
+      "dirRules": {
+        "title": "目录规则",
+        "hint": "为每个文件夹应用不同的翻译行为。规则适用于该文件夹及其所有子文件夹；最具体的规则优先生效。",
+        "addRule": "+ 添加规则",
+        "noRules": "没有目录规则。添加一条以翻译没有视频的字幕，或为特定文件夹添加语言。",
+        "enabled": "启用",
+        "allFolders": "所有文件夹（根目录）",
+        "videolessLabel": "翻译没有视频的字幕",
+        "tri_inherit": "继承",
+        "tri_on": "开",
+        "tri_off": "关",
+        "languagesLabel": "添加目标语言",
+        "noTasks": "尚未定义任何翻译任务。"
+      }
     },
     "saved": "设置已保存",
     "saveFailed": "保存失败：{{message}}",
