@@ -465,7 +465,11 @@
         "tri_on": "På",
         "tri_off": "Av",
         "languagesLabel": "Lägg till målspråk",
-        "noTasks": "Inga översättningsuppgifter definierade än."
+        "noTasks": "Inga översättningsuppgifter definierade än.",
+        "rulesButton": "Regler",
+        "chipNoVideo": "ingen video: {{state}}",
+        "chipLangs_one": "{{count}} språk",
+        "chipLangs_other": "{{count}} språk"
       }
     },
     "saved": "Inställningar sparade",

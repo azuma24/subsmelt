@@ -465,7 +465,11 @@
         "tri_on": "Bật",
         "tri_off": "Tắt",
         "languagesLabel": "Thêm ngôn ngữ đích",
-        "noTasks": "Chưa có tác vụ dịch nào được xác định."
+        "noTasks": "Chưa có tác vụ dịch nào được xác định.",
+        "rulesButton": "Quy tắc",
+        "chipNoVideo": "không video: {{state}}",
+        "chipLangs_one": "{{count}} ngôn ngữ",
+        "chipLangs_other": "{{count}} ngôn ngữ"
       }
     },
     "saved": "Settings saved",

@@ -465,7 +465,11 @@
         "tri_on": "开",
         "tri_off": "关",
         "languagesLabel": "添加目标语言",
-        "noTasks": "尚未定义任何翻译任务。"
+        "noTasks": "尚未定义任何翻译任务。",
+        "rulesButton": "规则",
+        "chipNoVideo": "无视频：{{state}}",
+        "chipLangs_one": "{{count}} 种语言",
+        "chipLangs_other": "{{count}} 种语言"
       }
     },
     "saved": "设置已保存",

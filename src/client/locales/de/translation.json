@@ -465,7 +465,11 @@
         "tri_on": "Ein",
         "tri_off": "Aus",
         "languagesLabel": "Zielsprachen hinzufügen",
-        "noTasks": "Noch keine Übersetzungsaufgaben definiert."
+        "noTasks": "Noch keine Übersetzungsaufgaben definiert.",
+        "rulesButton": "Regeln",
+        "chipNoVideo": "ohne Video: {{state}}",
+        "chipLangs_one": "{{count}} Sprache",
+        "chipLangs_other": "{{count}} Sprachen"
       }
     },
     "saved": "Settings saved",

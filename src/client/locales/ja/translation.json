@@ -465,7 +465,11 @@
         "tri_on": "オン",
         "tri_off": "オフ",
         "languagesLabel": "対象言語を追加",
-        "noTasks": "翻訳タスクはまだ定義されていません。"
+        "noTasks": "翻訳タスクはまだ定義されていません。",
+        "rulesButton": "ルール",
+        "chipNoVideo": "動画なし：{{state}}",
+        "chipLangs_one": "{{count}} 言語",
+        "chipLangs_other": "{{count}} 言語"
       }
     },
     "saved": "設定を保存しました",

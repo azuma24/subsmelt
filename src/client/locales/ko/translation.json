@@ -465,7 +465,11 @@
         "tri_on": "켜짐",
         "tri_off": "꺼짐",
         "languagesLabel": "대상 언어 추가",
-        "noTasks": "아직 정의된 번역 작업이 없습니다."
+        "noTasks": "아직 정의된 번역 작업이 없습니다.",
+        "rulesButton": "규칙",
+        "chipNoVideo": "동영상 없음: {{state}}",
+        "chipLangs_one": "언어 {{count}}개",
+        "chipLangs_other": "언어 {{count}}개"
       }
     },
     "saved": "Settings saved",

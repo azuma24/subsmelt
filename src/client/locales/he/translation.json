@@ -465,7 +465,11 @@
         "tri_on": "פעיל",
         "tri_off": "כבוי",
         "languagesLabel": "הוסף שפות יעד",
-        "noTasks": "טרם הוגדרו משימות תרגום."
+        "noTasks": "טרם הוגדרו משימות תרגום.",
+        "rulesButton": "כללים",
+        "chipNoVideo": "ללא וידאו: {{state}}",
+        "chipLangs_one": "שפה {{count}}",
+        "chipLangs_other": "{{count}} שפות"
       }
     },
     "saved": "ההגדרות נשמרו",

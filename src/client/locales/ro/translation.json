@@ -465,7 +465,11 @@
         "tri_on": "Pornit",
         "tri_off": "Oprit",
         "languagesLabel": "Adaugă limbi țintă",
-        "noTasks": "Nicio sarcină de traducere definită încă."
+        "noTasks": "Nicio sarcină de traducere definită încă.",
+        "rulesButton": "Reguli",
+        "chipNoVideo": "fără video: {{state}}",
+        "chipLangs_one": "{{count}} limbă",
+        "chipLangs_other": "{{count}} limbi"
       }
     },
     "saved": "Setări salvate",

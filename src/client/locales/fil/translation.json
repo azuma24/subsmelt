@@ -465,7 +465,11 @@
         "tri_on": "On",
         "tri_off": "Off",
         "languagesLabel": "Magdagdag ng target na wika",
-        "noTasks": "Wala pang natukoy na gawaing pagsasalin."
+        "noTasks": "Wala pang natukoy na gawaing pagsasalin.",
+        "rulesButton": "Mga Tuntunin",
+        "chipNoVideo": "walang video: {{state}}",
+        "chipLangs_one": "{{count}} wika",
+        "chipLangs_other": "{{count}} wika"
       }
     },
     "saved": "Na-save ang mga setting",

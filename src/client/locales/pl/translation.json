@@ -465,7 +465,11 @@
         "tri_on": "Wł.",
         "tri_off": "Wył.",
         "languagesLabel": "Dodaj języki docelowe",
-        "noTasks": "Nie zdefiniowano jeszcze żadnych zadań tłumaczenia."
+        "noTasks": "Nie zdefiniowano jeszcze żadnych zadań tłumaczenia.",
+        "rulesButton": "Reguły",
+        "chipNoVideo": "bez wideo: {{state}}",
+        "chipLangs_one": "{{count}} język",
+        "chipLangs_other": "{{count}} języków"
       }
     },
     "saved": "Ustawienia zapisane",

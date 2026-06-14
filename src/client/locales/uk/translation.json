@@ -465,7 +465,11 @@
         "tri_on": "Увімк.",
         "tri_off": "Вимк.",
         "languagesLabel": "Додати цільові мови",
-        "noTasks": "Завдань перекладу ще не визначено."
+        "noTasks": "Завдань перекладу ще не визначено.",
+        "rulesButton": "Правила",
+        "chipNoVideo": "без відео: {{state}}",
+        "chipLangs_one": "{{count}} мова",
+        "chipLangs_other": "{{count}} мов"
       }
     },
     "saved": "Налаштування збережено",

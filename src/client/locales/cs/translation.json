@@ -465,7 +465,11 @@
         "tri_on": "Zapnuto",
         "tri_off": "Vypnuto",
         "languagesLabel": "Přidat cílové jazyky",
-        "noTasks": "Zatím nejsou definovány žádné překladové úlohy."
+        "noTasks": "Zatím nejsou definovány žádné překladové úlohy.",
+        "rulesButton": "Pravidla",
+        "chipNoVideo": "bez videa: {{state}}",
+        "chipLangs_one": "{{count}} jazyk",
+        "chipLangs_other": "{{count}} jazyků"
       }
     },
     "saved": "Nastavení uloženo",

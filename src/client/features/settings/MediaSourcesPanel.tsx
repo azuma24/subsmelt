@@ -684,10 +684,10 @@ function FolderTreeRow({
     if (!hasRule) return null;
     const parts: string[] = [];
     if (rule.translateWithoutVideo !== "inherit") {
-      parts.push(`no-video: ${rule.translateWithoutVideo}`);
+      parts.push(t("settings.sources.dirRules.chipNoVideo", { state: t(`settings.sources.dirRules.tri_${rule.translateWithoutVideo}`) }));
     }
     if (rule.taskIds.length > 0) {
-      parts.push(`${rule.taskIds.length} lang${rule.taskIds.length === 1 ? "" : "s"}`);
+      parts.push(t("settings.sources.dirRules.chipLangs", { count: rule.taskIds.length }));
     }
     return parts.length > 0 ? parts.join(", ") : null;
   })();
@@ -761,7 +761,7 @@ function FolderTreeRow({
           }`}
           aria-expanded={rulesOpen}
         >
-          Rules
+          {t("settings.sources.dirRules.rulesButton")}
           {hasRule && ruleSummaryChip !== null && (
             <span className="ml-1 opacity-75">{ruleSummaryChip}</span>
           )}

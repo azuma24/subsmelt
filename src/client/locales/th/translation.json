@@ -465,7 +465,11 @@
         "tri_on": "เปิด",
         "tri_off": "ปิด",
         "languagesLabel": "เพิ่มภาษาปลายทาง",
-        "noTasks": "ยังไม่มีการกำหนดงานแปล"
+        "noTasks": "ยังไม่มีการกำหนดงานแปล",
+        "rulesButton": "กฎ",
+        "chipNoVideo": "ไม่มีวิดีโอ: {{state}}",
+        "chipLangs_one": "{{count}} ภาษา",
+        "chipLangs_other": "{{count}} ภาษา"
       }
     },
     "saved": "Settings saved",

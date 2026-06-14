@@ -465,7 +465,11 @@
         "tri_on": "Вкл.",
         "tri_off": "Выкл.",
         "languagesLabel": "Добавить целевые языки",
-        "noTasks": "Задачи перевода ещё не определены."
+        "noTasks": "Задачи перевода ещё не определены.",
+        "rulesButton": "Правила",
+        "chipNoVideo": "без видео: {{state}}",
+        "chipLangs_one": "{{count}} язык",
+        "chipLangs_other": "{{count}} языков"
       }
     },
     "saved": "Settings saved",

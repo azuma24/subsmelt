@@ -465,7 +465,11 @@
         "tri_on": "Ativado",
         "tri_off": "Desativado",
         "languagesLabel": "Adicionar idiomas de destino",
-        "noTasks": "Ainda não há tarefas de tradução definidas."
+        "noTasks": "Ainda não há tarefas de tradução definidas.",
+        "rulesButton": "Regras",
+        "chipNoVideo": "sem vídeo: {{state}}",
+        "chipLangs_one": "{{count}} idioma",
+        "chipLangs_other": "{{count}} idiomas"
       }
     },
     "saved": "Definições guardadas",

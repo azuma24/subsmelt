@@ -465,7 +465,11 @@
         "tri_on": "Açık",
         "tri_off": "Kapalı",
         "languagesLabel": "Hedef diller ekle",
-        "noTasks": "Henüz tanımlanmış çeviri görevi yok."
+        "noTasks": "Henüz tanımlanmış çeviri görevi yok.",
+        "rulesButton": "Kurallar",
+        "chipNoVideo": "videosuz: {{state}}",
+        "chipLangs_one": "{{count}} dil",
+        "chipLangs_other": "{{count}} dil"
       }
     },
     "saved": "Ayarlar kaydedildi",

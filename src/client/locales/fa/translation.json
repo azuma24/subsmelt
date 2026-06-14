@@ -465,7 +465,11 @@
         "tri_on": "روشن",
         "tri_off": "خاموش",
         "languagesLabel": "افزودن زبان‌های مقصد",
-        "noTasks": "هنوز هیچ وظیفه ترجمه‌ای تعریف نشده است."
+        "noTasks": "هنوز هیچ وظیفه ترجمه‌ای تعریف نشده است.",
+        "rulesButton": "قوانین",
+        "chipNoVideo": "بدون ویدئو: {{state}}",
+        "chipLangs_one": "{{count}} زبان",
+        "chipLangs_other": "{{count}} زبان"
       }
     },
     "saved": "تنظیمات ذخیره شد",

@@ -465,7 +465,11 @@
         "tri_on": "Nyala",
         "tri_off": "Mati",
         "languagesLabel": "Tambah bahasa tujuan",
-        "noTasks": "Belum ada tugas terjemahan yang ditentukan."
+        "noTasks": "Belum ada tugas terjemahan yang ditentukan.",
+        "rulesButton": "Aturan",
+        "chipNoVideo": "tanpa video: {{state}}",
+        "chipLangs_one": "{{count}} bahasa",
+        "chipLangs_other": "{{count}} bahasa"
       }
     },
     "saved": "Settings saved",

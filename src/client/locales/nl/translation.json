@@ -465,7 +465,11 @@
         "tri_on": "Aan",
         "tri_off": "Uit",
         "languagesLabel": "Doeltalen toevoegen",
-        "noTasks": "Nog geen vertaaltaken gedefinieerd."
+        "noTasks": "Nog geen vertaaltaken gedefinieerd.",
+        "rulesButton": "Regels",
+        "chipNoVideo": "geen video: {{state}}",
+        "chipLangs_one": "{{count}} taal",
+        "chipLangs_other": "{{count}} talen"
       }
     },
     "saved": "Instellingen opgeslagen",

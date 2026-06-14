@@ -465,7 +465,11 @@
         "tri_on": "Hidup",
         "tri_off": "Mati",
         "languagesLabel": "Tambah bahasa sasaran",
-        "noTasks": "Belum ada tugas terjemahan ditakrifkan."
+        "noTasks": "Belum ada tugas terjemahan ditakrifkan.",
+        "rulesButton": "Peraturan",
+        "chipNoVideo": "tanpa video: {{state}}",
+        "chipLangs_one": "{{count}} bahasa",
+        "chipLangs_other": "{{count}} bahasa"
       }
     },
     "saved": "Tetapan disimpan",

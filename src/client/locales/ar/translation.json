@@ -465,7 +465,11 @@
         "tri_on": "مفعّل",
         "tri_off": "معطّل",
         "languagesLabel": "إضافة لغات الهدف",
-        "noTasks": "لم تُحدَّد أي مهام ترجمة بعد."
+        "noTasks": "لم تُحدَّد أي مهام ترجمة بعد.",
+        "rulesButton": "القواعد",
+        "chipNoVideo": "بدون فيديو: {{state}}",
+        "chipLangs_one": "لغة {{count}}",
+        "chipLangs_other": "{{count}} لغات"
       }
     },
     "saved": "Settings saved",

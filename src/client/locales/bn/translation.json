@@ -465,7 +465,11 @@
         "tri_on": "চালু",
         "tri_off": "বন্ধ",
         "languagesLabel": "টার্গেট ভাষা যোগ করুন",
-        "noTasks": "এখনও কোনো অনুবাদ কাজ নির্ধারিত হয়নি।"
+        "noTasks": "এখনও কোনো অনুবাদ কাজ নির্ধারিত হয়নি।",
+        "rulesButton": "নিয়ম",
+        "chipNoVideo": "ভিডিও নেই: {{state}}",
+        "chipLangs_one": "{{count}} ভাষা",
+        "chipLangs_other": "{{count}} ভাষা"
       }
     },
     "saved": "সেটিংস সংরক্ষিত হয়েছে",

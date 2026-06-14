@@ -465,7 +465,11 @@
         "tri_on": "चालू",
         "tri_off": "बंद",
         "languagesLabel": "लक्ष्य भाषाएँ जोड़ें",
-        "noTasks": "अभी तक कोई अनुवाद कार्य परिभाषित नहीं किया गया है।"
+        "noTasks": "अभी तक कोई अनुवाद कार्य परिभाषित नहीं किया गया है।",
+        "rulesButton": "नियम",
+        "chipNoVideo": "वीडियो नहीं: {{state}}",
+        "chipLangs_one": "{{count}} भाषा",
+        "chipLangs_other": "{{count}} भाषाएँ"
       }
     },
     "saved": "Settings saved",

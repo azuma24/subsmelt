@@ -465,7 +465,11 @@
         "tri_on": "On",
         "tri_off": "Off",
         "languagesLabel": "Add target languages",
-        "noTasks": "No translation tasks defined yet."
+        "noTasks": "No translation tasks defined yet.",
+        "rulesButton": "Rules",
+        "chipNoVideo": "no-video: {{state}}",
+        "chipLangs_one": "{{count}} language",
+        "chipLangs_other": "{{count}} languages"
       }
     },
     "saved": "Settings saved",

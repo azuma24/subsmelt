@@ -465,7 +465,11 @@
         "tri_on": "Be",
         "tri_off": "Ki",
         "languagesLabel": "Célnyelvek hozzáadása",
-        "noTasks": "Még nincsenek definiált fordítási feladatok."
+        "noTasks": "Még nincsenek definiált fordítási feladatok.",
+        "rulesButton": "Szabályok",
+        "chipNoVideo": "nincs videó: {{state}}",
+        "chipLangs_one": "{{count}} nyelv",
+        "chipLangs_other": "{{count}} nyelv"
       }
     },
     "saved": "Beállítások mentve",
