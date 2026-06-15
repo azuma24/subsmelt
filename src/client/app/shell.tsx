@@ -93,7 +93,7 @@ export function TopStatusBar(_props: { queueRunning: boolean; watcherRunning: bo
 export function MobileBottomNav({ currentPath }: { currentPath: string }) {
   const { t } = useTranslation();
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 grid h-[58px] grid-cols-4 border-t border-[var(--border)] bg-[var(--surface)] pb-[env(safe-area-inset-bottom)] md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-30 grid h-[58px] grid-cols-5 border-t border-[var(--border)] bg-[var(--surface)] pb-[env(safe-area-inset-bottom)] md:hidden">
       {NAV_ITEMS.map((item) => {
         const active = currentPath === item.path;
         return (

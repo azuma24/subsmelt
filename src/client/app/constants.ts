@@ -36,6 +36,7 @@ export const LANGUAGES = [
 export const NAV_ITEMS = [
   { path: "/", labelKey: "nav.dashboard", icon: "📊" },
   { path: "/translations", labelKey: "nav.translations", icon: "🌐" },
+  { path: "/convert", labelKey: "nav.convert", icon: "🔄" },
   { path: "/settings", labelKey: "nav.settings", icon: "⚙️" },
   { path: "/logs", labelKey: "nav.logs", icon: "📋" },
 ] as const;
