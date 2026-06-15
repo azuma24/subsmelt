@@ -61,3 +61,6 @@ playwright-report/
 !.vscode/settings.json
 .claude-redesign-task.md
 .gstack/
+
+# graphify knowledge graph output
+graphify-out/

@@ -230,6 +230,8 @@ async function runJob(job: any, conns: ResolvedConnection[], llmModeForJob: LlmM
       maxAnalysisLines: ctxInfo.recommendedAnalysisLines,
       requestTimeoutMs,
       disableToolCalls: settings.disable_tool_calls === "1",
+      refinePass: settings.refine_pass === "1",
+      seriesMemory: settings.series_memory === "1",
       abortSignal: jobAbort.signal,
       onProgress: (completed, total) => {
         if (shouldStop) throw new Error("STOP_REQUESTED");

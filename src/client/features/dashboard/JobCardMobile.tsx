@@ -1,7 +1,5 @@
 import { useTranslation } from "react-i18next";
-import * as api from "../../api";
-import { useMutationWithInvalidation } from "../../hooks";
-import { useToast } from "../../components/Toast";
+import { useJobActions } from "../../hooks/useJobActions";
 import type { JobRow } from "../../types";
 import { ActionButton, ProgressSmall, StatusBadge } from "../../ui/primitives";
 
@@ -15,17 +13,6 @@ interface JobCardMobileProps {
   onOpenDetails: (job: JobRow) => void;
 }
 
-function classifyErrorReason(error: string | null): string {
-  if (!error) return "unknown";
-  const text = error.toLowerCase();
-  if (text.includes("timed out") || text.includes("timeout")) return "timeout";
-  if (text.includes("connection") || text.includes("econnrefused") || text.includes("network")) return "endpoint";
-  if (text.includes("rate limit") || text.includes("429")) return "rate-limit";
-  if (text.includes("schema") || text.includes("validation")) return "schema";
-  if (text.includes("not found") || text.includes("404")) return "not-found";
-  return "other";
-}
-
 export function JobCardMobile({
   job,
   currentJobId,
@@ -36,14 +23,12 @@ export function JobCardMobile({
   onOpenDetails,
 }: JobCardMobileProps) {
   const { t } = useTranslation();
-  const { addToast } = useToast();
-  const retryMutation = useMutationWithInvalidation((id: number) => api.retryJob(id));
-  const forceMutation = useMutationWithInvalidation((id: number) => api.forceJob(id));
+  const jobActions = useJobActions();
   const pct = job.total_cues > 0 ? Math.round((job.completed_cues / job.total_cues) * 100) : 0;
   const isActive = currentJobId === job.id;
   const hasError = job.status === "error" && job.error;
   const isPending = job.status === "pending";
-  const reason = hasError ? classifyErrorReason(job.error) : null;
+  const reason = hasError ? jobActions.classifyErrorReason(job.error) : null;
 
   return (
     <div className={`rounded-xl border p-[11px] ${isActive ? "border-[var(--accent-border)] bg-[var(--accent-dim)]" : hasError ? "border-[var(--red-border)] bg-[var(--surface)]" : selected ? "border-[var(--accent-border)] bg-[var(--accent-dim)]" : "border-[var(--border)] bg-[var(--surface)]"}`}>
@@ -78,9 +63,9 @@ export function JobCardMobile({
           >{t("dashboard.action.details")}</button>
         )}
         {job.status === "error" ? (
-          <ActionButton size="sm" variant="warning" onClick={() => { retryMutation.mutate(job.id); addToast(t("dashboard.toast.jobRetrying"), "info"); }}>{t("dashboard.action.retry")}</ActionButton>
+          <ActionButton size="sm" variant="warning" busy={jobActions.isRetrying} onClick={() => jobActions.retry(job.id)}>{t("dashboard.action.retry")}</ActionButton>
         ) : (job.status === "done" || job.status === "skipped") ? (
-          <ActionButton size="sm" variant="ghost" onClick={() => { forceMutation.mutate(job.id); addToast(t("dashboard.toast.retranslating"), "info"); }}>{t("dashboard.action.retranslate")}</ActionButton>
+          <ActionButton size="sm" variant="ghost" busy={jobActions.isRetranslating} onClick={() => jobActions.retranslate(job.id)}>{t("dashboard.action.retranslate")}</ActionButton>
         ) : (
           <button
             type="button"
@@ -89,6 +74,15 @@ export function JobCardMobile({
           >{t("dashboard.action.open")}</button>
         )}
       </div>
+      {isPending && (
+        <div className="mt-2">
+          {job.priority > 0 ? (
+            <ActionButton size="sm" variant="ghost" className="w-full" busy={jobActions.isUnpinning} onClick={() => jobActions.unpin(job.id)}>{t("dashboard.action.unpin")}</ActionButton>
+          ) : (
+            <ActionButton size="sm" variant="ghost" className="w-full" busy={jobActions.isPinning} onClick={() => jobActions.pin(job.id)}>{t("dashboard.action.pin")}</ActionButton>
+          )}
+        </div>
+      )}
       {job.status === "error" && (
         <button
           type="button"
@@ -98,6 +92,14 @@ export function JobCardMobile({
           {t("dashboard.action.logs")}
         </button>
       )}
+      <button
+        type="button"
+        onClick={() => { void jobActions.remove(job.id); }}
+        disabled={jobActions.isDeleting}
+        className="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-center text-[12px] font-medium text-[var(--text-3)] hover:text-[var(--red)] disabled:opacity-40"
+      >
+        {t("dashboard.action.delete")}
+      </button>
     </div>
   );
 }

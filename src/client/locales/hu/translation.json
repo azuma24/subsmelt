@@ -113,7 +113,10 @@
       "runSelectedStarted": "{{count}} kijelölt feladat elindítva",
       "selectedDeleted": "{{count}} kijelölt feladat törölve",
       "retrySelectedStarted": "{{count}} látható hiba újrapróbálása",
-      "forceSelectedStarted": "{{count}} látható feladat sorba állítva újrafordításra"
+      "forceSelectedStarted": "{{count}} látható feladat sorba állítva újrafordításra",
+      "jobDeleted": "Job deleted",
+      "deleteFailed": "Failed to delete job",
+      "actionFailed": "Action failed — please try again"
     },
     "confirm": {
       "clearTitle": "Összes feladat törlése",
@@ -124,7 +127,10 @@
       "deleteSelectedConfirm": "Kijelöltek törlése",
       "retranslateVisibleTitle": "Látható feladatok újrafordítása",
       "retranslateVisibleMessage": "Ezzel {{count}} kész vagy kihagyott feladat újra lefut az aktuális nézetben.",
-      "retranslateVisibleConfirm": "Újrafordítás"
+      "retranslateVisibleConfirm": "Újrafordítás",
+      "deleteJobTitle": "Delete job",
+      "deleteJobMessage": "This will remove this job from the queue. This cannot be undone.",
+      "deleteJobConfirm": "Delete"
     },
     "onboarding": {
       "title": "Kezdd el 3 lépésben:",
@@ -307,7 +313,10 @@
       "themeHint": "Válassz világos vagy sötét felületet, vagy kövesd a rendszerbeállítást.",
       "theme_system": "Rendszer",
       "theme_dark": "Sötét",
-      "theme_light": "Világos"
+      "theme_light": "Világos",
+      "fontSize": "Font size",
+      "fontSizeHint": "Scale the entire interface up or down. Saved on this device.",
+      "fontSizeReset": "Reset"
     },
     "llmConnection": {
       "title": "LLM-kapcsolat",
@@ -382,7 +391,9 @@
       "parallelChunksHint": "Az egyszerre fordítandó részletek száma (1–8). Magasabb = gyorsabb, de párhuzamosan több LLM-tokent/kontextust használ. Állítsd 1-re a letiltáshoz.",
       "requestTimeout": "Kérés időtúllépése (mp)",
       "requestTimeoutHint": "Az egy LLM-válaszra való várakozás maximális ideje másodpercben. Növeld lassú/nagy, gondolkodó modellekhez (pl. 600).",
-      "disableToolCalls": "Eszközhívások letiltása (egyszerű szöveges mód)"
+      "disableToolCalls": "Eszközhívások letiltása (egyszerű szöveges mód)",
+      "refinePass": "Refinement Pass (Pass 2)",
+      "refinePassHint": "Runs a second LLM editing pass to make translations read more naturally — better quality, but ~2× the token cost and slower. Falls back to the first-pass translation if the edit fails. Default off."
     },
     "sources": {
       "title": "Források és figyelés",
@@ -622,7 +633,8 @@
     "pathMapping": "Útvonal-leképezés",
     "rawConfig": "Nyers konfiguráció",
     "rawConfigHint": "JSON-blobok a mappánkénti STT alapértelmezésekhez és a speciális beállításokhoz.",
-    "rawConfigOpen": "Nyers konfiguráció megnyitása"
+    "rawConfigOpen": "Nyers konfiguráció megnyitása",
+    "invalidJson": "{{field}} must be valid JSON. Fix it before saving."
   },
   "jobDetail": {
     "title": "Feladat #{{id}}",
@@ -730,5 +742,13 @@
       "transcribeTranslate": "Átirat + fordítás",
       "enableHint": "Engedélyezd a beszéd szöveggé alakítást a Beállításokban, hogy feliratokat generálj ebből a videóból."
     }
+  },
+  "errors": {
+    "loading": "Loading…",
+    "loadFailed": "Something went wrong while loading this data.",
+    "retry": "Retry",
+    "reload": "Reload",
+    "boundaryTitle": "Something went wrong.",
+    "boundaryMessage": "An unexpected error occurred while rendering this page."
   }
 }

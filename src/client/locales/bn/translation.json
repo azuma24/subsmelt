@@ -113,7 +113,10 @@
       "runSelectedStarted": "{{count}}টি নির্বাচিত কাজ শুরু হয়েছে",
       "selectedDeleted": "{{count}}টি নির্বাচিত কাজ মুছে ফেলা হয়েছে",
       "retrySelectedStarted": "{{count}}টি দৃশ্যমান ত্রুটি পুনরায় চেষ্টা করা হচ্ছে",
-      "forceSelectedStarted": "{{count}}টি দৃশ্যমান কাজ পুনরায় অনুবাদের জন্য সারিতে যোগ করা হয়েছে"
+      "forceSelectedStarted": "{{count}}টি দৃশ্যমান কাজ পুনরায় অনুবাদের জন্য সারিতে যোগ করা হয়েছে",
+      "jobDeleted": "Job deleted",
+      "deleteFailed": "Failed to delete job",
+      "actionFailed": "Action failed — please try again"
     },
     "confirm": {
       "clearTitle": "সব কাজ মুছুন",
@@ -124,7 +127,10 @@
       "deleteSelectedConfirm": "নির্বাচিত মুছুন",
       "retranslateVisibleTitle": "দৃশ্যমান কাজ পুনরায় অনুবাদ করুন",
       "retranslateVisibleMessage": "এটি বর্তমান ভিউতে {{count}}টি সম্পন্ন বা এড়ানো কাজ পুনরায় চালাতে বাধ্য করবে।",
-      "retranslateVisibleConfirm": "পুনরায় অনুবাদ"
+      "retranslateVisibleConfirm": "পুনরায় অনুবাদ",
+      "deleteJobTitle": "Delete job",
+      "deleteJobMessage": "This will remove this job from the queue. This cannot be undone.",
+      "deleteJobConfirm": "Delete"
     },
     "onboarding": {
       "title": "৩টি ধাপে শুরু করুন:",
@@ -307,7 +313,10 @@
       "themeHint": "একটি হালকা বা গাঢ় ইন্টারফেস বাছুন, অথবা আপনার সিস্টেম সেটিং অনুসরণ করুন।",
       "theme_system": "সিস্টেম",
       "theme_dark": "গাঢ়",
-      "theme_light": "হালকা"
+      "theme_light": "হালকা",
+      "fontSize": "Font size",
+      "fontSizeHint": "Scale the entire interface up or down. Saved on this device.",
+      "fontSizeReset": "Reset"
     },
     "llmConnection": {
       "title": "LLM সংযোগ",
@@ -382,7 +391,9 @@
       "parallelChunksHint": "একসাথে অনুবাদ করার চাঙ্কের সংখ্যা (1–8)। বেশি = দ্রুত কিন্তু সমান্তরালে বেশি LLM টোকেন/প্রসঙ্গ ব্যবহার করে। নিষ্ক্রিয় করতে 1 সেট করুন।",
       "requestTimeout": "অনুরোধ টাইমআউট (সেকেন্ড)",
       "requestTimeoutHint": "একটি একক LLM উত্তরের জন্য অপেক্ষার সর্বোচ্চ সেকেন্ড। ধীর/বড় থিঙ্কিং মডেলের জন্য বাড়ান (যেমন 600)।",
-      "disableToolCalls": "টুল কল নিষ্ক্রিয় করুন (প্লেইন-টেক্সট মোড ব্যবহার করুন)"
+      "disableToolCalls": "টুল কল নিষ্ক্রিয় করুন (প্লেইন-টেক্সট মোড ব্যবহার করুন)",
+      "refinePass": "Refinement Pass (Pass 2)",
+      "refinePassHint": "Runs a second LLM editing pass to make translations read more naturally — better quality, but ~2× the token cost and slower. Falls back to the first-pass translation if the edit fails. Default off."
     },
     "sources": {
       "title": "উৎস ও পর্যবেক্ষণ",
@@ -622,7 +633,8 @@
     "pathMapping": "পাথ ম্যাপিং",
     "rawConfig": "র কনফিগ",
     "rawConfigHint": "প্রতি-ফোল্ডার STT ডিফল্ট ও উন্নত বিকল্পের জন্য JSON ব্লব।",
-    "rawConfigOpen": "র কনফিগ খুলুন"
+    "rawConfigOpen": "র কনফিগ খুলুন",
+    "invalidJson": "{{field}} must be valid JSON. Fix it before saving."
   },
   "jobDetail": {
     "title": "কাজ #{{id}}",
@@ -730,5 +742,13 @@
       "transcribeTranslate": "ট্রান্সক্রাইব + অনুবাদ",
       "enableHint": "এই ভিডিও থেকে সাবটাইটেল তৈরি করতে সেটিংসে স্পিচ-টু-টেক্সট সক্রিয় করুন।"
     }
+  },
+  "errors": {
+    "loading": "Loading…",
+    "loadFailed": "Something went wrong while loading this data.",
+    "retry": "Retry",
+    "reload": "Reload",
+    "boundaryTitle": "Something went wrong.",
+    "boundaryMessage": "An unexpected error occurred while rendering this page."
   }
 }

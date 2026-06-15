@@ -37,7 +37,9 @@ export async function fetchJSON<T = unknown>(url: string, opts: RequestInit = {}
   return res.json() as Promise<T>;
 }
 
-type FetchOpts = Pick<RequestInit, "signal">;
+// Request options threaded through query hooks. Carries React Query's
+// AbortSignal so in-flight requests can be cancelled on unmount/refetch.
+type FetchOpts = { signal?: AbortSignal };
 
 // Settings
 export const getSettings = (opts?: FetchOpts) => fetchJSON<Record<string, unknown>>("/settings", opts);

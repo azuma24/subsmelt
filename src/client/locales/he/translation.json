@@ -113,7 +113,10 @@
       "runSelectedStarted": "הופעלו {{count}} משימות שנבחרו",
       "selectedDeleted": "נמחקו {{count}} משימות שנבחרו",
       "retrySelectedStarted": "מנסה שוב {{count}} שגיאות מוצגות",
-      "forceSelectedStarted": "{{count}} משימות מוצגות נוספו לתור לתרגום מחדש"
+      "forceSelectedStarted": "{{count}} משימות מוצגות נוספו לתור לתרגום מחדש",
+      "jobDeleted": "Job deleted",
+      "deleteFailed": "Failed to delete job",
+      "actionFailed": "Action failed — please try again"
     },
     "confirm": {
       "clearTitle": "ניקוי כל המשימות",
@@ -124,7 +127,10 @@
       "deleteSelectedConfirm": "מחק נבחרים",
       "retranslateVisibleTitle": "תרגום מחדש של משימות מוצגות",
       "retranslateVisibleMessage": "פעולה זו תאלץ {{count}} משימות שהושלמו או דולגו בתצוגה הנוכחית לרוץ שוב.",
-      "retranslateVisibleConfirm": "תרגם מחדש"
+      "retranslateVisibleConfirm": "תרגם מחדש",
+      "deleteJobTitle": "Delete job",
+      "deleteJobMessage": "This will remove this job from the queue. This cannot be undone.",
+      "deleteJobConfirm": "Delete"
     },
     "onboarding": {
       "title": "התחל ב-3 שלבים:",
@@ -307,7 +313,10 @@
       "themeHint": "בחר ממשק בהיר או כהה, או עקוב אחר הגדרת המערכת שלך.",
       "theme_system": "מערכת",
       "theme_dark": "כהה",
-      "theme_light": "בהיר"
+      "theme_light": "בהיר",
+      "fontSize": "Font size",
+      "fontSizeHint": "Scale the entire interface up or down. Saved on this device.",
+      "fontSizeReset": "Reset"
     },
     "llmConnection": {
       "title": "חיבור LLM",
@@ -382,7 +391,9 @@
       "parallelChunksHint": "מספר המקטעים שיתורגמו בו-זמנית (1–8). גבוה יותר = מהיר יותר אך משתמש ביותר טוקנים/הקשר LLM במקביל. הגדר ל-1 כדי להשבית.",
       "requestTimeout": "פסק זמן לבקשה (שנ')",
       "requestTimeoutHint": "מספר השניות המרבי להמתנה לתגובת LLM יחידה. הגדל עבור מודלים איטיים/גדולים בעלי חשיבה (למשל 600).",
-      "disableToolCalls": "השבת קריאות לכלים (השתמש במצב טקסט פשוט)"
+      "disableToolCalls": "השבת קריאות לכלים (השתמש במצב טקסט פשוט)",
+      "refinePass": "Refinement Pass (Pass 2)",
+      "refinePassHint": "Runs a second LLM editing pass to make translations read more naturally — better quality, but ~2× the token cost and slower. Falls back to the first-pass translation if the edit fails. Default off."
     },
     "sources": {
       "title": "מקורות וניטור",
@@ -622,7 +633,8 @@
     "pathMapping": "מיפוי נתיב",
     "rawConfig": "תצורה גולמית",
     "rawConfigHint": "מקטעי JSON עבור ברירות מחדל STT לכל תיקייה ואפשרויות מתקדמות.",
-    "rawConfigOpen": "פתח תצורה גולמית"
+    "rawConfigOpen": "פתח תצורה גולמית",
+    "invalidJson": "{{field}} must be valid JSON. Fix it before saving."
   },
   "jobDetail": {
     "title": "משימה #{{id}}",
@@ -730,5 +742,13 @@
       "transcribeTranslate": "תמלל + תרגם",
       "enableHint": "הפעל דיבור לטקסט בהגדרות כדי ליצור כתוביות מסרטון זה."
     }
+  },
+  "errors": {
+    "loading": "Loading…",
+    "loadFailed": "Something went wrong while loading this data.",
+    "retry": "Retry",
+    "reload": "Reload",
+    "boundaryTitle": "Something went wrong.",
+    "boundaryMessage": "An unexpected error occurred while rendering this page."
   }
 }

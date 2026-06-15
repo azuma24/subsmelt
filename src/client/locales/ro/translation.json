@@ -113,7 +113,10 @@
       "runSelectedStarted": "S-au pornit {{count}} sarcini selectate",
       "selectedDeleted": "S-au șters {{count}} sarcini selectate",
       "retrySelectedStarted": "Se reîncearcă {{count}} erori vizibile",
-      "forceSelectedStarted": "S-au adăugat în coadă {{count}} sarcini vizibile pentru retraducere"
+      "forceSelectedStarted": "S-au adăugat în coadă {{count}} sarcini vizibile pentru retraducere",
+      "jobDeleted": "Job deleted",
+      "deleteFailed": "Failed to delete job",
+      "actionFailed": "Action failed — please try again"
     },
     "confirm": {
       "clearTitle": "Golește toate sarcinile",
@@ -124,7 +127,10 @@
       "deleteSelectedConfirm": "Șterge selecția",
       "retranslateVisibleTitle": "Retradu sarcinile vizibile",
       "retranslateVisibleMessage": "Acest lucru va forța rularea din nou a {{count}} sarcini finalizate sau omise din vizualizarea curentă.",
-      "retranslateVisibleConfirm": "Retradu"
+      "retranslateVisibleConfirm": "Retradu",
+      "deleteJobTitle": "Delete job",
+      "deleteJobMessage": "This will remove this job from the queue. This cannot be undone.",
+      "deleteJobConfirm": "Delete"
     },
     "onboarding": {
       "title": "Începe în 3 pași:",
@@ -307,7 +313,10 @@
       "themeHint": "Alege o interfață luminoasă sau întunecată, ori urmează setarea sistemului.",
       "theme_system": "Sistem",
       "theme_dark": "Întunecat",
-      "theme_light": "Luminos"
+      "theme_light": "Luminos",
+      "fontSize": "Font size",
+      "fontSizeHint": "Scale the entire interface up or down. Saved on this device.",
+      "fontSizeReset": "Reset"
     },
     "llmConnection": {
       "title": "Conexiune LLM",
@@ -382,7 +391,9 @@
       "parallelChunksHint": "Numărul de fragmente de tradus simultan (1–8). Mai multe = mai rapid, dar folosește mai multe tokenuri/context LLM în paralel. Setează la 1 pentru a dezactiva.",
       "requestTimeout": "Timp expirare cerere (s)",
       "requestTimeoutHint": "Numărul maxim de secunde de așteptare pentru un singur răspuns LLM. Crește-l pentru modele lente/mari de raționament (de exemplu 600).",
-      "disableToolCalls": "Dezactivează apelurile de unelte (folosește mod text simplu)"
+      "disableToolCalls": "Dezactivează apelurile de unelte (folosește mod text simplu)",
+      "refinePass": "Refinement Pass (Pass 2)",
+      "refinePassHint": "Runs a second LLM editing pass to make translations read more naturally — better quality, but ~2× the token cost and slower. Falls back to the first-pass translation if the edit fails. Default off."
     },
     "sources": {
       "title": "Surse și monitorizare",
@@ -622,7 +633,8 @@
     "pathMapping": "Mapare cale",
     "rawConfig": "Configurație brută",
     "rawConfigHint": "Blocuri JSON pentru valorile STT implicite per folder și opțiunile avansate.",
-    "rawConfigOpen": "Deschide configurația brută"
+    "rawConfigOpen": "Deschide configurația brută",
+    "invalidJson": "{{field}} must be valid JSON. Fix it before saving."
   },
   "jobDetail": {
     "title": "Sarcina #{{id}}",
@@ -730,5 +742,13 @@
       "transcribeTranslate": "Transcrie + tradu",
       "enableHint": "Activează vorbire în text în Setări pentru a genera subtitrări din acest video."
     }
+  },
+  "errors": {
+    "loading": "Loading…",
+    "loadFailed": "Something went wrong while loading this data.",
+    "retry": "Retry",
+    "reload": "Reload",
+    "boundaryTitle": "Something went wrong.",
+    "boundaryMessage": "An unexpected error occurred while rendering this page."
   }
 }

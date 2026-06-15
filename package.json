@@ -1,6 +1,6 @@
 {
   "name": "subsmelt",
-  "version": "0.4.2",
+  "version": "0.4.4",
   "type": "module",
   "description": "Self-hosted batch subtitle translator using LLM",
   "license": "MIT",
@@ -15,6 +15,7 @@
     "@ai-sdk/openai": "^3.0.68",
     "@ai-sdk/openai-compatible": "^1.0.17",
     "@tanstack/react-query": "^5.96.2",
+    "@tanstack/react-virtual": "^3.14.2",
     "ai": "^6.0.198",
     "ass-parser": "^0.2.0",
     "ass-stringify": "^0.1.3",

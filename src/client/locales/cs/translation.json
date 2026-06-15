@@ -113,7 +113,10 @@
       "runSelectedStarted": "Spuštěno {{count}} vybraných úloh",
       "selectedDeleted": "Smazáno {{count}} vybraných úloh",
       "retrySelectedStarted": "Opakuje se {{count}} viditelných chyb",
-      "forceSelectedStarted": "Zařazeno {{count}} viditelných úloh k opětovnému překladu"
+      "forceSelectedStarted": "Zařazeno {{count}} viditelných úloh k opětovnému překladu",
+      "jobDeleted": "Job deleted",
+      "deleteFailed": "Failed to delete job",
+      "actionFailed": "Action failed — please try again"
     },
     "confirm": {
       "clearTitle": "Vymazat všechny úlohy",
@@ -124,7 +127,10 @@
       "deleteSelectedConfirm": "Smazat vybrané",
       "retranslateVisibleTitle": "Znovu přeložit viditelné úlohy",
       "retranslateVisibleMessage": "Tímto se vynutí opětovné spuštění {{count}} dokončených nebo přeskočených úloh v aktuálním zobrazení.",
-      "retranslateVisibleConfirm": "Znovu přeložit"
+      "retranslateVisibleConfirm": "Znovu přeložit",
+      "deleteJobTitle": "Delete job",
+      "deleteJobMessage": "This will remove this job from the queue. This cannot be undone.",
+      "deleteJobConfirm": "Delete"
     },
     "onboarding": {
       "title": "Začněte ve 3 krocích:",
@@ -307,7 +313,10 @@
       "themeHint": "Zvolte světlé nebo tmavé rozhraní, nebo se řiďte nastavením systému.",
       "theme_system": "Systém",
       "theme_dark": "Tmavý",
-      "theme_light": "Světlý"
+      "theme_light": "Světlý",
+      "fontSize": "Font size",
+      "fontSizeHint": "Scale the entire interface up or down. Saved on this device.",
+      "fontSizeReset": "Reset"
     },
     "llmConnection": {
       "title": "Připojení LLM",
@@ -382,7 +391,9 @@
       "parallelChunksHint": "Počet částí překládaných současně (1–8). Více = rychlejší, ale využívá více tokenů/kontextu LLM paralelně. Nastavte na 1 pro vypnutí.",
       "requestTimeout": "Časový limit požadavku (s)",
       "requestTimeoutHint": "Max. počet sekund čekání na jednu odpověď LLM. Zvyšte u pomalých/velkých přemýšlejících modelů (např. 600).",
-      "disableToolCalls": "Zakázat volání nástrojů (použít režim prostého textu)"
+      "disableToolCalls": "Zakázat volání nástrojů (použít režim prostého textu)",
+      "refinePass": "Refinement Pass (Pass 2)",
+      "refinePassHint": "Runs a second LLM editing pass to make translations read more naturally — better quality, but ~2× the token cost and slower. Falls back to the first-pass translation if the edit fails. Default off."
     },
     "sources": {
       "title": "Zdroje a sledování",
@@ -622,7 +633,8 @@
     "pathMapping": "Mapování cest",
     "rawConfig": "Surová konfigurace",
     "rawConfigHint": "JSON bloky pro výchozí nastavení STT podle složek a pokročilé možnosti.",
-    "rawConfigOpen": "Otevřít surovou konfiguraci"
+    "rawConfigOpen": "Otevřít surovou konfiguraci",
+    "invalidJson": "{{field}} must be valid JSON. Fix it before saving."
   },
   "jobDetail": {
     "title": "Úloha č. {{id}}",
@@ -730,5 +742,13 @@
       "transcribeTranslate": "Přepsat + přeložit",
       "enableHint": "Povolte v Nastavení převod řeči na text pro generování titulků z tohoto videa."
     }
+  },
+  "errors": {
+    "loading": "Loading…",
+    "loadFailed": "Something went wrong while loading this data.",
+    "retry": "Retry",
+    "reload": "Reload",
+    "boundaryTitle": "Something went wrong.",
+    "boundaryMessage": "An unexpected error occurred while rendering this page."
   }
 }

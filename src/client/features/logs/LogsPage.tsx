@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { NavLink, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import * as api from "../../api";
 import { useLogsQuery } from "../../hooks";
 import { fullTime, highlightText, relativeTime } from "../../lib";
@@ -8,6 +9,7 @@ import type { LogEntry } from "../../types";
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmModal";
 import { Accordion, RowActionsMenu } from "../../ui/primitives";
+import { InlineError } from "../../ui/QueryState";
 
 export function LogsPage({ isMobile }: { isMobile: boolean }) {
   const { t } = useTranslation();
@@ -23,14 +25,9 @@ export function LogsPage({ isMobile }: { isMobile: boolean }) {
   const [category, setCategory] = useState("");
   const [search, setSearch] = useState("");
   const [follow, setFollow] = useState(true);
-  const scrollRef = useRef<HTMLDivElement>(null);
   const logsQuery = useLogsQuery(level, category, jobIdFilter);
   const logs = logsQuery.data || [];
   const chronologicalLogs = [...(search ? logs.filter((entry) => entry.message.toLowerCase().includes(search.toLowerCase()) || (entry.meta && entry.meta.toLowerCase().includes(search.toLowerCase()))) : logs)].reverse();
-
-  useEffect(() => {
-    if (follow && scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [chronologicalLogs.length, follow]);
 
   useEffect(() => {
     setParams((prev) => {
@@ -84,10 +81,11 @@ export function LogsPage({ isMobile }: { isMobile: boolean }) {
         {/* Row 2: search + level quick-pills */}
         <div className={`flex gap-2 ${isMobile ? "flex-col" : "flex-wrap items-center"}`}>
           <input
-            type="text"
+            type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("logs.search")}
+            aria-label={t("logs.search")}
             className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[13px] text-[var(--text)] outline-none focus:border-[var(--accent)]"
           />
           {/* Level quick-pills */}
@@ -120,6 +118,7 @@ export function LogsPage({ isMobile }: { isMobile: boolean }) {
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
+              aria-label={t("logs.category.all")}
               className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[13px] text-[var(--text-2)] outline-none focus:border-[var(--accent)]"
             >
               <option value="">{t("logs.category.all")}</option>
@@ -138,6 +137,7 @@ export function LogsPage({ isMobile }: { isMobile: boolean }) {
                 setJobIdFilter(Number.isInteger(next) && next > 0 ? next : null);
               }}
               placeholder={t("logs.jobId")}
+              aria-label={t("logs.jobId")}
               className="w-28 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[13px] text-[var(--text)] outline-none focus:border-[var(--accent)]"
             />
             {typeof jobIdFilter === "number" && jobIdFilter > 0 && (
@@ -154,10 +154,104 @@ export function LogsPage({ isMobile }: { isMobile: boolean }) {
         </div>
       </div>
 
+      {logsQuery.isError && (
+        <div className="px-3.5 pt-2 md:px-[18px]">
+          <InlineError onRetry={() => void logsQuery.refetch()} />
+        </div>
+      )}
+
+      {chronologicalLogs.length === 0 ? (
+        <div className="flex-1 overflow-y-auto px-3.5 py-2 md:px-[18px]">
+          <div className="px-4 py-12 text-center text-[13px] text-[var(--text-3)]">{search ? t("logs.noLogsSearch") : jobIdFilter ? t("logs.noLogsForJob") : t("logs.noLogs")}</div>
+        </div>
+      ) : (
+        <LogList logs={chronologicalLogs} search={search} follow={follow} />
+      )}
+    </div>
+  );
+}
+
+// Above this many entries we window the list (only rows near the viewport are
+// mounted). Below it we render everything so small log views stay simple and
+// fully rendered, which also avoids virtualization edge cases at low counts.
+const VIRTUALIZE_THRESHOLD = 200;
+// Initial per-row height guess. Log rows are variable height because long
+// messages wrap onto multiple lines, so this is only a starting estimate —
+// `virtualizer.measureElement` remeasures each mounted row's true height.
+const ROW_ESTIMATE = 28;
+
+// Renders the chronological log list. Logs auto-scroll to the latest entry when
+// `follow` is on. Two code paths share the same `LogRow` markup so behavior and
+// styling stay identical whether or not the list is windowed.
+function LogList({ logs, search, follow }: { logs: LogEntry[]; search: string; follow: boolean }) {
+  const shouldVirtualize = logs.length > VIRTUALIZE_THRESHOLD;
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: logs.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ROW_ESTIMATE,
+    overscan: 16,
+    // Stable key per entry so dynamic measurements stay attached to the right
+    // log across re-renders (filtering/new entries), independent of index.
+    getItemKey: (index) => logs[index].id,
+  });
+
+  // Auto-scroll-to-latest (follow mode). For the windowed path we drive the
+  // virtualizer to the last index; for the plain path we set scrollTop directly.
+  // Newest entries are at the end (chronological order), matching the original.
+  useEffect(() => {
+    if (!follow) return;
+    if (shouldVirtualize) {
+      if (logs.length > 0) virtualizer.scrollToIndex(logs.length - 1, { align: "end" });
+    } else if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+    // Re-run when new entries arrive (length changes) or follow toggles on.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [logs.length, follow, shouldVirtualize]);
+
+  if (!shouldVirtualize) {
+    return (
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3.5 py-2 md:px-[18px]">
-        {chronologicalLogs.length === 0
-          ? <div className="px-4 py-12 text-center text-[13px] text-[var(--text-3)]">{search ? t("logs.noLogsSearch") : jobIdFilter ? t("logs.noLogsForJob") : t("logs.noLogs")}</div>
-          : <div>{chronologicalLogs.map((entry: LogEntry) => <LogRow key={entry.id} entry={entry} search={search} />)}</div>}
+        <div>
+          {logs.map((entry) => (
+            <LogRow key={entry.id} entry={entry} search={search} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={scrollRef}
+      // Bounded scroll viewport for the windowed rows. `scrollbarGutter: stable`
+      // reserves the scrollbar track so row width stays constant as the windowed
+      // content changes height.
+      className="flex-1 overflow-y-auto px-3.5 py-2 md:px-[18px]"
+      style={{ scrollbarGutter: "stable" }}
+    >
+      <div style={{ height: virtualizer.getTotalSize(), position: "relative", width: "100%" }}>
+        {virtualizer.getVirtualItems().map((vitem) => {
+          const entry = logs[vitem.index];
+          return (
+            <div
+              key={entry.id}
+              data-index={vitem.index}
+              ref={virtualizer.measureElement}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                transform: `translateY(${vitem.start}px)`,
+              }}
+            >
+              <LogRow entry={entry} search={search} />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

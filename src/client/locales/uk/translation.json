@@ -113,7 +113,10 @@
       "runSelectedStarted": "Запущено {{count}} вибраних завдань",
       "selectedDeleted": "Видалено {{count}} вибраних завдань",
       "retrySelectedStarted": "Повтор {{count}} видимих помилок",
-      "forceSelectedStarted": "Поставлено в чергу {{count}} видимих завдань на повторний переклад"
+      "forceSelectedStarted": "Поставлено в чергу {{count}} видимих завдань на повторний переклад",
+      "jobDeleted": "Job deleted",
+      "deleteFailed": "Failed to delete job",
+      "actionFailed": "Action failed — please try again"
     },
     "confirm": {
       "clearTitle": "Очистити всі завдання",
@@ -124,7 +127,10 @@
       "deleteSelectedConfirm": "Видалити вибрані",
       "retranslateVisibleTitle": "Перекласти повторно видимі завдання",
       "retranslateVisibleMessage": "Це примусово запустить ще раз {{count}} завершених або пропущених завдань у поточному поданні.",
-      "retranslateVisibleConfirm": "Перекласти повторно"
+      "retranslateVisibleConfirm": "Перекласти повторно",
+      "deleteJobTitle": "Delete job",
+      "deleteJobMessage": "This will remove this job from the queue. This cannot be undone.",
+      "deleteJobConfirm": "Delete"
     },
     "onboarding": {
       "title": "Почніть за 3 кроки:",
@@ -307,7 +313,10 @@
       "themeHint": "Виберіть світлий чи темний інтерфейс або дотримуйтеся налаштувань системи.",
       "theme_system": "Системна",
       "theme_dark": "Темна",
-      "theme_light": "Світла"
+      "theme_light": "Світла",
+      "fontSize": "Font size",
+      "fontSizeHint": "Scale the entire interface up or down. Saved on this device.",
+      "fontSizeReset": "Reset"
     },
     "llmConnection": {
       "title": "З'єднання LLM",
@@ -382,7 +391,9 @@
       "parallelChunksHint": "Кількість фрагментів для одночасного перекладу (1–8). Більше = швидше, але паралельно споживає більше токенів/контексту LLM. Встановіть 1, щоб вимкнути.",
       "requestTimeout": "Тайм-аут запиту (с)",
       "requestTimeoutHint": "Максимум секунд очікування однієї відповіді LLM. Збільшіть для повільних/великих моделей з мисленням (наприклад, 600).",
-      "disableToolCalls": "Вимкнути виклики інструментів (режим звичайного тексту)"
+      "disableToolCalls": "Вимкнути виклики інструментів (режим звичайного тексту)",
+      "refinePass": "Refinement Pass (Pass 2)",
+      "refinePassHint": "Runs a second LLM editing pass to make translations read more naturally — better quality, but ~2× the token cost and slower. Falls back to the first-pass translation if the edit fails. Default off."
     },
     "sources": {
       "title": "Джерела та моніторинг",
@@ -622,7 +633,8 @@
     "pathMapping": "Зіставлення шляхів",
     "rawConfig": "Сира конфігурація",
     "rawConfigHint": "JSON-блоки для типових налаштувань STT по теках і розширених параметрів.",
-    "rawConfigOpen": "Відкрити сиру конфігурацію"
+    "rawConfigOpen": "Відкрити сиру конфігурацію",
+    "invalidJson": "{{field}} must be valid JSON. Fix it before saving."
   },
   "jobDetail": {
     "title": "Завдання #{{id}}",
@@ -730,5 +742,13 @@
       "transcribeTranslate": "Транскрибувати + перекласти",
       "enableHint": "Увімкніть мовлення в текст у налаштуваннях, щоб генерувати субтитри з цього відео."
     }
+  },
+  "errors": {
+    "loading": "Loading…",
+    "loadFailed": "Something went wrong while loading this data.",
+    "retry": "Retry",
+    "reload": "Reload",
+    "boundaryTitle": "Something went wrong.",
+    "boundaryMessage": "An unexpected error occurred while rendering this page."
   }
 }
