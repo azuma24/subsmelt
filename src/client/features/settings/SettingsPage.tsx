@@ -5,12 +5,17 @@ import { getErrorMessage } from "../../lib";
 import { useSettingsQuery, useTranscriptionHealthQuery } from "../../hooks";
 import { DEFAULT_PROMPT, LANGUAGES } from "../../app/constants";
 import { getThemePref, setThemePref, THEME_PREFS, type ThemePref } from "../../lib/theme";
+import { getFontScale, setFontScale, DEFAULT_SCALE, MIN_SCALE, MAX_SCALE, SCALE_STEP } from "../../lib/font-scale";
 import { useToast } from "../../components/Toast";
 import { Accordion, ActionButton, Drawer, Field, SettingsSection } from "../../ui/primitives";
+import { InlineError } from "../../ui/QueryState";
 import { ConnectionsPanel } from "./ConnectionsPanel";
 import { MediaSourcesPanel } from "./MediaSourcesPanel";
 import { TranscriptionReadinessPanel } from "./TranscriptionReadinessPanel";
+import { JSON_BLOB_SETTINGS, getStr, validateJsonSetting, type JsonBlobSettingKey } from "./settings-model";
 
+// Thin wrappers over the typed accessors so existing call sites (str/bool) stay
+// terse. `settings` is still a Record<string, unknown> on the wire.
 const str = (v: unknown, fallback = ""): string => (typeof v === "string" ? v : fallback);
 const bool = (v: unknown): boolean => Boolean(v);
 
@@ -33,6 +38,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   const [activeSection, setActiveSection] = useState<SectionKey>("llm");
   const [rawConfigDrawerOpen, setRawConfigDrawerOpen] = useState(false);
   const [themePref, setThemePrefState] = useState<ThemePref>(getThemePref());
+  const [fontScale, setFontScaleState] = useState<number>(getFontScale());
   const currentLanguage = LANGUAGES.find((lang) => i18n.language === lang.code || i18n.language.startsWith(`${lang.code}-`))?.code || "en";
 
   // Synchronous mirror of `settings` so rapid update()/updateAndSave() calls in the
@@ -101,7 +107,23 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
     }
   }, []);
 
-  const handleSave = async () => {
+  // Validate the two JSON-blob settings (folder defaults + advanced STT) before
+  // any save. On failure we toast and DO NOT persist the malformed value.
+  // Returns true when all blobs are valid, false when a save should be blocked.
+  const validateJsonBlobs = (): boolean => {
+    for (const key of Object.keys(JSON_BLOB_SETTINGS) as JsonBlobSettingKey[]) {
+      const result = validateJsonSetting(key, getStr(settingsRef.current, key));
+      if (!result.ok) {
+        const label = t(`settings.transcription.${key === "transcription_folder_defaults" ? "folderDefaults" : "advancedOptions"}`);
+        addToast(t("settings.invalidJson", { field: label }), "error");
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleSave = async (): Promise<boolean> => {
+    if (!validateJsonBlobs()) return false;
     setSaving(true);
     try {
       await api.saveSettings(settingsRef.current);
@@ -112,6 +134,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
       addToast(t("settings.saveFailed", { message }), "error");
     }
     setSaving(false);
+    return true;
   };
 
   const handleTranscriptionTest = async () => {
@@ -161,7 +184,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
       <Accordion title={t("settings.advanced")}>
         <div className="md:max-w-[320px]">
           <label className={labelCls}>{t("settings.llmConnection.temperatureLabel")}: <span className="font-mono text-[var(--accent)]">{str(settings.temperature, "0.7")}</span></label>
-          <input type="range" min="0" max="2" step="0.1" value={str(settings.temperature, "0.7")} onChange={(e) => updateAndSaveDebounced("temperature", e.target.value)} className="w-full accent-[var(--accent)]" />
+          <input type="range" min="0" max="2" step="0.1" aria-label={t("settings.llmConnection.temperatureLabel")} value={str(settings.temperature, "0.7")} onChange={(e) => updateAndSaveDebounced("temperature", e.target.value)} className="w-full accent-[var(--accent)]" />
           <p className="mt-2 text-[11.5px] leading-relaxed text-[var(--text-3)]">{t("settings.llmConnection.temperatureHelp")}</p>
         </div>
       </Accordion>
@@ -179,11 +202,11 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
               <label className="text-[12px] font-medium text-[var(--text-2)]">{t("settings.translationEngine.systemPrompt")}</label>
               <button onClick={() => updateAndSaveDebounced("prompt", DEFAULT_PROMPT)} className="text-[11px] text-[var(--text-3)]">{t("common.reset")}</button>
             </div>
-            <textarea value={str(settings.prompt)} onChange={(e) => updateAndSaveDebounced("prompt", e.target.value)} rows={8} className={`${textareaCls} font-mono leading-relaxed`} />
+            <textarea aria-label={t("settings.translationEngine.systemPrompt")} value={str(settings.prompt)} onChange={(e) => updateAndSaveDebounced("prompt", e.target.value)} rows={8} className={`${textareaCls} font-mono leading-relaxed`} />
           </div>
           <div>
             <label className={labelCls}>{t("settings.translationEngine.additionalContext")}</label>
-            <textarea value={str(settings.additional_context)} onChange={(e) => updateAndSaveDebounced("additional_context", e.target.value)} rows={3} placeholder={t("settings.translationEngine.additionalContextPlaceholder")} className={textareaCls} />
+            <textarea aria-label={t("settings.translationEngine.additionalContext")} value={str(settings.additional_context)} onChange={(e) => updateAndSaveDebounced("additional_context", e.target.value)} rows={3} placeholder={t("settings.translationEngine.additionalContextPlaceholder")} className={textareaCls} />
           </div>
         </div>
       </Accordion>
@@ -200,6 +223,12 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
             title={t("settings.translationEngine.disableToolCalls", "Disable tool calls (use plain-text mode)")}
             checked={settings.disable_tool_calls === "1"}
             onChange={(checked) => updateAndSaveDebounced("disable_tool_calls", checked ? "1" : "0")}
+          />
+          <ToggleRow
+            title={t("settings.translationEngine.refinePass", "Refinement Pass (Pass 2)")}
+            description={t("settings.translationEngine.refinePassHint", "Runs a second LLM editing pass to make translations read more naturally — better quality, but ~2× the token cost and slower. Falls back to the first-pass translation if the edit fails. Default off.")}
+            checked={settings.refine_pass === "1"}
+            onChange={(checked) => updateAndSaveDebounced("refine_pass", checked ? "1" : "0")}
           />
         </div>
       </Accordion>
@@ -283,7 +312,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
       <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
         <div>
           <label className={labelCls}>{t("settings.transcription.model")}</label>
-          <select value={str(settings.transcription_model, "small")} onChange={(e) => update("transcription_model", e.target.value)} className={selectCls}>
+          <select aria-label={t("settings.transcription.model")} value={str(settings.transcription_model, "small")} onChange={(e) => update("transcription_model", e.target.value)} className={selectCls}>
             <option value="base">{t("settings.transcription.modelBase")}</option>
             <option value="small">{t("settings.transcription.modelSmall")}</option>
             <option value="medium">{t("settings.transcription.modelMedium")}</option>
@@ -291,7 +320,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
         </div>
         <div>
           <label className={labelCls}>{t("settings.transcription.language")}</label>
-          <select value={str(settings.transcription_language, "auto")} onChange={(e) => update("transcription_language", e.target.value)} className={selectCls}>
+          <select aria-label={t("settings.transcription.language")} value={str(settings.transcription_language, "auto")} onChange={(e) => update("transcription_language", e.target.value)} className={selectCls}>
             <option value="auto">{t("settings.transcription.languageAuto")}</option>
             <option value="en">English</option>
             <option value="ja">Japanese</option>
@@ -301,7 +330,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
         </div>
         <div>
           <label className={labelCls}>{t("settings.transcription.output")}</label>
-          <select value={str(settings.transcription_output_format, "srt")} onChange={(e) => update("transcription_output_format", e.target.value)} className={selectCls}>
+          <select aria-label={t("settings.transcription.output")} value={str(settings.transcription_output_format, "srt")} onChange={(e) => update("transcription_output_format", e.target.value)} className={selectCls}>
             <option value="srt">SRT</option>
             <option value="vtt">VTT</option>
             <option value="txt">TXT</option>
@@ -352,7 +381,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
           <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-2"} md:max-w-[480px]`}>
             <div>
               <label className={labelCls}>{t("settings.transcription.missingSubtitleBehavior")}</label>
-              <select value={str(settings.transcription_missing_subtitle_behavior, "ask")} onChange={(e) => update("transcription_missing_subtitle_behavior", e.target.value)} className={selectCls}>
+              <select aria-label={t("settings.transcription.missingSubtitleBehavior")} value={str(settings.transcription_missing_subtitle_behavior, "ask")} onChange={(e) => update("transcription_missing_subtitle_behavior", e.target.value)} className={selectCls}>
                 <option value="ask">{t("settings.transcription.missingAsk")}</option>
                 <option value="auto_transcribe">{t("settings.transcription.missingAutoTranscribe")}</option>
                 <option value="auto_transcribe_and_translate">{t("settings.transcription.missingAutoTranscribeTranslate")}</option>
@@ -360,7 +389,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
             </div>
             <div>
               <label className={labelCls}>{t("settings.transcription.lowRamBehavior")}</label>
-              <select value={str(settings.transcription_low_ram_behavior, "ask")} onChange={(e) => update("transcription_low_ram_behavior", e.target.value)} className={selectCls}>
+              <select aria-label={t("settings.transcription.lowRamBehavior")} value={str(settings.transcription_low_ram_behavior, "ask")} onChange={(e) => update("transcription_low_ram_behavior", e.target.value)} className={selectCls}>
                 <option value="ask">{t("settings.transcription.lowRamAsk")}</option>
                 <option value="downgrade">{t("settings.transcription.lowRamDowngrade")}</option>
                 <option value="skip">{t("settings.transcription.lowRamSkip")}</option>
@@ -392,6 +421,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
           <div>
             <label className={labelCls}>{t("settings.transcription.folderDefaults")}</label>
             <textarea
+              aria-label={t("settings.transcription.folderDefaults")}
               value={str(settings.transcription_folder_defaults, "[]")}
               onChange={(e) => update("transcription_folder_defaults", e.target.value)}
               rows={8}
@@ -403,6 +433,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
           <div>
             <label className={labelCls}>{t("settings.transcription.advancedOptions")}</label>
             <textarea
+              aria-label={t("settings.transcription.advancedOptions")}
               value={str(settings.transcription_advanced_stt, "{}")}
               onChange={(e) => update("transcription_advanced_stt", e.target.value)}
               rows={8}
@@ -413,7 +444,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
           </div>
           <div className="flex justify-end gap-2">
             <ActionButton variant="ghost" size="sm" onClick={() => setRawConfigDrawerOpen(false)}>{t("common.close")}</ActionButton>
-            <ActionButton size="sm" onClick={async () => { await handleSave(); setRawConfigDrawerOpen(false); }} disabled={!dirty || saving}>{saving ? t("app.saving") : t("app.save")}</ActionButton>
+            <ActionButton size="sm" onClick={async () => { if (await handleSave()) setRawConfigDrawerOpen(false); }} disabled={!dirty || saving}>{saving ? t("app.saving") : t("app.save")}</ActionButton>
           </div>
         </div>
       </Drawer>
@@ -426,6 +457,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
       <div className="md:max-w-[240px]">
         <label className={labelCls}>{t("settings.interface.theme")}</label>
         <select
+          aria-label={t("settings.interface.theme")}
           value={themePref}
           onChange={(e) => {
             const next = e.target.value as ThemePref;
@@ -441,8 +473,40 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
         <p className="mt-1 text-[11.5px] text-[var(--text-3)]">{t("settings.interface.themeHint")}</p>
       </div>
       <div className="md:max-w-[240px]">
+        <label className={labelCls}>{t("settings.interface.fontSize", "Font size")}</label>
+        <div className="flex items-center gap-2">
+          <ActionButton
+            variant="ghost"
+            size="sm"
+            disabled={fontScale <= MIN_SCALE}
+            onClick={() => setFontScaleState(setFontScale(fontScale - SCALE_STEP))}
+          >
+            A−
+          </ActionButton>
+          <span className="min-w-[3.25rem] text-center font-mono text-[12px] text-[var(--text-2)]">{fontScale}%</span>
+          <ActionButton
+            variant="ghost"
+            size="sm"
+            disabled={fontScale >= MAX_SCALE}
+            onClick={() => setFontScaleState(setFontScale(fontScale + SCALE_STEP))}
+          >
+            A+
+          </ActionButton>
+          <ActionButton
+            variant="ghost"
+            size="sm"
+            disabled={fontScale === DEFAULT_SCALE}
+            onClick={() => setFontScaleState(setFontScale(DEFAULT_SCALE))}
+          >
+            {t("settings.interface.fontSizeReset", "Reset")}
+          </ActionButton>
+        </div>
+        <p className="mt-1 text-[11.5px] text-[var(--text-3)]">{t("settings.interface.fontSizeHint", "Scale the entire interface. Saved on this device.")}</p>
+      </div>
+      <div className="md:max-w-[240px]">
         <label className={labelCls}>{t("settings.interface.language")}</label>
         <select
+          aria-label={t("settings.interface.language")}
           value={currentLanguage}
           onChange={(e) => i18n.changeLanguage(e.target.value)}
           className={selectCls}
@@ -475,6 +539,11 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
       </div>
 
       <div className="flex-1 p-3.5 md:p-[18px]">
+        {settingsQuery.isError && (
+          <div className="mb-3.5">
+            <InlineError onRetry={() => void settingsQuery.refetch()} />
+          </div>
+        )}
         {isMobile ? (
           <div className="space-y-2.5">
             {/* LLM always expanded */}
