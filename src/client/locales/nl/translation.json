@@ -113,7 +113,10 @@
       "runSelectedStarted": "{{count}} geselecteerde taken gestart",
       "selectedDeleted": "{{count}} geselecteerde taken verwijderd",
       "retrySelectedStarted": "{{count}} zichtbare fouten opnieuw proberen",
-      "forceSelectedStarted": "{{count}} zichtbare taken in wachtrij voor opnieuw vertalen"
+      "forceSelectedStarted": "{{count}} zichtbare taken in wachtrij voor opnieuw vertalen",
+      "jobDeleted": "Job deleted",
+      "deleteFailed": "Failed to delete job",
+      "actionFailed": "Action failed — please try again"
     },
     "confirm": {
       "clearTitle": "Alle taken wissen",
@@ -124,7 +127,10 @@
       "deleteSelectedConfirm": "Selectie verwijderen",
       "retranslateVisibleTitle": "Zichtbare taken opnieuw vertalen",
       "retranslateVisibleMessage": "Hiermee worden {{count}} voltooide of overgeslagen taken in de huidige weergave opnieuw uitgevoerd.",
-      "retranslateVisibleConfirm": "Opnieuw vertalen"
+      "retranslateVisibleConfirm": "Opnieuw vertalen",
+      "deleteJobTitle": "Delete job",
+      "deleteJobMessage": "This will remove this job from the queue. This cannot be undone.",
+      "deleteJobConfirm": "Delete"
     },
     "onboarding": {
       "title": "Begin in 3 stappen:",
@@ -307,7 +313,10 @@
       "themeHint": "Kies een licht of donker thema, of volg je systeeminstelling.",
       "theme_system": "Systeem",
       "theme_dark": "Donker",
-      "theme_light": "Licht"
+      "theme_light": "Licht",
+      "fontSize": "Font size",
+      "fontSizeHint": "Scale the entire interface up or down. Saved on this device.",
+      "fontSizeReset": "Reset"
     },
     "llmConnection": {
       "title": "LLM-verbinding",
@@ -382,7 +391,9 @@
       "parallelChunksHint": "Aantal blokken dat tegelijk wordt vertaald (1–8). Hoger = sneller maar gebruikt meer LLM-tokens/context tegelijk. Zet op 1 om uit te schakelen.",
       "requestTimeout": "Time-out aanvraag (s)",
       "requestTimeoutHint": "Maximaal aantal seconden om op één LLM-respons te wachten. Verhoog voor trage/grote denkmodellen (bv. 600).",
-      "disableToolCalls": "Tool calls uitschakelen (platte-tekstmodus gebruiken)"
+      "disableToolCalls": "Tool calls uitschakelen (platte-tekstmodus gebruiken)",
+      "refinePass": "Refinement Pass (Pass 2)",
+      "refinePassHint": "Runs a second LLM editing pass to make translations read more naturally — better quality, but ~2× the token cost and slower. Falls back to the first-pass translation if the edit fails. Default off."
     },
     "sources": {
       "title": "Bronnen & monitoring",
@@ -622,7 +633,8 @@
     "pathMapping": "Padtoewijzing",
     "rawConfig": "Ruwe configuratie",
     "rawConfigHint": "JSON-blobs voor STT-standaarden per map en geavanceerde opties.",
-    "rawConfigOpen": "Ruwe configuratie openen"
+    "rawConfigOpen": "Ruwe configuratie openen",
+    "invalidJson": "{{field}} must be valid JSON. Fix it before saving."
   },
   "jobDetail": {
     "title": "Taak #{{id}}",
@@ -730,5 +742,13 @@
       "transcribeTranslate": "Transcriberen + vertalen",
       "enableHint": "Schakel spraak-naar-tekst in bij Instellingen om ondertitels van deze video te genereren."
     }
+  },
+  "errors": {
+    "loading": "Loading…",
+    "loadFailed": "Something went wrong while loading this data.",
+    "retry": "Retry",
+    "reload": "Reload",
+    "boundaryTitle": "Something went wrong.",
+    "boundaryMessage": "An unexpected error occurred while rendering this page."
   }
 }

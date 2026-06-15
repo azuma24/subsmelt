@@ -113,7 +113,10 @@
       "runSelectedStarted": "Startade {{count}} valda jobb",
       "selectedDeleted": "Tog bort {{count}} valda jobb",
       "retrySelectedStarted": "Försöker igen med {{count}} synliga fel",
-      "forceSelectedStarted": "Köade {{count}} synliga jobb för omöversättning"
+      "forceSelectedStarted": "Köade {{count}} synliga jobb för omöversättning",
+      "jobDeleted": "Job deleted",
+      "deleteFailed": "Failed to delete job",
+      "actionFailed": "Action failed — please try again"
     },
     "confirm": {
       "clearTitle": "Rensa alla jobb",
@@ -124,7 +127,10 @@
       "deleteSelectedConfirm": "Ta bort valda",
       "retranslateVisibleTitle": "Översätt om synliga jobb",
       "retranslateVisibleMessage": "Detta tvingar {{count}} klara eller överhoppade jobb i den aktuella vyn att köras igen.",
-      "retranslateVisibleConfirm": "Översätt om"
+      "retranslateVisibleConfirm": "Översätt om",
+      "deleteJobTitle": "Delete job",
+      "deleteJobMessage": "This will remove this job from the queue. This cannot be undone.",
+      "deleteJobConfirm": "Delete"
     },
     "onboarding": {
       "title": "Kom igång i 3 steg:",
@@ -307,7 +313,10 @@
       "themeHint": "Välj ett ljust eller mörkt gränssnitt, eller följ din systeminställning.",
       "theme_system": "System",
       "theme_dark": "Mörkt",
-      "theme_light": "Ljust"
+      "theme_light": "Ljust",
+      "fontSize": "Font size",
+      "fontSizeHint": "Scale the entire interface up or down. Saved on this device.",
+      "fontSizeReset": "Reset"
     },
     "llmConnection": {
       "title": "LLM-anslutning",
@@ -382,7 +391,9 @@
       "parallelChunksHint": "Antal segment att översätta samtidigt (1–8). Högre = snabbare men använder fler LLM-tokens/kontext parallellt. Ställ in på 1 för att inaktivera.",
       "requestTimeout": "Begärans tidsgräns (s)",
       "requestTimeoutHint": "Max antal sekunder att vänta på ett enskilt LLM-svar. Öka för långsamma/stora resonemangsmodeller (t.ex. 600).",
-      "disableToolCalls": "Inaktivera verktygsanrop (använd klartextläge)"
+      "disableToolCalls": "Inaktivera verktygsanrop (använd klartextläge)",
+      "refinePass": "Refinement Pass (Pass 2)",
+      "refinePassHint": "Runs a second LLM editing pass to make translations read more naturally — better quality, but ~2× the token cost and slower. Falls back to the first-pass translation if the edit fails. Default off."
     },
     "sources": {
       "title": "Källor och övervakning",
@@ -622,7 +633,8 @@
     "pathMapping": "Sökvägsmappning",
     "rawConfig": "Rå konfiguration",
     "rawConfigHint": "JSON-data för STT-standarder per mapp och avancerade alternativ.",
-    "rawConfigOpen": "Öppna rå konfiguration"
+    "rawConfigOpen": "Öppna rå konfiguration",
+    "invalidJson": "{{field}} must be valid JSON. Fix it before saving."
   },
   "jobDetail": {
     "title": "Jobb #{{id}}",
@@ -730,5 +742,13 @@
       "transcribeTranslate": "Transkribera + översätt",
       "enableHint": "Aktivera tal till text i Inställningar för att generera undertexter från denna video."
     }
+  },
+  "errors": {
+    "loading": "Loading…",
+    "loadFailed": "Something went wrong while loading this data.",
+    "retry": "Retry",
+    "reload": "Reload",
+    "boundaryTitle": "Something went wrong.",
+    "boundaryMessage": "An unexpected error occurred while rendering this page."
   }
 }

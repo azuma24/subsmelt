@@ -113,7 +113,10 @@
       "runSelectedStarted": "Ξεκίνησαν {{count}} επιλεγμένες εργασίες",
       "selectedDeleted": "Διαγράφηκαν {{count}} επιλεγμένες εργασίες",
       "retrySelectedStarted": "Επανάληψη {{count}} ορατών σφαλμάτων",
-      "forceSelectedStarted": "{{count}} ορατές εργασίες προστέθηκαν για επαναμετάφραση"
+      "forceSelectedStarted": "{{count}} ορατές εργασίες προστέθηκαν για επαναμετάφραση",
+      "jobDeleted": "Job deleted",
+      "deleteFailed": "Failed to delete job",
+      "actionFailed": "Action failed — please try again"
     },
     "confirm": {
       "clearTitle": "Καθαρισμός όλων των εργασιών",
@@ -124,7 +127,10 @@
       "deleteSelectedConfirm": "Διαγραφή επιλεγμένων",
       "retranslateVisibleTitle": "Επαναμετάφραση ορατών εργασιών",
       "retranslateVisibleMessage": "Αυτό θα αναγκάσει {{count}} ολοκληρωμένες ή παραλειφθείσες εργασίες της τρέχουσας προβολής να εκτελεστούν ξανά.",
-      "retranslateVisibleConfirm": "Επαναμετάφραση"
+      "retranslateVisibleConfirm": "Επαναμετάφραση",
+      "deleteJobTitle": "Delete job",
+      "deleteJobMessage": "This will remove this job from the queue. This cannot be undone.",
+      "deleteJobConfirm": "Delete"
     },
     "onboarding": {
       "title": "Ξεκινήστε σε 3 βήματα:",
@@ -307,7 +313,10 @@
       "themeHint": "Επιλέξτε φωτεινή ή σκοτεινή διεπαφή ή ακολουθήστε τη ρύθμιση του συστήματός σας.",
       "theme_system": "Σύστημα",
       "theme_dark": "Σκοτεινό",
-      "theme_light": "Φωτεινό"
+      "theme_light": "Φωτεινό",
+      "fontSize": "Font size",
+      "fontSizeHint": "Scale the entire interface up or down. Saved on this device.",
+      "fontSizeReset": "Reset"
     },
     "llmConnection": {
       "title": "Σύνδεση LLM",
@@ -382,7 +391,9 @@
       "parallelChunksHint": "Αριθμός τμημάτων προς ταυτόχρονη μετάφραση (1–8). Περισσότερα = πιο γρήγορο αλλά χρησιμοποιεί περισσότερα tokens/πλαίσιο LLM παράλληλα. Ορίστε 1 για απενεργοποίηση.",
       "requestTimeout": "Λήξη χρόνου αιτήματος (δ)",
       "requestTimeoutHint": "Μέγιστα δευτερόλεπτα αναμονής για μία απόκριση LLM. Αυξήστε για αργά/μεγάλα μοντέλα σκέψης (π.χ. 600).",
-      "disableToolCalls": "Απενεργοποίηση κλήσεων εργαλείων (λειτουργία απλού κειμένου)"
+      "disableToolCalls": "Απενεργοποίηση κλήσεων εργαλείων (λειτουργία απλού κειμένου)",
+      "refinePass": "Refinement Pass (Pass 2)",
+      "refinePassHint": "Runs a second LLM editing pass to make translations read more naturally — better quality, but ~2× the token cost and slower. Falls back to the first-pass translation if the edit fails. Default off."
     },
     "sources": {
       "title": "Πηγές & Παρακολούθηση",
@@ -622,7 +633,8 @@
     "pathMapping": "Αντιστοίχιση διαδρομών",
     "rawConfig": "Ακατέργαστη ρύθμιση",
     "rawConfigHint": "Δομές JSON για προεπιλογές STT ανά φάκελο και προηγμένες επιλογές.",
-    "rawConfigOpen": "Άνοιγμα ακατέργαστης ρύθμισης"
+    "rawConfigOpen": "Άνοιγμα ακατέργαστης ρύθμισης",
+    "invalidJson": "{{field}} must be valid JSON. Fix it before saving."
   },
   "jobDetail": {
     "title": "Εργασία #{{id}}",
@@ -730,5 +742,13 @@
       "transcribeTranslate": "Μεταγραφή + Μετάφραση",
       "enableHint": "Ενεργοποιήστε τη μετατροπή ομιλίας σε κείμενο στις Ρυθμίσεις για να δημιουργήσετε υπότιτλους από αυτό το βίντεο."
     }
+  },
+  "errors": {
+    "loading": "Loading…",
+    "loadFailed": "Something went wrong while loading this data.",
+    "retry": "Retry",
+    "reload": "Reload",
+    "boundaryTitle": "Something went wrong.",
+    "boundaryMessage": "An unexpected error occurred while rendering this page."
   }
 }

@@ -113,7 +113,10 @@
       "runSelectedStarted": "Sinimulan ang {{count}} napiling trabaho",
       "selectedDeleted": "Binura ang {{count}} napiling trabaho",
       "retrySelectedStarted": "Inuulit ang {{count}} nakikitang error",
-      "forceSelectedStarted": "Ni-queue ang {{count}} nakikitang trabaho para muling isalin"
+      "forceSelectedStarted": "Ni-queue ang {{count}} nakikitang trabaho para muling isalin",
+      "jobDeleted": "Job deleted",
+      "deleteFailed": "Failed to delete job",
+      "actionFailed": "Action failed — please try again"
     },
     "confirm": {
       "clearTitle": "I-clear lahat ng trabaho",
@@ -124,7 +127,10 @@
       "deleteSelectedConfirm": "Burahin ang Napili",
       "retranslateVisibleTitle": "Muling isalin ang nakikitang mga trabaho",
       "retranslateVisibleMessage": "Pipilitin nito ang {{count}} natapos o nilaktawang trabaho sa kasalukuyang view na tumakbong muli.",
-      "retranslateVisibleConfirm": "Muling isalin"
+      "retranslateVisibleConfirm": "Muling isalin",
+      "deleteJobTitle": "Delete job",
+      "deleteJobMessage": "This will remove this job from the queue. This cannot be undone.",
+      "deleteJobConfirm": "Delete"
     },
     "onboarding": {
       "title": "Magsimula sa 3 hakbang:",
@@ -307,7 +313,10 @@
       "themeHint": "Pumili ng light o dark na interface, o sundan ang setting ng iyong system.",
       "theme_system": "System",
       "theme_dark": "Dark",
-      "theme_light": "Light"
+      "theme_light": "Light",
+      "fontSize": "Font size",
+      "fontSizeHint": "Scale the entire interface up or down. Saved on this device.",
+      "fontSizeReset": "Reset"
     },
     "llmConnection": {
       "title": "Koneksyon sa LLM",
@@ -382,7 +391,9 @@
       "parallelChunksHint": "Bilang ng mga chunk na isasaling sabay-sabay (1–8). Mas mataas = mas mabilis pero gumagamit ng mas maraming LLM token/context nang parallel. Itakda sa 1 para i-disable.",
       "requestTimeout": "Request Timeout (s)",
       "requestTimeoutHint": "Pinakamaraming segundo na hihintayin para sa isang LLM response. Dagdagan para sa mabagal/malaking thinking model (hal. 600).",
-      "disableToolCalls": "I-disable ang tool calls (gamitin ang plain-text mode)"
+      "disableToolCalls": "I-disable ang tool calls (gamitin ang plain-text mode)",
+      "refinePass": "Refinement Pass (Pass 2)",
+      "refinePassHint": "Runs a second LLM editing pass to make translations read more naturally — better quality, but ~2× the token cost and slower. Falls back to the first-pass translation if the edit fails. Default off."
     },
     "sources": {
       "title": "Mga Source at Pagmamanman",
@@ -622,7 +633,8 @@
     "pathMapping": "Path mapping",
     "rawConfig": "Raw config",
     "rawConfigHint": "Mga JSON blob para sa per-folder na STT defaults at advanced na opsyon.",
-    "rawConfigOpen": "Buksan ang raw config"
+    "rawConfigOpen": "Buksan ang raw config",
+    "invalidJson": "{{field}} must be valid JSON. Fix it before saving."
   },
   "jobDetail": {
     "title": "Trabaho #{{id}}",
@@ -730,5 +742,13 @@
       "transcribeTranslate": "I-transcribe + Isalin",
       "enableHint": "I-enable ang speech-to-text sa Mga Setting para gumawa ng subtitle mula sa video na ito."
     }
+  },
+  "errors": {
+    "loading": "Loading…",
+    "loadFailed": "Something went wrong while loading this data.",
+    "retry": "Retry",
+    "reload": "Reload",
+    "boundaryTitle": "Something went wrong.",
+    "boundaryMessage": "An unexpected error occurred while rendering this page."
   }
 }

@@ -113,7 +113,10 @@
       "runSelectedStarted": "{{count}} தேர்ந்தெடுத்த பணிகள் தொடங்கப்பட்டன",
       "selectedDeleted": "{{count}} தேர்ந்தெடுத்த பணிகள் நீக்கப்பட்டன",
       "retrySelectedStarted": "{{count}} தெரியும் பிழைகளை மீண்டும் முயற்சிக்கிறது",
-      "forceSelectedStarted": "{{count}} தெரியும் பணிகள் மீண்டும் மொழிபெயர்ப்பதற்கு வரிசையில் சேர்க்கப்பட்டன"
+      "forceSelectedStarted": "{{count}} தெரியும் பணிகள் மீண்டும் மொழிபெயர்ப்பதற்கு வரிசையில் சேர்க்கப்பட்டன",
+      "jobDeleted": "Job deleted",
+      "deleteFailed": "Failed to delete job",
+      "actionFailed": "Action failed — please try again"
     },
     "confirm": {
       "clearTitle": "அனைத்து பணிகளையும் அழி",
@@ -124,7 +127,10 @@
       "deleteSelectedConfirm": "தேர்ந்தெடுத்ததை நீக்கு",
       "retranslateVisibleTitle": "தெரியும் பணிகளை மீண்டும் மொழிபெயர்",
       "retranslateVisibleMessage": "இது தற்போதைய காட்சியில் முடிந்த அல்லது தவிர்க்கப்பட்ட {{count}} பணிகளை மீண்டும் இயக்கும்படி கட்டாயப்படுத்தும்.",
-      "retranslateVisibleConfirm": "மீண்டும் மொழிபெயர்"
+      "retranslateVisibleConfirm": "மீண்டும் மொழிபெயர்",
+      "deleteJobTitle": "Delete job",
+      "deleteJobMessage": "This will remove this job from the queue. This cannot be undone.",
+      "deleteJobConfirm": "Delete"
     },
     "onboarding": {
       "title": "3 படிகளில் தொடங்குங்கள்:",
@@ -307,7 +313,10 @@
       "themeHint": "ஒளி அல்லது இருண்ட இடைமுகத்தைத் தேர்வுசெய்யவும், அல்லது உங்கள் கணினி அமைப்பைப் பின்பற்றவும்.",
       "theme_system": "கணினி",
       "theme_dark": "இருண்டது",
-      "theme_light": "ஒளி"
+      "theme_light": "ஒளி",
+      "fontSize": "Font size",
+      "fontSizeHint": "Scale the entire interface up or down. Saved on this device.",
+      "fontSizeReset": "Reset"
     },
     "llmConnection": {
       "title": "LLM இணைப்பு",
@@ -382,7 +391,9 @@
       "parallelChunksHint": "ஒரே நேரத்தில் மொழிபெயர்க்க வேண்டிய பகுதிகளின் எண்ணிக்கை (1–8). அதிகம் = வேகம் ஆனால் இணையாக அதிக LLM டோக்கன்கள்/சூழலைப் பயன்படுத்துகிறது. முடக்க 1 ஆக அமைக்கவும்.",
       "requestTimeout": "கோரிக்கை காலாவதி (வி)",
       "requestTimeoutHint": "ஒற்றை LLM பதிலுக்காகக் காத்திருக்க அதிகபட்ச வினாடிகள். மெதுவான/பெரிய சிந்தனை மாதிரிகளுக்கு அதிகரிக்கவும் (எ.கா. 600).",
-      "disableToolCalls": "கருவி அழைப்புகளை முடக்கு (வெற்று-உரை முறையைப் பயன்படுத்து)"
+      "disableToolCalls": "கருவி அழைப்புகளை முடக்கு (வெற்று-உரை முறையைப் பயன்படுத்து)",
+      "refinePass": "Refinement Pass (Pass 2)",
+      "refinePassHint": "Runs a second LLM editing pass to make translations read more naturally — better quality, but ~2× the token cost and slower. Falls back to the first-pass translation if the edit fails. Default off."
     },
     "sources": {
       "title": "மூலங்கள் & கண்காணிப்பு",
@@ -622,7 +633,8 @@
     "pathMapping": "பாதை வரைபடம்",
     "rawConfig": "மூல உள்ளமைவு",
     "rawConfigHint": "ஒவ்வொரு-கோப்புறை STT இயல்புகள் மற்றும் மேம்பட்ட விருப்பங்களுக்கான JSON தொகுதிகள்.",
-    "rawConfigOpen": "மூல உள்ளமைவைத் திற"
+    "rawConfigOpen": "மூல உள்ளமைவைத் திற",
+    "invalidJson": "{{field}} must be valid JSON. Fix it before saving."
   },
   "jobDetail": {
     "title": "பணி #{{id}}",
@@ -730,5 +742,13 @@
       "transcribeTranslate": "படியெடு + மொழிபெயர்",
       "enableHint": "இந்த வீடியோவிலிருந்து துணைத்தலைப்புகளை உருவாக்க அமைப்புகளில் பேச்சு-முதல்-உரையை இயக்கவும்."
     }
+  },
+  "errors": {
+    "loading": "Loading…",
+    "loadFailed": "Something went wrong while loading this data.",
+    "retry": "Retry",
+    "reload": "Reload",
+    "boundaryTitle": "Something went wrong.",
+    "boundaryMessage": "An unexpected error occurred while rendering this page."
   }
 }

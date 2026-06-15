@@ -113,7 +113,10 @@
       "runSelectedStarted": "Memulakan {{count}} kerja dipilih",
       "selectedDeleted": "Memadam {{count}} kerja dipilih",
       "retrySelectedStarted": "Mencuba semula {{count}} ralat yang dipaparkan",
-      "forceSelectedStarted": "Beratur {{count}} kerja yang dipaparkan untuk terjemahan semula"
+      "forceSelectedStarted": "Beratur {{count}} kerja yang dipaparkan untuk terjemahan semula",
+      "jobDeleted": "Job deleted",
+      "deleteFailed": "Failed to delete job",
+      "actionFailed": "Action failed — please try again"
     },
     "confirm": {
       "clearTitle": "Kosongkan semua kerja",
@@ -124,7 +127,10 @@
       "deleteSelectedConfirm": "Padam Dipilih",
       "retranslateVisibleTitle": "Terjemah semula kerja yang dipaparkan",
       "retranslateVisibleMessage": "Ini akan memaksa {{count}} kerja selesai atau dilangkau dalam paparan semasa berjalan semula.",
-      "retranslateVisibleConfirm": "Terjemah semula"
+      "retranslateVisibleConfirm": "Terjemah semula",
+      "deleteJobTitle": "Delete job",
+      "deleteJobMessage": "This will remove this job from the queue. This cannot be undone.",
+      "deleteJobConfirm": "Delete"
     },
     "onboarding": {
       "title": "Mulakan dalam 3 langkah:",
@@ -307,7 +313,10 @@
       "themeHint": "Pilih antara muka cerah atau gelap, atau ikut tetapan sistem anda.",
       "theme_system": "Sistem",
       "theme_dark": "Gelap",
-      "theme_light": "Cerah"
+      "theme_light": "Cerah",
+      "fontSize": "Font size",
+      "fontSizeHint": "Scale the entire interface up or down. Saved on this device.",
+      "fontSizeReset": "Reset"
     },
     "llmConnection": {
       "title": "Sambungan LLM",
@@ -382,7 +391,9 @@
       "parallelChunksHint": "Bilangan cebisan untuk diterjemah serentak (1–8). Lebih tinggi = lebih pantas tetapi menggunakan lebih banyak token/konteks LLM secara selari. Tetapkan ke 1 untuk melumpuhkan.",
       "requestTimeout": "Tamat Masa Permintaan (s)",
       "requestTimeoutHint": "Saat maksimum untuk menunggu satu respons LLM. Tingkatkan untuk model berfikir yang perlahan/besar (cth. 600).",
-      "disableToolCalls": "Lumpuhkan panggilan alat (gunakan mod teks biasa)"
+      "disableToolCalls": "Lumpuhkan panggilan alat (gunakan mod teks biasa)",
+      "refinePass": "Refinement Pass (Pass 2)",
+      "refinePassHint": "Runs a second LLM editing pass to make translations read more naturally — better quality, but ~2× the token cost and slower. Falls back to the first-pass translation if the edit fails. Default off."
     },
     "sources": {
       "title": "Sumber & Pemantauan",
@@ -622,7 +633,8 @@
     "pathMapping": "Pemetaan laluan",
     "rawConfig": "Konfigurasi mentah",
     "rawConfigHint": "Blob JSON untuk lalai STT setiap folder dan pilihan lanjutan.",
-    "rawConfigOpen": "Buka konfigurasi mentah"
+    "rawConfigOpen": "Buka konfigurasi mentah",
+    "invalidJson": "{{field}} must be valid JSON. Fix it before saving."
   },
   "jobDetail": {
     "title": "Kerja #{{id}}",
@@ -730,5 +742,13 @@
       "transcribeTranslate": "Transkrip + Terjemah",
       "enableHint": "Dayakan pertuturan-ke-teks dalam Tetapan untuk menjana sari kata daripada video ini."
     }
+  },
+  "errors": {
+    "loading": "Loading…",
+    "loadFailed": "Something went wrong while loading this data.",
+    "retry": "Retry",
+    "reload": "Reload",
+    "boundaryTitle": "Something went wrong.",
+    "boundaryMessage": "An unexpected error occurred while rendering this page."
   }
 }

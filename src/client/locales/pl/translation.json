@@ -113,7 +113,10 @@
       "runSelectedStarted": "Uruchomiono {{count}} wybranych zadań",
       "selectedDeleted": "Usunięto {{count}} wybranych zadań",
       "retrySelectedStarted": "Ponawianie {{count}} widocznych błędów",
-      "forceSelectedStarted": "Dodano do kolejki {{count}} widocznych zadań do ponownego tłumaczenia"
+      "forceSelectedStarted": "Dodano do kolejki {{count}} widocznych zadań do ponownego tłumaczenia",
+      "jobDeleted": "Job deleted",
+      "deleteFailed": "Failed to delete job",
+      "actionFailed": "Action failed — please try again"
     },
     "confirm": {
       "clearTitle": "Wyczyść wszystkie zadania",
@@ -124,7 +127,10 @@
       "deleteSelectedConfirm": "Usuń wybrane",
       "retranslateVisibleTitle": "Przetłumacz ponownie widoczne zadania",
       "retranslateVisibleMessage": "Spowoduje to wymuszenie ponownego uruchomienia {{count}} ukończonych lub pominiętych zadań w bieżącym widoku.",
-      "retranslateVisibleConfirm": "Przetłumacz ponownie"
+      "retranslateVisibleConfirm": "Przetłumacz ponownie",
+      "deleteJobTitle": "Delete job",
+      "deleteJobMessage": "This will remove this job from the queue. This cannot be undone.",
+      "deleteJobConfirm": "Delete"
     },
     "onboarding": {
       "title": "Zacznij w 3 krokach:",
@@ -307,7 +313,10 @@
       "themeHint": "Wybierz jasny lub ciemny interfejs albo dostosuj się do ustawień systemu.",
       "theme_system": "Systemowy",
       "theme_dark": "Ciemny",
-      "theme_light": "Jasny"
+      "theme_light": "Jasny",
+      "fontSize": "Font size",
+      "fontSizeHint": "Scale the entire interface up or down. Saved on this device.",
+      "fontSizeReset": "Reset"
     },
     "llmConnection": {
       "title": "Połączenie LLM",
@@ -382,7 +391,9 @@
       "parallelChunksHint": "Liczba fragmentów tłumaczonych jednocześnie (1–8). Więcej = szybciej, ale zużywa więcej tokenów/kontekstu LLM równolegle. Ustaw 1, aby wyłączyć.",
       "requestTimeout": "Limit czasu żądania (s)",
       "requestTimeoutHint": "Maksymalna liczba sekund oczekiwania na pojedynczą odpowiedź LLM. Zwiększ dla wolnych/dużych modeli myślących (np. 600).",
-      "disableToolCalls": "Wyłącz wywołania narzędzi (tryb zwykłego tekstu)"
+      "disableToolCalls": "Wyłącz wywołania narzędzi (tryb zwykłego tekstu)",
+      "refinePass": "Refinement Pass (Pass 2)",
+      "refinePassHint": "Runs a second LLM editing pass to make translations read more naturally — better quality, but ~2× the token cost and slower. Falls back to the first-pass translation if the edit fails. Default off."
     },
     "sources": {
       "title": "Źródła i monitorowanie",
@@ -622,7 +633,8 @@
     "pathMapping": "Mapowanie ścieżek",
     "rawConfig": "Surowa konfiguracja",
     "rawConfigHint": "Bloki JSON dla domyślnych ustawień STT i opcji zaawansowanych dla poszczególnych folderów.",
-    "rawConfigOpen": "Otwórz surową konfigurację"
+    "rawConfigOpen": "Otwórz surową konfigurację",
+    "invalidJson": "{{field}} must be valid JSON. Fix it before saving."
   },
   "jobDetail": {
     "title": "Zadanie #{{id}}",
@@ -730,5 +742,13 @@
       "transcribeTranslate": "Transkrybuj + tłumacz",
       "enableHint": "Włącz mowę na tekst w Ustawieniach, aby generować napisy z tego wideo."
     }
+  },
+  "errors": {
+    "loading": "Loading…",
+    "loadFailed": "Something went wrong while loading this data.",
+    "retry": "Retry",
+    "reload": "Reload",
+    "boundaryTitle": "Something went wrong.",
+    "boundaryMessage": "An unexpected error occurred while rendering this page."
   }
 }

@@ -113,7 +113,10 @@
       "runSelectedStarted": "Started {{count}} selected jobs",
       "selectedDeleted": "Deleted {{count}} selected jobs",
       "retrySelectedStarted": "Retrying {{count}} visible errors",
-      "forceSelectedStarted": "Queued {{count}} visible jobs for re-translation"
+      "forceSelectedStarted": "Queued {{count}} visible jobs for re-translation",
+      "jobDeleted": "Job deleted",
+      "deleteFailed": "Failed to delete job",
+      "actionFailed": "Action failed — please try again"
     },
     "confirm": {
       "clearTitle": "Clear all jobs",
@@ -124,7 +127,10 @@
       "deleteSelectedConfirm": "Delete Selected",
       "retranslateVisibleTitle": "Re-translate visible jobs",
       "retranslateVisibleMessage": "This will force {{count}} completed or skipped jobs in the current view to run again.",
-      "retranslateVisibleConfirm": "Re-translate"
+      "retranslateVisibleConfirm": "Re-translate",
+      "deleteJobTitle": "Delete job",
+      "deleteJobMessage": "This will remove this job from the queue. This cannot be undone.",
+      "deleteJobConfirm": "Delete"
     },
     "onboarding": {
       "title": "Get started in 3 steps:",
@@ -307,7 +313,10 @@
       "themeHint": "Escolha uma interface clara ou escura, ou siga a configuração do seu sistema.",
       "theme_system": "Sistema",
       "theme_dark": "Escuro",
-      "theme_light": "Claro"
+      "theme_light": "Claro",
+      "fontSize": "Font size",
+      "fontSizeHint": "Scale the entire interface up or down. Saved on this device.",
+      "fontSizeReset": "Reset"
     },
     "llmConnection": {
       "title": "LLM Connection",
@@ -382,7 +391,9 @@
       "parallelChunksHint": "Number of chunks to translate simultaneously (1–8). Higher = faster. Set to 1 to disable.",
       "requestTimeout": "Request Timeout (s)",
       "requestTimeoutHint": "Max seconds to wait for a single LLM response. Increase for slow/large thinking models (e.g. 600).",
-      "disableToolCalls": "Disable tool calls (use plain-text mode)"
+      "disableToolCalls": "Disable tool calls (use plain-text mode)",
+      "refinePass": "Refinement Pass (Pass 2)",
+      "refinePassHint": "Runs a second LLM editing pass to make translations read more naturally — better quality, but ~2× the token cost and slower. Falls back to the first-pass translation if the edit fails. Default off."
     },
     "sources": {
       "title": "Sources & Monitoring",
@@ -622,7 +633,8 @@
     "pathMapping": "Path mapping",
     "rawConfig": "Raw config",
     "rawConfigHint": "JSON blobs for per-folder STT defaults and advanced options.",
-    "rawConfigOpen": "Open raw config"
+    "rawConfigOpen": "Open raw config",
+    "invalidJson": "{{field}} must be valid JSON. Fix it before saving."
   },
   "jobDetail": {
     "title": "Job #{{id}}",
@@ -730,5 +742,13 @@
       "transcribeTranslate": "Transcribe + Translate",
       "enableHint": "Enable speech-to-text in Settings to generate subtitles from this video."
     }
+  },
+  "errors": {
+    "loading": "Loading…",
+    "loadFailed": "Something went wrong while loading this data.",
+    "retry": "Retry",
+    "reload": "Reload",
+    "boundaryTitle": "Something went wrong.",
+    "boundaryMessage": "An unexpected error occurred while rendering this page."
   }
 }

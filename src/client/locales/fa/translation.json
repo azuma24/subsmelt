@@ -113,7 +113,10 @@
       "runSelectedStarted": "{{count}} کار انتخاب‌شده آغاز شد",
       "selectedDeleted": "{{count}} کار انتخاب‌شده حذف شد",
       "retrySelectedStarted": "تلاش مجدد برای {{count}} خطای قابل‌مشاهده",
-      "forceSelectedStarted": "{{count}} کار قابل‌مشاهده برای ترجمه مجدد به صف اضافه شد"
+      "forceSelectedStarted": "{{count}} کار قابل‌مشاهده برای ترجمه مجدد به صف اضافه شد",
+      "jobDeleted": "Job deleted",
+      "deleteFailed": "Failed to delete job",
+      "actionFailed": "Action failed — please try again"
     },
     "confirm": {
       "clearTitle": "پاک کردن همه کارها",
@@ -124,7 +127,10 @@
       "deleteSelectedConfirm": "حذف انتخاب‌شده‌ها",
       "retranslateVisibleTitle": "ترجمه مجدد کارهای قابل‌مشاهده",
       "retranslateVisibleMessage": "این کار {{count}} کار تکمیل‌شده یا رد‌شده در نمای فعلی را مجبور به اجرای دوباره می‌کند.",
-      "retranslateVisibleConfirm": "ترجمه مجدد"
+      "retranslateVisibleConfirm": "ترجمه مجدد",
+      "deleteJobTitle": "Delete job",
+      "deleteJobMessage": "This will remove this job from the queue. This cannot be undone.",
+      "deleteJobConfirm": "Delete"
     },
     "onboarding": {
       "title": "در ۳ مرحله شروع کنید:",
@@ -307,7 +313,10 @@
       "themeHint": "یک رابط روشن یا تیره انتخاب کنید، یا از تنظیمات سیستم خود پیروی کنید.",
       "theme_system": "سیستم",
       "theme_dark": "تیره",
-      "theme_light": "روشن"
+      "theme_light": "روشن",
+      "fontSize": "Font size",
+      "fontSizeHint": "Scale the entire interface up or down. Saved on this device.",
+      "fontSizeReset": "Reset"
     },
     "llmConnection": {
       "title": "اتصال LLM",
@@ -382,7 +391,9 @@
       "parallelChunksHint": "تعداد بخش‌هایی که هم‌زمان ترجمه می‌شوند (۱ تا ۸). بیشتر = سریع‌تر اما توکن/زمینه بیشتری از LLM به‌صورت موازی مصرف می‌کند. برای غیرفعال کردن روی ۱ بگذارید.",
       "requestTimeout": "زمان‌اتمام درخواست (ثانیه)",
       "requestTimeoutHint": "حداکثر ثانیه‌های انتظار برای یک پاسخ LLM. برای مدل‌های کند/بزرگ تفکری افزایش دهید (مثلاً ۶۰۰).",
-      "disableToolCalls": "غیرفعال کردن فراخوانی ابزار (استفاده از حالت متن ساده)"
+      "disableToolCalls": "غیرفعال کردن فراخوانی ابزار (استفاده از حالت متن ساده)",
+      "refinePass": "Refinement Pass (Pass 2)",
+      "refinePassHint": "Runs a second LLM editing pass to make translations read more naturally — better quality, but ~2× the token cost and slower. Falls back to the first-pass translation if the edit fails. Default off."
     },
     "sources": {
       "title": "منابع و پایش",
@@ -622,7 +633,8 @@
     "pathMapping": "نگاشت مسیر",
     "rawConfig": "پیکربندی خام",
     "rawConfigHint": "بلاب‌های JSON برای پیش‌فرض‌های STT هر پوشه و گزینه‌های پیشرفته.",
-    "rawConfigOpen": "باز کردن پیکربندی خام"
+    "rawConfigOpen": "باز کردن پیکربندی خام",
+    "invalidJson": "{{field}} must be valid JSON. Fix it before saving."
   },
   "jobDetail": {
     "title": "کار #{{id}}",
@@ -730,5 +742,13 @@
       "transcribeTranslate": "رونویسی + ترجمه",
       "enableHint": "گفتار به متن را در تنظیمات فعال کنید تا از این ویدئو زیرنویس تولید کنید."
     }
+  },
+  "errors": {
+    "loading": "Loading…",
+    "loadFailed": "Something went wrong while loading this data.",
+    "retry": "Retry",
+    "reload": "Reload",
+    "boundaryTitle": "Something went wrong.",
+    "boundaryMessage": "An unexpected error occurred while rendering this page."
   }
 }

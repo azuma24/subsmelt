@@ -113,7 +113,10 @@
       "runSelectedStarted": "Seçilen {{count}} iş başlatıldı",
       "selectedDeleted": "Seçilen {{count}} iş silindi",
       "retrySelectedStarted": "Görünen {{count}} hata yeniden deneniyor",
-      "forceSelectedStarted": "Görünen {{count}} iş yeniden çeviri için kuyruğa alındı"
+      "forceSelectedStarted": "Görünen {{count}} iş yeniden çeviri için kuyruğa alındı",
+      "jobDeleted": "Job deleted",
+      "deleteFailed": "Failed to delete job",
+      "actionFailed": "Action failed — please try again"
     },
     "confirm": {
       "clearTitle": "Tüm işleri temizle",
@@ -124,7 +127,10 @@
       "deleteSelectedConfirm": "Seçileni Sil",
       "retranslateVisibleTitle": "Görünen işleri yeniden çevir",
       "retranslateVisibleMessage": "Bu işlem geçerli görünümdeki {{count}} tamamlanmış veya atlanmış işi yeniden çalıştırmaya zorlar.",
-      "retranslateVisibleConfirm": "Yeniden çevir"
+      "retranslateVisibleConfirm": "Yeniden çevir",
+      "deleteJobTitle": "Delete job",
+      "deleteJobMessage": "This will remove this job from the queue. This cannot be undone.",
+      "deleteJobConfirm": "Delete"
     },
     "onboarding": {
       "title": "3 adımda başlayın:",
@@ -307,7 +313,10 @@
       "themeHint": "Açık veya koyu arayüz seçin ya da sistem ayarınızı izleyin.",
       "theme_system": "Sistem",
       "theme_dark": "Koyu",
-      "theme_light": "Açık"
+      "theme_light": "Açık",
+      "fontSize": "Font size",
+      "fontSizeHint": "Scale the entire interface up or down. Saved on this device.",
+      "fontSizeReset": "Reset"
     },
     "llmConnection": {
       "title": "LLM Bağlantısı",
@@ -382,7 +391,9 @@
       "parallelChunksHint": "Aynı anda çevrilecek parça sayısı (1–8). Daha yüksek = daha hızlı ama paralelde daha fazla LLM belirteci/bağlamı kullanır. Devre dışı bırakmak için 1 yapın.",
       "requestTimeout": "İstek Zaman Aşımı (sn)",
       "requestTimeoutHint": "Tek bir LLM yanıtı için beklenecek azami saniye. Yavaş/büyük düşünen modeller için artırın (örn. 600).",
-      "disableToolCalls": "Araç çağrılarını devre dışı bırak (düz metin modunu kullan)"
+      "disableToolCalls": "Araç çağrılarını devre dışı bırak (düz metin modunu kullan)",
+      "refinePass": "Refinement Pass (Pass 2)",
+      "refinePassHint": "Runs a second LLM editing pass to make translations read more naturally — better quality, but ~2× the token cost and slower. Falls back to the first-pass translation if the edit fails. Default off."
     },
     "sources": {
       "title": "Kaynaklar ve İzleme",
@@ -622,7 +633,8 @@
     "pathMapping": "Yol eşlemesi",
     "rawConfig": "Ham yapılandırma",
     "rawConfigHint": "Klasör başına STT varsayılanları ve gelişmiş seçenekler için JSON blokları.",
-    "rawConfigOpen": "Ham yapılandırmayı aç"
+    "rawConfigOpen": "Ham yapılandırmayı aç",
+    "invalidJson": "{{field}} must be valid JSON. Fix it before saving."
   },
   "jobDetail": {
     "title": "İş #{{id}}",
@@ -730,5 +742,13 @@
       "transcribeTranslate": "Transkribe Et + Çevir",
       "enableHint": "Bu videodan altyazı oluşturmak için Ayarlar'da konuşmadan metni etkinleştirin."
     }
+  },
+  "errors": {
+    "loading": "Loading…",
+    "loadFailed": "Something went wrong while loading this data.",
+    "retry": "Retry",
+    "reload": "Reload",
+    "boundaryTitle": "Something went wrong.",
+    "boundaryMessage": "An unexpected error occurred while rendering this page."
   }
 }
