@@ -63,6 +63,14 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   parallel_chunks: "1",
   request_timeout_s: "300",
   disable_tool_calls: "1",
+  // Refinement Pass (Pass 2): optional second LLM editing call per chunk for
+  // natural flow/tone. Default off. Never degrades below pass-1 — a refined
+  // chunk is only accepted when it returns the exact same line count.
+  refine_pass: "0",
+  // Series-Wide Memory (§2): when "1", a .subsmelt_glossary.json file in each
+  // translated file's folder is loaded before analysis and updated after, so a
+  // series stays consistent across files. Default off — behavior unchanged.
+  series_memory: "0",
   auto_scan_interval: "0",
   watch_enabled: "0",
   auto_translate: "1",
