@@ -18,6 +18,16 @@
           document.documentElement.setAttribute("data-theme", "dark");
         }
       })();
+      // Apply the saved UI font scale before first paint. Mirrors
+      // src/client/lib/font-scale.ts (percentage applied as root `zoom`).
+      (function () {
+        try {
+          var raw = parseInt(localStorage.getItem("subsmelt-font-scale"), 10);
+          if (raw >= 70 && raw <= 150) {
+            document.documentElement.style.zoom = String(raw / 100);
+          }
+        } catch (e) { /* ignore */ }
+      })();
     </script>
   </head>
   <body>

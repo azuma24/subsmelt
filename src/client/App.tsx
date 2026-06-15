@@ -1,19 +1,29 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ToastProvider, useToast } from "./components/Toast";
 import { ConfirmProvider } from "./components/ConfirmModal";
 import { formatDur } from "./lib";
 import { applyTheme, getThemePref, watchSystemTheme } from "./lib/theme";
+import { applyFontScale, getFontScale } from "./lib/font-scale";
 import { useIsMobile, useJobsQuery, useQueueStatusQuery, useSSE, useSettingsQuery } from "./hooks";
 import type { JobRow } from "./types";
 import { DesktopSidebar, MobileBottomNav } from "./app/shell";
 import { LANGUAGES } from "./app/constants";
 import { DashboardPage } from "./features/dashboard";
-import { LogsPage } from "./features/logs/LogsPage";
-import { JobDetailPage } from "./features/jobs/JobDetailPage";
-import { TranslationLanguagesPage } from "./features/tasks/TasksPage";
-import { SettingsPage } from "./features/settings/SettingsPage";
+
+const LogsPage = lazy(() =>
+  import("./features/logs/LogsPage").then((m) => ({ default: m.LogsPage })),
+);
+const JobDetailPage = lazy(() =>
+  import("./features/jobs/JobDetailPage").then((m) => ({ default: m.JobDetailPage })),
+);
+const TranslationLanguagesPage = lazy(() =>
+  import("./features/tasks/TasksPage").then((m) => ({ default: m.TranslationLanguagesPage })),
+);
+const SettingsPage = lazy(() =>
+  import("./features/settings/SettingsPage").then((m) => ({ default: m.SettingsPage })),
+);
 
 export default function App() {
   return (
@@ -74,6 +84,7 @@ function AppInner() {
   // Apply the stored theme and follow OS scheme changes while on "system".
   useEffect(() => {
     applyTheme(getThemePref());
+    applyFontScale(getFontScale());
     return watchSystemTheme(() => {
       if (getThemePref() === "system") applyTheme("system");
     });
@@ -93,14 +104,16 @@ function AppInner() {
       )}
       <div className="flex min-w-0 flex-1 flex-col">
         <main className={`flex-1 overflow-auto ${isMobile ? "pb-[58px]" : ""}`}>
-          <Routes>
-            <Route path="/" element={<DashboardPage isMobile={isMobile} />} />
-            <Route path="/translations" element={<TranslationLanguagesPage isMobile={isMobile} />} />
-            <Route path="/tasks" element={<Navigate to="/translations" replace />} />
-            <Route path="/settings" element={<SettingsPage isMobile={isMobile} />} />
-            <Route path="/logs" element={<LogsPage isMobile={isMobile} />} />
-            <Route path="/jobs/:id" element={<JobDetailPage />} />
-          </Routes>
+          <Suspense fallback={<div className="p-8 text-[var(--text-3)]">{t("common.loading")}</div>}>
+            <Routes>
+              <Route path="/" element={<DashboardPage isMobile={isMobile} />} />
+              <Route path="/translations" element={<TranslationLanguagesPage isMobile={isMobile} />} />
+              <Route path="/tasks" element={<Navigate to="/translations" replace />} />
+              <Route path="/settings" element={<SettingsPage isMobile={isMobile} />} />
+              <Route path="/logs" element={<LogsPage isMobile={isMobile} />} />
+              <Route path="/jobs/:id" element={<JobDetailPage />} />
+            </Routes>
+          </Suspense>
         </main>
         {isMobile && <MobileBottomNav currentPath={location.pathname} />}
       </div>
