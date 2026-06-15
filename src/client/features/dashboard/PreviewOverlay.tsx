@@ -1,9 +1,11 @@
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useJobPreview } from "../../hooks";
 import { formatTimecode } from "../../lib";
 import { copyText } from "../../lib/clipboard";
 import { ModalShell } from "../../components/ModalShell";
+import { PageError, PageLoading } from "../../ui/QueryState";
 import { useToast } from "../../components/Toast";
 import type { PreviewLine } from "../../types";
 
@@ -23,6 +25,18 @@ function splitAnalysisSections(analysis: string) {
   return { plot, glossary };
 }
 
+// Above this many cue rows we window the list; below it we render the list
+// fully so small/filtered previews keep simple, fully-mounted behavior.
+// Mirrors the VIRTUALIZE_THRESHOLD used by JobsTableDesktop.
+const VIRTUALIZE_THRESHOLD = 200;
+// Initial per-row height estimates (px). react-virtual measures real heights,
+// so these only seed the first paint. Desktop rows are tight; mobile cards taller.
+const DESKTOP_ROW_ESTIMATE = 32;
+const MOBILE_ROW_ESTIMATE = 132;
+// Shared grid template for the virtualized desktop rows so the windowed body
+// stays column-aligned with the sticky header: # | TIME | ORIGINAL | TRANSLATED | ⚠
+const DESKTOP_GRID_COLS = "32px 96px minmax(0,1fr) minmax(0,1fr) 32px";
+
 export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearch, onClose }: PreviewOverlayProps) {
   const { t } = useTranslation();
   const { addToast } = useToast();
@@ -30,7 +44,13 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
   const previewData = previewQuery.data;
   const [showOnlyChanged, setShowOnlyChanged] = useState(false);
   const [showOnlyIssues, setShowOnlyIssues] = useState(false);
+  // Outer scroll viewport. Holds the analysis block + the (possibly windowed)
+  // cue list, so existing scroll behavior (analysis scrolls with the list) is
+  // preserved. When the list is windowed it is also the virtualizer's scroller.
   const listRef = useRef<HTMLDivElement>(null);
+  // Marks where the cue list begins inside the scroll viewport so the
+  // virtualizer can offset for the analysis block rendered above it.
+  const listStartRef = useRef<HTMLDivElement>(null);
 
   const { plot, glossary } = useMemo(() => splitAnalysisSections(previewData?.analysis || ""), [previewData?.analysis]);
 
@@ -41,13 +61,33 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
     return lines;
   }, [previewData?.lines, previewSearch, showOnlyChanged, showOnlyIssues]);
 
+  const shouldVirtualize = filteredLines.length > VIRTUALIZE_THRESHOLD;
+
+  // Single virtualizer instance, scoped to the outer viewport. Created
+  // unconditionally (hooks rules) but only consumed on the windowed path.
+  const virtualizer = useVirtualizer({
+    count: filteredLines.length,
+    getScrollElement: () => listRef.current,
+    estimateSize: () => (isMobile ? MOBILE_ROW_ESTIMATE : DESKTOP_ROW_ESTIMATE),
+    overscan: 12,
+    scrollMargin: listStartRef.current?.offsetTop ?? 0,
+  });
+  const virtualizerRef = useRef(virtualizer);
+  virtualizerRef.current = virtualizer;
+
   const jumpToNextIssue = () => {
-    const firstIssue = filteredLines.find((line) => hasIssue(line));
-    if (!firstIssue) {
+    const issueIdx = filteredLines.findIndex((line) => hasIssue(line));
+    if (issueIdx === -1) {
       addToast(t("dashboard.preview.noIssues"), "info");
       return;
     }
-    const el = document.getElementById(`preview-line-${firstIssue.index}`);
+    // When windowed the target row may not be mounted, so scroll the
+    // virtualizer to it; otherwise the row exists in the DOM by its id.
+    if (shouldVirtualize && virtualizerRef.current) {
+      virtualizerRef.current.scrollToIndex(issueIdx, { align: "center", behavior: "smooth" });
+      return;
+    }
+    const el = document.getElementById(`preview-line-${filteredLines[issueIdx].index}`);
     if (el && listRef.current) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
     }
@@ -77,7 +117,7 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
             {previewData?.targetLang && <p className="text-xs text-gray-500">→ {previewData.targetLang} • {filteredLines.length}</p>}
           </div>
           <input
-            type="text"
+            type="search"
             value={previewSearch}
             onChange={(e) => setPreviewSearch(e.target.value)}
             placeholder={t("dashboard.preview.search")}
@@ -94,7 +134,10 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
             </div>
           </div>
           <div ref={listRef} className="flex-1 overflow-y-auto">
-            {previewQuery.isLoading && <div className="py-10 text-center text-sm text-gray-500">{t("dashboard.preview.loading")}</div>}
+            {previewQuery.isLoading && <PageLoading label={t("dashboard.preview.loading")} />}
+            {previewQuery.isError && !previewQuery.isLoading && (
+              <PageError onRetry={() => void previewQuery.refetch()} />
+            )}
             {previewData?.analysis && (
               <div className="mx-4 mt-4 rounded-2xl border border-gray-800 bg-gray-950/40 p-4">
                 <div className="mb-2 text-xs uppercase tracking-wide text-gray-500">Context / Plot Summary / Glossary</div>
@@ -110,9 +153,17 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
               <div className="py-10 text-center text-sm text-gray-500">{t("dashboard.preview.noLines")}</div>
             )}
             {previewData && filteredLines.length > 0 && (
-              isMobile
-                ? <PreviewMobileList lines={filteredLines} />
-                : <PreviewDesktopTable lines={filteredLines} />
+              <div ref={listStartRef}>
+                {shouldVirtualize ? (
+                  isMobile
+                    ? <PreviewMobileVirtual lines={filteredLines} virtualizer={virtualizer} />
+                    : <PreviewDesktopVirtual lines={filteredLines} virtualizer={virtualizer} />
+                ) : isMobile ? (
+                  <PreviewMobileList lines={filteredLines} />
+                ) : (
+                  <PreviewDesktopTable lines={filteredLines} />
+                )}
+              </div>
             )}
           </div>
           {previewData && filteredLines.length > 0 && (
@@ -178,6 +229,88 @@ function PreviewMobileList({ lines }: { lines: PreviewLine[] }) {
   );
 }
 
+type Virtualizer = ReturnType<typeof useVirtualizer<HTMLDivElement, Element>>;
+
+// Windowed desktop body. Uses a CSS-grid header + absolutely-positioned grid
+// rows (mirroring JobsTableDesktop) because <tr>/<table> can't be absolutely
+// positioned inside the virtualizer spacer. Column widths come from
+// DESKTOP_GRID_COLS so the header and rows stay aligned.
+function PreviewDesktopVirtual({
+  lines,
+  virtualizer,
+}: {
+  lines: PreviewLine[];
+  virtualizer: Virtualizer;
+}) {
+  const { t } = useTranslation();
+  const TH = "px-3 py-2 text-left";
+  return (
+    <div className="text-sm">
+      <div
+        className="sticky top-0 z-10 grid bg-gray-900 text-gray-500 text-[10px] uppercase"
+        style={{ gridTemplateColumns: DESKTOP_GRID_COLS }}
+      >
+        <div className={TH}>{t("dashboard.preview.colIndex")}</div>
+        <div className={TH}>{t("dashboard.preview.colTime")}</div>
+        <div className={TH}>{t("dashboard.preview.colOriginal")}</div>
+        <div className={TH}>{t("dashboard.preview.colTranslated")}</div>
+        <div className={TH}></div>
+      </div>
+      <div style={{ height: virtualizer.getTotalSize(), position: "relative", width: "100%" }}>
+        {virtualizer.getVirtualItems().map((vitem) => {
+          const line = lines[vitem.index];
+          return (
+            <PreviewLineGridRow
+              key={line.index}
+              line={line}
+              dataIndex={vitem.index}
+              measureRef={virtualizer.measureElement}
+              start={vitem.start - virtualizer.options.scrollMargin}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Windowed mobile body. Same card markup as PreviewMobileList, absolutely
+// positioned inside the virtualizer spacer.
+function PreviewMobileVirtual({
+  lines,
+  virtualizer,
+}: {
+  lines: PreviewLine[];
+  virtualizer: Virtualizer;
+}) {
+  return (
+    <div className="p-4">
+      <div style={{ height: virtualizer.getTotalSize(), position: "relative", width: "100%" }}>
+        {virtualizer.getVirtualItems().map((vitem) => {
+          const line = lines[vitem.index];
+          return (
+            <div
+              key={line.index}
+              data-index={vitem.index}
+              ref={virtualizer.measureElement}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                paddingBottom: 12,
+                transform: `translateY(${vitem.start - virtualizer.options.scrollMargin}px)`,
+              }}
+            >
+              <PreviewLineRow line={line} />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function PreviewLineRow({ line, table = false }: { line: PreviewLine; table?: boolean }) {
   const { t } = useTranslation();
   const issue = hasIssue(line);
@@ -210,6 +343,47 @@ function PreviewLineRow({ line, table = false }: { line: PreviewLine; table?: bo
           <div className="text-gray-100">{line.translated || <span className="text-red-400/60 italic">{t("dashboard.preview.untranslated")}</span>}</div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Grid-layout equivalent of the desktop table row, used only on the windowed
+// path. Same id (for jump-to-issue), same issue highlight, same cell content
+// as the <tr> variant, but laid out via DESKTOP_GRID_COLS and absolutely
+// positioned inside the virtualizer spacer.
+function PreviewLineGridRow({
+  line,
+  dataIndex,
+  measureRef,
+  start,
+}: {
+  line: PreviewLine;
+  dataIndex: number;
+  measureRef: (el: HTMLElement | null) => void;
+  start: number;
+}) {
+  const { t } = useTranslation();
+  const issue = hasIssue(line);
+  return (
+    <div
+      id={`preview-line-${line.index}`}
+      data-index={dataIndex}
+      ref={measureRef}
+      className={`grid border-b border-gray-800/30 ${issue ? "bg-yellow-900/5" : ""}`}
+      style={{
+        gridTemplateColumns: DESKTOP_GRID_COLS,
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100%",
+        transform: `translateY(${start}px)`,
+      }}
+    >
+      <div className="px-3 py-1.5 text-gray-600 text-[10px]">{line.index}</div>
+      <div className="px-3 py-1.5 text-[10px] text-gray-600 font-mono whitespace-nowrap">{formatTimecode(line.start)}</div>
+      <div className="px-3 py-1.5 text-gray-300 text-xs">{line.original}</div>
+      <div className="px-3 py-1.5 text-gray-200 text-xs">{line.translated || <span className="text-red-400/60 italic">{t("dashboard.preview.untranslated")}</span>}</div>
+      <div className="px-3 py-1.5">{issue && <span className="text-yellow-500 text-[10px]">⚠</span>}</div>
     </div>
   );
 }

@@ -6,7 +6,13 @@ const css = readFileSync("src/client/index.css", "utf8");
 const app = readFileSync("src/client/App.tsx", "utf8");
 const shell = readFileSync("src/client/app/shell.tsx", "utf8");
 const primitives = readFileSync("src/client/ui/primitives.tsx", "utf8");
-const dashboard = readFileSync("src/client/features/dashboard/DashboardPage.tsx", "utf8");
+const dashboard = [
+  "src/client/features/dashboard/DashboardPage.tsx",
+  "src/client/features/dashboard/DashboardHero.tsx",
+  "src/client/features/dashboard/QueueToolbar.tsx",
+  "src/client/features/dashboard/ScanConfirmModal.tsx",
+  "src/client/features/dashboard/TranscriptionHistoryPanel.tsx",
+].map((path) => readFileSync(path, "utf8")).join("\n");
 
 test("global typography uses readable app font and line-height defaults", () => {
   assert.match(css, /font-family:\s*ui-sans-serif/);

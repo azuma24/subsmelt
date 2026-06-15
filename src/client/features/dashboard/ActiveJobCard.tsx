@@ -16,7 +16,7 @@ export function ActiveJobCard({ job, pendingCount }: ActiveJobCardProps) {
       <div className="min-w-0 flex-1">
         <p className="text-[10px] font-semibold uppercase tracking-[0.7px] text-[var(--accent)]">{t("app.currentlyTranslating")}</p>
         <h2 className="mt-0.5 truncate text-[13.5px] font-semibold text-[var(--text)]">{job.srt_path.split("/").pop()} → {job.lang_code}</h2>
-        <div className="mt-0.5 text-[11.5px] text-[var(--text-2)]">{t("dashboard.moreInQueue", { count: pendingCount })}</div>
+        {pendingCount > 0 && <div className="mt-0.5 text-[11.5px] text-[var(--text-2)]">{t("dashboard.moreInQueue", { count: pendingCount })}</div>}
       </div>
       <div className="w-full sm:max-w-[200px]">
         <div className="h-[3px] overflow-hidden rounded-full bg-[var(--surface-3)]">
