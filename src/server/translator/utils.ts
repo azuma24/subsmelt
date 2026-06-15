@@ -201,6 +201,90 @@ function buildAssDocumentFromCues(cues: SubtitleCue[]): any[] {
   ];
 }
 
+const SUPPORTED_CONVERT_EXTS = ["srt", "vtt", "ass", "ssa"] as const;
+export type ConvertExt = (typeof SUPPORTED_CONVERT_EXTS)[number];
+
+/**
+ * Pure format conversion: parse subtitle `content` (in `fromExt`) and
+ * re-stringify the ORIGINAL cue text into `toExt`. No translation, no disk I/O —
+ * returns the converted document as a string. Mirrors saveTranslated's
+ * stringify logic but uses the original `text` (not `translatedText`).
+ * Handles all combinations of {srt,vtt,ass,ssa} → {srt,vtt,ass,ssa}.
+ */
+export function convertSubtitle(content: string, fromExt: string, toExt: string): string {
+  const from = fromExt.toLowerCase().replace(/^\./, "");
+  const to = toExt.toLowerCase().replace(/^\./, "");
+  if (!SUPPORTED_CONVERT_EXTS.includes(from as ConvertExt)) {
+    throw new Error(`Unsupported source extension: ${fromExt}`);
+  }
+  if (!SUPPORTED_CONVERT_EXTS.includes(to as ConvertExt)) {
+    throw new Error(`Unsupported target extension: ${toExt}`);
+  }
+  if (typeof content !== "string" || content.trim() === "") {
+    throw new Error("Subtitle content is empty");
+  }
+
+  let parsed: ReturnType<typeof parseSubtitle>;
+  try {
+    parsed = parseSubtitle(content, from);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to parse ${from} subtitle: ${reason}`);
+  }
+
+  // parseSubtitle returns an array of nodes for srt/vtt (which may include a
+  // non-cue "header" node for VTT), or { full, events } for ass/ssa.
+  const isAssSource = !Array.isArray(parsed);
+  const cues: SubtitleCue[] = isAssSource
+    ? (parsed as { full: any[]; events: SubtitleCue[] }).events
+    : (parsed as SubtitleCue[]).filter((node) => node?.type === "cue");
+
+  if (!Array.isArray(cues) || cues.length === 0) {
+    throw new Error(`No subtitle cues found in ${from} input`);
+  }
+
+  if (["srt", "vtt"].includes(to)) {
+    const format = to === "vtt" ? "WebVTT" : "SRT";
+    return stringifySync(
+      cues.map((cue: SubtitleCue) => ({
+        type: "cue",
+        data: {
+          ...cue.data,
+          start: normalizeTimeToMs(cue?.data?.start),
+          end: normalizeTimeToMs(cue?.data?.end),
+          // Pure conversion: keep the ORIGINAL text.
+          text: cue?.data?.text || "",
+        },
+      })),
+      { format },
+    );
+  }
+
+  // Target is ass/ssa. When the source is already ass/ssa we preserve the full
+  // document (styles, script info) and just rewrite Dialogue text from the
+  // original cues. Otherwise we build a fresh ASS document from the cues.
+  if (isAssSource) {
+    const full = (parsed as { full: any[] }).full;
+    let dialogueIndex = 0;
+    return assStringify(
+      full.map((section: any) => {
+        if (section.section !== "Events" || !Array.isArray(section.body)) return section;
+        return {
+          ...section,
+          body: section.body.map((line: any) => {
+            if (line.key !== "Dialogue") return line;
+            const cue = cues[dialogueIndex++];
+            const text = cue?.data?.text || line.value?.Text || "";
+            return { key: "Dialogue", value: { ...line.value, Text: text } };
+          }),
+        };
+      }),
+    );
+  }
+
+  return assStringify(buildAssDocumentFromCues(cues));
+}
+
 export function saveTranslated(
   outputPath: string,
   parsedSubtitle: any,

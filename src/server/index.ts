@@ -40,7 +40,7 @@ import {
   startAutoScan,
   stopAutoScan,
 } from "./queue.js";
-import { testConnection, parseSubtitle } from "./translator.js";
+import { testConnection, parseSubtitle, convertSubtitle } from "./translator.js";
 import { resolveConnectionPool } from "./connections.js";
 import type { CloudProvider } from "./translator.js";
 import {
@@ -64,7 +64,7 @@ const app = express();
 const PORT = parseInt(process.env.PORT || "3000", 10);
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "25mb" }));
 
 const staticDir = path.join(__dirname, "../../dist/client");
 app.use(express.static(staticDir));
@@ -129,6 +129,60 @@ app.delete("/api/tasks/:id", (req, res) => {
   deleteTask(id);
   logger.info("system", `Deleted translation task #${id}`);
   res.json({ ok: true });
+});
+
+// ======== Subtitle Format Converter ========
+// Pure client-driven format conversion (no translation, no DB). The browser
+// uploads file contents; we re-stringify each into the target format and return
+// them inline. Per-file failures are collected in `errors` so one bad file
+// never fails the whole batch.
+const CONVERT_TARGET_FORMATS = ["srt", "vtt", "ass", "ssa"] as const;
+const MAX_CONVERT_FILES = 50;
+const MAX_CONVERT_FILE_BYTES = 10 * 1024 * 1024; // 10 MB per file
+
+app.post("/api/convert", (req, res) => {
+  const body = req.body ?? {};
+  const targetFormat = String(body.targetFormat || "").toLowerCase();
+  const files = Array.isArray(body.files) ? body.files : null;
+
+  if (!CONVERT_TARGET_FORMATS.includes(targetFormat as (typeof CONVERT_TARGET_FORMATS)[number])) {
+    return res.status(400).json({ error: `Unsupported target format. Use one of: ${CONVERT_TARGET_FORMATS.join(", ")}` });
+  }
+  if (!files) {
+    return res.status(400).json({ error: "files must be an array of { name, content }" });
+  }
+  if (files.length === 0) {
+    return res.status(400).json({ error: "No files provided" });
+  }
+  if (files.length > MAX_CONVERT_FILES) {
+    return res.status(400).json({ error: `Too many files (max ${MAX_CONVERT_FILES})` });
+  }
+  for (const file of files) {
+    const content = typeof file?.content === "string" ? file.content : "";
+    if (Buffer.byteLength(content, "utf8") > MAX_CONVERT_FILE_BYTES) {
+      return res.status(400).json({ error: `File too large: ${String(file?.name || "unknown")} (max 10MB per file)` });
+    }
+  }
+
+  const outputs: { name: string; content: string }[] = [];
+  const errors: { name: string; error: string }[] = [];
+
+  for (const file of files) {
+    const name = String(file?.name || "subtitle");
+    const content = typeof file?.content === "string" ? file.content : "";
+    const dotIndex = name.lastIndexOf(".");
+    const baseName = dotIndex > 0 ? name.slice(0, dotIndex) : name;
+    const sourceExt = dotIndex >= 0 ? name.slice(dotIndex + 1).toLowerCase() : "";
+    try {
+      const converted = convertSubtitle(content, sourceExt, targetFormat);
+      outputs.push({ name: `${baseName}.${targetFormat}`, content: converted });
+    } catch (error) {
+      errors.push({ name, error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
+  logger.info("system", `Converted ${outputs.length}/${files.length} subtitle file(s) → ${targetFormat}`);
+  res.json({ files: outputs, errors });
 });
 
 // ======== Subfolders ========
