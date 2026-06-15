@@ -386,7 +386,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     coreText: string[],
     order: ResolvedConnection[],
     contextPromptPrefix: string
-  ): Promise<string[] | null> {
+  ): Promise<{ result: string[]; conn: ResolvedConnection } | null> {
     for (const conn of order) {
       try {
         const result = await retryTranslate(
@@ -418,7 +418,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
           opts.onRetry
         );
         markUsed(conn);
-        return result;
+        return { result, conn };
       } catch (e: any) {
         if (e?.message === "STOP_REQUESTED") throw e;
         // exhausted retries on this connection — cascade to the next
@@ -543,8 +543,14 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     // Each connection gets 2 attempts via retryTranslate; on exhaustion we cascade
     // to the next connection. Schema failures are usually systematic, not transient.
     const connOrder = connectionOrderFor(workerIndex);
+    // Track which connection actually produced pass-1 so the refinement pass
+    // reuses it instead of always hitting connOrder[0] (which may be down in
+    // fallback/parallel mode, stalling every chunk on a dead primary).
+    let pass1Conn: ResolvedConnection | null = null;
     try {
-      translatedWindow = await translateChunkWithFallback(coreText, connOrder, contextPromptPrefix);
+      const chunkResult = await translateChunkWithFallback(coreText, connOrder, contextPromptPrefix);
+      translatedWindow = chunkResult?.result ?? null;
+      pass1Conn = chunkResult?.conn ?? null;
     } catch (e: any) {
       if (e?.message === "STOP_REQUESTED") throw e;
       translatedWindow = null;
@@ -564,7 +570,9 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     // Additive only: accepted solely when it returns the exact same line count;
     // any failure/mismatch keeps the pass-1 translation untouched.
     if (opts.refinePass && translatedWindow && translatedWindow.every((t) => typeof t === "string")) {
-      const refineConn = connOrder[0];
+      // Reuse the connection that produced pass-1 (falls back to the primary
+      // only when pass-1 came from the single-line fallback path).
+      const refineConn = pass1Conn ?? connOrder[0];
       const refined = await refineChunk(coreText, translatedWindow as string[], {
         apiKey: refineConn.apiKey,
         apiHost: refineConn.apiHost,

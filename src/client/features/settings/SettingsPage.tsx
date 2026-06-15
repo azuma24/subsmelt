@@ -62,7 +62,21 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
     setSettings(next);
   };
 
+  // Silent predicate: are both JSON-blob settings well-formed in `s`?
+  const jsonBlobsValid = (s: Record<string, unknown>): boolean =>
+    (Object.keys(JSON_BLOB_SETTINGS) as JsonBlobSettingKey[]).every(
+      (key) => validateJsonSetting(key, getStr(s, key)).ok
+    );
+
   const persist = (next: Record<string, unknown>) => {
+    // Guard EVERY save path (debounced edits, unmount flush, transcription
+    // test) — never persist a malformed JSON blob that could later break
+    // transcription request building. Keep the form dirty so the value isn't
+    // lost; handleSave surfaces the toast on an explicit save.
+    if (!jsonBlobsValid(next)) {
+      setDirty(true);
+      return Promise.resolve();
+    }
     saveChainRef.current = saveChainRef.current
       .then(() => api.saveSettings(next))
       .then(() => setDirty(false))
@@ -142,6 +156,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
     setTranscriptionTestResult(null);
     try {
       if (dirty) {
+        if (!validateJsonBlobs()) { setTestingTranscription(false); return; }
         await api.saveSettings(settingsRef.current);
         setDirty(false);
       }
