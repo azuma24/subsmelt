@@ -21,10 +21,9 @@ export async function analyzeSubtitlesForContext(
 ): Promise<string> {
   if (!opts.model || subtitles.length === 0) return "";
 
-  // Skip analysis for short files — YouTube clips, interviews, and tech talks
-  // under 300 lines have no glossary-worthy content. Analysis would waste tokens
-  // and inject useless context into every chunk.
-  if (subtitles.length < 300) return "";
+  // Context analysis runs for every non-empty file regardless of length — short
+  // clips (tech talks, interviews) still carry glossary-worthy terms, and the
+  // active-glossary / series-memory paths depend on this result.
 
   // Cap context analysis to a dynamically computed line count.
   // probeModelContext() reads the model's actual context window from LM Studio's
