@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { LlmMode, ResolvedConnection } from "../connections.js";
-import type { CloudProvider } from "./ai-client.js";
+import type { CloudProvider, TokenUsage } from "./ai-client.js";
 import {
   retryTranslate,
   translateChunk,
@@ -264,6 +264,13 @@ export interface TranslateFileOptions {
   onConnectionUsed?: (info: { id: string; label: string }) => void;
   /** Fired when a connection exhausts its retries and the job cascades to the next. */
   onConnectionError?: (info: { id: string; label: string; error: string }) => void;
+  /**
+   * Token-usage aggregator. Fired incrementally after each successful LLM call
+   * (analysis, chunk, single, refine) for this file so a caller can live-update a
+   * running total. Purely additive: callers that omit it are unaffected. No DB or
+   * UI is touched here — this only plumbs usage out.
+   */
+  onUsage?: (u: TokenUsage) => void;
 }
 
 export async function translateFile(opts: TranslateFileOptions): Promise<void> {
@@ -333,6 +340,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     abortSignal: opts.abortSignal,
     maxAnalysisLines: opts.maxAnalysisLines,
     requestTimeoutMs: jobTimeoutMs,
+    onUsage: opts.onUsage,
   });
 
   if (analysis) {
@@ -407,6 +415,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
               disableToolCalls: opts.disableToolCalls,
               requestTimeoutMs: jobTimeoutMs,
               contextPromptPrefix,
+              onUsage: opts.onUsage,
             }).then((r) => {
               if (!Array.isArray(r) || r.length !== coreText.length) {
                 throw new Error("did not match schema");
@@ -449,6 +458,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
               abortSignal: opts.abortSignal,
               disableToolCalls: opts.disableToolCalls,
               requestTimeoutMs: jobTimeoutMs,
+              onUsage: opts.onUsage,
             }),
           retries,
           1000,
@@ -585,6 +595,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
         abortSignal: opts.abortSignal,
         disableToolCalls: opts.disableToolCalls,
         requestTimeoutMs: jobTimeoutMs,
+        onUsage: opts.onUsage,
       });
       if (refined) translatedWindow = refined;
     }
