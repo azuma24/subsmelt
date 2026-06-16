@@ -135,6 +135,19 @@ export const testConnection = (payload?: { provider?: string; apiKey?: string; m
 export const getLlmHealth = (opts?: FetchOpts) =>
   fetchJSON<LlmHealth>("/llm-health", opts);
 
+// Subtitle format converter
+export type ConvertTargetFormat = "srt" | "vtt" | "ass" | "ssa";
+export interface ConvertRequest {
+  files: { name: string; content: string }[];
+  targetFormat: ConvertTargetFormat;
+}
+export interface ConvertResponse {
+  files: { name: string; content: string }[];
+  errors: { name: string; error: string }[];
+}
+export const convertSubtitles = (body: ConvertRequest, opts?: FetchOpts) =>
+  fetchJSON<ConvertResponse>("/convert", { ...opts, method: "POST", body: JSON.stringify(body) });
+
 // Speech-to-text
 export const getTranscriptionHealth = (opts?: FetchOpts) =>
   fetchJSON<TranscriptionHealth>("/transcribe/health", opts);

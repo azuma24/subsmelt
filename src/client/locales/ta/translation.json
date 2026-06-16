@@ -4,7 +4,8 @@
     "languages": "மொழிபெயர்ப்புகள்",
     "translations": "மொழிபெயர்ப்புகள்",
     "logs": "பதிவுகள்",
-    "settings": "அமைப்புகள்"
+    "settings": "அமைப்புகள்",
+    "convert": "Convert"
   },
   "common": {
     "save": "சேமி",
@@ -750,5 +751,27 @@
     "reload": "Reload",
     "boundaryTitle": "Something went wrong.",
     "boundaryMessage": "An unexpected error occurred while rendering this page."
+  },
+  "convert": {
+    "title": "Subtitle Converter",
+    "description": "Convert subtitle files between formats (SRT, VTT, ASS, SSA) right in your browser. No translation — pure format conversion. Drop one or many files, pick a target format, and download.",
+    "dropzone": "Drag & drop subtitle files here",
+    "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
+    "browse": "Browse for subtitle files",
+    "empty": "No files staged yet",
+    "emptyHint": "Add subtitle files to get started.",
+    "staged": "{{count}} file(s) staged",
+    "clearAll": "Clear all",
+    "remove": "Remove",
+    "targetFormat": "Target format",
+    "convert": "Convert",
+    "converting": "Converting…",
+    "downloadReady": "Converted {{count}} file(s) to {{format}} — download started.",
+    "errors": "Some files could not be converted",
+    "allFailed": "None of the files could be converted. Check the errors below.",
+    "failed": "Conversion failed. Please try again.",
+    "unsupported": "Skipped {{count}} unsupported file(s). Only .srt, .vtt, .ass, .ssa are accepted.",
+    "fileTooLarge": "File is too large (max 10MB per file).",
+    "tooManyFiles": "Too many files (max 50)."
   }
 }

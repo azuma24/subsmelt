@@ -24,6 +24,9 @@ const TranslationLanguagesPage = lazy(() =>
 const SettingsPage = lazy(() =>
   import("./features/settings/SettingsPage").then((m) => ({ default: m.SettingsPage })),
 );
+const ConvertPage = lazy(() =>
+  import("./features/convert/ConvertPage").then((m) => ({ default: m.ConvertPage })),
+);
 
 export default function App() {
   return (
@@ -108,6 +111,7 @@ function AppInner() {
             <Routes>
               <Route path="/" element={<DashboardPage isMobile={isMobile} />} />
               <Route path="/translations" element={<TranslationLanguagesPage isMobile={isMobile} />} />
+              <Route path="/convert" element={<ConvertPage isMobile={isMobile} />} />
               <Route path="/tasks" element={<Navigate to="/translations" replace />} />
               <Route path="/settings" element={<SettingsPage isMobile={isMobile} />} />
               <Route path="/logs" element={<LogsPage isMobile={isMobile} />} />

@@ -17,8 +17,11 @@ export {
 
 export {
   parseSubtitle,
+  readSubtitleFileText,
   saveTranslated,
   splitIntoChunks,
+  convertSubtitle,
+  type ConvertExt,
 } from "./translator/utils.js";
 
 export {

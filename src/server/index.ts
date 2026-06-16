@@ -40,7 +40,7 @@ import {
   startAutoScan,
   stopAutoScan,
 } from "./queue.js";
-import { testConnection, parseSubtitle } from "./translator.js";
+import { testConnection, parseSubtitle, convertSubtitle, readSubtitleFileText } from "./translator.js";
 import { resolveConnectionPool } from "./connections.js";
 import type { CloudProvider } from "./translator.js";
 import {
@@ -50,6 +50,7 @@ import {
   localTranscriptionOutputPath,
   preflightTranscription,
   transcribePostActionValues,
+  transcribeTimeoutSeconds,
   transcribeWithBackend,
   type TranscribePostAction,
   type TranscriptionOutputFormat,
@@ -64,7 +65,7 @@ const app = express();
 const PORT = parseInt(process.env.PORT || "3000", 10);
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "25mb" }));
 
 const staticDir = path.join(__dirname, "../../dist/client");
 app.use(express.static(staticDir));
@@ -131,6 +132,60 @@ app.delete("/api/tasks/:id", (req, res) => {
   res.json({ ok: true });
 });
 
+// ======== Subtitle Format Converter ========
+// Pure client-driven format conversion (no translation, no DB). The browser
+// uploads file contents; we re-stringify each into the target format and return
+// them inline. Per-file failures are collected in `errors` so one bad file
+// never fails the whole batch.
+const CONVERT_TARGET_FORMATS = ["srt", "vtt", "ass", "ssa"] as const;
+const MAX_CONVERT_FILES = 50;
+const MAX_CONVERT_FILE_BYTES = 10 * 1024 * 1024; // 10 MB per file
+
+app.post("/api/convert", (req, res) => {
+  const body = req.body ?? {};
+  const targetFormat = String(body.targetFormat || "").toLowerCase();
+  const files = Array.isArray(body.files) ? body.files : null;
+
+  if (!CONVERT_TARGET_FORMATS.includes(targetFormat as (typeof CONVERT_TARGET_FORMATS)[number])) {
+    return res.status(400).json({ error: `Unsupported target format. Use one of: ${CONVERT_TARGET_FORMATS.join(", ")}` });
+  }
+  if (!files) {
+    return res.status(400).json({ error: "files must be an array of { name, content }" });
+  }
+  if (files.length === 0) {
+    return res.status(400).json({ error: "No files provided" });
+  }
+  if (files.length > MAX_CONVERT_FILES) {
+    return res.status(400).json({ error: `Too many files (max ${MAX_CONVERT_FILES})` });
+  }
+  for (const file of files) {
+    const content = typeof file?.content === "string" ? file.content : "";
+    if (Buffer.byteLength(content, "utf8") > MAX_CONVERT_FILE_BYTES) {
+      return res.status(400).json({ error: `File too large: ${String(file?.name || "unknown")} (max 10MB per file)` });
+    }
+  }
+
+  const outputs: { name: string; content: string }[] = [];
+  const errors: { name: string; error: string }[] = [];
+
+  for (const file of files) {
+    const name = String(file?.name || "subtitle");
+    const content = typeof file?.content === "string" ? file.content : "";
+    const dotIndex = name.lastIndexOf(".");
+    const baseName = dotIndex > 0 ? name.slice(0, dotIndex) : name;
+    const sourceExt = dotIndex >= 0 ? name.slice(dotIndex + 1).toLowerCase() : "";
+    try {
+      const converted = convertSubtitle(content, sourceExt, targetFormat);
+      outputs.push({ name: `${baseName}.${targetFormat}`, content: converted });
+    } catch (error) {
+      errors.push({ name, error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
+  logger.info("system", `Converted ${outputs.length}/${files.length} subtitle file(s) → ${targetFormat}`);
+  res.json({ files: outputs, errors });
+});
+
 // ======== Subfolders ========
 app.get("/api/subfolders", (_req, res) => {
   res.json({ subfolders: listSubfolders() });
@@ -152,25 +207,23 @@ app.post("/api/scan", async (_req, res) => {
       const missingVideos = result.files
         .filter((file) => file.videoPath && file.subtitles.length === 0)
         .map((file) => file.videoPath as string);
-      const maxConcurrent = Math.max(1, Math.min(4, parseInt(settings.transcription_max_concurrent || "1", 10) || 1));
-      for (let i = 0; i < missingVideos.length; i += maxConcurrent) {
-        const batch = missingVideos.slice(i, i + maxConcurrent);
-        await Promise.all(batch.map(async (videoPath) => {
-          try {
-            const request = buildTranscriptionRequest({ videoPath, mediaDir: MEDIA_DIR, settings, postAction });
-            const checkedRequest = await applyPreflightPolicy(backendUrl, request, settings);
-            const transcribed = await transcribeWithBackend(backendUrl, checkedRequest);
-            logger.info("system", `Auto-transcribed ${path.basename(videoPath)} → ${transcribed.subtitle_path || "subtitle output"}`);
-          } catch (error: any) {
-            const message = error?.message || String(error);
-            if (settings.transcription_low_ram_behavior === "skip" && message.startsWith("Transcription skipped:")) {
-              logger.info("system", `Skipped auto-transcription for ${path.basename(videoPath)}: ${message}`);
-              return;
-            }
-            throw error;
+      // Per-file isolation: a single failure must NOT abort the whole scan
+      // batch. Each file is transcribed through runTranscriptionAttempt (which
+      // records a history entry and acquires the shared concurrency slot), and
+      // any hard failure is caught + logged here so remaining files continue.
+      await Promise.all(missingVideos.map(async (videoPath) => {
+        try {
+          const { result: transcribed } = await runTranscriptionAttempt({ videoPath, postAction, settings });
+          logger.info("system", `Auto-transcribed ${path.basename(videoPath)} → ${transcribed.subtitle_path || "subtitle output"}`);
+        } catch (error: any) {
+          const message = error?.message || String(error);
+          if (settings.transcription_low_ram_behavior === "skip" && message.startsWith("Transcription skipped:")) {
+            logger.info("system", `Skipped auto-transcription for ${path.basename(videoPath)}: ${message}`);
+            return;
           }
-        }));
-      }
+          logger.error("system", `Auto-transcription failed for ${path.basename(videoPath)}: ${message}`);
+        }
+      }));
       if (missingVideos.length > 0) {
         result = scanFolder(postAction === "transcribe_and_translate");
       }
@@ -313,7 +366,7 @@ app.get("/api/jobs/:id/preview", (req, res) => {
 
   try {
     const srcExt = path.extname(job.srt_path).slice(1).toLowerCase();
-    const srcContent = fs.readFileSync(job.srt_path, "utf8");
+    const srcContent = readSubtitleFileText(job.srt_path);
     const srcParsed = parseSubtitle(srcContent, srcExt);
     let srcCues: any[];
     if (Array.isArray(srcParsed)) {
@@ -327,7 +380,7 @@ app.get("/api/jobs/:id/preview", (req, res) => {
     let trgCues: any[] = [];
     if (fs.existsSync(job.output_path)) {
       const trgExt = path.extname(job.output_path).slice(1).toLowerCase();
-      const trgContent = fs.readFileSync(job.output_path, "utf8");
+      const trgContent = readSubtitleFileText(job.output_path);
       const trgParsed = parseSubtitle(trgContent, trgExt);
       if (Array.isArray(trgParsed)) {
         trgCues = trgParsed.filter((l: any) => l.type === "cue");
@@ -497,6 +550,52 @@ function getTranscriptionBackendUrl(settings = getAllSettings()): string {
   return (settings.transcription_backend_url || process.env.WHISPER_BACKEND_URL || "").replace(/\/+$/, "");
 }
 
+// --- Shared transcription concurrency gate ---
+// A minimal async semaphore so EVERY transcription entry point (scan auto-
+// transcribe, manual POST /api/transcribe, history retry) honors
+// transcription_max_concurrent — not just the scan loop. Permits are re-read
+// from settings at acquire time so changing the setting takes effect for new
+// work without a restart. No deadlocks: a release always follows acquire via
+// try/finally, and waiters are resolved FIFO.
+function transcriptionMaxConcurrent(settings = getAllSettings()): number {
+  return Math.max(1, Math.min(4, parseInt(settings.transcription_max_concurrent || "1", 10) || 1));
+}
+
+let transcriptionActive = 0;
+const transcriptionWaiters: Array<() => void> = [];
+
+function acquireTranscriptionSlot(): Promise<void> {
+  const limit = transcriptionMaxConcurrent();
+  if (transcriptionActive < limit) {
+    transcriptionActive += 1;
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolve) => {
+    transcriptionWaiters.push(() => {
+      transcriptionActive += 1;
+      resolve();
+    });
+  });
+}
+
+function releaseTranscriptionSlot(): void {
+  transcriptionActive = Math.max(0, transcriptionActive - 1);
+  const limit = transcriptionMaxConcurrent();
+  if (transcriptionActive < limit) {
+    const next = transcriptionWaiters.shift();
+    if (next) next();
+  }
+}
+
+async function withTranscriptionSlot<T>(fn: () => Promise<T>): Promise<T> {
+  await acquireTranscriptionSlot();
+  try {
+    return await fn();
+  } finally {
+    releaseTranscriptionSlot();
+  }
+}
+
 async function runTranscriptionAttempt(opts: {
   videoPath: string;
   postAction: TranscribePostAction;
@@ -532,7 +631,9 @@ async function runTranscriptionAttempt(opts: {
   try {
     const startedAtMs = Date.parse(attempt.startedAt);
     const checkedRequest = await applyPreflightPolicy(backendUrl, request, settings);
-    const result = await transcribeWithBackend(backendUrl, checkedRequest);
+    const result = await withTranscriptionSlot(() =>
+      transcribeWithBackend(backendUrl, checkedRequest, { timeoutSeconds: transcribeTimeoutSeconds(settings) }),
+    );
     const finishedAt = new Date().toISOString();
     const durationSeconds = typeof result.duration_seconds === "number"
       ? result.duration_seconds
@@ -782,6 +883,13 @@ app.listen(PORT, "0.0.0.0", () => {
   for (const [key, value] of Object.entries(envOverrides)) {
     if (value !== undefined && value !== "") setSetting(key, value);
   }
+  // Reconcile any transcription attempts left "running" by a previous process
+  // (e.g. crash/restart mid-transcription) so they no longer hang in history.
+  const reconciled = transcriptionHistory.reconcileRunning();
+  if (reconciled > 0) {
+    logger.info("system", `Reconciled ${reconciled} interrupted transcription attempt(s) as failed`);
+  }
+
   logger.info("system", `SubSmelt started on port ${PORT}`);
   logger.info("system", `Timezone: ${process.env.TZ || "UTC"}`);
   logger.info("system", `Media directory: ${MEDIA_DIR}`);

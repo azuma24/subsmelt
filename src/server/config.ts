@@ -92,6 +92,9 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   transcription_missing_subtitle_behavior: "ask",
   transcription_low_ram_behavior: "ask",
   transcription_max_concurrent: "1",
+  // Backend request timeout in seconds for /transcribe (default 30min). Health
+  // and preflight use a short fixed timeout in transcription-client.ts.
+  transcription_request_timeout_s: "1800",
   transcription_path_map_from: "",
   transcription_path_map_to: "",
   additional_context: "",
