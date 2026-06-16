@@ -9,6 +9,7 @@ import {
 } from "./ai-client.js";
 import {
   parseSubtitle,
+  readSubtitleFileText,
   saveTranslated,
   splitIntoChunks,
   sanitizeSecrets,
@@ -268,7 +269,7 @@ export interface TranslateFileOptions {
 export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   const sourceExt = path.extname(opts.srtPath).slice(1).toLowerCase();
   const outputExt = path.extname(opts.outputPath).slice(1).toLowerCase() || sourceExt;
-  const content = fs.readFileSync(opts.srtPath, "utf8");
+  const content = readSubtitleFileText(opts.srtPath);
   const parsed = parseSubtitle(content, sourceExt);
   // Use per-job timeout if provided, otherwise fall back to module default
   const jobTimeoutMs = opts.requestTimeoutMs;

@@ -129,6 +129,27 @@ export class TranscriptionHistoryStore {
     return entry;
   }
 
+  /**
+   * Marks any lingering "running" attempts as failed. Called at startup so an
+   * attempt that was in-flight when the process restarted does not stay
+   * "running" forever. Returns the number of entries reconciled.
+   */
+  reconcileRunning(reason = "Transcription interrupted by server restart"): number {
+    const entries = this.read();
+    let reconciled = 0;
+    const now = new Date().toISOString();
+    for (const entry of entries) {
+      if (entry.status === "running") {
+        entry.status = "failed";
+        entry.finishedAt = entry.finishedAt || now;
+        entry.errorSummary = entry.errorSummary || reason;
+        reconciled += 1;
+      }
+    }
+    if (reconciled > 0) this.write(entries);
+    return reconciled;
+  }
+
   listRecent(limit = 20): TranscriptionHistoryEntry[] {
     return this.read().slice(0, Math.max(1, limit));
   }

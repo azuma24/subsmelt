@@ -17,6 +17,7 @@ export {
 
 export {
   parseSubtitle,
+  readSubtitleFileText,
   saveTranslated,
   splitIntoChunks,
   convertSubtitle,

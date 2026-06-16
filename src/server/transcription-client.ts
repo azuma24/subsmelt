@@ -5,6 +5,35 @@ export type TranscribePostAction = typeof transcribePostActionValues[number];
 export type TranscriptionOutputFormat = "srt" | "vtt" | "txt";
 export type LowRamBehavior = "ask" | "downgrade" | "skip" | "run_anyway";
 
+// Short timeout (ms) for lightweight backend calls (health, preflight).
+const SHORT_REQUEST_TIMEOUT_MS = 10_000;
+// Default timeout (ms) for /transcribe when no setting is supplied (30 minutes).
+const DEFAULT_TRANSCRIBE_TIMEOUT_MS = 1_800_000;
+
+/**
+ * Runs fetch with an AbortController-based timeout. On timeout, throws a clear
+ * "<label> timed out after Ns" error instead of hanging Node forever.
+ */
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  label: string,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`${label} timed out after ${Math.round(timeoutMs / 1000)}s`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export interface TranscriptionSettings {
   transcription_backend_url?: string;
   transcription_model?: string;
@@ -16,6 +45,7 @@ export interface TranscriptionSettings {
   transcription_low_ram_behavior?: string;
   transcription_path_map_from?: string;
   transcription_path_map_to?: string;
+  transcription_request_timeout_s?: string;
   transcription_max_line_length?: string;
   transcription_max_subtitle_duration?: string;
   transcription_merge_short_segments?: string;
@@ -303,7 +333,7 @@ export async function fetchTranscriptionHealth(backendUrl: string, model?: strin
   const url = normalizeTranscriptionBackendUrl(backendUrl);
   if (!url) throw new Error("Transcription backend URL is not configured");
   const qs = model ? `?${new URLSearchParams({ model }).toString()}` : "";
-  const response = await fetch(`${url}/health${qs}`);
+  const response = await fetchWithTimeout(`${url}/health${qs}`, {}, SHORT_REQUEST_TIMEOUT_MS, "Transcription backend health check");
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(backendErrorMessage(body, response.status));
   return body;
@@ -312,11 +342,11 @@ export async function fetchTranscriptionHealth(backendUrl: string, model?: strin
 export async function preflightTranscription(backendUrl: string, request: BackendTranscriptionRequest): Promise<BackendPreflightResponse> {
   const url = normalizeTranscriptionBackendUrl(backendUrl);
   if (!url) throw new Error("Transcription backend URL is not configured");
-  const response = await fetch(`${url}/preflight`, {
+  const response = await fetchWithTimeout(`${url}/preflight`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(request),
-  });
+  }, SHORT_REQUEST_TIMEOUT_MS, "Transcription backend preflight");
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(backendErrorMessage(body, response.status));
   return body as BackendPreflightResponse;
@@ -351,15 +381,39 @@ export async function applyPreflightPolicy(
   throw new Error(`Transcription preflight failed: ${preflight.code || "unsafe"}`);
 }
 
-export async function transcribeWithBackend(backendUrl: string, request: BackendTranscriptionRequest): Promise<BackendTranscriptionResponse> {
+export interface TranscribeBackendOptions {
+  // Total request timeout in seconds. Falls back to the 30-minute default.
+  timeoutSeconds?: number;
+}
+
+function resolveTranscribeTimeoutMs(timeoutSeconds: number | undefined): number {
+  if (typeof timeoutSeconds === "number" && Number.isFinite(timeoutSeconds) && timeoutSeconds > 0) {
+    return Math.round(timeoutSeconds * 1000);
+  }
+  return DEFAULT_TRANSCRIBE_TIMEOUT_MS;
+}
+
+export async function transcribeWithBackend(
+  backendUrl: string,
+  request: BackendTranscriptionRequest,
+  options?: TranscribeBackendOptions,
+): Promise<BackendTranscriptionResponse> {
   const url = normalizeTranscriptionBackendUrl(backendUrl);
   if (!url) throw new Error("Transcription backend URL is not configured");
-  const response = await fetch(`${url}/transcribe`, {
+  const timeoutMs = resolveTranscribeTimeoutMs(options?.timeoutSeconds);
+  const response = await fetchWithTimeout(`${url}/transcribe`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(request),
-  });
+  }, timeoutMs, "Transcription backend");
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(backendErrorMessage(body, response.status));
   return body as BackendTranscriptionResponse;
+}
+
+// Reads transcription_request_timeout_s from settings; undefined → default.
+export function transcribeTimeoutSeconds(settings: TranscriptionSettings): number | undefined {
+  const raw = settings.transcription_request_timeout_s;
+  const value = typeof raw === "number" ? raw : Number.parseInt((raw || "").trim(), 10);
+  return Number.isFinite(value) && value > 0 ? value : undefined;
 }

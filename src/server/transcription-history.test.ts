@@ -52,3 +52,38 @@ test("history store records attempts and keeps newest entries first", () => {
   assert.equal(recent[1]?.status, "succeeded");
   assert.equal(recent[1]?.durationSeconds, 5);
 });
+
+test("reconcileRunning marks lingering running attempts as failed", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-history-reconcile-"));
+  const store = new TranscriptionHistoryStore(path.join(tmpDir, "transcription-history.json"));
+
+  const running = store.startAttempt({
+    inputPath: "/media/show/Episode 03.mkv",
+    outputPath: "/media/show/Episode 03.srt",
+    model: "small",
+    language: "auto",
+    outputFormat: "srt",
+    postAction: "transcribe_only",
+  });
+  const done = store.startAttempt({
+    inputPath: "/media/show/Episode 04.mkv",
+    outputPath: "/media/show/Episode 04.srt",
+    model: "small",
+    language: "auto",
+    outputFormat: "srt",
+    postAction: "transcribe_only",
+  });
+  store.finishAttempt(done.id, { status: "succeeded", durationSeconds: 3 });
+
+  const reconciled = store.reconcileRunning();
+  assert.equal(reconciled, 1);
+
+  const after = store.get(running.id);
+  assert.equal(after?.status, "failed");
+  assert.ok(after?.finishedAt);
+  assert.match(after?.errorSummary || "", /interrupted/i);
+
+  // Succeeded entry untouched; second reconcile is a no-op.
+  assert.equal(store.get(done.id)?.status, "succeeded");
+  assert.equal(store.reconcileRunning(), 0);
+});
