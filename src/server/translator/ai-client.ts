@@ -15,6 +15,111 @@ import {
 
 export type CloudProvider = "local" | "openai" | "anthropic" | "gemini";
 
+/**
+ * Token usage captured from a single generateText call. Normalised across AI SDK
+ * versions: v6 exposes `inputTokens`/`outputTokens`, older versions used
+ * `promptTokens`/`completionTokens`. We surface the v6 names.
+ */
+export type TokenUsage = { inputTokens: number; outputTokens: number };
+
+/**
+ * Defensively extract a normalised {@link TokenUsage} from a generateText result.
+ * Handles both v6 (`inputTokens`/`outputTokens`) and legacy
+ * (`promptTokens`/`completionTokens`) shapes, treating missing/undefined fields
+ * as 0. Returns null when nothing usable is present.
+ */
+export function extractUsage(result: unknown): TokenUsage | null {
+  const usage = (result as { usage?: Record<string, unknown> } | null)?.usage;
+  if (!usage || typeof usage !== "object") return null;
+  const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  const inputTokens = num(usage.inputTokens) || num(usage.promptTokens);
+  const outputTokens = num(usage.outputTokens) || num(usage.completionTokens);
+  if (inputTokens === 0 && outputTokens === 0) return null;
+  return { inputTokens, outputTokens };
+}
+
+/** Fire an onUsage callback for a generateText result, swallowing extraction failures. */
+function reportUsage(result: unknown, onUsage?: (u: TokenUsage) => void): void {
+  if (!onUsage) return;
+  const usage = extractUsage(result);
+  if (usage) onUsage(usage);
+}
+
+/**
+ * Detect HTTP 429 (rate limit) / 503 (overloaded) from a thrown AI SDK error and,
+ * when present, return the wait in ms honoring a `Retry-After` header (delta-seconds
+ * or an HTTP-date), capped to `maxMs`. Returns null when the error is not a
+ * 429/503 rate-limit-style error.
+ *
+ * Be defensive: the AI SDK surfaces status under several shapes
+ * (`statusCode`, `status`, `response.status`) and headers under
+ * `responseHeaders` or `response.headers`.
+ */
+export function rateLimitRetryDelayMs(error: unknown, maxMs = 60_000, now = Date.now()): number | null {
+  const err = error as any;
+  const status: number | undefined =
+    typeof err?.statusCode === "number"
+      ? err.statusCode
+      : typeof err?.status === "number"
+      ? err.status
+      : typeof err?.response?.status === "number"
+      ? err.response.status
+      : undefined;
+
+  const msg = (err?.message || "").toLowerCase();
+  const looksRateLimited =
+    status === 429 || status === 503 || msg.includes("rate limit") || msg.includes("too many requests");
+  if (!looksRateLimited) return null;
+
+  const headers = err?.responseHeaders ?? err?.response?.headers ?? err?.headers;
+  const retryAfter = readHeader(headers, "retry-after");
+  const parsed = parseRetryAfter(retryAfter, now);
+  if (parsed === null) return 0; // rate-limited but no Retry-After — caller applies its own backoff
+  return Math.min(parsed, maxMs);
+}
+
+/** Read a header value case-insensitively from a Headers instance or plain object. */
+function readHeader(headers: unknown, name: string): string | null {
+  if (!headers) return null;
+  // Headers / Map-like with a get() method
+  if (typeof (headers as { get?: unknown }).get === "function") {
+    const v = (headers as Headers).get(name);
+    return v == null ? null : String(v);
+  }
+  if (typeof headers === "object") {
+    const lower = name.toLowerCase();
+    for (const [k, v] of Object.entries(headers as Record<string, unknown>)) {
+      if (k.toLowerCase() === lower) return v == null ? null : String(v);
+    }
+  }
+  return null;
+}
+
+/**
+ * Parse a `Retry-After` header value into a delay in ms. Supports both the
+ * delta-seconds form (e.g. "120") and the HTTP-date form (e.g.
+ * "Wed, 21 Oct 2015 07:28:00 GMT"). Returns null when the value is absent or
+ * unparseable; clamps negatives to 0.
+ */
+export function parseRetryAfter(value: string | null | undefined, now = Date.now()): number | null {
+  if (value == null) return null;
+  const trimmed = String(value).trim();
+  if (!trimmed) return null;
+
+  // delta-seconds
+  if (/^\d+$/.test(trimmed)) {
+    return Math.max(0, Number.parseInt(trimmed, 10) * 1000);
+  }
+
+  // HTTP-date
+  const dateMs = Date.parse(trimmed);
+  if (!Number.isNaN(dateMs)) {
+    return Math.max(0, dateMs - now);
+  }
+
+  return null;
+}
+
 export function getAi({ apiKey, apiHost, provider }: { apiKey: string; apiHost: string; provider?: CloudProvider }) {
   switch (provider) {
     case "openai":
@@ -119,8 +224,13 @@ export async function retryTranslate<T>(
         msg.includes("empty single-line translation") ||
         error?.status >= 429;
       if (!isRetryable) throw error;
-      const backoff =
+      // Rate-limit aware backoff: when the server says 429/503, honor Retry-After
+      // (capped) instead of the default exponential schedule. A 429 with no
+      // Retry-After falls back to exponential too.
+      const rateLimitMs = rateLimitRetryDelayMs(error);
+      const exponential =
         delay * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 250);
+      const backoff = rateLimitMs && rateLimitMs > 0 ? rateLimitMs : exponential;
       onRetry?.(attempt, error, backoff);
       await new Promise((r) => setTimeout(r, backoff));
     }
@@ -142,6 +252,8 @@ export async function translateChunk(
     requestTimeoutMs?: number;
     /** Optional read-only context lines prepended to the prompt. */
     contextPromptPrefix?: string;
+    /** Fired after each successful generateText with that call's token usage. */
+    onUsage?: (u: TokenUsage) => void;
   }
 ): Promise<string[]> {
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost, provider: opts.provider });
@@ -188,6 +300,7 @@ export async function translateChunk(
         timeoutMs,
         opts.abortSignal
       ));
+      reportUsage(result, opts.onUsage);
 
       if (toolResult && Array.isArray(toolResult)) return toolResult;
 
@@ -218,6 +331,7 @@ export async function translateChunk(
     timeoutMs,
     opts.abortSignal
   ));
+  reportUsage(textResult, opts.onUsage);
 
   const parsed = extractJsonFromText(textResult.text || "");
   const translated = coerceTranslatedArray(parsed);
@@ -242,6 +356,8 @@ export async function translateSingle(
     abortSignal?: AbortSignal;
     disableToolCalls?: boolean;
     requestTimeoutMs?: number;
+    /** Fired after each successful generateText with that call's token usage. */
+    onUsage?: (u: TokenUsage) => void;
   }
 ): Promise<string> {
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost, provider: opts.provider });
@@ -280,6 +396,7 @@ export async function translateSingle(
         timeoutMs,
         opts.abortSignal
       ));
+      reportUsage(result, opts.onUsage);
 
       if (typeof toolResult === "string") return toolResult;
 
@@ -313,6 +430,7 @@ export async function translateSingle(
     timeoutMs,
     opts.abortSignal
   ));
+  reportUsage(textResult, opts.onUsage);
 
   const rawText = textResult.text || "";
   const final = extractFinalAnswerFromReasoning(rawText);

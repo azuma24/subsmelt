@@ -1,7 +1,7 @@
 import { generateText } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
-import { getAi, normalizeResult, withAbortTimeout, REQUEST_TIMEOUT_MS, type CloudProvider } from "./ai-client.js";
+import { getAi, normalizeResult, withAbortTimeout, REQUEST_TIMEOUT_MS, extractUsage, type CloudProvider, type TokenUsage } from "./ai-client.js";
 import { coerceTranslatedArray, extractJsonFromText } from "./utils.js";
 
 export function isAutomaticSourceLanguage(sourceLang?: string): boolean {
@@ -61,6 +61,8 @@ export async function refineChunk(
     abortSignal?: AbortSignal;
     disableToolCalls?: boolean;
     requestTimeoutMs?: number;
+    /** Fired after each successful generateText with that call's token usage. */
+    onUsage?: (u: TokenUsage) => void;
   }
 ): Promise<string[] | null> {
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost, provider: opts.provider });
@@ -71,6 +73,12 @@ export async function refineChunk(
     "Refine the 'draft' translations below. Return the result as an array of strings, " +
     "same length and order as input — one refined translation per item.\n\n" +
     JSON.stringify(pairs);
+
+  const reportUsage = (result: unknown): void => {
+    if (!opts.onUsage) return;
+    const usage = extractUsage(result);
+    if (usage) opts.onUsage(usage);
+  };
 
   const accept = (arr: unknown): string[] | null =>
     Array.isArray(arr) && arr.length === originalLines.length && arr.every((s) => typeof s === "string")
@@ -107,6 +115,7 @@ export async function refineChunk(
         timeoutMs,
         opts.abortSignal
       ));
+      reportUsage(result);
 
       const fromTool = accept(toolResult);
       if (fromTool) return fromTool;
@@ -126,6 +135,7 @@ export async function refineChunk(
       timeoutMs,
       opts.abortSignal
     ));
+    reportUsage(textResult);
     return accept(coerceTranslatedArray(extractJsonFromText(textResult.text || "")));
   } catch (e: any) {
     if (e?.message === "STOP_REQUESTED") throw e;

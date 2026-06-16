@@ -3,7 +3,12 @@
 // existing importers (queue.ts, index.ts, connections.ts, tests) keep working
 // without any change to their import paths.
 
-export type { CloudProvider } from "./translator/ai-client.js";
+export type { CloudProvider, TokenUsage } from "./translator/ai-client.js";
+export {
+  extractUsage,
+  parseRetryAfter,
+  rateLimitRetryDelayMs,
+} from "./translator/ai-client.js";
 
 export {
   type ModelContextInfo,
