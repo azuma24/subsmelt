@@ -769,7 +769,11 @@
       "working": "Працюю…",
       "transcribe": "Транскрибувати",
       "transcribeTranslate": "Транскрибувати + перекласти",
-      "enableHint": "Увімкніть мовлення в текст у налаштуваннях, щоб генерувати субтитри з цього відео."
+      "enableHint": "Увімкніть мовлення в текст у налаштуваннях, щоб генерувати субтитри з цього відео.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

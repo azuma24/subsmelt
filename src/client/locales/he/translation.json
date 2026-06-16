@@ -769,7 +769,11 @@
       "working": "עובד…",
       "transcribe": "תמלל",
       "transcribeTranslate": "תמלל + תרגם",
-      "enableHint": "הפעל דיבור לטקסט בהגדרות כדי ליצור כתוביות מסרטון זה."
+      "enableHint": "הפעל דיבור לטקסט בהגדרות כדי ליצור כתוביות מסרטון זה.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

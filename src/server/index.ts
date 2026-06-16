@@ -53,6 +53,8 @@ import {
   transcribePostActionValues,
   transcribeTimeoutSeconds,
   transcribeWithBackend,
+  transcribeWithBackendStreaming,
+  StreamingUnsupportedError,
   type TranscribePostAction,
   type TranscriptionOutputFormat,
 } from "./transcription-client.js";
@@ -673,6 +675,47 @@ async function withTranscriptionSlot<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
+// --- In-flight transcription cancellation registry ---
+// Maps the local SubSmelt media path of an in-flight transcription to its
+// AbortController. POST /api/transcribe/cancel aborts the matching controller,
+// which closes the streaming HTTP request → the backend detects the disconnect
+// → stops segment iteration. Entries are removed when the attempt settles.
+const inFlightTranscriptions = new Map<string, { controller: AbortController; attemptId: string }>();
+
+// Resolves to true when a streaming run succeeded, so we know whether to skip
+// the legacy fallback. Throws StreamingUnsupportedError only for 404s.
+async function transcribeRelayingProgress(
+  backendUrl: string,
+  request: ReturnType<typeof buildTranscriptionRequest>,
+  settings: Record<string, string>,
+  videoPath: string,
+  controller: AbortController,
+) {
+  try {
+    return await transcribeWithBackendStreaming(backendUrl, request, {
+      timeoutSeconds: transcribeTimeoutSeconds(settings),
+      signal: controller.signal,
+      onProgress: ({ pct, processedSeconds, totalSeconds }) => {
+        broadcast("transcription:progress", { path: videoPath, pct, processedSeconds, totalSeconds });
+      },
+    });
+  } catch (error: unknown) {
+    if (error instanceof StreamingUnsupportedError) {
+      // Older backend without the stream route: fall back to the JSON endpoint.
+      // No live progress is available, but transcription still completes.
+      return await transcribeWithBackend(backendUrl, request, {
+        timeoutSeconds: transcribeTimeoutSeconds(settings),
+      });
+    }
+    throw error;
+  }
+}
+
+function isCancellationError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /Transcription cancelled/i.test(message);
+}
+
 async function runTranscriptionAttempt(opts: {
   videoPath: string;
   postAction: TranscribePostAction;
@@ -705,11 +748,14 @@ async function runTranscriptionAttempt(opts: {
     advancedOptions: request.advanced_options,
   });
 
+  const controller = new AbortController();
+  inFlightTranscriptions.set(opts.videoPath, { controller, attemptId: attempt.id });
+
   try {
     const startedAtMs = Date.parse(attempt.startedAt);
     const checkedRequest = await applyPreflightPolicy(backendUrl, request, settings);
     const result = await withTranscriptionSlot(() =>
-      transcribeWithBackend(backendUrl, checkedRequest, { timeoutSeconds: transcribeTimeoutSeconds(settings) }),
+      transcribeRelayingProgress(backendUrl, checkedRequest, settings, opts.videoPath, controller),
     );
     const finishedAt = new Date().toISOString();
     const durationSeconds = typeof result.duration_seconds === "number"
@@ -722,15 +768,21 @@ async function runTranscriptionAttempt(opts: {
       finishedAt,
       durationSeconds,
     });
+    broadcast("transcription:progress", { path: opts.videoPath, pct: 100, done: true });
     return { attemptId: attempt.id, result };
   } catch (error: unknown) {
+    const cancelled = isCancellationError(error) || controller.signal.aborted;
     const summary = summarizeTranscriptionError(error);
     transcriptionHistory.finishAttempt(attempt.id, {
-      status: "failed",
+      status: cancelled ? "cancelled" : "failed",
       finishedAt: new Date().toISOString(),
-      errorSummary: summary,
+      errorSummary: cancelled ? "Transcription cancelled" : summary,
     });
-    throw new Error(summary);
+    broadcast("transcription:progress", { path: opts.videoPath, cancelled, error: true });
+    throw new Error(cancelled ? "Transcription cancelled" : summary);
+  } finally {
+    const current = inFlightTranscriptions.get(opts.videoPath);
+    if (current && current.attemptId === attempt.id) inFlightTranscriptions.delete(opts.videoPath);
   }
 }
 
@@ -830,6 +882,16 @@ app.post("/api/transcribe", async (req, res) => {
     logger.error("system", `Transcription failed: ${error?.message || error}`);
     return res.status(400).json({ error: error?.message || "Transcription failed" });
   }
+});
+
+app.post("/api/transcribe/cancel", (req, res) => {
+  const videoPath = typeof req.body?.path === "string" ? req.body.path : "";
+  if (!videoPath) return res.status(400).json({ error: "path is required" });
+  const entry = inFlightTranscriptions.get(videoPath);
+  if (!entry) return res.status(404).json({ ok: false, error: "No in-flight transcription for that path" });
+  entry.controller.abort();
+  logger.info("system", `Cancellation requested for transcription ${path.basename(videoPath)}`);
+  return res.json({ ok: true });
 });
 
 // ======== List Models ========

@@ -769,7 +769,11 @@
       "working": "Se lucrează…",
       "transcribe": "Transcrie",
       "transcribeTranslate": "Transcrie + tradu",
-      "enableHint": "Activează vorbire în text în Setări pentru a genera subtitrări din acest video."
+      "enableHint": "Activează vorbire în text în Setări pentru a genera subtitrări din acest video.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

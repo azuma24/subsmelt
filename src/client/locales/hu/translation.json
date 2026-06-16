@@ -769,7 +769,11 @@
       "working": "Folyamatban…",
       "transcribe": "Átirat",
       "transcribeTranslate": "Átirat + fordítás",
-      "enableHint": "Engedélyezd a beszéd szöveggé alakítást a Beállításokban, hogy feliratokat generálj ebből a videóból."
+      "enableHint": "Engedélyezd a beszéd szöveggé alakítást a Beállításokban, hogy feliratokat generálj ebből a videóból.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

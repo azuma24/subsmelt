@@ -769,7 +769,11 @@
       "working": "Pracuje se…",
       "transcribe": "Přepsat",
       "transcribeTranslate": "Přepsat + přeložit",
-      "enableHint": "Povolte v Nastavení převod řeči na text pro generování titulků z tohoto videa."
+      "enableHint": "Povolte v Nastavení převod řeči na text pro generování titulků z tohoto videa.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

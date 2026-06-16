@@ -769,7 +769,11 @@
       "working": "A trabalhar…",
       "transcribe": "Transcrever",
       "transcribeTranslate": "Transcrever + traduzir",
-      "enableHint": "Ative a conversão de voz em texto nas Definições para gerar legendas a partir deste vídeo."
+      "enableHint": "Ative a conversão de voz em texto nas Definições para gerar legendas a partir deste vídeo.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

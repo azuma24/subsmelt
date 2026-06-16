@@ -769,7 +769,11 @@
       "working": "Bezig…",
       "transcribe": "Transcriberen",
       "transcribeTranslate": "Transcriberen + vertalen",
-      "enableHint": "Schakel spraak-naar-tekst in bij Instellingen om ondertitels van deze video te genereren."
+      "enableHint": "Schakel spraak-naar-tekst in bij Instellingen om ondertitels van deze video te genereren.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

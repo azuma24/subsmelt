@@ -769,7 +769,11 @@
       "working": "வேலை செய்கிறது…",
       "transcribe": "படியெடு",
       "transcribeTranslate": "படியெடு + மொழிபெயர்",
-      "enableHint": "இந்த வீடியோவிலிருந்து துணைத்தலைப்புகளை உருவாக்க அமைப்புகளில் பேச்சு-முதல்-உரையை இயக்கவும்."
+      "enableHint": "இந்த வீடியோவிலிருந்து துணைத்தலைப்புகளை உருவாக்க அமைப்புகளில் பேச்சு-முதல்-உரையை இயக்கவும்.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

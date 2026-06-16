@@ -769,7 +769,11 @@
       "working": "Praca w toku…",
       "transcribe": "Transkrybuj",
       "transcribeTranslate": "Transkrybuj + tłumacz",
-      "enableHint": "Włącz mowę na tekst w Ustawieniach, aby generować napisy z tego wideo."
+      "enableHint": "Włącz mowę na tekst w Ustawieniach, aby generować napisy z tego wideo.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

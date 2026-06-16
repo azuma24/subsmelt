@@ -769,7 +769,11 @@
       "working": "Σε εξέλιξη…",
       "transcribe": "Μεταγραφή",
       "transcribeTranslate": "Μεταγραφή + Μετάφραση",
-      "enableHint": "Ενεργοποιήστε τη μετατροπή ομιλίας σε κείμενο στις Ρυθμίσεις για να δημιουργήσετε υπότιτλους από αυτό το βίντεο."
+      "enableHint": "Ενεργοποιήστε τη μετατροπή ομιλίας σε κείμενο στις Ρυθμίσεις για να δημιουργήσετε υπότιτλους από αυτό το βίντεο.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {
