@@ -58,6 +58,7 @@ import {
 import { summarizeTranscriptionError, transcriptionHistory } from "./transcription-history.js";
 import { logger } from "./logger.js";
 import { addSSEClient, broadcast } from "./sse.js";
+import { notifyTest } from "./notify.js";
 import { startWatcher, stopWatcher, isWatcherRunning, restartWatcher } from "./watcher.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -859,6 +860,15 @@ app.post("/api/test-connection", async (req, res) => {
   const result = await testConnection(conn);
   if (result.ok) logger.info("system", `Connection test passed: ${result.message}`);
   else logger.error("system", `Connection test failed: ${result.message}`);
+  res.json(result);
+});
+
+// ======== Notification test ========
+// Sends a sample webhook using the current settings (format + URL), bypassing
+// the notify_events filter so the UI can verify connectivity. Never affects
+// translation/queue — this is an isolated, on-demand call.
+app.post("/api/notify/test", async (_req, res) => {
+  const result = await notifyTest();
   res.json(result);
 });
 

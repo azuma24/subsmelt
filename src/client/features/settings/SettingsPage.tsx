@@ -35,6 +35,8 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   const [saving, setSaving] = useState(false);
   const [testingTranscription, setTestingTranscription] = useState(false);
   const [transcriptionTestResult, setTranscriptionTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [testingNotification, setTestingNotification] = useState(false);
+  const [notificationTestResult, setNotificationTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [activeSection, setActiveSection] = useState<SectionKey>("llm");
   const [rawConfigDrawerOpen, setRawConfigDrawerOpen] = useState(false);
   const [themePref, setThemePrefState] = useState<ThemePref>(getThemePref());
@@ -174,6 +176,33 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
     setTestingTranscription(false);
   };
 
+  const handleNotificationTest = async () => {
+    setTestingNotification(true);
+    setNotificationTestResult(null);
+    try {
+      // Flush any pending edits so the test uses the latest webhook URL/format.
+      if (dirty) {
+        if (!validateJsonBlobs()) { setTestingNotification(false); return; }
+        await api.saveSettings(settingsRef.current);
+        setDirty(false);
+      }
+      const result = await api.testNotification();
+      if (result.ok) {
+        setNotificationTestResult({ ok: true, message: t("settings.notifications.testSent") });
+        addToast(t("settings.notifications.testSent"), "success");
+      } else {
+        const message = t("settings.notifications.testFailed", { message: result.error || "unknown" });
+        setNotificationTestResult({ ok: false, message });
+        addToast(message, "error");
+      }
+    } catch (e: unknown) {
+      const message = t("settings.notifications.testFailed", { message: getErrorMessage(e) });
+      setNotificationTestResult({ ok: false, message });
+      addToast(message, "error");
+    }
+    setTestingNotification(false);
+  };
+
   const toggleWatcher = async () => {
     try {
       if (settings._watcher_running) {
@@ -294,6 +323,49 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
           </div>
           <div className="md:max-w-[200px]">
             <Field label={t("settings.sources.autoScanInterval")} value={str(settings.auto_scan_interval, "0")} onChange={(v) => update("auto_scan_interval", v)} help={t("settings.sources.autoScanIntervalHint")} type="number" />
+          </div>
+        </div>
+      </Accordion>
+      {/* Outbound webhook notifications — disabled by default (empty URL). */}
+      <Accordion title={t("settings.notifications.title")}>
+        <div className="space-y-4">
+          <div className="md:max-w-[420px]">
+            <Field
+              label={t("settings.notifications.webhookUrl")}
+              value={str(settings.notify_webhook_url)}
+              onChange={(v) => updateAndSaveDebounced("notify_webhook_url", v)}
+              placeholder="https://discord.com/api/webhooks/…"
+              help={t("settings.notifications.hint")}
+            />
+          </div>
+          <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-2"} md:max-w-[480px]`}>
+            <div>
+              <label className={labelCls}>{t("settings.notifications.format")}</label>
+              <select
+                aria-label={t("settings.notifications.format")}
+                value={str(settings.notify_format, "json")}
+                onChange={(e) => updateAndSave("notify_format", e.target.value)}
+                className={selectCls}
+              >
+                <option value="json">JSON</option>
+                <option value="discord">Discord</option>
+                <option value="slack">Slack</option>
+              </select>
+            </div>
+            <Field
+              label={t("settings.notifications.events")}
+              value={str(settings.notify_events, "job:error,queue:finished")}
+              onChange={(v) => updateAndSaveDebounced("notify_events", v)}
+              placeholder="job:error,queue:finished"
+            />
+          </div>
+          <div className={`flex ${isMobile ? "flex-col" : "items-center"} gap-3`}>
+            <ActionButton variant="ghost" size="sm" onClick={handleNotificationTest} disabled={testingNotification}>
+              {testingNotification ? t("app.testing") : t("settings.notifications.sendTest")}
+            </ActionButton>
+            {notificationTestResult && (
+              <span className={`text-[13px] ${notificationTestResult.ok ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{notificationTestResult.message}</span>
+            )}
           </div>
         </div>
       </Accordion>

@@ -484,6 +484,16 @@
         "chipLangs_other": "{{count}} لغات"
       }
     },
+    "notifications": {
+      "title": "Notifications",
+      "webhookUrl": "Webhook URL",
+      "format": "Payload format",
+      "events": "Events to send",
+      "sendTest": "Send test",
+      "testSent": "Test notification sent successfully",
+      "testFailed": "Test notification failed: {{message}}",
+      "hint": "Fire an outbound webhook when jobs complete or fail and when the queue finishes. Leave the URL empty to disable. Events is a comma-separated list (job:done, job:error, queue:finished, queue:stopped)."
+    },
     "saved": "Settings saved",
     "saveFailed": "Save failed: {{message}}",
     "watcherStarted": "File watcher started",

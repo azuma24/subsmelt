@@ -5,6 +5,7 @@ import { summarizeTranslationError, translateFile, probeModelContext } from "./t
 import { resolveConnectionPool, type ResolvedConnection, type LlmMode } from "./connections.js";
 import { logger } from "./logger.js";
 import { broadcast } from "./sse.js";
+import { notify } from "./notify.js";
 
 let isRunning = false;
 let shouldStop = false;
@@ -65,9 +66,11 @@ export async function processQueue(onlyIds?: number[]) {
     if (shouldStop) {
       logger.info("queue", "Queue stopped by user request");
       broadcast("queue:stopped", {});
+      void notify("queue:stopped", {});
     } else {
       logger.info("queue", "Queue finished — no more pending jobs");
       broadcast("queue:finished", {});
+      void notify("queue:finished", {});
     }
   } finally {
     isRunning = false;
@@ -286,6 +289,7 @@ async function runJob(job: any, conns: ResolvedConnection[], llmModeForJob: LlmM
       job.id
     );
     broadcast("job:done", { jobId: job.id, durationSeconds, srtName, langCode });
+    void notify("job:done", { jobId: job.id, durationSeconds, srtName, langCode });
     return false;
   } catch (error: any) {
     const durationSeconds = (Date.now() - startTime) / 1000;
@@ -336,6 +340,7 @@ async function runJob(job: any, conns: ResolvedConnection[], llmModeForJob: LlmM
       used_connections: usedConnLabels.length > 0 ? usedConnLabels.join(", ") : null,
     });
     broadcast("job:error", { jobId: job.id, error: compactError, srtName });
+    void notify("job:error", { jobId: job.id, error: compactError, srtName, langCode });
     return false;
   } finally {
     abortControllers.delete(jobAbort);

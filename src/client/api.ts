@@ -135,6 +135,11 @@ export const testConnection = (payload?: { provider?: string; apiKey?: string; m
 export const getLlmHealth = (opts?: FetchOpts) =>
   fetchJSON<LlmHealth>("/llm-health", opts);
 
+// Outbound notification webhook test — sends a sample notification using the
+// currently-saved settings and reports whether the webhook accepted it.
+export const testNotification = () =>
+  fetchJSON<{ ok: boolean; error?: string }>("/notify/test", { method: "POST" });
+
 // Subtitle format converter
 export type ConvertTargetFormat = "srt" | "vtt" | "ass" | "ssa";
 export interface ConvertRequest {
