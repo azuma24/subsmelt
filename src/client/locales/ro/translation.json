@@ -164,7 +164,15 @@
       "copiedContext": "Context copiat",
       "copiedPlot": "Rezumatul intrigii copiat",
       "copiedGlossary": "Glosar copiat",
-      "copyFailed": "Copiere eșuată"
+      "copyFailed": "Copiere eșuată",
+      "editPlaceholder": "Editează traducerea…",
+      "saveChanges": "Salvează modificările",
+      "saveChangesCount": "Salvează modificările ({{count}})",
+      "saving": "Se salvează…",
+      "saved": "{{count}} rând(uri) salvate",
+      "saveFailed": "Salvarea modificărilor a eșuat",
+      "download": "Descarcă",
+      "edited": "editat"
     },
     "stat": {
       "pending": "În așteptare",

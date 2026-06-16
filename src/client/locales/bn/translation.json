@@ -164,7 +164,15 @@
       "copiedContext": "প্রসঙ্গ কপি করা হয়েছে",
       "copiedPlot": "কাহিনী সারাংশ কপি করা হয়েছে",
       "copiedGlossary": "শব্দকোষ কপি করা হয়েছে",
-      "copyFailed": "কপি ব্যর্থ"
+      "copyFailed": "কপি ব্যর্থ",
+      "editPlaceholder": "অনুবাদ সম্পাদনা…",
+      "saveChanges": "পরিবর্তন সংরক্ষণ",
+      "saveChangesCount": "পরিবর্তন সংরক্ষণ ({{count}})",
+      "saving": "সংরক্ষণ হচ্ছে…",
+      "saved": "{{count}}টি লাইন সংরক্ষিত",
+      "saveFailed": "পরিবর্তন সংরক্ষণ ব্যর্থ",
+      "download": "ডাউনলোড",
+      "edited": "সম্পাদিত"
     },
     "stat": {
       "pending": "মুলতবি",

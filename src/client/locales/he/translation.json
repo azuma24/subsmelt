@@ -164,7 +164,15 @@
       "copiedContext": "ההקשר הועתק",
       "copiedPlot": "תקציר העלילה הועתק",
       "copiedGlossary": "מילון המונחים הועתק",
-      "copyFailed": "ההעתקה נכשלה"
+      "copyFailed": "ההעתקה נכשלה",
+      "editPlaceholder": "עריכת תרגום…",
+      "saveChanges": "שמירת שינויים",
+      "saveChangesCount": "שמירת שינויים ({{count}})",
+      "saving": "שומר…",
+      "saved": "{{count}} שורות נשמרו",
+      "saveFailed": "שמירת השינויים נכשלה",
+      "download": "הורדה",
+      "edited": "נערך"
     },
     "stat": {
       "pending": "ממתין",

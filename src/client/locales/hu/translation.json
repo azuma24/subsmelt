@@ -164,7 +164,15 @@
       "copiedContext": "Kontextus másolva",
       "copiedPlot": "Cselekmény-összefoglaló másolva",
       "copiedGlossary": "Szószedet másolva",
-      "copyFailed": "A másolás sikertelen"
+      "copyFailed": "A másolás sikertelen",
+      "editPlaceholder": "Fordítás szerkesztése…",
+      "saveChanges": "Módosítások mentése",
+      "saveChangesCount": "Módosítások mentése ({{count}})",
+      "saving": "Mentés…",
+      "saved": "{{count}} sor mentve",
+      "saveFailed": "A módosítások mentése sikertelen",
+      "download": "Letöltés",
+      "edited": "szerkesztve"
     },
     "stat": {
       "pending": "Függőben",

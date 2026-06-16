@@ -164,7 +164,15 @@
       "copiedContext": "Context copied",
       "copiedPlot": "Plot summary copied",
       "copiedGlossary": "Glossary copied",
-      "copyFailed": "Copy failed"
+      "copyFailed": "Copy failed",
+      "editPlaceholder": "แก้ไขคำแปล…",
+      "saveChanges": "บันทึกการเปลี่ยนแปลง",
+      "saveChangesCount": "บันทึกการเปลี่ยนแปลง ({{count}})",
+      "saving": "กำลังบันทึก…",
+      "saved": "บันทึกแล้ว {{count}} บรรทัด",
+      "saveFailed": "บันทึกการเปลี่ยนแปลงไม่สำเร็จ",
+      "download": "ดาวน์โหลด",
+      "edited": "แก้ไขแล้ว"
     },
     "stat": {
       "pending": "Pending",

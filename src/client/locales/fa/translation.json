@@ -164,7 +164,15 @@
       "copiedContext": "زمینه کپی شد",
       "copiedPlot": "خلاصه داستان کپی شد",
       "copiedGlossary": "واژه‌نامه کپی شد",
-      "copyFailed": "کپی ناموفق بود"
+      "copyFailed": "کپی ناموفق بود",
+      "editPlaceholder": "ویرایش ترجمه…",
+      "saveChanges": "ذخیره تغییرات",
+      "saveChangesCount": "ذخیره تغییرات ({{count}})",
+      "saving": "در حال ذخیره…",
+      "saved": "{{count}} خط ذخیره شد",
+      "saveFailed": "ذخیره تغییرات ناموفق بود",
+      "download": "دانلود",
+      "edited": "ویرایش‌شده"
     },
     "stat": {
       "pending": "در انتظار",

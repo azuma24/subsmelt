@@ -164,7 +164,15 @@
       "copiedContext": "Skopiowano kontekst",
       "copiedPlot": "Skopiowano streszczenie fabuły",
       "copiedGlossary": "Skopiowano glosariusz",
-      "copyFailed": "Kopiowanie nie powiodło się"
+      "copyFailed": "Kopiowanie nie powiodło się",
+      "editPlaceholder": "Edytuj tłumaczenie…",
+      "saveChanges": "Zapisz zmiany",
+      "saveChangesCount": "Zapisz zmiany ({{count}})",
+      "saving": "Zapisywanie…",
+      "saved": "Zapisano wierszy: {{count}}",
+      "saveFailed": "Nie udało się zapisać zmian",
+      "download": "Pobierz",
+      "edited": "edytowano"
     },
     "stat": {
       "pending": "Oczekujące",

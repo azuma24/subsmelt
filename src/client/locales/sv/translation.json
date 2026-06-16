@@ -164,7 +164,15 @@
       "copiedContext": "Kontext kopierad",
       "copiedPlot": "Handlingssammanfattning kopierad",
       "copiedGlossary": "Ordlista kopierad",
-      "copyFailed": "Kopiering misslyckades"
+      "copyFailed": "Kopiering misslyckades",
+      "editPlaceholder": "Redigera översättning…",
+      "saveChanges": "Spara ändringar",
+      "saveChangesCount": "Spara ändringar ({{count}})",
+      "saving": "Sparar…",
+      "saved": "{{count}} rad(er) sparade",
+      "saveFailed": "Det gick inte att spara ändringarna",
+      "download": "Ladda ner",
+      "edited": "redigerad"
     },
     "stat": {
       "pending": "Väntande",

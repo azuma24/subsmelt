@@ -93,6 +93,20 @@ export const unpinJob = (id: number) =>
   fetchJSON(`/jobs/${id}/unpin`, { method: "POST" });
 export const getJobPreview = (id: number, opts?: FetchOpts) => fetchJSON<JobPreview>(`/jobs/${id}/preview`, opts);
 
+// Manual cue edits — saves edited translated lines to the OUTPUT file.
+export interface CueEditInput {
+  index: number;
+  text: string;
+}
+export const saveJobCues = (id: number, edits: CueEditInput[], opts?: FetchOpts) =>
+  fetchJSON<{ ok: boolean; updated: number }>(`/jobs/${id}/cues`, {
+    ...opts,
+    method: "PUT",
+    body: JSON.stringify({ edits }),
+  });
+// URL for an <a href download> that streams the translated output file.
+export const jobDownloadUrl = (id: number) => `${BASE}/jobs/${id}/download`;
+
 // Queue
 export const startQueue = (ids?: number[]) =>
   fetchJSON("/queue/start", {

@@ -164,7 +164,15 @@
       "copiedContext": "Context copied",
       "copiedPlot": "Plot summary copied",
       "copiedGlossary": "Glossary copied",
-      "copyFailed": "コピーに失敗しました"
+      "copyFailed": "コピーに失敗しました",
+      "editPlaceholder": "翻訳を編集…",
+      "saveChanges": "変更を保存",
+      "saveChangesCount": "変更を保存（{{count}}）",
+      "saving": "保存中…",
+      "saved": "{{count}} 行を保存しました",
+      "saveFailed": "変更の保存に失敗しました",
+      "download": "ダウンロード",
+      "edited": "編集済み"
     },
     "stat": {
       "pending": "待機中",

@@ -164,7 +164,15 @@
       "copiedContext": "Контекст скопійовано",
       "copiedPlot": "Короткий сюжет скопійовано",
       "copiedGlossary": "Глосарій скопійовано",
-      "copyFailed": "Не вдалося скопіювати"
+      "copyFailed": "Не вдалося скопіювати",
+      "editPlaceholder": "Редагувати переклад…",
+      "saveChanges": "Зберегти зміни",
+      "saveChangesCount": "Зберегти зміни ({{count}})",
+      "saving": "Збереження…",
+      "saved": "Збережено рядків: {{count}}",
+      "saveFailed": "Не вдалося зберегти зміни",
+      "download": "Завантажити",
+      "edited": "змінено"
     },
     "stat": {
       "pending": "В очікуванні",

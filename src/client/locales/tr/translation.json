@@ -164,7 +164,15 @@
       "copiedContext": "Bağlam kopyalandı",
       "copiedPlot": "Konu özeti kopyalandı",
       "copiedGlossary": "Sözlük kopyalandı",
-      "copyFailed": "Kopyalama başarısız"
+      "copyFailed": "Kopyalama başarısız",
+      "editPlaceholder": "Çeviriyi düzenle…",
+      "saveChanges": "Değişiklikleri kaydet",
+      "saveChangesCount": "Değişiklikleri kaydet ({{count}})",
+      "saving": "Kaydediliyor…",
+      "saved": "{{count}} satır kaydedildi",
+      "saveFailed": "Değişiklikler kaydedilemedi",
+      "download": "İndir",
+      "edited": "düzenlendi"
     },
     "stat": {
       "pending": "Bekliyor",
