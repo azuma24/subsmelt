@@ -170,7 +170,11 @@
       "pending": "Bekliyor",
       "translating": "Çevriliyor",
       "done": "Tamamlandı",
-      "errors": "Hatalar"
+      "errors": "Hatalar",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "Henüz iş yok.",
     "noJobsHint": "Altyazı dosyalarını keşfetmek için <strong>Klasörleri Tara</strong>'ya tıklayın.",
@@ -235,7 +239,11 @@
       "error": "Hata",
       "analysis": "Analiz bağlamı",
       "openLogs": "Günlükleri aç",
-      "fullPage": "Tam sayfa"
+      "fullPage": "Tam sayfa",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Bağlam analiz ediliyor…"
   },
@@ -482,7 +490,9 @@
         "chipNoVideo": "videosuz: {{state}}",
         "chipLangs_one": "{{count}} dil",
         "chipLangs_other": "{{count}} dil"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
     },
     "notifications": {
       "title": "Notifications",

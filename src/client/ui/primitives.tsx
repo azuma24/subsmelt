@@ -35,7 +35,7 @@ export function ActionButton({ children, onClick, className = "", variant = "pri
   return <button onClick={onClick} disabled={disabled || busy} className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg text-center font-medium leading-6 transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${sizeCls} ${cls} ${className}`}>{children}</button>;
 }
 
-export function StatCard({ label, value, color, onClick }: { label: string; value: number; color: string; onClick?: () => void }) {
+export function StatCard({ label, value, color, onClick }: { label: string; value: number | string; color: string; onClick?: () => void }) {
   const base = "rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5";
   if (onClick) {
     return (

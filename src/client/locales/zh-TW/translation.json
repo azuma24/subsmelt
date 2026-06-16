@@ -170,7 +170,11 @@
       "pending": "等待中",
       "translating": "翻譯中",
       "done": "已完成",
-      "errors": "錯誤"
+      "errors": "錯誤",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "尚無任務。",
     "noJobsHint": "點擊「掃描資料夾」以搜尋字幕檔案。",
@@ -235,7 +239,11 @@
       "error": "錯誤",
       "analysis": "分析上下文",
       "openLogs": "開啟記錄",
-      "fullPage": "完整頁面"
+      "fullPage": "完整頁面",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Analysing context…"
   },
@@ -482,7 +490,9 @@
         "chipNoVideo": "無影片：{{state}}",
         "chipLangs_one": "{{count}} 種語言",
         "chipLangs_other": "{{count}} 種語言"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
     },
     "notifications": {
       "title": "Notifications",

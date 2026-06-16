@@ -42,6 +42,7 @@ import {
 } from "./queue.js";
 import { testConnection, parseSubtitle, convertSubtitle, readSubtitleFileText } from "./translator.js";
 import { resolveConnectionPool } from "./connections.js";
+import { estimateCost } from "./pricing.js";
 import type { CloudProvider } from "./translator.js";
 import {
   applyPreflightPolicy,
@@ -249,14 +250,24 @@ app.get("/api/scan/preview", (_req, res) => {
 
 // ======== Jobs ========
 
-// Enrich job rows with task data (since settings/tasks are in config, not SQL JOIN)
+// Enrich job rows with task data (since settings/tasks are in config, not SQL JOIN).
+// Also surfaces token usage + an APPROXIMATE est_cost: jobs don't store which
+// model ran, so we derive the model from the current connection pool primary
+// (best-effort) and price the accumulated tokens. Unknown/local models → null.
 function enrichJobs(jobs: any[]): any[] {
   const tasks = getTasks();
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
+  const { pool } = resolveConnectionPool(getAllSettings());
+  const primaryModel = pool[0]?.model || "";
   return jobs.map((job) => {
     const task = taskMap.get(job.task_id);
+    const inputTokens = Number(job.input_tokens) || 0;
+    const outputTokens = Number(job.output_tokens) || 0;
     return {
       ...job,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      est_cost: estimateCost(primaryModel, inputTokens, outputTokens),
       target_lang: task?.target_lang || "",
       lang_code: task?.lang_code || "",
       source_lang: task?.source_lang || "",

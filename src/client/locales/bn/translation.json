@@ -170,7 +170,11 @@
       "pending": "মুলতবি",
       "translating": "অনুবাদ হচ্ছে",
       "done": "সম্পন্ন",
-      "errors": "ত্রুটি"
+      "errors": "ত্রুটি",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "এখনও কোনো কাজ নেই।",
     "noJobsHint": "সাবটাইটেল ফাইল খুঁজে পেতে <strong>ফোল্ডার স্ক্যান করুন</strong> ক্লিক করুন।",
@@ -235,7 +239,11 @@
       "error": "ত্রুটি",
       "analysis": "বিশ্লেষণ প্রসঙ্গ",
       "openLogs": "লগ খুলুন",
-      "fullPage": "সম্পূর্ণ পৃষ্ঠা"
+      "fullPage": "সম্পূর্ণ পৃষ্ঠা",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "প্রসঙ্গ বিশ্লেষণ হচ্ছে…"
   },
@@ -482,7 +490,9 @@
         "chipNoVideo": "ভিডিও নেই: {{state}}",
         "chipLangs_one": "{{count}} ভাষা",
         "chipLangs_other": "{{count}} ভাষা"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
     },
     "notifications": {
       "title": "Notifications",

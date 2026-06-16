@@ -170,7 +170,11 @@
       "pending": "待機中",
       "translating": "翻訳中",
       "done": "完了",
-      "errors": "エラー"
+      "errors": "エラー",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "ジョブがありません。",
     "noJobsHint": "「フォルダをスキャン」をクリックして字幕ファイルを検索してください。",
@@ -235,7 +239,11 @@
       "error": "エラー",
       "analysis": "分析コンテキスト",
       "openLogs": "ログを開く",
-      "fullPage": "全ページ"
+      "fullPage": "全ページ",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Analysing context…"
   },
@@ -482,7 +490,9 @@
         "chipNoVideo": "動画なし：{{state}}",
         "chipLangs_one": "{{count}} 言語",
         "chipLangs_other": "{{count}} 言語"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
     },
     "notifications": {
       "title": "Notifications",

@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { JobRow } from "../../types";
 import { Drawer, StatusBadge } from "../../ui/primitives";
-import { formatDur } from "../../lib";
+import { formatDur, formatTokens, formatCost } from "../../lib";
 
 interface JobDetailsDrawerProps {
   job: JobRow | null;
@@ -92,6 +92,34 @@ export function JobDetailsDrawer({ job, open, onClose, onOpenLogs }: JobDetailsD
               : "—"}
           </div>
         </section>
+
+        {/* Tokens + estimated cost */}
+        <div className="grid grid-cols-2 gap-3">
+          <section>
+            <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[var(--text-3)]">
+              {t("dashboard.details.tokens")}
+            </div>
+            <div className="font-mono text-[13px] text-[var(--text)]">
+              {(job.input_tokens || job.output_tokens)
+                ? `${formatTokens(job.input_tokens)} / ${formatTokens(job.output_tokens)}`
+                : "—"}
+            </div>
+          </section>
+          <section>
+            <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[var(--text-3)]">
+              {t("dashboard.details.cost")}
+            </div>
+            <div className="font-mono text-[13px] text-[var(--text)]">
+              {job.est_cost === null || job.est_cost === undefined
+                ? <span className="italic text-[var(--text-3)]">{t("dashboard.details.costLocal")}</span>
+                : (
+                  <span title={t("dashboard.details.costApprox")}>
+                    ≈ {formatCost(job.est_cost)}
+                  </span>
+                )}
+            </div>
+          </section>
+        </div>
 
         {/* Translated by */}
         <section>

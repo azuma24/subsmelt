@@ -170,7 +170,11 @@
       "pending": "În așteptare",
       "translating": "Se traduce",
       "done": "Finalizate",
-      "errors": "Erori"
+      "errors": "Erori",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "Nicio sarcină încă.",
     "noJobsHint": "Apasă <strong>Scanează folderele</strong> pentru a descoperi fișiere de subtitrare.",
@@ -235,7 +239,11 @@
       "error": "Eroare",
       "analysis": "Context de analiză",
       "openLogs": "Deschide jurnalele",
-      "fullPage": "Pagină completă"
+      "fullPage": "Pagină completă",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Se analizează contextul…"
   },
@@ -482,7 +490,9 @@
         "chipNoVideo": "fără video: {{state}}",
         "chipLangs_one": "{{count}} limbă",
         "chipLangs_other": "{{count}} limbi"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
     },
     "notifications": {
       "title": "Notifications",

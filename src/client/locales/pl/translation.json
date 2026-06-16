@@ -170,7 +170,11 @@
       "pending": "Oczekujące",
       "translating": "Tłumaczenie",
       "done": "Gotowe",
-      "errors": "Błędy"
+      "errors": "Błędy",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "Brak zadań.",
     "noJobsHint": "Kliknij <strong>Skanuj foldery</strong>, aby wykryć pliki napisów.",
@@ -235,7 +239,11 @@
       "error": "Błąd",
       "analysis": "Kontekst analizy",
       "openLogs": "Otwórz dzienniki",
-      "fullPage": "Pełna strona"
+      "fullPage": "Pełna strona",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Analizowanie kontekstu…"
   },
@@ -482,7 +490,9 @@
         "chipNoVideo": "bez wideo: {{state}}",
         "chipLangs_one": "{{count}} język",
         "chipLangs_other": "{{count}} języków"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
     },
     "notifications": {
       "title": "Notifications",

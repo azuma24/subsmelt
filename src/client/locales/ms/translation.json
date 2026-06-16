@@ -170,7 +170,11 @@
       "pending": "Tertangguh",
       "translating": "Menterjemah",
       "done": "Selesai",
-      "errors": "Ralat"
+      "errors": "Ralat",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "Belum ada kerja.",
     "noJobsHint": "Klik <strong>Imbas Folder</strong> untuk menemui fail sari kata.",
@@ -235,7 +239,11 @@
       "error": "Ralat",
       "analysis": "Konteks analisis",
       "openLogs": "Buka log",
-      "fullPage": "Halaman penuh"
+      "fullPage": "Halaman penuh",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Menganalisis konteks…"
   },
@@ -482,7 +490,9 @@
         "chipNoVideo": "tanpa video: {{state}}",
         "chipLangs_one": "{{count}} bahasa",
         "chipLangs_other": "{{count}} bahasa"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
     },
     "notifications": {
       "title": "Notifications",

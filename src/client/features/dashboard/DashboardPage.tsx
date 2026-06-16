@@ -87,6 +87,21 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const hasLlmConfig = Boolean(str(settings.llm_endpoint)) && Boolean(str(settings.model));
   const transcriptionEnabled = str(settings.transcription_enabled, "0") === "1";
   const transcriptionAttempts = transcriptionHistoryQuery.data?.attempts || [];
+  const tokenBudget = Math.max(0, parseInt(str(settings.monthly_token_budget, "0"), 10) || 0);
+
+  // Summed token usage + approximate cost across all jobs (display-only).
+  const usageTotals = jobs.reduce(
+    (acc, job) => {
+      acc.inputTokens += job.input_tokens || 0;
+      acc.outputTokens += job.output_tokens || 0;
+      if (typeof job.est_cost === "number") {
+        acc.cost += job.est_cost;
+        acc.hasCost = true;
+      }
+      return acc;
+    },
+    { inputTokens: 0, outputTokens: 0, cost: 0, hasCost: false },
+  );
 
   const {
     pendingJobs,
@@ -438,6 +453,8 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
           pendingJobs={pendingJobs}
           doneJobs={doneJobs}
           errorJobs={errorJobs}
+          usageTotals={usageTotals}
+          tokenBudget={tokenBudget}
           onSelectStatus={selectStatus}
           t={t}
         />

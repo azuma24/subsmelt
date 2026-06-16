@@ -321,8 +321,9 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
             <Field label={t("settings.sources.videoExtensions")} value={str(settings.video_extensions)} onChange={(v) => update("video_extensions", v)} help={t("settings.sources.videoExtensionsHint")} />
             <Field label={t("settings.sources.subtitleExtensions")} value={str(settings.subtitle_extensions)} onChange={(v) => update("subtitle_extensions", v)} help={t("settings.sources.subtitleExtensionsHint")} />
           </div>
-          <div className="md:max-w-[200px]">
+          <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-2"} md:max-w-[420px]`}>
             <Field label={t("settings.sources.autoScanInterval")} value={str(settings.auto_scan_interval, "0")} onChange={(v) => update("auto_scan_interval", v)} help={t("settings.sources.autoScanIntervalHint")} type="number" />
+            <Field label={t("settings.sources.monthlyTokenBudget")} value={str(settings.monthly_token_budget, "0")} onChange={(v) => update("monthly_token_budget", v)} help={t("settings.sources.monthlyTokenBudgetHint")} type="number" />
           </div>
         </div>
       </Accordion>
