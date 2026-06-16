@@ -74,6 +74,18 @@ def ffmpeg_available() -> bool:
 
 def evaluate_model_safety(model: str, available_ram_mb: int) -> SafetyResult:
     requirements = model_ram_requirements_mb(model)
+    # available_ram_mb <= 0 means we could not measure RAM (e.g. psutil missing).
+    # Fail OPEN in that case — blocking every transcription on an unknown reading
+    # is worse than proceeding; report "ram_unknown" so the UI can warn instead.
+    if available_ram_mb <= 0:
+        return {
+            "safe": True,
+            "code": "ram_unknown",
+            "available_ram_mb": available_ram_mb,
+            "required_ram_mb": requirements["required"],
+            "recommended_ram_mb": requirements["recommended"],
+            "suggested_model": None,
+        }
     safe = available_ram_mb >= requirements["required"]
     return {
         "safe": safe,
