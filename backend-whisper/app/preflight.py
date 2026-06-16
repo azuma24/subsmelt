@@ -27,6 +27,15 @@ class DiskSafetyResult(TypedDict):
     required_disk_mb: int
 
 
+class GpuSafetyResult(TypedDict):
+    safe: bool
+    code: str
+    free_vram_mb: int
+    required_vram_mb: int
+    recommended_vram_mb: int
+    suggested_model: str | None
+
+
 MODEL_RAM_MB: dict[str, dict[str, int]] = {
     "tiny": {"required": 2048, "recommended": 4096},
     "base": {"required": 3072, "recommended": 4096},
@@ -41,6 +50,32 @@ MODEL_RAM_MB: dict[str, dict[str, int]] = {
 
 def model_ram_requirements_mb(model: str) -> dict[str, int]:
     return MODEL_RAM_MB.get((model or "small").lower(), MODEL_RAM_MB["small"])
+
+
+# Per-model VRAM requirements (MB) for the CUDA path. GPU memory is the binding
+# constraint when device=cuda, and float16 weights plus activations fit in far
+# less VRAM than the conservative system-RAM proxy used for the CPU path.
+MODEL_VRAM_MB: dict[str, dict[str, int]] = {
+    "tiny": {"required": 1024, "recommended": 2048},
+    "base": {"required": 1536, "recommended": 2048},
+    "small": {"required": 2048, "recommended": 4096},
+    "medium": {"required": 5120, "recommended": 8192},
+    "large": {"required": 10240, "recommended": 12288},
+    "large-v2": {"required": 10240, "recommended": 12288},
+    "large-v3": {"required": 10240, "recommended": 12288},
+    "large-v3-turbo": {"required": 6144, "recommended": 8192},
+}
+
+
+def model_vram_requirements_mb(model: str) -> dict[str, int]:
+    return MODEL_VRAM_MB.get((model or "small").lower(), MODEL_VRAM_MB["small"])
+
+
+def suggest_model_for_vram(free_vram_mb: int) -> str | None:
+    for model in ["small", "base", "tiny"]:
+        if free_vram_mb >= MODEL_VRAM_MB[model]["required"]:
+            return model
+    return None
 
 
 def suggest_model_for_ram(available_ram_mb: int) -> str | None:
@@ -94,6 +129,35 @@ def evaluate_model_safety(model: str, available_ram_mb: int) -> SafetyResult:
         "required_ram_mb": requirements["required"],
         "recommended_ram_mb": requirements["recommended"],
         "suggested_model": None if safe else suggest_model_for_ram(available_ram_mb),
+    }
+
+
+def evaluate_gpu_safety(model: str, free_vram_mb: int | None) -> GpuSafetyResult:
+    """Mirror of :func:`evaluate_model_safety` against VRAM for the CUDA path.
+
+    ``free_vram_mb`` is the measured free GPU memory (from ``gpu.gpu_info``).
+    When it is ``None`` (or non-positive) VRAM could not be measured — fail OPEN
+    with code ``vram_unknown``, matching the ``ram_unknown`` fail-open behaviour,
+    rather than blocking every GPU transcription on an unknown reading.
+    """
+    requirements = model_vram_requirements_mb(model)
+    if free_vram_mb is None or free_vram_mb <= 0:
+        return {
+            "safe": True,
+            "code": "vram_unknown",
+            "free_vram_mb": free_vram_mb or 0,
+            "required_vram_mb": requirements["required"],
+            "recommended_vram_mb": requirements["recommended"],
+            "suggested_model": None,
+        }
+    safe = free_vram_mb >= requirements["required"]
+    return {
+        "safe": safe,
+        "code": "ok" if safe else "insufficient_vram",
+        "free_vram_mb": free_vram_mb,
+        "required_vram_mb": requirements["required"],
+        "recommended_vram_mb": requirements["recommended"],
+        "suggested_model": None if safe else suggest_model_for_vram(free_vram_mb),
     }
 
 

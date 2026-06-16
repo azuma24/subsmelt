@@ -63,6 +63,13 @@ class PreflightResponse(BaseModel):
     disk_available_mb: int = Field(alias="diskAvailableMb")
     required_disk_mb: int = Field(alias="requiredDiskMb")
     model_cache: dict | None = Field(default=None, alias="modelCache")
+    # GPU/VRAM fields — populated only when the request targets device=cuda.
+    # Additive; default None so the CPU path response shape is unchanged.
+    device: str | None = Field(default=None, alias="device")
+    free_vram_mb: int | None = Field(default=None, alias="freeVramMb")
+    required_vram_mb: int | None = Field(default=None, alias="requiredVramMb")
+    recommended_vram_mb: int | None = Field(default=None, alias="recommendedVramMb")
+    gpus: list[dict] | None = Field(default=None, alias="gpus")
 
     class Config:
         populate_by_name = True
