@@ -12,7 +12,8 @@ export type SSEEventName =
   | "queue:stopped"
   | "scan:complete"
   | "job:stopped"
-  | "transcription:progress";
+  | "transcription:progress"
+  | "model:download";
 
 export type SSEEventHandler = (type: SSEEventName, data: Record<string, unknown>) => void;
 
@@ -122,6 +123,7 @@ const SSE_EVENT_NAMES: readonly SSEEventName[] = [
   "scan:complete",
   "job:stopped",
   "transcription:progress",
+  "model:download",
 ];
 
 type QueryKey = readonly unknown[];
@@ -153,6 +155,10 @@ export function getSSEInvalidationKeys(name: SSEEventName): QueryKey[] {
     case "transcription:progress":
       // Per-path progress is consumed directly by the dashboard component via
       // onEvent; it should not trigger query refetches on every tick.
+      return [];
+    case "model:download":
+      // Per-model download progress is consumed directly by the Model Manager
+      // via onEvent; it should not trigger query refetches on every tick.
       return [];
   }
 }
@@ -212,8 +218,9 @@ export function useSSE(onEvent?: SSEEventHandler) {
         onEventRef.current?.(name, data);
 
         // Per-path transcription progress is handled entirely by the dashboard
-        // via onEvent; it must not schedule query invalidations.
-        if (name === "transcription:progress") return;
+        // via onEvent; it must not schedule query invalidations. Likewise the
+        // per-model download progress is consumed directly by the Model Manager.
+        if (name === "transcription:progress" || name === "model:download") return;
 
         // For progress events: patch the cache directly from the SSE payload so
         // the progress bar updates immediately without waiting for a round-trip

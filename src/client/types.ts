@@ -234,3 +234,24 @@ export interface TranscriptionHealth {
     };
   };
 }
+
+// Whisper Model Manager — one row per backend-known model.
+export interface WhisperModel {
+  id: string;
+  downloaded: boolean;
+  sizeMb?: number;
+  requiredRamMb?: number;
+  requiredVramMb?: number;
+  cachePath?: string | null;
+}
+
+export interface WhisperModelDeleteResult {
+  ok: boolean;
+  freedMb?: number;
+}
+
+export interface WhisperModelDownloadResult {
+  ok: boolean;
+  model: string;
+  cachePath?: string | null;
+}

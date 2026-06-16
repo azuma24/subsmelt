@@ -12,6 +12,7 @@ import { InlineError } from "../../ui/QueryState";
 import { ConnectionsPanel } from "./ConnectionsPanel";
 import { MediaSourcesPanel } from "./MediaSourcesPanel";
 import { TranscriptionReadinessPanel } from "./TranscriptionReadinessPanel";
+import { ModelManagerPanel } from "./ModelManagerPanel";
 import { JSON_BLOB_SETTINGS, getStr, validateJsonSetting, type JsonBlobSettingKey } from "./settings-model";
 
 // Thin wrappers over the typed accessors so existing call sites (str/bool) stay
@@ -436,6 +437,10 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
         </div>
       </div>
       <TranscriptionReadinessPanel settings={settings} healthQuery={transcriptionHealthQuery} dirty={dirty} />
+
+      {/* Whisper model manager — proxied to the configured backend. Requires a
+          backend URL to be set; download progress streams over SSE. */}
+      <ModelManagerPanel enabled={Boolean(str(settings.transcription_backend_url))} />
 
       {/* Path mapping → accordion */}
       <Accordion title={t("settings.pathMapping")}>
