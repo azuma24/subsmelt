@@ -769,7 +769,11 @@
       "working": "Bekerja…",
       "transcribe": "Transkrip",
       "transcribeTranslate": "Transkrip + Terjemah",
-      "enableHint": "Dayakan pertuturan-ke-teks dalam Tetapan untuk menjana sari kata daripada video ini."
+      "enableHint": "Dayakan pertuturan-ke-teks dalam Tetapan untuk menjana sari kata daripada video ini.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

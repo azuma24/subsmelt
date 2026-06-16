@@ -769,7 +769,11 @@
       "working": "Arbetar…",
       "transcribe": "Transkribera",
       "transcribeTranslate": "Transkribera + översätt",
-      "enableHint": "Aktivera tal till text i Inställningar för att generera undertexter från denna video."
+      "enableHint": "Aktivera tal till text i Inställningar för att generera undertexter från denna video.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

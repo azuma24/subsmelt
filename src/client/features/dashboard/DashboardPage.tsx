@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
-import { useJobsQuery, useMutationWithInvalidation, useQueueStatusQuery, useSettingsQuery, useTasksQuery, useTranscriptionHistoryQuery } from "../../hooks";
+import { useJobsQuery, useMutationWithInvalidation, useQueueStatusQuery, useSettingsQuery, useSSE, useTasksQuery, useTranscriptionHistoryQuery } from "../../hooks";
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmModal";
 import type { JobRow, ScannedFile, TranscribePostAction, TranscriptionHistoryEntry } from "../../types";
@@ -20,6 +20,7 @@ import { TranscriptionHistoryPanel } from "./TranscriptionHistoryPanel";
 import { ScanConfirmModal, type ScanPlan } from "./ScanConfirmModal";
 import {
   createManualTranscriptionProgress,
+  isManualTranscriptionBusy,
   transitionManualTranscriptionProgress,
   type ManualTranscriptionProgress,
 } from "./transcription-progress";
@@ -75,6 +76,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const forceSelectedMutation = useMutationWithInvalidation((ids: number[]) => api.forceJobsApi(ids));
   const transcribeMutation = useMutationWithInvalidation((payload: { videoPath: string; postAction: TranscribePostAction }) => api.transcribeVideo(payload));
   const retryTranscriptionMutation = useMutationWithInvalidation((id: string) => api.retryTranscriptionAttempt(id));
+  const cancelTranscriptionMutation = useMutationWithInvalidation((videoPath: string) => api.cancelTranscription({ path: videoPath }));
 
   const jobs: JobRow[] = jobsQuery.data?.jobs || [];
   const queueRunning = Boolean(queueStatusQuery.data?.running ?? jobsQuery.data?.queueRunning ?? false);
@@ -297,6 +299,39 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
         : updater;
       return { ...prev, [videoPath]: next };
     });
+  };
+
+  // Subscribe to live per-segment transcription progress. The backend emits
+  // transcription:progress { path, pct, processedSeconds, totalSeconds } as it
+  // processes the faster-whisper segment generator; we match by path and feed
+  // the real percentage into the progress state machine.
+  useSSE((type, data) => {
+    if (type !== "transcription:progress") return;
+    const videoPath = typeof data.path === "string" ? data.path : "";
+    if (!videoPath) return;
+    if (data.cancelled === true) {
+      updateTranscriptionProgress(videoPath, (current) =>
+        transitionManualTranscriptionProgress(current, { type: "cancelled" }),
+      );
+      return;
+    }
+    if (typeof data.pct === "number") {
+      const pct = data.pct;
+      updateTranscriptionProgress(videoPath, (current) =>
+        transitionManualTranscriptionProgress(current, { type: "progress", pct }),
+      );
+    }
+  });
+
+  const handleCancelTranscription = async (videoPath: string) => {
+    updateTranscriptionProgress(videoPath, (current) =>
+      transitionManualTranscriptionProgress(current, { type: "cancel-requested" }),
+    );
+    try {
+      await cancelTranscriptionMutation.mutateAsync(videoPath);
+    } catch (e: unknown) {
+      addToast(`Cancel failed: ${getErrorMessage(e)}`, "error");
+    }
   };
 
   const handleTranscribe = async (videoPath: string, postAction: TranscribePostAction) => {
@@ -608,6 +643,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
                 mode={scanResultMode}
                 onQueueAll={handleScan}
                 onTranscribe={handleTranscribe}
+                onCancelTranscribe={handleCancelTranscription}
                 transcriptionEnabled={transcriptionEnabled}
                 transcriptionProgressByPath={transcriptionProgressByPath}
                 isQueueing={scanMutation.isPending}

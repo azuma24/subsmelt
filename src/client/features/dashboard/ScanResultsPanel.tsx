@@ -2,7 +2,7 @@ import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import type { JobRow, ManualTranscriptionStage, ScannedFile, TaskStatus } from "../../types";
 import { STATUS_ICON } from "../../app/constants";
-import type { ManualTranscriptionProgress, TranscribePostAction } from "./transcription-progress";
+import { isManualTranscriptionBusy, type ManualTranscriptionProgress, type TranscribePostAction } from "./transcription-progress";
 
 export type ScanFilter = "all" | "new" | "missing" | "orphans";
 
@@ -20,6 +20,7 @@ interface ScanResultsPanelProps {
   mode: "preview" | "queued";
   onQueueAll: () => void;
   onTranscribe?: (videoPath: string, postAction: TranscribePostAction) => void;
+  onCancelTranscribe?: (videoPath: string) => void;
   transcriptionEnabled?: boolean;
   transcriptionProgressByPath?: Record<string, ManualTranscriptionProgress>;
   isQueueing: boolean;
@@ -60,17 +61,26 @@ function stageTone(stage: ManualTranscriptionStage): string {
       return "text-yellow-300";
     case "failed":
       return "text-red-300";
+    case "cancelled":
+      return "text-gray-400";
+    case "cancelling":
+      return "text-yellow-300";
     default:
       return "text-blue-300";
   }
 }
 
-function stageText(progress: ManualTranscriptionProgress, t: (key: string) => string): string {
+function stageText(
+  progress: ManualTranscriptionProgress,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): string {
   switch (progress.stage) {
     case "preflighting":
       return t("scan.transcription.preflighting");
     case "transcribing":
-      return t("scan.transcription.transcribing");
+      return typeof progress.pct === "number"
+        ? t("scan.transcription.progressPct", { pct: Math.round(progress.pct) })
+        : t("scan.transcription.transcribing");
     case "queueing":
       return t("scan.transcription.queueing");
     case "complete":
@@ -81,6 +91,10 @@ function stageText(progress: ManualTranscriptionProgress, t: (key: string) => st
       return progress.message || t("scan.transcription.skipped");
     case "failed":
       return progress.message || t("scan.transcription.failed");
+    case "cancelling":
+      return t("scan.transcription.cancelling");
+    case "cancelled":
+      return t("scan.transcription.cancelled");
   }
 }
 
@@ -98,6 +112,7 @@ export function ScanResultsPanel({
   mode,
   onQueueAll,
   onTranscribe,
+  onCancelTranscribe,
   transcriptionEnabled = false,
   transcriptionProgressByPath = {},
   isQueueing,
@@ -208,6 +223,7 @@ export function ScanResultsPanel({
                         selectedIds={selectedIds}
                         setSelectedIds={setSelectedIds}
                         onTranscribe={onTranscribe}
+                        onCancelTranscribe={onCancelTranscribe}
                         transcriptionEnabled={transcriptionEnabled}
                         transcriptionProgressByPath={transcriptionProgressByPath}
                       />
@@ -229,6 +245,7 @@ function CompactScanFileRow({
   selectedIds,
   setSelectedIds,
   onTranscribe,
+  onCancelTranscribe,
   transcriptionEnabled,
   transcriptionProgressByPath,
 }: {
@@ -237,6 +254,7 @@ function CompactScanFileRow({
   selectedIds: Set<number>;
   setSelectedIds: Dispatch<SetStateAction<Set<number>>>;
   onTranscribe?: (videoPath: string, postAction: TranscribePostAction) => void;
+  onCancelTranscribe?: (videoPath: string) => void;
   transcriptionEnabled: boolean;
   transcriptionProgressByPath: Record<string, ManualTranscriptionProgress>;
 }) {
@@ -253,7 +271,12 @@ function CompactScanFileRow({
   const allPendingSelected = pendingJobIds.length > 0 && selectedPendingCount === pendingJobIds.length;
   const somePendingSelected = selectedPendingCount > 0 && !allPendingSelected;
   const progress = file.videoPath ? transcriptionProgressByPath[file.videoPath] : undefined;
-  const isBusy = progress ? !["complete", "skipped", "failed"].includes(progress.stage) : false;
+  const isBusy = isManualTranscriptionBusy(progress);
+  // Cancel is only meaningful while the backend is actively transcribing (a
+  // stream is open); preflight/cancelling phases have nothing to abort yet.
+  const canCancel = Boolean(
+    onCancelTranscribe && file.videoPath && progress && progress.stage === "transcribing",
+  );
 
   const togglePendingJobs = () => {
     setSelectedIds((prev) => {
@@ -314,26 +337,45 @@ function CompactScanFileRow({
             <div className="space-y-2 rounded-2xl border border-yellow-900/30 bg-yellow-950/10 p-3">
               <div className="text-xs text-yellow-600">{t("dashboard.noSubtitleFound")}</div>
               {transcriptionEnabled && file.videoPath && onTranscribe ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={isBusy}
-                    onClick={() => onTranscribe(file.videoPath as string, "transcribe_only")}
-                    className="rounded-lg bg-gray-800 px-3 py-2 text-xs font-medium text-gray-200 disabled:opacity-50"
-                  >
-                    {progress?.postAction === "transcribe_only" && isBusy ? t("scan.transcription.working") : t("scan.transcription.transcribe")}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isBusy}
-                    onClick={() => onTranscribe(file.videoPath as string, "transcribe_and_translate")}
-                    className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white disabled:opacity-50"
-                  >
-                    {progress?.postAction === "transcribe_and_translate" && isBusy ? t("scan.transcription.working") : t("scan.transcription.transcribeTranslate")}
-                  </button>
-                  {progress && (
-                    <div className={`text-[11px] ${stageTone(progress.stage)}`}>
-                      {stageText(progress, t)}
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={isBusy}
+                      onClick={() => onTranscribe(file.videoPath as string, "transcribe_only")}
+                      className="rounded-lg bg-gray-800 px-3 py-2 text-xs font-medium text-gray-200 disabled:opacity-50"
+                    >
+                      {progress?.postAction === "transcribe_only" && isBusy ? t("scan.transcription.working") : t("scan.transcription.transcribe")}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isBusy}
+                      onClick={() => onTranscribe(file.videoPath as string, "transcribe_and_translate")}
+                      className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white disabled:opacity-50"
+                    >
+                      {progress?.postAction === "transcribe_and_translate" && isBusy ? t("scan.transcription.working") : t("scan.transcription.transcribeTranslate")}
+                    </button>
+                    {canCancel && (
+                      <button
+                        type="button"
+                        onClick={() => onCancelTranscribe?.(file.videoPath as string)}
+                        className="rounded-lg border border-red-700/60 bg-red-950/30 px-3 py-2 text-xs font-medium text-red-300 hover:bg-red-900/40"
+                      >
+                        {t("scan.transcription.cancel")}
+                      </button>
+                    )}
+                    {progress && (
+                      <div className={`text-[11px] ${stageTone(progress.stage)}`}>
+                        {stageText(progress, t)}
+                      </div>
+                    )}
+                  </div>
+                  {progress?.stage === "transcribing" && typeof progress.pct === "number" && (
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-800" aria-hidden="true">
+                      <div
+                        className="h-full rounded-full bg-blue-500 transition-[width] duration-300"
+                        style={{ width: `${Math.max(0, Math.min(100, progress.pct))}%` }}
+                      />
                     </div>
                   )}
                 </div>

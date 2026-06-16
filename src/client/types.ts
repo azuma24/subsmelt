@@ -133,7 +133,7 @@ export interface LlmHealth {
 }
 
 export type TranscribePostAction = "transcribe_only" | "transcribe_and_translate";
-export type ManualTranscriptionStage = "preflighting" | "transcribing" | "queueing" | "complete" | "skipped" | "failed";
+export type ManualTranscriptionStage = "preflighting" | "transcribing" | "queueing" | "complete" | "skipped" | "failed" | "cancelling" | "cancelled";
 
 export interface TranscribeRequest {
   videoPath: string;

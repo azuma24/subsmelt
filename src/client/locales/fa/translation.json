@@ -769,7 +769,11 @@
       "working": "در حال کار…",
       "transcribe": "رونویسی",
       "transcribeTranslate": "رونویسی + ترجمه",
-      "enableHint": "گفتار به متن را در تنظیمات فعال کنید تا از این ویدئو زیرنویس تولید کنید."
+      "enableHint": "گفتار به متن را در تنظیمات فعال کنید تا از این ویدئو زیرنویس تولید کنید.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

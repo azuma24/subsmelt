@@ -769,7 +769,11 @@
       "working": "Gumagawa…",
       "transcribe": "I-transcribe",
       "transcribeTranslate": "I-transcribe + Isalin",
-      "enableHint": "I-enable ang speech-to-text sa Mga Setting para gumawa ng subtitle mula sa video na ito."
+      "enableHint": "I-enable ang speech-to-text sa Mga Setting para gumawa ng subtitle mula sa video na ito.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

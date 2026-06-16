@@ -178,3 +178,5 @@ export const getTranscriptionHistory = (limit = 10, opts?: FetchOpts) =>
   fetchJSON<{ attempts: TranscriptionHistoryEntry[] }>(`/transcribe/history?limit=${limit}`, opts);
 export const retryTranscriptionAttempt = (id: string) =>
   fetchJSON<TranscribeResponse>(`/transcribe/history/${id}/retry`, { method: "POST" });
+export const cancelTranscription = (payload: { path: string }) =>
+  fetchJSON<{ ok: boolean }>("/transcribe/cancel", { method: "POST", body: JSON.stringify(payload) });

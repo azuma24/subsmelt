@@ -769,7 +769,11 @@
       "working": "কাজ চলছে…",
       "transcribe": "ট্রান্সক্রাইব",
       "transcribeTranslate": "ট্রান্সক্রাইব + অনুবাদ",
-      "enableHint": "এই ভিডিও থেকে সাবটাইটেল তৈরি করতে সেটিংসে স্পিচ-টু-টেক্সট সক্রিয় করুন।"
+      "enableHint": "এই ভিডিও থেকে সাবটাইটেল তৈরি করতে সেটিংসে স্পিচ-টু-টেক্সট সক্রিয় করুন।",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

@@ -6,7 +6,7 @@ const DATA_DIR = process.env.DATA_DIR || "./data";
 const HISTORY_FILE = path.join(DATA_DIR, "transcription-history.json");
 const HISTORY_LIMIT = 100;
 
-export type TranscriptionAttemptStatus = "running" | "succeeded" | "failed";
+export type TranscriptionAttemptStatus = "running" | "succeeded" | "failed" | "cancelled";
 
 export interface TranscriptionHistoryEntry {
   id: string;

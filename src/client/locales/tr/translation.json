@@ -769,7 +769,11 @@
       "working": "Çalışıyor…",
       "transcribe": "Transkribe Et",
       "transcribeTranslate": "Transkribe Et + Çevir",
-      "enableHint": "Bu videodan altyazı oluşturmak için Ayarlar'da konuşmadan metni etkinleştirin."
+      "enableHint": "Bu videodan altyazı oluşturmak için Ayarlar'da konuşmadan metni etkinleştirin.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

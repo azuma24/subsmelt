@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import asyncio
+import json
 import os
 from pathlib import Path
+from typing import AsyncIterator
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
 
 from .model_cache import describe_model_cache
 from .preflight import (
@@ -16,7 +20,13 @@ from .preflight import (
     total_ram_mb,
 )
 from .schemas import HealthResponse, PreflightResponse, TranscribeRequest, TranscribeResponse
-from .transcribe import fake_transcribe_for_tests, run_faster_whisper
+from .transcribe import (
+    TranscriptionCancelled,
+    fake_transcribe_for_tests,
+    fake_transcribe_streaming_for_tests,
+    run_faster_whisper,
+    run_faster_whisper_streaming,
+)
 
 MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/media")
 ALLOW_UNSAFE = os.environ.get("SUBSMELT_WHISPER_ALLOW_UNSAFE", "0") == "1"
@@ -95,8 +105,13 @@ def preflight(request: TranscribeRequest) -> PreflightResponse:
         raise HTTPException(status_code=400, detail={"code": "path_not_allowed", "message": str(exc)}) from exc
 
 
-@app.post("/transcribe", response_model=TranscribeResponse)
-def transcribe(request: TranscribeRequest) -> TranscribeResponse:
+def validate_transcribe_request(request: TranscribeRequest) -> Path:
+    """Shared validation for both the JSON and streaming transcribe endpoints.
+
+    Returns the resolved input path or raises the appropriate HTTPException
+    (path not allowed / preflight unsafe / input missing) so both endpoints
+    surface identical error semantics.
+    """
     try:
         input_path = assert_path_under_media(request.input_path, MEDIA_ROOT)
     except ValueError as exc:
@@ -115,9 +130,86 @@ def transcribe(request: TranscribeRequest) -> TranscribeResponse:
     if not input_path.exists():
         raise HTTPException(status_code=404, detail={"code": "input_missing", "message": "Input media file does not exist"})
 
+    return input_path
+
+
+@app.post("/transcribe", response_model=TranscribeResponse)
+def transcribe(request: TranscribeRequest) -> TranscribeResponse:
+    input_path = validate_transcribe_request(request)
     try:
         if USE_FAKE_TRANSCRIBE:
             return fake_transcribe_for_tests(input_path, request)
         return run_faster_whisper(request, input_path)
     except Exception as exc:
         raise HTTPException(status_code=500, detail={"code": "transcription_failed", "message": str(exc)}) from exc
+
+
+@app.post("/transcribe/stream")
+async def transcribe_stream(request: TranscribeRequest, http_request: Request) -> StreamingResponse:
+    """Streaming transcription that emits NDJSON progress lines.
+
+    Validation (path/preflight/missing) still returns regular HTTP error codes
+    BEFORE the stream opens, so a 404/422 is surfaced cleanly. Once streaming,
+    each line is a JSON object: ``progress`` lines while segments are processed,
+    then a terminal ``result`` or ``error`` line.
+
+    Cancellation: the blocking faster-whisper generator runs on a worker thread.
+    A cooperative ``cancel_event`` is set when the client disconnects (detected
+    via ``http_request.is_disconnected()``), which stops segment iteration and
+    raises ``TranscriptionCancelled`` — the temp ffmpeg dir is cleaned up by the
+    generator's context manager either way.
+    """
+    input_path = validate_transcribe_request(request)
+
+    cancel_event = asyncio.Event()
+
+    def is_cancelled() -> bool:
+        return cancel_event.is_set()
+
+    def build_generator():
+        if USE_FAKE_TRANSCRIBE:
+            return fake_transcribe_streaming_for_tests(input_path, request, is_cancelled)
+        return run_faster_whisper_streaming(request, input_path, is_cancelled)
+
+    async def ndjson_stream() -> AsyncIterator[bytes]:
+        loop = asyncio.get_running_loop()
+        gen = build_generator()
+
+        async def watch_disconnect() -> None:
+            try:
+                while not cancel_event.is_set():
+                    if await http_request.is_disconnected():
+                        cancel_event.set()
+                        return
+                    await asyncio.sleep(0.5)
+            except asyncio.CancelledError:  # pragma: no cover - shutdown path
+                pass
+
+        watcher = asyncio.create_task(watch_disconnect())
+        sentinel = object()
+
+        def next_item():
+            try:
+                return next(gen)
+            except StopIteration:
+                return sentinel
+
+        try:
+            while True:
+                # Run each blocking generator step on a worker thread so the
+                # event loop stays free to detect client disconnects.
+                item = await loop.run_in_executor(None, next_item)
+                if item is sentinel:
+                    break
+                yield (json.dumps(item) + "\n").encode("utf-8")
+        except TranscriptionCancelled:
+            # Client went away; generator already cleaned up. Nothing left to send.
+            return
+        except Exception as exc:  # noqa: BLE001 - surface as a terminal error line
+            yield (json.dumps({"type": "error", "error": str(exc)}) + "\n").encode("utf-8")
+        finally:
+            cancel_event.set()
+            watcher.cancel()
+            gen.close()
+
+    return StreamingResponse(ndjson_stream(), media_type="application/x-ndjson")

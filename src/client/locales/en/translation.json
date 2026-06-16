@@ -799,7 +799,11 @@
       "working": "Working…",
       "transcribe": "Transcribe",
       "transcribeTranslate": "Transcribe + Translate",
-      "enableHint": "Enable speech-to-text in Settings to generate subtitles from this video."
+      "enableHint": "Enable speech-to-text in Settings to generate subtitles from this video.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   }
 }
