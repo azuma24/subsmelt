@@ -26,7 +26,10 @@ export {
   saveTranslated,
   splitIntoChunks,
   convertSubtitle,
+  applyCueEdits,
+  writeSubtitleFile,
   type ConvertExt,
+  type CueEdit,
 } from "./translator/utils.js";
 
 export {

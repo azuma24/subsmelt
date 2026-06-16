@@ -164,7 +164,15 @@
       "copiedContext": "Context copied",
       "copiedPlot": "Plot summary copied",
       "copiedGlossary": "Glossary copied",
-      "copyFailed": "Copy failed"
+      "copyFailed": "Copy failed",
+      "editPlaceholder": "تحرير الترجمة…",
+      "saveChanges": "حفظ التغييرات",
+      "saveChangesCount": "حفظ التغييرات ({{count}})",
+      "saving": "جارٍ الحفظ…",
+      "saved": "تم حفظ {{count}} سطر",
+      "saveFailed": "فشل حفظ التغييرات",
+      "download": "تنزيل",
+      "edited": "تم التحرير"
     },
     "stat": {
       "pending": "Pending",

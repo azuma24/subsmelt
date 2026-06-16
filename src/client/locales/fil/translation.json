@@ -164,7 +164,15 @@
       "copiedContext": "Nakopya ang konteksto",
       "copiedPlot": "Nakopya ang buod ng plot",
       "copiedGlossary": "Nakopya ang glossary",
-      "copyFailed": "Nabigo ang pagkopya"
+      "copyFailed": "Nabigo ang pagkopya",
+      "editPlaceholder": "I-edit ang pagsasalin…",
+      "saveChanges": "I-save ang mga pagbabago",
+      "saveChangesCount": "I-save ang mga pagbabago ({{count}})",
+      "saving": "Sine-save…",
+      "saved": "{{count}} linya ang na-save",
+      "saveFailed": "Nabigong i-save ang mga pagbabago",
+      "download": "I-download",
+      "edited": "na-edit"
     },
     "stat": {
       "pending": "Nakabinbin",

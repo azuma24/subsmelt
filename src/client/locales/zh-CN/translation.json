@@ -164,7 +164,15 @@
       "copiedContext": "Context copied",
       "copiedPlot": "Plot summary copied",
       "copiedGlossary": "Glossary copied",
-      "copyFailed": "复制失败"
+      "copyFailed": "复制失败",
+      "editPlaceholder": "编辑翻译…",
+      "saveChanges": "保存更改",
+      "saveChangesCount": "保存更改（{{count}}）",
+      "saving": "保存中…",
+      "saved": "已保存 {{count}} 行",
+      "saveFailed": "保存更改失败",
+      "download": "下载",
+      "edited": "已编辑"
     },
     "stat": {
       "pending": "等待中",

@@ -164,7 +164,15 @@
       "copiedContext": "Context copied",
       "copiedPlot": "Plot summary copied",
       "copiedGlossary": "Glossary copied",
-      "copyFailed": "Copy failed"
+      "copyFailed": "Copy failed",
+      "editPlaceholder": "Chỉnh sửa bản dịch…",
+      "saveChanges": "Lưu thay đổi",
+      "saveChangesCount": "Lưu thay đổi ({{count}})",
+      "saving": "Đang lưu…",
+      "saved": "Đã lưu {{count}} dòng",
+      "saveFailed": "Lưu thay đổi thất bại",
+      "download": "Tải xuống",
+      "edited": "đã sửa"
     },
     "stat": {
       "pending": "Pending",

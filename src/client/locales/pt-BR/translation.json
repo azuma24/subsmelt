@@ -164,7 +164,15 @@
       "copiedContext": "Context copied",
       "copiedPlot": "Plot summary copied",
       "copiedGlossary": "Glossary copied",
-      "copyFailed": "Copy failed"
+      "copyFailed": "Copy failed",
+      "editPlaceholder": "Editar tradução…",
+      "saveChanges": "Salvar alterações",
+      "saveChangesCount": "Salvar alterações ({{count}})",
+      "saving": "Salvando…",
+      "saved": "{{count}} linha(s) salva(s)",
+      "saveFailed": "Falha ao salvar as alterações",
+      "download": "Baixar",
+      "edited": "editado"
     },
     "stat": {
       "pending": "Pending",

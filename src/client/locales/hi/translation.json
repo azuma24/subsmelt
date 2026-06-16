@@ -164,7 +164,15 @@
       "copiedContext": "Context copied",
       "copiedPlot": "Plot summary copied",
       "copiedGlossary": "Glossary copied",
-      "copyFailed": "Copy failed"
+      "copyFailed": "Copy failed",
+      "editPlaceholder": "अनुवाद संपादित करें…",
+      "saveChanges": "परिवर्तन सहेजें",
+      "saveChangesCount": "परिवर्तन सहेजें ({{count}})",
+      "saving": "सहेजा जा रहा है…",
+      "saved": "{{count}} पंक्ति सहेजी गई",
+      "saveFailed": "परिवर्तन सहेजने में विफल",
+      "download": "डाउनलोड",
+      "edited": "संपादित"
     },
     "stat": {
       "pending": "Pending",

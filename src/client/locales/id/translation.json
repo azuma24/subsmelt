@@ -164,7 +164,15 @@
       "copiedContext": "Context copied",
       "copiedPlot": "Plot summary copied",
       "copiedGlossary": "Glossary copied",
-      "copyFailed": "Copy failed"
+      "copyFailed": "Copy failed",
+      "editPlaceholder": "Edit terjemahan…",
+      "saveChanges": "Simpan perubahan",
+      "saveChangesCount": "Simpan perubahan ({{count}})",
+      "saving": "Menyimpan…",
+      "saved": "{{count}} baris disimpan",
+      "saveFailed": "Gagal menyimpan perubahan",
+      "download": "Unduh",
+      "edited": "diedit"
     },
     "stat": {
       "pending": "Pending",

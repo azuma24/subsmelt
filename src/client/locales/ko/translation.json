@@ -164,7 +164,15 @@
       "copiedContext": "Context copied",
       "copiedPlot": "Plot summary copied",
       "copiedGlossary": "Glossary copied",
-      "copyFailed": "Copy failed"
+      "copyFailed": "Copy failed",
+      "editPlaceholder": "번역 편집…",
+      "saveChanges": "변경사항 저장",
+      "saveChangesCount": "변경사항 저장 ({{count}})",
+      "saving": "저장 중…",
+      "saved": "{{count}}개 줄 저장됨",
+      "saveFailed": "변경사항 저장 실패",
+      "download": "다운로드",
+      "edited": "편집됨"
     },
     "stat": {
       "pending": "Pending",

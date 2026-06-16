@@ -164,7 +164,15 @@
       "copiedContext": "Context gekopieerd",
       "copiedPlot": "Plotsamenvatting gekopieerd",
       "copiedGlossary": "Woordenlijst gekopieerd",
-      "copyFailed": "Kopiëren mislukt"
+      "copyFailed": "Kopiëren mislukt",
+      "editPlaceholder": "Vertaling bewerken…",
+      "saveChanges": "Wijzigingen opslaan",
+      "saveChangesCount": "Wijzigingen opslaan ({{count}})",
+      "saving": "Opslaan…",
+      "saved": "{{count}} regel(s) opgeslagen",
+      "saveFailed": "Wijzigingen opslaan mislukt",
+      "download": "Downloaden",
+      "edited": "bewerkt"
     },
     "stat": {
       "pending": "Wachtend",

@@ -40,7 +40,7 @@ import {
   startAutoScan,
   stopAutoScan,
 } from "./queue.js";
-import { testConnection, parseSubtitle, convertSubtitle, readSubtitleFileText } from "./translator.js";
+import { testConnection, parseSubtitle, convertSubtitle, readSubtitleFileText, applyCueEdits, writeSubtitleFile, type CueEdit } from "./translator.js";
 import { resolveConnectionPool } from "./connections.js";
 import { estimateCost } from "./pricing.js";
 import type { CloudProvider } from "./translator.js";
@@ -422,6 +422,71 @@ app.get("/api/jobs/:id/preview", (req, res) => {
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Apply manual translated-line edits to the OUTPUT file and re-export. Body:
+// { edits: Array<{ index: number; text: string }> } where `index` is the
+// 1-based cue index from the preview rows. Source file is never touched.
+app.put("/api/jobs/:id/cues", (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const job = getJob(id) as any;
+  if (!job) return res.status(404).json({ error: "Job not found" });
+
+  const rawEdits = (req.body as { edits?: unknown })?.edits;
+  if (!Array.isArray(rawEdits)) {
+    return res.status(400).json({ error: "edits must be an array" });
+  }
+
+  // Coerce to well-typed edits; malformed entries are dropped here and any
+  // out-of-range indices are skipped (and counted) inside applyCueEdits.
+  const edits: CueEdit[] = rawEdits
+    .filter(
+      (e): e is CueEdit =>
+        !!e &&
+        typeof (e as any).index === "number" &&
+        Number.isFinite((e as any).index) &&
+        typeof (e as any).text === "string"
+    )
+    .map((e) => ({ index: Math.trunc(e.index), text: e.text }));
+
+  if (!fs.existsSync(job.output_path)) {
+    return res.status(404).json({ error: "Output file not found" });
+  }
+
+  try {
+    const ext = path.extname(job.output_path).slice(1).toLowerCase();
+    const content = readSubtitleFileText(job.output_path);
+    const { output, updated } = applyCueEdits(content, ext, edits);
+    writeSubtitleFile(job.output_path, output);
+    res.json({ ok: true, updated });
+  } catch (error: any) {
+    res.status(500).json({ error: `Failed to save edits: ${error?.message || String(error)}` });
+  }
+});
+
+// Download the translated OUTPUT file as an attachment.
+app.get("/api/jobs/:id/download", (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const job = getJob(id) as any;
+  if (!job) return res.status(404).json({ error: "Job not found" });
+  if (!fs.existsSync(job.output_path)) {
+    return res.status(404).json({ error: "Output file not found" });
+  }
+
+  try {
+    const basename = path.basename(job.output_path);
+    const ext = path.extname(basename).slice(1).toLowerCase();
+    const contentType = ext === "vtt" ? "text/vtt; charset=utf-8" : "text/plain; charset=utf-8";
+    const content = readSubtitleFileText(job.output_path);
+    res.setHeader("Content-Type", contentType);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${basename.replace(/"/g, "")}"`
+    );
+    res.send(content);
+  } catch (error: any) {
+    res.status(500).json({ error: `Failed to download: ${error?.message || String(error)}` });
   }
 });
 

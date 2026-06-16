@@ -164,7 +164,15 @@
       "copiedContext": "Konteks disalin",
       "copiedPlot": "Ringkasan plot disalin",
       "copiedGlossary": "Glosari disalin",
-      "copyFailed": "Salinan gagal"
+      "copyFailed": "Salinan gagal",
+      "editPlaceholder": "Sunting terjemahan…",
+      "saveChanges": "Simpan perubahan",
+      "saveChangesCount": "Simpan perubahan ({{count}})",
+      "saving": "Menyimpan…",
+      "saved": "{{count}} baris disimpan",
+      "saveFailed": "Gagal menyimpan perubahan",
+      "download": "Muat turun",
+      "edited": "disunting"
     },
     "stat": {
       "pending": "Tertangguh",

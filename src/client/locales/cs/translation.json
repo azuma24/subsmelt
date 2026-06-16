@@ -164,7 +164,15 @@
       "copiedContext": "Kontext zkopírován",
       "copiedPlot": "Shrnutí děje zkopírováno",
       "copiedGlossary": "Glosář zkopírován",
-      "copyFailed": "Kopírování selhalo"
+      "copyFailed": "Kopírování selhalo",
+      "editPlaceholder": "Upravit překlad…",
+      "saveChanges": "Uložit změny",
+      "saveChangesCount": "Uložit změny ({{count}})",
+      "saving": "Ukládání…",
+      "saved": "Uloženo řádků: {{count}}",
+      "saveFailed": "Uložení změn se nezdařilo",
+      "download": "Stáhnout",
+      "edited": "upraveno"
     },
     "stat": {
       "pending": "Čeká",
