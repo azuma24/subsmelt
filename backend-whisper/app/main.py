@@ -9,9 +9,19 @@ from typing import AsyncIterator
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from .gpu import cuda_device_count, gpu_info, total_free_vram_mb
 from .model_cache import describe_model_cache
+from .model_manager import (
+    ModelNotDownloadedError,
+    UnknownModelError,
+    assert_model_downloaded,
+    delete_model,
+    describe_models,
+    download_model_events,
+    normalize_model,
+)
 from .preflight import (
     assert_path_under_media,
     available_ram_mb,
@@ -23,7 +33,12 @@ from .preflight import (
     total_ram_mb,
 )
 from .schemas import HealthResponse, PreflightResponse, TranscribeRequest, TranscribeResponse
-from .model_loader import CudaOutOfMemoryError, CudaUnavailableError, InvalidComputeTypeError
+from .model_loader import (
+    CudaOutOfMemoryError,
+    CudaUnavailableError,
+    InvalidComputeTypeError,
+    ModelWeightsMissingError,
+)
 from .transcribe import (
     TranscriptionCancelled,
     fake_transcribe_for_tests,
@@ -136,6 +151,84 @@ def health(model: str = Query(default="small")) -> HealthResponse:
     )
 
 
+@app.get("/models")
+def list_models(_auth: None = Depends(require_token)) -> dict:
+    """List every advertised model with cache + resource metadata.
+
+    ``downloaded``/``cachePath`` reflect the on-disk HF cache; ``sizeMb`` is the
+    real on-disk size when present, else an APPROXIMATE download estimate.
+    Models are never auto-downloaded — this endpoint is read-only.
+    """
+    return {"models": describe_models()}
+
+
+class ModelDownloadRequest(BaseModel):
+    model: str
+
+
+@app.post("/models/download")
+async def models_download(
+    request: ModelDownloadRequest,
+    _auth: None = Depends(require_token),
+) -> StreamingResponse:
+    """USER-initiated model download, streamed as NDJSON.
+
+    Validates the model id (400 on unknown) BEFORE the stream opens, then emits
+    ``progress`` lines and a terminal ``result``/``error`` line. Idempotent: an
+    already-present model yields an immediate ``result``. The blocking
+    ``snapshot_download`` runs on a worker thread feeding a queue, so the event
+    loop stays free (mirrors ``/transcribe/stream``).
+    """
+    try:
+        normalize_model(request.model)
+    except UnknownModelError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "unknown_model", "model": request.model, "message": str(exc)},
+        ) from exc
+
+    async def ndjson_stream() -> AsyncIterator[bytes]:
+        loop = asyncio.get_running_loop()
+        gen = download_model_events(request.model)
+        sentinel = object()
+
+        def next_item():
+            try:
+                return next(gen)
+            except StopIteration:
+                return sentinel
+
+        try:
+            while True:
+                item = await loop.run_in_executor(None, next_item)
+                if item is sentinel:
+                    break
+                yield (json.dumps(item) + "\n").encode("utf-8")
+        except Exception as exc:  # noqa: BLE001 - surface as a terminal error line
+            yield (json.dumps({"type": "error", "error": str(exc)}) + "\n").encode("utf-8")
+        finally:
+            gen.close()
+
+    return StreamingResponse(ndjson_stream(), media_type="application/x-ndjson")
+
+
+@app.delete("/models/{model}")
+def models_delete(model: str, _auth: None = Depends(require_token)) -> dict:
+    """Delete a cached model snapshot. 400 unknown id, 404 if not present."""
+    try:
+        return delete_model(model)
+    except UnknownModelError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "unknown_model", "model": model, "message": str(exc)},
+        ) from exc
+    except ModelNotDownloadedError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "model_not_downloaded", "model": exc.model},
+        ) from exc
+
+
 def preflight_result(request: TranscribeRequest) -> PreflightResponse:
     input_path = assert_path_under_media(request.input_path, MEDIA_ROOT)
     free_ram = available_ram_mb()
@@ -223,6 +316,18 @@ def validate_transcribe_request(request: TranscribeRequest) -> Path:
     if not input_path.exists():
         raise HTTPException(status_code=404, detail={"code": "input_missing", "message": "Input media file does not exist"})
 
+    # CRITICAL: never silently auto-download. A known model that is not present
+    # in the cache is refused with 409 here (first defence); loading later also
+    # forces local_files_only=True (second defence) so faster-whisper cannot
+    # reach the network either.
+    try:
+        assert_model_downloaded(request.model)
+    except ModelNotDownloadedError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "model_not_downloaded", "model": exc.model},
+        ) from exc
+
     return input_path
 
 
@@ -233,6 +338,11 @@ def transcribe(request: TranscribeRequest, _auth: None = Depends(require_token))
         if USE_FAKE_TRANSCRIBE:
             return fake_transcribe_for_tests(input_path, request)
         return run_faster_whisper(request, input_path)
+    except ModelWeightsMissingError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "model_not_downloaded", "model": exc.model},
+        ) from exc
     except (CudaUnavailableError, InvalidComputeTypeError) as exc:
         raise HTTPException(status_code=400, detail={"code": "invalid_device", "message": str(exc)}) from exc
     except CudaOutOfMemoryError as exc:

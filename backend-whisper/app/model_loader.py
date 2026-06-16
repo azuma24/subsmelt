@@ -30,6 +30,44 @@ class CudaOutOfMemoryError(RuntimeError):
     """CUDA ran out of memory loading or running the model."""
 
 
+class ModelWeightsMissingError(RuntimeError):
+    """WhisperModel was asked to load weights that are not present locally.
+
+    Because models are loaded with ``local_files_only=True`` (no silent network
+    fetch), a missing/uncached model surfaces as a local-file lookup failure.
+    The API layer maps this to HTTP 409 ``model_not_downloaded``.
+    """
+
+    def __init__(self, model: str) -> None:
+        super().__init__(
+            f"Model {model!r} weights are not present locally and auto-download is "
+            f"disabled; download the model first"
+        )
+        self.model = model
+
+
+def _is_missing_local_files(exc: Exception) -> bool:
+    """Heuristic: did the load fail because weights were absent locally?
+
+    With ``local_files_only=True`` huggingface_hub raises errors mentioning the
+    local lookup / cache miss rather than performing a download. Match the common
+    phrasings so we can map them to a clean 409 instead of a generic 500.
+    """
+    text = str(exc).lower()
+    needles = (
+        "local_files_only",
+        "could not find",
+        "cannot find",
+        "not found in the local",
+        "no such file",
+        "localentrynotfound",
+        "is not a local folder",
+        "we couldn't connect",
+        "offline",
+    )
+    return any(needle in text for needle in needles)
+
+
 def _is_cuda_oom(exc: Exception) -> bool:
     text = str(exc).lower()
     return "out of memory" in text or "cuda_error_out_of_memory" in text or "cublas" in text and "alloc" in text
@@ -96,13 +134,24 @@ def get_whisper_model(model: str, device: str, compute_type: str) -> Any:
         from faster_whisper import WhisperModel  # type: ignore
 
         try:
-            model_instance = WhisperModel(model, device=device, compute_type=compute_type)
+            # local_files_only=True is the CRITICAL second defence against silent
+            # auto-download: faster-whisper / huggingface_hub must NOT reach the
+            # network here. A model that has not been explicitly downloaded fails
+            # locally and is mapped to a clean 409 (model_not_downloaded).
+            model_instance = WhisperModel(
+                model,
+                device=device,
+                compute_type=compute_type,
+                local_files_only=True,
+            )
         except Exception as exc:  # noqa: BLE001 - re-raise as typed/clear errors
             if _is_cuda_oom(exc):
                 raise CudaOutOfMemoryError(
                     f"CUDA ran out of memory loading model {model!r}; try a smaller "
                     f"model (e.g. small or base) or free GPU memory"
                 ) from exc
+            if _is_missing_local_files(exc):
+                raise ModelWeightsMissingError(model) from exc
             raise
         _MODEL_CACHE[key] = model_instance
         return model_instance
