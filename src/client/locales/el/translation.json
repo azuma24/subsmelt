@@ -170,7 +170,11 @@
       "pending": "Εκκρεμή",
       "translating": "Μετάφραση",
       "done": "Ολοκληρωμένα",
-      "errors": "Σφάλματα"
+      "errors": "Σφάλματα",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "Δεν υπάρχουν εργασίες ακόμη.",
     "noJobsHint": "Πατήστε <strong>Σάρωση φακέλων</strong> για να εντοπίσετε αρχεία υποτίτλων.",
@@ -235,7 +239,11 @@
       "error": "Σφάλμα",
       "analysis": "Πλαίσιο ανάλυσης",
       "openLogs": "Άνοιγμα καταγραφών",
-      "fullPage": "Πλήρης σελίδα"
+      "fullPage": "Πλήρης σελίδα",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Ανάλυση πλαισίου…"
   },
@@ -482,7 +490,9 @@
         "chipNoVideo": "χωρίς βίντεο: {{state}}",
         "chipLangs_one": "{{count}} γλώσσα",
         "chipLangs_other": "{{count}} γλώσσες"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
     },
     "notifications": {
       "title": "Notifications",

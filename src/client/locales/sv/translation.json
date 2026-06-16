@@ -170,7 +170,11 @@
       "pending": "Väntande",
       "translating": "Översätter",
       "done": "Klara",
-      "errors": "Fel"
+      "errors": "Fel",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "Inga jobb än.",
     "noJobsHint": "Klicka på <strong>Skanna mappar</strong> för att hitta undertextfiler.",
@@ -235,7 +239,11 @@
       "error": "Fel",
       "analysis": "Analyskontext",
       "openLogs": "Öppna loggar",
-      "fullPage": "Helsida"
+      "fullPage": "Helsida",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Analyserar kontext…"
   },
@@ -482,7 +490,9 @@
         "chipNoVideo": "ingen video: {{state}}",
         "chipLangs_one": "{{count}} språk",
         "chipLangs_other": "{{count}} språk"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
     },
     "notifications": {
       "title": "Notifications",

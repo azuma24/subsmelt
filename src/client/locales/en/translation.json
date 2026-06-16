@@ -200,7 +200,11 @@
       "pending": "Pending",
       "translating": "Translating",
       "done": "Done",
-      "errors": "Errors"
+      "errors": "Errors",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "No jobs yet.",
     "noJobsHint": "Click <strong>Scan Folders</strong> to discover subtitle files.",
@@ -265,7 +269,11 @@
       "error": "Error",
       "analysis": "Analysis context",
       "openLogs": "Open logs",
-      "fullPage": "Full page"
+      "fullPage": "Full page",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Analysing context…"
   },
@@ -512,7 +520,9 @@
         "chipNoVideo": "no-video: {{state}}",
         "chipLangs_one": "{{count}} language",
         "chipLangs_other": "{{count}} languages"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
     },
     "notifications": {
       "title": "Notifications",

@@ -170,7 +170,11 @@
       "pending": "等待中",
       "translating": "翻译中",
       "done": "已完成",
-      "errors": "错误"
+      "errors": "错误",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "暂无任务。",
     "noJobsHint": "点击「扫描文件夹」以搜索字幕文件。",
@@ -235,7 +239,11 @@
       "error": "错误",
       "analysis": "分析上下文",
       "openLogs": "打开日志",
-      "fullPage": "完整页面"
+      "fullPage": "完整页面",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Analysing context…"
   },
@@ -482,7 +490,9 @@
         "chipNoVideo": "无视频：{{state}}",
         "chipLangs_one": "{{count}} 种语言",
         "chipLangs_other": "{{count}} 种语言"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
     },
     "notifications": {
       "title": "Notifications",

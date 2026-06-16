@@ -41,6 +41,13 @@ if (!jobColumns.some((c) => c.name === "analysis_context")) {
 if (!jobColumns.some((c) => c.name === "used_connections")) {
   db.exec("ALTER TABLE jobs ADD COLUMN used_connections TEXT");
 }
+// Token/cost tracking — accumulated per job as the LLM reports usage.
+if (!jobColumns.some((c) => c.name === "input_tokens")) {
+  db.exec("ALTER TABLE jobs ADD COLUMN input_tokens INTEGER DEFAULT 0");
+}
+if (!jobColumns.some((c) => c.name === "output_tokens")) {
+  db.exec("ALTER TABLE jobs ADD COLUMN output_tokens INTEGER DEFAULT 0");
+}
 
 // --- Schema: Logs ---
 
@@ -90,6 +97,8 @@ export function updateJob(
     used_connections: string | null;
     duration_seconds: number;
     force: number;
+    input_tokens: number;
+    output_tokens: number;
   }>
 ) {
   const sets: string[] = ["updated_at = datetime('now')"];
@@ -102,6 +111,20 @@ export function updateJob(
   }
   vals.push(id);
   db.prepare(`UPDATE jobs SET ${sets.join(", ")} WHERE id = ?`).run(...vals);
+}
+
+/**
+ * Increment a job's accumulated token usage. Called per LLM call as usage is
+ * reported, so the totals build up while the job runs. Deltas are coerced to
+ * finite non-negative integers; a no-op when both are zero.
+ */
+export function addJobUsage(id: number, inputDelta: number, outputDelta: number) {
+  const inDelta = Number.isFinite(inputDelta) ? Math.max(0, Math.trunc(inputDelta)) : 0;
+  const outDelta = Number.isFinite(outputDelta) ? Math.max(0, Math.trunc(outputDelta)) : 0;
+  if (inDelta === 0 && outDelta === 0) return;
+  db.prepare(
+    "UPDATE jobs SET input_tokens = COALESCE(input_tokens, 0) + ?, output_tokens = COALESCE(output_tokens, 0) + ? WHERE id = ?"
+  ).run(inDelta, outDelta, id);
 }
 
 export function getJobs(status?: string) {

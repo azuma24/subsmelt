@@ -56,6 +56,7 @@ export interface ClientSettings {
   directory_rules?: string; // JSON array
   translate_without_video?: string; // "on" | "off"
   auto_scan_interval?: string;
+  monthly_token_budget?: string;
   watch_enabled?: StringBool;
   auto_translate?: StringBool;
   video_extensions?: string;

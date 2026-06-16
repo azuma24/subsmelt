@@ -170,7 +170,11 @@
       "pending": "В очікуванні",
       "translating": "Переклад",
       "done": "Готово",
-      "errors": "Помилки"
+      "errors": "Помилки",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "Завдань ще немає.",
     "noJobsHint": "Натисніть <strong>Сканувати теки</strong>, щоб знайти файли субтитрів.",
@@ -235,7 +239,11 @@
       "error": "Помилка",
       "analysis": "Контекст аналізу",
       "openLogs": "Відкрити журнали",
-      "fullPage": "На всю сторінку"
+      "fullPage": "На всю сторінку",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Аналіз контексту…"
   },
@@ -482,7 +490,9 @@
         "chipNoVideo": "без відео: {{state}}",
         "chipLangs_one": "{{count}} мова",
         "chipLangs_other": "{{count}} мов"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
     },
     "notifications": {
       "title": "Notifications",

@@ -170,7 +170,11 @@
       "pending": "در انتظار",
       "translating": "در حال ترجمه",
       "done": "انجام‌شده",
-      "errors": "خطاها"
+      "errors": "خطاها",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "هنوز کاری وجود ندارد.",
     "noJobsHint": "برای یافتن فایل‌های زیرنویس روی <strong>اسکن پوشه‌ها</strong> کلیک کنید.",
@@ -235,7 +239,11 @@
       "error": "خطا",
       "analysis": "زمینه تحلیل",
       "openLogs": "باز کردن گزارش‌ها",
-      "fullPage": "صفحه کامل"
+      "fullPage": "صفحه کامل",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "در حال تحلیل زمینه…"
   },
@@ -482,7 +490,9 @@
         "chipNoVideo": "بدون ویدئو: {{state}}",
         "chipLangs_one": "{{count}} زبان",
         "chipLangs_other": "{{count}} زبان"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
     },
     "notifications": {
       "title": "Notifications",

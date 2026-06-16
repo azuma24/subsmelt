@@ -45,6 +45,22 @@ export function fullTime(ts: string): string {
   }
 }
 
+/** Compact token count: 1234 → "1,234", 12345 → "12.3k", 1234567 → "1.23M". */
+export function formatTokens(n: number | undefined | null): string {
+  const v = typeof n === "number" && Number.isFinite(n) ? Math.max(0, n) : 0;
+  if (v < 10_000) return v.toLocaleString();
+  if (v < 1_000_000) return `${(v / 1_000).toFixed(1)}k`;
+  return `${(v / 1_000_000).toFixed(2)}M`;
+}
+
+/** Approximate USD cost. null → "—" (handled by caller); tiny non-zero → "<$0.01". */
+export function formatCost(cost: number | null | undefined): string {
+  if (cost === null || cost === undefined || !Number.isFinite(cost)) return "—";
+  if (cost === 0) return "$0.00";
+  if (cost < 0.01) return "<$0.01";
+  return `$${cost.toFixed(2)}`;
+}
+
 export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   if (typeof error === "string") return error;

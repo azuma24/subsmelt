@@ -170,7 +170,11 @@
       "pending": "Wachtend",
       "translating": "Vertalen",
       "done": "Klaar",
-      "errors": "Fouten"
+      "errors": "Fouten",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "Nog geen taken.",
     "noJobsHint": "Klik op <strong>Mappen scannen</strong> om ondertitelbestanden te ontdekken.",
@@ -235,7 +239,11 @@
       "error": "Fout",
       "analysis": "Analysecontext",
       "openLogs": "Logboeken openen",
-      "fullPage": "Volledige pagina"
+      "fullPage": "Volledige pagina",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Context analyseren…"
   },
@@ -482,7 +490,9 @@
         "chipNoVideo": "geen video: {{state}}",
         "chipLangs_one": "{{count}} taal",
         "chipLangs_other": "{{count}} talen"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
     },
     "notifications": {
       "title": "Notifications",

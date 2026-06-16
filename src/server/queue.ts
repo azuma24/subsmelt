@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { getJobs, updateJob, getJob } from "./db.js";
+import { getJobs, updateJob, getJob, addJobUsage } from "./db.js";
 import { getAllSettings, getTask, getSetting } from "./config.js";
 import { summarizeTranslationError, translateFile, probeModelContext } from "./translator.js";
 import { resolveConnectionPool, type ResolvedConnection, type LlmMode } from "./connections.js";
@@ -102,7 +102,7 @@ function claimNextJob(filter: Set<number> | null): any | null {
       continue;
     }
 
-    updateJob(job.id, { status: "translating", error: null, analysis_context: null, used_connections: null });
+    updateJob(job.id, { status: "translating", error: null, analysis_context: null, used_connections: null, input_tokens: 0, output_tokens: 0 });
     activeJobIds.add(job.id);
     currentJobId = job.id;
     return job;
@@ -264,6 +264,7 @@ async function runJob(job: any, conns: ResolvedConnection[], llmModeForJob: LlmM
           }
         );
       },
+      onUsage: (u) => addJobUsage(job.id, u.inputTokens, u.outputTokens),
       onAnalysis: (analysis) => {
         updateJob(job.id, { analysis_context: analysis });
         logger.info("translate", `Context prepared for ${srtName} (${langCode})`, job.id, {

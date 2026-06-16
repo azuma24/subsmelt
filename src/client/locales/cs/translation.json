@@ -170,7 +170,11 @@
       "pending": "Čeká",
       "translating": "Překládání",
       "done": "Hotovo",
-      "errors": "Chyby"
+      "errors": "Chyby",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "Zatím žádné úlohy.",
     "noJobsHint": "Klikněte na <strong>Prohledat složky</strong> pro nalezení souborů titulků.",
@@ -235,7 +239,11 @@
       "error": "Chyba",
       "analysis": "Kontext analýzy",
       "openLogs": "Otevřít protokoly",
-      "fullPage": "Celá stránka"
+      "fullPage": "Celá stránka",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Analýza kontextu…"
   },
@@ -482,7 +490,9 @@
         "chipNoVideo": "bez videa: {{state}}",
         "chipLangs_one": "{{count}} jazyk",
         "chipLangs_other": "{{count}} jazyků"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
     },
     "notifications": {
       "title": "Notifications",

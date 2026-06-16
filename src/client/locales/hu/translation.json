@@ -170,7 +170,11 @@
       "pending": "Függőben",
       "translating": "Fordítás",
       "done": "Kész",
-      "errors": "Hibák"
+      "errors": "Hibák",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "Még nincsenek feladatok.",
     "noJobsHint": "Kattints a <strong>Mappák átvizsgálása</strong> gombra a feliratfájlok felderítéséhez.",
@@ -235,7 +239,11 @@
       "error": "Hiba",
       "analysis": "Elemzési kontextus",
       "openLogs": "Naplók megnyitása",
-      "fullPage": "Teljes oldal"
+      "fullPage": "Teljes oldal",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Kontextus elemzése…"
   },
@@ -482,7 +490,9 @@
         "chipNoVideo": "nincs videó: {{state}}",
         "chipLangs_one": "{{count}} nyelv",
         "chipLangs_other": "{{count}} nyelv"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
     },
     "notifications": {
       "title": "Notifications",
