@@ -3,3 +3,15 @@ uvicorn[standard]==0.35.0
 pydantic==2.12.5
 psutil==7.1.3
 faster-whisper==1.2.1
+# NVML bindings for GPU/VRAM detection. Pure-python, safe to install on any
+# host (no CUDA toolkit needed); imports are guarded so absence degrades to
+# CPU-only detection. Exposes the `pynvml` module.
+nvidia-ml-py==12.560.30
+#
+# GPU-only runtime deps are intentionally NOT pinned here — they are
+# Windows/GPU packaging concerns supplied by the GPU compose image / Windows
+# build, not the CPU base requirements:
+#   - the CUDA build of ctranslate2 (faster-whisper's backend)
+#   - nvidia-cudnn-cu12, nvidia-cublas-cu12 (the cuDNN/cuBLAS runtime wheels)
+# Installing these on a CPU-only box would pull large CUDA artifacts and can
+# break the CPU ctranslate2 install, so they live in the GPU packaging layer.

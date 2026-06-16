@@ -12,6 +12,7 @@ import { InlineError } from "../../ui/QueryState";
 import { ConnectionsPanel } from "./ConnectionsPanel";
 import { MediaSourcesPanel } from "./MediaSourcesPanel";
 import { TranscriptionReadinessPanel } from "./TranscriptionReadinessPanel";
+import { ModelManagerPanel } from "./ModelManagerPanel";
 import { JSON_BLOB_SETTINGS, getStr, validateJsonSetting, type JsonBlobSettingKey } from "./settings-model";
 
 // Thin wrappers over the typed accessors so existing call sites (str/bool) stay
@@ -391,6 +392,16 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
           help={t("settings.transcription.backendUrlHelp")}
         />
       </div>
+      <div className="md:max-w-[340px]">
+        <Field
+          label={t("settings.transcription.backendToken")}
+          value={str(settings.transcription_backend_token)}
+          onChange={(v) => updateAndSaveDebounced("transcription_backend_token", v)}
+          type="password"
+          placeholder="••••••••"
+          help={t("settings.transcription.backendTokenHelp")}
+        />
+      </div>
       <div className={`flex ${isMobile ? "flex-col" : "items-center"} gap-3`}>
         <ActionButton variant="ghost" size="sm" onClick={handleTranscriptionTest}>{testingTranscription ? t("app.testing") : t("settings.transcription.testButton")}</ActionButton>
         {transcriptionTestResult && (
@@ -426,6 +437,10 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
         </div>
       </div>
       <TranscriptionReadinessPanel settings={settings} healthQuery={transcriptionHealthQuery} dirty={dirty} />
+
+      {/* Whisper model manager — proxied to the configured backend. Requires a
+          backend URL to be set; download progress streams over SSE. */}
+      <ModelManagerPanel enabled={Boolean(str(settings.transcription_backend_url))} />
 
       {/* Path mapping → accordion */}
       <Accordion title={t("settings.pathMapping")}>

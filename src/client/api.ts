@@ -1,4 +1,4 @@
-import type { FolderNode, JobPreview, JobRow, LlmHealth, LogEntry, QueueStatus, ScanResult, Task, TranscribeRequest, TranscribeResponse, TranscriptionHealth, TranscriptionHistoryEntry, TranscriptionPreflightResponse } from "./types";
+import type { FolderNode, JobPreview, JobRow, LlmHealth, LogEntry, QueueStatus, ScanResult, Task, TranscribeRequest, TranscribeResponse, TranscriptionHealth, TranscriptionHistoryEntry, TranscriptionPreflightResponse, WhisperModel, WhisperModelDeleteResult, WhisperModelDownloadResult } from "./types";
 
 const BASE = "/api";
 
@@ -180,3 +180,13 @@ export const retryTranscriptionAttempt = (id: string) =>
   fetchJSON<TranscribeResponse>(`/transcribe/history/${id}/retry`, { method: "POST" });
 export const cancelTranscription = (payload: { path: string }) =>
   fetchJSON<{ ok: boolean }>("/transcribe/cancel", { method: "POST", body: JSON.stringify(payload) });
+
+// Whisper Model Manager — proxied through the SubSmelt server to the configured
+// whisper backend. Download progress arrives via the "model:download" SSE event
+// (matched by model id); these calls only kick off / await the terminal result.
+export const listWhisperModels = (opts?: FetchOpts) =>
+  fetchJSON<{ models: WhisperModel[] }>("/whisper/models", opts);
+export const downloadWhisperModel = (model: string) =>
+  fetchJSON<WhisperModelDownloadResult>("/whisper/models/download", { method: "POST", body: JSON.stringify({ model }) });
+export const deleteWhisperModel = (model: string) =>
+  fetchJSON<WhisperModelDeleteResult>(`/whisper/models/${encodeURIComponent(model)}`, { method: "DELETE" });

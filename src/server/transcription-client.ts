@@ -36,6 +36,7 @@ async function fetchWithTimeout(
 
 export interface TranscriptionSettings {
   transcription_backend_url?: string;
+  transcription_backend_token?: string;
   transcription_model?: string;
   transcription_device?: string;
   transcription_compute_type?: string;
@@ -315,6 +316,27 @@ export function buildTranscriptionRequest(options: BuildTranscriptionRequestOpti
   };
 }
 
+// Phase 1 remote hardening: when a shared-secret token is configured it is sent
+// as `Authorization: Bearer <token>` on every backend call. An empty/whitespace
+// token means no header (localhost dev default), matching the backend which
+// disables auth when SUBSMELT_WHISPER_TOKEN is unset.
+export function transcriptionAuthHeaders(token: string | undefined): Record<string, string> {
+  const value = typeof token === "string" ? token.trim() : "";
+  return value ? { Authorization: `Bearer ${value}` } : {};
+}
+
+// Clear, actionable message when the backend rejects the configured token so the
+// user is pointed straight at the setting to fix.
+const TOKEN_REJECTED_MESSAGE =
+  "Whisper backend rejected the token — check Transcription backend token in Settings";
+
+// Throws the standard 401 message; otherwise returns the generic backend error.
+// Centralizes 401 handling so every backend call surfaces the same guidance.
+function throwBackendError(body: unknown, status: number): never {
+  if (status === 401) throw new Error(TOKEN_REJECTED_MESSAGE);
+  throw new Error(backendErrorMessage(body, status));
+}
+
 function backendErrorMessage(body: unknown, status: number): string {
   if (body && typeof body === "object") {
     const record = body as Record<string, unknown>;
@@ -329,26 +351,28 @@ function backendErrorMessage(body: unknown, status: number): string {
   return `Transcription backend returned HTTP ${status}`;
 }
 
-export async function fetchTranscriptionHealth(backendUrl: string, model?: string): Promise<unknown> {
+export async function fetchTranscriptionHealth(backendUrl: string, model?: string, token?: string): Promise<unknown> {
   const url = normalizeTranscriptionBackendUrl(backendUrl);
   if (!url) throw new Error("Transcription backend URL is not configured");
   const qs = model ? `?${new URLSearchParams({ model }).toString()}` : "";
-  const response = await fetchWithTimeout(`${url}/health${qs}`, {}, SHORT_REQUEST_TIMEOUT_MS, "Transcription backend health check");
+  const response = await fetchWithTimeout(`${url}/health${qs}`, {
+    headers: { ...transcriptionAuthHeaders(token) },
+  }, SHORT_REQUEST_TIMEOUT_MS, "Transcription backend health check");
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(backendErrorMessage(body, response.status));
+  if (!response.ok) throwBackendError(body, response.status);
   return body;
 }
 
-export async function preflightTranscription(backendUrl: string, request: BackendTranscriptionRequest): Promise<BackendPreflightResponse> {
+export async function preflightTranscription(backendUrl: string, request: BackendTranscriptionRequest, token?: string): Promise<BackendPreflightResponse> {
   const url = normalizeTranscriptionBackendUrl(backendUrl);
   if (!url) throw new Error("Transcription backend URL is not configured");
   const response = await fetchWithTimeout(`${url}/preflight`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...transcriptionAuthHeaders(token) },
     body: JSON.stringify(request),
   }, SHORT_REQUEST_TIMEOUT_MS, "Transcription backend preflight");
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(backendErrorMessage(body, response.status));
+  if (!response.ok) throwBackendError(body, response.status);
   return body as BackendPreflightResponse;
 }
 
@@ -357,14 +381,15 @@ export async function applyPreflightPolicy(
   request: BackendTranscriptionRequest,
   settings: TranscriptionSettings,
 ): Promise<BackendTranscriptionRequest> {
-  const preflight = await preflightTranscription(backendUrl, request);
+  const token = settings.transcription_backend_token;
+  const preflight = await preflightTranscription(backendUrl, request, token);
   if (preflight.safe !== false && preflight.ok !== false) return request;
 
   if (preflight.code === "insufficient_ram") {
     const behavior = lowRamBehavior(settings.transcription_low_ram_behavior);
     if (behavior === "downgrade" && preflight.suggestedModel && preflight.suggestedModel !== request.model) {
       const downgraded = { ...request, model: preflight.suggestedModel };
-      const downgradedPreflight = await preflightTranscription(backendUrl, downgraded);
+      const downgradedPreflight = await preflightTranscription(backendUrl, downgraded, token);
       if (downgradedPreflight.safe !== false && downgradedPreflight.ok !== false) return downgraded;
     }
     if (behavior === "run_anyway") return { ...request, allow_unsafe: true };
@@ -384,6 +409,8 @@ export async function applyPreflightPolicy(
 export interface TranscribeBackendOptions {
   // Total request timeout in seconds. Falls back to the 30-minute default.
   timeoutSeconds?: number;
+  // Optional shared-secret token sent as `Authorization: Bearer <token>`.
+  token?: string;
 }
 
 function resolveTranscribeTimeoutMs(timeoutSeconds: number | undefined): number {
@@ -403,11 +430,11 @@ export async function transcribeWithBackend(
   const timeoutMs = resolveTranscribeTimeoutMs(options?.timeoutSeconds);
   const response = await fetchWithTimeout(`${url}/transcribe`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...transcriptionAuthHeaders(options?.token) },
     body: JSON.stringify(request),
   }, timeoutMs, "Transcription backend");
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(backendErrorMessage(body, response.status));
+  if (!response.ok) throwBackendError(body, response.status);
   return body as BackendTranscriptionResponse;
 }
 
@@ -482,7 +509,7 @@ export async function transcribeWithBackendStreaming(
   try {
     response = await fetch(`${url}/transcribe/stream`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...transcriptionAuthHeaders(options?.token) },
       body: JSON.stringify(request),
       signal: controller.signal,
     });
@@ -504,7 +531,7 @@ export async function transcribeWithBackendStreaming(
     const body = await response.json().catch(() => ({}));
     clearTimeout(timer);
     externalSignal?.removeEventListener("abort", onExternalAbort);
-    throw new Error(backendErrorMessage(body, response.status));
+    throwBackendError(body, response.status);
   }
 
   const decoder = new TextDecoder();
@@ -551,6 +578,167 @@ export async function transcribeWithBackendStreaming(
 
   if (streamError) throw new Error(streamError);
   if (!result) throw new Error("Transcription stream ended without a result");
+  return result;
+}
+
+// ======== Whisper Model Manager ========
+// Thin client over the backend model-manager API. Reuses the same auth-header
+// pattern + abortable fetch as the transcription calls. The browser never hits
+// the whisper backend directly — these are invoked from the SubSmelt server
+// proxy routes (GET /api/whisper/models, POST .../download, DELETE .../:model).
+
+export interface WhisperModelInfo {
+  id: string;
+  downloaded: boolean;
+  sizeMb?: number;
+  requiredRamMb?: number;
+  requiredVramMb?: number;
+  cachePath?: string | null;
+}
+
+export interface WhisperModelDownloadProgress {
+  pct: number;
+  downloadedMb?: number;
+  totalMb?: number;
+}
+
+export interface WhisperModelDownloadResult {
+  ok: boolean;
+  model: string;
+  cachePath?: string | null;
+}
+
+export interface WhisperModelDeleteResult {
+  ok: boolean;
+  freedMb?: number;
+}
+
+// GET {backend}/models → { models: [...] }
+export async function listBackendModels(backendUrl: string, token?: string): Promise<WhisperModelInfo[]> {
+  const url = normalizeTranscriptionBackendUrl(backendUrl);
+  if (!url) throw new Error("Transcription backend URL is not configured");
+  const response = await fetchWithTimeout(`${url}/models`, {
+    headers: { ...transcriptionAuthHeaders(token) },
+  }, SHORT_REQUEST_TIMEOUT_MS, "Whisper model list");
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throwBackendError(body, response.status);
+  const models = (body as { models?: unknown })?.models;
+  return Array.isArray(models) ? (models as WhisperModelInfo[]) : [];
+}
+
+// DELETE {backend}/models/{model} → { ok, freedMb }
+export async function deleteBackendModel(backendUrl: string, model: string, token?: string): Promise<WhisperModelDeleteResult> {
+  const url = normalizeTranscriptionBackendUrl(backendUrl);
+  if (!url) throw new Error("Transcription backend URL is not configured");
+  const response = await fetchWithTimeout(`${url}/models/${encodeURIComponent(model)}`, {
+    method: "DELETE",
+    headers: { ...transcriptionAuthHeaders(token) },
+  }, SHORT_REQUEST_TIMEOUT_MS, "Whisper model delete");
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throwBackendError(body, response.status);
+  return body as WhisperModelDeleteResult;
+}
+
+export interface DownloadBackendModelOptions {
+  token?: string;
+  timeoutMs?: number;
+  onProgress?: (update: WhisperModelDownloadProgress) => void;
+}
+
+// Downloads model size can vary; large models take a while, so the download
+// stream gets the same generous default as a transcription run.
+const DEFAULT_DOWNLOAD_TIMEOUT_MS = DEFAULT_TRANSCRIBE_TIMEOUT_MS;
+
+function toDownloadProgress(record: Record<string, unknown>): WhisperModelDownloadProgress | null {
+  const pct = typeof record.pct === "number" ? record.pct : undefined;
+  if (pct === undefined) return null;
+  return {
+    pct,
+    ...(typeof record.downloadedMb === "number" ? { downloadedMb: record.downloadedMb } : {}),
+    ...(typeof record.totalMb === "number" ? { totalMb: record.totalMb } : {}),
+  };
+}
+
+// POST {backend}/models/download body {model} → NDJSON stream:
+//   {type:"progress",pct,downloadedMb,totalMb} … terminal
+//   {type:"result",ok,model,cachePath} or {type:"error",error}
+// Consumes the stream line-by-line, invoking onProgress per progress line and
+// resolving with the terminal result. Reuses the transcription NDJSON parser.
+export async function downloadBackendModel(
+  backendUrl: string,
+  model: string,
+  options?: DownloadBackendModelOptions,
+): Promise<WhisperModelDownloadResult> {
+  const url = normalizeTranscriptionBackendUrl(backendUrl);
+  if (!url) throw new Error("Transcription backend URL is not configured");
+
+  const timeoutMs = options?.timeoutMs && options.timeoutMs > 0 ? options.timeoutMs : DEFAULT_DOWNLOAD_TIMEOUT_MS;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let response: Response;
+  try {
+    response = await fetch(`${url}/models/download`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...transcriptionAuthHeaders(options?.token) },
+      body: JSON.stringify({ model }),
+      signal: controller.signal,
+    });
+  } catch (error: unknown) {
+    clearTimeout(timer);
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`Whisper model download timed out after ${Math.round(timeoutMs / 1000)}s`);
+    }
+    throw error;
+  }
+
+  if (!response.ok || !response.body) {
+    const body = await response.json().catch(() => ({}));
+    clearTimeout(timer);
+    throwBackendError(body, response.status);
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let result: WhisperModelDownloadResult | null = null;
+  let streamError: string | null = null;
+
+  const handleLine = (line: string): void => {
+    const record = parseNdjsonLine(line);
+    if (!record) return;
+    const type = record.type;
+    if (type === "progress") {
+      const update = toDownloadProgress(record);
+      if (update && options?.onProgress) options.onProgress(update);
+    } else if (type === "result") {
+      result = {
+        ok: record.ok !== false,
+        model: typeof record.model === "string" ? record.model : model,
+        ...(typeof record.cachePath === "string" ? { cachePath: record.cachePath } : {}),
+      };
+    } else if (type === "error") {
+      streamError = typeof record.error === "string" ? record.error : "Model download failed";
+    }
+  };
+
+  try {
+    for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
+      buffer += decoder.decode(chunk, { stream: true });
+      let newlineIndex = buffer.indexOf("\n");
+      while (newlineIndex !== -1) {
+        handleLine(buffer.slice(0, newlineIndex));
+        buffer = buffer.slice(newlineIndex + 1);
+        newlineIndex = buffer.indexOf("\n");
+      }
+    }
+    buffer += decoder.decode();
+    if (buffer.trim()) handleLine(buffer);
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (streamError) throw new Error(streamError);
+  if (!result) throw new Error("Model download stream ended without a result");
   return result;
 }
 

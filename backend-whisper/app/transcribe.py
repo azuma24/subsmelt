@@ -7,7 +7,7 @@ from typing import Callable, Iterator
 
 from .audio import extract_audio
 from .formatters import write_transcript
-from .model_loader import get_whisper_model
+from .model_loader import CudaOutOfMemoryError, _is_cuda_oom, get_whisper_model
 from .paths import output_path_for
 from .schemas import TranscribeRequest, TranscribeResponse
 from .segments import postprocess_segments
@@ -79,6 +79,20 @@ def apply_subtitle_quality(segments: list, request: TranscribeRequest) -> list:
     )
 
 
+def _raise_if_cuda_oom(exc: Exception, model: str) -> None:
+    """Re-raise a CUDA OOM as a typed error suggesting a smaller model.
+
+    No-op for non-OOM exceptions (the caller re-raises the original).
+    """
+    if isinstance(exc, CudaOutOfMemoryError):
+        raise exc
+    if _is_cuda_oom(exc):
+        raise CudaOutOfMemoryError(
+            f"CUDA ran out of memory transcribing with model {model!r}; try a "
+            f"smaller model (e.g. small or base) or free GPU memory"
+        ) from exc
+
+
 def _require_faster_whisper() -> None:
     try:
         import faster_whisper  # type: ignore  # noqa: F401
@@ -116,8 +130,14 @@ def run_faster_whisper(request: TranscribeRequest, input_path: Path) -> Transcri
     with tempfile.TemporaryDirectory(prefix="subsmelt-whisper-") as tmp:
         audio_path = extract_audio(input_path, Path(tmp) / "audio.wav")
         model = get_whisper_model(request.model, request.device, request.compute_type)
-        segments_iter, info = model.transcribe(str(audio_path), **faster_whisper_transcribe_kwargs(request))
-        return _finalize_transcript(list(segments_iter), info, request, input_path, output_path)
+        try:
+            segments_iter, info = model.transcribe(str(audio_path), **faster_whisper_transcribe_kwargs(request))
+            # Segments are produced lazily, so CUDA OOM can surface during iteration.
+            collected = list(segments_iter)
+        except Exception as exc:  # noqa: BLE001 - surface CUDA OOM as a typed error
+            _raise_if_cuda_oom(exc, request.model)
+            raise
+        return _finalize_transcript(collected, info, request, input_path, output_path)
 
 
 def run_faster_whisper_streaming(
@@ -142,12 +162,24 @@ def run_faster_whisper_streaming(
     with tempfile.TemporaryDirectory(prefix="subsmelt-whisper-") as tmp:
         audio_path = extract_audio(input_path, Path(tmp) / "audio.wav")
         model = get_whisper_model(request.model, request.device, request.compute_type)
-        segments_iter, info = model.transcribe(str(audio_path), **faster_whisper_transcribe_kwargs(request))
+        try:
+            segments_iter, info = model.transcribe(str(audio_path), **faster_whisper_transcribe_kwargs(request))
+        except Exception as exc:  # noqa: BLE001 - surface CUDA OOM as a typed error
+            _raise_if_cuda_oom(exc, request.model)
+            raise
         total_seconds = float(getattr(info, "duration", 0.0) or 0.0)
 
         collected: list = []
         last_emitted = -min_progress_interval
-        for segment in segments_iter:
+        segment_iterator = iter(segments_iter)
+        while True:
+            try:
+                segment = next(segment_iterator)
+            except StopIteration:
+                break
+            except Exception as exc:  # noqa: BLE001 - OOM can surface mid-iteration
+                _raise_if_cuda_oom(exc, request.model)
+                raise
             if is_cancelled is not None and is_cancelled():
                 raise TranscriptionCancelled("Transcription cancelled by client")
             collected.append(segment)

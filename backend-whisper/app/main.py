@@ -3,23 +3,42 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import secrets
 from pathlib import Path
 from typing import AsyncIterator
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
+from .gpu import cuda_device_count, gpu_info, total_free_vram_mb
 from .model_cache import describe_model_cache
+from .model_manager import (
+    ModelNotDownloadedError,
+    UnknownModelError,
+    assert_model_downloaded,
+    delete_model,
+    describe_models,
+    download_model_events,
+    normalize_model,
+)
 from .preflight import (
     assert_path_under_media,
     available_ram_mb,
     disk_free_mb,
     evaluate_disk_safety,
+    evaluate_gpu_safety,
     evaluate_model_safety,
     ffmpeg_available,
     total_ram_mb,
 )
 from .schemas import HealthResponse, PreflightResponse, TranscribeRequest, TranscribeResponse
+from .model_loader import (
+    CudaOutOfMemoryError,
+    CudaUnavailableError,
+    InvalidComputeTypeError,
+    ModelWeightsMissingError,
+)
 from .transcribe import (
     TranscriptionCancelled,
     fake_transcribe_for_tests,
@@ -35,11 +54,77 @@ USE_FAKE_TRANSCRIBE = os.environ.get("SUBSMELT_WHISPER_FAKE", "0") == "1"
 app = FastAPI(title="Subsmelt Whisper Backend", version="0.1.0")
 
 
+def _configured_token() -> str:
+    """The shared-secret token, read from the environment at request time.
+
+    Read live (not cached at import) so tests and the launcher can set/unset
+    ``SUBSMELT_WHISPER_TOKEN`` per process without re-importing the module. An
+    empty/unset value means auth is DISABLED (the localhost dev default).
+    """
+    return (os.environ.get("SUBSMELT_WHISPER_TOKEN") or "").strip()
+
+
+def auth_required() -> bool:
+    """True when a non-empty shared-secret token is configured."""
+    return bool(_configured_token())
+
+
+def require_token(
+    authorization: str | None = Header(default=None),
+    x_subsmelt_token: str | None = Header(default=None, alias="X-Subsmelt-Token"),
+) -> None:
+    """FastAPI dependency enforcing the optional shared-secret token (Phase 1).
+
+    When no token is configured, this is a no-op so localhost dev keeps working
+    exactly as before. When a token IS configured, the request must present it
+    via ``Authorization: Bearer <token>`` or ``X-Subsmelt-Token: <token>``;
+    a missing or mismatched token yields 401. The comparison uses
+    ``secrets.compare_digest`` so it is constant-time and not vulnerable to
+    timing attacks.
+    """
+    expected = _configured_token()
+    if not expected:
+        return  # Auth disabled.
+
+    presented = ""
+    if authorization:
+        scheme, _, value = authorization.partition(" ")
+        if scheme.lower() == "bearer" and value:
+            presented = value.strip()
+    if not presented and x_subsmelt_token:
+        presented = x_subsmelt_token.strip()
+
+    if not presented or not secrets.compare_digest(presented, expected):
+        raise HTTPException(
+            status_code=401,
+            detail={"code": "unauthorized", "message": "Invalid or missing whisper backend token"},
+        )
+
+
 def capabilities() -> dict:
+    """Advertise the backend's real capabilities, probed at request time.
+
+    ``devices`` always includes ``cpu``; ``cuda`` is added only when CTranslate2
+    reports at least one CUDA device. ``computeTypes`` gains the GPU-only
+    float16 variants when CUDA is present. ``gpus`` lists detected GPUs with
+    VRAM (empty on a CPU-only box). All probes degrade gracefully — never raise.
+    """
+    has_cuda = cuda_device_count() > 0
+    devices = ["cpu"]
+    compute_types = ["int8", "float32"]
+    if has_cuda:
+        devices.append("cuda")
+        compute_types = ["int8", "float32", "float16", "int8_float16"]
     return {
+        # authRequired tells the client a shared-secret token must be sent on
+        # the gated routes (/preflight, /transcribe, /transcribe/stream). It is
+        # surfaced via /health (which stays open) so an unauthenticated
+        # reachability check can still learn a token is needed.
+        "authRequired": auth_required(),
         "models": ["tiny", "base", "small", "medium", "large-v3", "large-v3-turbo"],
-        "devices": ["cpu"],
-        "computeTypes": ["int8", "float32"],
+        "devices": devices,
+        "computeTypes": compute_types,
+        "gpus": gpu_info(),
         "outputFormats": ["srt", "vtt", "txt"],
         "vad": True,
         "advancedOptions": {
@@ -66,6 +151,84 @@ def health(model: str = Query(default="small")) -> HealthResponse:
     )
 
 
+@app.get("/models")
+def list_models(_auth: None = Depends(require_token)) -> dict:
+    """List every advertised model with cache + resource metadata.
+
+    ``downloaded``/``cachePath`` reflect the on-disk HF cache; ``sizeMb`` is the
+    real on-disk size when present, else an APPROXIMATE download estimate.
+    Models are never auto-downloaded — this endpoint is read-only.
+    """
+    return {"models": describe_models()}
+
+
+class ModelDownloadRequest(BaseModel):
+    model: str
+
+
+@app.post("/models/download")
+async def models_download(
+    request: ModelDownloadRequest,
+    _auth: None = Depends(require_token),
+) -> StreamingResponse:
+    """USER-initiated model download, streamed as NDJSON.
+
+    Validates the model id (400 on unknown) BEFORE the stream opens, then emits
+    ``progress`` lines and a terminal ``result``/``error`` line. Idempotent: an
+    already-present model yields an immediate ``result``. The blocking
+    ``snapshot_download`` runs on a worker thread feeding a queue, so the event
+    loop stays free (mirrors ``/transcribe/stream``).
+    """
+    try:
+        normalize_model(request.model)
+    except UnknownModelError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "unknown_model", "model": request.model, "message": str(exc)},
+        ) from exc
+
+    async def ndjson_stream() -> AsyncIterator[bytes]:
+        loop = asyncio.get_running_loop()
+        gen = download_model_events(request.model)
+        sentinel = object()
+
+        def next_item():
+            try:
+                return next(gen)
+            except StopIteration:
+                return sentinel
+
+        try:
+            while True:
+                item = await loop.run_in_executor(None, next_item)
+                if item is sentinel:
+                    break
+                yield (json.dumps(item) + "\n").encode("utf-8")
+        except Exception as exc:  # noqa: BLE001 - surface as a terminal error line
+            yield (json.dumps({"type": "error", "error": str(exc)}) + "\n").encode("utf-8")
+        finally:
+            gen.close()
+
+    return StreamingResponse(ndjson_stream(), media_type="application/x-ndjson")
+
+
+@app.delete("/models/{model}")
+def models_delete(model: str, _auth: None = Depends(require_token)) -> dict:
+    """Delete a cached model snapshot. 400 unknown id, 404 if not present."""
+    try:
+        return delete_model(model)
+    except UnknownModelError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "unknown_model", "model": model, "message": str(exc)},
+        ) from exc
+    except ModelNotDownloadedError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "model_not_downloaded", "model": exc.model},
+        ) from exc
+
+
 def preflight_result(request: TranscribeRequest) -> PreflightResponse:
     input_path = assert_path_under_media(request.input_path, MEDIA_ROOT)
     free_ram = available_ram_mb()
@@ -75,9 +238,27 @@ def preflight_result(request: TranscribeRequest) -> PreflightResponse:
     disk_mb = disk_free_mb(input_path.parent if input_path.exists() else Path(MEDIA_ROOT))
     input_size_mb = int(input_path.stat().st_size / 1024 / 1024) if input_path.exists() else 0
     disk_safety = evaluate_disk_safety(input_size_mb, disk_mb)
-    safe = bool(safety["safe"] and ffmpeg_ok and disk_safety["safe"])
+
+    # When the request targets CUDA, the binding constraint is VRAM, not system
+    # RAM. Evaluate GPU safety against free VRAM (from gpu_info) and surface the
+    # VRAM-specific fields/code; the system-RAM table is meaningless for GPU.
+    on_gpu = (request.device or "cpu").strip().lower() == "cuda"
+    gpu_safety = None
+    detected_gpus = None
+    if on_gpu:
+        detected_gpus = gpu_info()
+        gpu_safety = evaluate_gpu_safety(request.model, total_free_vram_mb())
+        model_safe = gpu_safety["safe"]
+        model_code = gpu_safety["code"]
+        suggested = gpu_safety["suggested_model"]
+    else:
+        model_safe = safety["safe"]
+        model_code = safety["code"]
+        suggested = safety["suggested_model"]
+
+    safe = bool(model_safe and ffmpeg_ok and disk_safety["safe"])
     code = (
-        safety["code"] if not safety["safe"]
+        model_code if not model_safe
         else "ffmpeg_missing" if not ffmpeg_ok
         else disk_safety["code"] if not disk_safety["safe"]
         else "ok"
@@ -89,16 +270,21 @@ def preflight_result(request: TranscribeRequest) -> PreflightResponse:
         available_ram_mb=safety["available_ram_mb"],
         required_ram_mb=safety["required_ram_mb"],
         recommended_ram_mb=safety["recommended_ram_mb"],
-        suggested_model=safety["suggested_model"],
+        suggested_model=suggested,
         ffmpeg_available=ffmpeg_ok,
         disk_available_mb=disk_mb,
         required_disk_mb=disk_safety["required_disk_mb"],
         model_cache=model_cache,
+        device="cuda" if on_gpu else "cpu",
+        free_vram_mb=gpu_safety["free_vram_mb"] if gpu_safety else None,
+        required_vram_mb=gpu_safety["required_vram_mb"] if gpu_safety else None,
+        recommended_vram_mb=gpu_safety["recommended_vram_mb"] if gpu_safety else None,
+        gpus=detected_gpus,
     )
 
 
 @app.post("/preflight", response_model=PreflightResponse, response_model_by_alias=True)
-def preflight(request: TranscribeRequest) -> PreflightResponse:
+def preflight(request: TranscribeRequest, _auth: None = Depends(require_token)) -> PreflightResponse:
     try:
         return preflight_result(request)
     except ValueError as exc:
@@ -130,22 +316,50 @@ def validate_transcribe_request(request: TranscribeRequest) -> Path:
     if not input_path.exists():
         raise HTTPException(status_code=404, detail={"code": "input_missing", "message": "Input media file does not exist"})
 
+    # CRITICAL: never silently auto-download. A known model that is not present
+    # in the cache is refused with 409 here (first defence); loading later also
+    # forces local_files_only=True (second defence) so faster-whisper cannot
+    # reach the network either.
+    try:
+        assert_model_downloaded(request.model)
+    except ModelNotDownloadedError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "model_not_downloaded", "model": exc.model},
+        ) from exc
+
     return input_path
 
 
 @app.post("/transcribe", response_model=TranscribeResponse)
-def transcribe(request: TranscribeRequest) -> TranscribeResponse:
+def transcribe(request: TranscribeRequest, _auth: None = Depends(require_token)) -> TranscribeResponse:
     input_path = validate_transcribe_request(request)
     try:
         if USE_FAKE_TRANSCRIBE:
             return fake_transcribe_for_tests(input_path, request)
         return run_faster_whisper(request, input_path)
+    except ModelWeightsMissingError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "model_not_downloaded", "model": exc.model},
+        ) from exc
+    except (CudaUnavailableError, InvalidComputeTypeError) as exc:
+        raise HTTPException(status_code=400, detail={"code": "invalid_device", "message": str(exc)}) from exc
+    except CudaOutOfMemoryError as exc:
+        raise HTTPException(
+            status_code=507,
+            detail={"code": "cuda_out_of_memory", "message": str(exc), "suggestedModel": "small"},
+        ) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail={"code": "transcription_failed", "message": str(exc)}) from exc
 
 
 @app.post("/transcribe/stream")
-async def transcribe_stream(request: TranscribeRequest, http_request: Request) -> StreamingResponse:
+async def transcribe_stream(
+    request: TranscribeRequest,
+    http_request: Request,
+    _auth: None = Depends(require_token),
+) -> StreamingResponse:
     """Streaming transcription that emits NDJSON progress lines.
 
     Validation (path/preflight/missing) still returns regular HTTP error codes

@@ -55,6 +55,9 @@ import {
   transcribeWithBackend,
   transcribeWithBackendStreaming,
   StreamingUnsupportedError,
+  listBackendModels,
+  downloadBackendModel,
+  deleteBackendModel,
   type TranscribePostAction,
   type TranscriptionOutputFormat,
 } from "./transcription-client.js";
@@ -691,9 +694,11 @@ async function transcribeRelayingProgress(
   videoPath: string,
   controller: AbortController,
 ) {
+  const token = settings.transcription_backend_token;
   try {
     return await transcribeWithBackendStreaming(backendUrl, request, {
       timeoutSeconds: transcribeTimeoutSeconds(settings),
+      token,
       signal: controller.signal,
       onProgress: ({ pct, processedSeconds, totalSeconds }) => {
         broadcast("transcription:progress", { path: videoPath, pct, processedSeconds, totalSeconds });
@@ -705,6 +710,7 @@ async function transcribeRelayingProgress(
       // No live progress is available, but transcription still completes.
       return await transcribeWithBackend(backendUrl, request, {
         timeoutSeconds: transcribeTimeoutSeconds(settings),
+        token,
       });
     }
     throw error;
@@ -796,7 +802,7 @@ app.get("/api/transcribe/health", async (_req, res) => {
     return res.json({ ok: false, endpointReachable: false, reason: "endpoint-missing" });
   }
   try {
-    const health = await fetchTranscriptionHealth(backendUrl, selectedModel);
+    const health = await fetchTranscriptionHealth(backendUrl, selectedModel, settings.transcription_backend_token);
     return res.json({ ok: true, endpointReachable: true, backendUrl, health });
   } catch (error: any) {
     return res.json({ ok: false, endpointReachable: false, backendUrl, reason: "network-error", message: error?.message || "unknown" });
@@ -817,7 +823,7 @@ app.post("/api/transcribe/preflight", async (req, res) => {
       outputFormat: req.body?.outputFormat as TranscriptionOutputFormat | undefined,
       postAction: req.body?.postAction as TranscribePostAction | undefined,
     });
-    const result = await preflightTranscription(backendUrl, request);
+    const result = await preflightTranscription(backendUrl, request, settings.transcription_backend_token);
     return res.json(result);
   } catch (error: any) {
     return res.status(400).json({ error: error?.message || "Transcription preflight failed" });
@@ -892,6 +898,65 @@ app.post("/api/transcribe/cancel", (req, res) => {
   entry.controller.abort();
   logger.info("system", `Cancellation requested for transcription ${path.basename(videoPath)}`);
   return res.json({ ok: true });
+});
+
+// ======== Whisper Model Manager (proxy to whisper backend) ========
+// The browser never talks to the whisper backend directly (it may live on
+// another host with no CORS). These routes forward to the configured backend,
+// attaching the shared-secret token, and relay download progress to the client
+// over the existing SSE channel (event "model:download") for consistency with
+// transcription progress.
+
+app.get("/api/whisper/models", async (_req, res) => {
+  const settings = getAllSettings();
+  const backendUrl = getTranscriptionBackendUrl(settings);
+  if (!backendUrl) return res.status(400).json({ error: "Transcription backend URL is not configured" });
+  try {
+    const models = await listBackendModels(backendUrl, settings.transcription_backend_token);
+    return res.json({ models });
+  } catch (error: any) {
+    return res.status(502).json({ error: error?.message || "Failed to list whisper models" });
+  }
+});
+
+app.post("/api/whisper/models/download", async (req, res) => {
+  const settings = getAllSettings();
+  const backendUrl = getTranscriptionBackendUrl(settings);
+  if (!backendUrl) return res.status(400).json({ error: "Transcription backend URL is not configured" });
+  const model = typeof req.body?.model === "string" ? req.body.model.trim() : "";
+  if (!model) return res.status(400).json({ error: "model is required" });
+
+  try {
+    const result = await downloadBackendModel(backendUrl, model, {
+      token: settings.transcription_backend_token,
+      onProgress: ({ pct, downloadedMb, totalMb }) => {
+        broadcast("model:download", { model, pct, downloadedMb, totalMb });
+      },
+    });
+    broadcast("model:download", { model, pct: 100, done: true, cachePath: result.cachePath });
+    logger.info("system", `Downloaded whisper model ${model}${result.cachePath ? ` → ${result.cachePath}` : ""}`);
+    return res.json(result);
+  } catch (error: any) {
+    const message = error?.message || "Whisper model download failed";
+    broadcast("model:download", { model, error: true, message });
+    logger.error("system", `Whisper model download failed for ${model}: ${message}`);
+    return res.status(502).json({ error: message });
+  }
+});
+
+app.delete("/api/whisper/models/:model", async (req, res) => {
+  const settings = getAllSettings();
+  const backendUrl = getTranscriptionBackendUrl(settings);
+  if (!backendUrl) return res.status(400).json({ error: "Transcription backend URL is not configured" });
+  const model = typeof req.params.model === "string" ? req.params.model : "";
+  if (!model) return res.status(400).json({ error: "model is required" });
+  try {
+    const result = await deleteBackendModel(backendUrl, model, settings.transcription_backend_token);
+    logger.info("system", `Deleted whisper model ${model}${typeof result.freedMb === "number" ? ` (freed ${result.freedMb} MB)` : ""}`);
+    return res.json(result);
+  } catch (error: any) {
+    return res.status(502).json({ error: error?.message || "Failed to delete whisper model" });
+  }
 });
 
 // ======== List Models ========
