@@ -562,6 +562,8 @@
       "enableHelp": "Translates existing subtitles without this; enable only when you have a transcription backend configured.",
       "backendUrl": "Backend URL",
       "backendUrlHelp": "Use http://whisper-backend:8001 for the optional compose backend, or point to your own local faster-whisper server.",
+      "backendToken": "Backend token",
+      "backendTokenHelp": "Optional shared secret for a remote backend. Leave blank for a localhost backend. When set, it is sent as an Authorization header on every transcription request and must match the backend's SUBSMELT_WHISPER_TOKEN.",
       "pathMapFrom": "Backend path map: from",
       "pathMapFromHelp": "Optional. Leave both mapping fields blank for the default same-path setup.",
       "pathMapTo": "Backend path map: to",

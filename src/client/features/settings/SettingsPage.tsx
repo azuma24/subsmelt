@@ -391,6 +391,16 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
           help={t("settings.transcription.backendUrlHelp")}
         />
       </div>
+      <div className="md:max-w-[340px]">
+        <Field
+          label={t("settings.transcription.backendToken")}
+          value={str(settings.transcription_backend_token)}
+          onChange={(v) => updateAndSaveDebounced("transcription_backend_token", v)}
+          type="password"
+          placeholder="••••••••"
+          help={t("settings.transcription.backendTokenHelp")}
+        />
+      </div>
       <div className={`flex ${isMobile ? "flex-col" : "items-center"} gap-3`}>
         <ActionButton variant="ghost" size="sm" onClick={handleTranscriptionTest}>{testingTranscription ? t("app.testing") : t("settings.transcription.testButton")}</ActionButton>
         {transcriptionTestResult && (

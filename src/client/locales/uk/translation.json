@@ -531,6 +531,8 @@
       "enableHelp": "Переклад наявних субтитрів працює і без цього; вмикайте лише за наявності налаштованого бекенду транскрипції.",
       "backendUrl": "URL бекенду",
       "backendUrlHelp": "Використовуйте http://whisper-backend:8001 для необов'язкового бекенду compose або вкажіть свій локальний сервер faster-whisper.",
+      "backendToken": "Backend token",
+      "backendTokenHelp": "Optional shared secret for a remote backend. Leave blank for a localhost backend. When set, it is sent as an Authorization header on every transcription request and must match the backend's SUBSMELT_WHISPER_TOKEN.",
       "pathMapFrom": "Зіставлення шляхів бекенду: з",
       "pathMapFromHelp": "Необов'язково. Залиште обидва поля зіставлення порожніми для типового налаштування з однаковим шляхом.",
       "pathMapTo": "Зіставлення шляхів бекенду: на",

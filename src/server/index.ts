@@ -691,9 +691,11 @@ async function transcribeRelayingProgress(
   videoPath: string,
   controller: AbortController,
 ) {
+  const token = settings.transcription_backend_token;
   try {
     return await transcribeWithBackendStreaming(backendUrl, request, {
       timeoutSeconds: transcribeTimeoutSeconds(settings),
+      token,
       signal: controller.signal,
       onProgress: ({ pct, processedSeconds, totalSeconds }) => {
         broadcast("transcription:progress", { path: videoPath, pct, processedSeconds, totalSeconds });
@@ -705,6 +707,7 @@ async function transcribeRelayingProgress(
       // No live progress is available, but transcription still completes.
       return await transcribeWithBackend(backendUrl, request, {
         timeoutSeconds: transcribeTimeoutSeconds(settings),
+        token,
       });
     }
     throw error;
@@ -796,7 +799,7 @@ app.get("/api/transcribe/health", async (_req, res) => {
     return res.json({ ok: false, endpointReachable: false, reason: "endpoint-missing" });
   }
   try {
-    const health = await fetchTranscriptionHealth(backendUrl, selectedModel);
+    const health = await fetchTranscriptionHealth(backendUrl, selectedModel, settings.transcription_backend_token);
     return res.json({ ok: true, endpointReachable: true, backendUrl, health });
   } catch (error: any) {
     return res.json({ ok: false, endpointReachable: false, backendUrl, reason: "network-error", message: error?.message || "unknown" });
@@ -817,7 +820,7 @@ app.post("/api/transcribe/preflight", async (req, res) => {
       outputFormat: req.body?.outputFormat as TranscriptionOutputFormat | undefined,
       postAction: req.body?.postAction as TranscribePostAction | undefined,
     });
-    const result = await preflightTranscription(backendUrl, request);
+    const result = await preflightTranscription(backendUrl, request, settings.transcription_backend_token);
     return res.json(result);
   } catch (error: any) {
     return res.status(400).json({ error: error?.message || "Transcription preflight failed" });

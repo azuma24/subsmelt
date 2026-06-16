@@ -531,6 +531,8 @@
       "enableHelp": "Vertaalt bestaande ondertitels ook zonder dit; schakel alleen in als je een transcriptiebackend hebt geconfigureerd.",
       "backendUrl": "Backend-URL",
       "backendUrlHelp": "Gebruik http://whisper-backend:8001 voor de optionele compose-backend, of wijs naar je eigen lokale faster-whisper-server.",
+      "backendToken": "Backend token",
+      "backendTokenHelp": "Optional shared secret for a remote backend. Leave blank for a localhost backend. When set, it is sent as an Authorization header on every transcription request and must match the backend's SUBSMELT_WHISPER_TOKEN.",
       "pathMapFrom": "Backend-padtoewijzing: van",
       "pathMapFromHelp": "Optioneel. Laat beide toewijzingsvelden leeg voor de standaard gelijke-padopstelling.",
       "pathMapTo": "Backend-padtoewijzing: naar",

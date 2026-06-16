@@ -531,6 +531,8 @@
       "enableHelp": "Traduce subtitrările existente fără aceasta; activează doar când ai configurat un backend de transcriere.",
       "backendUrl": "URL backend",
       "backendUrlHelp": "Folosește http://whisper-backend:8001 pentru backendul opțional din compose sau indică propriul tău server faster-whisper local.",
+      "backendToken": "Backend token",
+      "backendTokenHelp": "Optional shared secret for a remote backend. Leave blank for a localhost backend. When set, it is sent as an Authorization header on every transcription request and must match the backend's SUBSMELT_WHISPER_TOKEN.",
       "pathMapFrom": "Mapare cale backend: de la",
       "pathMapFromHelp": "Opțional. Lasă ambele câmpuri de mapare goale pentru configurarea implicită cu aceeași cale.",
       "pathMapTo": "Mapare cale backend: către",

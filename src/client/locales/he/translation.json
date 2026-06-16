@@ -531,6 +531,8 @@
       "enableHelp": "מתרגם כתוביות קיימות ללא זה; הפעל רק כשיש לך קצה עורפי לתמלול מוגדר.",
       "backendUrl": "כתובת URL של הקצה העורפי",
       "backendUrlHelp": "השתמש ב-http://whisper-backend:8001 עבור הקצה העורפי האופציונלי של compose, או הצבע אל שרת faster-whisper מקומי משלך.",
+      "backendToken": "Backend token",
+      "backendTokenHelp": "Optional shared secret for a remote backend. Leave blank for a localhost backend. When set, it is sent as an Authorization header on every transcription request and must match the backend's SUBSMELT_WHISPER_TOKEN.",
       "pathMapFrom": "מיפוי נתיב בקצה העורפי: מ",
       "pathMapFromHelp": "אופציונלי. השאר את שני שדות המיפוי ריקים עבור הגדרת אותו-נתיב המוגדרת כברירת מחדל.",
       "pathMapTo": "מיפוי נתיב בקצה העורפי: אל",

@@ -531,6 +531,8 @@
       "enableHelp": "এটি ছাড়াই বিদ্যমান সাবটাইটেল অনুবাদ করে; আপনার একটি ট্রান্সক্রিপশন ব্যাকএন্ড কনফিগার থাকলেই কেবল সক্রিয় করুন।",
       "backendUrl": "ব্যাকএন্ড URL",
       "backendUrlHelp": "ঐচ্ছিক compose ব্যাকএন্ডের জন্য http://whisper-backend:8001 ব্যবহার করুন, অথবা আপনার নিজস্ব স্থানীয় faster-whisper সার্ভারের দিকে নির্দেশ করুন।",
+      "backendToken": "Backend token",
+      "backendTokenHelp": "Optional shared secret for a remote backend. Leave blank for a localhost backend. When set, it is sent as an Authorization header on every transcription request and must match the backend's SUBSMELT_WHISPER_TOKEN.",
       "pathMapFrom": "ব্যাকএন্ড পাথ ম্যাপ: থেকে",
       "pathMapFromHelp": "ঐচ্ছিক। ডিফল্ট একই-পাথ সেটআপের জন্য উভয় ম্যাপিং ক্ষেত্র খালি রাখুন।",
       "pathMapTo": "ব্যাকএন্ড পাথ ম্যাপ: পর্যন্ত",

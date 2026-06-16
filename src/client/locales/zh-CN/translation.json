@@ -531,6 +531,8 @@
       "enableHelp": "不启用时仍会翻译已有字幕；仅在配置了转写后端时启用。",
       "backendUrl": "后端 URL",
       "backendUrlHelp": "Use http://whisper-backend:8001 for the optional compose backend, or point to your own local faster-whisper server.",
+      "backendToken": "Backend token",
+      "backendTokenHelp": "Optional shared secret for a remote backend. Leave blank for a localhost backend. When set, it is sent as an Authorization header on every transcription request and must match the backend's SUBSMELT_WHISPER_TOKEN.",
       "pathMapFrom": "后端路径映射：来源",
       "pathMapFromHelp": "Optional. Leave both mapping fields blank for the default same-path setup.",
       "pathMapTo": "后端路径映射：目标",

@@ -531,6 +531,8 @@
       "enableHelp": "Traduz legendas existentes sem isto; ative apenas quando tiver um backend de transcrição configurado.",
       "backendUrl": "URL do backend",
       "backendUrlHelp": "Use http://whisper-backend:8001 para o backend opcional do compose, ou aponte para o seu próprio servidor faster-whisper local.",
+      "backendToken": "Backend token",
+      "backendTokenHelp": "Optional shared secret for a remote backend. Leave blank for a localhost backend. When set, it is sent as an Authorization header on every transcription request and must match the backend's SUBSMELT_WHISPER_TOKEN.",
       "pathMapFrom": "Mapa de caminhos do backend: de",
       "pathMapFromHelp": "Opcional. Deixe ambos os campos de mapeamento em branco para a configuração predefinida de caminho igual.",
       "pathMapTo": "Mapa de caminhos do backend: para",

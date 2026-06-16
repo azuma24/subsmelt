@@ -36,6 +36,7 @@ async function fetchWithTimeout(
 
 export interface TranscriptionSettings {
   transcription_backend_url?: string;
+  transcription_backend_token?: string;
   transcription_model?: string;
   transcription_device?: string;
   transcription_compute_type?: string;
@@ -315,6 +316,27 @@ export function buildTranscriptionRequest(options: BuildTranscriptionRequestOpti
   };
 }
 
+// Phase 1 remote hardening: when a shared-secret token is configured it is sent
+// as `Authorization: Bearer <token>` on every backend call. An empty/whitespace
+// token means no header (localhost dev default), matching the backend which
+// disables auth when SUBSMELT_WHISPER_TOKEN is unset.
+export function transcriptionAuthHeaders(token: string | undefined): Record<string, string> {
+  const value = typeof token === "string" ? token.trim() : "";
+  return value ? { Authorization: `Bearer ${value}` } : {};
+}
+
+// Clear, actionable message when the backend rejects the configured token so the
+// user is pointed straight at the setting to fix.
+const TOKEN_REJECTED_MESSAGE =
+  "Whisper backend rejected the token — check Transcription backend token in Settings";
+
+// Throws the standard 401 message; otherwise returns the generic backend error.
+// Centralizes 401 handling so every backend call surfaces the same guidance.
+function throwBackendError(body: unknown, status: number): never {
+  if (status === 401) throw new Error(TOKEN_REJECTED_MESSAGE);
+  throw new Error(backendErrorMessage(body, status));
+}
+
 function backendErrorMessage(body: unknown, status: number): string {
   if (body && typeof body === "object") {
     const record = body as Record<string, unknown>;
@@ -329,26 +351,28 @@ function backendErrorMessage(body: unknown, status: number): string {
   return `Transcription backend returned HTTP ${status}`;
 }
 
-export async function fetchTranscriptionHealth(backendUrl: string, model?: string): Promise<unknown> {
+export async function fetchTranscriptionHealth(backendUrl: string, model?: string, token?: string): Promise<unknown> {
   const url = normalizeTranscriptionBackendUrl(backendUrl);
   if (!url) throw new Error("Transcription backend URL is not configured");
   const qs = model ? `?${new URLSearchParams({ model }).toString()}` : "";
-  const response = await fetchWithTimeout(`${url}/health${qs}`, {}, SHORT_REQUEST_TIMEOUT_MS, "Transcription backend health check");
+  const response = await fetchWithTimeout(`${url}/health${qs}`, {
+    headers: { ...transcriptionAuthHeaders(token) },
+  }, SHORT_REQUEST_TIMEOUT_MS, "Transcription backend health check");
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(backendErrorMessage(body, response.status));
+  if (!response.ok) throwBackendError(body, response.status);
   return body;
 }
 
-export async function preflightTranscription(backendUrl: string, request: BackendTranscriptionRequest): Promise<BackendPreflightResponse> {
+export async function preflightTranscription(backendUrl: string, request: BackendTranscriptionRequest, token?: string): Promise<BackendPreflightResponse> {
   const url = normalizeTranscriptionBackendUrl(backendUrl);
   if (!url) throw new Error("Transcription backend URL is not configured");
   const response = await fetchWithTimeout(`${url}/preflight`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...transcriptionAuthHeaders(token) },
     body: JSON.stringify(request),
   }, SHORT_REQUEST_TIMEOUT_MS, "Transcription backend preflight");
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(backendErrorMessage(body, response.status));
+  if (!response.ok) throwBackendError(body, response.status);
   return body as BackendPreflightResponse;
 }
 
@@ -357,14 +381,15 @@ export async function applyPreflightPolicy(
   request: BackendTranscriptionRequest,
   settings: TranscriptionSettings,
 ): Promise<BackendTranscriptionRequest> {
-  const preflight = await preflightTranscription(backendUrl, request);
+  const token = settings.transcription_backend_token;
+  const preflight = await preflightTranscription(backendUrl, request, token);
   if (preflight.safe !== false && preflight.ok !== false) return request;
 
   if (preflight.code === "insufficient_ram") {
     const behavior = lowRamBehavior(settings.transcription_low_ram_behavior);
     if (behavior === "downgrade" && preflight.suggestedModel && preflight.suggestedModel !== request.model) {
       const downgraded = { ...request, model: preflight.suggestedModel };
-      const downgradedPreflight = await preflightTranscription(backendUrl, downgraded);
+      const downgradedPreflight = await preflightTranscription(backendUrl, downgraded, token);
       if (downgradedPreflight.safe !== false && downgradedPreflight.ok !== false) return downgraded;
     }
     if (behavior === "run_anyway") return { ...request, allow_unsafe: true };
@@ -384,6 +409,8 @@ export async function applyPreflightPolicy(
 export interface TranscribeBackendOptions {
   // Total request timeout in seconds. Falls back to the 30-minute default.
   timeoutSeconds?: number;
+  // Optional shared-secret token sent as `Authorization: Bearer <token>`.
+  token?: string;
 }
 
 function resolveTranscribeTimeoutMs(timeoutSeconds: number | undefined): number {
@@ -403,11 +430,11 @@ export async function transcribeWithBackend(
   const timeoutMs = resolveTranscribeTimeoutMs(options?.timeoutSeconds);
   const response = await fetchWithTimeout(`${url}/transcribe`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...transcriptionAuthHeaders(options?.token) },
     body: JSON.stringify(request),
   }, timeoutMs, "Transcription backend");
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(backendErrorMessage(body, response.status));
+  if (!response.ok) throwBackendError(body, response.status);
   return body as BackendTranscriptionResponse;
 }
 
@@ -482,7 +509,7 @@ export async function transcribeWithBackendStreaming(
   try {
     response = await fetch(`${url}/transcribe/stream`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...transcriptionAuthHeaders(options?.token) },
       body: JSON.stringify(request),
       signal: controller.signal,
     });
@@ -504,7 +531,7 @@ export async function transcribeWithBackendStreaming(
     const body = await response.json().catch(() => ({}));
     clearTimeout(timer);
     externalSignal?.removeEventListener("abort", onExternalAbort);
-    throw new Error(backendErrorMessage(body, response.status));
+    throwBackendError(body, response.status);
   }
 
   const decoder = new TextDecoder();

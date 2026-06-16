@@ -531,6 +531,8 @@
       "enableHelp": "Bunu kullanmadan mevcut altyazıları çevirir; yalnızca yapılandırılmış bir transkripsiyon arka ucunuz olduğunda etkinleştirin.",
       "backendUrl": "Arka Uç URL'si",
       "backendUrlHelp": "İsteğe bağlı compose arka ucu için http://whisper-backend:8001 kullanın veya kendi yerel faster-whisper sunucunuza yönlendirin.",
+      "backendToken": "Backend token",
+      "backendTokenHelp": "Optional shared secret for a remote backend. Leave blank for a localhost backend. When set, it is sent as an Authorization header on every transcription request and must match the backend's SUBSMELT_WHISPER_TOKEN.",
       "pathMapFrom": "Arka uç yol eşlemesi: kaynaktan",
       "pathMapFromHelp": "İsteğe bağlı. Varsayılan aynı yol kurulumu için her iki eşleme alanını da boş bırakın.",
       "pathMapTo": "Arka uç yol eşlemesi: hedefe",

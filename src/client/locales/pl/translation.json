@@ -531,6 +531,8 @@
       "enableHelp": "Tłumaczy istniejące napisy bez tego; włącz tylko, gdy masz skonfigurowany backend transkrypcji.",
       "backendUrl": "URL backendu",
       "backendUrlHelp": "Użyj http://whisper-backend:8001 dla opcjonalnego backendu compose lub wskaż własny lokalny serwer faster-whisper.",
+      "backendToken": "Backend token",
+      "backendTokenHelp": "Optional shared secret for a remote backend. Leave blank for a localhost backend. When set, it is sent as an Authorization header on every transcription request and must match the backend's SUBSMELT_WHISPER_TOKEN.",
       "pathMapFrom": "Mapa ścieżek backendu: z",
       "pathMapFromHelp": "Opcjonalne. Pozostaw oba pola mapowania puste dla domyślnej konfiguracji z tą samą ścieżką.",
       "pathMapTo": "Mapa ścieżek backendu: na",

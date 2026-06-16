@@ -531,6 +531,8 @@
       "enableHelp": "Isinasalin ang mga umiiral na subtitle kahit wala ito; i-enable lang kapag may naka-configure kang transcription backend.",
       "backendUrl": "Backend URL",
       "backendUrlHelp": "Gamitin ang http://whisper-backend:8001 para sa opsyonal na compose backend, o ituro sa sarili mong lokal na faster-whisper server.",
+      "backendToken": "Backend token",
+      "backendTokenHelp": "Optional shared secret for a remote backend. Leave blank for a localhost backend. When set, it is sent as an Authorization header on every transcription request and must match the backend's SUBSMELT_WHISPER_TOKEN.",
       "pathMapFrom": "Backend path map: mula",
       "pathMapFromHelp": "Opsyonal. Iwanang blangko ang parehong mapping field para sa default na same-path setup.",
       "pathMapTo": "Backend path map: papunta",

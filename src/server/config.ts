@@ -89,6 +89,10 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   subtitle_extensions: ".srt,.ass,.ssa,.vtt",
   transcription_enabled: "0",
   transcription_backend_url: "",
+  // Optional shared-secret token (Phase 1 remote hardening). When non-empty it
+  // is sent as `Authorization: Bearer <token>` on every backend call. Empty =
+  // no auth header (localhost dev default; backend auth also disabled then).
+  transcription_backend_token: "",
   transcription_model: "small",
   transcription_device: "cpu",
   transcription_compute_type: "int8",

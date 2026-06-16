@@ -531,6 +531,8 @@
       "enableHelp": "Menterjemah sari kata sedia ada tanpa ini; dayakan hanya apabila anda mempunyai bahagian belakang transkripsi dikonfigurasi.",
       "backendUrl": "URL Bahagian Belakang",
       "backendUrlHelp": "Gunakan http://whisper-backend:8001 untuk bahagian belakang compose pilihan, atau halakan ke pelayan faster-whisper tempatan anda sendiri.",
+      "backendToken": "Backend token",
+      "backendTokenHelp": "Optional shared secret for a remote backend. Leave blank for a localhost backend. When set, it is sent as an Authorization header on every transcription request and must match the backend's SUBSMELT_WHISPER_TOKEN.",
       "pathMapFrom": "Peta laluan bahagian belakang: dari",
       "pathMapFromHelp": "Pilihan. Biarkan kedua-dua medan pemetaan kosong untuk persediaan laluan-sama lalai.",
       "pathMapTo": "Peta laluan bahagian belakang: ke",

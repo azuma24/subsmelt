@@ -531,6 +531,8 @@
       "enableHelp": "இது இல்லாமல் ஏற்கனவே உள்ள துணைத்தலைப்புகளை மொழிபெயர்க்கிறது; படியெடுத்தல் பின்தளம் அமைக்கப்பட்டிருக்கும்போது மட்டும் இயக்கவும்.",
       "backendUrl": "பின்தள URL",
       "backendUrlHelp": "விருப்பத்தேர்வு compose பின்தளத்திற்கு http://whisper-backend:8001 ஐப் பயன்படுத்தவும், அல்லது உங்கள் சொந்த உள்ளூர் faster-whisper சேவையகத்தை சுட்டவும்.",
+      "backendToken": "Backend token",
+      "backendTokenHelp": "Optional shared secret for a remote backend. Leave blank for a localhost backend. When set, it is sent as an Authorization header on every transcription request and must match the backend's SUBSMELT_WHISPER_TOKEN.",
       "pathMapFrom": "பின்தள பாதை வரைபடம்: இருந்து",
       "pathMapFromHelp": "விருப்பத்தேர்வு. இயல்புநிலை ஒரே-பாதை அமைவுக்கு இரு வரைபட புலங்களையும் வெறுமையாக விடவும்.",
       "pathMapTo": "பின்தள பாதை வரைபடம்: வரை",
