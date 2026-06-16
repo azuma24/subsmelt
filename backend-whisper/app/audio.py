@@ -1,11 +1,28 @@
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
 # Generous ceiling so legitimately long media still extracts, while a hung or
 # stuck ffmpeg cannot block the worker thread forever.
 DEFAULT_FFMPEG_TIMEOUT_SECONDS = 30 * 60
+
+
+def ffmpeg_binary() -> str:
+    """Resolve the ffmpeg executable to invoke.
+
+    Resolution order (Phase 3 Windows packaging):
+      1. ``SUBSMELT_FFMPEG`` env var — set by the packaged launcher
+         (``run_server.py``) to the bundled ``ffmpeg.exe`` so we never depend on
+         the system PATH on a Windows service host.
+      2. ``ffmpeg`` on PATH — the existing/default behavior for Docker, local
+         dev, and any environment where ffmpeg is already installed.
+
+    Additive only: when ``SUBSMELT_FFMPEG`` is unset (every current deployment
+    and the test suite), this returns ``"ffmpeg"`` exactly as before.
+    """
+    return os.environ.get("SUBSMELT_FFMPEG") or "ffmpeg"
 
 
 def extract_audio(
@@ -15,7 +32,7 @@ def extract_audio(
 ) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     command = [
-        "ffmpeg",
+        ffmpeg_binary(),
         "-y",
         "-i",
         str(input_path),
