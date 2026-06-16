@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { generateText } from "ai";
-import { getAi, normalizeResult, withAbortTimeout, REQUEST_TIMEOUT_MS, type CloudProvider } from "./ai-client.js";
+import { getAi, normalizeResult, withAbortTimeout, REQUEST_TIMEOUT_MS, extractUsage, type CloudProvider, type TokenUsage } from "./ai-client.js";
 
 export async function analyzeSubtitlesForContext(
   subtitles: string[],
@@ -17,6 +17,8 @@ export async function analyzeSubtitlesForContext(
     maxAnalysisLines?: number;
     /** Per-job request timeout in ms. */
     requestTimeoutMs?: number;
+    /** Fired after the analysis generateText with its token usage. */
+    onUsage?: (u: TokenUsage) => void;
   }
 ): Promise<string> {
   if (!opts.model || subtitles.length === 0) return "";
@@ -85,6 +87,11 @@ Use exactly this markdown structure:
       opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS,
       opts.abortSignal
     ));
+
+    if (opts.onUsage) {
+      const usage = extractUsage(result);
+      if (usage) opts.onUsage(usage);
+    }
 
     return result.text?.trim() || "";
   } catch (e: any) {

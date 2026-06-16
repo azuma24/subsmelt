@@ -164,13 +164,25 @@
       "copiedContext": "زمینه کپی شد",
       "copiedPlot": "خلاصه داستان کپی شد",
       "copiedGlossary": "واژه‌نامه کپی شد",
-      "copyFailed": "کپی ناموفق بود"
+      "copyFailed": "کپی ناموفق بود",
+      "editPlaceholder": "ویرایش ترجمه…",
+      "saveChanges": "ذخیره تغییرات",
+      "saveChangesCount": "ذخیره تغییرات ({{count}})",
+      "saving": "در حال ذخیره…",
+      "saved": "{{count}} خط ذخیره شد",
+      "saveFailed": "ذخیره تغییرات ناموفق بود",
+      "download": "دانلود",
+      "edited": "ویرایش‌شده"
     },
     "stat": {
       "pending": "در انتظار",
       "translating": "در حال ترجمه",
       "done": "انجام‌شده",
-      "errors": "خطاها"
+      "errors": "خطاها",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "هنوز کاری وجود ندارد.",
     "noJobsHint": "برای یافتن فایل‌های زیرنویس روی <strong>اسکن پوشه‌ها</strong> کلیک کنید.",
@@ -235,7 +247,11 @@
       "error": "خطا",
       "analysis": "زمینه تحلیل",
       "openLogs": "باز کردن گزارش‌ها",
-      "fullPage": "صفحه کامل"
+      "fullPage": "صفحه کامل",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "در حال تحلیل زمینه…"
   },
@@ -482,7 +498,19 @@
         "chipNoVideo": "بدون ویدئو: {{state}}",
         "chipLangs_one": "{{count}} زبان",
         "chipLangs_other": "{{count}} زبان"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "webhookUrl": "Webhook URL",
+      "format": "Payload format",
+      "events": "Events to send",
+      "sendTest": "Send test",
+      "testSent": "Test notification sent successfully",
+      "testFailed": "Test notification failed: {{message}}",
+      "hint": "Fire an outbound webhook when jobs complete or fail and when the queue finishes. Leave the URL empty to disable. Events is a comma-separated list (job:done, job:error, queue:finished, queue:stopped)."
     },
     "saved": "تنظیمات ذخیره شد",
     "saveFailed": "ذخیره ناموفق بود: {{message}}",
@@ -741,7 +769,11 @@
       "working": "در حال کار…",
       "transcribe": "رونویسی",
       "transcribeTranslate": "رونویسی + ترجمه",
-      "enableHint": "گفتار به متن را در تنظیمات فعال کنید تا از این ویدئو زیرنویس تولید کنید."
+      "enableHint": "گفتار به متن را در تنظیمات فعال کنید تا از این ویدئو زیرنویس تولید کنید.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

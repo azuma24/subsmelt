@@ -120,6 +120,10 @@ const requiredTranscriptionKeys = [
   "scan.transcription.transcribe",
   "scan.transcription.transcribeTranslate",
   "scan.transcription.enableHint",
+  "scan.transcription.progressPct",
+  "scan.transcription.cancel",
+  "scan.transcription.cancelling",
+  "scan.transcription.cancelled",
 ];
 
 function getNested(obj: unknown, dottedKey: string): unknown {

@@ -164,13 +164,25 @@
       "copiedContext": "ההקשר הועתק",
       "copiedPlot": "תקציר העלילה הועתק",
       "copiedGlossary": "מילון המונחים הועתק",
-      "copyFailed": "ההעתקה נכשלה"
+      "copyFailed": "ההעתקה נכשלה",
+      "editPlaceholder": "עריכת תרגום…",
+      "saveChanges": "שמירת שינויים",
+      "saveChangesCount": "שמירת שינויים ({{count}})",
+      "saving": "שומר…",
+      "saved": "{{count}} שורות נשמרו",
+      "saveFailed": "שמירת השינויים נכשלה",
+      "download": "הורדה",
+      "edited": "נערך"
     },
     "stat": {
       "pending": "ממתין",
       "translating": "מתרגם",
       "done": "הושלם",
-      "errors": "שגיאות"
+      "errors": "שגיאות",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "אין עדיין משימות.",
     "noJobsHint": "לחץ על <strong>סריקת תיקיות</strong> כדי לגלות קובצי כתוביות.",
@@ -235,7 +247,11 @@
       "error": "שגיאה",
       "analysis": "הקשר ניתוח",
       "openLogs": "פתח יומנים",
-      "fullPage": "עמוד מלא"
+      "fullPage": "עמוד מלא",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "מנתח הקשר…"
   },
@@ -482,7 +498,19 @@
         "chipNoVideo": "ללא וידאו: {{state}}",
         "chipLangs_one": "שפה {{count}}",
         "chipLangs_other": "{{count}} שפות"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "webhookUrl": "Webhook URL",
+      "format": "Payload format",
+      "events": "Events to send",
+      "sendTest": "Send test",
+      "testSent": "Test notification sent successfully",
+      "testFailed": "Test notification failed: {{message}}",
+      "hint": "Fire an outbound webhook when jobs complete or fail and when the queue finishes. Leave the URL empty to disable. Events is a comma-separated list (job:done, job:error, queue:finished, queue:stopped)."
     },
     "saved": "ההגדרות נשמרו",
     "saveFailed": "השמירה נכשלה: {{message}}",
@@ -741,7 +769,11 @@
       "working": "עובד…",
       "transcribe": "תמלל",
       "transcribeTranslate": "תמלל + תרגם",
-      "enableHint": "הפעל דיבור לטקסט בהגדרות כדי ליצור כתוביות מסרטון זה."
+      "enableHint": "הפעל דיבור לטקסט בהגדרות כדי ליצור כתוביות מסרטון זה.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

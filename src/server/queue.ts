@@ -1,10 +1,11 @@
 import fs from "node:fs";
-import { getJobs, updateJob, getJob } from "./db.js";
+import { getJobs, updateJob, getJob, addJobUsage } from "./db.js";
 import { getAllSettings, getTask, getSetting } from "./config.js";
 import { summarizeTranslationError, translateFile, probeModelContext } from "./translator.js";
 import { resolveConnectionPool, type ResolvedConnection, type LlmMode } from "./connections.js";
 import { logger } from "./logger.js";
 import { broadcast } from "./sse.js";
+import { notify } from "./notify.js";
 
 let isRunning = false;
 let shouldStop = false;
@@ -65,9 +66,11 @@ export async function processQueue(onlyIds?: number[]) {
     if (shouldStop) {
       logger.info("queue", "Queue stopped by user request");
       broadcast("queue:stopped", {});
+      void notify("queue:stopped", {});
     } else {
       logger.info("queue", "Queue finished — no more pending jobs");
       broadcast("queue:finished", {});
+      void notify("queue:finished", {});
     }
   } finally {
     isRunning = false;
@@ -99,7 +102,7 @@ function claimNextJob(filter: Set<number> | null): any | null {
       continue;
     }
 
-    updateJob(job.id, { status: "translating", error: null, analysis_context: null, used_connections: null });
+    updateJob(job.id, { status: "translating", error: null, analysis_context: null, used_connections: null, input_tokens: 0, output_tokens: 0 });
     activeJobIds.add(job.id);
     currentJobId = job.id;
     return job;
@@ -261,6 +264,7 @@ async function runJob(job: any, conns: ResolvedConnection[], llmModeForJob: LlmM
           }
         );
       },
+      onUsage: (u) => addJobUsage(job.id, u.inputTokens, u.outputTokens),
       onAnalysis: (analysis) => {
         updateJob(job.id, { analysis_context: analysis });
         logger.info("translate", `Context prepared for ${srtName} (${langCode})`, job.id, {
@@ -286,6 +290,7 @@ async function runJob(job: any, conns: ResolvedConnection[], llmModeForJob: LlmM
       job.id
     );
     broadcast("job:done", { jobId: job.id, durationSeconds, srtName, langCode });
+    void notify("job:done", { jobId: job.id, durationSeconds, srtName, langCode });
     return false;
   } catch (error: any) {
     const durationSeconds = (Date.now() - startTime) / 1000;
@@ -336,6 +341,7 @@ async function runJob(job: any, conns: ResolvedConnection[], llmModeForJob: LlmM
       used_connections: usedConnLabels.length > 0 ? usedConnLabels.join(", ") : null,
     });
     broadcast("job:error", { jobId: job.id, error: compactError, srtName });
+    void notify("job:error", { jobId: job.id, error: compactError, srtName, langCode });
     return false;
   } finally {
     abortControllers.delete(jobAbort);

@@ -93,6 +93,20 @@ export const unpinJob = (id: number) =>
   fetchJSON(`/jobs/${id}/unpin`, { method: "POST" });
 export const getJobPreview = (id: number, opts?: FetchOpts) => fetchJSON<JobPreview>(`/jobs/${id}/preview`, opts);
 
+// Manual cue edits — saves edited translated lines to the OUTPUT file.
+export interface CueEditInput {
+  index: number;
+  text: string;
+}
+export const saveJobCues = (id: number, edits: CueEditInput[], opts?: FetchOpts) =>
+  fetchJSON<{ ok: boolean; updated: number }>(`/jobs/${id}/cues`, {
+    ...opts,
+    method: "PUT",
+    body: JSON.stringify({ edits }),
+  });
+// URL for an <a href download> that streams the translated output file.
+export const jobDownloadUrl = (id: number) => `${BASE}/jobs/${id}/download`;
+
 // Queue
 export const startQueue = (ids?: number[]) =>
   fetchJSON("/queue/start", {
@@ -135,6 +149,11 @@ export const testConnection = (payload?: { provider?: string; apiKey?: string; m
 export const getLlmHealth = (opts?: FetchOpts) =>
   fetchJSON<LlmHealth>("/llm-health", opts);
 
+// Outbound notification webhook test — sends a sample notification using the
+// currently-saved settings and reports whether the webhook accepted it.
+export const testNotification = () =>
+  fetchJSON<{ ok: boolean; error?: string }>("/notify/test", { method: "POST" });
+
 // Subtitle format converter
 export type ConvertTargetFormat = "srt" | "vtt" | "ass" | "ssa";
 export interface ConvertRequest {
@@ -159,3 +178,5 @@ export const getTranscriptionHistory = (limit = 10, opts?: FetchOpts) =>
   fetchJSON<{ attempts: TranscriptionHistoryEntry[] }>(`/transcribe/history?limit=${limit}`, opts);
 export const retryTranscriptionAttempt = (id: string) =>
   fetchJSON<TranscribeResponse>(`/transcribe/history/${id}/retry`, { method: "POST" });
+export const cancelTranscription = (payload: { path: string }) =>
+  fetchJSON<{ ok: boolean }>("/transcribe/cancel", { method: "POST", body: JSON.stringify(payload) });

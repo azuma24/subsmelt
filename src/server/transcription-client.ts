@@ -411,6 +411,149 @@ export async function transcribeWithBackend(
   return body as BackendTranscriptionResponse;
 }
 
+export interface TranscriptionProgressUpdate {
+  pct: number;
+  processedSeconds: number;
+  totalSeconds: number;
+}
+
+export interface TranscribeStreamingOptions extends TranscribeBackendOptions {
+  // Called once per backend progress line.
+  onProgress?: (update: TranscriptionProgressUpdate) => void;
+  // Aborting this signal closes the HTTP stream → backend detects the
+  // disconnect → stops iterating segments and aborts the run.
+  signal?: AbortSignal;
+}
+
+// Sentinel thrown when the stream endpoint is absent (older backend) so callers
+// can transparently fall back to the non-streaming JSON endpoint.
+export class StreamingUnsupportedError extends Error {
+  constructor(message = "Streaming transcription endpoint is unavailable") {
+    super(message);
+    this.name = "StreamingUnsupportedError";
+  }
+}
+
+function parseNdjsonLine(line: string): Record<string, unknown> | null {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+function toProgressUpdate(record: Record<string, unknown>): TranscriptionProgressUpdate | null {
+  const pct = typeof record.pct === "number" ? record.pct : undefined;
+  const processedSeconds = typeof record.processedSeconds === "number" ? record.processedSeconds : undefined;
+  const totalSeconds = typeof record.totalSeconds === "number" ? record.totalSeconds : undefined;
+  if (pct === undefined || processedSeconds === undefined || totalSeconds === undefined) return null;
+  return { pct, processedSeconds, totalSeconds };
+}
+
+/**
+ * POSTs to /transcribe/stream and consumes the NDJSON line protocol. Progress
+ * lines invoke onProgress; the terminal "result" line resolves the promise; an
+ * "error" line throws. If the endpoint returns 404 (older backend without the
+ * stream route) a StreamingUnsupportedError is thrown so the caller can fall
+ * back to transcribeWithBackend. The passed AbortSignal cancels the request.
+ */
+export async function transcribeWithBackendStreaming(
+  backendUrl: string,
+  request: BackendTranscriptionRequest,
+  options?: TranscribeStreamingOptions,
+): Promise<BackendTranscriptionResponse> {
+  const url = normalizeTranscriptionBackendUrl(backendUrl);
+  if (!url) throw new Error("Transcription backend URL is not configured");
+
+  const timeoutMs = resolveTranscribeTimeoutMs(options?.timeoutSeconds);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const externalSignal = options?.signal;
+  const onExternalAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) controller.abort();
+    else externalSignal.addEventListener("abort", onExternalAbort, { once: true });
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${url}/transcribe/stream`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+      signal: controller.signal,
+    });
+  } catch (error: unknown) {
+    clearTimeout(timer);
+    externalSignal?.removeEventListener("abort", onExternalAbort);
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Transcription cancelled");
+    }
+    throw error;
+  }
+
+  if (response.status === 404) {
+    clearTimeout(timer);
+    externalSignal?.removeEventListener("abort", onExternalAbort);
+    throw new StreamingUnsupportedError();
+  }
+  if (!response.ok || !response.body) {
+    const body = await response.json().catch(() => ({}));
+    clearTimeout(timer);
+    externalSignal?.removeEventListener("abort", onExternalAbort);
+    throw new Error(backendErrorMessage(body, response.status));
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let result: BackendTranscriptionResponse | null = null;
+  let streamError: string | null = null;
+
+  const handleLine = (line: string): void => {
+    const record = parseNdjsonLine(line);
+    if (!record) return;
+    const type = record.type;
+    if (type === "progress") {
+      const update = toProgressUpdate(record);
+      if (update && options?.onProgress) options.onProgress(update);
+    } else if (type === "result") {
+      const { type: _t, ...rest } = record;
+      result = rest as unknown as BackendTranscriptionResponse;
+    } else if (type === "error") {
+      streamError = typeof record.error === "string" ? record.error : "Transcription failed";
+    }
+  };
+
+  try {
+    for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
+      buffer += decoder.decode(chunk, { stream: true });
+      let newlineIndex = buffer.indexOf("\n");
+      while (newlineIndex !== -1) {
+        handleLine(buffer.slice(0, newlineIndex));
+        buffer = buffer.slice(newlineIndex + 1);
+        newlineIndex = buffer.indexOf("\n");
+      }
+    }
+    buffer += decoder.decode();
+    if (buffer.trim()) handleLine(buffer);
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Transcription cancelled");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    externalSignal?.removeEventListener("abort", onExternalAbort);
+  }
+
+  if (streamError) throw new Error(streamError);
+  if (!result) throw new Error("Transcription stream ended without a result");
+  return result;
+}
+
 // Reads transcription_request_timeout_s from settings; undefined → default.
 export function transcribeTimeoutSeconds(settings: TranscriptionSettings): number | undefined {
   const raw = settings.transcription_request_timeout_s;

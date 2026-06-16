@@ -164,13 +164,25 @@
       "copiedContext": "Context copiat",
       "copiedPlot": "Rezumatul intrigii copiat",
       "copiedGlossary": "Glosar copiat",
-      "copyFailed": "Copiere eșuată"
+      "copyFailed": "Copiere eșuată",
+      "editPlaceholder": "Editează traducerea…",
+      "saveChanges": "Salvează modificările",
+      "saveChangesCount": "Salvează modificările ({{count}})",
+      "saving": "Se salvează…",
+      "saved": "{{count}} rând(uri) salvate",
+      "saveFailed": "Salvarea modificărilor a eșuat",
+      "download": "Descarcă",
+      "edited": "editat"
     },
     "stat": {
       "pending": "În așteptare",
       "translating": "Se traduce",
       "done": "Finalizate",
-      "errors": "Erori"
+      "errors": "Erori",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "Nicio sarcină încă.",
     "noJobsHint": "Apasă <strong>Scanează folderele</strong> pentru a descoperi fișiere de subtitrare.",
@@ -235,7 +247,11 @@
       "error": "Eroare",
       "analysis": "Context de analiză",
       "openLogs": "Deschide jurnalele",
-      "fullPage": "Pagină completă"
+      "fullPage": "Pagină completă",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Se analizează contextul…"
   },
@@ -482,7 +498,19 @@
         "chipNoVideo": "fără video: {{state}}",
         "chipLangs_one": "{{count}} limbă",
         "chipLangs_other": "{{count}} limbi"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "webhookUrl": "Webhook URL",
+      "format": "Payload format",
+      "events": "Events to send",
+      "sendTest": "Send test",
+      "testSent": "Test notification sent successfully",
+      "testFailed": "Test notification failed: {{message}}",
+      "hint": "Fire an outbound webhook when jobs complete or fail and when the queue finishes. Leave the URL empty to disable. Events is a comma-separated list (job:done, job:error, queue:finished, queue:stopped)."
     },
     "saved": "Setări salvate",
     "saveFailed": "Salvare eșuată: {{message}}",
@@ -741,7 +769,11 @@
       "working": "Se lucrează…",
       "transcribe": "Transcrie",
       "transcribeTranslate": "Transcrie + tradu",
-      "enableHint": "Activează vorbire în text în Setări pentru a genera subtitrări din acest video."
+      "enableHint": "Activează vorbire în text în Setări pentru a genera subtitrări din acest video.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

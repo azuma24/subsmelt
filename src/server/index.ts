@@ -40,8 +40,9 @@ import {
   startAutoScan,
   stopAutoScan,
 } from "./queue.js";
-import { testConnection, parseSubtitle, convertSubtitle, readSubtitleFileText } from "./translator.js";
+import { testConnection, parseSubtitle, convertSubtitle, readSubtitleFileText, applyCueEdits, writeSubtitleFile, type CueEdit } from "./translator.js";
 import { resolveConnectionPool } from "./connections.js";
+import { estimateCost } from "./pricing.js";
 import type { CloudProvider } from "./translator.js";
 import {
   applyPreflightPolicy,
@@ -52,12 +53,15 @@ import {
   transcribePostActionValues,
   transcribeTimeoutSeconds,
   transcribeWithBackend,
+  transcribeWithBackendStreaming,
+  StreamingUnsupportedError,
   type TranscribePostAction,
   type TranscriptionOutputFormat,
 } from "./transcription-client.js";
 import { summarizeTranscriptionError, transcriptionHistory } from "./transcription-history.js";
 import { logger } from "./logger.js";
 import { addSSEClient, broadcast } from "./sse.js";
+import { notifyTest } from "./notify.js";
 import { startWatcher, stopWatcher, isWatcherRunning, restartWatcher } from "./watcher.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -248,14 +252,24 @@ app.get("/api/scan/preview", (_req, res) => {
 
 // ======== Jobs ========
 
-// Enrich job rows with task data (since settings/tasks are in config, not SQL JOIN)
+// Enrich job rows with task data (since settings/tasks are in config, not SQL JOIN).
+// Also surfaces token usage + an APPROXIMATE est_cost: jobs don't store which
+// model ran, so we derive the model from the current connection pool primary
+// (best-effort) and price the accumulated tokens. Unknown/local models → null.
 function enrichJobs(jobs: any[]): any[] {
   const tasks = getTasks();
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
+  const { pool } = resolveConnectionPool(getAllSettings());
+  const primaryModel = pool[0]?.model || "";
   return jobs.map((job) => {
     const task = taskMap.get(job.task_id);
+    const inputTokens = Number(job.input_tokens) || 0;
+    const outputTokens = Number(job.output_tokens) || 0;
     return {
       ...job,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      est_cost: estimateCost(primaryModel, inputTokens, outputTokens),
       target_lang: task?.target_lang || "",
       lang_code: task?.lang_code || "",
       source_lang: task?.source_lang || "",
@@ -410,6 +424,71 @@ app.get("/api/jobs/:id/preview", (req, res) => {
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Apply manual translated-line edits to the OUTPUT file and re-export. Body:
+// { edits: Array<{ index: number; text: string }> } where `index` is the
+// 1-based cue index from the preview rows. Source file is never touched.
+app.put("/api/jobs/:id/cues", (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const job = getJob(id) as any;
+  if (!job) return res.status(404).json({ error: "Job not found" });
+
+  const rawEdits = (req.body as { edits?: unknown })?.edits;
+  if (!Array.isArray(rawEdits)) {
+    return res.status(400).json({ error: "edits must be an array" });
+  }
+
+  // Coerce to well-typed edits; malformed entries are dropped here and any
+  // out-of-range indices are skipped (and counted) inside applyCueEdits.
+  const edits: CueEdit[] = rawEdits
+    .filter(
+      (e): e is CueEdit =>
+        !!e &&
+        typeof (e as any).index === "number" &&
+        Number.isFinite((e as any).index) &&
+        typeof (e as any).text === "string"
+    )
+    .map((e) => ({ index: Math.trunc(e.index), text: e.text }));
+
+  if (!fs.existsSync(job.output_path)) {
+    return res.status(404).json({ error: "Output file not found" });
+  }
+
+  try {
+    const ext = path.extname(job.output_path).slice(1).toLowerCase();
+    const content = readSubtitleFileText(job.output_path);
+    const { output, updated } = applyCueEdits(content, ext, edits);
+    writeSubtitleFile(job.output_path, output);
+    res.json({ ok: true, updated });
+  } catch (error: any) {
+    res.status(500).json({ error: `Failed to save edits: ${error?.message || String(error)}` });
+  }
+});
+
+// Download the translated OUTPUT file as an attachment.
+app.get("/api/jobs/:id/download", (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const job = getJob(id) as any;
+  if (!job) return res.status(404).json({ error: "Job not found" });
+  if (!fs.existsSync(job.output_path)) {
+    return res.status(404).json({ error: "Output file not found" });
+  }
+
+  try {
+    const basename = path.basename(job.output_path);
+    const ext = path.extname(basename).slice(1).toLowerCase();
+    const contentType = ext === "vtt" ? "text/vtt; charset=utf-8" : "text/plain; charset=utf-8";
+    const content = readSubtitleFileText(job.output_path);
+    res.setHeader("Content-Type", contentType);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${basename.replace(/"/g, "")}"`
+    );
+    res.send(content);
+  } catch (error: any) {
+    res.status(500).json({ error: `Failed to download: ${error?.message || String(error)}` });
   }
 });
 
@@ -596,6 +675,47 @@ async function withTranscriptionSlot<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
+// --- In-flight transcription cancellation registry ---
+// Maps the local SubSmelt media path of an in-flight transcription to its
+// AbortController. POST /api/transcribe/cancel aborts the matching controller,
+// which closes the streaming HTTP request → the backend detects the disconnect
+// → stops segment iteration. Entries are removed when the attempt settles.
+const inFlightTranscriptions = new Map<string, { controller: AbortController; attemptId: string }>();
+
+// Resolves to true when a streaming run succeeded, so we know whether to skip
+// the legacy fallback. Throws StreamingUnsupportedError only for 404s.
+async function transcribeRelayingProgress(
+  backendUrl: string,
+  request: ReturnType<typeof buildTranscriptionRequest>,
+  settings: Record<string, string>,
+  videoPath: string,
+  controller: AbortController,
+) {
+  try {
+    return await transcribeWithBackendStreaming(backendUrl, request, {
+      timeoutSeconds: transcribeTimeoutSeconds(settings),
+      signal: controller.signal,
+      onProgress: ({ pct, processedSeconds, totalSeconds }) => {
+        broadcast("transcription:progress", { path: videoPath, pct, processedSeconds, totalSeconds });
+      },
+    });
+  } catch (error: unknown) {
+    if (error instanceof StreamingUnsupportedError) {
+      // Older backend without the stream route: fall back to the JSON endpoint.
+      // No live progress is available, but transcription still completes.
+      return await transcribeWithBackend(backendUrl, request, {
+        timeoutSeconds: transcribeTimeoutSeconds(settings),
+      });
+    }
+    throw error;
+  }
+}
+
+function isCancellationError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /Transcription cancelled/i.test(message);
+}
+
 async function runTranscriptionAttempt(opts: {
   videoPath: string;
   postAction: TranscribePostAction;
@@ -628,11 +748,14 @@ async function runTranscriptionAttempt(opts: {
     advancedOptions: request.advanced_options,
   });
 
+  const controller = new AbortController();
+  inFlightTranscriptions.set(opts.videoPath, { controller, attemptId: attempt.id });
+
   try {
     const startedAtMs = Date.parse(attempt.startedAt);
     const checkedRequest = await applyPreflightPolicy(backendUrl, request, settings);
     const result = await withTranscriptionSlot(() =>
-      transcribeWithBackend(backendUrl, checkedRequest, { timeoutSeconds: transcribeTimeoutSeconds(settings) }),
+      transcribeRelayingProgress(backendUrl, checkedRequest, settings, opts.videoPath, controller),
     );
     const finishedAt = new Date().toISOString();
     const durationSeconds = typeof result.duration_seconds === "number"
@@ -645,15 +768,21 @@ async function runTranscriptionAttempt(opts: {
       finishedAt,
       durationSeconds,
     });
+    broadcast("transcription:progress", { path: opts.videoPath, pct: 100, done: true });
     return { attemptId: attempt.id, result };
   } catch (error: unknown) {
+    const cancelled = isCancellationError(error) || controller.signal.aborted;
     const summary = summarizeTranscriptionError(error);
     transcriptionHistory.finishAttempt(attempt.id, {
-      status: "failed",
+      status: cancelled ? "cancelled" : "failed",
       finishedAt: new Date().toISOString(),
-      errorSummary: summary,
+      errorSummary: cancelled ? "Transcription cancelled" : summary,
     });
-    throw new Error(summary);
+    broadcast("transcription:progress", { path: opts.videoPath, cancelled, error: true });
+    throw new Error(cancelled ? "Transcription cancelled" : summary);
+  } finally {
+    const current = inFlightTranscriptions.get(opts.videoPath);
+    if (current && current.attemptId === attempt.id) inFlightTranscriptions.delete(opts.videoPath);
   }
 }
 
@@ -753,6 +882,16 @@ app.post("/api/transcribe", async (req, res) => {
     logger.error("system", `Transcription failed: ${error?.message || error}`);
     return res.status(400).json({ error: error?.message || "Transcription failed" });
   }
+});
+
+app.post("/api/transcribe/cancel", (req, res) => {
+  const videoPath = typeof req.body?.path === "string" ? req.body.path : "";
+  if (!videoPath) return res.status(400).json({ error: "path is required" });
+  const entry = inFlightTranscriptions.get(videoPath);
+  if (!entry) return res.status(404).json({ ok: false, error: "No in-flight transcription for that path" });
+  entry.controller.abort();
+  logger.info("system", `Cancellation requested for transcription ${path.basename(videoPath)}`);
+  return res.json({ ok: true });
 });
 
 // ======== List Models ========
@@ -859,6 +998,15 @@ app.post("/api/test-connection", async (req, res) => {
   const result = await testConnection(conn);
   if (result.ok) logger.info("system", `Connection test passed: ${result.message}`);
   else logger.error("system", `Connection test failed: ${result.message}`);
+  res.json(result);
+});
+
+// ======== Notification test ========
+// Sends a sample webhook using the current settings (format + URL), bypassing
+// the notify_events filter so the UI can verify connectivity. Never affects
+// translation/queue — this is an isolated, on-demand call.
+app.post("/api/notify/test", async (_req, res) => {
+  const result = await notifyTest();
   res.json(result);
 });
 

@@ -164,13 +164,25 @@
       "copiedContext": "প্রসঙ্গ কপি করা হয়েছে",
       "copiedPlot": "কাহিনী সারাংশ কপি করা হয়েছে",
       "copiedGlossary": "শব্দকোষ কপি করা হয়েছে",
-      "copyFailed": "কপি ব্যর্থ"
+      "copyFailed": "কপি ব্যর্থ",
+      "editPlaceholder": "অনুবাদ সম্পাদনা…",
+      "saveChanges": "পরিবর্তন সংরক্ষণ",
+      "saveChangesCount": "পরিবর্তন সংরক্ষণ ({{count}})",
+      "saving": "সংরক্ষণ হচ্ছে…",
+      "saved": "{{count}}টি লাইন সংরক্ষিত",
+      "saveFailed": "পরিবর্তন সংরক্ষণ ব্যর্থ",
+      "download": "ডাউনলোড",
+      "edited": "সম্পাদিত"
     },
     "stat": {
       "pending": "মুলতবি",
       "translating": "অনুবাদ হচ্ছে",
       "done": "সম্পন্ন",
-      "errors": "ত্রুটি"
+      "errors": "ত্রুটি",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "এখনও কোনো কাজ নেই।",
     "noJobsHint": "সাবটাইটেল ফাইল খুঁজে পেতে <strong>ফোল্ডার স্ক্যান করুন</strong> ক্লিক করুন।",
@@ -235,7 +247,11 @@
       "error": "ত্রুটি",
       "analysis": "বিশ্লেষণ প্রসঙ্গ",
       "openLogs": "লগ খুলুন",
-      "fullPage": "সম্পূর্ণ পৃষ্ঠা"
+      "fullPage": "সম্পূর্ণ পৃষ্ঠা",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "প্রসঙ্গ বিশ্লেষণ হচ্ছে…"
   },
@@ -482,7 +498,19 @@
         "chipNoVideo": "ভিডিও নেই: {{state}}",
         "chipLangs_one": "{{count}} ভাষা",
         "chipLangs_other": "{{count}} ভাষা"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "webhookUrl": "Webhook URL",
+      "format": "Payload format",
+      "events": "Events to send",
+      "sendTest": "Send test",
+      "testSent": "Test notification sent successfully",
+      "testFailed": "Test notification failed: {{message}}",
+      "hint": "Fire an outbound webhook when jobs complete or fail and when the queue finishes. Leave the URL empty to disable. Events is a comma-separated list (job:done, job:error, queue:finished, queue:stopped)."
     },
     "saved": "সেটিংস সংরক্ষিত হয়েছে",
     "saveFailed": "সংরক্ষণ ব্যর্থ: {{message}}",
@@ -741,7 +769,11 @@
       "working": "কাজ চলছে…",
       "transcribe": "ট্রান্সক্রাইব",
       "transcribeTranslate": "ট্রান্সক্রাইব + অনুবাদ",
-      "enableHint": "এই ভিডিও থেকে সাবটাইটেল তৈরি করতে সেটিংসে স্পিচ-টু-টেক্সট সক্রিয় করুন।"
+      "enableHint": "এই ভিডিও থেকে সাবটাইটেল তৈরি করতে সেটিংসে স্পিচ-টু-টেক্সট সক্রিয় করুন।",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

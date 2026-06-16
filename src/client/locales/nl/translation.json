@@ -164,13 +164,25 @@
       "copiedContext": "Context gekopieerd",
       "copiedPlot": "Plotsamenvatting gekopieerd",
       "copiedGlossary": "Woordenlijst gekopieerd",
-      "copyFailed": "Kopiëren mislukt"
+      "copyFailed": "Kopiëren mislukt",
+      "editPlaceholder": "Vertaling bewerken…",
+      "saveChanges": "Wijzigingen opslaan",
+      "saveChangesCount": "Wijzigingen opslaan ({{count}})",
+      "saving": "Opslaan…",
+      "saved": "{{count}} regel(s) opgeslagen",
+      "saveFailed": "Wijzigingen opslaan mislukt",
+      "download": "Downloaden",
+      "edited": "bewerkt"
     },
     "stat": {
       "pending": "Wachtend",
       "translating": "Vertalen",
       "done": "Klaar",
-      "errors": "Fouten"
+      "errors": "Fouten",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "Nog geen taken.",
     "noJobsHint": "Klik op <strong>Mappen scannen</strong> om ondertitelbestanden te ontdekken.",
@@ -235,7 +247,11 @@
       "error": "Fout",
       "analysis": "Analysecontext",
       "openLogs": "Logboeken openen",
-      "fullPage": "Volledige pagina"
+      "fullPage": "Volledige pagina",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Context analyseren…"
   },
@@ -482,7 +498,19 @@
         "chipNoVideo": "geen video: {{state}}",
         "chipLangs_one": "{{count}} taal",
         "chipLangs_other": "{{count}} talen"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "webhookUrl": "Webhook URL",
+      "format": "Payload format",
+      "events": "Events to send",
+      "sendTest": "Send test",
+      "testSent": "Test notification sent successfully",
+      "testFailed": "Test notification failed: {{message}}",
+      "hint": "Fire an outbound webhook when jobs complete or fail and when the queue finishes. Leave the URL empty to disable. Events is a comma-separated list (job:done, job:error, queue:finished, queue:stopped)."
     },
     "saved": "Instellingen opgeslagen",
     "saveFailed": "Opslaan mislukt: {{message}}",
@@ -741,7 +769,11 @@
       "working": "Bezig…",
       "transcribe": "Transcriberen",
       "transcribeTranslate": "Transcriberen + vertalen",
-      "enableHint": "Schakel spraak-naar-tekst in bij Instellingen om ondertitels van deze video te genereren."
+      "enableHint": "Schakel spraak-naar-tekst in bij Instellingen om ondertitels van deze video te genereren.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

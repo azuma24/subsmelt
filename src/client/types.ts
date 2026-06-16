@@ -23,6 +23,12 @@ export interface JobRow {
   force: number;
   analysis_context?: string | null;
   used_connections?: string | null;
+  /** Accumulated prompt-token usage for this job (0 when not tracked). */
+  input_tokens?: number;
+  /** Accumulated completion-token usage for this job (0 when not tracked). */
+  output_tokens?: number;
+  /** APPROXIMATE estimated USD cost; null for unknown/local models (tokens still tracked). */
+  est_cost?: number | null;
 }
 
 export interface QueueStatus {
@@ -127,7 +133,7 @@ export interface LlmHealth {
 }
 
 export type TranscribePostAction = "transcribe_only" | "transcribe_and_translate";
-export type ManualTranscriptionStage = "preflighting" | "transcribing" | "queueing" | "complete" | "skipped" | "failed";
+export type ManualTranscriptionStage = "preflighting" | "transcribing" | "queueing" | "complete" | "skipped" | "failed" | "cancelling" | "cancelled";
 
 export interface TranscribeRequest {
   videoPath: string;

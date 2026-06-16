@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
-import { useJobsQuery, useMutationWithInvalidation, useQueueStatusQuery, useSettingsQuery, useTasksQuery, useTranscriptionHistoryQuery } from "../../hooks";
+import { useJobsQuery, useMutationWithInvalidation, useQueueStatusQuery, useSettingsQuery, useSSE, useTasksQuery, useTranscriptionHistoryQuery } from "../../hooks";
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmModal";
 import type { JobRow, ScannedFile, TranscribePostAction, TranscriptionHistoryEntry } from "../../types";
@@ -20,6 +20,7 @@ import { TranscriptionHistoryPanel } from "./TranscriptionHistoryPanel";
 import { ScanConfirmModal, type ScanPlan } from "./ScanConfirmModal";
 import {
   createManualTranscriptionProgress,
+  isManualTranscriptionBusy,
   transitionManualTranscriptionProgress,
   type ManualTranscriptionProgress,
 } from "./transcription-progress";
@@ -75,6 +76,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const forceSelectedMutation = useMutationWithInvalidation((ids: number[]) => api.forceJobsApi(ids));
   const transcribeMutation = useMutationWithInvalidation((payload: { videoPath: string; postAction: TranscribePostAction }) => api.transcribeVideo(payload));
   const retryTranscriptionMutation = useMutationWithInvalidation((id: string) => api.retryTranscriptionAttempt(id));
+  const cancelTranscriptionMutation = useMutationWithInvalidation((videoPath: string) => api.cancelTranscription({ path: videoPath }));
 
   const jobs: JobRow[] = jobsQuery.data?.jobs || [];
   const queueRunning = Boolean(queueStatusQuery.data?.running ?? jobsQuery.data?.queueRunning ?? false);
@@ -87,6 +89,21 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const hasLlmConfig = Boolean(str(settings.llm_endpoint)) && Boolean(str(settings.model));
   const transcriptionEnabled = str(settings.transcription_enabled, "0") === "1";
   const transcriptionAttempts = transcriptionHistoryQuery.data?.attempts || [];
+  const tokenBudget = Math.max(0, parseInt(str(settings.monthly_token_budget, "0"), 10) || 0);
+
+  // Summed token usage + approximate cost across all jobs (display-only).
+  const usageTotals = jobs.reduce(
+    (acc, job) => {
+      acc.inputTokens += job.input_tokens || 0;
+      acc.outputTokens += job.output_tokens || 0;
+      if (typeof job.est_cost === "number") {
+        acc.cost += job.est_cost;
+        acc.hasCost = true;
+      }
+      return acc;
+    },
+    { inputTokens: 0, outputTokens: 0, cost: 0, hasCost: false },
+  );
 
   const {
     pendingJobs,
@@ -284,6 +301,39 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
     });
   };
 
+  // Subscribe to live per-segment transcription progress. The backend emits
+  // transcription:progress { path, pct, processedSeconds, totalSeconds } as it
+  // processes the faster-whisper segment generator; we match by path and feed
+  // the real percentage into the progress state machine.
+  useSSE((type, data) => {
+    if (type !== "transcription:progress") return;
+    const videoPath = typeof data.path === "string" ? data.path : "";
+    if (!videoPath) return;
+    if (data.cancelled === true) {
+      updateTranscriptionProgress(videoPath, (current) =>
+        transitionManualTranscriptionProgress(current, { type: "cancelled" }),
+      );
+      return;
+    }
+    if (typeof data.pct === "number") {
+      const pct = data.pct;
+      updateTranscriptionProgress(videoPath, (current) =>
+        transitionManualTranscriptionProgress(current, { type: "progress", pct }),
+      );
+    }
+  });
+
+  const handleCancelTranscription = async (videoPath: string) => {
+    updateTranscriptionProgress(videoPath, (current) =>
+      transitionManualTranscriptionProgress(current, { type: "cancel-requested" }),
+    );
+    try {
+      await cancelTranscriptionMutation.mutateAsync(videoPath);
+    } catch (e: unknown) {
+      addToast(`Cancel failed: ${getErrorMessage(e)}`, "error");
+    }
+  };
+
   const handleTranscribe = async (videoPath: string, postAction: TranscribePostAction) => {
     setTranscriptionProgressByPath((prev) => ({
       ...prev,
@@ -438,6 +488,8 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
           pendingJobs={pendingJobs}
           doneJobs={doneJobs}
           errorJobs={errorJobs}
+          usageTotals={usageTotals}
+          tokenBudget={tokenBudget}
           onSelectStatus={selectStatus}
           t={t}
         />
@@ -591,6 +643,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
                 mode={scanResultMode}
                 onQueueAll={handleScan}
                 onTranscribe={handleTranscribe}
+                onCancelTranscribe={handleCancelTranscription}
                 transcriptionEnabled={transcriptionEnabled}
                 transcriptionProgressByPath={transcriptionProgressByPath}
                 isQueueing={scanMutation.isPending}

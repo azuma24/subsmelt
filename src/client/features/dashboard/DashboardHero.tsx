@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import type { JobRow } from "../../types";
 import { StatusStrip, StatCard } from "../../ui/primitives";
 import { ActiveJobCard } from "./ActiveJobCard";
+import { formatTokens, formatCost } from "../../lib";
 
 interface StatusSegment {
   key: string;
@@ -18,6 +19,10 @@ interface DashboardHeroProps {
   pendingJobs: JobRow[];
   doneJobs: JobRow[];
   errorJobs: JobRow[];
+  /** Summed token usage + approximate cost across all visible jobs. */
+  usageTotals: { inputTokens: number; outputTokens: number; cost: number; hasCost: boolean };
+  /** Soft monthly token budget (0 = unlimited) — display-only indicator. */
+  tokenBudget: number;
   onSelectStatus: (key: string) => void;
   t: TFunction;
 }
@@ -29,9 +34,18 @@ export function DashboardHero({
   pendingJobs,
   doneJobs,
   errorJobs,
+  usageTotals,
+  tokenBudget,
   onSelectStatus,
   t,
 }: DashboardHeroProps) {
+  const totalTokens = usageTotals.inputTokens + usageTotals.outputTokens;
+  const costStr = usageTotals.hasCost ? `≈ ${formatCost(usageTotals.cost)}` : t("dashboard.stat.costLocal");
+  const budgetStr = tokenBudget > 0
+    ? t("dashboard.stat.tokenBudget", { used: formatTokens(totalTokens), budget: formatTokens(tokenBudget) })
+    : costStr;
+  const overBudget = tokenBudget > 0 && totalTokens > tokenBudget;
+  const tokenCardLabel = `${t("dashboard.stat.tokens")} · ${budgetStr}`;
   return (
     <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:gap-4">
       {/* Left: Status strip + active job */}
@@ -61,6 +75,14 @@ export function DashboardHero({
           color="text-[var(--red)]"
           onClick={() => onSelectStatus("error")}
         />
+        {/* Tokens / est. cost — unobtrusive, spans the full width below the 4 cards */}
+        <div className="col-span-2 xl:col-span-4">
+          <StatCard
+            label={tokenCardLabel}
+            value={formatTokens(totalTokens)}
+            color={overBudget ? "text-[var(--red)]" : "text-[var(--text)]"}
+          />
+        </div>
       </div>
     </div>
   );

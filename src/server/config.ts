@@ -72,6 +72,17 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   // series stays consistent across files. Default off — behavior unchanged.
   series_memory: "0",
   auto_scan_interval: "0",
+  // Soft monthly token budget for the cost/usage indicator. "0" = unlimited.
+  // Display-only: NEVER blocks or throttles translation — it only powers a
+  // visible "tokens used vs budget" hint in the UI.
+  monthly_token_budget: "0",
+  // Outbound webhook notifications. Empty webhook_url = disabled (default).
+  // notify_events: comma list of which SSE events trigger a webhook. Defaults
+  // to errors + queue-finished only, NOT every job:done (avoids per-file spam).
+  // notify_format: payload shape — "json" | "discord" | "slack".
+  notify_webhook_url: "",
+  notify_events: "job:error,queue:finished",
+  notify_format: "json",
   watch_enabled: "0",
   auto_translate: "1",
   video_extensions: ".mkv,.mp4,.avi,.m4v,.ts,.wmv,.mov",

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useJobPreview } from "../../hooks";
@@ -7,6 +7,7 @@ import { copyText } from "../../lib/clipboard";
 import { ModalShell } from "../../components/ModalShell";
 import { PageError, PageLoading } from "../../ui/QueryState";
 import { useToast } from "../../components/Toast";
+import { ApiError, jobDownloadUrl, saveJobCues } from "../../api";
 import type { PreviewLine } from "../../types";
 
 interface PreviewOverlayProps {
@@ -31,11 +32,26 @@ function splitAnalysisSections(analysis: string) {
 const VIRTUALIZE_THRESHOLD = 200;
 // Initial per-row height estimates (px). react-virtual measures real heights,
 // so these only seed the first paint. Desktop rows are tight; mobile cards taller.
-const DESKTOP_ROW_ESTIMATE = 32;
-const MOBILE_ROW_ESTIMATE = 132;
+const DESKTOP_ROW_ESTIMATE = 40;
+const MOBILE_ROW_ESTIMATE = 150;
 // Shared grid template for the virtualized desktop rows so the windowed body
 // stays column-aligned with the sticky header: # | TIME | ORIGINAL | TRANSLATED | ⚠
 const DESKTOP_GRID_COLS = "32px 96px minmax(0,1fr) minmax(0,1fr) 32px";
+
+/**
+ * Shared edit context threaded through every render path (table / list /
+ * virtualized). Edits live in a Map keyed by the STABLE cue index (line.index),
+ * never by row position, so the windowed list and filters stay correct.
+ */
+interface EditCtx {
+  // Current edited value for a cue index, or undefined if unedited.
+  getValue: (index: number) => string | undefined;
+  // True when the cue's current value differs from the saved baseline.
+  isDirty: (index: number) => boolean;
+  onChange: (index: number, value: string) => void;
+  placeholder: string;
+  editedLabel: string;
+}
 
 export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearch, onClose }: PreviewOverlayProps) {
   const { t } = useTranslation();
@@ -44,6 +60,24 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
   const previewData = previewQuery.data;
   const [showOnlyChanged, setShowOnlyChanged] = useState(false);
   const [showOnlyIssues, setShowOnlyIssues] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  // Pending edits keyed by stable cue index → new translated text. Cleared on
+  // successful save (baseline is then refetched so highlights reflect saves).
+  const [edits, setEdits] = useState<Map<number, string>>(new Map());
+
+  // Baseline translated text per cue index from the server. Used to decide
+  // whether an edit actually differs from what's saved on disk.
+  const baseline = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const line of previewData?.lines || []) map.set(line.index, line.translated || "");
+    return map;
+  }, [previewData?.lines]);
+
+  // Reset edit buffer when switching jobs or when fresh data arrives.
+  useEffect(() => {
+    setEdits(new Map());
+  }, [jobId]);
+
   // Outer scroll viewport. Holds the analysis block + the (possibly windowed)
   // cue list, so existing scroll behavior (analysis scrolls with the list) is
   // preserved. When the list is windowed it is also the virtualizer's scroller.
@@ -54,12 +88,62 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
 
   const { plot, glossary } = useMemo(() => splitAnalysisSections(previewData?.analysis || ""), [previewData?.analysis]);
 
+  const getValue = useCallback(
+    (index: number): string | undefined => edits.get(index),
+    [edits]
+  );
+  const isDirty = useCallback(
+    (index: number): boolean => {
+      if (!edits.has(index)) return false;
+      return (edits.get(index) ?? "") !== (baseline.get(index) ?? "");
+    },
+    [edits, baseline]
+  );
+  const onChange = useCallback((index: number, value: string) => {
+    setEdits((prev) => {
+      const next = new Map(prev);
+      next.set(index, value);
+      return next;
+    });
+  }, []);
+
+  const editCtx: EditCtx = useMemo(
+    () => ({
+      getValue,
+      isDirty,
+      onChange,
+      placeholder: t("dashboard.preview.editPlaceholder"),
+      editedLabel: t("dashboard.preview.edited"),
+    }),
+    [getValue, isDirty, onChange, t]
+  );
+
+  // The effective translated text for a line: edited value if present, else
+  // the server baseline. Drives filters, issue detection, and Copy TSV so they
+  // always reflect what the user currently sees.
+  const effectiveTranslated = useCallback(
+    (line: PreviewLine): string => {
+      const edited = edits.get(line.index);
+      return edited !== undefined ? edited : line.translated;
+    },
+    [edits]
+  );
+
+  // Count of cues whose edited value differs from the saved baseline.
+  const dirtyCount = useMemo(() => {
+    let n = 0;
+    for (const [index, value] of edits) {
+      if ((value ?? "") !== (baseline.get(index) ?? "")) n++;
+    }
+    return n;
+  }, [edits, baseline]);
+
   const filteredLines = useMemo(() => {
-    let lines = filterLines(previewData?.lines || [], previewSearch);
-    if (showOnlyChanged) lines = lines.filter((l) => l.original.trim() !== l.translated.trim());
-    if (showOnlyIssues) lines = lines.filter((l) => hasIssue(l));
+    let lines = filterLines(previewData?.lines || [], previewSearch, effectiveTranslated);
+    if (showOnlyChanged) lines = lines.filter((l) => l.original.trim() !== effectiveTranslated(l).trim());
+    if (showOnlyIssues) lines = lines.filter((l) => hasIssue(l, effectiveTranslated(l)));
     return lines;
-  }, [previewData?.lines, previewSearch, showOnlyChanged, showOnlyIssues]);
+  }, [previewData?.lines, previewSearch, showOnlyChanged, showOnlyIssues, effectiveTranslated]);
 
   const shouldVirtualize = filteredLines.length > VIRTUALIZE_THRESHOLD;
 
@@ -76,7 +160,7 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
   virtualizerRef.current = virtualizer;
 
   const jumpToNextIssue = () => {
-    const issueIdx = filteredLines.findIndex((line) => hasIssue(line));
+    const issueIdx = filteredLines.findIndex((line) => hasIssue(line, effectiveTranslated(line)));
     if (issueIdx === -1) {
       addToast(t("dashboard.preview.noIssues"), "info");
       return;
@@ -100,6 +184,29 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
       return;
     }
     addToast(t("dashboard.preview.copyFailed"), "error");
+  };
+
+  const handleSave = async () => {
+    // Only send cues that actually differ from the saved baseline.
+    const payload: { index: number; text: string }[] = [];
+    for (const [index, value] of edits) {
+      if ((value ?? "") !== (baseline.get(index) ?? "")) payload.push({ index, text: value });
+    }
+    if (payload.length === 0) return;
+    setIsSaving(true);
+    try {
+      const res = await saveJobCues(jobId, payload);
+      addToast(t("dashboard.preview.saved", { count: res.updated }), "success");
+      // Clear the edit buffer and refetch so the baseline reflects the saved
+      // state — "changed" highlighting then turns off for the saved lines.
+      setEdits(new Map());
+      await previewQuery.refetch();
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : t("dashboard.preview.saveFailed");
+      addToast(message, "error");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const title = previewData?.srtPath?.split("/").pop() || t("dashboard.action.preview");
@@ -156,26 +263,48 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
               <div ref={listStartRef}>
                 {shouldVirtualize ? (
                   isMobile
-                    ? <PreviewMobileVirtual lines={filteredLines} virtualizer={virtualizer} />
-                    : <PreviewDesktopVirtual lines={filteredLines} virtualizer={virtualizer} />
+                    ? <PreviewMobileVirtual lines={filteredLines} virtualizer={virtualizer} editCtx={editCtx} effective={effectiveTranslated} />
+                    : <PreviewDesktopVirtual lines={filteredLines} virtualizer={virtualizer} editCtx={editCtx} effective={effectiveTranslated} />
                 ) : isMobile ? (
-                  <PreviewMobileList lines={filteredLines} />
+                  <PreviewMobileList lines={filteredLines} editCtx={editCtx} effective={effectiveTranslated} />
                 ) : (
-                  <PreviewDesktopTable lines={filteredLines} />
+                  <PreviewDesktopTable lines={filteredLines} editCtx={editCtx} effective={effectiveTranslated} />
                 )}
               </div>
             )}
           </div>
           {previewData && filteredLines.length > 0 && (
-            <div className="border-t border-gray-800 px-5 py-3 flex justify-end">
+            <div className="border-t border-gray-800 px-5 py-3 flex flex-wrap items-center justify-end gap-2">
               <button
                 onClick={() => {
-                  const tsv = filteredLines.map((l) => `${l.index}\t${l.original}\t${l.translated}`).join("\n");
+                  const tsv = filteredLines.map((l) => `${l.index}\t${l.original}\t${effectiveTranslated(l)}`).join("\n");
                   void handleCopy(tsv, t("dashboard.toast.copiedTSV"));
                 }}
                 className="rounded-xl border border-gray-700 px-3 py-2 text-xs text-gray-400 hover:text-gray-200"
               >
                 {t("dashboard.preview.copyTSV")}
+              </button>
+              <a
+                href={jobDownloadUrl(jobId)}
+                download
+                className="rounded-xl border border-gray-700 px-3 py-2 text-xs text-gray-400 hover:text-gray-200"
+              >
+                {t("dashboard.preview.download")}
+              </a>
+              <button
+                onClick={() => void handleSave()}
+                disabled={dirtyCount === 0 || isSaving}
+                className={`rounded-xl px-3 py-2 text-xs font-medium ${
+                  dirtyCount === 0 || isSaving
+                    ? "cursor-not-allowed bg-gray-800 text-gray-600"
+                    : "bg-blue-600 text-white hover:bg-blue-500"
+                }`}
+              >
+                {isSaving
+                  ? t("dashboard.preview.saving")
+                  : dirtyCount > 0
+                    ? t("dashboard.preview.saveChangesCount", { count: dirtyCount })
+                    : t("dashboard.preview.saveChanges")}
               </button>
             </div>
           )}
@@ -184,9 +313,9 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
   );
 }
 
-function hasIssue(line: PreviewLine): boolean {
+function hasIssue(line: PreviewLine, translatedOverride?: string): boolean {
   const original = line.original?.trim() || "";
-  const translated = line.translated?.trim() || "";
+  const translated = (translatedOverride ?? line.translated ?? "").trim();
 
   const isUntranslated = original.length > 0 && translated.length === 0;
   const isSuspiciousShort = translated.length > 0 && original.length > 35 && translated.length < original.length * 0.12;
@@ -195,13 +324,47 @@ function hasIssue(line: PreviewLine): boolean {
   return Boolean(isUntranslated || isSuspiciousShort || isSuspiciousLong);
 }
 
-function filterLines(lines: PreviewLine[], search: string): PreviewLine[] {
+function filterLines(
+  lines: PreviewLine[],
+  search: string,
+  effective: (line: PreviewLine) => string
+): PreviewLine[] {
   if (!search) return lines;
   const q = search.toLowerCase();
-  return lines.filter((l) => l.original.toLowerCase().includes(q) || l.translated.toLowerCase().includes(q));
+  return lines.filter((l) => l.original.toLowerCase().includes(q) || effective(l).toLowerCase().includes(q));
 }
 
-function PreviewDesktopTable({ lines }: { lines: PreviewLine[] }) {
+// Auto-growing translated-text editor bound to the shared edit context, keyed
+// by the stable cue index. Works identically in the table, list, and windowed
+// paths because state lives in the parent, not in row position.
+function TranslatedEditor({ line, editCtx }: { line: PreviewLine; editCtx: EditCtx }) {
+  const edited = editCtx.getValue(line.index);
+  const value = edited !== undefined ? edited : line.translated;
+  const dirty = editCtx.isDirty(line.index);
+  return (
+    <textarea
+      value={value}
+      onChange={(e) => editCtx.onChange(line.index, e.target.value)}
+      placeholder={editCtx.placeholder}
+      rows={1}
+      aria-label={editCtx.placeholder}
+      className={`w-full resize-y rounded border bg-gray-900/60 px-2 py-1 text-xs text-gray-100 focus:outline-none focus:border-blue-500 ${
+        dirty ? "border-blue-600/70 bg-blue-950/30" : "border-transparent hover:border-gray-700"
+      }`}
+      style={{ minHeight: "1.75rem", fieldSizing: "content" } as React.CSSProperties}
+    />
+  );
+}
+
+function PreviewDesktopTable({
+  lines,
+  editCtx,
+  effective,
+}: {
+  lines: PreviewLine[];
+  editCtx: EditCtx;
+  effective: (line: PreviewLine) => string;
+}) {
   const { t } = useTranslation();
   return (
     <table className="w-full text-sm">
@@ -215,16 +378,24 @@ function PreviewDesktopTable({ lines }: { lines: PreviewLine[] }) {
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-800/30">
-        {lines.map((line) => <PreviewLineRow key={line.index} line={line} table />)}
+        {lines.map((line) => <PreviewLineRow key={line.index} line={line} table editCtx={editCtx} effective={effective} />)}
       </tbody>
     </table>
   );
 }
 
-function PreviewMobileList({ lines }: { lines: PreviewLine[] }) {
+function PreviewMobileList({
+  lines,
+  editCtx,
+  effective,
+}: {
+  lines: PreviewLine[];
+  editCtx: EditCtx;
+  effective: (line: PreviewLine) => string;
+}) {
   return (
     <div className="space-y-3 p-4">
-      {lines.map((line) => <PreviewLineRow key={line.index} line={line} />)}
+      {lines.map((line) => <PreviewLineRow key={line.index} line={line} editCtx={editCtx} effective={effective} />)}
     </div>
   );
 }
@@ -238,9 +409,13 @@ type Virtualizer = ReturnType<typeof useVirtualizer<HTMLDivElement, Element>>;
 function PreviewDesktopVirtual({
   lines,
   virtualizer,
+  editCtx,
+  effective,
 }: {
   lines: PreviewLine[];
   virtualizer: Virtualizer;
+  editCtx: EditCtx;
+  effective: (line: PreviewLine) => string;
 }) {
   const { t } = useTranslation();
   const TH = "px-3 py-2 text-left";
@@ -266,6 +441,8 @@ function PreviewDesktopVirtual({
               dataIndex={vitem.index}
               measureRef={virtualizer.measureElement}
               start={vitem.start - virtualizer.options.scrollMargin}
+              editCtx={editCtx}
+              effective={effective}
             />
           );
         })}
@@ -279,9 +456,13 @@ function PreviewDesktopVirtual({
 function PreviewMobileVirtual({
   lines,
   virtualizer,
+  editCtx,
+  effective,
 }: {
   lines: PreviewLine[];
   virtualizer: Virtualizer;
+  editCtx: EditCtx;
+  effective: (line: PreviewLine) => string;
 }) {
   return (
     <div className="p-4">
@@ -302,7 +483,7 @@ function PreviewMobileVirtual({
                 transform: `translateY(${vitem.start - virtualizer.options.scrollMargin}px)`,
               }}
             >
-              <PreviewLineRow line={line} />
+              <PreviewLineRow line={line} editCtx={editCtx} effective={effective} />
             </div>
           );
         })}
@@ -311,9 +492,19 @@ function PreviewMobileVirtual({
   );
 }
 
-function PreviewLineRow({ line, table = false }: { line: PreviewLine; table?: boolean }) {
+function PreviewLineRow({
+  line,
+  table = false,
+  editCtx,
+  effective,
+}: {
+  line: PreviewLine;
+  table?: boolean;
+  editCtx: EditCtx;
+  effective: (line: PreviewLine) => string;
+}) {
   const { t } = useTranslation();
-  const issue = hasIssue(line);
+  const issue = hasIssue(line, effective(line));
 
   if (table) {
     return (
@@ -321,7 +512,7 @@ function PreviewLineRow({ line, table = false }: { line: PreviewLine; table?: bo
         <td className="px-3 py-1.5 text-gray-600 text-[10px] align-top">{line.index}</td>
         <td className="px-3 py-1.5 text-[10px] text-gray-600 font-mono align-top whitespace-nowrap">{formatTimecode(line.start)}</td>
         <td className="px-3 py-1.5 text-gray-300 align-top text-xs">{line.original}</td>
-        <td className="px-3 py-1.5 text-gray-200 align-top text-xs">{line.translated || <span className="text-red-400/60 italic">{t("dashboard.preview.untranslated")}</span>}</td>
+        <td className="px-3 py-1.5 align-top text-xs"><TranslatedEditor line={line} editCtx={editCtx} /></td>
         <td className="px-3 py-1.5 align-top">{issue && <span className="text-yellow-500 text-[10px]">⚠</span>}</td>
       </tr>
     );
@@ -340,7 +531,7 @@ function PreviewLineRow({ line, table = false }: { line: PreviewLine; table?: bo
         </div>
         <div>
           <div className="mb-1 text-[10px] uppercase text-gray-600">{t("dashboard.preview.colTranslated")}</div>
-          <div className="text-gray-100">{line.translated || <span className="text-red-400/60 italic">{t("dashboard.preview.untranslated")}</span>}</div>
+          <TranslatedEditor line={line} editCtx={editCtx} />
         </div>
       </div>
     </div>
@@ -356,14 +547,17 @@ function PreviewLineGridRow({
   dataIndex,
   measureRef,
   start,
+  editCtx,
+  effective,
 }: {
   line: PreviewLine;
   dataIndex: number;
   measureRef: (el: HTMLElement | null) => void;
   start: number;
+  editCtx: EditCtx;
+  effective: (line: PreviewLine) => string;
 }) {
-  const { t } = useTranslation();
-  const issue = hasIssue(line);
+  const issue = hasIssue(line, effective(line));
   return (
     <div
       id={`preview-line-${line.index}`}
@@ -382,7 +576,7 @@ function PreviewLineGridRow({
       <div className="px-3 py-1.5 text-gray-600 text-[10px]">{line.index}</div>
       <div className="px-3 py-1.5 text-[10px] text-gray-600 font-mono whitespace-nowrap">{formatTimecode(line.start)}</div>
       <div className="px-3 py-1.5 text-gray-300 text-xs">{line.original}</div>
-      <div className="px-3 py-1.5 text-gray-200 text-xs">{line.translated || <span className="text-red-400/60 italic">{t("dashboard.preview.untranslated")}</span>}</div>
+      <div className="px-3 py-1.5 text-xs"><TranslatedEditor line={line} editCtx={editCtx} /></div>
       <div className="px-3 py-1.5">{issue && <span className="text-yellow-500 text-[10px]">⚠</span>}</div>
     </div>
   );

@@ -164,13 +164,25 @@
       "copiedContext": "சூழல் நகலெடுக்கப்பட்டது",
       "copiedPlot": "கதைச் சுருக்கம் நகலெடுக்கப்பட்டது",
       "copiedGlossary": "சொற்களஞ்சியம் நகலெடுக்கப்பட்டது",
-      "copyFailed": "நகலெடுப்பு தோல்வியடைந்தது"
+      "copyFailed": "நகலெடுப்பு தோல்வியடைந்தது",
+      "editPlaceholder": "மொழிபெயர்ப்பைத் திருத்து…",
+      "saveChanges": "மாற்றங்களைச் சேமி",
+      "saveChangesCount": "மாற்றங்களைச் சேமி ({{count}})",
+      "saving": "சேமிக்கிறது…",
+      "saved": "{{count}} வரிகள் சேமிக்கப்பட்டன",
+      "saveFailed": "மாற்றங்களைச் சேமிக்க முடியவில்லை",
+      "download": "பதிவிறக்கு",
+      "edited": "திருத்தப்பட்டது"
     },
     "stat": {
       "pending": "நிலுவையில்",
       "translating": "மொழிபெயர்க்கிறது",
       "done": "முடிந்தது",
-      "errors": "பிழைகள்"
+      "errors": "பிழைகள்",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "இன்னும் பணிகள் இல்லை.",
     "noJobsHint": "துணைத்தலைப்பு கோப்புகளைக் கண்டறிய <strong>கோப்புறைகளை ஸ்கேன் செய்</strong> என்பதைக் கிளிக் செய்யவும்.",
@@ -235,7 +247,11 @@
       "error": "பிழை",
       "analysis": "பகுப்பாய்வுச் சூழல்",
       "openLogs": "பதிவுகளைத் திற",
-      "fullPage": "முழுப் பக்கம்"
+      "fullPage": "முழுப் பக்கம்",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "சூழலைப் பகுப்பாய்வு செய்கிறது…"
   },
@@ -482,7 +498,19 @@
         "chipNoVideo": "வீடியோ இல்லை: {{state}}",
         "chipLangs_one": "{{count}} மொழி",
         "chipLangs_other": "{{count}} மொழிகள்"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "webhookUrl": "Webhook URL",
+      "format": "Payload format",
+      "events": "Events to send",
+      "sendTest": "Send test",
+      "testSent": "Test notification sent successfully",
+      "testFailed": "Test notification failed: {{message}}",
+      "hint": "Fire an outbound webhook when jobs complete or fail and when the queue finishes. Leave the URL empty to disable. Events is a comma-separated list (job:done, job:error, queue:finished, queue:stopped)."
     },
     "saved": "அமைப்புகள் சேமிக்கப்பட்டன",
     "saveFailed": "சேமிப்பு தோல்வியடைந்தது: {{message}}",
@@ -741,7 +769,11 @@
       "working": "வேலை செய்கிறது…",
       "transcribe": "படியெடு",
       "transcribeTranslate": "படியெடு + மொழிபெயர்",
-      "enableHint": "இந்த வீடியோவிலிருந்து துணைத்தலைப்புகளை உருவாக்க அமைப்புகளில் பேச்சு-முதல்-உரையை இயக்கவும்."
+      "enableHint": "இந்த வீடியோவிலிருந்து துணைத்தலைப்புகளை உருவாக்க அமைப்புகளில் பேச்சு-முதல்-உரையை இயக்கவும்.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

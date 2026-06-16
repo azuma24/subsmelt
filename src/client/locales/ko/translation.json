@@ -164,13 +164,25 @@
       "copiedContext": "Context copied",
       "copiedPlot": "Plot summary copied",
       "copiedGlossary": "Glossary copied",
-      "copyFailed": "Copy failed"
+      "copyFailed": "Copy failed",
+      "editPlaceholder": "번역 편집…",
+      "saveChanges": "변경사항 저장",
+      "saveChangesCount": "변경사항 저장 ({{count}})",
+      "saving": "저장 중…",
+      "saved": "{{count}}개 줄 저장됨",
+      "saveFailed": "변경사항 저장 실패",
+      "download": "다운로드",
+      "edited": "편집됨"
     },
     "stat": {
       "pending": "Pending",
       "translating": "Translating",
       "done": "Done",
-      "errors": "Errors"
+      "errors": "Errors",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "No jobs yet.",
     "noJobsHint": "Click <strong>Scan Folders</strong> to discover subtitle files.",
@@ -235,7 +247,11 @@
       "error": "오류",
       "analysis": "분석 컨텍스트",
       "openLogs": "로그 열기",
-      "fullPage": "전체 페이지"
+      "fullPage": "전체 페이지",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Analysing context…"
   },
@@ -482,7 +498,19 @@
         "chipNoVideo": "동영상 없음: {{state}}",
         "chipLangs_one": "언어 {{count}}개",
         "chipLangs_other": "언어 {{count}}개"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "webhookUrl": "Webhook URL",
+      "format": "Payload format",
+      "events": "Events to send",
+      "sendTest": "Send test",
+      "testSent": "Test notification sent successfully",
+      "testFailed": "Test notification failed: {{message}}",
+      "hint": "Fire an outbound webhook when jobs complete or fail and when the queue finishes. Leave the URL empty to disable. Events is a comma-separated list (job:done, job:error, queue:finished, queue:stopped)."
     },
     "saved": "Settings saved",
     "saveFailed": "Save failed: {{message}}",
@@ -741,7 +769,11 @@
       "working": "Working…",
       "transcribe": "Transcribe",
       "transcribeTranslate": "Transcribe + Translate",
-      "enableHint": "Enable speech-to-text in Settings to generate subtitles from this video."
+      "enableHint": "Enable speech-to-text in Settings to generate subtitles from this video.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

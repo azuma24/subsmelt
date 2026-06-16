@@ -164,13 +164,25 @@
       "copiedContext": "Nakopya ang konteksto",
       "copiedPlot": "Nakopya ang buod ng plot",
       "copiedGlossary": "Nakopya ang glossary",
-      "copyFailed": "Nabigo ang pagkopya"
+      "copyFailed": "Nabigo ang pagkopya",
+      "editPlaceholder": "I-edit ang pagsasalin…",
+      "saveChanges": "I-save ang mga pagbabago",
+      "saveChangesCount": "I-save ang mga pagbabago ({{count}})",
+      "saving": "Sine-save…",
+      "saved": "{{count}} linya ang na-save",
+      "saveFailed": "Nabigong i-save ang mga pagbabago",
+      "download": "I-download",
+      "edited": "na-edit"
     },
     "stat": {
       "pending": "Nakabinbin",
       "translating": "Isinasalin",
       "done": "Tapos",
-      "errors": "Mga Error"
+      "errors": "Mga Error",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "Wala pang trabaho.",
     "noJobsHint": "I-click ang <strong>I-scan ang mga Folder</strong> upang matuklasan ang mga subtitle file.",
@@ -235,7 +247,11 @@
       "error": "Error",
       "analysis": "Konteksto ng pagsusuri",
       "openLogs": "Buksan ang mga log",
-      "fullPage": "Buong pahina"
+      "fullPage": "Buong pahina",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Sinusuri ang konteksto…"
   },
@@ -482,7 +498,19 @@
         "chipNoVideo": "walang video: {{state}}",
         "chipLangs_one": "{{count}} wika",
         "chipLangs_other": "{{count}} wika"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "webhookUrl": "Webhook URL",
+      "format": "Payload format",
+      "events": "Events to send",
+      "sendTest": "Send test",
+      "testSent": "Test notification sent successfully",
+      "testFailed": "Test notification failed: {{message}}",
+      "hint": "Fire an outbound webhook when jobs complete or fail and when the queue finishes. Leave the URL empty to disable. Events is a comma-separated list (job:done, job:error, queue:finished, queue:stopped)."
     },
     "saved": "Na-save ang mga setting",
     "saveFailed": "Nabigo ang pag-save: {{message}}",
@@ -741,7 +769,11 @@
       "working": "Gumagawa…",
       "transcribe": "I-transcribe",
       "transcribeTranslate": "I-transcribe + Isalin",
-      "enableHint": "I-enable ang speech-to-text sa Mga Setting para gumawa ng subtitle mula sa video na ito."
+      "enableHint": "I-enable ang speech-to-text sa Mga Setting para gumawa ng subtitle mula sa video na ito.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

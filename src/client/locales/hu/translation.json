@@ -164,13 +164,25 @@
       "copiedContext": "Kontextus másolva",
       "copiedPlot": "Cselekmény-összefoglaló másolva",
       "copiedGlossary": "Szószedet másolva",
-      "copyFailed": "A másolás sikertelen"
+      "copyFailed": "A másolás sikertelen",
+      "editPlaceholder": "Fordítás szerkesztése…",
+      "saveChanges": "Módosítások mentése",
+      "saveChangesCount": "Módosítások mentése ({{count}})",
+      "saving": "Mentés…",
+      "saved": "{{count}} sor mentve",
+      "saveFailed": "A módosítások mentése sikertelen",
+      "download": "Letöltés",
+      "edited": "szerkesztve"
     },
     "stat": {
       "pending": "Függőben",
       "translating": "Fordítás",
       "done": "Kész",
-      "errors": "Hibák"
+      "errors": "Hibák",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "Még nincsenek feladatok.",
     "noJobsHint": "Kattints a <strong>Mappák átvizsgálása</strong> gombra a feliratfájlok felderítéséhez.",
@@ -235,7 +247,11 @@
       "error": "Hiba",
       "analysis": "Elemzési kontextus",
       "openLogs": "Naplók megnyitása",
-      "fullPage": "Teljes oldal"
+      "fullPage": "Teljes oldal",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Kontextus elemzése…"
   },
@@ -482,7 +498,19 @@
         "chipNoVideo": "nincs videó: {{state}}",
         "chipLangs_one": "{{count}} nyelv",
         "chipLangs_other": "{{count}} nyelv"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "webhookUrl": "Webhook URL",
+      "format": "Payload format",
+      "events": "Events to send",
+      "sendTest": "Send test",
+      "testSent": "Test notification sent successfully",
+      "testFailed": "Test notification failed: {{message}}",
+      "hint": "Fire an outbound webhook when jobs complete or fail and when the queue finishes. Leave the URL empty to disable. Events is a comma-separated list (job:done, job:error, queue:finished, queue:stopped)."
     },
     "saved": "Beállítások mentve",
     "saveFailed": "A mentés sikertelen: {{message}}",
@@ -741,7 +769,11 @@
       "working": "Folyamatban…",
       "transcribe": "Átirat",
       "transcribeTranslate": "Átirat + fordítás",
-      "enableHint": "Engedélyezd a beszéd szöveggé alakítást a Beállításokban, hogy feliratokat generálj ebből a videóból."
+      "enableHint": "Engedélyezd a beszéd szöveggé alakítást a Beállításokban, hogy feliratokat generálj ebből a videóból.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

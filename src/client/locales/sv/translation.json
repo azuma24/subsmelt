@@ -164,13 +164,25 @@
       "copiedContext": "Kontext kopierad",
       "copiedPlot": "Handlingssammanfattning kopierad",
       "copiedGlossary": "Ordlista kopierad",
-      "copyFailed": "Kopiering misslyckades"
+      "copyFailed": "Kopiering misslyckades",
+      "editPlaceholder": "Redigera översättning…",
+      "saveChanges": "Spara ändringar",
+      "saveChangesCount": "Spara ändringar ({{count}})",
+      "saving": "Sparar…",
+      "saved": "{{count}} rad(er) sparade",
+      "saveFailed": "Det gick inte att spara ändringarna",
+      "download": "Ladda ner",
+      "edited": "redigerad"
     },
     "stat": {
       "pending": "Väntande",
       "translating": "Översätter",
       "done": "Klara",
-      "errors": "Fel"
+      "errors": "Fel",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "Inga jobb än.",
     "noJobsHint": "Klicka på <strong>Skanna mappar</strong> för att hitta undertextfiler.",
@@ -235,7 +247,11 @@
       "error": "Fel",
       "analysis": "Analyskontext",
       "openLogs": "Öppna loggar",
-      "fullPage": "Helsida"
+      "fullPage": "Helsida",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Analyserar kontext…"
   },
@@ -482,7 +498,19 @@
         "chipNoVideo": "ingen video: {{state}}",
         "chipLangs_one": "{{count}} språk",
         "chipLangs_other": "{{count}} språk"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "webhookUrl": "Webhook URL",
+      "format": "Payload format",
+      "events": "Events to send",
+      "sendTest": "Send test",
+      "testSent": "Test notification sent successfully",
+      "testFailed": "Test notification failed: {{message}}",
+      "hint": "Fire an outbound webhook when jobs complete or fail and when the queue finishes. Leave the URL empty to disable. Events is a comma-separated list (job:done, job:error, queue:finished, queue:stopped)."
     },
     "saved": "Inställningar sparade",
     "saveFailed": "Sparande misslyckades: {{message}}",
@@ -741,7 +769,11 @@
       "working": "Arbetar…",
       "transcribe": "Transkribera",
       "transcribeTranslate": "Transkribera + översätt",
-      "enableHint": "Aktivera tal till text i Inställningar för att generera undertexter från denna video."
+      "enableHint": "Aktivera tal till text i Inställningar för att generera undertexter från denna video.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

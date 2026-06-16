@@ -164,13 +164,25 @@
       "copiedContext": "Το πλαίσιο αντιγράφηκε",
       "copiedPlot": "Η περίληψη πλοκής αντιγράφηκε",
       "copiedGlossary": "Το γλωσσάριο αντιγράφηκε",
-      "copyFailed": "Η αντιγραφή απέτυχε"
+      "copyFailed": "Η αντιγραφή απέτυχε",
+      "editPlaceholder": "Επεξεργασία μετάφρασης…",
+      "saveChanges": "Αποθήκευση αλλαγών",
+      "saveChangesCount": "Αποθήκευση αλλαγών ({{count}})",
+      "saving": "Αποθήκευση…",
+      "saved": "Αποθηκεύτηκαν {{count}} γραμμές",
+      "saveFailed": "Αποτυχία αποθήκευσης αλλαγών",
+      "download": "Λήψη",
+      "edited": "επεξεργασμένο"
     },
     "stat": {
       "pending": "Εκκρεμή",
       "translating": "Μετάφραση",
       "done": "Ολοκληρωμένα",
-      "errors": "Σφάλματα"
+      "errors": "Σφάλματα",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "Δεν υπάρχουν εργασίες ακόμη.",
     "noJobsHint": "Πατήστε <strong>Σάρωση φακέλων</strong> για να εντοπίσετε αρχεία υποτίτλων.",
@@ -235,7 +247,11 @@
       "error": "Σφάλμα",
       "analysis": "Πλαίσιο ανάλυσης",
       "openLogs": "Άνοιγμα καταγραφών",
-      "fullPage": "Πλήρης σελίδα"
+      "fullPage": "Πλήρης σελίδα",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Ανάλυση πλαισίου…"
   },
@@ -482,7 +498,19 @@
         "chipNoVideo": "χωρίς βίντεο: {{state}}",
         "chipLangs_one": "{{count}} γλώσσα",
         "chipLangs_other": "{{count}} γλώσσες"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "webhookUrl": "Webhook URL",
+      "format": "Payload format",
+      "events": "Events to send",
+      "sendTest": "Send test",
+      "testSent": "Test notification sent successfully",
+      "testFailed": "Test notification failed: {{message}}",
+      "hint": "Fire an outbound webhook when jobs complete or fail and when the queue finishes. Leave the URL empty to disable. Events is a comma-separated list (job:done, job:error, queue:finished, queue:stopped)."
     },
     "saved": "Οι ρυθμίσεις αποθηκεύτηκαν",
     "saveFailed": "Η αποθήκευση απέτυχε: {{message}}",
@@ -741,7 +769,11 @@
       "working": "Σε εξέλιξη…",
       "transcribe": "Μεταγραφή",
       "transcribeTranslate": "Μεταγραφή + Μετάφραση",
-      "enableHint": "Ενεργοποιήστε τη μετατροπή ομιλίας σε κείμενο στις Ρυθμίσεις για να δημιουργήσετε υπότιτλους από αυτό το βίντεο."
+      "enableHint": "Ενεργοποιήστε τη μετατροπή ομιλίας σε κείμενο στις Ρυθμίσεις για να δημιουργήσετε υπότιτλους από αυτό το βίντεο.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

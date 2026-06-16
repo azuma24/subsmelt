@@ -164,13 +164,25 @@
       "copiedContext": "Contexto copiado",
       "copiedPlot": "Resumo do enredo copiado",
       "copiedGlossary": "Glossário copiado",
-      "copyFailed": "Falha ao copiar"
+      "copyFailed": "Falha ao copiar",
+      "editPlaceholder": "Editar tradução…",
+      "saveChanges": "Guardar alterações",
+      "saveChangesCount": "Guardar alterações ({{count}})",
+      "saving": "A guardar…",
+      "saved": "{{count}} linha(s) guardada(s)",
+      "saveFailed": "Falha ao guardar as alterações",
+      "download": "Transferir",
+      "edited": "editado"
     },
     "stat": {
       "pending": "Pendentes",
       "translating": "A traduzir",
       "done": "Concluídos",
-      "errors": "Erros"
+      "errors": "Erros",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "Ainda não há trabalhos.",
     "noJobsHint": "Clique em <strong>Analisar pastas</strong> para descobrir ficheiros de legendas.",
@@ -235,7 +247,11 @@
       "error": "Erro",
       "analysis": "Contexto da análise",
       "openLogs": "Abrir registos",
-      "fullPage": "Página completa"
+      "fullPage": "Página completa",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "A analisar contexto…"
   },
@@ -482,7 +498,19 @@
         "chipNoVideo": "sem vídeo: {{state}}",
         "chipLangs_one": "{{count}} idioma",
         "chipLangs_other": "{{count}} idiomas"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "webhookUrl": "Webhook URL",
+      "format": "Payload format",
+      "events": "Events to send",
+      "sendTest": "Send test",
+      "testSent": "Test notification sent successfully",
+      "testFailed": "Test notification failed: {{message}}",
+      "hint": "Fire an outbound webhook when jobs complete or fail and when the queue finishes. Leave the URL empty to disable. Events is a comma-separated list (job:done, job:error, queue:finished, queue:stopped)."
     },
     "saved": "Definições guardadas",
     "saveFailed": "Falha ao guardar: {{message}}",
@@ -741,7 +769,11 @@
       "working": "A trabalhar…",
       "transcribe": "Transcrever",
       "transcribeTranslate": "Transcrever + traduzir",
-      "enableHint": "Ative a conversão de voz em texto nas Definições para gerar legendas a partir deste vídeo."
+      "enableHint": "Ative a conversão de voz em texto nas Definições para gerar legendas a partir deste vídeo.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

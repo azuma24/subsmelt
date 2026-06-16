@@ -164,13 +164,25 @@
       "copiedContext": "Kontext zkopírován",
       "copiedPlot": "Shrnutí děje zkopírováno",
       "copiedGlossary": "Glosář zkopírován",
-      "copyFailed": "Kopírování selhalo"
+      "copyFailed": "Kopírování selhalo",
+      "editPlaceholder": "Upravit překlad…",
+      "saveChanges": "Uložit změny",
+      "saveChangesCount": "Uložit změny ({{count}})",
+      "saving": "Ukládání…",
+      "saved": "Uloženo řádků: {{count}}",
+      "saveFailed": "Uložení změn se nezdařilo",
+      "download": "Stáhnout",
+      "edited": "upraveno"
     },
     "stat": {
       "pending": "Čeká",
       "translating": "Překládání",
       "done": "Hotovo",
-      "errors": "Chyby"
+      "errors": "Chyby",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "Zatím žádné úlohy.",
     "noJobsHint": "Klikněte na <strong>Prohledat složky</strong> pro nalezení souborů titulků.",
@@ -235,7 +247,11 @@
       "error": "Chyba",
       "analysis": "Kontext analýzy",
       "openLogs": "Otevřít protokoly",
-      "fullPage": "Celá stránka"
+      "fullPage": "Celá stránka",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Analýza kontextu…"
   },
@@ -482,7 +498,19 @@
         "chipNoVideo": "bez videa: {{state}}",
         "chipLangs_one": "{{count}} jazyk",
         "chipLangs_other": "{{count}} jazyků"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "webhookUrl": "Webhook URL",
+      "format": "Payload format",
+      "events": "Events to send",
+      "sendTest": "Send test",
+      "testSent": "Test notification sent successfully",
+      "testFailed": "Test notification failed: {{message}}",
+      "hint": "Fire an outbound webhook when jobs complete or fail and when the queue finishes. Leave the URL empty to disable. Events is a comma-separated list (job:done, job:error, queue:finished, queue:stopped)."
     },
     "saved": "Nastavení uloženo",
     "saveFailed": "Uložení selhalo: {{message}}",
@@ -741,7 +769,11 @@
       "working": "Pracuje se…",
       "transcribe": "Přepsat",
       "transcribeTranslate": "Přepsat + přeložit",
-      "enableHint": "Povolte v Nastavení převod řeči na text pro generování titulků z tohoto videa."
+      "enableHint": "Povolte v Nastavení převod řeči na text pro generování titulků z tohoto videa.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {

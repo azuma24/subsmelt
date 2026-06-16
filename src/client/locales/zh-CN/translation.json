@@ -164,13 +164,25 @@
       "copiedContext": "Context copied",
       "copiedPlot": "Plot summary copied",
       "copiedGlossary": "Glossary copied",
-      "copyFailed": "复制失败"
+      "copyFailed": "复制失败",
+      "editPlaceholder": "编辑翻译…",
+      "saveChanges": "保存更改",
+      "saveChangesCount": "保存更改（{{count}}）",
+      "saving": "保存中…",
+      "saved": "已保存 {{count}} 行",
+      "saveFailed": "保存更改失败",
+      "download": "下载",
+      "edited": "已编辑"
     },
     "stat": {
       "pending": "等待中",
       "translating": "翻译中",
       "done": "已完成",
-      "errors": "错误"
+      "errors": "错误",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "tokenBudget": "{{used}} / {{budget}} tokens"
     },
     "noJobsEmpty": "暂无任务。",
     "noJobsHint": "点击「扫描文件夹」以搜索字幕文件。",
@@ -235,7 +247,11 @@
       "error": "错误",
       "analysis": "分析上下文",
       "openLogs": "打开日志",
-      "fullPage": "完整页面"
+      "fullPage": "完整页面",
+      "tokens": "Tokens (in / out)",
+      "cost": "Est. cost",
+      "costLocal": "local",
+      "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
     "analysing": "Analysing context…"
   },
@@ -482,7 +498,19 @@
         "chipNoVideo": "无视频：{{state}}",
         "chipLangs_one": "{{count}} 种语言",
         "chipLangs_other": "{{count}} 种语言"
-      }
+      },
+      "monthlyTokenBudget": "Monthly token budget",
+      "monthlyTokenBudgetHint": "Soft monthly cap for the usage indicator. 0 = unlimited. Display-only — never blocks translation."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "webhookUrl": "Webhook URL",
+      "format": "Payload format",
+      "events": "Events to send",
+      "sendTest": "Send test",
+      "testSent": "Test notification sent successfully",
+      "testFailed": "Test notification failed: {{message}}",
+      "hint": "Fire an outbound webhook when jobs complete or fail and when the queue finishes. Leave the URL empty to disable. Events is a comma-separated list (job:done, job:error, queue:finished, queue:stopped)."
     },
     "saved": "设置已保存",
     "saveFailed": "保存失败：{{message}}",
@@ -741,7 +769,11 @@
       "working": "Working…",
       "transcribe": "Transcribe",
       "transcribeTranslate": "Transcribe + Translate",
-      "enableHint": "Enable speech-to-text in Settings to generate subtitles from this video."
+      "enableHint": "Enable speech-to-text in Settings to generate subtitles from this video.",
+      "progressPct": "Transcribing… {{pct}}%",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Transcription cancelled."
     }
   },
   "errors": {
