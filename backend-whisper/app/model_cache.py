@@ -98,14 +98,32 @@ def _candidate_cache_paths(model: str, cache_root: Path) -> list[Path]:
     ]
 
 
+def _dir_has_weights(d: Path) -> bool:
+    """True when a model dir holds CTranslate2 weights (``model.bin``).
+
+    Detection must require the actual weights, not just a snapshot directory:
+    a partial/interrupted download can leave the dir present but weightless, and
+    reporting that as "downloaded" makes the model show ✓ yet fail every
+    transcription. Accept ``*.safetensors`` too for forward-compat.
+    """
+    try:
+        return (d / "model.bin").exists() or any(d.glob("*.safetensors"))
+    except OSError:  # pragma: no cover - race with deletion
+        return False
+
+
 def _first_existing_path(candidates: list[Path]) -> Path | None:
     for candidate in candidates:
         if candidate.is_dir():
             if candidate.name == "snapshots":
                 snapshots = sorted((path for path in candidate.iterdir() if path.is_dir()), key=lambda path: path.name)
-                if snapshots:
-                    return snapshots[-1]
-            return candidate
+                # Newest snapshot that actually contains weights (skip incomplete ones).
+                for snapshot in reversed(snapshots):
+                    if _dir_has_weights(snapshot):
+                        return snapshot
+                continue
+            if _dir_has_weights(candidate):
+                return candidate
     return None
 
 

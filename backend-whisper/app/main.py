@@ -267,6 +267,13 @@ def models_delete(model: str, _auth: None = Depends(require_token)) -> dict:
             status_code=404,
             detail={"code": "model_not_downloaded", "model": exc.model},
         ) from exc
+    except OSError as exc:
+        # Deletion failed for real (e.g. a Windows file lock from a loaded model).
+        # Surface it instead of reporting a phantom success.
+        raise HTTPException(
+            status_code=500,
+            detail={"code": "delete_failed", "model": model, "message": str(exc)},
+        ) from exc
 
 
 def preflight_result(request: TranscribeRequest) -> PreflightResponse:
@@ -291,10 +298,20 @@ def preflight_result(request: TranscribeRequest) -> PreflightResponse:
         model_safe = gpu_safety["safe"]
         model_code = gpu_safety["code"]
         suggested = gpu_safety["suggested_model"]
+        # On GPU the binding constraint is VRAM. Surface VRAM under the generic
+        # available/required/recommended fields too (not just the *VramMb ones) so
+        # a client reading availableRamMb sees the resource that actually gated the
+        # request instead of unrelated system RAM.
+        avail_mb = gpu_safety["free_vram_mb"]
+        req_mb = gpu_safety["required_vram_mb"]
+        rec_mb = gpu_safety["recommended_vram_mb"]
     else:
         model_safe = safety["safe"]
         model_code = safety["code"]
         suggested = safety["suggested_model"]
+        avail_mb = safety["available_ram_mb"]
+        req_mb = safety["required_ram_mb"]
+        rec_mb = safety["recommended_ram_mb"]
 
     safe = bool(model_safe and ffmpeg_ok and disk_safety["safe"])
     code = (
@@ -307,9 +324,9 @@ def preflight_result(request: TranscribeRequest) -> PreflightResponse:
         ok=safe,
         safe=safe,
         code=code,
-        available_ram_mb=safety["available_ram_mb"],
-        required_ram_mb=safety["required_ram_mb"],
-        recommended_ram_mb=safety["recommended_ram_mb"],
+        available_ram_mb=avail_mb,
+        required_ram_mb=req_mb,
+        recommended_ram_mb=rec_mb,
         suggested_model=suggested,
         ffmpeg_available=ffmpeg_ok,
         disk_available_mb=disk_mb,

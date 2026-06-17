@@ -22,11 +22,22 @@ class ModelCacheTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             model_dir = Path(tmp) / "hub" / "models--Systran--faster-whisper-small" / "snapshots" / "1234"
             model_dir.mkdir(parents=True)
+            (model_dir / "model.bin").write_bytes(b"\0")
             info = describe_model_cache("small", 8192, env={"HF_HOME": tmp})
             self.assertEqual(info["cache_path"], str(model_dir))
             self.assertTrue(info["cached"])
             self.assertFalse(info["first_run_download_expected"])
             self.assertIsNone(info["suggested_model"])
+
+    def test_weightless_snapshot_is_not_cached(self):
+        # A snapshot dir without model.bin (partial/interrupted download) must NOT
+        # be reported cached — otherwise it shows ✓ downloaded yet fails to load.
+        with tempfile.TemporaryDirectory() as tmp:
+            snap = Path(tmp) / "hub" / "models--Systran--faster-whisper-small" / "snapshots" / "1234"
+            snap.mkdir(parents=True)  # no model.bin
+            info = describe_model_cache("small", 8192, env={"HF_HOME": tmp})
+            self.assertFalse(info["cached"])
+            self.assertIsNone(info["cache_path"])
 
     def test_uses_xdg_cache_home_huggingface_fallback(self):
         with tempfile.TemporaryDirectory() as tmp:
