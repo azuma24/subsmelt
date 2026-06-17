@@ -5,7 +5,8 @@
     "translations": "Traduzioni",
     "logs": "Log",
     "settings": "Impostazioni",
-    "convert": "Convert"
+    "convert": "Convert",
+    "whisper": "Whisper"
   },
   "common": {
     "save": "Salva",
@@ -853,5 +854,12 @@
     "unsupported": "Skipped {{count}} unsupported file(s). Only .srt, .vtt, .ass, .ssa are accepted.",
     "fileTooLarge": "File is too large (max 10MB per file).",
     "tooManyFiles": "Too many files (max 50)."
+  },
+  "whisper": {
+    "title": "Whisper — Speech to Text",
+    "subtitle": "Backend readiness, model downloads, and recent transcriptions. Select videos to transcribe on the Dashboard.",
+    "disabledNotice": "Speech-to-text is disabled.",
+    "openSettings": "Open Settings",
+    "transcribeHint": "To transcribe, open the Dashboard, scan your library, and use the per-file or batch Transcribe actions."
   }
 }

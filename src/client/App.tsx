@@ -27,6 +27,9 @@ const SettingsPage = lazy(() =>
 const ConvertPage = lazy(() =>
   import("./features/convert/ConvertPage").then((m) => ({ default: m.ConvertPage })),
 );
+const WhisperPage = lazy(() =>
+  import("./features/whisper/WhisperPage").then((m) => ({ default: m.WhisperPage })),
+);
 
 export default function App() {
   return (
@@ -111,6 +114,7 @@ function AppInner() {
             <Routes>
               <Route path="/" element={<DashboardPage isMobile={isMobile} />} />
               <Route path="/translations" element={<TranslationLanguagesPage isMobile={isMobile} />} />
+              <Route path="/whisper" element={<WhisperPage isMobile={isMobile} />} />
               <Route path="/convert" element={<ConvertPage isMobile={isMobile} />} />
               <Route path="/tasks" element={<Navigate to="/translations" replace />} />
               <Route path="/settings" element={<SettingsPage isMobile={isMobile} />} />
