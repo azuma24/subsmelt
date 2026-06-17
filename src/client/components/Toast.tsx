@@ -42,11 +42,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ addToast, removeToast }}>
       {children}
-      {/* Toast container */}
-      <div className="fixed inset-x-4 bottom-20 z-[100] flex flex-col gap-2 md:inset-x-auto md:bottom-4 md:right-4 md:max-w-sm">
+      {/* Toast container — aria-live so screen readers announce notifications. */}
+      <div
+        aria-live="polite"
+        aria-atomic="false"
+        className="fixed inset-x-4 bottom-20 z-[100] flex flex-col gap-2 md:inset-x-auto md:bottom-4 md:right-4 md:max-w-sm"
+      >
         {toasts.map((toast) => (
           <div
             key={toast.id}
+            role={toast.type === "error" ? "alert" : "status"}
             className={`flex items-start gap-2 rounded-2xl px-4 py-3 shadow-lg text-sm animate-[slideIn_0.2s_ease-out] ${
               toast.type === "success"
                 ? "bg-green-900/90 text-green-200 border border-green-800"
