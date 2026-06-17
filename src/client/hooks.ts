@@ -195,64 +195,81 @@ export function createDebouncedInvalidator(
   };
 }
 
+// Single shared EventSource for the whole app. Multiple components call useSSE
+// (App, Dashboard, ModelManager); each previously opened its OWN connection and
+// ran its OWN cache invalidation, so every event fired N times and the browser's
+// 6-connection-per-origin budget was burned. This singleton holds ONE connection
+// and fans events out to all subscribers; invalidation runs exactly once.
+type SseSingleton = {
+  es: EventSource;
+  invalidator: ReturnType<typeof createDebouncedInvalidator>;
+  subs: Set<SSEEventHandler>;
+};
+let sseSingleton: SseSingleton | null = null;
+
+function ensureSse(queryClient: ReturnType<typeof useQueryClient>): SseSingleton {
+  if (sseSingleton) return sseSingleton;
+  const es = new EventSource("/api/events");
+  const subs = new Set<SSEEventHandler>();
+  const invalidator = createDebouncedInvalidator((queryKey) => {
+    queryClient.invalidateQueries({ queryKey });
+  });
+  const refresh = (name?: SSEEventName) => {
+    invalidator.schedule(name ? getSSEInvalidationKeys(name) : [["jobs"], ["queue-status"], ["logs"], ["transcription-history"]]);
+  };
+
+  const bind = (name: SSEEventName) => {
+    es.addEventListener(name, (e) => {
+      const data = parseSSEData((e as MessageEvent).data);
+      // Dispatch to every subscriber; isolate so one throwing handler can't kill others.
+      subs.forEach((fn) => { try { fn(name, data); } catch { /* subscriber error */ } });
+
+      // Per-path transcription progress / per-model download progress are consumed
+      // directly by their components via onEvent; they must not invalidate queries.
+      if (name === "transcription:progress" || name === "model:download") return;
+
+      if (name === "job:progress") {
+        const { jobId, completed, total } = data as { jobId?: number; completed?: number; total?: number };
+        if (typeof jobId === "number" && typeof completed === "number" && typeof total === "number") {
+          queryClient.setQueryData(["jobs"], (old: Job[] | undefined) => {
+            if (!old) return old;
+            return old.map((job) => (job.id === jobId ? { ...job, completed_cues: completed, total_cues: total } : job));
+          });
+          invalidator.schedule([["queue-status"]]);
+          return;
+        }
+      }
+
+      refresh(name);
+    });
+  };
+
+  SSE_EVENT_NAMES.forEach(bind);
+  es.onerror = () => refresh();
+  sseSingleton = { es, invalidator, subs };
+  return sseSingleton;
+}
+
 export function useSSE(onEvent?: SSEEventHandler) {
   const queryClient = useQueryClient();
   const onEventRef = useRef(onEvent);
-
   useEffect(() => {
     onEventRef.current = onEvent;
   }, [onEvent]);
 
   useEffect(() => {
-    const es = new EventSource("/api/events");
-    const invalidator = createDebouncedInvalidator((queryKey) => {
-      queryClient.invalidateQueries({ queryKey });
-    });
-    const refresh = (name?: SSEEventName) => {
-      invalidator.schedule(name ? getSSEInvalidationKeys(name) : [["jobs"], ["queue-status"], ["logs"], ["transcription-history"]]);
-    };
-
-    const bind = (name: SSEEventName) => {
-      es.addEventListener(name, (e) => {
-        const data = parseSSEData((e as MessageEvent).data);
-        onEventRef.current?.(name, data);
-
-        // Per-path transcription progress is handled entirely by the dashboard
-        // via onEvent; it must not schedule query invalidations. Likewise the
-        // per-model download progress is consumed directly by the Model Manager.
-        if (name === "transcription:progress" || name === "model:download") return;
-
-        // For progress events: patch the cache directly from the SSE payload so
-        // the progress bar updates immediately without waiting for a round-trip
-        // refetch. This fixes the "stuck at 0%" issue where debounced invalidation
-        // collapsed many progress events into a single late refetch.
-        if (name === "job:progress") {
-          const { jobId, completed, total } = data as { jobId?: number; completed?: number; total?: number };
-          if (typeof jobId === "number" && typeof completed === "number" && typeof total === "number") {
-            queryClient.setQueryData(["jobs"], (old: Job[] | undefined) => {
-              if (!old) return old;
-              return old.map((job) =>
-                job.id === jobId
-                  ? { ...job, completed_cues: completed, total_cues: total }
-                  : job
-              );
-            });
-            // Still invalidate queue-status so the header badge stays current
-            invalidator.schedule([["queue-status"]]);
-            return;
-          }
-        }
-
-        refresh(name);
-      });
-    };
-
-    SSE_EVENT_NAMES.forEach(bind);
-    es.onerror = () => refresh();
-
+    const s = ensureSse(queryClient);
+    const sub: SSEEventHandler = (name, data) => onEventRef.current?.(name, data);
+    s.subs.add(sub);
     return () => {
-      invalidator.cancel();
-      es.close();
+      s.subs.delete(sub);
+      // Close the shared connection only when the last subscriber unmounts; it
+      // reopens on the next mount.
+      if (s.subs.size === 0) {
+        s.invalidator.cancel();
+        s.es.close();
+        sseSingleton = null;
+      }
     };
   }, [queryClient]);
 }

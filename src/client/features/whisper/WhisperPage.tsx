@@ -278,7 +278,8 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
       const href = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = href;
-      a.download = `transcript.${res.outputFormat || format}`;
+      const safeExt = (FORMATS as string[]).includes(res.outputFormat) ? res.outputFormat : format;
+      a.download = `transcript.${safeExt}`;
       document.body.appendChild(a);
       a.click();
       a.remove();

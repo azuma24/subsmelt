@@ -219,8 +219,12 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   };
 
   const handleRunAll = async () => {
-    await startQueueMutation.mutateAsync();
-    addToast(t("dashboard.toast.queueStarted"), "info");
+    try {
+      await startQueueMutation.mutateAsync();
+      addToast(t("dashboard.toast.queueStarted"), "info");
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : t("dashboard.toast.actionFailed"), "error");
+    }
   };
 
   const handleRunSelected = async () => {
@@ -231,7 +235,11 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   };
 
   const handleStop = async () => {
-    await stopQueueMutation.mutateAsync();
+    try {
+      await stopQueueMutation.mutateAsync();
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : t("dashboard.toast.actionFailed"), "error");
+    }
   };
 
   const handleClearAll = async () => {

@@ -47,11 +47,11 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
     const normalizedOutputPattern = applyOutputFormat(editing.output_pattern, selectedOutputFormat);
     const sourceLang = editing.source_lang || AUTO_SOURCE_LANG;
     if (isNew) {
-      await createMutation.mutateAsync({ source_lang: sourceLang, target_lang: editing.target_lang, output_pattern: normalizedOutputPattern, lang_code: editing.lang_code });
-      if (editing.prompt_override) {
-        const allTasks = await api.getTasks();
-        const newest = allTasks[allTasks.length - 1];
-        if (newest) await api.updateTask(newest.id, { prompt_override: editing.prompt_override });
+      const created = await createMutation.mutateAsync({ source_lang: sourceLang, target_lang: editing.target_lang, output_pattern: normalizedOutputPattern, lang_code: editing.lang_code });
+      // Use the created task's own id — picking the "newest" by array position
+      // races with any concurrent create and could tag the wrong task.
+      if (editing.prompt_override && created?.id) {
+        await api.updateTask(created.id, { prompt_override: editing.prompt_override });
       }
       addToast(t("translation_languages.toast.created", { lang: editing.target_lang }), "success");
     } else if (editing.id) {

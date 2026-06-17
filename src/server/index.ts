@@ -977,6 +977,12 @@ app.post("/api/transcribe/url", async (req, res) => {
   const b = (req.body || {}) as Record<string, unknown>;
   const url = typeof b.url === "string" ? b.url.trim() : "";
   if (!url) return res.status(400).json({ error: "url is required" });
+  // Only http(s) — reject file:/smb:/ftp:/data: before forwarding to yt-dlp.
+  let parsedUrl: URL | null = null;
+  try { parsedUrl = new URL(url); } catch { parsedUrl = null; }
+  if (!parsedUrl || (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:")) {
+    return res.status(400).json({ error: "Only http:// and https:// URLs are allowed" });
+  }
   const pick = (k: string, fb: string): string => (typeof b[k] === "string" && b[k] ? (b[k] as string) : fb);
 
   const outputFormat = pick("outputFormat", settings.transcription_output_format || "srt");
