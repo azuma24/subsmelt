@@ -360,6 +360,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <input
                 type="url"
+                aria-label={t("whisper.urlPlaceholder")}
                 value={urlValue}
                 onChange={(e) => setUrlValue(e.target.value)}
                 placeholder={t("whisper.urlPlaceholder")}
@@ -487,11 +488,12 @@ function FolderNodeView(props: FolderNodeProps) {
     <div>
       <div className="flex items-center gap-2 border-b border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[12px] font-medium text-[var(--text)]"
         style={{ paddingLeft: `${12 + depth * 16}px` }}>
-        <button type="button" onClick={() => toggleExpand(node.path)} className="w-3 shrink-0 text-[var(--text-3)]" aria-label="toggle">
+        <button type="button" onClick={() => toggleExpand(node.path)} className="w-3 shrink-0 text-[var(--text-3)]" aria-label={node.name} aria-expanded={open}>
           {open ? "▾" : "▸"}
         </button>
         <input
           type="checkbox"
+          aria-label={node.name}
           checked={allSel}
           ref={(el) => { if (el) el.indeterminate = someSel; }}
           onChange={() => toggleFolder(node.allPaths)}
