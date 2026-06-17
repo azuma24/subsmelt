@@ -57,6 +57,12 @@ from .diarize import (
     DiarizationUnavailableError,
     diarize_available,
 )
+from .fetch_url import (
+    UrlFetchError,
+    UrlFetchUnavailableError,
+    download_url,
+    url_fetch_available,
+)
 from .transcribe import (
     TranscriptionCancelled,
     fake_transcribe_for_tests,
@@ -156,6 +162,9 @@ def capabilities() -> dict:
         "computeTypes": compute_types,
         "gpus": gpu_info(),
         "outputFormats": ["srt", "vtt", "txt", "ass"],
+        # urlInput true only when yt-dlp is installed → frontend shows the URL box
+        # only when the backend can actually fetch.
+        "urlInput": url_fetch_available(),
         "vad": True,
         "advancedOptions": {
             "beamSize": True,
@@ -377,7 +386,10 @@ def validate_transcribe_request(request: TranscribeRequest) -> Path:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail={"code": "path_not_allowed", "message": str(exc)}) from exc
 
-    result = preflight_result(request)
+    try:
+        result = preflight_result(request)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail={"code": "path_not_allowed", "message": str(exc)}) from exc
     if not result.safe and not (ALLOW_UNSAFE or request.allow_unsafe):
         raise HTTPException(status_code=422, detail={
             "code": result.code,
@@ -660,6 +672,91 @@ async def transcribe_upload_stream(
         upload_size_mb = int(saved.stat().st_size / 1024 / 1024)
         parsed = parse_upload_request(request, str(saved))
         validate_upload_request(parsed, upload_size_mb, tmp_dir)
+    except BaseException:
+        tmp_ctx.cleanup()
+        raise
+
+    cancel_event = asyncio.Event()
+
+    def is_cancelled() -> bool:
+        return cancel_event.is_set()
+
+    def build_generator():
+        if USE_FAKE_TRANSCRIBE:
+            return fake_transcribe_upload_streaming_for_tests(saved, parsed, is_cancelled)
+        return run_faster_whisper_upload_streaming(parsed, saved, is_cancelled)
+
+    async def ndjson_stream() -> AsyncIterator[bytes]:
+        loop = asyncio.get_running_loop()
+        gen = build_generator()
+
+        async def watch_disconnect() -> None:
+            try:
+                while not cancel_event.is_set():
+                    if await http_request.is_disconnected():
+                        cancel_event.set()
+                        return
+                    await asyncio.sleep(0.5)
+            except asyncio.CancelledError:  # pragma: no cover - shutdown path
+                pass
+
+        watcher = asyncio.create_task(watch_disconnect())
+        sentinel = object()
+
+        def next_item():
+            try:
+                return next(gen)
+            except StopIteration:
+                return sentinel
+
+        try:
+            while True:
+                item = await loop.run_in_executor(None, next_item)
+                if item is sentinel:
+                    break
+                yield (json.dumps(item) + "\n").encode("utf-8")
+        except TranscriptionCancelled:
+            return
+        except Exception as exc:  # noqa: BLE001 - surface as a terminal error line
+            yield (json.dumps({"type": "error", "error": str(exc)}) + "\n").encode("utf-8")
+        finally:
+            cancel_event.set()
+            watcher.cancel()
+            gen.close()
+            tmp_ctx.cleanup()
+
+    return StreamingResponse(ndjson_stream(), media_type="application/x-ndjson")
+
+
+@app.post("/transcribe/url/stream")
+async def transcribe_url_stream(
+    http_request: Request,
+    payload: dict,
+    _auth: None = Depends(require_token),
+) -> StreamingResponse:
+    """Fetch remote media (YouTube etc.) via yt-dlp, then transcribe it like an
+    upload. Body: {"url": "...", ...same fields as the upload `request` JSON}.
+
+    Download + validation (400/409/422) happen BEFORE the stream opens; the temp
+    dir holding the fetched media is removed when the stream finishes.
+    """
+    url = payload.get("url")
+    if not isinstance(url, str) or not url.strip():
+        raise HTTPException(status_code=400, detail={"code": "bad_request", "message": "Missing 'url'"})
+
+    tmp_ctx = tempfile.TemporaryDirectory(prefix="subsmelt-url-")
+    tmp_dir = Path(tmp_ctx.name)
+    try:
+        try:
+            saved = download_url(url, tmp_dir)
+        except UrlFetchUnavailableError as exc:
+            raise HTTPException(status_code=400, detail={"code": "url_fetch_unavailable", "message": str(exc)}) from exc
+        except UrlFetchError as exc:
+            raise HTTPException(status_code=400, detail={"code": "url_fetch_failed", "message": str(exc)}) from exc
+        size_mb = int(saved.stat().st_size / 1024 / 1024)
+        request_json = json.dumps({k: v for k, v in payload.items() if k != "url"})
+        parsed = parse_upload_request(request_json, str(saved))
+        validate_upload_request(parsed, size_mb, tmp_dir)
     except BaseException:
         tmp_ctx.cleanup()
         raise

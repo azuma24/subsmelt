@@ -888,6 +888,11 @@
     "overwriteConfirm": "{{count}} selected file(s) already have a subtitle. Transcribing will overwrite the same-named output. Continue?",
     "diarize": "Identify speakers",
     "diarizing": "Identifying speakers…",
-    "diarizeUnavailable": "Speaker diarization unavailable — backend needs pyannote installed and a Hugging Face token."
+    "diarizeUnavailable": "Speaker diarization unavailable — backend needs pyannote installed and a Hugging Face token.",
+    "urlPlaceholder": "Paste a video URL (YouTube, etc.)",
+    "urlButton": "Transcribe URL",
+    "urlBusy": "Fetching & transcribing…",
+    "urlDone": "Transcribed {{segments}} segments — download started.",
+    "urlFailed": "URL transcription failed"
   }
 }

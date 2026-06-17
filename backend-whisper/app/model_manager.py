@@ -239,7 +239,10 @@ def _make_progress_tqdm(progress_queue: "queue.Queue[dict]"):
             return result
 
         def close(self):
-            self._publish()
+            # Drop this bar so its total isn't double-counted in the aggregate
+            # after it finishes (multi-file downloads create many bars).
+            with state["lock"]:
+                state["bars"].pop(id(self), None)
             return super().close()
 
         def _publish(self) -> None:

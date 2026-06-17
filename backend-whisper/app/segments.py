@@ -11,6 +11,10 @@ class Segment:
     start: float
     end: float
     text: str
+    # Diarized speaker label (e.g. "SPEAKER_00"); None when not diarized. Must be
+    # carried through merge/split so diarization isn't silently lost when subtitle
+    # quality post-processing runs.
+    speaker: str | None = None
 
     @property
     def duration(self) -> float:
@@ -29,6 +33,7 @@ def _to_segment(item: object) -> Segment:
         start=float(getattr(item, "start")),
         end=float(getattr(item, "end")),
         text=str(getattr(item, "text")),
+        speaker=getattr(item, "speaker", None),
     )
 
 
@@ -89,7 +94,7 @@ def _join(first: Segment, second: Segment) -> Segment:
         text = f"{first_text} {second_text}"
     else:
         text = first_text or second_text
-    return Segment(start=min(first.start, second.start), end=max(first.end, second.end), text=text)
+    return Segment(start=min(first.start, second.start), end=max(first.end, second.end), text=text, speaker=first.speaker or second.speaker)
 
 
 def split_long_segments(segments: Sequence[Segment], max_duration: float | None) -> list[Segment]:
@@ -133,7 +138,7 @@ def _split_one(segment: Segment, max_duration: float) -> list[Segment]:
         if index == chunks - 1:
             word_end = len(words)
         chunk_words = words[word_start:word_end]
-        pieces.append(Segment(start=start, end=end, text=" ".join(chunk_words)))
+        pieces.append(Segment(start=start, end=end, text=" ".join(chunk_words), speaker=segment.speaker))
     return pieces
 
 

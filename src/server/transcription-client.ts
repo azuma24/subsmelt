@@ -397,8 +397,16 @@ function backendErrorMessage(body: unknown, status: number): string {
     if (typeof record.error === "string") return record.error;
     if (typeof record.message === "string") return record.message;
     if (typeof detail === "string") return detail;
-    if (detail && typeof detail === "object" && typeof (detail as Record<string, unknown>).message === "string") {
-      return String((detail as Record<string, unknown>).message);
+    if (detail && typeof detail === "object") {
+      const d = detail as Record<string, unknown>;
+      if (typeof d.message === "string") return d.message;
+      // Some backend errors carry a structured code but no message (e.g. the
+      // 409 model_not_downloaded shape {code, model}). Render an actionable line
+      // instead of falling through to the useless "HTTP <status>" generic.
+      if (d.code === "model_not_downloaded" && typeof d.model === "string") {
+        return `Model "${d.model}" is not downloaded — download it in Settings → Speech to Text → Whisper Models first`;
+      }
+      if (typeof d.code === "string") return `Transcription failed (${d.code})`;
     }
   }
   return `Transcription backend returned HTTP ${status}`;
@@ -786,6 +794,67 @@ export async function transcribeWithBackendUploadStreaming(
     if (error instanceof Error && error.name === "AbortError") {
       throw new Error("Transcription cancelled");
     }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    externalSignal?.removeEventListener("abort", onExternalAbort);
+  }
+}
+
+/**
+ * URL/YouTube transport, streaming: POSTs a JSON body {url, ...request fields}
+ * to /transcribe/url/stream (backend fetches via yt-dlp) and consumes the same
+ * NDJSON progress protocol, returning the subtitle content.
+ */
+export async function transcribeUrlWithBackendStreaming(
+  backendUrl: string,
+  body: Record<string, unknown>,
+  options?: TranscribeStreamingOptions,
+): Promise<BackendTranscriptionResponse> {
+  const url = normalizeTranscriptionBackendUrl(backendUrl);
+  if (!url) throw new Error("Transcription backend URL is not configured");
+
+  const timeoutMs = resolveTranscribeTimeoutMs(options?.timeoutSeconds);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const externalSignal = options?.signal;
+  const onExternalAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) controller.abort();
+    else externalSignal.addEventListener("abort", onExternalAbort, { once: true });
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${url}/transcribe/url/stream`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...transcriptionAuthHeaders(options?.token) },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } catch (error: unknown) {
+    clearTimeout(timer);
+    externalSignal?.removeEventListener("abort", onExternalAbort);
+    if (error instanceof Error && error.name === "AbortError") throw new Error("Transcription cancelled");
+    throw error;
+  }
+
+  if (response.status === 404) {
+    clearTimeout(timer);
+    externalSignal?.removeEventListener("abort", onExternalAbort);
+    throw new StreamingUnsupportedError();
+  }
+  if (!response.ok || !response.body) {
+    const errBody = await response.json().catch(() => ({}));
+    clearTimeout(timer);
+    externalSignal?.removeEventListener("abort", onExternalAbort);
+    throwBackendError(errBody, response.status);
+  }
+
+  try {
+    return await consumeTranscriptionNdjson(response.body as ReadableStream<Uint8Array>, options?.onProgress, options?.onPhase);
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === "AbortError") throw new Error("Transcription cancelled");
     throw error;
   } finally {
     clearTimeout(timer);
