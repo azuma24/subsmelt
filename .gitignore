@@ -41,6 +41,7 @@ __pycache__/
 .mypy_cache/
 .venv/
 venv/
+.venv-build/
 
 # Coverage/test output
 coverage/
