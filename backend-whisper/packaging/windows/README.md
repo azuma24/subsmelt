@@ -60,9 +60,18 @@ installer, a Windows Service, and a system-tray controller.
 
 ---
 
-## Drop-in vendor files (required before building)
+## Vendor files (required before building)
 
-Create `packaging\windows\vendor\` and place:
+**Automatic (recommended):** run the fetch script — it downloads `ffmpeg.exe`
+(BtbN static win64) and `vc_redist.x64.exe` (Microsoft permalink) into
+`packaging\windows\vendor\`. Idempotent; `-Force` re-downloads. CI runs this same
+script.
+
+```powershell
+pwsh packaging\windows\fetch-vendor.ps1
+```
+
+**Manual fallback:** create `packaging\windows\vendor\` and place:
 
 | File | Where to get it | Used by |
 |---|---|---|
@@ -70,6 +79,8 @@ Create `packaging\windows\vendor\` and place:
 | `vc_redist.x64.exe` | Microsoft Visual C++ Redistributable (x64) | `installer.iss` installs it silently |
 | `whisper.ico` *(optional)* | your icon | exe icon (enable the `icon=` line in the spec) |
 | `provision.exe` *(Phase 3a, optional)* | built from the provision module | installer driver pre-check + tray diagnostics |
+
+The `vendor\` dir is gitignored — these binaries are never committed.
 
 > If `vc_redist.x64.exe` is missing at compile time, `ISCC` errors — that is the
 > intended "you forgot to drop it in" guard. `ffmpeg.exe` absence only logs a note.
@@ -153,37 +164,27 @@ LocalSystem service sees them.
 
 ---
 
-## CI hint (Phase 6)
+## CI (Phase 6) — implemented
 
-Build on a **Windows runner, on tag** (mirror the repo's existing
-`docker-publish.yml` tag-trigger pattern). Sketch:
+The build runs automatically in **`.github/workflows/windows-whisper-build.yml`**
+on a `windows-latest` runner. It triggers on `whisper-v*` tags (decoupled from the
+Docker `v*` tags because the CUDA onedir is ~1–2 GB) and via manual
+`workflow_dispatch` (with a `version` input). Steps:
 
-```yaml
-# .github/workflows/windows-build.yml
-on:
-  push:
-    tags: ["v*"]
-jobs:
-  build:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.11" }
-      - run: |
-          cd backend-whisper
-          pip install -r requirements.txt pyinstaller nvidia-cudnn-cu12 nvidia-cublas-cu12 ctranslate2 pystray pillow
-          pyinstaller packaging\windows\whisper-server.spec --clean --noconfirm
-      # - download/drop vendor\ffmpeg.exe + vc_redist.x64.exe (secure source)
-      # - install Inno Setup, then: iscc packaging\windows\installer.iss
-      - uses: actions/upload-artifact@v4
-        with:
-          name: whisper-backend-windows
-          path: backend-whisper/packaging/windows/Output/*.exe
-```
+1. resolve version (from the `whisper-v<ver>` tag or the dispatch input),
+2. install `requirements.txt` + `nvidia-cudnn-cu12` / `nvidia-cublas-cu12` + PyInstaller,
+3. `fetch-vendor.ps1` → `vendor\ffmpeg.exe` + `vendor\vc_redist.x64.exe`,
+4. `pyinstaller … whisper-server.spec`, then smoke-test `run_server.exe --help`,
+5. `choco install innosetup`, then `ISCC /DMyAppVersion=<ver> installer.iss`,
+6. upload the `Output\*.exe` installer as a build artifact, and — on a tag —
+   attach it to a GitHub release.
 
-Packaging smoke test (plan Phase 6): installer runs → service starts →
-`/health` returns 200.
+**To cut a release:** push a tag like `whisper-v0.5.0`. **To test the build
+without a release:** run the workflow manually from the Actions tab.
+
+> Not yet in CI (future work): a full packaging smoke test that *installs* the
+> service and asserts `/health` returns 200 (needs a GPU-or-CPU service-lifecycle
+> step), and code signing of the installer.
 
 ---
 
