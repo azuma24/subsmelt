@@ -887,6 +887,7 @@
     "overwriteTitle": "Overwrite existing subtitles?",
     "overwriteConfirm": "{{count}} selected file(s) already have a subtitle. Transcribing will overwrite the same-named output. Continue?",
     "diarize": "Identify speakers",
-    "diarizing": "Identifying speakers…"
+    "diarizing": "Identifying speakers…",
+    "diarizeUnavailable": "Speaker diarization unavailable — backend needs pyannote installed and a Hugging Face token."
   }
 }
