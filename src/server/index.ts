@@ -762,6 +762,7 @@ function overridesFromBody(body: unknown): TranscriptionOverrides | undefined {
     ...(pick("language") ? { language: pick("language") } : {}),
     ...(pick("device") ? { device: pick("device") } : {}),
     ...(pick("computeType") ? { compute_type: pick("computeType") } : {}),
+    ...(b.speakerDiarization === true ? { speaker_diarization: true } : {}),
   };
   return Object.keys(ov).length ? ov : undefined;
 }

@@ -35,7 +35,8 @@
     "overwriteTitle": "Overwrite existing subtitles?",
     "overwriteConfirm": "{{count}} selected file(s) already have a subtitle. Transcribing will overwrite the same-named output. Continue?",
     "overwriteHint": "Transcribing a file that already has a subtitle of the same name overwrites it.",
-    "batchDone": "Transcribed {{ok}}/{{total}} to {{format}}."
+    "batchDone": "Transcribed {{ok}}/{{total}} to {{format}}.",
+    "diarize": "Identify speakers"
   },
   "convert": {
     "title": "Subtitle Converter",

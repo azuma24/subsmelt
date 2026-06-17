@@ -119,6 +119,10 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const [computeType, setComputeType] = useState("");
   const [language, setLanguage] = useState("");
   const [format, setFormat] = useState<OutputFormat>("srt");
+  const [diarize, setDiarize] = useState(false);
+  // Diarization toggle is offered only when the backend advertises it (pyannote
+  // installed + HF token configured), so it can never be a silent no-op.
+  const canDiarize = Boolean(caps?.advancedOptions?.speakerDiarization);
   const modelOptions = caps?.models?.length ? caps.models : FALLBACK_MODELS;
   const deviceOptions = caps?.devices?.length ? caps.devices : ["cpu"];
   const eff = (v: string, fallbackKey: string, fb: string) => v || str(settings[fallbackKey], fb);
@@ -218,6 +222,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
           language: effLang,
           device: effDevice,
           computeType: effCompute,
+          speakerDiarization: canDiarize && diarize,
         });
         ok += 1;
       } catch (e: unknown) {
@@ -284,6 +289,12 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
                 {FORMATS.map((f) => <option key={f} value={f}>{f.toUpperCase()}</option>)}
               </select>
             </label>
+            {canDiarize && (
+              <label className="flex items-center gap-2 text-[11px] text-[var(--text-2)]">
+                <input type="checkbox" checked={diarize} onChange={(e) => setDiarize(e.target.checked)} className="h-4 w-4 accent-blue-500" />
+                {t("whisper.diarize")}
+              </label>
+            )}
           </div>
 
           {/* Actions */}
