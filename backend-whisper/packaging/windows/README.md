@@ -98,6 +98,21 @@ optional — only needed for the `.exe` installer).
 
 - **Test the server without installing:** double-click `run-built-server.bat`
   after the build, then open `http://127.0.0.1:8001/health` and `/version`.
+- **Native GUI app (recommended):** double-click `run-gui.bat`. Opens a real
+  window to pick bind host (127.0.0.1 / 0.0.0.0) + port + optional token, then
+  Start / Stop / Restart the server, read `/health` (version, GPU, ffmpeg,
+  models), and open the health page / logs / config. **Closing the window hides
+  it to the system tray** (the server keeps running); the tray icon restores it
+  or quits (Quit stops the server). No console window. `build-local.bat` builds
+  `whisper-gui.exe`.
+- **Tray-only (no window):** double-click `run-tray.bat` — a tray icon with
+  Start / Stop / Restart / Open health page / Open logs / Quit. `build-local.bat`
+  builds `whisper-tray.exe`. Skip both extra exes with `-SkipTray`.
+- **Remote/LAN access:** the server binds `127.0.0.1` by default and only widens
+  to `0.0.0.0` when a token is set (so a fresh run is never exposed
+  unauthenticated). To reach it from another machine: `set
+  SUBSMELT_WHISPER_TOKEN=<secret>` before launching, and open the firewall port:
+  `netsh advfirewall firewall add rule name="SubSmelt Whisper" dir=in action=allow protocol=TCP localport=8001`.
 - **From a terminal** you can pass flags: `build-local.bat -Run`,
   `build-local.bat -Version 0.5.0`, `build-local.bat -Clean`,
   `build-local.bat -SkipInstaller`.
