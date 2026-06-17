@@ -56,6 +56,7 @@ import {
   transcribeWithBackendStreaming,
   transcribeWithBackendUpload,
   transcribeWithBackendUploadStreaming,
+  transcribeUrlWithBackendStreaming,
   resolveTransportMode,
   StreamingUnsupportedError,
   type TranscriptionOverrides,
@@ -962,6 +963,53 @@ app.post("/api/transcribe", async (req, res) => {
   } catch (error: any) {
     logger.error("system", `Transcription failed: ${error?.message || error}`);
     return res.status(400).json({ error: error?.message || "Transcription failed" });
+  }
+});
+
+// Transcribe remote media (YouTube etc.). The backend fetches via yt-dlp; no
+// local media file is involved, so the rendered subtitle content is returned to
+// the client (which downloads it) rather than written next to a library file.
+app.post("/api/transcribe/url", async (req, res) => {
+  const settings = getAllSettings();
+  if (settings.transcription_enabled !== "1") return res.status(400).json({ error: "Speech-to-text is disabled in settings" });
+  const backendUrl = getTranscriptionBackendUrl(settings);
+  if (!backendUrl) return res.status(400).json({ error: "Transcription backend URL is not configured" });
+  const b = (req.body || {}) as Record<string, unknown>;
+  const url = typeof b.url === "string" ? b.url.trim() : "";
+  if (!url) return res.status(400).json({ error: "url is required" });
+  const pick = (k: string, fb: string): string => (typeof b[k] === "string" && b[k] ? (b[k] as string) : fb);
+
+  const outputFormat = pick("outputFormat", settings.transcription_output_format || "srt");
+  const body: Record<string, unknown> = {
+    url,
+    output_format: outputFormat,
+    model: pick("model", settings.transcription_model || "small"),
+    language: pick("language", settings.transcription_language || "auto"),
+    device: pick("device", settings.transcription_device || "cpu"),
+    compute_type: pick("computeType", settings.transcription_compute_type || "int8"),
+    post_action: "transcribe_only",
+    ...(b.speakerDiarization === true ? { advanced_options: { speaker_diarization: true } } : {}),
+  };
+
+  // Relay progress/phase to the UI keyed by the URL (acts as the row id).
+  const onProgress = ({ pct, processedSeconds, totalSeconds }: { pct: number; processedSeconds: number; totalSeconds: number }) =>
+    broadcast("transcription:progress", { path: url, pct, processedSeconds, totalSeconds });
+  const onPhase = (phase: string) => broadcast("transcription:progress", { path: url, phase });
+
+  try {
+    const result = await transcribeUrlWithBackendStreaming(backendUrl, body, {
+      timeoutSeconds: transcribeTimeoutSeconds(settings),
+      token: settings.transcription_backend_token,
+      onProgress,
+      onPhase,
+    });
+    broadcast("transcription:progress", { path: url, pct: 100, done: true });
+    const content = (result as unknown as { content?: string }).content ?? "";
+    return res.json({ ok: true, content, language: result.language, segments: result.segments, outputFormat, url });
+  } catch (error: any) {
+    broadcast("transcription:progress", { path: url, error: true });
+    logger.error("system", `URL transcription failed: ${error?.message || error}`);
+    return res.status(400).json({ error: error?.message || "URL transcription failed" });
   }
 });
 

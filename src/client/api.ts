@@ -174,6 +174,25 @@ export const preflightTranscription = (payload: TranscribeRequest) =>
   fetchJSON<TranscriptionPreflightResponse>("/transcribe/preflight", { method: "POST", body: JSON.stringify(payload) });
 export const transcribeVideo = (payload: TranscribeRequest) =>
   fetchJSON<TranscribeResponse>("/transcribe", { method: "POST", body: JSON.stringify(payload) });
+export interface TranscribeUrlRequest {
+  url: string;
+  outputFormat?: "srt" | "vtt" | "txt" | "ass";
+  model?: string;
+  language?: string;
+  device?: string;
+  computeType?: string;
+  speakerDiarization?: boolean;
+}
+export interface TranscribeUrlResponse {
+  ok: boolean;
+  content: string;
+  language?: string;
+  segments?: number;
+  outputFormat: string;
+  url: string;
+}
+export const transcribeUrl = (payload: TranscribeUrlRequest) =>
+  fetchJSON<TranscribeUrlResponse>("/transcribe/url", { method: "POST", body: JSON.stringify(payload) });
 export const getTranscriptionHistory = (limit = 10, opts?: FetchOpts) =>
   fetchJSON<{ attempts: TranscriptionHistoryEntry[] }>(`/transcribe/history?limit=${limit}`, opts);
 export const retryTranscriptionAttempt = (id: string) =>

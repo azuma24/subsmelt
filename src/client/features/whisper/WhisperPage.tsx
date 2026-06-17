@@ -118,9 +118,13 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const [language, setLanguage] = useState("");
   const [format, setFormat] = useState<OutputFormat>("srt");
   const [diarize, setDiarize] = useState(false);
+  const [urlValue, setUrlValue] = useState("");
+  const [urlBusy, setUrlBusy] = useState(false);
   // Diarization toggle is offered only when the backend advertises it (pyannote
   // installed + HF token configured), so it can never be a silent no-op.
   const canDiarize = Boolean(caps?.advancedOptions?.speakerDiarization);
+  // URL/YouTube input offered only when the backend has yt-dlp installed.
+  const canUrl = Boolean((caps as { urlInput?: boolean } | undefined)?.urlInput);
   const modelOptions = caps?.models?.length ? caps.models : FALLBACK_MODELS;
   const deviceOptions = caps?.devices?.length ? caps.devices : ["cpu"];
   const eff = (v: string, fallbackKey: string, fb: string) => v || str(settings[fallbackKey], fb);
@@ -260,6 +264,34 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
     historyQuery.refetch();
   };
 
+  const transcribeFromUrl = async () => {
+    const url = urlValue.trim();
+    if (!url) return;
+    setUrlBusy(true);
+    try {
+      const res = await api.transcribeUrl({
+        url, outputFormat: format, model: effModel, language: effLang,
+        device: effDevice, computeType: effCompute, speakerDiarization: canDiarize && diarize,
+      });
+      // No local media file for a URL — hand the rendered subtitle to the browser.
+      const blob = new Blob([res.content], { type: "text/plain;charset=utf-8" });
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = href;
+      a.download = `transcript.${res.outputFormat || format}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(href);
+      addToast(t("whisper.urlDone", { segments: res.segments ?? 0 }), "success");
+      setUrlValue("");
+    } catch (e: unknown) {
+      addToast(`${t("whisper.urlFailed")}: ${e instanceof Error ? e.message : "failed"}`, "error");
+    } finally {
+      setUrlBusy(false);
+    }
+  };
+
   const selectCls = "rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-[12px] text-[var(--text)]";
 
   return (
@@ -321,6 +353,23 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
               </label>
             ) : null}
           </div>
+
+          {/* URL / YouTube input (only when backend has yt-dlp) */}
+          {canUrl && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <input
+                type="url"
+                value={urlValue}
+                onChange={(e) => setUrlValue(e.target.value)}
+                placeholder={t("whisper.urlPlaceholder")}
+                className={`${selectCls} min-w-[280px] flex-1`}
+              />
+              <button type="button" disabled={urlBusy || !urlValue.trim()} onClick={transcribeFromUrl}
+                className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white disabled:opacity-40">
+                {urlBusy ? t("whisper.urlBusy") : t("whisper.urlButton")}
+              </button>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="mt-3 flex flex-wrap items-center gap-2">
