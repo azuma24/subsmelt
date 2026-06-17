@@ -25,6 +25,13 @@ type OutputFormat = "srt" | "ass" | "vtt" | "txt";
 const FORMATS: OutputFormat[] = ["srt", "ass", "vtt", "txt"];
 const FALLBACK_MODELS = ["tiny", "base", "small", "medium", "large-v3", "large-v3-turbo"];
 const COMMON_LANGS = ["auto", "en", "es", "fr", "de", "it", "pt", "ja", "ko", "zh", "ru", "ar", "hi"];
+// CTranslate2 compute types are device-specific: float16 / int8_float16 are
+// GPU-only and crash on CPU. Gate the selector by device so an invalid pair can
+// never be chosen (keeps it simple + error-free). int8 is valid everywhere.
+const COMPUTE_BY_DEVICE: Record<string, string[]> = {
+  cpu: ["int8", "float32"],
+  cuda: ["int8", "int8_float16", "float16", "float32"],
+};
 
 interface FileProgress { pct?: number; done?: boolean; error?: boolean; cancelled?: boolean }
 
@@ -72,12 +79,15 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const [format, setFormat] = useState<OutputFormat>("srt");
   const modelOptions = caps?.models?.length ? caps.models : FALLBACK_MODELS;
   const deviceOptions = caps?.devices?.length ? caps.devices : ["cpu"];
-  const computeOptions = caps?.computeTypes?.length ? caps.computeTypes : ["int8"];
   const eff = (v: string, fallbackKey: string, fb: string) => v || str(settings[fallbackKey], fb);
   const effModel = eff(model, "transcription_model", "small");
   const effDevice = eff(device, "transcription_device", "cpu");
-  const effCompute = eff(computeType, "transcription_compute_type", "int8");
   const effLang = eff(language, "transcription_language", "auto");
+  // Compute options follow the chosen device; the effective value is always a
+  // member of that set (falls back to int8), so cpu+float16 can't be submitted.
+  const computeOptions = COMPUTE_BY_DEVICE[effDevice] ?? ["int8"];
+  const rawCompute = eff(computeType, "transcription_compute_type", "int8");
+  const effCompute = computeOptions.includes(rawCompute) ? rawCompute : computeOptions[0];
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [running, setRunning] = useState(false);
