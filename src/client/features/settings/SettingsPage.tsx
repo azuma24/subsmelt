@@ -83,7 +83,12 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
     saveChainRef.current = saveChainRef.current
       .then(() => api.saveSettings(next))
       .then(() => setDirty(false))
-      .catch(() => setDirty(true));
+      .catch((e: unknown) => {
+        // Keep the form dirty so the value isn't lost, and surface the failure
+        // instead of swallowing it (debounced autosaves otherwise fail silently).
+        setDirty(true);
+        addToast(t("settings.saveFailed", { message: getErrorMessage(e) }), "error");
+      });
     return saveChainRef.current;
   };
 

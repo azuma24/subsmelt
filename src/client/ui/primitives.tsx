@@ -135,8 +135,8 @@ export function HealthChips({ items }: { items: { label: string; status: "ok" | 
   const icon = { ok: "✓", fail: "✕", warn: "⚠" };
   return (
     <div className="flex flex-wrap gap-1.5">
-      {items.map((item, i) => (
-        <span key={i} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] ${tone[item.status]}`}>
+      {items.map((item) => (
+        <span key={item.label} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] ${tone[item.status]}`}>
           {icon[item.status]} {item.label}
         </span>
       ))}
@@ -283,9 +283,9 @@ export function RowActionsMenu({ items }: RowActionsMenuProps) {
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden="true" />
           <div role="menu" className="absolute right-0 z-20 mt-1 min-w-[160px] rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-xl">
-            {items.map((item, i) => (
+            {items.map((item) => (
               <button
-                key={i}
+                key={item.label}
                 type="button"
                 role="menuitem"
                 disabled={item.disabled}

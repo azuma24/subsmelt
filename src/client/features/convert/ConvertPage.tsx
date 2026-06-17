@@ -38,10 +38,13 @@ function triggerDownload(blob: Blob, fileName: string) {
   a.href = url;
   a.download = fileName;
   document.body.appendChild(a);
-  a.click();
-  a.remove();
-  // Revoke on next tick so the download has a chance to start.
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  try {
+    a.click();
+  } finally {
+    a.remove();
+    // Revoke on next tick so the download has a chance to start.
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 }
 
 export function ConvertPage({ isMobile }: { isMobile: boolean }) {

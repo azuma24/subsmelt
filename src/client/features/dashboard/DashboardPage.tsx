@@ -154,7 +154,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const expandInterestingScanGroups = (files: ScannedFile[]) => {
     const initialGroups = new Set<string>();
     files.forEach((file: ScannedFile) => {
-      const group = getScanGroupName(file);
+      const group = getScanGroupName(file, mediaDir);
       const hasNew = file.subtitles.some((sub) => sub.tasks.some((task) => task.status === "new" || task.status === "pending"));
       const missing = file.videoName && file.subtitles.length === 0;
       const orphan = !file.videoName;
@@ -552,8 +552,8 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
               </button>
             </div>
             <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
-              {quickChecks.map((step, idx) => (
-                <div key={idx} className={`rounded-xl border p-3 ${step.done ? "border-[var(--green-border)] bg-[var(--green-dim)]" : "border-[var(--border)] bg-[var(--surface)]"}`}>
+              {quickChecks.map((step) => (
+                <div key={step.title} className={`rounded-xl border p-3 ${step.done ? "border-[var(--green-border)] bg-[var(--green-dim)]" : "border-[var(--border)] bg-[var(--surface)]"}`}>
                   <div className="flex items-center justify-between gap-2">
                     <div className="text-xs font-semibold text-[var(--text)]">{step.title}</div>
                     <span className={`text-[11px] ${step.done ? "text-[var(--green)]" : "text-[var(--yellow)]"}`}>{step.done ? "✓" : "○"}</span>
@@ -692,6 +692,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
                 transcriptionProgressByPath={transcriptionProgressByPath}
                 isQueueing={scanMutation.isPending}
                 newJobsCount={scanResult.flatMap((file) => file.subtitles.flatMap((sub) => sub.tasks)).filter((task) => task.status === "new").length}
+                mediaDir={mediaDir}
               />
             </div>
           )}

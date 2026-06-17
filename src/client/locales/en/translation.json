@@ -782,7 +782,19 @@
   },
   "jobDetail": {
     "title": "Job #{{id}}",
-    "notFound": "Job not found"
+    "notFound": "Job not found",
+    "context": "Context",
+    "noContext": "No context analysis available yet."
+  },
+  "transcriptionHistory": {
+    "title": "Recent transcriptions",
+    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "empty": "No transcription attempts yet.",
+    "shown": "{{count}} shown",
+    "retry": "Retry",
+    "retrying": "Retrying…",
+    "postQueueTranslate": "queue translate",
+    "postTranscribeOnly": "transcribe only"
   },
   "logs": {
     "title": "Logs",
