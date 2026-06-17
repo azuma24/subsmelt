@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { JobRow } from "../types";
 import { STATUS_ICON, STATUS_LABEL_KEY } from "../app/constants";
@@ -155,18 +155,26 @@ interface AccordionProps {
 
 export function Accordion({ title, defaultOpen = false, children, className = "" }: AccordionProps) {
   const [open, setOpen] = useState(defaultOpen);
+  const panelId = useId();
+  const triggerId = useId();
   return (
     <div className={`rounded-xl border border-[var(--border)] bg-[var(--surface)] ${className}`}>
       <button
         type="button"
+        id={triggerId}
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
+        aria-controls={panelId}
         className="flex min-h-[44px] w-full items-center justify-between gap-3 px-4 py-3 text-[13px] font-medium text-[var(--text)] leading-6"
       >
         <span>{title}</span>
         <span className={`text-[var(--text-3)] transition-transform duration-200 ${open ? "rotate-180" : ""}`} aria-hidden="true">▾</span>
       </button>
-      {open && <div className="border-t border-[var(--border)] px-4 py-3">{children}</div>}
+      {open && (
+        <div id={panelId} role="region" aria-labelledby={triggerId} className="border-t border-[var(--border)] px-4 py-3">
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -180,13 +188,46 @@ interface DrawerProps {
 }
 
 export function Drawer({ open, onClose, title, children, width = "max-w-md" }: DrawerProps) {
+  const titleId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const panel = panelRef.current;
+    const focusable = panel?.querySelector<HTMLElement>(
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    );
+    (focusable || panel)?.focus();
+    return () => {
+      previousFocusRef.current?.focus?.();
+    };
+  }, [open]);
+
   if (!open) return null;
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onClose();
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden="true" />
-      <div className={`relative flex w-full ${width} flex-col border-l border-[var(--border)] bg-[var(--surface)] shadow-2xl`}>
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        onKeyDown={handleKeyDown}
+        className={`relative flex w-full ${width} flex-col border-l border-[var(--border)] bg-[var(--surface)] shadow-2xl outline-none`}
+      >
         <div className="flex min-h-[50px] shrink-0 items-center justify-between border-b border-[var(--border)] px-4">
-          <span className="text-[13.5px] font-semibold text-[var(--text)] leading-6">{title}</span>
+          <span id={titleId} className="text-[13.5px] font-semibold text-[var(--text)] leading-6">{title}</span>
           <button
             type="button"
             onClick={onClose}
@@ -216,11 +257,23 @@ interface RowActionsMenuProps {
 export function RowActionsMenu({ items }: RowActionsMenuProps) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="relative inline-block">
+    <div
+      className="relative inline-block"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          setOpen(false);
+        }
+      }}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
+      }}
+    >
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label="Row actions"
+        aria-haspopup="menu"
         aria-expanded={open}
         className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--surface-3)]"
       >
@@ -229,11 +282,12 @@ export function RowActionsMenu({ items }: RowActionsMenuProps) {
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden="true" />
-          <div className="absolute right-0 z-20 mt-1 min-w-[160px] rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-xl">
+          <div role="menu" className="absolute right-0 z-20 mt-1 min-w-[160px] rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-xl">
             {items.map((item, i) => (
               <button
                 key={i}
                 type="button"
+                role="menuitem"
                 disabled={item.disabled}
                 onClick={() => { item.onClick(); setOpen(false); }}
                 className={`w-full px-3 py-2 text-left text-[13px] leading-6 hover:bg-[var(--surface-2)] disabled:opacity-40 ${item.danger ? "text-[var(--red)]" : "text-[var(--text)]"}`}
