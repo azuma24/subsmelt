@@ -498,6 +498,8 @@ export interface TranscriptionProgressUpdate {
 export interface TranscribeStreamingOptions extends TranscribeBackendOptions {
   // Called once per backend progress line.
   onProgress?: (update: TranscriptionProgressUpdate) => void;
+  // Called on a backend phase line (e.g. "diarizing") for a live status hint.
+  onPhase?: (phase: string) => void;
   // Aborting this signal closes the HTTP stream → backend detects the
   // disconnect → stops iterating segments and aborts the run.
   signal?: AbortSignal;
@@ -597,6 +599,8 @@ export async function transcribeWithBackendStreaming(
     if (type === "progress") {
       const update = toProgressUpdate(record);
       if (update && options?.onProgress) options.onProgress(update);
+    } else if (type === "phase") {
+      if (typeof record.phase === "string" && options?.onPhase) options.onPhase(record.phase);
     } else if (type === "result") {
       const { type: _t, ...rest } = record;
       result = rest as unknown as BackendTranscriptionResponse;

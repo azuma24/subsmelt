@@ -49,6 +49,14 @@ MODEL_RAM_MB: dict[str, dict[str, int]] = {
 }
 
 
+# Extra headroom (MB) the pyannote diarization pipeline needs ON TOP of the
+# whisper model — it loads a second model for the post-pass. Added to the
+# required figure in preflight when diarization is requested so a run that would
+# OOM is flagged up front instead of crashing mid-pass.
+DIARIZATION_RAM_MB = 2048
+DIARIZATION_VRAM_MB = 2048
+
+
 def model_ram_requirements_mb(model: str) -> dict[str, int]:
     return MODEL_RAM_MB.get((model or "small").lower(), MODEL_RAM_MB["small"])
 

@@ -27,6 +27,8 @@ from .model_manager import (
     normalize_model,
 )
 from .preflight import (
+    DIARIZATION_RAM_MB,
+    DIARIZATION_VRAM_MB,
     assert_path_under_media,
     available_ram_mb,
     disk_free_mb,
@@ -319,6 +321,14 @@ def preflight_result(request: TranscribeRequest) -> PreflightResponse:
         avail_mb = safety["available_ram_mb"]
         req_mb = safety["required_ram_mb"]
         rec_mb = safety["recommended_ram_mb"]
+
+    # Diarization loads a second (pyannote) model — add its headroom to the
+    # requirement so a run that would OOM mid-pass is flagged up front.
+    if request.advanced_options and request.advanced_options.speaker_diarization:
+        req_mb += DIARIZATION_VRAM_MB if on_gpu else DIARIZATION_RAM_MB
+        if model_safe and avail_mb < req_mb:
+            model_safe = False
+            model_code = "insufficient_vram" if on_gpu else "insufficient_ram"
 
     safe = bool(model_safe and ffmpeg_ok and disk_safety["safe"])
     code = (

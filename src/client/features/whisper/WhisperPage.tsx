@@ -32,7 +32,7 @@ const COMPUTE_BY_DEVICE: Record<string, string[]> = {
   cuda: ["int8", "int8_float16", "float16", "float32"],
 };
 
-interface FileProgress { pct?: number; done?: boolean; error?: boolean; cancelled?: boolean }
+interface FileProgress { pct?: number; done?: boolean; error?: boolean; cancelled?: boolean; phase?: string }
 
 interface TreeNode {
   name: string;
@@ -166,9 +166,23 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   // Live per-file progress from the server's SSE broadcast.
   useSSE((type, data) => {
     if (type !== "transcription:progress") return;
-    const d = data as { path?: string; pct?: number; done?: boolean; error?: boolean; cancelled?: boolean };
+    const d = data as { path?: string; pct?: number; done?: boolean; error?: boolean; cancelled?: boolean; phase?: string };
     if (!d.path) return;
-    setFileProgress((prev) => ({ ...prev, [d.path as string]: { pct: d.pct, done: d.done, error: d.error, cancelled: d.cancelled } }));
+    // Merge so a phase-only line (e.g. "diarizing") keeps the last pct.
+    setFileProgress((prev) => {
+      const cur = prev[d.path as string] || {};
+      return {
+        ...prev,
+        [d.path as string]: {
+          ...cur,
+          ...(d.pct !== undefined ? { pct: d.pct } : {}),
+          ...(d.done !== undefined ? { done: d.done } : {}),
+          ...(d.error !== undefined ? { error: d.error } : {}),
+          ...(d.cancelled !== undefined ? { cancelled: d.cancelled } : {}),
+          ...(d.phase !== undefined ? { phase: d.phase } : {}),
+        },
+      };
+    });
   });
 
   const toggle = (vp: string) =>
@@ -376,6 +390,7 @@ function FileRow({ file, depth, selected, toggleFile, fileProgress, activePath }
   const status = fp?.done ? t("whisper.statusDone")
     : fp?.cancelled ? t("whisper.statusCancelled")
     : fp?.error ? t("whisper.statusError")
+    : fp?.phase === "diarizing" ? t("whisper.diarizing")
     : typeof fp?.pct === "number" ? `${Math.round(fp.pct)}%` : "";
   return (
     <label className="flex items-center gap-2 px-3 py-1.5 text-[12px] text-[var(--text-2)] hover:bg-[var(--surface-2)]"

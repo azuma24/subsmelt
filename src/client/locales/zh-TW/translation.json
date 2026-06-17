@@ -886,6 +886,7 @@
     "statusError": "error",
     "overwriteTitle": "Overwrite existing subtitles?",
     "overwriteConfirm": "{{count}} selected file(s) already have a subtitle. Transcribing will overwrite the same-named output. Continue?",
-    "diarize": "Identify speakers"
+    "diarize": "Identify speakers",
+    "diarizing": "Identifying speakers…"
   }
 }
