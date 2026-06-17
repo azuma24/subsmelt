@@ -198,6 +198,16 @@ export function setSetting(key: string, value: string): void {
   saveConfig(_config);
 }
 
+// Allow-list of writable setting keys for POST /api/settings. Derived from the
+// known schema (DEFAULT_SETTINGS) so it stays in sync automatically — any key
+// the UI legitimately persists has a default here. Requests carrying unknown
+// keys are rejected (skipped) by the route to avoid arbitrary config injection.
+const WRITABLE_SETTING_KEYS: ReadonlySet<string> = new Set(Object.keys(DEFAULT_SETTINGS));
+
+export function isWritableSettingKey(key: string): boolean {
+  return WRITABLE_SETTING_KEYS.has(key);
+}
+
 export function getAllSettings(): Record<string, string> {
   const merged = { ...DEFAULT_SETTINGS, ..._config.settings };
   // Backfill the connections array from legacy flat keys so the client and the
