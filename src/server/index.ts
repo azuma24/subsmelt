@@ -58,6 +58,7 @@ import {
   transcribeWithBackendUploadStreaming,
   resolveTransportMode,
   StreamingUnsupportedError,
+  type TranscriptionOverrides,
   listBackendModels,
   downloadBackendModel,
   deleteBackendModel,
@@ -749,10 +750,27 @@ function isCancellationError(error: unknown): boolean {
   return /Transcription cancelled/i.test(message);
 }
 
+// Extract per-run transcription overrides from a request body. Only string
+// values are taken; empty/missing fields are dropped so buildTranscriptionRequest
+// falls through to per-folder defaults / global settings.
+function overridesFromBody(body: unknown): TranscriptionOverrides | undefined {
+  if (!body || typeof body !== "object") return undefined;
+  const b = body as Record<string, unknown>;
+  const pick = (k: string): string | undefined => (typeof b[k] === "string" && b[k] ? (b[k] as string) : undefined);
+  const ov: TranscriptionOverrides = {
+    ...(pick("model") ? { model: pick("model") } : {}),
+    ...(pick("language") ? { language: pick("language") } : {}),
+    ...(pick("device") ? { device: pick("device") } : {}),
+    ...(pick("computeType") ? { compute_type: pick("computeType") } : {}),
+  };
+  return Object.keys(ov).length ? ov : undefined;
+}
+
 async function runTranscriptionAttempt(opts: {
   videoPath: string;
   postAction: TranscribePostAction;
   outputFormat?: TranscriptionOutputFormat;
+  overrides?: TranscriptionOverrides;
   settings?: Record<string, string>;
 }) {
   const settings = opts.settings || getAllSettings();
@@ -766,6 +784,7 @@ async function runTranscriptionAttempt(opts: {
     settings,
     outputFormat: opts.outputFormat,
     postAction: opts.postAction,
+    overrides: opts.overrides,
   });
   const outputPath = localTranscriptionOutputPath(opts.videoPath, request.language, request.output_format);
   const attempt = transcriptionHistory.startAttempt({
@@ -870,6 +889,7 @@ app.post("/api/transcribe/preflight", async (req, res) => {
       settings,
       outputFormat: req.body?.outputFormat as TranscriptionOutputFormat | undefined,
       postAction: req.body?.postAction as TranscribePostAction | undefined,
+      overrides: overridesFromBody(req.body),
     });
     const result = await preflightTranscription(backendUrl, request, settings.transcription_backend_token);
     return res.json(result);
@@ -920,6 +940,7 @@ app.post("/api/transcribe", async (req, res) => {
       videoPath,
       postAction,
       outputFormat: req.body?.outputFormat as TranscriptionOutputFormat | undefined,
+      overrides: overridesFromBody(req.body),
       settings,
     });
     logger.info("system", `Transcribed ${path.basename(videoPath)} → ${result.subtitle_path || "subtitle output"}`);

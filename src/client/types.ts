@@ -139,6 +139,11 @@ export interface TranscribeRequest {
   videoPath: string;
   outputFormat?: "srt" | "vtt" | "txt" | "ass";
   postAction?: TranscribePostAction;
+  // Per-run overrides (Whisper page). Omit to use global Settings.
+  model?: string;
+  language?: string;
+  device?: string;
+  computeType?: string;
 }
 
 export interface TranscriptionHistoryEntry {

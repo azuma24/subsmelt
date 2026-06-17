@@ -80,12 +80,22 @@ export interface TranscriptionAdvancedOptions {
   bgm_separation?: boolean;
 }
 
+// Per-run overrides that win over the global Settings values (Whisper page lets
+// the user pick model/device/compute/language for a specific batch).
+export interface TranscriptionOverrides {
+  model?: string;
+  language?: string;
+  device?: string;
+  compute_type?: string;
+}
+
 export interface BuildTranscriptionRequestOptions {
   videoPath: string;
   mediaDir: string;
   settings: TranscriptionSettings;
   outputFormat?: TranscriptionOutputFormat;
   postAction?: TranscribePostAction;
+  overrides?: TranscriptionOverrides;
 }
 
 export interface BackendTranscriptionRequest {
@@ -329,14 +339,18 @@ export function buildTranscriptionRequest(options: BuildTranscriptionRequestOpti
   const postAction = transcribePostActionValues.includes(requestedAction) ? requestedAction : "transcribe_only";
   const subtitleQuality = subtitleQualitySettings(options.settings, folderDefaults);
   const advancedOptions = advancedSttOptions(options.settings, folderDefaults);
+  // Per-run overrides (Whisper page) win over per-folder defaults and global
+  // settings. setting() ignores empty/whitespace, so an unset override falls
+  // through to the existing precedence cleanly.
+  const ov = options.overrides ?? {};
 
   return {
     input_path: backendInputPath,
     output_format: options.outputFormat ?? outputFormat(folderDefaults?.output_format ?? options.settings.transcription_output_format, "srt"),
-    model: setting(folderDefaults?.model ?? options.settings.transcription_model, "small"),
-    language: setting(folderDefaults?.language ?? options.settings.transcription_language, "auto"),
-    device: setting(folderDefaults?.device ?? options.settings.transcription_device, "cpu"),
-    compute_type: setting(folderDefaults?.compute_type ?? options.settings.transcription_compute_type, "int8"),
+    model: setting(ov.model ?? folderDefaults?.model ?? options.settings.transcription_model, "small"),
+    language: setting(ov.language ?? folderDefaults?.language ?? options.settings.transcription_language, "auto"),
+    device: setting(ov.device ?? folderDefaults?.device ?? options.settings.transcription_device, "cpu"),
+    compute_type: setting(ov.compute_type ?? folderDefaults?.compute_type ?? options.settings.transcription_compute_type, "int8"),
     use_vad: boolSetting(folderDefaults?.use_vad ?? options.settings.transcription_use_vad, true),
     post_action: postAction,
     ...(subtitleQuality ? { subtitle_quality: subtitleQuality } : {}),

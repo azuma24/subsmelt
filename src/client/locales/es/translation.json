@@ -870,6 +870,18 @@
     "noVideos": "No video files found under the media directory.",
     "hasSubtitle": "has subtitle",
     "overwriteHint": "Transcribing a file that already has a subtitle of the same name overwrites it.",
-    "batchDone": "Transcribed {{ok}}/{{total}} to {{format}}."
+    "batchDone": "Transcribed {{ok}}/{{total}} to {{format}}.",
+    "model": "Model",
+    "device": "Device",
+    "compute": "Compute",
+    "language": "Language",
+    "cancel": "Cancel",
+    "selectAll": "Select all",
+    "clear": "Clear",
+    "statusDone": "done",
+    "statusCancelled": "cancelled",
+    "statusError": "error",
+    "overwriteTitle": "Overwrite existing subtitles?",
+    "overwriteConfirm": "{{count}} selected file(s) already have a subtitle. Transcribing will overwrite the same-named output. Continue?"
   }
 }
