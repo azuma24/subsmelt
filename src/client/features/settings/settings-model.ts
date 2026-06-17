@@ -95,6 +95,7 @@ export interface ClientSettings {
   transcription_max_concurrent?: string;
   transcription_path_map_from?: string;
   transcription_path_map_to?: string;
+  transcription_transport?: string;
 
   // ── Transient / server-injected, not persisted by the client ──
   _watcher_running?: boolean;

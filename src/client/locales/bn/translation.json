@@ -630,7 +630,12 @@
         "currentDefaults": "বর্তমান অনুরোধ ডিফল্ট: {{device}} / {{computeType}}-এ {{model}}, আউটপুট {{output}}।",
         "backendMessage": "ব্যাকএন্ড বার্তা: {{message}}",
         "firstRunQuiet": "মডেল ডাউনলোড বা ওয়ার্ম-আপ চলাকালীন প্রথম ট্রান্সক্রিপশন রান কিছুক্ষণ নীরব থাকতে পারে।"
-      }
+      },
+      "transport": "File transport",
+      "transportAuto": "Auto (recommended)",
+      "transportShared": "Shared filesystem (path)",
+      "transportUpload": "Upload (remote)",
+      "transportHelp": "How media reaches the backend. Auto: upload when a backend token is set with no path map (true remote), otherwise shared path. Shared: the backend reads the same files (local or path-mapped). Upload: SubSmelt sends the media and writes the returned subtitle locally — no shared storage needed."
     },
     "connections": {
       "mode": "সংযোগ মোড",

@@ -54,6 +54,9 @@ import {
   transcribeTimeoutSeconds,
   transcribeWithBackend,
   transcribeWithBackendStreaming,
+  transcribeWithBackendUpload,
+  transcribeWithBackendUploadStreaming,
+  resolveTransportMode,
   StreamingUnsupportedError,
   listBackendModels,
   downloadBackendModel,
@@ -693,16 +696,40 @@ async function transcribeRelayingProgress(
   settings: Record<string, string>,
   videoPath: string,
   controller: AbortController,
+  transport: ReturnType<typeof resolveTransportMode>,
 ) {
   const token = settings.transcription_backend_token;
+  const onProgress = ({ pct, processedSeconds, totalSeconds }: { pct: number; processedSeconds: number; totalSeconds: number }) => {
+    broadcast("transcription:progress", { path: videoPath, pct, processedSeconds, totalSeconds });
+  };
+
+  if (transport === "upload") {
+    // Model B: stream the local media file to the backend; it returns content.
+    try {
+      return await transcribeWithBackendUploadStreaming(backendUrl, request, videoPath, {
+        timeoutSeconds: transcribeTimeoutSeconds(settings),
+        token,
+        signal: controller.signal,
+        onProgress,
+      });
+    } catch (error: unknown) {
+      if (error instanceof StreamingUnsupportedError) {
+        return await transcribeWithBackendUpload(backendUrl, request, videoPath, {
+          timeoutSeconds: transcribeTimeoutSeconds(settings),
+          token,
+        });
+      }
+      throw error;
+    }
+  }
+
+  // Model A (shared filesystem): backend reads/writes the mapped path.
   try {
     return await transcribeWithBackendStreaming(backendUrl, request, {
       timeoutSeconds: transcribeTimeoutSeconds(settings),
       token,
       signal: controller.signal,
-      onProgress: ({ pct, processedSeconds, totalSeconds }) => {
-        broadcast("transcription:progress", { path: videoPath, pct, processedSeconds, totalSeconds });
-      },
+      onProgress,
     });
   } catch (error: unknown) {
     if (error instanceof StreamingUnsupportedError) {
@@ -757,12 +784,33 @@ async function runTranscriptionAttempt(opts: {
   const controller = new AbortController();
   inFlightTranscriptions.set(opts.videoPath, { controller, attemptId: attempt.id });
 
+  const transport = resolveTransportMode(settings);
+
   try {
     const startedAtMs = Date.parse(attempt.startedAt);
-    const checkedRequest = await applyPreflightPolicy(backendUrl, request, settings);
+    // Upload mode (Model B) skips the HTTP /preflight: that endpoint validates a
+    // server-side media path, which does not exist in upload mode. The upload
+    // endpoint runs its own resource preflight (422/409). We still honour
+    // run_anyway by sending allow_unsafe so the backend won't block a low-RAM run.
+    let checkedRequest = request;
+    if (transport === "upload") {
+      if ((settings.transcription_low_ram_behavior || "").trim() === "run_anyway") {
+        checkedRequest = { ...request, allow_unsafe: true };
+      }
+    } else {
+      checkedRequest = await applyPreflightPolicy(backendUrl, request, settings);
+    }
     const result = await withTranscriptionSlot(() =>
-      transcribeRelayingProgress(backendUrl, checkedRequest, settings, opts.videoPath, controller),
+      transcribeRelayingProgress(backendUrl, checkedRequest, settings, opts.videoPath, controller, transport),
     );
+    // Upload mode returns subtitle CONTENT; write it to the local output path
+    // (path mode wrote it on the shared filesystem already).
+    if (transport === "upload") {
+      if (typeof result.content !== "string") {
+        throw new Error("Upload transcription returned no subtitle content");
+      }
+      await fs.promises.writeFile(outputPath, result.content, "utf-8");
+    }
     const finishedAt = new Date().toISOString();
     const durationSeconds = typeof result.duration_seconds === "number"
       ? result.duration_seconds

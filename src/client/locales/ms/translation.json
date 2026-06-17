@@ -630,7 +630,12 @@
         "currentDefaults": "Lalai permintaan semasa: {{model}} pada {{device}} / {{computeType}}, output {{output}}.",
         "backendMessage": "Mesej bahagian belakang: {{message}}",
         "firstRunQuiet": "Jalanan transkripsi pertama boleh kekal senyap untuk seketika semasa model dimuat turun atau dipanaskan."
-      }
+      },
+      "transport": "File transport",
+      "transportAuto": "Auto (recommended)",
+      "transportShared": "Shared filesystem (path)",
+      "transportUpload": "Upload (remote)",
+      "transportHelp": "How media reaches the backend. Auto: upload when a backend token is set with no path map (true remote), otherwise shared path. Shared: the backend reads the same files (local or path-mapped). Upload: SubSmelt sends the media and writes the returned subtitle locally — no shared storage needed."
     },
     "connections": {
       "mode": "Mod sambungan",

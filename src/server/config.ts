@@ -112,6 +112,11 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   transcription_request_timeout_s: "1800",
   transcription_path_map_from: "",
   transcription_path_map_to: "",
+  // File transport mode (plan Phase 2). "auto" picks shared-FS path mode when a
+  // path mapping is set or no token is configured (local same-host), and upload
+  // mode when a token is set with no mapping (true remote). "shared" forces
+  // path mode (Model A); "upload" forces multipart upload (Model B).
+  transcription_transport: "auto",
   additional_context: "",
   prompt: `You are a professional subtitle translator.
 You will receive subtitle text in an automatically detected source language.

@@ -630,7 +630,12 @@
         "currentDefaults": "Huidige aanvraagstandaarden: {{model}} op {{device}} / {{computeType}}, uitvoer {{output}}.",
         "backendMessage": "Backendbericht: {{message}}",
         "firstRunQuiet": "De eerste transcriptieruns kunnen een tijdje stil blijven terwijl het model downloadt of opwarmt."
-      }
+      },
+      "transport": "File transport",
+      "transportAuto": "Auto (recommended)",
+      "transportShared": "Shared filesystem (path)",
+      "transportUpload": "Upload (remote)",
+      "transportHelp": "How media reaches the backend. Auto: upload when a backend token is set with no path map (true remote), otherwise shared path. Shared: the backend reads the same files (local or path-mapped). Upload: SubSmelt sends the media and writes the returned subtitle locally — no shared storage needed."
     },
     "connections": {
       "mode": "Verbindingsmodus",

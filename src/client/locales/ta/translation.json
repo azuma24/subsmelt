@@ -630,7 +630,12 @@
         "currentDefaults": "தற்போதைய கோரிக்கை இயல்புகள்: {{model}} மீது {{device}} / {{computeType}}, வெளியீடு {{output}}.",
         "backendMessage": "பின்தளச் செய்தி: {{message}}",
         "firstRunQuiet": "மாதிரி பதிவிறங்கும்போது அல்லது சூடாகும்போது முதல் படியெடுத்தல் இயக்கங்கள் சிறிது நேரம் அமைதியாக இருக்கலாம்."
-      }
+      },
+      "transport": "File transport",
+      "transportAuto": "Auto (recommended)",
+      "transportShared": "Shared filesystem (path)",
+      "transportUpload": "Upload (remote)",
+      "transportHelp": "How media reaches the backend. Auto: upload when a backend token is set with no path map (true remote), otherwise shared path. Shared: the backend reads the same files (local or path-mapped). Upload: SubSmelt sends the media and writes the returned subtitle locally — no shared storage needed."
     },
     "connections": {
       "mode": "இணைப்பு முறை",

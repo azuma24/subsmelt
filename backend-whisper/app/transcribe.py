@@ -122,6 +122,77 @@ def _finalize_transcript(
     )
 
 
+def _finalize_content(collected: list, info: object, request: TranscribeRequest) -> dict:
+    """Finalize segments to an in-memory subtitle string (upload transport).
+
+    Mirrors :func:`_finalize_transcript` but, instead of writing next to the
+    input on a shared filesystem, writes to a throwaway temp file and reads the
+    rendered subtitle back as a string — the upload caller writes it locally.
+    """
+    processed = apply_subtitle_quality(collected, request)
+    max_line_length = request.subtitle_quality.max_line_length if request.subtitle_quality else None
+    with tempfile.TemporaryDirectory(prefix="subsmelt-whisper-out-") as out_tmp:
+        out_path = Path(out_tmp) / f"transcript.{request.output_format}"
+        count = write_transcript(processed, out_path, request.output_format, max_line_length=max_line_length)
+        content = out_path.read_text(encoding="utf-8")
+    language = None if request.language == "auto" else request.language
+    detected_language = getattr(info, "language", None) or language or request.language
+    duration = getattr(info, "duration", None)
+    return {
+        "ok": True,
+        "content": content,
+        "language": detected_language,
+        "segments": count,
+        "duration_seconds": duration,
+    }
+
+
+def _iter_segments_with_progress(
+    segments_iter,
+    total_seconds: float,
+    collected: list,
+    request: TranscribeRequest,
+    is_cancelled: Callable[[], bool] | None,
+    min_progress_interval: float,
+) -> Iterator[dict]:
+    """Drive the faster-whisper segment generator, appending to ``collected``.
+
+    Yields throttled ``progress`` dicts as audio time advances and honours
+    cooperative cancellation. Shared by the path-mode and upload streaming
+    finalizers so the iteration/throttle/cancel logic lives in one place.
+    """
+    last_emitted = -min_progress_interval
+    segment_iterator = iter(segments_iter)
+    while True:
+        try:
+            segment = next(segment_iterator)
+        except StopIteration:
+            break
+        except Exception as exc:  # noqa: BLE001 - OOM can surface mid-iteration
+            _raise_if_cuda_oom(exc, request.model)
+            raise
+        if is_cancelled is not None and is_cancelled():
+            raise TranscriptionCancelled("Transcription cancelled by client")
+        collected.append(segment)
+        processed_seconds = float(getattr(segment, "end", 0.0) or 0.0)
+        if processed_seconds - last_emitted >= min_progress_interval:
+            last_emitted = processed_seconds
+            pct = (
+                max(0.0, min(100.0, processed_seconds / total_seconds * 100.0))
+                if total_seconds > 0
+                else 0.0
+            )
+            yield {
+                "type": "progress",
+                "processedSeconds": round(processed_seconds, 3),
+                "totalSeconds": round(total_seconds, 3),
+                "pct": round(pct, 2),
+            }
+
+    if is_cancelled is not None and is_cancelled():
+        raise TranscriptionCancelled("Transcription cancelled by client")
+
+
 def run_faster_whisper(request: TranscribeRequest, input_path: Path) -> TranscribeResponse:
     assert_supported_advanced_features(request)
     _require_faster_whisper()
@@ -170,39 +241,69 @@ def run_faster_whisper_streaming(
         total_seconds = float(getattr(info, "duration", 0.0) or 0.0)
 
         collected: list = []
-        last_emitted = -min_progress_interval
-        segment_iterator = iter(segments_iter)
-        while True:
-            try:
-                segment = next(segment_iterator)
-            except StopIteration:
-                break
-            except Exception as exc:  # noqa: BLE001 - OOM can surface mid-iteration
-                _raise_if_cuda_oom(exc, request.model)
-                raise
-            if is_cancelled is not None and is_cancelled():
-                raise TranscriptionCancelled("Transcription cancelled by client")
-            collected.append(segment)
-            processed_seconds = float(getattr(segment, "end", 0.0) or 0.0)
-            if processed_seconds - last_emitted >= min_progress_interval:
-                last_emitted = processed_seconds
-                pct = (
-                    max(0.0, min(100.0, processed_seconds / total_seconds * 100.0))
-                    if total_seconds > 0
-                    else 0.0
-                )
-                yield {
-                    "type": "progress",
-                    "processedSeconds": round(processed_seconds, 3),
-                    "totalSeconds": round(total_seconds, 3),
-                    "pct": round(pct, 2),
-                }
-
-        if is_cancelled is not None and is_cancelled():
-            raise TranscriptionCancelled("Transcription cancelled by client")
+        yield from _iter_segments_with_progress(
+            segments_iter, total_seconds, collected, request, is_cancelled, min_progress_interval
+        )
 
         response = _finalize_transcript(collected, info, request, input_path, output_path)
         result = response.model_dump()
+        result["type"] = "result"
+        yield result
+
+
+def run_faster_whisper_upload(request: TranscribeRequest, input_path: Path) -> dict:
+    """Upload-transport counterpart of :func:`run_faster_whisper`.
+
+    Transcribes ``input_path`` (an uploaded temp file, NOT under the media root)
+    and returns the subtitle as a ``content`` string instead of writing it to a
+    shared path. The caller is responsible for deleting ``input_path``.
+    """
+    assert_supported_advanced_features(request)
+    _require_faster_whisper()
+
+    with tempfile.TemporaryDirectory(prefix="subsmelt-whisper-") as tmp:
+        audio_path = extract_audio(input_path, Path(tmp) / "audio.wav")
+        model = get_whisper_model(request.model, request.device, request.compute_type)
+        try:
+            segments_iter, info = model.transcribe(str(audio_path), **faster_whisper_transcribe_kwargs(request))
+            collected = list(segments_iter)
+        except Exception as exc:  # noqa: BLE001 - surface CUDA OOM as a typed error
+            _raise_if_cuda_oom(exc, request.model)
+            raise
+        return _finalize_content(collected, info, request)
+
+
+def run_faster_whisper_upload_streaming(
+    request: TranscribeRequest,
+    input_path: Path,
+    is_cancelled: Callable[[], bool] | None = None,
+    min_progress_interval: float = 1.0,
+) -> Iterator[dict]:
+    """Streaming upload transport: progress lines then a terminal ``content`` result.
+
+    Mirrors :func:`run_faster_whisper_streaming` but the terminal result carries
+    the subtitle ``content`` string (no ``subtitle_path``). The uploaded temp
+    file at ``input_path`` is the caller's to remove.
+    """
+    assert_supported_advanced_features(request)
+    _require_faster_whisper()
+
+    with tempfile.TemporaryDirectory(prefix="subsmelt-whisper-") as tmp:
+        audio_path = extract_audio(input_path, Path(tmp) / "audio.wav")
+        model = get_whisper_model(request.model, request.device, request.compute_type)
+        try:
+            segments_iter, info = model.transcribe(str(audio_path), **faster_whisper_transcribe_kwargs(request))
+        except Exception as exc:  # noqa: BLE001 - surface CUDA OOM as a typed error
+            _raise_if_cuda_oom(exc, request.model)
+            raise
+        total_seconds = float(getattr(info, "duration", 0.0) or 0.0)
+
+        collected: list = []
+        yield from _iter_segments_with_progress(
+            segments_iter, total_seconds, collected, request, is_cancelled, min_progress_interval
+        )
+
+        result = _finalize_content(collected, info, request)
         result["type"] = "result"
         yield result
 
@@ -249,5 +350,47 @@ def fake_transcribe_streaming_for_tests(
     info = SimpleNamespace(language=request.language, duration=total_seconds)
     response = _finalize_transcript(collected, info, request, input_path, output_path)
     result = response.model_dump()
+    result["type"] = "result"
+    yield result
+
+
+def fake_transcribe_upload_for_tests(input_path: Path, request: TranscribeRequest) -> dict:
+    """Upload counterpart to :func:`fake_transcribe_for_tests` (no faster-whisper).
+
+    Renders the subtitle to a ``content`` string so the upload protocol can be
+    exercised in tests without a real model or shared filesystem.
+    """
+    assert_supported_advanced_features(request)
+    segment = SimpleNamespace(start=0.0, end=1.5, text="Test transcription")
+    info = SimpleNamespace(language=request.language, duration=1.5)
+    return _finalize_content([segment], info, request)
+
+
+def fake_transcribe_upload_streaming_for_tests(
+    input_path: Path,
+    request: TranscribeRequest,
+    is_cancelled: Callable[[], bool] | None = None,
+) -> Iterator[dict]:
+    """Streaming upload counterpart to :func:`fake_transcribe_streaming_for_tests`."""
+    assert_supported_advanced_features(request)
+    total_seconds = 1.5
+    fake_segments = [
+        SimpleNamespace(start=0.0, end=0.75, text="Test transcription"),
+        SimpleNamespace(start=0.75, end=1.5, text="second line"),
+    ]
+    collected: list = []
+    for segment in fake_segments:
+        if is_cancelled is not None and is_cancelled():
+            raise TranscriptionCancelled("Transcription cancelled by client")
+        collected.append(segment)
+        yield {
+            "type": "progress",
+            "processedSeconds": round(segment.end, 3),
+            "totalSeconds": total_seconds,
+            "pct": round(segment.end / total_seconds * 100.0, 2),
+        }
+
+    info = SimpleNamespace(language=request.language, duration=total_seconds)
+    result = _finalize_content(collected, info, request)
     result["type"] = "result"
     yield result
