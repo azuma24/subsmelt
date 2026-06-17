@@ -642,7 +642,10 @@
       "transportAuto": "Auto (recommended)",
       "transportShared": "Shared filesystem (path)",
       "transportUpload": "Upload (remote)",
-      "transportHelp": "How media reaches the backend. Auto: upload when a backend token is set with no path map (true remote), otherwise shared path. Shared: the backend reads the same files (local or path-mapped). Upload: SubSmelt sends the media and writes the returned subtitle locally — no shared storage needed."
+      "transportHelp": "How media reaches the backend. Auto: upload when a backend token is set with no path map (true remote), otherwise shared path. Shared: the backend reads the same files (local or path-mapped). Upload: SubSmelt sends the media and writes the returned subtitle locally — no shared storage needed.",
+      "modelTiny": "Tiny — fastest, lowest accuracy",
+      "modelLargeV3": "Large v3 — best accuracy",
+      "modelLargeV3Turbo": "Large v3 turbo — fast + accurate"
     },
     "connections": {
       "mode": "Modo de conexión",
