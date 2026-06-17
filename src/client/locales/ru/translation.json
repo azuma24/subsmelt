@@ -817,7 +817,11 @@
       "progressPct": "Transcribing… {{pct}}%",
       "cancel": "Cancel",
       "cancelling": "Cancelling…",
-      "cancelled": "Transcription cancelled."
+      "cancelled": "Transcription cancelled.",
+      "selectForTranscription": "Select this video for transcription",
+      "batchTranscribe": "Transcribe {{count}} selected",
+      "batchTranscribeTranslate": "Transcribe + Translate {{count}}",
+      "clearSelection": "Clear"
     }
   },
   "errors": {

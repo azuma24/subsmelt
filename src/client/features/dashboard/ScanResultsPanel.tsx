@@ -21,6 +21,9 @@ interface ScanResultsPanelProps {
   onQueueAll: () => void;
   onTranscribe?: (videoPath: string, postAction: TranscribePostAction) => void;
   onCancelTranscribe?: (videoPath: string) => void;
+  selectedVideoPaths?: Set<string>;
+  setSelectedVideoPaths?: Dispatch<SetStateAction<Set<string>>>;
+  onBatchTranscribe?: (videoPaths: string[], postAction: TranscribePostAction) => void;
   transcriptionEnabled?: boolean;
   transcriptionProgressByPath?: Record<string, ManualTranscriptionProgress>;
   isQueueing: boolean;
@@ -113,12 +116,17 @@ export function ScanResultsPanel({
   onQueueAll,
   onTranscribe,
   onCancelTranscribe,
+  selectedVideoPaths,
+  setSelectedVideoPaths,
+  onBatchTranscribe,
   transcriptionEnabled = false,
   transcriptionProgressByPath = {},
   isQueueing,
   newJobsCount,
 }: ScanResultsPanelProps) {
   const { t } = useTranslation();
+  const selectedPaths = selectedVideoPaths ?? new Set<string>();
+  const batchEnabled = transcriptionEnabled && Boolean(onBatchTranscribe && setSelectedVideoPaths);
 
   const filteredFiles = useMemo(() => {
     const query = search.toLowerCase();
@@ -163,6 +171,31 @@ export function ScanResultsPanel({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-gray-500">{t("dashboard.entries", { count: filteredFiles.length })}</span>
+          {batchEnabled && selectedPaths.size > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onBatchTranscribe?.(Array.from(selectedPaths), "transcribe_only")}
+                className="rounded-lg bg-gray-700 px-3 py-2 text-xs font-medium text-gray-100"
+              >
+                {t("scan.transcription.batchTranscribe", { count: selectedPaths.size })}
+              </button>
+              <button
+                type="button"
+                onClick={() => onBatchTranscribe?.(Array.from(selectedPaths), "transcribe_and_translate")}
+                className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white"
+              >
+                {t("scan.transcription.batchTranscribeTranslate", { count: selectedPaths.size })}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedVideoPaths?.(new Set())}
+                className="rounded-lg border border-gray-700 px-3 py-2 text-xs text-gray-400"
+              >
+                {t("scan.transcription.clearSelection")}
+              </button>
+            </div>
+          )}
           {mode === "preview" && (
             <button
               type="button"
@@ -224,6 +257,9 @@ export function ScanResultsPanel({
                         setSelectedIds={setSelectedIds}
                         onTranscribe={onTranscribe}
                         onCancelTranscribe={onCancelTranscribe}
+                        selectedVideoPaths={selectedPaths}
+                        setSelectedVideoPaths={setSelectedVideoPaths}
+                        batchEnabled={batchEnabled}
                         transcriptionEnabled={transcriptionEnabled}
                         transcriptionProgressByPath={transcriptionProgressByPath}
                       />
@@ -246,6 +282,9 @@ function CompactScanFileRow({
   setSelectedIds,
   onTranscribe,
   onCancelTranscribe,
+  selectedVideoPaths,
+  setSelectedVideoPaths,
+  batchEnabled,
   transcriptionEnabled,
   transcriptionProgressByPath,
 }: {
@@ -255,6 +294,9 @@ function CompactScanFileRow({
   setSelectedIds: Dispatch<SetStateAction<Set<number>>>;
   onTranscribe?: (videoPath: string, postAction: TranscribePostAction) => void;
   onCancelTranscribe?: (videoPath: string) => void;
+  selectedVideoPaths: Set<string>;
+  setSelectedVideoPaths?: Dispatch<SetStateAction<Set<string>>>;
+  batchEnabled: boolean;
   transcriptionEnabled: boolean;
   transcriptionProgressByPath: Record<string, ManualTranscriptionProgress>;
 }) {
@@ -290,6 +332,23 @@ function CompactScanFileRow({
   return (
     <div className="border-b border-gray-800/50 last:border-b-0">
       <div className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-800/20 ${allPendingSelected || somePendingSelected ? "bg-blue-950/20" : ""}`}>
+        {batchEnabled && file.videoPath && (
+          <input
+            type="checkbox"
+            checked={selectedVideoPaths.has(file.videoPath)}
+            onChange={() => {
+              const vp = file.videoPath as string;
+              setSelectedVideoPaths?.((prev) => {
+                const next = new Set(prev);
+                if (next.has(vp)) next.delete(vp); else next.add(vp);
+                return next;
+              });
+            }}
+            className="h-4 w-4 shrink-0 accent-green-500"
+            title={t("scan.transcription.selectForTranscription")}
+            aria-label={t("scan.transcription.selectForTranscription")}
+          />
+        )}
         {pendingJobIds.length > 0 && (
           <input
             type="checkbox"

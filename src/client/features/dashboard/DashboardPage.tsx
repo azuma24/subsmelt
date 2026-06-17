@@ -53,6 +53,9 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const [previewSearch, setPreviewSearch] = useState("");
   const [detailsJob, setDetailsJob] = useState<JobRow | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  // File-level selection for batch transcription (by videoPath), independent of
+  // the job-id selection used for bulk translation.
+  const [selectedVideoPaths, setSelectedVideoPaths] = useState<Set<string>>(new Set());
   const [scanResultMode, setScanResultMode] = useState<ScanResultMode>("queued");
   const [folderFilter, setFolderFilter] = useState("all");
   const [targetFilter, setTargetFilter] = useState("all");
@@ -383,6 +386,16 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
     }
   };
 
+  // Batch transcription: run the same single-file flow for each selected video,
+  // sequentially so per-file progress is visible and the server's transcription
+  // semaphore still bounds concurrency. Reuses handleTranscribe wholesale.
+  const handleBatchTranscribe = async (videoPaths: string[], postAction: TranscribePostAction) => {
+    setSelectedVideoPaths(new Set());
+    for (const videoPath of videoPaths) {
+      await handleTranscribe(videoPath, postAction);
+    }
+  };
+
   const handleRetryTranscription = async (attempt: TranscriptionHistoryEntry) => {
     setTranscribingPath(attempt.inputPath);
     try {
@@ -644,6 +657,9 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
                 onQueueAll={handleScan}
                 onTranscribe={handleTranscribe}
                 onCancelTranscribe={handleCancelTranscription}
+                selectedVideoPaths={selectedVideoPaths}
+                setSelectedVideoPaths={setSelectedVideoPaths}
+                onBatchTranscribe={handleBatchTranscribe}
                 transcriptionEnabled={transcriptionEnabled}
                 transcriptionProgressByPath={transcriptionProgressByPath}
                 isQueueing={scanMutation.isPending}
