@@ -629,7 +629,14 @@
         "cachePending": "Detaliile cache-ului vor apărea când backendul raportează starea pentru modelul selectat.",
         "currentDefaults": "Valori implicite curente ale cererii: {{model}} pe {{device}} / {{computeType}}, ieșire {{output}}.",
         "backendMessage": "Mesaj backend: {{message}}",
-        "firstRunQuiet": "Primele rulări de transcriere pot rămâne tăcute o vreme în timp ce modelul se descarcă sau se încălzește."
+        "firstRunQuiet": "Primele rulări de transcriere pot rămâne tăcute o vreme în timp ce modelul se descarcă sau se încălzește.",
+        "serverVersion": "Server version",
+        "transportMode": "Transport mode",
+        "transport_auto": "Auto",
+        "transport_shared": "Shared filesystem",
+        "transport_upload": "Upload",
+        "gpus": "GPUs",
+        "noGpu": "none detected (CPU)"
       },
       "transport": "File transport",
       "transportAuto": "Auto (recommended)",

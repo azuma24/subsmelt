@@ -85,6 +85,12 @@ export function TranscriptionReadinessPanel({
   const ramMeetsRequired = ramKnown ? availableRamMb >= requirements.required : undefined;
   const ramMeetsRecommended = ramKnown ? availableRamMb >= requirements.recommended : undefined;
   const suggestedModel = cacheInfo?.suggestedModel ?? (ramMeetsRequired === false ? suggestCpuModel(availableRamMb) : null);
+  const transportSetting = str(settings.transcription_transport, "auto");
+  const transportLabel = t(`settings.transcription.readiness.transport_${transportSetting}`, transportSetting);
+  const gpus = capabilities?.gpus;
+  const gpuSummary = gpus?.length
+    ? gpus.map((g) => `${g.name || "GPU"} (${formatMb(g.free_vram_mb)} / ${formatMb(g.total_vram_mb)})`).join("; ")
+    : t("settings.transcription.readiness.noGpu");
   const models = capabilities?.models;
   const outputFormats = capabilities?.outputFormats;
   const selectedModelAdvertised = models?.length ? models.includes(selectedModel) : undefined;
@@ -147,6 +153,9 @@ export function TranscriptionReadinessPanel({
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
           <div className="text-xs font-semibold text-[var(--text)]">{t("settings.transcription.readiness.backendCapabilities")}</div>
           <div className="mt-2 space-y-1 text-xs text-[var(--text-2)]">
+            <div>{t("settings.transcription.readiness.serverVersion")}: <span className="text-[var(--text)]">{capabilities?.version || unknownLabel}</span></div>
+            <div>{t("settings.transcription.readiness.transportMode")}: <span className="text-[var(--text)]">{transportLabel}</span></div>
+            <div>{t("settings.transcription.readiness.gpus")}: <span className="text-[var(--text)]">{gpuSummary}</span></div>
             <div>{t("settings.transcription.readiness.models")}: <span className="text-[var(--text)]">{list(models, unknownLabel)}</span></div>
             <div>{t("settings.transcription.readiness.outputFormats")}: <span className="text-[var(--text)]">{list(outputFormats, unknownLabel)}</span></div>
             <div>{t("settings.transcription.readiness.devices")}: <span className="text-[var(--text)]">{list(capabilities?.devices, unknownLabel)}</span></div>

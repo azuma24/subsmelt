@@ -629,7 +629,14 @@
         "cachePending": "פרטי המטמון יופיעו כשהקצה העורפי ידווח על תקינות עבור המודל הנבחר.",
         "currentDefaults": "ברירות מחדל נוכחיות לבקשה: {{model}} על {{device}} / {{computeType}}, פלט {{output}}.",
         "backendMessage": "הודעת הקצה העורפי: {{message}}",
-        "firstRunQuiet": "ריצות תמלול ראשונות עשויות להישאר שקטות לזמן מה בעוד המודל מוריד או מתחמם."
+        "firstRunQuiet": "ריצות תמלול ראשונות עשויות להישאר שקטות לזמן מה בעוד המודל מוריד או מתחמם.",
+        "serverVersion": "Server version",
+        "transportMode": "Transport mode",
+        "transport_auto": "Auto",
+        "transport_shared": "Shared filesystem",
+        "transport_upload": "Upload",
+        "gpus": "GPUs",
+        "noGpu": "none detected (CPU)"
       },
       "transport": "File transport",
       "transportAuto": "Auto (recommended)",

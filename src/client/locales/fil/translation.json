@@ -629,7 +629,14 @@
         "cachePending": "Lalabas ang mga detalye ng cache kapag iniulat ng backend ang kalusugan para sa napiling model.",
         "currentDefaults": "Kasalukuyang request defaults: {{model}} sa {{device}} / {{computeType}}, output {{output}}.",
         "backendMessage": "Mensahe ng backend: {{message}}",
-        "firstRunQuiet": "Maaaring manatiling tahimik nang ilang panahon ang mga unang pagtakbo ng transkripsyon habang dina-download o pinaiinit ang model."
+        "firstRunQuiet": "Maaaring manatiling tahimik nang ilang panahon ang mga unang pagtakbo ng transkripsyon habang dina-download o pinaiinit ang model.",
+        "serverVersion": "Server version",
+        "transportMode": "Transport mode",
+        "transport_auto": "Auto",
+        "transport_shared": "Shared filesystem",
+        "transport_upload": "Upload",
+        "gpus": "GPUs",
+        "noGpu": "none detected (CPU)"
       },
       "transport": "File transport",
       "transportAuto": "Auto (recommended)",

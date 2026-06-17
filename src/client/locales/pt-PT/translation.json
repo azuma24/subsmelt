@@ -629,7 +629,14 @@
         "cachePending": "Os detalhes da cache aparecerão quando o backend reportar o estado do modelo selecionado.",
         "currentDefaults": "Predefinições atuais do pedido: {{model}} em {{device}} / {{computeType}}, saída {{output}}.",
         "backendMessage": "Mensagem do backend: {{message}}",
-        "firstRunQuiet": "As primeiras execuções de transcrição podem ficar silenciosas durante algum tempo enquanto o modelo é transferido ou aquece."
+        "firstRunQuiet": "As primeiras execuções de transcrição podem ficar silenciosas durante algum tempo enquanto o modelo é transferido ou aquece.",
+        "serverVersion": "Server version",
+        "transportMode": "Transport mode",
+        "transport_auto": "Auto",
+        "transport_shared": "Shared filesystem",
+        "transport_upload": "Upload",
+        "gpus": "GPUs",
+        "noGpu": "none detected (CPU)"
       },
       "transport": "File transport",
       "transportAuto": "Auto (recommended)",

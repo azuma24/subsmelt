@@ -629,7 +629,14 @@
         "cachePending": "தேர்ந்தெடுத்த மாதிரிக்கு பின்தளம் நலனைத் தெரிவிக்கும்போது கேச் விவரங்கள் தோன்றும்.",
         "currentDefaults": "தற்போதைய கோரிக்கை இயல்புகள்: {{model}} மீது {{device}} / {{computeType}}, வெளியீடு {{output}}.",
         "backendMessage": "பின்தளச் செய்தி: {{message}}",
-        "firstRunQuiet": "மாதிரி பதிவிறங்கும்போது அல்லது சூடாகும்போது முதல் படியெடுத்தல் இயக்கங்கள் சிறிது நேரம் அமைதியாக இருக்கலாம்."
+        "firstRunQuiet": "மாதிரி பதிவிறங்கும்போது அல்லது சூடாகும்போது முதல் படியெடுத்தல் இயக்கங்கள் சிறிது நேரம் அமைதியாக இருக்கலாம்.",
+        "serverVersion": "Server version",
+        "transportMode": "Transport mode",
+        "transport_auto": "Auto",
+        "transport_shared": "Shared filesystem",
+        "transport_upload": "Upload",
+        "gpus": "GPUs",
+        "noGpu": "none detected (CPU)"
       },
       "transport": "File transport",
       "transportAuto": "Auto (recommended)",

@@ -629,7 +629,14 @@
         "cachePending": "Cachedetails verschijnen wanneer de backend de status voor het geselecteerde model meldt.",
         "currentDefaults": "Huidige aanvraagstandaarden: {{model}} op {{device}} / {{computeType}}, uitvoer {{output}}.",
         "backendMessage": "Backendbericht: {{message}}",
-        "firstRunQuiet": "De eerste transcriptieruns kunnen een tijdje stil blijven terwijl het model downloadt of opwarmt."
+        "firstRunQuiet": "De eerste transcriptieruns kunnen een tijdje stil blijven terwijl het model downloadt of opwarmt.",
+        "serverVersion": "Server version",
+        "transportMode": "Transport mode",
+        "transport_auto": "Auto",
+        "transport_shared": "Shared filesystem",
+        "transport_upload": "Upload",
+        "gpus": "GPUs",
+        "noGpu": "none detected (CPU)"
       },
       "transport": "File transport",
       "transportAuto": "Auto (recommended)",

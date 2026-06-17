@@ -177,20 +177,31 @@ and *the fix button*. cuDNN load failure (the #1 footgun) is its own check with 
 pre-install gate, and the tray app reuses it for the doctor. Keep driver fetch
 URLs/min-versions in a config the app can update without a rebuild.
 
-### Phase 4 — SubSmelt client integration
+### Phase 4 — SubSmelt client integration — ✅ implemented
 - Settings: `transcription_backend_token`, transport mode, (existing) backend URL
-  + path map.
-- Send auth header; handle 401 with a clear message.
+  + path map. ✅ (Phases 1/2)
+- Send auth header; handle 401 with a clear message. ✅ (Phase 1)
 - Readiness panel: show CUDA/float16 from the now-real `/capabilities`; show
-  server version + transport mode; "test connection" includes auth.
-- Upload-mode wiring (Phase 2 client half).
+  server version + transport mode; "test connection" includes auth. ✅ — the
+  panel now renders `capabilities.version`, the configured transport mode, and the
+  detected GPUs (name + free/total VRAM) alongside the existing devices/computeTypes.
+- Upload-mode wiring (Phase 2 client half). ✅ (Phase 2)
 
-### Phase 5 — Ops & lifecycle
-- File logging + rotation (no console on a service); log level config.
-- `/version` endpoint; health includes GPU/driver/model-cache status.
-- Graceful shutdown: finish or cancel in-flight (disconnect-cancel exists).
+### Phase 5 — Ops & lifecycle — ⏳ partial
+- File logging + rotation (no console on a service); log level config. ✅ —
+  `SUBSMELT_WHISPER_LOG_FILE` adds a RotatingFileHandler (5 MB × 5) to root +
+  uvicorn loggers; `log_config=None` keeps it attached. Level from
+  `SUBSMELT_WHISPER_LOG_LEVEL`.
+- `/version` endpoint; health includes GPU/driver/model-cache status. ✅ —
+  `GET /version` (open) returns `{version, transportModes, capabilities}`;
+  `capabilities` now embeds `version`/`transportModes`; health already carries
+  GPUs + model cache. Version is `SUBSMELT_WHISPER_VERSION`-overridable.
+- Graceful shutdown: finish or cancel in-flight (disconnect-cancel exists). ✅
+  (streaming disconnect-cancel from Phase 2; uvicorn handles SIGTERM).
 - Auto-update: check a release feed, download, swap, restart service (or manual
-  installer). Model integrity (hash) checks.
+  installer). Model integrity (hash) checks. ⛔ DEFERRED — needs a signed release
+  feed + installer swap/restart machinery; out of scope until Phase 6 CI produces
+  signed artifacts. Manual installer re-run is the interim update path.
 
 ### Phase 6 — Build, test, docs
 - **CI**: a GitHub Actions Windows runner builds the exe/installer on tag (mirror

@@ -629,7 +629,14 @@
         "cachePending": "Οι λεπτομέρειες προσωρινής μνήμης θα εμφανιστούν όταν το backend αναφέρει την υγεία για το επιλεγμένο μοντέλο.",
         "currentDefaults": "Τρέχουσες προεπιλογές αιτήματος: {{model}} σε {{device}} / {{computeType}}, έξοδος {{output}}.",
         "backendMessage": "Μήνυμα backend: {{message}}",
-        "firstRunQuiet": "Οι πρώτες εκτελέσεις μεταγραφής μπορεί να μείνουν σιωπηλές για λίγο όσο γίνεται λήψη ή προθέρμανση του μοντέλου."
+        "firstRunQuiet": "Οι πρώτες εκτελέσεις μεταγραφής μπορεί να μείνουν σιωπηλές για λίγο όσο γίνεται λήψη ή προθέρμανση του μοντέλου.",
+        "serverVersion": "Server version",
+        "transportMode": "Transport mode",
+        "transport_auto": "Auto",
+        "transport_shared": "Shared filesystem",
+        "transport_upload": "Upload",
+        "gpus": "GPUs",
+        "noGpu": "none detected (CPU)"
       },
       "transport": "File transport",
       "transportAuto": "Auto (recommended)",

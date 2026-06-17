@@ -629,7 +629,14 @@
         "cachePending": "Butiran cache akan muncul apabila bahagian belakang melaporkan kesihatan untuk model dipilih.",
         "currentDefaults": "Lalai permintaan semasa: {{model}} pada {{device}} / {{computeType}}, output {{output}}.",
         "backendMessage": "Mesej bahagian belakang: {{message}}",
-        "firstRunQuiet": "Jalanan transkripsi pertama boleh kekal senyap untuk seketika semasa model dimuat turun atau dipanaskan."
+        "firstRunQuiet": "Jalanan transkripsi pertama boleh kekal senyap untuk seketika semasa model dimuat turun atau dipanaskan.",
+        "serverVersion": "Server version",
+        "transportMode": "Transport mode",
+        "transport_auto": "Auto",
+        "transport_shared": "Shared filesystem",
+        "transport_upload": "Upload",
+        "gpus": "GPUs",
+        "noGpu": "none detected (CPU)"
       },
       "transport": "File transport",
       "transportAuto": "Auto (recommended)",

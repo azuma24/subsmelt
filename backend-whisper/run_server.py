@@ -25,6 +25,7 @@ Config (all optional; sensible localhost defaults):
     SUBSMELT_FFMPEG          path to bundled ffmpeg.exe (consumed by app/audio.py)
     SUBSMELT_WHISPER_CONFIG  path to a JSON config file (env vars win over it)
     SUBSMELT_WHISPER_LOG_LEVEL   uvicorn log level (default "info")
+    SUBSMELT_WHISPER_LOG_FILE    path to a rotating log file (5MB×5; default: console only)
 
 Binding note (mirrors plan §1/Phase 1): we only auto-widen the default bind to
 0.0.0.0 when a token is configured. Without a token we stay on 127.0.0.1 so a
@@ -63,6 +64,7 @@ class ServerConfig:
     media_root: str | None
     ffmpeg: str | None
     log_level: str
+    log_file: str | None
 
     def redacted(self) -> dict:
         """Config safe to print/log — never leak the token."""
@@ -73,6 +75,7 @@ class ServerConfig:
             "media_root": self.media_root,
             "ffmpeg": self.ffmpeg,
             "log_level": self.log_level,
+            "log_file": self.log_file,
             "token": "<set>" if self.token else None,
         }
 
@@ -136,6 +139,7 @@ def load_config() -> ServerConfig:
         ffmpeg=pick("SUBSMELT_FFMPEG", "ffmpeg", None),
         log_level=pick("SUBSMELT_WHISPER_LOG_LEVEL", "log_level", DEFAULT_LOG_LEVEL)
         or DEFAULT_LOG_LEVEL,
+        log_file=pick("SUBSMELT_WHISPER_LOG_FILE", "log_file", None),
     )
 
 
@@ -245,6 +249,45 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def configure_file_logging(config: "ServerConfig") -> bool:
+    """Attach a rotating file handler when SUBSMELT_WHISPER_LOG_FILE is set.
+
+    Windows services have no console, so log to a file (plan Phase 5). The handler
+    is attached to the root logger plus uvicorn's loggers, and uvicorn is later
+    told NOT to reset logging (``log_config=None``) so these handlers survive.
+    Rotation: 5 MB × 5 backups. Returns True when file logging was enabled.
+    """
+    if not config.log_file:
+        return False
+    import logging
+    from logging.handlers import RotatingFileHandler
+
+    try:
+        log_path = Path(config.log_file)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        handler = RotatingFileHandler(
+            log_path, maxBytes=5 * 1024 * 1024, backupCount=5, encoding="utf-8"
+        )
+        handler.setFormatter(logging.Formatter(
+            "%(asctime)s %(levelname)s %(name)s: %(message)s"
+        ))
+        level = getattr(logging, config.log_level.upper(), logging.INFO)
+        root = logging.getLogger()
+        root.setLevel(level)
+        root.addHandler(handler)
+        for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+            lg = logging.getLogger(name)
+            lg.setLevel(level)
+            lg.addHandler(handler)
+        print(f"[run_server] file logging → {log_path} (level={config.log_level})")
+        return True
+    except OSError as exc:
+        # Never refuse to start over a logging-path problem; warn and use console.
+        print(f"[run_server] WARNING: could not open log file {config.log_file}: {exc}",
+              file=sys.stderr)
+        return False
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(sys.argv[1:] if argv is None else argv)
     config = load_config()
@@ -255,6 +298,7 @@ def main(argv: list[str] | None = None) -> int:
 
     apply_environment(config)
     add_bundled_dll_dir()
+    file_logging = configure_file_logging(config)
 
     gpu_ok, message = verify_cuda_runtime()
     print(f"[run_server] {message}")
@@ -277,13 +321,18 @@ def main(argv: list[str] | None = None) -> int:
     )
     # Pass the import string (not the app object) so uvicorn owns the lifecycle;
     # reload is intentionally off for a service.
-    uvicorn.run(
-        "app.main:app",
-        host=config.host,
-        port=config.port,
-        log_level=config.log_level,
-        reload=False,
-    )
+    run_kwargs = {
+        "host": config.host,
+        "port": config.port,
+        "log_level": config.log_level,
+        "reload": False,
+    }
+    # When we installed a file handler, tell uvicorn NOT to reset logging
+    # (log_config=None) so our rotating handler stays attached. Otherwise let
+    # uvicorn apply its default console logging (omit the kwarg) (plan Phase 5).
+    if file_logging:
+        run_kwargs["log_config"] = None
+    uvicorn.run("app.main:app", **run_kwargs)
     return 0
 
 

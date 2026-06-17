@@ -629,7 +629,14 @@
         "cachePending": "A gyorsítótár részletei akkor jelennek meg, amikor a háttérrendszer jelenti a kiválasztott modell állapotát.",
         "currentDefaults": "Aktuális kérés-alapértelmezések: {{model}} ezen: {{device}} / {{computeType}}, kimenet {{output}}.",
         "backendMessage": "Háttérrendszer üzenete: {{message}}",
-        "firstRunQuiet": "Az első átiratfutások egy ideig csendben maradhatnak, amíg a modell letöltődik vagy bemelegszik."
+        "firstRunQuiet": "Az első átiratfutások egy ideig csendben maradhatnak, amíg a modell letöltődik vagy bemelegszik.",
+        "serverVersion": "Server version",
+        "transportMode": "Transport mode",
+        "transport_auto": "Auto",
+        "transport_shared": "Shared filesystem",
+        "transport_upload": "Upload",
+        "gpus": "GPUs",
+        "noGpu": "none detected (CPU)"
       },
       "transport": "File transport",
       "transportAuto": "Auto (recommended)",

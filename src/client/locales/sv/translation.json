@@ -629,7 +629,14 @@
         "cachePending": "Cachedetaljer visas när backenden rapporterar hälsa för den valda modellen.",
         "currentDefaults": "Aktuella begäranstandarder: {{model}} på {{device}} / {{computeType}}, utdata {{output}}.",
         "backendMessage": "Backend-meddelande: {{message}}",
-        "firstRunQuiet": "De första transkriberingskörningarna kan vara tysta en stund medan modellen laddas ner eller värms upp."
+        "firstRunQuiet": "De första transkriberingskörningarna kan vara tysta en stund medan modellen laddas ner eller värms upp.",
+        "serverVersion": "Server version",
+        "transportMode": "Transport mode",
+        "transport_auto": "Auto",
+        "transport_shared": "Shared filesystem",
+        "transport_upload": "Upload",
+        "gpus": "GPUs",
+        "noGpu": "none detected (CPU)"
       },
       "transport": "File transport",
       "transportAuto": "Auto (recommended)",
