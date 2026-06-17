@@ -490,10 +490,9 @@ app.get("/api/jobs/:id/download", (req, res) => {
     const contentType = ext === "vtt" ? "text/vtt; charset=utf-8" : "text/plain; charset=utf-8";
     const content = readSubtitleFileText(job.output_path);
     res.setHeader("Content-Type", contentType);
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${basename.replace(/"/g, "")}"`
-    );
+    // Allow-list filename chars (CRLF/";" etc. could inject response headers).
+    const safeName = basename.replace(/[^A-Za-z0-9._-]/g, "_") || "subtitle.srt";
+    res.setHeader("Content-Disposition", `attachment; filename="${safeName}"`);
     res.send(content);
   } catch (error: any) {
     res.status(500).json({ error: `Failed to download: ${error?.message || String(error)}` });

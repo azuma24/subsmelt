@@ -103,16 +103,24 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
 
   const applyBulk = async (payload: Partial<Task>) => {
     if (selectedTasks.length === 0) return;
-    await Promise.all(selectedTasks.map((task) => api.updateTask(task.id, payload)));
-    addToast(t("translation_languages.toast.bulkUpdated", { count: selectedTasks.length }), "success");
-    tasksQuery.refetch();
+    try {
+      await Promise.all(selectedTasks.map((task) => api.updateTask(task.id, payload)));
+      addToast(t("translation_languages.toast.bulkUpdated", { count: selectedTasks.length }), "success");
+      await tasksQuery.refetch();
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : "Bulk update failed", "error");
+    }
   };
 
   const applyBulkFormat = async (format: OutputFormat) => {
     if (selectedTasks.length === 0) return;
-    await Promise.all(selectedTasks.map((task) => api.updateTask(task.id, { output_pattern: applyOutputFormat(task.output_pattern, format) })));
-    addToast(t("translation_languages.toast.bulkFormatUpdated", { count: selectedTasks.length, format }), "success");
-    tasksQuery.refetch();
+    try {
+      await Promise.all(selectedTasks.map((task) => api.updateTask(task.id, { output_pattern: applyOutputFormat(task.output_pattern, format) })));
+      addToast(t("translation_languages.toast.bulkFormatUpdated", { count: selectedTasks.length, format }), "success");
+      await tasksQuery.refetch();
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : "Bulk update failed", "error");
+    }
   };
 
   const clearSelection = () => setSelectedTaskIds(new Set());
@@ -195,7 +203,7 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
             <div key={task.id} className={`rounded-xl border px-[13px] py-[14px] ${task.enabled ? "border-[var(--border)] bg-[var(--surface)]" : "border-[var(--border)] bg-[var(--surface)] opacity-60"}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 flex-1 items-start gap-2">
-                  <input type="checkbox" checked={selectedTaskIds.has(task.id)} onChange={() => toggleTaskSelected(task.id)} className="mt-1 h-4 w-4 accent-[var(--accent)]" />
+                  <input type="checkbox" aria-label={task.target_lang} checked={selectedTaskIds.has(task.id)} onChange={() => toggleTaskSelected(task.id)} className="mt-1 h-4 w-4 accent-[var(--accent)]" />
                   <div className="min-w-0 flex-1">
                     {/* L1: Source → Target */}
                     <div className="flex items-center gap-2 text-[13px] font-medium text-[var(--text)]">

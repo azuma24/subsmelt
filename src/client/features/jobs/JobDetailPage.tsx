@@ -13,6 +13,10 @@ export function JobDetailPage() {
   const previewQuery = useJobPreview(Number.isFinite(jobId) ? jobId : null);
   const job = (jobsQuery.data?.jobs || []).find((j: JobRow) => j.id === jobId);
 
+  // Don't flash "not found" while the jobs list is still loading (deep-link nav).
+  if (jobsQuery.isLoading && !jobsQuery.data) {
+    return <div className="mx-auto max-w-4xl p-6"><EmptyHint text={t("errors.loading")} /></div>;
+  }
   if (!job) {
     return <div className="mx-auto max-w-4xl p-6"><EmptyHint text={t("jobDetail.notFound")} /></div>;
   }
