@@ -717,6 +717,7 @@ function FolderTreeRow({
           <input
             type="checkbox"
             checked={checked}
+            aria-label={node.name}
             ref={(el) => {
               if (el) el.indeterminate = mixed;
             }}

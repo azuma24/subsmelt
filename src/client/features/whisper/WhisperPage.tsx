@@ -397,6 +397,9 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
               className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-2)]">
               {scanQuery.isFetching ? t("whisper.scanning") : t("whisper.rescan")}
             </button>
+            <span aria-live="polite" className="sr-only">
+              {running && progress ? t("whisper.transcribingProgress", { done: progress.done, total: progress.total }) : ""}
+            </span>
           </div>
 
           <div className="mt-3 max-h-[40vh] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)]">
@@ -458,7 +461,7 @@ function FileRow({ file, depth, selected, toggleFile, fileProgress, activePath }
     <label className="flex items-center gap-2 px-3 py-1.5 text-[12px] text-[var(--text-2)] hover:bg-[var(--surface-2)]"
       style={{ paddingLeft: `${12 + (depth + 1) * 16}px` }}>
       <input type="checkbox" checked={selected.has(vp)} onChange={() => toggleFile(vp)} className="h-4 w-4 accent-blue-500" />
-      <span className="truncate">🎬 {file.videoName || baseName(vp)}</span>
+      <span className="truncate"><span aria-hidden="true">🎬</span> {file.videoName || baseName(vp)}</span>
       <span className="ml-auto flex shrink-0 items-center gap-2">
         {status && <span className={`text-[10px] ${activePath === vp ? "text-[var(--accent)]" : "text-[var(--text-3)]"}`}>{status}</span>}
         {file.subtitles.length > 0 && <span className="text-[10px] text-[var(--text-3)]">{t("whisper.hasSubtitle")}</span>}

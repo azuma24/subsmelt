@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import type { LlmConnection, LlmMode, LlmProvider } from "../../types";
@@ -48,6 +48,7 @@ function parseConnections(raw: unknown): LlmConnection[] {
 
 export function ConnectionsPanel({ settings, update, addToast, isMobile }: ConnectionsPanelProps) {
   const { t } = useTranslation();
+  const modeLabelId = useId();
   const [modelsByConn, setModelsByConn] = useState<Record<string, string[]>>({});
   const [loadingByConn, setLoadingByConn] = useState<Record<string, boolean>>({});
   const [testingByConn, setTestingByConn] = useState<Record<string, boolean>>({});
@@ -148,8 +149,8 @@ export function ConnectionsPanel({ settings, update, addToast, isMobile }: Conne
     <div className="space-y-4">
       {/* Mode selector */}
       <div>
-        <label className={labelCls}>{t("settings.connections.mode")}</label>
-        <div className="flex overflow-hidden rounded-lg border border-[var(--border)]">
+        <label id={modeLabelId} className={labelCls}>{t("settings.connections.mode")}</label>
+        <div role="group" aria-labelledby={modeLabelId} className="flex overflow-hidden rounded-lg border border-[var(--border)]">
           {(["single", "fallback", "parallel"] as LlmMode[]).map((m) => (
             <button
               key={m}
@@ -184,6 +185,7 @@ export function ConnectionsPanel({ settings, update, addToast, isMobile }: Conne
                     checked={activeId === c.id}
                     onChange={() => update("active_connection_id", c.id)}
                     title={t("settings.connections.activeTitle")}
+                    aria-label={c.label}
                     className="h-4 w-4 shrink-0 accent-[var(--accent)]"
                   />
                 )}
