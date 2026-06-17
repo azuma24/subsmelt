@@ -18,6 +18,18 @@ def _timestamp(seconds: float, sep: str = ",") -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d}{sep}{ms:03d}"
 
 
+def _speaker(segment: object) -> str:
+    """The segment's diarized speaker label, or '' when not diarized."""
+    return str(getattr(segment, "speaker", "") or "")
+
+
+def _with_speaker(segment: object) -> str:
+    """Segment text, prefixed with ``[SPEAKER_x] `` when a speaker is assigned."""
+    spk = _speaker(segment)
+    text = getattr(segment, "text", "") or ""
+    return f"[{spk}] {text}" if spk else text
+
+
 def _wrap_text(text: str, max_line_length: int | None = None) -> str:
     stripped = text.strip()
     if not stripped or not max_line_length or max_line_length < 1:
@@ -46,7 +58,7 @@ def write_srt(segments: Iterable[SegmentLike], output_path: Path, max_line_lengt
     for count, segment in enumerate(segments, start=1):
         lines.append(str(count))
         lines.append(f"{_timestamp(segment.start)} --> {_timestamp(segment.end)}")
-        lines.append(_wrap_text(segment.text, max_line_length))
+        lines.append(_wrap_text(_with_speaker(segment), max_line_length))
         lines.append("")
     output_path.write_text("\n".join(lines), encoding="utf-8")
     return count
@@ -57,7 +69,7 @@ def write_vtt(segments: Iterable[SegmentLike], output_path: Path, max_line_lengt
     count = 0
     for count, segment in enumerate(segments, start=1):
         lines.append(f"{_timestamp(segment.start, '.')} --> {_timestamp(segment.end, '.')}")
-        lines.append(_wrap_text(segment.text, max_line_length))
+        lines.append(_wrap_text(_with_speaker(segment), max_line_length))
         lines.append("")
     output_path.write_text("\n".join(lines), encoding="utf-8")
     return count
@@ -67,7 +79,7 @@ def write_txt(segments: Iterable[SegmentLike], output_path: Path) -> int:
     texts: list[str] = []
     count = 0
     for count, segment in enumerate(segments, start=1):
-        text = segment.text.strip()
+        text = _with_speaker(segment).strip()
         if text:
             texts.append(text)
     output_path.write_text("\n".join(texts) + ("\n" if texts else ""), encoding="utf-8")
@@ -105,8 +117,10 @@ def write_ass(segments: Iterable[SegmentLike], output_path: Path, max_line_lengt
     count = 0
     for count, segment in enumerate(segments, start=1):
         text = _wrap_text(segment.text, max_line_length).replace("\n", "\\N")
+        # Speaker goes in the ASS Name/actor field (not the rendered text).
+        name = _speaker(segment)
         lines.append(
-            f"Dialogue: 0,{_ass_timestamp(segment.start)},{_ass_timestamp(segment.end)},Default,,0,0,0,,{text}"
+            f"Dialogue: 0,{_ass_timestamp(segment.start)},{_ass_timestamp(segment.end)},Default,{name},0,0,0,,{text}"
         )
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return count

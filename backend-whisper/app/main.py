@@ -50,6 +50,11 @@ from .model_loader import (
     InvalidComputeTypeError,
     ModelWeightsMissingError,
 )
+from .diarize import (
+    DiarizationTokenMissingError,
+    DiarizationUnavailableError,
+    diarize_available,
+)
 from .transcribe import (
     TranscriptionCancelled,
     fake_transcribe_for_tests,
@@ -156,7 +161,9 @@ def capabilities() -> dict:
             "conditionOnPreviousText": True,
             "wordTimestamps": True,
             "initialPrompt": True,
-            "speakerDiarization": False,
+            # Advertised true only when pyannote is installed AND an HF token is
+            # configured, so the frontend offers the toggle only when it works.
+            "speakerDiarization": diarize_available(),
             "bgmSeparation": False,
         },
     }
@@ -402,6 +409,10 @@ def transcribe(request: TranscribeRequest, _auth: None = Depends(require_token))
         ) from exc
     except (CudaUnavailableError, InvalidComputeTypeError) as exc:
         raise HTTPException(status_code=400, detail={"code": "invalid_device", "message": str(exc)}) from exc
+    except DiarizationTokenMissingError as exc:
+        raise HTTPException(status_code=422, detail={"code": "diarization_token_missing", "message": str(exc)}) from exc
+    except DiarizationUnavailableError as exc:
+        raise HTTPException(status_code=400, detail={"code": "diarization_unavailable", "message": str(exc)}) from exc
     except CudaOutOfMemoryError as exc:
         raise HTTPException(
             status_code=507,
@@ -584,6 +595,10 @@ def _map_upload_transcription_error(exc: Exception) -> HTTPException:
         return HTTPException(status_code=409, detail={"code": "model_not_downloaded", "model": exc.model})
     if isinstance(exc, (CudaUnavailableError, InvalidComputeTypeError)):
         return HTTPException(status_code=400, detail={"code": "invalid_device", "message": str(exc)})
+    if isinstance(exc, DiarizationTokenMissingError):
+        return HTTPException(status_code=422, detail={"code": "diarization_token_missing", "message": str(exc)})
+    if isinstance(exc, DiarizationUnavailableError):
+        return HTTPException(status_code=400, detail={"code": "diarization_unavailable", "message": str(exc)})
     if isinstance(exc, CudaOutOfMemoryError):
         return HTTPException(
             status_code=507,
