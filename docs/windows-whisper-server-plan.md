@@ -62,7 +62,7 @@ client-side ffmpeg extraction so only audio crosses the wire.
   optional self-signed/`--cert` support.
 - Keep the existing `assert_path_under_media` guard with a Windows `MEDIA_ROOT`.
 
-### Phase 2 — Upload transport (Model B)
+### Phase 2 — Upload transport (Model B) — ✅ implemented
 - New `POST /transcribe/upload` (multipart or chunked stream): accepts the media/
   audio bytes + the same `TranscribeRequest` fields (minus `input_path`).
 - Server writes to a temp dir, runs the existing pipeline, returns subtitle
@@ -75,6 +75,17 @@ client-side ffmpeg extraction so only audio crosses the wire.
   mode it reads the file, optionally extracts audio, uploads, writes the returned
   content to the local output path. Falls back to path mode when configured.
 - Keep `/transcribe` + `/transcribe/stream` (path mode) unchanged for Model A.
+
+  **As built:** `POST /transcribe/upload` + `/transcribe/upload/stream` (multipart
+  `file` + `request` JSON; returns subtitle `content`, not a path; NDJSON progress
+  + disconnect-cancel + temp cleanup). Client: `transcription_transport`
+  (`auto`/`shared`/`upload`, default `auto` → upload when a token is set with no
+  path map). `transcribeWithBackendUpload[Streaming]` stream the local file via
+  `openAsBlob` (no full in-memory copy) and write the returned content locally.
+  Upload mode skips the path-mode HTTP `/preflight` (no server path); the upload
+  endpoint runs its own resource/model-downloaded gate.
+  **Follow-ups:** client-side audio extraction to shrink uploads (currently the
+  backend extracts), and low-RAM auto-downgrade in upload mode (path-mode only now).
 
 ### Phase 3 — Windows packaging
 - **Bundler**: PyInstaller **`--onedir`** (not onefile — CTranslate2 + CUDA DLL

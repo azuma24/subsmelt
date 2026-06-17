@@ -7,9 +7,12 @@ import secrets
 from pathlib import Path
 from typing import AsyncIterator
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
+import shutil
+import tempfile
+
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from .gpu import cuda_device_count, gpu_info, total_free_vram_mb
 from .model_cache import describe_model_cache
@@ -32,7 +35,13 @@ from .preflight import (
     ffmpeg_available,
     total_ram_mb,
 )
-from .schemas import HealthResponse, PreflightResponse, TranscribeRequest, TranscribeResponse
+from .schemas import (
+    HealthResponse,
+    PreflightResponse,
+    TranscribeRequest,
+    TranscribeResponse,
+    UploadTranscribeResponse,
+)
 from .model_loader import (
     CudaOutOfMemoryError,
     CudaUnavailableError,
@@ -43,8 +52,12 @@ from .transcribe import (
     TranscriptionCancelled,
     fake_transcribe_for_tests,
     fake_transcribe_streaming_for_tests,
+    fake_transcribe_upload_for_tests,
+    fake_transcribe_upload_streaming_for_tests,
     run_faster_whisper,
     run_faster_whisper_streaming,
+    run_faster_whisper_upload,
+    run_faster_whisper_upload_streaming,
 )
 
 MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/media")
@@ -425,5 +438,210 @@ async def transcribe_stream(
             cancel_event.set()
             watcher.cancel()
             gen.close()
+
+    return StreamingResponse(ndjson_stream(), media_type="application/x-ndjson")
+
+
+# ===========================================================================
+# Upload transport (Model B, plan Phase 2)
+#
+# The client uploads the media bytes (multipart) instead of pointing at a shared
+# path; the server transcribes from a temp file and returns the subtitle CONTENT
+# (string), never a server-side path. No shared filesystem required — true remote.
+# ===========================================================================
+
+
+def parse_upload_request(request_json: str, input_path: str) -> TranscribeRequest:
+    """Build a TranscribeRequest from the multipart ``request`` JSON field.
+
+    The upload protocol omits ``input_path`` (the client has no server path), so
+    we inject the saved temp path. Bad JSON or schema violations become 400 so
+    the client gets a clean error before any heavy work starts.
+    """
+    try:
+        data = json.loads(request_json)
+        if not isinstance(data, dict):
+            raise ValueError("request must be a JSON object")
+    except (json.JSONDecodeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "bad_request", "message": f"Invalid request JSON: {exc}"},
+        ) from exc
+    data["input_path"] = input_path
+    try:
+        return TranscribeRequest(**data)
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "bad_request", "message": "Invalid transcribe request", "errors": exc.errors()},
+        ) from exc
+
+
+def validate_upload_request(request: TranscribeRequest, upload_size_mb: int, scratch_dir: Path) -> None:
+    """Resource/preflight gate for upload mode (no path-under-media check).
+
+    Mirrors :func:`validate_transcribe_request` minus the shared-path checks:
+    verifies ffmpeg, model RAM/VRAM safety, disk headroom for the upload + output,
+    and that the model is already downloaded (409, never auto-download). Raises the
+    same HTTP error codes so the client handles upload and path mode identically.
+    """
+    ffmpeg_ok = ffmpeg_available()
+    on_gpu = (request.device or "cpu").strip().lower() == "cuda"
+    if on_gpu:
+        gpu_safety = evaluate_gpu_safety(request.model, total_free_vram_mb())
+        model_safe, model_code, suggested = gpu_safety["safe"], gpu_safety["code"], gpu_safety["suggested_model"]
+        avail_ram = total_free_vram_mb() or 0
+        req_ram = gpu_safety["required_vram_mb"]
+    else:
+        safety = evaluate_model_safety(request.model, available_ram_mb())
+        model_safe, model_code, suggested = safety["safe"], safety["code"], safety["suggested_model"]
+        avail_ram = safety["available_ram_mb"]
+        req_ram = safety["required_ram_mb"]
+
+    disk_safety = evaluate_disk_safety(upload_size_mb, disk_free_mb(scratch_dir))
+    safe = bool(model_safe and ffmpeg_ok and disk_safety["safe"])
+    code = (
+        model_code if not model_safe
+        else "ffmpeg_missing" if not ffmpeg_ok
+        else disk_safety["code"] if not disk_safety["safe"]
+        else "ok"
+    )
+
+    if not safe and not (ALLOW_UNSAFE or request.allow_unsafe):
+        raise HTTPException(status_code=422, detail={
+            "code": code,
+            "message": f"Transcription preflight failed: {code}",
+            "availableRamMb": avail_ram,
+            "requiredRamMb": req_ram,
+            "suggestedModel": suggested,
+        })
+
+    try:
+        assert_model_downloaded(request.model)
+    except ModelNotDownloadedError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "model_not_downloaded", "model": exc.model},
+        ) from exc
+
+
+def _save_upload(file: UploadFile, dest_dir: Path) -> Path:
+    """Persist the uploaded stream to a real temp file ffmpeg can read."""
+    filename = Path(file.filename or "upload.bin").name or "upload.bin"
+    dest = dest_dir / filename
+    with dest.open("wb") as out:
+        shutil.copyfileobj(file.file, out)
+    return dest
+
+
+def _map_upload_transcription_error(exc: Exception) -> HTTPException:
+    """Translate a transcription exception to the upload endpoint's HTTP error."""
+    if isinstance(exc, ModelWeightsMissingError):
+        return HTTPException(status_code=409, detail={"code": "model_not_downloaded", "model": exc.model})
+    if isinstance(exc, (CudaUnavailableError, InvalidComputeTypeError)):
+        return HTTPException(status_code=400, detail={"code": "invalid_device", "message": str(exc)})
+    if isinstance(exc, CudaOutOfMemoryError):
+        return HTTPException(
+            status_code=507,
+            detail={"code": "cuda_out_of_memory", "message": str(exc), "suggestedModel": "small"},
+        )
+    return HTTPException(status_code=500, detail={"code": "transcription_failed", "message": str(exc)})
+
+
+@app.post("/transcribe/upload", response_model=UploadTranscribeResponse)
+def transcribe_upload(
+    file: UploadFile = File(...),
+    request: str = Form(...),
+    _auth: None = Depends(require_token),
+) -> UploadTranscribeResponse:
+    """Upload transport (Model B): transcribe uploaded media, return content."""
+    with tempfile.TemporaryDirectory(prefix="subsmelt-upload-") as tmp:
+        tmp_dir = Path(tmp)
+        saved = _save_upload(file, tmp_dir)
+        upload_size_mb = int(saved.stat().st_size / 1024 / 1024)
+        parsed = parse_upload_request(request, str(saved))
+        validate_upload_request(parsed, upload_size_mb, tmp_dir)
+        try:
+            if USE_FAKE_TRANSCRIBE:
+                result = fake_transcribe_upload_for_tests(saved, parsed)
+            else:
+                result = run_faster_whisper_upload(parsed, saved)
+        except Exception as exc:  # noqa: BLE001 - mapped to typed HTTP errors
+            raise _map_upload_transcription_error(exc) from exc
+        return UploadTranscribeResponse(**result)
+
+
+@app.post("/transcribe/upload/stream")
+async def transcribe_upload_stream(
+    http_request: Request,
+    file: UploadFile = File(...),
+    request: str = Form(...),
+    _auth: None = Depends(require_token),
+) -> StreamingResponse:
+    """Streaming upload transport: NDJSON progress then a terminal content result.
+
+    Validation (400/409/422) happens BEFORE the stream opens. The uploaded media
+    is saved to a temp dir that is removed when the stream finishes — including on
+    client disconnect (cooperative cancel, mirroring ``/transcribe/stream``).
+    """
+    tmp_ctx = tempfile.TemporaryDirectory(prefix="subsmelt-upload-")
+    tmp_dir = Path(tmp_ctx.name)
+    try:
+        saved = _save_upload(file, tmp_dir)
+        upload_size_mb = int(saved.stat().st_size / 1024 / 1024)
+        parsed = parse_upload_request(request, str(saved))
+        validate_upload_request(parsed, upload_size_mb, tmp_dir)
+    except BaseException:
+        tmp_ctx.cleanup()
+        raise
+
+    cancel_event = asyncio.Event()
+
+    def is_cancelled() -> bool:
+        return cancel_event.is_set()
+
+    def build_generator():
+        if USE_FAKE_TRANSCRIBE:
+            return fake_transcribe_upload_streaming_for_tests(saved, parsed, is_cancelled)
+        return run_faster_whisper_upload_streaming(parsed, saved, is_cancelled)
+
+    async def ndjson_stream() -> AsyncIterator[bytes]:
+        loop = asyncio.get_running_loop()
+        gen = build_generator()
+
+        async def watch_disconnect() -> None:
+            try:
+                while not cancel_event.is_set():
+                    if await http_request.is_disconnected():
+                        cancel_event.set()
+                        return
+                    await asyncio.sleep(0.5)
+            except asyncio.CancelledError:  # pragma: no cover - shutdown path
+                pass
+
+        watcher = asyncio.create_task(watch_disconnect())
+        sentinel = object()
+
+        def next_item():
+            try:
+                return next(gen)
+            except StopIteration:
+                return sentinel
+
+        try:
+            while True:
+                item = await loop.run_in_executor(None, next_item)
+                if item is sentinel:
+                    break
+                yield (json.dumps(item) + "\n").encode("utf-8")
+        except TranscriptionCancelled:
+            return
+        except Exception as exc:  # noqa: BLE001 - surface as a terminal error line
+            yield (json.dumps({"type": "error", "error": str(exc)}) + "\n").encode("utf-8")
+        finally:
+            cancel_event.set()
+            watcher.cancel()
+            gen.close()
+            tmp_ctx.cleanup()
 
     return StreamingResponse(ndjson_stream(), media_type="application/x-ndjson")

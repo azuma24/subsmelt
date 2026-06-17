@@ -7,6 +7,7 @@ import {
   normalizeTranscriptionBackendUrl,
   localTranscriptionOutputPath,
   transcribePostActionValues,
+  resolveTransportMode,
 } from "./transcription-client.js";
 
 test("assertMediaPathAllowed accepts files under the media root", () => {
@@ -20,6 +21,34 @@ test("assertMediaPathAllowed rejects paths outside the media root", () => {
 
 test("normalizeTranscriptionBackendUrl trims trailing slashes", () => {
   assert.equal(normalizeTranscriptionBackendUrl("http://whisper-backend:8001///"), "http://whisper-backend:8001");
+});
+
+test("resolveTransportMode honours explicit shared/upload settings", () => {
+  assert.equal(resolveTransportMode({ transcription_transport: "shared" }), "shared");
+  assert.equal(resolveTransportMode({ transcription_transport: "upload" }), "upload");
+  assert.equal(resolveTransportMode({ transcription_transport: "UPLOAD" }), "upload");
+});
+
+test("resolveTransportMode auto: upload only when a token is set with no path mapping (true remote)", () => {
+  // No token, no mapping → local same-host → shared (preserves prior default).
+  assert.equal(resolveTransportMode({ transcription_transport: "auto" }), "shared");
+  // Token set, no mapping → remote with no shared FS → upload.
+  assert.equal(resolveTransportMode({ transcription_transport: "auto", transcription_backend_token: "t" }), "upload");
+  // Token + explicit mapping → operator wired a shared mount → shared.
+  assert.equal(
+    resolveTransportMode({
+      transcription_transport: "auto",
+      transcription_backend_token: "t",
+      transcription_path_map_from: "/media",
+      transcription_path_map_to: "/srv/media",
+    }),
+    "shared",
+  );
+});
+
+test("resolveTransportMode defaults to auto behaviour when unset", () => {
+  assert.equal(resolveTransportMode({}), "shared");
+  assert.equal(resolveTransportMode({ transcription_backend_token: "t" }), "upload");
 });
 
 test("buildTranscriptionRequest keeps whisper behavior app-owned", () => {

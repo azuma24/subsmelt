@@ -630,7 +630,12 @@
         "currentDefaults": "Поточні типові значення запиту: {{model}} на {{device}} / {{computeType}}, результат {{output}}.",
         "backendMessage": "Повідомлення бекенду: {{message}}",
         "firstRunQuiet": "Перші запуски транскрипції можуть деякий час бути без ознак активності, доки модель завантажується чи прогрівається."
-      }
+      },
+      "transport": "File transport",
+      "transportAuto": "Auto (recommended)",
+      "transportShared": "Shared filesystem (path)",
+      "transportUpload": "Upload (remote)",
+      "transportHelp": "How media reaches the backend. Auto: upload when a backend token is set with no path map (true remote), otherwise shared path. Shared: the backend reads the same files (local or path-mapped). Upload: SubSmelt sends the media and writes the returned subtitle locally — no shared storage needed."
     },
     "connections": {
       "mode": "Режим з'єднання",

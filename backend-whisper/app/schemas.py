@@ -81,3 +81,19 @@ class TranscribeResponse(BaseModel):
     language: str | None = None
     segments: int = 0
     duration_seconds: float | None = None
+
+
+class UploadTranscribeResponse(BaseModel):
+    """Response for the upload transport (Model B, plan Phase 2).
+
+    Unlike :class:`TranscribeResponse`, this carries the subtitle ``content`` as a
+    string rather than a server-side ``subtitle_path`` — the client sent the
+    media over the wire and writes the returned content to its own local output
+    path, so no shared filesystem is involved.
+    """
+
+    ok: bool
+    content: str
+    language: str | None = None
+    segments: int = 0
+    duration_seconds: float | None = None

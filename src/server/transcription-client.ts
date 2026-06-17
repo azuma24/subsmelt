@@ -1,3 +1,4 @@
+import { openAsBlob } from "node:fs";
 import path from "node:path";
 
 export const transcribePostActionValues = ["transcribe_only", "transcribe_and_translate"] as const;
@@ -46,6 +47,7 @@ export interface TranscriptionSettings {
   transcription_low_ram_behavior?: string;
   transcription_path_map_from?: string;
   transcription_path_map_to?: string;
+  transcription_transport?: string;
   transcription_request_timeout_s?: string;
   transcription_max_line_length?: string;
   transcription_max_subtitle_duration?: string;
@@ -132,12 +134,38 @@ export interface BackendPreflightResponse {
 
 export interface BackendTranscriptionResponse {
   ok: boolean;
+  // Path mode (Model A): backend wrote the subtitle to a shared path.
   subtitle_path?: string;
+  // Upload mode (Model B): backend returns the subtitle content; the SubSmelt
+  // server writes it to the local output path.
+  content?: string;
   language?: string;
   segments?: number;
   duration_seconds?: number;
   error?: string;
   detail?: unknown;
+}
+
+export type TranscriptionTransportMode = "shared" | "upload";
+
+/**
+ * Resolves which file transport to use (plan Phase 2).
+ *
+ * - "shared"/"upload" in settings force that mode.
+ * - "auto" (default): upload when a token is configured but no path mapping is
+ *   set — the remote Windows-server case where no shared filesystem exists.
+ *   Otherwise shared path mode (local same-host / Docker volume, or an explicit
+ *   path mapping that resolves on the backend), preserving prior behaviour.
+ */
+export function resolveTransportMode(settings: TranscriptionSettings): TranscriptionTransportMode {
+  const explicit = (settings.transcription_transport || "").trim().toLowerCase();
+  if (explicit === "shared" || explicit === "upload") return explicit;
+
+  const hasMapping = Boolean(
+    settings.transcription_path_map_from?.trim() && settings.transcription_path_map_to?.trim(),
+  );
+  const hasToken = Boolean(settings.transcription_backend_token?.trim());
+  return hasToken && !hasMapping ? "upload" : "shared";
 }
 
 export function normalizeTranscriptionBackendUrl(url: string): string {
@@ -579,6 +607,158 @@ export async function transcribeWithBackendStreaming(
   if (streamError) throw new Error(streamError);
   if (!result) throw new Error("Transcription stream ended without a result");
   return result;
+}
+
+// ======== Upload transport (Model B, plan Phase 2) ========
+// The media bytes are uploaded as multipart instead of pointing the backend at a
+// shared path; the backend returns subtitle CONTENT which the caller writes
+// locally. `openAsBlob` streams the file from disk (no full in-memory copy).
+
+// Builds the multipart body: the request JSON (minus input_path, which is
+// meaningless server-side in upload mode) plus the media file.
+async function buildUploadForm(request: BackendTranscriptionRequest, filePath: string): Promise<FormData> {
+  const { input_path: _ignored, ...rest } = request;
+  const blob = await openAsBlob(filePath);
+  const form = new FormData();
+  form.append("request", JSON.stringify(rest));
+  form.append("file", blob, path.basename(filePath));
+  return form;
+}
+
+// Parses an NDJSON transcription stream (shared by upload streaming below).
+// Progress lines drive onProgress; the terminal "result" line is returned; an
+// "error" line throws. Mirrors the consumer in transcribeWithBackendStreaming.
+async function consumeTranscriptionNdjson(
+  body: ReadableStream<Uint8Array>,
+  onProgress?: (update: TranscriptionProgressUpdate) => void,
+): Promise<BackendTranscriptionResponse> {
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let result: BackendTranscriptionResponse | null = null;
+  let streamError: string | null = null;
+
+  const handleLine = (line: string): void => {
+    const record = parseNdjsonLine(line);
+    if (!record) return;
+    const type = record.type;
+    if (type === "progress") {
+      const update = toProgressUpdate(record);
+      if (update && onProgress) onProgress(update);
+    } else if (type === "result") {
+      const { type: _t, ...rest } = record;
+      result = rest as unknown as BackendTranscriptionResponse;
+    } else if (type === "error") {
+      streamError = typeof record.error === "string" ? record.error : "Transcription failed";
+    }
+  };
+
+  for await (const chunk of body as unknown as AsyncIterable<Uint8Array>) {
+    buffer += decoder.decode(chunk, { stream: true });
+    let newlineIndex = buffer.indexOf("\n");
+    while (newlineIndex !== -1) {
+      handleLine(buffer.slice(0, newlineIndex));
+      buffer = buffer.slice(newlineIndex + 1);
+      newlineIndex = buffer.indexOf("\n");
+    }
+  }
+  buffer += decoder.decode();
+  if (buffer.trim()) handleLine(buffer);
+
+  if (streamError) throw new Error(streamError);
+  if (!result) throw new Error("Transcription stream ended without a result");
+  return result;
+}
+
+/**
+ * Upload transport, non-streaming: POSTs the media file + request to
+ * /transcribe/upload and returns the response carrying subtitle `content`.
+ */
+export async function transcribeWithBackendUpload(
+  backendUrl: string,
+  request: BackendTranscriptionRequest,
+  filePath: string,
+  options?: TranscribeBackendOptions,
+): Promise<BackendTranscriptionResponse> {
+  const url = normalizeTranscriptionBackendUrl(backendUrl);
+  if (!url) throw new Error("Transcription backend URL is not configured");
+  const timeoutMs = resolveTranscribeTimeoutMs(options?.timeoutSeconds);
+  const form = await buildUploadForm(request, filePath);
+  const response = await fetchWithTimeout(`${url}/transcribe/upload`, {
+    method: "POST",
+    headers: { ...transcriptionAuthHeaders(options?.token) },
+    body: form,
+  }, timeoutMs, "Transcription backend upload");
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throwBackendError(body, response.status);
+  return body as BackendTranscriptionResponse;
+}
+
+/**
+ * Upload transport, streaming: POSTs the media file + request to
+ * /transcribe/upload/stream and consumes the NDJSON progress protocol. Aborting
+ * the signal closes the stream → backend cancels. A 404 (older backend without
+ * the upload route) throws StreamingUnsupportedError so callers can react.
+ */
+export async function transcribeWithBackendUploadStreaming(
+  backendUrl: string,
+  request: BackendTranscriptionRequest,
+  filePath: string,
+  options?: TranscribeStreamingOptions,
+): Promise<BackendTranscriptionResponse> {
+  const url = normalizeTranscriptionBackendUrl(backendUrl);
+  if (!url) throw new Error("Transcription backend URL is not configured");
+
+  const timeoutMs = resolveTranscribeTimeoutMs(options?.timeoutSeconds);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const externalSignal = options?.signal;
+  const onExternalAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) controller.abort();
+    else externalSignal.addEventListener("abort", onExternalAbort, { once: true });
+  }
+
+  const form = await buildUploadForm(request, filePath);
+  let response: Response;
+  try {
+    response = await fetch(`${url}/transcribe/upload/stream`, {
+      method: "POST",
+      headers: { ...transcriptionAuthHeaders(options?.token) },
+      body: form,
+      signal: controller.signal,
+    });
+  } catch (error: unknown) {
+    clearTimeout(timer);
+    externalSignal?.removeEventListener("abort", onExternalAbort);
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Transcription cancelled");
+    }
+    throw error;
+  }
+
+  if (response.status === 404) {
+    clearTimeout(timer);
+    externalSignal?.removeEventListener("abort", onExternalAbort);
+    throw new StreamingUnsupportedError();
+  }
+  if (!response.ok || !response.body) {
+    const body = await response.json().catch(() => ({}));
+    clearTimeout(timer);
+    externalSignal?.removeEventListener("abort", onExternalAbort);
+    throwBackendError(body, response.status);
+  }
+
+  try {
+    return await consumeTranscriptionNdjson(response.body as ReadableStream<Uint8Array>, options?.onProgress);
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Transcription cancelled");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    externalSignal?.removeEventListener("abort", onExternalAbort);
+  }
 }
 
 // ======== Whisper Model Manager ========
