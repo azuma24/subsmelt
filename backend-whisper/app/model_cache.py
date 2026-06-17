@@ -37,17 +37,45 @@ def _looks_like_local_path(model: str) -> bool:
     return model.startswith(("/", "./", "../", "~")) or "\\" in model
 
 
-# HF repo ids per managed model. Most are Systran's faster-whisper CTranslate2
-# conversions; large-v3-turbo is NOT published by Systran (that repo 404s), so it
-# uses the canonical community conversion faster-whisper itself maps to.
+# Fallback repo overrides used ONLY when faster-whisper's own registry is not
+# importable (e.g. minimal/test envs). large-v3-turbo is not a Systran repo.
 _MODEL_REPO_OVERRIDES = {
     "large-v3-turbo": "mobiuslabsgmbh/faster-whisper-large-v3-turbo",
 }
 
+# Cache of faster-whisper's authoritative model→repo registry (faster_whisper
+# .utils._MODELS). None = not yet probed; {} = probed but unavailable.
+_FW_MODELS: dict[str, str] | None = None
+
+
+def _faster_whisper_repos() -> dict[str, str]:
+    """faster-whisper's canonical model→HF-repo mapping (the source of truth).
+
+    Reading faster-whisper's own registry means we ship exactly the repos it
+    uses — no hand-maintained Systran strings, no 404s when a model (e.g.
+    large-v3-turbo) lives under a different org. Guarded so the module still
+    imports where faster-whisper is absent.
+    """
+    global _FW_MODELS
+    if _FW_MODELS is None:
+        try:
+            from faster_whisper.utils import _MODELS  # type: ignore
+            _FW_MODELS = {str(k).lower(): str(v) for k, v in dict(_MODELS).items()}
+        except Exception:  # pragma: no cover - faster-whisper not installed
+            _FW_MODELS = {}
+    return _FW_MODELS
+
 
 def repo_id_for_model(model: str) -> str:
-    """Hugging Face repo id for a model id (single source of truth)."""
+    """Hugging Face repo id for a model id (single source of truth).
+
+    Prefers faster-whisper's own registry; falls back to the override map, then
+    the Systran naming convention, when that registry is unavailable.
+    """
     normalized = (model or "").strip().lower()
+    fw = _faster_whisper_repos()
+    if normalized in fw:
+        return fw[normalized]
     return _MODEL_REPO_OVERRIDES.get(normalized, f"Systran/faster-whisper-{normalized}")
 
 
