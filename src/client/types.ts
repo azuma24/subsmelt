@@ -137,8 +137,13 @@ export type ManualTranscriptionStage = "preflighting" | "transcribing" | "queuei
 
 export interface TranscribeRequest {
   videoPath: string;
-  outputFormat?: "srt" | "vtt" | "txt";
+  outputFormat?: "srt" | "vtt" | "txt" | "ass";
   postAction?: TranscribePostAction;
+  // Per-run overrides (Whisper page). Omit to use global Settings.
+  model?: string;
+  language?: string;
+  device?: string;
+  computeType?: string;
 }
 
 export interface TranscriptionHistoryEntry {
@@ -147,7 +152,7 @@ export interface TranscriptionHistoryEntry {
   outputPath: string;
   model: string;
   language: string;
-  outputFormat: "srt" | "vtt" | "txt";
+  outputFormat: "srt" | "vtt" | "txt" | "ass";
   postAction: TranscribePostAction;
   status: "running" | "succeeded" | "failed";
   startedAt: string;

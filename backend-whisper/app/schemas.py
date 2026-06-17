@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-OutputFormat = Literal["srt", "vtt", "txt"]
+OutputFormat = Literal["srt", "vtt", "txt", "ass"]
 PostAction = Literal["transcribe_only", "transcribe_and_translate"]
 
 

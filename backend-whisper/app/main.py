@@ -144,7 +144,7 @@ def capabilities() -> dict:
         "devices": devices,
         "computeTypes": compute_types,
         "gpus": gpu_info(),
-        "outputFormats": ["srt", "vtt", "txt"],
+        "outputFormats": ["srt", "vtt", "txt", "ass"],
         "vad": True,
         "advancedOptions": {
             "beamSize": True,
