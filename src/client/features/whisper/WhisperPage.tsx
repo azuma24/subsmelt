@@ -117,12 +117,20 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const [computeType, setComputeType] = useState("");
   const [language, setLanguage] = useState("");
   const [format, setFormat] = useState<OutputFormat>("srt");
-  const [diarize, setDiarize] = useState(false);
+  // null = follow the saved default; true/false = explicit per-run override.
+  const [diarize, setDiarize] = useState<boolean | null>(null);
   const [urlValue, setUrlValue] = useState("");
   const [urlBusy, setUrlBusy] = useState(false);
   // Diarization toggle is offered only when the backend advertises it (pyannote
   // installed + HF token configured), so it can never be a silent no-op.
   const canDiarize = Boolean(caps?.advancedOptions?.speakerDiarization);
+  // Default the toggle from the saved advanced_stt setting so a user who enabled
+  // diarization in Settings doesn't get it silently dropped on every run.
+  const sttDiarizationDefault = useMemo(() => {
+    try { return Boolean(JSON.parse(str(settings.transcription_advanced_stt, "{}"))?.speaker_diarization); }
+    catch { return false; }
+  }, [settings.transcription_advanced_stt]);
+  const effDiarize = diarize ?? sttDiarizationDefault;
   // URL/YouTube input offered only when the backend has yt-dlp installed.
   const canUrl = Boolean((caps as { urlInput?: boolean } | undefined)?.urlInput);
   const modelOptions = caps?.models?.length ? caps.models : FALLBACK_MODELS;
@@ -245,7 +253,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
           language: effLang,
           device: effDevice,
           computeType: effCompute,
-          speakerDiarization: canDiarize && diarize,
+          speakerDiarization: canDiarize && effDiarize,
         });
         ok += 1;
       } catch (e: unknown) {
@@ -271,7 +279,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
     try {
       const res = await api.transcribeUrl({
         url, outputFormat: format, model: effModel, language: effLang,
-        device: effDevice, computeType: effCompute, speakerDiarization: canDiarize && diarize,
+        device: effDevice, computeType: effCompute, speakerDiarization: canDiarize && effDiarize,
       });
       // No local media file for a URL — hand the rendered subtitle to the browser.
       const blob = new Blob([res.content], { type: "text/plain;charset=utf-8" });
@@ -344,7 +352,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
             </label>
             {canDiarize ? (
               <label className="flex items-center gap-2 text-[11px] text-[var(--text-2)]">
-                <input type="checkbox" checked={diarize} onChange={(e) => setDiarize(e.target.checked)} className="h-4 w-4 accent-blue-500" />
+                <input type="checkbox" checked={effDiarize} onChange={(e) => setDiarize(e.target.checked)} className="h-4 w-4 accent-blue-500" />
                 {t("whisper.diarize")}
               </label>
             ) : caps ? (
