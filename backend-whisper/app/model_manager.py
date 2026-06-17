@@ -14,6 +14,8 @@ from .model_cache import (
     repo_id_for_model,
 )
 from .preflight import (
+    MODEL_RAM_MB,
+    MODEL_VRAM_MB,
     available_ram_mb,
     model_ram_requirements_mb,
     model_vram_requirements_mb,
@@ -51,6 +53,19 @@ APPROX_MODEL_SIZE_MB: dict[str, int] = {
     "distil-large-v3": 1510,
     "large-v3-turbo": 1620,
 }
+
+# Fail fast at import if an advertised model lacks a resource entry. Without this,
+# preflight's MODEL_RAM_MB/MODEL_VRAM_MB .get(..., small) fallback would silently
+# gate a newly-added large model with small's 4 GB requirement and approve an
+# unsafe transcription. Keep these tables in lockstep with ADVERTISED_MODELS.
+_missing_resource = [
+    m
+    for m in ADVERTISED_MODELS
+    if m not in MODEL_RAM_MB or m not in MODEL_VRAM_MB or m not in APPROX_MODEL_SIZE_MB
+]
+assert not _missing_resource, (
+    f"Advertised models missing RAM/VRAM/size table entries: {_missing_resource}"
+)
 
 
 class ModelNotDownloadedError(RuntimeError):

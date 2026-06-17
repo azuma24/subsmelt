@@ -4,7 +4,8 @@ import threading
 from typing import Any
 
 from .gpu import cuda_device_count
-from .model_cache import cache_root_from_env
+from .model_cache import cache_root_from_env, describe_model_cache
+from .preflight import available_ram_mb
 
 # Module-level cache of loaded WhisperModel instances keyed by the parameters
 # that affect model identity. FastAPI runs sync handlers in a threadpool, so the
@@ -71,7 +72,42 @@ def _is_missing_local_files(exc: Exception) -> bool:
 
 def _is_cuda_oom(exc: Exception) -> bool:
     text = str(exc).lower()
-    return "out of memory" in text or "cuda_error_out_of_memory" in text or "cublas" in text and "alloc" in text
+    return (
+        "out of memory" in text
+        or "cuda_error_out_of_memory" in text
+        or ("cublas" in text and "alloc" in text)
+    )
+
+
+def _resolve_model_source(model: str) -> str:
+    """Resolve a model id to the exact on-disk snapshot dir, if present.
+
+    Loading from the path the cache detector found makes load == detection: the
+    same describe_model_cache that powers /models, /health and
+    assert_model_downloaded picks the directory, so a model can never be
+    reported "downloaded" yet fail to load because faster-whisper looked in a
+    different HF cache layout (``<root>`` vs ``<root>/hub``). Falls back to the
+    raw id (local-path ids, or genuinely-uncached models) when no snapshot is
+    found — those resolve through faster-whisper with local_files_only=True.
+    """
+    try:
+        info = describe_model_cache(model, available_ram_mb())
+    except Exception:  # noqa: BLE001 - never let detection break loading
+        return model
+    path = info.get("cache_path")
+    if info.get("cached") and path:
+        return path
+    return model
+
+
+def _cache_key(model: str, device: str, compute_type: str) -> tuple[str, str, str]:
+    """Cache key with managed model ids normalized so ``Small`` and ``small``
+    do not load (and pin VRAM for) two separate WhisperModel instances. Local
+    path ids keep their original case."""
+    key_model = model.strip()
+    if not (key_model.startswith(("/", "./", "../", "~")) or "/" in key_model or "\\" in key_model):
+        key_model = key_model.lower()
+    return (key_model, device, compute_type)
 
 
 def validate_device_and_compute_type(device: str, compute_type: str) -> None:
@@ -121,7 +157,7 @@ def get_whisper_model(model: str, device: str, compute_type: str) -> Any:
     """
     validate_device_and_compute_type(device, compute_type)
 
-    key = (model, device, compute_type)
+    key = _cache_key(model, device, compute_type)
     cached = _MODEL_CACHE.get(key)
     if cached is not None:
         return cached
@@ -134,20 +170,22 @@ def get_whisper_model(model: str, device: str, compute_type: str) -> Any:
 
         from faster_whisper import WhisperModel  # type: ignore
 
+        # Load from the exact snapshot dir the cache detector resolved, so the
+        # loader can never disagree with /models, /health and
+        # assert_model_downloaded about whether a model is present — regardless
+        # of HF cache layout (``<root>`` vs ``<root>/hub``) or where it was
+        # downloaded from.
+        source = _resolve_model_source(model)
+
         try:
             # local_files_only=True is the CRITICAL second defence against silent
             # auto-download: faster-whisper / huggingface_hub must NOT reach the
             # network here. A model that has not been explicitly downloaded fails
             # locally and is mapped to a clean 409 (model_not_downloaded).
-            #
-            # download_root MUST match the cache root the downloader wrote to
-            # (model_manager → snapshot_download(cache_dir=cache_root_from_env)).
-            # Without it faster-whisper defaults to HF_HUB_CACHE (``<root>/hub``)
-            # while the downloader writes to ``<root>`` — so every downloaded model
-            # would fail to load with a bogus "weights not present" error. Local
-            # path model ids ignore download_root, so passing it is always safe.
+            # download_root still points at the managed cache root so the fallback
+            # (raw id, no resolved snapshot) looks where the downloader wrote.
             model_instance = WhisperModel(
-                model,
+                source,
                 device=device,
                 compute_type=compute_type,
                 download_root=str(cache_root_from_env()),
