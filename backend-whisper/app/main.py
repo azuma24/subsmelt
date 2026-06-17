@@ -746,9 +746,12 @@ async def transcribe_url_stream(
 
     tmp_ctx = tempfile.TemporaryDirectory(prefix="subsmelt-url-")
     tmp_dir = Path(tmp_ctx.name)
+    loop = asyncio.get_running_loop()
     try:
         try:
-            saved = download_url(url, tmp_dir)
+            # yt-dlp is blocking — run it off the event loop so this async worker
+            # keeps serving health/cancel/progress while a large URL downloads.
+            saved = await loop.run_in_executor(None, download_url, url, tmp_dir)
         except UrlFetchUnavailableError as exc:
             raise HTTPException(status_code=400, detail={"code": "url_fetch_unavailable", "message": str(exc)}) from exc
         except UrlFetchError as exc:

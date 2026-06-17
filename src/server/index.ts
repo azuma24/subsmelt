@@ -783,8 +783,14 @@ function isCancellationError(error: unknown): boolean {
 // failure → 502 Bad Gateway. Everything else is treated as a client/config error
 // → 400. Heuristic on the error message since errors bubble up as plain Error.
 function transcriptionErrorStatus(error: unknown): number {
+  // Prefer the carried backend HTTP status when present (set by throwBackendError):
+  // a 5xx upstream failure → 502, a 4xx → 400.
+  const carried = (error as { backendStatus?: number } | null)?.backendStatus;
+  if (typeof carried === "number") return carried >= 500 ? 502 : 400;
   const message = error instanceof Error ? error.message : String(error ?? "");
-  return /backend|HTTP 5\d\d|unavailable|ECONNREFUSED|timed out/i.test(message) ? 502 : 400;
+  // Message heuristic for errors with no carried status (e.g. NDJSON stream error
+  // lines): include CUDA/OOM phrasings since those are upstream failures too.
+  return /backend|HTTP 5\d\d|unavailable|ECONNREFUSED|timed out|out of memory|cuda/i.test(message) ? 502 : 400;
 }
 
 // Extract per-run transcription overrides from a request body. Only string
@@ -895,7 +901,12 @@ async function runTranscriptionAttempt(opts: {
     broadcast("transcription:progress", cancelled
       ? { path: opts.videoPath, cancelled: true }
       : { path: opts.videoPath, error: true });
-    throw new Error(cancelled ? "Transcription cancelled" : summary);
+    const rethrown = new Error(cancelled ? "Transcription cancelled" : summary);
+    // Preserve the backend HTTP status so the route can still map a 5xx upstream
+    // failure to 502 even though we summarize the message here.
+    const carried = (error as { backendStatus?: number } | null)?.backendStatus;
+    if (typeof carried === "number") (rethrown as Error & { backendStatus?: number }).backendStatus = carried;
+    throw rethrown;
   } finally {
     const current = inFlightTranscriptions.get(opts.videoPath);
     if (current && current.attemptId === attempt.id) inFlightTranscriptions.delete(opts.videoPath);

@@ -211,6 +211,27 @@ export function Drawer({ open, onClose, title, children, width = "max-w-md" }: D
     if (event.key === "Escape") {
       event.preventDefault();
       onClose();
+      return;
+    }
+    // Trap Tab focus within the panel — aria-modal advertises the background as
+    // unavailable, so keyboard focus must not escape to it.
+    if (event.key === "Tab") {
+      const panel = panelRef.current;
+      if (!panel) return;
+      const items = panel.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (items.length === 0) { event.preventDefault(); return; }
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || active === panel)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
     }
   };
 
