@@ -69,3 +69,6 @@ graphify-out/
 # Windows build vendored binaries (fetched by fetch-vendor.ps1, never committed —
 # large + separately licensed: ffmpeg.exe, vc_redist.x64.exe)
 backend-whisper/packaging/windows/vendor/
+
+# Local transcription test fixtures (not committed)
+test data/

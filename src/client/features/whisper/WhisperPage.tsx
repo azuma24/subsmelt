@@ -16,7 +16,6 @@ import type { ScannedFile, TranscriptionHistoryEntry } from "../../types";
 import { TranscriptionReadinessPanel } from "../settings/TranscriptionReadinessPanel";
 import { ModelManagerPanel } from "../settings/ModelManagerPanel";
 import { TranscriptionHistoryPanel } from "../dashboard/TranscriptionHistoryPanel";
-import { getScanGroupName } from "../dashboard/ScanResultsPanel";
 
 const str = (v: unknown, fallback = ""): string => (typeof v === "string" ? v : fallback);
 const baseName = (p: string): string => p.split(/[\\/]/).pop() || p;
@@ -25,8 +24,63 @@ type OutputFormat = "srt" | "ass" | "vtt" | "txt";
 const FORMATS: OutputFormat[] = ["srt", "ass", "vtt", "txt"];
 const FALLBACK_MODELS = ["tiny", "base", "small", "medium", "large-v3", "large-v3-turbo"];
 const COMMON_LANGS = ["auto", "en", "es", "fr", "de", "it", "pt", "ja", "ko", "zh", "ru", "ar", "hi"];
+// CTranslate2 compute types are device-specific: float16 / int8_float16 are
+// GPU-only and crash on CPU. Gate the selector by device so an invalid pair can
+// never be chosen (keeps it simple + error-free). int8 is valid everywhere.
+const COMPUTE_BY_DEVICE: Record<string, string[]> = {
+  cpu: ["int8", "float32"],
+  cuda: ["int8", "int8_float16", "float16", "float32"],
+};
 
 interface FileProgress { pct?: number; done?: boolean; error?: boolean; cancelled?: boolean }
+
+interface TreeNode {
+  name: string;
+  path: string;          // folder path key (relative)
+  children: TreeNode[];
+  files: ScannedFile[];  // files directly in this folder
+  allPaths: string[];    // every videoPath under this node (recursive)
+}
+
+// Split a videoPath into folder segments + filename, relative to the media root.
+function relSegments(videoPath: string): string[] {
+  const marker = "/media/";
+  const idx = videoPath.indexOf(marker);
+  const rest = idx >= 0 ? videoPath.slice(idx + marker.length) : videoPath.replace(/^\/+/, "");
+  return rest.split(/[\\/]/).filter(Boolean);
+}
+
+function buildFolderTree(files: ScannedFile[]): TreeNode {
+  const root: TreeNode = { name: "", path: "", children: [], files: [], allPaths: [] };
+  const byPath = new Map<string, TreeNode>([["", root]]);
+  for (const f of files) {
+    const segs = relSegments(f.videoPath as string);
+    const dirs = segs.slice(0, -1);
+    let node = root;
+    let acc = "";
+    for (const dir of dirs) {
+      acc = acc ? `${acc}/${dir}` : dir;
+      let child = byPath.get(acc);
+      if (!child) {
+        child = { name: dir, path: acc, children: [], files: [], allPaths: [] };
+        byPath.set(acc, child);
+        node.children.push(child);
+      }
+      node = child;
+    }
+    node.files.push(f);
+  }
+  const fill = (n: TreeNode): string[] => {
+    n.children.sort((a, b) => a.name.localeCompare(b.name));
+    n.files.sort((a, b) => (a.videoName || "").localeCompare(b.videoName || ""));
+    const own = n.files.map((f) => f.videoPath as string);
+    const kids = n.children.flatMap(fill);
+    n.allPaths = [...own, ...kids];
+    return n.allPaths;
+  };
+  fill(root);
+  return root;
+}
 
 export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const { t } = useTranslation();
@@ -55,14 +109,9 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
     () => (scanQuery.data?.files ?? []).filter((f) => Boolean(f.videoPath)),
     [scanQuery.data],
   );
-  const groups = useMemo(() => {
-    const g = new Map<string, ScannedFile[]>();
-    for (const f of videoFiles) {
-      const name = getScanGroupName(f);
-      g.set(name, [...(g.get(name) || []), f]);
-    }
-    return Array.from(g.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [videoFiles]);
+  // Build a navigable folder tree from the file paths so subfolders can be
+  // expanded and selected individually (not collapsed into one top-level group).
+  const tree = useMemo(() => buildFolderTree(videoFiles), [videoFiles]);
 
   // Per-run options (default from Settings + advertised capabilities).
   const [model, setModel] = useState("");
@@ -72,19 +121,34 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const [format, setFormat] = useState<OutputFormat>("srt");
   const modelOptions = caps?.models?.length ? caps.models : FALLBACK_MODELS;
   const deviceOptions = caps?.devices?.length ? caps.devices : ["cpu"];
-  const computeOptions = caps?.computeTypes?.length ? caps.computeTypes : ["int8"];
   const eff = (v: string, fallbackKey: string, fb: string) => v || str(settings[fallbackKey], fb);
   const effModel = eff(model, "transcription_model", "small");
   const effDevice = eff(device, "transcription_device", "cpu");
-  const effCompute = eff(computeType, "transcription_compute_type", "int8");
   const effLang = eff(language, "transcription_language", "auto");
+  // Compute options follow the chosen device; the effective value is always a
+  // member of that set (falls back to int8), so cpu+float16 can't be submitted.
+  const computeOptions = COMPUTE_BY_DEVICE[effDevice] ?? ["int8"];
+  const rawCompute = eff(computeType, "transcription_compute_type", "int8");
+  const effCompute = computeOptions.includes(rawCompute) ? rawCompute : computeOptions[0];
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [activePath, setActivePath] = useState<string | null>(null);
   const [fileProgress, setFileProgress] = useState<Record<string, FileProgress>>({});
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const cancelRef = useRef(false);
+
+  // Default-expand the top-level folders when the tree (re)builds.
+  useEffect(() => {
+    setExpanded((prev) => (prev.size ? prev : new Set(tree.children.map((c) => c.path))));
+  }, [tree]);
+  const toggleExpand = (p: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(p)) next.delete(p); else next.add(p);
+      return next;
+    });
 
   // Drop stale selections when the library refetches (a file may be gone).
   useEffect(() => {
@@ -109,9 +173,8 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
       if (next.has(vp)) next.delete(vp); else next.add(vp);
       return next;
     });
-  const toggleFolder = (files: ScannedFile[]) => {
-    const paths = files.map((f) => f.videoPath as string);
-    const allSelected = paths.every((p) => selected.has(p));
+  const toggleFolder = (paths: string[]) => {
+    const allSelected = paths.length > 0 && paths.every((p) => selected.has(p));
     setSelected((prev) => {
       const next = new Set(prev);
       if (allSelected) paths.forEach((p) => next.delete(p));
@@ -254,34 +317,24 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
             {!scanQuery.isLoading && videoFiles.length === 0 && (
               <div className="px-4 py-6 text-center text-xs text-[var(--text-3)]">{t("whisper.noVideos")}</div>
             )}
-            {groups.map(([group, files]) => {
-              const paths = files.map((f) => f.videoPath as string);
-              const allSel = paths.every((p) => selected.has(p));
-              const someSel = !allSel && paths.some((p) => selected.has(p));
-              return (
-                <div key={group} className="border-b border-[var(--border)] last:border-b-0">
-                  <label className="flex items-center gap-2 bg-[var(--surface-2)] px-3 py-2 text-[12px] font-medium text-[var(--text)]">
-                    <input type="checkbox" checked={allSel} ref={(el) => { if (el) el.indeterminate = someSel; }} onChange={() => toggleFolder(files)} className="h-4 w-4 accent-blue-500" />
-                    📁 {group} <span className="text-[10px] text-[var(--text-3)]">({files.length})</span>
-                  </label>
-                  {files.map((f) => {
-                    const vp = f.videoPath as string;
-                    const fp = fileProgress[vp];
-                    const status = fp?.done ? t("whisper.statusDone") : fp?.cancelled ? t("whisper.statusCancelled") : fp?.error ? t("whisper.statusError") : typeof fp?.pct === "number" ? `${Math.round(fp.pct)}%` : "";
-                    return (
-                      <label key={vp} className="flex items-center gap-2 px-3 py-1.5 pl-7 text-[12px] text-[var(--text-2)] hover:bg-[var(--surface-2)]">
-                        <input type="checkbox" checked={selected.has(vp)} onChange={() => toggle(vp)} className="h-4 w-4 accent-blue-500" />
-                        <span className="truncate">🎬 {f.videoName || baseName(vp)}</span>
-                        <span className="ml-auto flex shrink-0 items-center gap-2">
-                          {status && <span className={`text-[10px] ${activePath === vp ? "text-[var(--accent)]" : "text-[var(--text-3)]"}`}>{status}</span>}
-                          {f.subtitles.length > 0 && <span className="text-[10px] text-[var(--text-3)]">{t("whisper.hasSubtitle")}</span>}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              );
-            })}
+            {!scanQuery.isLoading && tree.children.map((child) => (
+              <FolderNodeView
+                key={child.path}
+                node={child}
+                depth={0}
+                selected={selected}
+                expanded={expanded}
+                toggleExpand={toggleExpand}
+                toggleFolder={toggleFolder}
+                toggleFile={toggle}
+                fileProgress={fileProgress}
+                activePath={activePath}
+              />
+            ))}
+            {/* Files directly in the media root (no subfolder). */}
+            {!scanQuery.isLoading && tree.files.map((f) => (
+              <FileRow key={f.videoPath as string} file={f} depth={0} selected={selected} toggleFile={toggle} fileProgress={fileProgress} activePath={activePath} />
+            ))}
           </div>
           <p className="mt-2 text-[11px] text-[var(--text-3)]">{t("whisper.overwriteHint")}</p>
         </section>
@@ -292,6 +345,83 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]">
         <TranscriptionHistoryPanel attempts={attempts} transcribingPath={activePath} isRetryPending={retryMutation.isPending} isTranscribePending={running} onRetry={onRetry} />
       </section>
+    </div>
+  );
+}
+
+interface FileRowProps {
+  file: ScannedFile;
+  depth: number;
+  selected: Set<string>;
+  toggleFile: (vp: string) => void;
+  fileProgress: Record<string, FileProgress>;
+  activePath: string | null;
+}
+
+function FileRow({ file, depth, selected, toggleFile, fileProgress, activePath }: FileRowProps) {
+  const { t } = useTranslation();
+  const vp = file.videoPath as string;
+  const fp = fileProgress[vp];
+  const status = fp?.done ? t("whisper.statusDone")
+    : fp?.cancelled ? t("whisper.statusCancelled")
+    : fp?.error ? t("whisper.statusError")
+    : typeof fp?.pct === "number" ? `${Math.round(fp.pct)}%` : "";
+  return (
+    <label className="flex items-center gap-2 px-3 py-1.5 text-[12px] text-[var(--text-2)] hover:bg-[var(--surface-2)]"
+      style={{ paddingLeft: `${12 + (depth + 1) * 16}px` }}>
+      <input type="checkbox" checked={selected.has(vp)} onChange={() => toggleFile(vp)} className="h-4 w-4 accent-blue-500" />
+      <span className="truncate">🎬 {file.videoName || baseName(vp)}</span>
+      <span className="ml-auto flex shrink-0 items-center gap-2">
+        {status && <span className={`text-[10px] ${activePath === vp ? "text-[var(--accent)]" : "text-[var(--text-3)]"}`}>{status}</span>}
+        {file.subtitles.length > 0 && <span className="text-[10px] text-[var(--text-3)]">{t("whisper.hasSubtitle")}</span>}
+      </span>
+    </label>
+  );
+}
+
+interface FolderNodeProps {
+  node: TreeNode;
+  depth: number;
+  selected: Set<string>;
+  expanded: Set<string>;
+  toggleExpand: (p: string) => void;
+  toggleFolder: (paths: string[]) => void;
+  toggleFile: (vp: string) => void;
+  fileProgress: Record<string, FileProgress>;
+  activePath: string | null;
+}
+
+function FolderNodeView(props: FolderNodeProps) {
+  const { node, depth, selected, expanded, toggleExpand, toggleFolder } = props;
+  const open = expanded.has(node.path);
+  const allSel = node.allPaths.length > 0 && node.allPaths.every((p) => selected.has(p));
+  const someSel = !allSel && node.allPaths.some((p) => selected.has(p));
+  return (
+    <div>
+      <div className="flex items-center gap-2 border-b border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[12px] font-medium text-[var(--text)]"
+        style={{ paddingLeft: `${12 + depth * 16}px` }}>
+        <button type="button" onClick={() => toggleExpand(node.path)} className="w-3 shrink-0 text-[var(--text-3)]" aria-label="toggle">
+          {open ? "▾" : "▸"}
+        </button>
+        <input
+          type="checkbox"
+          checked={allSel}
+          ref={(el) => { if (el) el.indeterminate = someSel; }}
+          onChange={() => toggleFolder(node.allPaths)}
+          className="h-4 w-4 accent-blue-500"
+        />
+        <button type="button" onClick={() => toggleExpand(node.path)} className="flex-1 truncate text-left">
+          📁 {node.name} <span className="text-[10px] text-[var(--text-3)]">({node.allPaths.length})</span>
+        </button>
+      </div>
+      {open && (
+        <>
+          {node.children.map((c) => <FolderNodeView key={c.path} {...props} node={c} depth={depth + 1} />)}
+          {node.files.map((f) => (
+            <FileRow key={f.videoPath as string} file={f} depth={depth} selected={selected} toggleFile={props.toggleFile} fileProgress={props.fileProgress} activePath={props.activePath} />
+          ))}
+        </>
+      )}
     </div>
   );
 }
