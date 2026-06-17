@@ -8,6 +8,7 @@ import {
   getAllSettings,
   setSetting,
   getSetting,
+  isWritableSettingKey,
   getTasks,
   getTask,
   createTask,
@@ -76,7 +77,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = parseInt(process.env.PORT || "3000", 10);
 
-app.use(cors());
+// The web UI is served same-origin from this server, so cross-origin browser
+// requests are never needed. Disabling the allow-origin header prevents other
+// sites from scripting this self-hosted API via the user's browser.
+app.use(cors({ origin: false }));
 app.use(express.json({ limit: "25mb" }));
 
 const staticDir = path.join(__dirname, "../../dist/client");
@@ -97,14 +101,26 @@ app.get("/api/settings", (_req, res) => {
 });
 
 app.post("/api/settings", (req, res) => {
-  const settings = req.body;
+  const settings = req.body && typeof req.body === "object" ? req.body : {};
   const changedKeys: string[] = [];
+  // Reject any key not on the writable allow-list (derived from the settings
+  // schema). Underscore-prefixed keys are read-only computed fields; unknown
+  // keys are silently skipped and reported back in `rejected` so a misbehaving
+  // or malicious client can't inject arbitrary config entries.
+  const rejected: string[] = [];
   for (const [key, value] of Object.entries(settings)) {
     if (key.startsWith("_")) continue;
+    if (!isWritableSettingKey(key)) {
+      rejected.push(key);
+      continue;
+    }
     setSetting(key, String(value));
     changedKeys.push(key);
   }
   logger.info("system", `Settings updated: ${changedKeys.join(", ")}`);
+  if (rejected.length > 0) {
+    logger.info("system", `Settings rejected (unknown keys): ${rejected.join(", ")}`);
+  }
 
   const interval = parseInt(getSetting("auto_scan_interval") || "0", 10);
   if (interval > 0) startAutoScan(interval, scanFolder);
@@ -113,7 +129,7 @@ app.post("/api/settings", (req, res) => {
   if (changedKeys.includes("watch_enabled")) {
     restartWatcher();
   }
-  res.json({ ok: true });
+  res.json({ ok: true, rejected });
 });
 
 // ======== Translation Tasks ========
@@ -1088,22 +1104,47 @@ app.delete("/api/whisper/models/:model", async (req, res) => {
 });
 
 // ======== List Models ========
-app.get("/api/models", async (req, res) => {
-  const settings = getAllSettings();
-  const provider = (req.query.provider as string) || "local";
-  // Optional overrides so a not-yet-saved connection card can fetch its models.
-  const keyOverride = (req.query.key as string) || "";
-  const endpointOverride = (req.query.endpoint as string) || "";
+// Basic SSRF guard for a caller-supplied `endpoint` override. We intentionally
+// DO NOT block private/RFC1918 ranges — local LLM backends (e.g. localhost,
+// 192.168.x.x) are the primary, legitimate use case here. We only reject values
+// that don't parse as an http(s) URL, which stops `file://`, `gopher://`, etc.
+// and obviously malformed input. Returns the normalized origin+path (trailing
+// slashes stripped) or null when the value is unusable.
+function sanitizeLlmEndpoint(raw: string): string | null {
+  const trimmed = (raw || "").trim();
+  if (!trimmed) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+  return trimmed.replace(/\/+$/, "");
+}
 
+type ModelsResult =
+  | { status: number; body: { error: string } }
+  | { status: 200; body: { models: string[]; provider: string } };
+
+// Shared logic for GET/POST /api/models. `keyOverride`/`endpointOverride` let a
+// not-yet-saved connection card fetch its models. The key is used only as an
+// outbound auth header — it is never logged or echoed back.
+async function listModels(
+  provider: string,
+  keyOverride: string,
+  endpointOverride: string
+): Promise<ModelsResult> {
+  const settings = getAllSettings();
   try {
     // ── Cloud providers ────────────────────────────────────────────────────
     if (provider === "openai") {
       const apiKey = keyOverride || settings.cloud_api_key_openai || "";
-      if (!apiKey) return res.status(400).json({ error: "No OpenAI API key configured" });
+      if (!apiKey) return { status: 400, body: { error: "No OpenAI API key configured" } };
       const resp = await fetch("https://api.openai.com/v1/models", {
         headers: { Authorization: `Bearer ${apiKey}` },
       });
-      if (!resp.ok) return res.status(resp.status).json({ error: `OpenAI returned ${resp.status}` });
+      if (!resp.ok) return { status: resp.status, body: { error: `OpenAI returned ${resp.status}` } };
       const data = await resp.json() as any;
       const models: string[] = (data?.data || [])
         .map((m: any) => m.id)
@@ -1111,58 +1152,84 @@ app.get("/api/models", async (req, res) => {
           id.startsWith("gpt-") || id.startsWith("o1") || id.startsWith("o3") || id.startsWith("o4")
         ))
         .sort();
-      return res.json({ models, provider });
+      return { status: 200, body: { models, provider } };
     }
 
     if (provider === "anthropic") {
       const apiKey = keyOverride || settings.cloud_api_key_anthropic || "";
-      if (!apiKey) return res.status(400).json({ error: "No Anthropic API key configured" });
+      if (!apiKey) return { status: 400, body: { error: "No Anthropic API key configured" } };
       const resp = await fetch("https://api.anthropic.com/v1/models", {
         headers: {
           "x-api-key": apiKey,
           "anthropic-version": "2023-06-01",
         },
       });
-      if (!resp.ok) return res.status(resp.status).json({ error: `Anthropic returned ${resp.status}` });
+      if (!resp.ok) return { status: resp.status, body: { error: `Anthropic returned ${resp.status}` } };
       const data = await resp.json() as any;
       const models: string[] = (data?.data || [])
         .map((m: any) => m.id)
         .filter((id: string) => typeof id === "string")
         .sort();
-      return res.json({ models, provider });
+      return { status: 200, body: { models, provider } };
     }
 
     if (provider === "gemini") {
       const apiKey = keyOverride || settings.cloud_api_key_gemini || "";
-      if (!apiKey) return res.status(400).json({ error: "No Gemini API key configured" });
+      if (!apiKey) return { status: 400, body: { error: "No Gemini API key configured" } };
       const resp = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}&pageSize=100`
       );
-      if (!resp.ok) return res.status(resp.status).json({ error: `Gemini returned ${resp.status}` });
+      if (!resp.ok) return { status: resp.status, body: { error: `Gemini returned ${resp.status}` } };
       const data = await resp.json() as any;
       const models: string[] = (data?.models || [])
         .map((m: any) => (m.name || "").replace(/^models\//, ""))
         .filter((id: string) => typeof id === "string" && id.startsWith("gemini"))
         .sort();
-      return res.json({ models, provider });
+      return { status: 200, body: { models, provider } };
     }
 
     // ── Local / OpenAI-compatible endpoint ────────────────────────────────
-    const endpoint = (endpointOverride || settings.llm_endpoint || "http://localhost:8000/v1").replace(/\/+$/, "");
+    let endpoint: string;
+    if (endpointOverride) {
+      const sanitized = sanitizeLlmEndpoint(endpointOverride);
+      if (!sanitized) return { status: 400, body: { error: "Invalid endpoint: must be an http(s) URL" } };
+      endpoint = sanitized;
+    } else {
+      endpoint = (settings.llm_endpoint || "http://localhost:8000/v1").replace(/\/+$/, "");
+    }
     const apiKey = keyOverride || settings.api_key || "";
     const url = endpoint + "/models";
     const resp = await fetch(url, {
       headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
     });
-    if (!resp.ok) return res.status(resp.status).json({ error: `LLM returned ${resp.status}` });
+    if (!resp.ok) return { status: resp.status, body: { error: `LLM returned ${resp.status}` } };
     const data = await resp.json() as any;
     const models: string[] = (data?.data || data?.models || [])
       .map((m: any) => m.id || m.name || m)
       .filter((m: any) => typeof m === "string");
-    res.json({ models, provider: "local" });
+    return { status: 200, body: { models, provider: "local" } };
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    return { status: 500, body: { error: e?.message || "Failed to list models" } };
   }
+}
+
+// POST is the preferred path: the API key travels in the request body, never in
+// the URL/query string (which can leak via logs, proxies, Referer headers).
+app.post("/api/models", async (req, res) => {
+  const body = (req.body || {}) as { provider?: string; key?: string; endpoint?: string };
+  const result = await listModels(body.provider || "local", body.key || "", body.endpoint || "");
+  res.status(result.status).json(result.body);
+});
+
+// GET retained for backward-compat. The key may still arrive via query string
+// here; it is used only as an outbound auth header and is never logged.
+app.get("/api/models", async (req, res) => {
+  const result = await listModels(
+    (req.query.provider as string) || "local",
+    (req.query.key as string) || "",
+    (req.query.endpoint as string) || ""
+  );
+  res.status(result.status).json(result.body);
 });
 
 // ======== Test Connection ========

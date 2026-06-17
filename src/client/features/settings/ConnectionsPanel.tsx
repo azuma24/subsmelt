@@ -104,10 +104,17 @@ export function ConnectionsPanel({ settings, update, addToast, isMobile }: Conne
   const fetchModels = async (c: LlmConnection) => {
     setLoadingByConn((s) => ({ ...s, [c.id]: true }));
     try {
-      const q = new URLSearchParams({ provider: c.provider });
-      if (c.apiKey) q.set("key", c.apiKey);
-      if (c.provider === "local" && c.endpoint) q.set("endpoint", c.endpoint);
-      const res = await fetch(`/api/models?${q.toString()}`);
+      // POST so the API key travels in the body, not the query string (avoids
+      // leaking it via server logs, proxies, or Referer headers).
+      const res = await fetch("/api/models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: c.provider,
+          ...(c.apiKey ? { key: c.apiKey } : {}),
+          ...(c.provider === "local" && c.endpoint ? { endpoint: c.endpoint } : {}),
+        }),
+      });
       const data = await res.json();
       if (data.models?.length) setModelsByConn((m) => ({ ...m, [c.id]: data.models }));
       else addToast(data.error || t("settings.llmConnection.noModelsFound"), "error");
