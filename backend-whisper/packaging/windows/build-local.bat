@@ -7,7 +7,7 @@ REM  It builds the PyInstaller bundle and (if Inno Setup is installed) the
 REM  installer, fetching ffmpeg + vc_redist automatically. Model weights are
 REM  NOT bundled - download them after install via the in-app model manager.
 REM
-REM  Prereqs: Python 3.10-3.12 on PATH. Inno Setup is optional (only needed to
+REM  Prereqs: Python 3.10-3.13 on PATH. Inno Setup is optional (only needed to
 REM  produce the .exe installer; the bundle builds without it).
 REM
 REM  Pass-through flags work too, e.g. from a terminal:

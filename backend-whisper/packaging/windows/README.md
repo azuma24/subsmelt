@@ -93,7 +93,7 @@ Copy the whole repo to a Windows machine and **double-click
 `packaging\windows\build-local.bat`**. It does everything below automatically:
 creates a build virtualenv, installs deps + cuDNN/cuBLAS + PyInstaller, runs
 `fetch-vendor.ps1`, builds the bundle, smoke-tests it, and (if Inno Setup is
-installed) compiles the installer. Prereq: Python 3.10–3.12 on PATH (Inno Setup
+installed) compiles the installer. Prereq: Python 3.10–3.13 on PATH (Inno Setup
 optional — only needed for the `.exe` installer).
 
 - **Test the server without installing:** double-click `run-built-server.bat`

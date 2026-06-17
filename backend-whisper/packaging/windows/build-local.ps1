@@ -68,7 +68,7 @@ try {
     $sysPy = Get-Command python -ErrorAction SilentlyContinue
     if (-not $sysPy) { $sysPy = Get-Command py -ErrorAction SilentlyContinue }
     if (-not $sysPy) {
-        Die "Python not found on PATH. Install Python 3.10-3.12 from https://python.org (check 'Add to PATH')."
+        Die "Python not found on PATH. Install Python 3.10-3.13 from https://python.org (check 'Add to PATH')."
     }
     if (-not (Test-Path $VenvPy)) {
         Info "creating build venv at $VenvDir"
