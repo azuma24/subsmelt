@@ -543,6 +543,9 @@
       "modelBase": "Base — দ্রুত",
       "modelSmall": "Small — প্রস্তাবিত",
       "modelMedium": "Medium — ধীর/ভালো",
+      "modelLargeV1": "Large v1 — legacy large",
+      "modelLargeV2": "Large v2 — high accuracy",
+      "modelDistilLargeV3": "Distil Large v3 — near-large, much faster",
       "language": "ভাষা",
       "languageAuto": "স্বয়ংক্রিয়-শনাক্ত",
       "output": "আউটপুট",
@@ -882,6 +885,8 @@
     "statusCancelled": "cancelled",
     "statusError": "error",
     "overwriteTitle": "Overwrite existing subtitles?",
-    "overwriteConfirm": "{{count}} selected file(s) already have a subtitle. Transcribing will overwrite the same-named output. Continue?"
+    "overwriteConfirm": "{{count}} selected file(s) already have a subtitle. Transcribing will overwrite the same-named output. Continue?",
+    "diarize": "Identify speakers",
+    "diarizing": "Identifying speakers…"
   }
 }

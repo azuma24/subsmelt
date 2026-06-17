@@ -16,6 +16,8 @@ class ModelRepoResolutionTests(unittest.TestCase):
         self.assertEqual(repo_id_for_model("small"), "Systran/faster-whisper-small")
         # turbo is not a Systran repo — override map supplies the right org.
         self.assertEqual(repo_id_for_model("large-v3-turbo"), "mobiuslabsgmbh/faster-whisper-large-v3-turbo")
+        # distil models live under faster-DISTIL-whisper-<model>, not the default.
+        self.assertEqual(repo_id_for_model("distil-large-v3"), "Systran/faster-distil-whisper-large-v3")
 
     def test_faster_whisper_registry_takes_precedence(self):
         # When faster-whisper's own registry is present, we use it verbatim.

@@ -87,6 +87,9 @@ export interface TranscriptionOverrides {
   language?: string;
   device?: string;
   compute_type?: string;
+  // Per-run speaker diarization toggle (Whisper page). Merged into
+  // advanced_options so it wins over per-folder / global advanced_stt.
+  speaker_diarization?: boolean;
 }
 
 export interface BuildTranscriptionRequestOptions {
@@ -343,6 +346,12 @@ export function buildTranscriptionRequest(options: BuildTranscriptionRequestOpti
   // settings. setting() ignores empty/whitespace, so an unset override falls
   // through to the existing precedence cleanly.
   const ov = options.overrides ?? {};
+  // A per-run diarize toggle merges into advanced_options (creating it if the
+  // settings produced none) so it overrides the global advanced_stt value.
+  const mergedAdvanced =
+    ov.speaker_diarization === true
+      ? { ...(advancedOptions ?? {}), speaker_diarization: true }
+      : advancedOptions;
 
   return {
     input_path: backendInputPath,
@@ -354,7 +363,7 @@ export function buildTranscriptionRequest(options: BuildTranscriptionRequestOpti
     use_vad: boolSetting(folderDefaults?.use_vad ?? options.settings.transcription_use_vad, true),
     post_action: postAction,
     ...(subtitleQuality ? { subtitle_quality: subtitleQuality } : {}),
-    ...(advancedOptions ? { advanced_options: advancedOptions } : {}),
+    ...(mergedAdvanced ? { advanced_options: mergedAdvanced } : {}),
   };
 }
 
@@ -489,6 +498,8 @@ export interface TranscriptionProgressUpdate {
 export interface TranscribeStreamingOptions extends TranscribeBackendOptions {
   // Called once per backend progress line.
   onProgress?: (update: TranscriptionProgressUpdate) => void;
+  // Called on a backend phase line (e.g. "diarizing") for a live status hint.
+  onPhase?: (phase: string) => void;
   // Aborting this signal closes the HTTP stream → backend detects the
   // disconnect → stops iterating segments and aborts the run.
   signal?: AbortSignal;
@@ -588,6 +599,8 @@ export async function transcribeWithBackendStreaming(
     if (type === "progress") {
       const update = toProgressUpdate(record);
       if (update && options?.onProgress) options.onProgress(update);
+    } else if (type === "phase") {
+      if (typeof record.phase === "string" && options?.onPhase) options.onPhase(record.phase);
     } else if (type === "result") {
       const { type: _t, ...rest } = record;
       result = rest as unknown as BackendTranscriptionResponse;

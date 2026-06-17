@@ -9,8 +9,10 @@ const MODEL_RAM_MB: Record<string, { required: number; recommended: number }> = 
   small: { required: 4096, recommended: 8192 },
   medium: { required: 8192, recommended: 16384 },
   large: { required: 16384, recommended: 32768 },
+  "large-v1": { required: 16384, recommended: 32768 },
   "large-v2": { required: 16384, recommended: 32768 },
   "large-v3": { required: 16384, recommended: 32768 },
+  "distil-large-v3": { required: 12288, recommended: 24576 },
   "large-v3-turbo": { required: 12288, recommended: 24576 },
 };
 

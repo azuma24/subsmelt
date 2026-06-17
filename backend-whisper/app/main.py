@@ -17,6 +17,7 @@ from pydantic import BaseModel, ValidationError
 from .gpu import cuda_device_count, gpu_info, total_free_vram_mb
 from .model_cache import describe_model_cache
 from .model_manager import (
+    ADVERTISED_MODELS,
     ModelNotDownloadedError,
     UnknownModelError,
     assert_model_downloaded,
@@ -26,6 +27,8 @@ from .model_manager import (
     normalize_model,
 )
 from .preflight import (
+    DIARIZATION_RAM_MB,
+    DIARIZATION_VRAM_MB,
     assert_path_under_media,
     available_ram_mb,
     disk_free_mb,
@@ -48,6 +51,11 @@ from .model_loader import (
     CudaUnavailableError,
     InvalidComputeTypeError,
     ModelWeightsMissingError,
+)
+from .diarize import (
+    DiarizationTokenMissingError,
+    DiarizationUnavailableError,
+    diarize_available,
 )
 from .transcribe import (
     TranscriptionCancelled,
@@ -140,7 +148,10 @@ def capabilities() -> dict:
         # surfaced via /health (which stays open) so an unauthenticated
         # reachability check can still learn a token is needed.
         "authRequired": auth_required(),
-        "models": ["tiny", "base", "small", "medium", "large-v3", "large-v3-turbo"],
+        # Single source of truth: the model-manager's advertised set. Keeping this
+        # derived (not a duplicated literal) means the dropdown the frontend builds
+        # from capabilities.models can never drift from what the backend manages.
+        "models": list(ADVERTISED_MODELS),
         "devices": devices,
         "computeTypes": compute_types,
         "gpus": gpu_info(),
@@ -152,7 +163,9 @@ def capabilities() -> dict:
             "conditionOnPreviousText": True,
             "wordTimestamps": True,
             "initialPrompt": True,
-            "speakerDiarization": False,
+            # Advertised true only when pyannote is installed AND an HF token is
+            # configured, so the frontend offers the toggle only when it works.
+            "speakerDiarization": diarize_available(),
             "bgmSeparation": False,
         },
     }
@@ -263,6 +276,13 @@ def models_delete(model: str, _auth: None = Depends(require_token)) -> dict:
             status_code=404,
             detail={"code": "model_not_downloaded", "model": exc.model},
         ) from exc
+    except OSError as exc:
+        # Deletion failed for real (e.g. a Windows file lock from a loaded model).
+        # Surface it instead of reporting a phantom success.
+        raise HTTPException(
+            status_code=500,
+            detail={"code": "delete_failed", "model": model, "message": str(exc)},
+        ) from exc
 
 
 def preflight_result(request: TranscribeRequest) -> PreflightResponse:
@@ -287,10 +307,28 @@ def preflight_result(request: TranscribeRequest) -> PreflightResponse:
         model_safe = gpu_safety["safe"]
         model_code = gpu_safety["code"]
         suggested = gpu_safety["suggested_model"]
+        # On GPU the binding constraint is VRAM. Surface VRAM under the generic
+        # available/required/recommended fields too (not just the *VramMb ones) so
+        # a client reading availableRamMb sees the resource that actually gated the
+        # request instead of unrelated system RAM.
+        avail_mb = gpu_safety["free_vram_mb"]
+        req_mb = gpu_safety["required_vram_mb"]
+        rec_mb = gpu_safety["recommended_vram_mb"]
     else:
         model_safe = safety["safe"]
         model_code = safety["code"]
         suggested = safety["suggested_model"]
+        avail_mb = safety["available_ram_mb"]
+        req_mb = safety["required_ram_mb"]
+        rec_mb = safety["recommended_ram_mb"]
+
+    # Diarization loads a second (pyannote) model — add its headroom to the
+    # requirement so a run that would OOM mid-pass is flagged up front.
+    if request.advanced_options and request.advanced_options.speaker_diarization:
+        req_mb += DIARIZATION_VRAM_MB if on_gpu else DIARIZATION_RAM_MB
+        if model_safe and avail_mb < req_mb:
+            model_safe = False
+            model_code = "insufficient_vram" if on_gpu else "insufficient_ram"
 
     safe = bool(model_safe and ffmpeg_ok and disk_safety["safe"])
     code = (
@@ -303,9 +341,9 @@ def preflight_result(request: TranscribeRequest) -> PreflightResponse:
         ok=safe,
         safe=safe,
         code=code,
-        available_ram_mb=safety["available_ram_mb"],
-        required_ram_mb=safety["required_ram_mb"],
-        recommended_ram_mb=safety["recommended_ram_mb"],
+        available_ram_mb=avail_mb,
+        required_ram_mb=req_mb,
+        recommended_ram_mb=rec_mb,
         suggested_model=suggested,
         ffmpeg_available=ffmpeg_ok,
         disk_available_mb=disk_mb,
@@ -381,6 +419,10 @@ def transcribe(request: TranscribeRequest, _auth: None = Depends(require_token))
         ) from exc
     except (CudaUnavailableError, InvalidComputeTypeError) as exc:
         raise HTTPException(status_code=400, detail={"code": "invalid_device", "message": str(exc)}) from exc
+    except DiarizationTokenMissingError as exc:
+        raise HTTPException(status_code=422, detail={"code": "diarization_token_missing", "message": str(exc)}) from exc
+    except DiarizationUnavailableError as exc:
+        raise HTTPException(status_code=400, detail={"code": "diarization_unavailable", "message": str(exc)}) from exc
     except CudaOutOfMemoryError as exc:
         raise HTTPException(
             status_code=507,
@@ -563,6 +605,10 @@ def _map_upload_transcription_error(exc: Exception) -> HTTPException:
         return HTTPException(status_code=409, detail={"code": "model_not_downloaded", "model": exc.model})
     if isinstance(exc, (CudaUnavailableError, InvalidComputeTypeError)):
         return HTTPException(status_code=400, detail={"code": "invalid_device", "message": str(exc)})
+    if isinstance(exc, DiarizationTokenMissingError):
+        return HTTPException(status_code=422, detail={"code": "diarization_token_missing", "message": str(exc)})
+    if isinstance(exc, DiarizationUnavailableError):
+        return HTTPException(status_code=400, detail={"code": "diarization_unavailable", "message": str(exc)})
     if isinstance(exc, CudaOutOfMemoryError):
         return HTTPException(
             status_code=507,

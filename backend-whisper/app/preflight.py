@@ -41,11 +41,20 @@ MODEL_RAM_MB: dict[str, dict[str, int]] = {
     "base": {"required": 3072, "recommended": 4096},
     "small": {"required": 4096, "recommended": 8192},
     "medium": {"required": 8192, "recommended": 16384},
-    "large": {"required": 16384, "recommended": 32768},
+    "large-v1": {"required": 16384, "recommended": 32768},
     "large-v2": {"required": 16384, "recommended": 32768},
     "large-v3": {"required": 16384, "recommended": 32768},
+    "distil-large-v3": {"required": 12288, "recommended": 24576},
     "large-v3-turbo": {"required": 12288, "recommended": 24576},
 }
+
+
+# Extra headroom (MB) the pyannote diarization pipeline needs ON TOP of the
+# whisper model — it loads a second model for the post-pass. Added to the
+# required figure in preflight when diarization is requested so a run that would
+# OOM is flagged up front instead of crashing mid-pass.
+DIARIZATION_RAM_MB = 2048
+DIARIZATION_VRAM_MB = 2048
 
 
 def model_ram_requirements_mb(model: str) -> dict[str, int]:
@@ -60,9 +69,10 @@ MODEL_VRAM_MB: dict[str, dict[str, int]] = {
     "base": {"required": 1536, "recommended": 2048},
     "small": {"required": 2048, "recommended": 4096},
     "medium": {"required": 5120, "recommended": 8192},
-    "large": {"required": 10240, "recommended": 12288},
+    "large-v1": {"required": 10240, "recommended": 12288},
     "large-v2": {"required": 10240, "recommended": 12288},
     "large-v3": {"required": 10240, "recommended": 12288},
+    "distil-large-v3": {"required": 6144, "recommended": 8192},
     "large-v3-turbo": {"required": 6144, "recommended": 8192},
 }
 

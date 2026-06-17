@@ -703,6 +703,9 @@ async function transcribeRelayingProgress(
   const onProgress = ({ pct, processedSeconds, totalSeconds }: { pct: number; processedSeconds: number; totalSeconds: number }) => {
     broadcast("transcription:progress", { path: videoPath, pct, processedSeconds, totalSeconds });
   };
+  const onPhase = (phase: string) => {
+    broadcast("transcription:progress", { path: videoPath, phase });
+  };
 
   if (transport === "upload") {
     // Model B: stream the local media file to the backend; it returns content.
@@ -712,6 +715,7 @@ async function transcribeRelayingProgress(
         token,
         signal: controller.signal,
         onProgress,
+        onPhase,
       });
     } catch (error: unknown) {
       if (error instanceof StreamingUnsupportedError) {
@@ -762,6 +766,7 @@ function overridesFromBody(body: unknown): TranscriptionOverrides | undefined {
     ...(pick("language") ? { language: pick("language") } : {}),
     ...(pick("device") ? { device: pick("device") } : {}),
     ...(pick("computeType") ? { compute_type: pick("computeType") } : {}),
+    ...(b.speakerDiarization === true ? { speaker_diarization: true } : {}),
   };
   return Object.keys(ov).length ? ov : undefined;
 }

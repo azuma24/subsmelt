@@ -35,7 +35,9 @@
     "overwriteTitle": "Overwrite existing subtitles?",
     "overwriteConfirm": "{{count}} selected file(s) already have a subtitle. Transcribing will overwrite the same-named output. Continue?",
     "overwriteHint": "Transcribing a file that already has a subtitle of the same name overwrites it.",
-    "batchDone": "Transcribed {{ok}}/{{total}} to {{format}}."
+    "batchDone": "Transcribed {{ok}}/{{total}} to {{format}}.",
+    "diarize": "Identify speakers",
+    "diarizing": "Identifying speakers…"
   },
   "convert": {
     "title": "Subtitle Converter",
@@ -609,7 +611,10 @@
       "modelBase": "Base — faster",
       "modelSmall": "Small — recommended",
       "modelMedium": "Medium — slower/better",
+      "modelLargeV1": "Large v1 — legacy large",
+      "modelLargeV2": "Large v2 — high accuracy",
       "modelLargeV3": "Large v3 — best accuracy",
+      "modelDistilLargeV3": "Distil Large v3 — near-large, much faster",
       "modelLargeV3Turbo": "Large v3 turbo — fast + accurate",
       "language": "Language",
       "languageAuto": "Auto-detect",

@@ -22,7 +22,7 @@ const baseName = (p: string): string => p.split(/[\\/]/).pop() || p;
 
 type OutputFormat = "srt" | "ass" | "vtt" | "txt";
 const FORMATS: OutputFormat[] = ["srt", "ass", "vtt", "txt"];
-const FALLBACK_MODELS = ["tiny", "base", "small", "medium", "large-v3", "large-v3-turbo"];
+const FALLBACK_MODELS = ["tiny", "base", "small", "medium", "large-v1", "large-v2", "large-v3", "distil-large-v3", "large-v3-turbo"];
 const COMMON_LANGS = ["auto", "en", "es", "fr", "de", "it", "pt", "ja", "ko", "zh", "ru", "ar", "hi"];
 // CTranslate2 compute types are device-specific: float16 / int8_float16 are
 // GPU-only and crash on CPU. Gate the selector by device so an invalid pair can
@@ -32,7 +32,7 @@ const COMPUTE_BY_DEVICE: Record<string, string[]> = {
   cuda: ["int8", "int8_float16", "float16", "float32"],
 };
 
-interface FileProgress { pct?: number; done?: boolean; error?: boolean; cancelled?: boolean }
+interface FileProgress { pct?: number; done?: boolean; error?: boolean; cancelled?: boolean; phase?: string }
 
 interface TreeNode {
   name: string;
@@ -119,6 +119,10 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const [computeType, setComputeType] = useState("");
   const [language, setLanguage] = useState("");
   const [format, setFormat] = useState<OutputFormat>("srt");
+  const [diarize, setDiarize] = useState(false);
+  // Diarization toggle is offered only when the backend advertises it (pyannote
+  // installed + HF token configured), so it can never be a silent no-op.
+  const canDiarize = Boolean(caps?.advancedOptions?.speakerDiarization);
   const modelOptions = caps?.models?.length ? caps.models : FALLBACK_MODELS;
   const deviceOptions = caps?.devices?.length ? caps.devices : ["cpu"];
   const eff = (v: string, fallbackKey: string, fb: string) => v || str(settings[fallbackKey], fb);
@@ -162,9 +166,23 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   // Live per-file progress from the server's SSE broadcast.
   useSSE((type, data) => {
     if (type !== "transcription:progress") return;
-    const d = data as { path?: string; pct?: number; done?: boolean; error?: boolean; cancelled?: boolean };
+    const d = data as { path?: string; pct?: number; done?: boolean; error?: boolean; cancelled?: boolean; phase?: string };
     if (!d.path) return;
-    setFileProgress((prev) => ({ ...prev, [d.path as string]: { pct: d.pct, done: d.done, error: d.error, cancelled: d.cancelled } }));
+    // Merge so a phase-only line (e.g. "diarizing") keeps the last pct.
+    setFileProgress((prev) => {
+      const cur = prev[d.path as string] || {};
+      return {
+        ...prev,
+        [d.path as string]: {
+          ...cur,
+          ...(d.pct !== undefined ? { pct: d.pct } : {}),
+          ...(d.done !== undefined ? { done: d.done } : {}),
+          ...(d.error !== undefined ? { error: d.error } : {}),
+          ...(d.cancelled !== undefined ? { cancelled: d.cancelled } : {}),
+          ...(d.phase !== undefined ? { phase: d.phase } : {}),
+        },
+      };
+    });
   });
 
   const toggle = (vp: string) =>
@@ -218,6 +236,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
           language: effLang,
           device: effDevice,
           computeType: effCompute,
+          speakerDiarization: canDiarize && diarize,
         });
         ok += 1;
       } catch (e: unknown) {
@@ -284,6 +303,12 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
                 {FORMATS.map((f) => <option key={f} value={f}>{f.toUpperCase()}</option>)}
               </select>
             </label>
+            {canDiarize && (
+              <label className="flex items-center gap-2 text-[11px] text-[var(--text-2)]">
+                <input type="checkbox" checked={diarize} onChange={(e) => setDiarize(e.target.checked)} className="h-4 w-4 accent-blue-500" />
+                {t("whisper.diarize")}
+              </label>
+            )}
           </div>
 
           {/* Actions */}
@@ -365,6 +390,7 @@ function FileRow({ file, depth, selected, toggleFile, fileProgress, activePath }
   const status = fp?.done ? t("whisper.statusDone")
     : fp?.cancelled ? t("whisper.statusCancelled")
     : fp?.error ? t("whisper.statusError")
+    : fp?.phase === "diarizing" ? t("whisper.diarizing")
     : typeof fp?.pct === "number" ? `${Math.round(fp.pct)}%` : "";
   return (
     <label className="flex items-center gap-2 px-3 py-1.5 text-[12px] text-[var(--text-2)] hover:bg-[var(--surface-2)]"

@@ -543,6 +543,9 @@
       "modelBase": "Base — lebih pantas",
       "modelSmall": "Small — disyorkan",
       "modelMedium": "Medium — lebih perlahan/lebih baik",
+      "modelLargeV1": "Large v1 — legacy large",
+      "modelLargeV2": "Large v2 — high accuracy",
+      "modelDistilLargeV3": "Distil Large v3 — near-large, much faster",
       "language": "Bahasa",
       "languageAuto": "Kesan automatik",
       "output": "Output",
@@ -882,6 +885,8 @@
     "statusCancelled": "cancelled",
     "statusError": "error",
     "overwriteTitle": "Overwrite existing subtitles?",
-    "overwriteConfirm": "{{count}} selected file(s) already have a subtitle. Transcribing will overwrite the same-named output. Continue?"
+    "overwriteConfirm": "{{count}} selected file(s) already have a subtitle. Transcribing will overwrite the same-named output. Continue?",
+    "diarize": "Identify speakers",
+    "diarizing": "Identifying speakers…"
   }
 }

@@ -21,6 +21,9 @@ class AdvancedSttOptions(BaseModel):
     word_timestamps: bool | None = None
     initial_prompt: str | None = None
     speaker_diarization: bool = False
+    # Optional pyannote speaker-count hints (only used when speaker_diarization).
+    min_speakers: int | None = None
+    max_speakers: int | None = None
     bgm_separation: bool = False
 
 

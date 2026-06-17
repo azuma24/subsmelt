@@ -14,6 +14,8 @@ from .model_cache import (
     repo_id_for_model,
 )
 from .preflight import (
+    MODEL_RAM_MB,
+    MODEL_VRAM_MB,
     available_ram_mb,
     model_ram_requirements_mb,
     model_vram_requirements_mb,
@@ -27,7 +29,10 @@ ADVERTISED_MODELS: tuple[str, ...] = (
     "base",
     "small",
     "medium",
+    "large-v1",
+    "large-v2",
     "large-v3",
+    "distil-large-v3",
     "large-v3-turbo",
 )
 
@@ -42,9 +47,25 @@ APPROX_MODEL_SIZE_MB: dict[str, int] = {
     "base": 145,
     "small": 484,
     "medium": 1530,
+    "large-v1": 3090,
+    "large-v2": 3090,
     "large-v3": 3090,
+    "distil-large-v3": 1510,
     "large-v3-turbo": 1620,
 }
+
+# Fail fast at import if an advertised model lacks a resource entry. Without this,
+# preflight's MODEL_RAM_MB/MODEL_VRAM_MB .get(..., small) fallback would silently
+# gate a newly-added large model with small's 4 GB requirement and approve an
+# unsafe transcription. Keep these tables in lockstep with ADVERTISED_MODELS.
+_missing_resource = [
+    m
+    for m in ADVERTISED_MODELS
+    if m not in MODEL_RAM_MB or m not in MODEL_VRAM_MB or m not in APPROX_MODEL_SIZE_MB
+]
+assert not _missing_resource, (
+    f"Advertised models missing RAM/VRAM/size table entries: {_missing_resource}"
+)
 
 
 class ModelNotDownloadedError(RuntimeError):
@@ -166,6 +187,38 @@ def _download_cache_dir(env: Mapping[str, str] | None = None) -> Path:
     return cache_root_from_env(env)
 
 
+# Max seconds to wait for a single download progress tick before checking whether
+# the worker thread is still alive (defensive against a hung/dead worker).
+_DOWNLOAD_STALL_TIMEOUT_S = 900
+
+# One lock per model id so concurrent downloads of the same model serialize
+# instead of each spawning an independent snapshot_download (wasted bandwidth).
+_DOWNLOAD_LOCKS: dict[str, threading.Lock] = {}
+_DOWNLOAD_LOCKS_GUARD = threading.Lock()
+
+
+def _download_lock(model: str) -> threading.Lock:
+    with _DOWNLOAD_LOCKS_GUARD:
+        lock = _DOWNLOAD_LOCKS.get(model)
+        if lock is None:
+            lock = threading.Lock()
+            _DOWNLOAD_LOCKS[model] = lock
+        return lock
+
+
+def _snapshot_has_weights(snapshot_dir: str | None) -> bool:
+    """True when a downloaded snapshot dir actually holds CTranslate2 weights.
+
+    faster-whisper models carry a ``model.bin``; guard against a partial download
+    leaving the dir present but weightless (which would otherwise read as
+    "downloaded" and then fail every transcription).
+    """
+    if not snapshot_dir:
+        return False
+    p = Path(snapshot_dir)
+    return (p / "model.bin").exists() or any(p.glob("*.safetensors"))
+
+
 def _make_progress_tqdm(progress_queue: "queue.Queue[dict]"):
     """Build a tqdm subclass that pushes download progress into ``progress_queue``.
 
@@ -241,50 +294,87 @@ def download_model_events(
         }
         return
 
-    progress_queue: "queue.Queue[dict]" = queue.Queue()
-    sentinel = object()
-    result_holder: dict = {}
+    # Serialize concurrent downloads of the SAME model: a second request blocks
+    # here, then re-checks is_model_downloaded below and returns the idempotent
+    # "already present" result instead of running a second snapshot_download.
+    with _download_lock(normalized):
+        if is_model_downloaded(normalized, env=env):
+            cache = describe_model_cache(normalized, available_ram_mb(), env=env)
+            yield {
+                "type": "result",
+                "ok": True,
+                "model": normalized,
+                "cachePath": cache["cache_path"],
+                "alreadyPresent": True,
+            }
+            return
 
-    def worker() -> None:
-        try:
-            from huggingface_hub import snapshot_download  # type: ignore
+        progress_queue: "queue.Queue[dict]" = queue.Queue()
+        sentinel = object()
+        result_holder: dict = {}
 
-            tqdm_class = _make_progress_tqdm(progress_queue)
-            path = snapshot_download(
-                repo_id=repo_id_for(normalized),
-                cache_dir=str(_download_cache_dir(env)),
-                tqdm_class=tqdm_class,
-            )
-            result_holder["path"] = path
-        except Exception as exc:  # noqa: BLE001 - surface as a terminal error line
-            result_holder["error"] = str(exc)
-        finally:
-            progress_queue.put(sentinel)  # type: ignore[arg-type]
+        def worker() -> None:
+            try:
+                from huggingface_hub import snapshot_download  # type: ignore
 
-    thread = threading.Thread(target=worker, name=f"hf-download-{normalized}", daemon=True)
-    thread.start()
+                tqdm_class = _make_progress_tqdm(progress_queue)
+                path = snapshot_download(
+                    repo_id=repo_id_for(normalized),
+                    cache_dir=str(_download_cache_dir(env)),
+                    tqdm_class=tqdm_class,
+                )
+                result_holder["path"] = path
+            except Exception as exc:  # noqa: BLE001 - surface as a terminal error line
+                result_holder["error"] = str(exc)
+            finally:
+                progress_queue.put(sentinel)  # type: ignore[arg-type]
 
-    while True:
-        item = progress_queue.get()
-        if item is sentinel:
-            break
-        yield item
+        thread = threading.Thread(target=worker, name=f"hf-download-{normalized}", daemon=True)
+        thread.start()
 
-    thread.join()
+        # Bounded get so a worker that dies WITHOUT posting the sentinel (a future
+        # exception-path bug) can never hang the stream forever — fall through when
+        # the thread is no longer alive.
+        while True:
+            try:
+                item = progress_queue.get(timeout=_DOWNLOAD_STALL_TIMEOUT_S)
+            except queue.Empty:
+                if not thread.is_alive():
+                    break
+                continue
+            if item is sentinel:
+                break
+            yield item
 
-    if "error" in result_holder:
-        yield {"type": "error", "error": result_holder["error"], "model": normalized}
-        return
+        thread.join(timeout=_DOWNLOAD_STALL_TIMEOUT_S)
 
-    # Re-describe so cachePath reflects the freshly-written snapshot.
-    cache = describe_model_cache(normalized, available_ram_mb(), env=env)
-    cache_path = cache["cache_path"] or result_holder.get("path")
-    yield {
-        "type": "result",
-        "ok": True,
-        "model": normalized,
-        "cachePath": cache_path,
-    }
+        if "error" in result_holder:
+            yield {"type": "error", "error": result_holder["error"], "model": normalized}
+            return
+
+        # Re-describe so cachePath reflects the freshly-written snapshot.
+        cache = describe_model_cache(normalized, available_ram_mb(), env=env)
+        cache_path = cache["cache_path"] or result_holder.get("path")
+        # Integrity gate: a partial/interrupted download can leave a snapshot dir
+        # without the CTranslate2 weights. Reporting success here would make the
+        # model show as "downloaded" yet fail every transcription, so verify the
+        # weight file is actually present before declaring success.
+        if not _snapshot_has_weights(cache_path):
+            yield {
+                "type": "error",
+                "error": (
+                    "Download finished but model weights (model.bin) are missing; the "
+                    "snapshot is incomplete — delete it and download again"
+                ),
+                "model": normalized,
+            }
+            return
+        yield {
+            "type": "result",
+            "ok": True,
+            "model": normalized,
+            "cachePath": cache_path,
+        }
 
 
 def delete_model(model: str, env: Mapping[str, str] | None = None) -> dict:
@@ -308,12 +398,25 @@ def delete_model(model: str, env: Mapping[str, str] | None = None) -> dict:
         cache_root / normalized,
     ]
 
+    def _try_remove(target: Path) -> int:
+        """Remove a cache dir, returning freed MB. Raise on a real failure so the
+        API surfaces it instead of reporting a phantom success (e.g. a Windows
+        file lock from a still-loaded model)."""
+        size = _dir_size_mb(target)
+        try:
+            shutil.rmtree(target)
+        except OSError as exc:
+            raise OSError(
+                f"Failed to delete cached model {normalized!r} at {target}: {exc}. "
+                f"It may be in use — stop any running transcription and retry."
+            ) from exc
+        return size
+
     freed_mb = 0
     removed_any = False
     for candidate in candidates:
         if candidate.is_dir():
-            freed_mb += _dir_size_mb(candidate)
-            shutil.rmtree(candidate, ignore_errors=True)
+            freed_mb += _try_remove(candidate)
             removed_any = True
 
     if not removed_any:
@@ -322,9 +425,7 @@ def delete_model(model: str, env: Mapping[str, str] | None = None) -> dict:
         cache = describe_model_cache(normalized, available_ram_mb(), env=env)
         cache_path = cache["cache_path"]
         if cache_path and Path(cache_path).exists():
-            target = Path(cache_path)
-            freed_mb += _dir_size_mb(target)
-            shutil.rmtree(target, ignore_errors=True)
+            freed_mb += _try_remove(Path(cache_path))
             removed_any = True
 
     if not removed_any:  # pragma: no cover - defensive; cached implied existence

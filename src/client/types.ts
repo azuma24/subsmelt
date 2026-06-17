@@ -144,6 +144,8 @@ export interface TranscribeRequest {
   language?: string;
   device?: string;
   computeType?: string;
+  // Per-run speaker diarization toggle (only when caps.advancedOptions.speakerDiarization).
+  speakerDiarization?: boolean;
 }
 
 export interface TranscriptionHistoryEntry {

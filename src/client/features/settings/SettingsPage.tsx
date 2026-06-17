@@ -379,13 +379,16 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   // the dropdown always matches what the server (and the model manager) support.
   // Falls back to the full known set before health loads, and always includes the
   // currently-selected model so a saved value (e.g. large-v3) can't be dropped.
-  const STT_MODEL_FALLBACK = ["tiny", "base", "small", "medium", "large-v3", "large-v3-turbo"];
+  const STT_MODEL_FALLBACK = ["tiny", "base", "small", "medium", "large-v1", "large-v2", "large-v3", "distil-large-v3", "large-v3-turbo"];
   const STT_MODEL_LABEL_KEYS: Record<string, string> = {
     tiny: "settings.transcription.modelTiny",
     base: "settings.transcription.modelBase",
     small: "settings.transcription.modelSmall",
     medium: "settings.transcription.modelMedium",
+    "large-v1": "settings.transcription.modelLargeV1",
+    "large-v2": "settings.transcription.modelLargeV2",
     "large-v3": "settings.transcription.modelLargeV3",
+    "distil-large-v3": "settings.transcription.modelDistilLargeV3",
     "large-v3-turbo": "settings.transcription.modelLargeV3Turbo",
   };
   const advertisedModels = transcriptionHealthQuery.data?.health?.capabilities?.models;
