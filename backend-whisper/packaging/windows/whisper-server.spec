@@ -20,7 +20,7 @@
 import os
 import sys
 
-from PyInstaller.utils.hooks import collect_dynamic_libs, collect_submodules
+from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs, collect_submodules
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -100,7 +100,10 @@ except Exception as exc:  # pragma: no cover
 datas = [
     (APP_DIR, "app"),
 ]
-_ffmpeg = os.path.join(SPEC_DIR, "vendor", "ffmpeg.exe")
+# faster-whisper ships non-Python data assets (notably the bundled Silero VAD
+# model, assets/silero_vad*.onnx). collect_submodules does NOT pick these up, so
+# without this the frozen exe raises ONNXRuntime NO_SUCHFILE when use_vad=True.
+datas += collect_data_files("faster_whisper")
 if os.path.isfile(_ffmpeg):
     datas.append((_ffmpeg, "."))
 else:
