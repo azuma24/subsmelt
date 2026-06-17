@@ -32,6 +32,7 @@
 param(
     [string]$Version = "0.0.0-local",
     [switch]$SkipInstaller,
+    [switch]$SkipTray,
     [switch]$Run,
     [switch]$Clean,
     [switch]$ForceVendor
@@ -106,6 +107,27 @@ try {
     & $DistExe --print-config
     if ($LASTEXITCODE -ne 0) { Die "run_server.exe --print-config failed (exit $LASTEXITCODE)" }
     Ok "smoke test passed"
+
+    # --- 5b. system-tray exe (optional) ---
+    # Small onefile whisper-tray.exe that launches/controls/closes run_server.exe
+    # from the Windows system tray (standalone mode). Copied next to run_server.exe
+    # so its sibling lookup works.
+    if (-not $SkipTray) {
+        Info "building system-tray exe (pystray + pillow)"
+        & $VenvPy -m pip install pystray pillow
+        if ($LASTEXITCODE -ne 0) { Warn "could not install pystray/pillow - skipping tray build" }
+        else {
+            & $VenvPy -m PyInstaller (Join-Path $WinDir "whisper-tray.spec") --clean --noconfirm
+            $trayBuilt = Join-Path $BackendRoot "dist\whisper-tray.exe"
+            $trayDest  = Join-Path $BackendRoot "dist\whisper-server\whisper-tray.exe"
+            if (Test-Path $trayBuilt) {
+                Copy-Item -Force $trayBuilt $trayDest
+                Ok "tray exe built and placed next to run_server.exe: $trayDest"
+            } else {
+                Warn "tray build did not produce dist\whisper-tray.exe"
+            }
+        }
+    }
 
     # --- 6. installer (optional) ---
     if (-not $SkipInstaller) {

@@ -61,6 +61,83 @@ def _run(cmd: list[str]) -> tuple[int, str]:
         return 1, str(exc)
 
 
+# ---------------------------------------------------------------------------
+# Standalone mode: the tray OWNS a run_server.exe child process (no Windows
+# Service). This is what you get when you run the built bundle directly instead
+# of installing the service — the tray launches, controls, and closes the server.
+# ---------------------------------------------------------------------------
+
+_server_proc: "subprocess.Popen | None" = None
+
+
+def _server_command() -> list[str]:
+    """Resolve how to launch the server in standalone mode.
+
+    Frozen (whisper-tray.exe): run the sibling run_server.exe in the same dir.
+    Dev: run the repo's run_server.py with the current interpreter.
+    """
+    if getattr(sys, "frozen", False):
+        return [str(Path(sys.executable).parent / "run_server.exe")]
+    return [sys.executable, str(Path(__file__).resolve().parents[3] / "run_server.py")]
+
+
+def server_process_running() -> bool:
+    return _server_proc is not None and _server_proc.poll() is None
+
+
+def start_server_process(_icon=None, _item=None) -> None:
+    """Launch run_server.exe as a child process (standalone mode)."""
+    global _server_proc
+    if server_process_running():
+        print("[tray] server already running.")
+        return
+    cmd = _server_command()
+    try:
+        # CREATE_NEW_PROCESS_GROUP lets us signal it independently on Windows.
+        creationflags = 0x00000200 if _is_windows() else 0  # CREATE_NEW_PROCESS_GROUP
+        _server_proc = subprocess.Popen(cmd, creationflags=creationflags)
+        print(f"[tray] started server: {' '.join(cmd)} (pid {_server_proc.pid})")
+    except Exception as exc:  # pragma: no cover - environment dependent
+        print(f"[tray] failed to start server: {exc}")
+
+
+def stop_server_process(_icon=None, _item=None) -> None:
+    """Terminate the server child process (standalone mode)."""
+    global _server_proc
+    if not server_process_running():
+        print("[tray] server not running.")
+        _server_proc = None
+        return
+    proc = _server_proc
+    try:
+        proc.terminate()
+        try:
+            proc.wait(timeout=10)
+        except Exception:
+            proc.kill()
+        print("[tray] server stopped.")
+    except Exception as exc:  # pragma: no cover
+        print(f"[tray] failed to stop server: {exc}")
+    finally:
+        _server_proc = None
+
+
+def restart_server_process(_icon=None, _item=None) -> None:
+    stop_server_process()
+    start_server_process()
+
+
+def open_health(_icon=None, _item=None) -> None:
+    webbrowser.open(f"http://127.0.0.1:{DEFAULT_PORT}/health")
+
+
+def quit_standalone(icon=None, _item=None) -> None:
+    """Quit the tray AND stop the owned server process."""
+    stop_server_process()
+    if icon is not None and hasattr(icon, "stop"):
+        icon.stop()
+
+
 def start_service(_icon=None, _item=None) -> None:
     if not _is_windows():
         print("[tray] start_service is a no-op off Windows.")
@@ -182,11 +259,46 @@ def build_tray():
                         "SubSmelt Whisper Backend", menu)
 
 
+def build_standalone_tray():
+    """Tray that owns a run_server.exe child process (no Windows Service)."""
+    if not _HAS_TRAY:
+        raise RuntimeError(
+            "pystray and pillow are required for the tray app. "
+            "Install with: pip install pystray pillow"
+        )
+    menu = pystray.Menu(
+        pystray.MenuItem(
+            lambda _: f"Server: {'running' if server_process_running() else 'stopped'}",
+            None, enabled=False,
+        ),
+        pystray.Menu.SEPARATOR,
+        pystray.MenuItem("Start server", start_server_process,
+                         enabled=lambda _: not server_process_running()),
+        pystray.MenuItem("Stop server", stop_server_process,
+                         enabled=lambda _: server_process_running()),
+        pystray.MenuItem("Restart server", restart_server_process),
+        pystray.Menu.SEPARATOR,
+        pystray.MenuItem("Open health page", open_health),
+        pystray.MenuItem("Open logs", open_logs),
+        pystray.MenuItem("Open config", open_config),
+        pystray.Menu.SEPARATOR,
+        pystray.MenuItem("Quit (stops server)", quit_standalone),
+    )
+    return pystray.Icon("subsmelt_whisper", _make_icon_image(),
+                        "SubSmelt Whisper Backend (standalone)", menu)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="whisper_tray",
         description="SubSmelt Whisper system-tray controller (Windows tray build).",
     )
+    parser.add_argument("--standalone", action="store_true",
+                        help="Own a run_server.exe child process instead of the "
+                             "Windows Service. Auto-starts the server, then the "
+                             "tray Start/Stop/Quit control it directly.")
+    parser.add_argument("--no-autostart", action="store_true",
+                        help="In --standalone mode, do NOT start the server on launch.")
     parser.add_argument("--status", action="store_true",
                         help="Print service status and exit (no tray).")
     parser.add_argument("--diagnostics", action="store_true",
@@ -205,6 +317,15 @@ def main(argv: list[str] | None = None) -> int:
               "Use --status or --diagnostics, or install with: pip install pystray pillow",
               file=sys.stderr)
         return 1
+
+    if args.standalone:
+        # Make sure the owned server is stopped if the tray dies unexpectedly.
+        import atexit
+        atexit.register(stop_server_process)
+        if not args.no_autostart:
+            start_server_process()
+        build_standalone_tray().run()
+        return 0
 
     build_tray().run()
     return 0
