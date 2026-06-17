@@ -72,11 +72,8 @@ class ModelManagerEndpointTests(unittest.TestCase):
         body = resp.json()
         self.assertIn("models", body)
         models = {m["id"]: m for m in body["models"]}
-        # All advertised models present.
-        self.assertEqual(
-            set(models),
-            {"tiny", "base", "small", "medium", "large-v3", "large-v3-turbo"},
-        )
+        # All advertised models present (derived, so this never drifts from the set).
+        self.assertEqual(set(models), set(model_manager.ADVERTISED_MODELS))
         # Shape of each entry.
         for m in body["models"]:
             for key in ("id", "downloaded", "sizeMb", "requiredRamMb", "requiredVramMb", "cachePath"):

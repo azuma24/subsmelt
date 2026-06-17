@@ -22,7 +22,7 @@ const baseName = (p: string): string => p.split(/[\\/]/).pop() || p;
 
 type OutputFormat = "srt" | "ass" | "vtt" | "txt";
 const FORMATS: OutputFormat[] = ["srt", "ass", "vtt", "txt"];
-const FALLBACK_MODELS = ["tiny", "base", "small", "medium", "large-v3", "large-v3-turbo"];
+const FALLBACK_MODELS = ["tiny", "base", "small", "medium", "large-v1", "large-v2", "large-v3", "distil-large-v3", "large-v3-turbo"];
 const COMMON_LANGS = ["auto", "en", "es", "fr", "de", "it", "pt", "ja", "ko", "zh", "ru", "ar", "hi"];
 // CTranslate2 compute types are device-specific: float16 / int8_float16 are
 // GPU-only and crash on CPU. Gate the selector by device so an invalid pair can

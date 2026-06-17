@@ -27,7 +27,10 @@ ADVERTISED_MODELS: tuple[str, ...] = (
     "base",
     "small",
     "medium",
+    "large-v1",
+    "large-v2",
     "large-v3",
+    "distil-large-v3",
     "large-v3-turbo",
 )
 
@@ -42,7 +45,10 @@ APPROX_MODEL_SIZE_MB: dict[str, int] = {
     "base": 145,
     "small": 484,
     "medium": 1530,
+    "large-v1": 3090,
+    "large-v2": 3090,
     "large-v3": 3090,
+    "distil-large-v3": 1510,
     "large-v3-turbo": 1620,
 }
 

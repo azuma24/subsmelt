@@ -17,6 +17,7 @@ from pydantic import BaseModel, ValidationError
 from .gpu import cuda_device_count, gpu_info, total_free_vram_mb
 from .model_cache import describe_model_cache
 from .model_manager import (
+    ADVERTISED_MODELS,
     ModelNotDownloadedError,
     UnknownModelError,
     assert_model_downloaded,
@@ -140,7 +141,10 @@ def capabilities() -> dict:
         # surfaced via /health (which stays open) so an unauthenticated
         # reachability check can still learn a token is needed.
         "authRequired": auth_required(),
-        "models": ["tiny", "base", "small", "medium", "large-v3", "large-v3-turbo"],
+        # Single source of truth: the model-manager's advertised set. Keeping this
+        # derived (not a duplicated literal) means the dropdown the frontend builds
+        # from capabilities.models can never drift from what the backend manages.
+        "models": list(ADVERTISED_MODELS),
         "devices": devices,
         "computeTypes": compute_types,
         "gpus": gpu_info(),

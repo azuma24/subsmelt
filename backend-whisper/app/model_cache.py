@@ -40,6 +40,9 @@ def _looks_like_local_path(model: str) -> bool:
 # Fallback repo overrides used ONLY when faster-whisper's own registry is not
 # importable (e.g. minimal/test envs). large-v3-turbo is not a Systran repo.
 _MODEL_REPO_OVERRIDES = {
+    # distil models live under faster-DISTIL-whisper repos, not the Systran
+    # faster-whisper-<model> default; turbo lives under a different org.
+    "distil-large-v3": "Systran/faster-distil-whisper-large-v3",
     "large-v3-turbo": "mobiuslabsgmbh/faster-whisper-large-v3-turbo",
 }
 
