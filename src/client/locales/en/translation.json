@@ -10,10 +10,20 @@
   },
   "whisper": {
     "title": "Whisper — Speech to Text",
-    "subtitle": "Backend readiness, model downloads, and recent transcriptions. Select videos to transcribe on the Dashboard.",
+    "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
-    "transcribeHint": "To transcribe, open the Dashboard, scan your library, and use the per-file or batch Transcribe actions."
+    "pickerTitle": "Transcribe library files",
+    "pickerHint": "Select single files, multiple files, or whole folders, choose a format, then transcribe.",
+    "format": "Format",
+    "transcribeSelected": "Transcribe {{count}} selected",
+    "transcribingProgress": "Transcribing {{done}}/{{total}}…",
+    "scanning": "Scanning library…",
+    "rescan": "Rescan",
+    "noVideos": "No video files found under the media directory.",
+    "hasSubtitle": "has subtitle",
+    "overwriteHint": "Transcribing a file that already has a subtitle of the same name overwrites it.",
+    "batchDone": "Transcribed {{ok}}/{{total}} to {{format}}."
   },
   "convert": {
     "title": "Subtitle Converter",

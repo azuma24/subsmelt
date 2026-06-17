@@ -3,7 +3,7 @@ import path from "node:path";
 
 export const transcribePostActionValues = ["transcribe_only", "transcribe_and_translate"] as const;
 export type TranscribePostAction = typeof transcribePostActionValues[number];
-export type TranscriptionOutputFormat = "srt" | "vtt" | "txt";
+export type TranscriptionOutputFormat = "srt" | "vtt" | "txt" | "ass";
 export type LowRamBehavior = "ask" | "downgrade" | "skip" | "run_anyway";
 
 // Short timeout (ms) for lightweight backend calls (health, preflight).
@@ -234,7 +234,7 @@ function boolSetting(raw: string | boolean | undefined, fallback: boolean): bool
 }
 
 function outputFormat(raw: string | undefined, fallback: TranscriptionOutputFormat): TranscriptionOutputFormat {
-  return raw === "vtt" || raw === "txt" || raw === "srt" ? raw : fallback;
+  return raw === "vtt" || raw === "txt" || raw === "srt" || raw === "ass" ? raw : fallback;
 }
 
 function lowRamBehavior(raw: string | undefined): LowRamBehavior {

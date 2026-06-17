@@ -74,6 +74,44 @@ def write_txt(segments: Iterable[SegmentLike], output_path: Path) -> int:
     return count
 
 
+def _ass_timestamp(seconds: float) -> str:
+    """ASS time: H:MM:SS.cc (centiseconds, single-digit hours)."""
+    cs_total = int(round(seconds * 100))
+    hours, rem = divmod(cs_total, 360_000)
+    minutes, rem = divmod(rem, 6_000)
+    secs, cs = divmod(rem, 100)
+    return f"{hours:d}:{minutes:02d}:{secs:02d}.{cs:02d}"
+
+
+_ASS_HEADER = """[Script Info]
+ScriptType: v4.00+
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+PlayResX: 1920
+PlayResY: 1080
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,48,&H00FFFFFF,&H000000FF,&H00000000,&H64000000,0,0,0,0,100,100,0,0,1,2,1,2,40,40,40,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+"""
+
+
+def write_ass(segments: Iterable[SegmentLike], output_path: Path, max_line_length: int | None = None) -> int:
+    """Write Advanced SubStation Alpha (.ass). Line breaks use ASS's ``\\N``."""
+    lines = [_ASS_HEADER]
+    count = 0
+    for count, segment in enumerate(segments, start=1):
+        text = _wrap_text(segment.text, max_line_length).replace("\n", "\\N")
+        lines.append(
+            f"Dialogue: 0,{_ass_timestamp(segment.start)},{_ass_timestamp(segment.end)},Default,,0,0,0,,{text}"
+        )
+    output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return count
+
+
 def write_transcript(
     segments: Iterable[SegmentLike],
     output_path: Path,
@@ -85,4 +123,6 @@ def write_transcript(
         return write_vtt(segments, output_path, max_line_length=max_line_length)
     if output_format == "txt":
         return write_txt(segments, output_path)
+    if output_format == "ass":
+        return write_ass(segments, output_path, max_line_length=max_line_length)
     return write_srt(segments, output_path, max_line_length=max_line_length)
