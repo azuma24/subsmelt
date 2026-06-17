@@ -1,0 +1,113 @@
+name: Build Windows Whisper Installer
+
+# Plan Phase 6. Builds the PyInstaller onedir bundle + Inno Setup installer on a
+# Windows runner. Decoupled from the Docker `v*` tags because this build is heavy
+# (CUDA DLLs + onedir, ~1-2 GB) — it runs on its own `whisper-v*` tags and on
+# manual dispatch. On a tag it also uploads the installer as a release asset.
+on:
+  push:
+    tags:
+      - 'whisper-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version string for the installer (e.g. 0.5.0)'
+        required: false
+        default: '0.0.0-dev'
+
+permissions:
+  contents: write   # needed to create/attach release assets on tag
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: backend-whisper
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.3
+
+      # Resolve the version: from the whisper-v* tag, else the dispatch input.
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -like 'refs/tags/whisper-v*') {
+            $v = $env:GITHUB_REF -replace '^refs/tags/whisper-v', ''
+          } else {
+            $v = '${{ github.event.inputs.version }}'
+          }
+          if (-not $v) { $v = '0.0.0-dev' }
+          Write-Host "Resolved version: $v"
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Build deps: the CPU requirements (faster-whisper pulls the CUDA-capable
+      # ctranslate2 wheel on Windows), PLUS the cuDNN/cuBLAS runtime wheels so
+      # the spec's collect_dynamic_libs finds the DLLs, PLUS PyInstaller.
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install nvidia-cudnn-cu12==9.* nvidia-cublas-cu12 pyinstaller
+          pip list
+
+      # Fetch ffmpeg.exe + vc_redist.x64.exe into packaging\windows\vendor\.
+      - name: Fetch vendored binaries
+        run: pwsh packaging/windows/fetch-vendor.ps1
+
+      # Freeze run_server.py -> dist\whisper-server\ (onedir). Run from
+      # backend-whisper/ so the spec's relative paths resolve.
+      - name: Build PyInstaller bundle
+        run: pyinstaller packaging/windows/whisper-server.spec --clean --noconfirm
+
+      # Smoke: --print-config resolves config and exits before uvicorn/CUDA are
+      # imported, so it exercises the real launcher path on the GPU-less runner.
+      # (--check would run the cuDNN probe and fail without a GPU; don't use it here.)
+      - name: Smoke test frozen launcher (--print-config)
+        run: |
+          $exe = "dist/whisper-server/run_server.exe"
+          if (-not (Test-Path $exe)) { throw "build did not produce $exe" }
+          & $exe --print-config
+          if ($LASTEXITCODE -ne 0) { throw "run_server.exe --print-config exited $LASTEXITCODE" }
+
+      # Inno Setup compiles installer.iss -> Output\SubSmeltWhisperBackend-Setup-<ver>.exe
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Compile installer
+        run: |
+          $ver = '${{ steps.ver.outputs.version }}'
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" `
+            "/DMyAppVersion=$ver" `
+            packaging/windows/installer.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC exited $LASTEXITCODE" }
+          Get-ChildItem packaging/windows/Output
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SubSmeltWhisperBackend-Setup-${{ steps.ver.outputs.version }}
+          path: backend-whisper/packaging/windows/Output/*.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      # On a whisper-v* tag, publish the installer as a GitHub release asset.
+      - name: Publish release asset
+        if: startsWith(github.ref, 'refs/tags/whisper-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: backend-whisper/packaging/windows/Output/*.exe
+          name: Whisper Backend ${{ steps.ver.outputs.version }}
+          tag_name: ${{ github.ref_name }}
+          body: |
+            SubSmelt Windows Whisper backend installer (CUDA + CPU fallback).
+            Models are downloaded post-install via the in-app model manager —
+            none are bundled. See backend-whisper/packaging/windows/README.md.

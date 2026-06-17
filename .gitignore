@@ -64,3 +64,7 @@ playwright-report/
 
 # graphify knowledge graph output
 graphify-out/
+
+# Windows build vendored binaries (fetched by fetch-vendor.ps1, never committed —
+# large + separately licensed: ffmpeg.exe, vc_redist.x64.exe)
+backend-whisper/packaging/windows/vendor/

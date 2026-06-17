@@ -21,7 +21,12 @@
 ; =============================================================================
 
 #define MyAppName "SubSmelt Whisper Backend"
-#define MyAppVersion "0.4.2"
+; Version is overridable from CI: `iscc /DMyAppVersion=1.2.3 installer.iss`.
+; The #ifndef guard lets a command-line /D win; falls back to this default for
+; local manual compiles.
+#ifndef MyAppVersion
+  #define MyAppVersion "0.4.2"
+#endif
 #define MyAppPublisher "SubSmelt"
 #define MyServiceName "SubSmeltWhisper"
 #define MyDefaultPort "8001"
