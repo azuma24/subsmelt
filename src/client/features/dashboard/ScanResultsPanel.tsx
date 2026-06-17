@@ -151,6 +151,13 @@ export function ScanResultsPanel({
     });
     return Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [filteredFiles]);
+  // Only act on selections that are still visible under the current filter/search,
+  // so the bulk action never transcribes files the user can no longer see.
+  const visibleSelectedPaths = useMemo(() => {
+    const visible = new Set(filteredFiles.map((f) => f.videoPath).filter(Boolean) as string[]);
+    return Array.from(selectedPaths).filter((p) => visible.has(p));
+  }, [filteredFiles, selectedPaths]);
+
   const toggleGroup = (group: string) => setExpandedGroups((prev) => {
     const next = new Set(prev);
     if (next.has(group)) next.delete(group); else next.add(group);
@@ -171,21 +178,21 @@ export function ScanResultsPanel({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-gray-500">{t("dashboard.entries", { count: filteredFiles.length })}</span>
-          {batchEnabled && selectedPaths.size > 0 && (
+          {batchEnabled && visibleSelectedPaths.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={() => onBatchTranscribe?.(Array.from(selectedPaths), "transcribe_only")}
+                onClick={() => onBatchTranscribe?.(visibleSelectedPaths, "transcribe_only")}
                 className="rounded-lg bg-gray-700 px-3 py-2 text-xs font-medium text-gray-100"
               >
-                {t("scan.transcription.batchTranscribe", { count: selectedPaths.size })}
+                {t("scan.transcription.batchTranscribe", { count: visibleSelectedPaths.length })}
               </button>
               <button
                 type="button"
-                onClick={() => onBatchTranscribe?.(Array.from(selectedPaths), "transcribe_and_translate")}
+                onClick={() => onBatchTranscribe?.(visibleSelectedPaths, "transcribe_and_translate")}
                 className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white"
               >
-                {t("scan.transcription.batchTranscribeTranslate", { count: selectedPaths.size })}
+                {t("scan.transcription.batchTranscribeTranslate", { count: visibleSelectedPaths.length })}
               </button>
               <button
                 type="button"
@@ -336,6 +343,7 @@ function CompactScanFileRow({
           <input
             type="checkbox"
             checked={selectedVideoPaths.has(file.videoPath)}
+            disabled={isBusy}
             onChange={() => {
               const vp = file.videoPath as string;
               setSelectedVideoPaths?.((prev) => {

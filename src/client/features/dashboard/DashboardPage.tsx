@@ -167,6 +167,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
     try {
       const result = await scanPreviewMutation.mutateAsync();
       setScanResult(result.files);
+      setSelectedVideoPaths(new Set());
       setScanResultMode("preview");
       expandInterestingScanGroups(result.files);
       setActiveTab("scan");
@@ -206,6 +207,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
     try {
       const result = await scanMutation.mutateAsync();
       setScanResult(result.files);
+      setSelectedVideoPaths(new Set());
       setScanResultMode("queued");
       expandInterestingScanGroups(result.files);
       setScanPlan(null);
@@ -337,7 +339,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
     }
   };
 
-  const handleTranscribe = async (videoPath: string, postAction: TranscribePostAction) => {
+  const handleTranscribe = async (videoPath: string, postAction: TranscribePostAction, opts?: { skipRescan?: boolean }) => {
     setTranscriptionProgressByPath((prev) => ({
       ...prev,
       [videoPath]: createManualTranscriptionProgress(postAction),
@@ -355,7 +357,11 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
         );
       }
 
-      if (result.scanResult?.files) {
+      // In batch mode the caller does a single rescan after all files finish —
+      // skip the per-file refresh (avoids N scans + N re-renders mid-batch).
+      if (opts?.skipRescan) {
+        // no-op: leave scan state for the batch caller to refresh once
+      } else if (result.scanResult?.files) {
         setScanResult(result.scanResult.files);
         setScanResultMode(postAction === "transcribe_and_translate" ? "queued" : "preview");
         expandInterestingScanGroups(result.scanResult.files);
@@ -391,8 +397,22 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   // semaphore still bounds concurrency. Reuses handleTranscribe wholesale.
   const handleBatchTranscribe = async (videoPaths: string[], postAction: TranscribePostAction) => {
     setSelectedVideoPaths(new Set());
-    for (const videoPath of videoPaths) {
-      await handleTranscribe(videoPath, postAction);
+    // Skip files already transcribing so we don't clobber their live progress or
+    // double-issue requests. Each file is isolated (handleTranscribe catches its
+    // own errors), so one failure never aborts the rest.
+    const runnable = videoPaths.filter((p) => !isManualTranscriptionBusy(transcriptionProgressByPath[p]));
+    if (runnable.length === 0) return;
+    for (const videoPath of runnable) {
+      await handleTranscribe(videoPath, postAction, { skipRescan: true });
+    }
+    // One scan refresh after the whole batch (instead of one per file).
+    try {
+      const refreshed = await scanPreviewMutation.mutateAsync();
+      setScanResult(refreshed.files);
+      setScanResultMode(postAction === "transcribe_and_translate" ? "queued" : "preview");
+      expandInterestingScanGroups(refreshed.files);
+    } catch {
+      // Non-fatal: transcription already completed; the next manual scan will sync.
     }
   };
 
