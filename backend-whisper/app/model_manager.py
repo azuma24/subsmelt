@@ -7,7 +7,12 @@ import threading
 from pathlib import Path
 from typing import Iterator, Mapping
 
-from .model_cache import cache_root_from_env, describe_model_cache
+from .model_cache import (
+    cache_dir_name_for_model,
+    cache_root_from_env,
+    describe_model_cache,
+    repo_id_for_model,
+)
 from .preflight import (
     available_ram_mb,
     model_ram_requirements_mb,
@@ -76,8 +81,13 @@ def normalize_model(model: str) -> str:
 
 
 def repo_id_for(model: str) -> str:
-    """The Hugging Face repo id for a (validated) model id."""
-    return f"Systran/faster-whisper-{model}"
+    """The Hugging Face repo id for a (validated) model id.
+
+    Delegates to the single source of truth in model_cache so download, cache
+    detection, and delete all agree (notably large-v3-turbo lives under a
+    different org than the Systran default).
+    """
+    return repo_id_for_model(model)
 
 
 def _dir_size_mb(path: Path) -> int:
@@ -290,7 +300,7 @@ def delete_model(model: str, env: Mapping[str, str] | None = None) -> dict:
         raise ModelNotDownloadedError(normalized)
 
     cache_root = cache_root_from_env(env)
-    repo_dir_name = f"models--Systran--faster-whisper-{normalized}"
+    repo_dir_name = cache_dir_name_for_model(normalized)
     candidates = [
         cache_root / "hub" / repo_dir_name,
         cache_root / repo_dir_name,

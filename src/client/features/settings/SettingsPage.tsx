@@ -375,6 +375,26 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   );
 
   // ── Speech-to-Text ──
+  // Model options are driven by the backend's advertised capabilities.models so
+  // the dropdown always matches what the server (and the model manager) support.
+  // Falls back to the full known set before health loads, and always includes the
+  // currently-selected model so a saved value (e.g. large-v3) can't be dropped.
+  const STT_MODEL_FALLBACK = ["tiny", "base", "small", "medium", "large-v3", "large-v3-turbo"];
+  const STT_MODEL_LABEL_KEYS: Record<string, string> = {
+    tiny: "settings.transcription.modelTiny",
+    base: "settings.transcription.modelBase",
+    small: "settings.transcription.modelSmall",
+    medium: "settings.transcription.modelMedium",
+    "large-v3": "settings.transcription.modelLargeV3",
+    "large-v3-turbo": "settings.transcription.modelLargeV3Turbo",
+  };
+  const advertisedModels = transcriptionHealthQuery.data?.health?.capabilities?.models;
+  const selectedSttModel = str(settings.transcription_model, "small");
+  const sttModelOptions = (() => {
+    const base = advertisedModels && advertisedModels.length ? [...advertisedModels] : [...STT_MODEL_FALLBACK];
+    if (!base.includes(selectedSttModel)) base.unshift(selectedSttModel);
+    return base;
+  })();
   const sttContent = (
     <>
       <ToggleRow
@@ -411,10 +431,10 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
       <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
         <div>
           <label className={labelCls}>{t("settings.transcription.model")}</label>
-          <select aria-label={t("settings.transcription.model")} value={str(settings.transcription_model, "small")} onChange={(e) => update("transcription_model", e.target.value)} className={selectCls}>
-            <option value="base">{t("settings.transcription.modelBase")}</option>
-            <option value="small">{t("settings.transcription.modelSmall")}</option>
-            <option value="medium">{t("settings.transcription.modelMedium")}</option>
+          <select aria-label={t("settings.transcription.model")} value={selectedSttModel} onChange={(e) => update("transcription_model", e.target.value)} className={selectCls}>
+            {sttModelOptions.map((m) => (
+              <option key={m} value={m}>{STT_MODEL_LABEL_KEYS[m] ? t(STT_MODEL_LABEL_KEYS[m]) : m}</option>
+            ))}
           </select>
         </div>
         <div>

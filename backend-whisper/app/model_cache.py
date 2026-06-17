@@ -37,13 +37,32 @@ def _looks_like_local_path(model: str) -> bool:
     return model.startswith(("/", "./", "../", "~")) or "\\" in model
 
 
+# HF repo ids per managed model. Most are Systran's faster-whisper CTranslate2
+# conversions; large-v3-turbo is NOT published by Systran (that repo 404s), so it
+# uses the canonical community conversion faster-whisper itself maps to.
+_MODEL_REPO_OVERRIDES = {
+    "large-v3-turbo": "mobiuslabsgmbh/faster-whisper-large-v3-turbo",
+}
+
+
+def repo_id_for_model(model: str) -> str:
+    """Hugging Face repo id for a model id (single source of truth)."""
+    normalized = (model or "").strip().lower()
+    return _MODEL_REPO_OVERRIDES.get(normalized, f"Systran/faster-whisper-{normalized}")
+
+
+def cache_dir_name_for_model(model: str) -> str:
+    """HF cache directory name for a model, e.g. ``models--Systran--faster-whisper-small``."""
+    return "models--" + repo_id_for_model(model).replace("/", "--")
+
+
 def _candidate_cache_paths(model: str, cache_root: Path) -> list[Path]:
     normalized = (model or "").strip().lower()
-    repo_name = f"faster-whisper-{normalized}"
+    dir_name = cache_dir_name_for_model(normalized)
     return [
-        cache_root / "hub" / f"models--Systran--{repo_name}" / "snapshots",
-        cache_root / f"models--Systran--{repo_name}" / "snapshots",
-        cache_root / repo_name,
+        cache_root / "hub" / dir_name / "snapshots",
+        cache_root / dir_name / "snapshots",
+        cache_root / f"faster-whisper-{normalized}",
         cache_root / normalized,
     ]
 
