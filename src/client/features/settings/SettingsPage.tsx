@@ -221,6 +221,15 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
     }
   };
 
+  // NOTE: The five section trees below (llmContent/engineContent/sourcesContent/
+  // sttContent/ifaceContent) are intentionally NOT wrapped in useMemo. Each one
+  // closes over the inline update()/updateAndSave()/updateAndSaveDebounced()
+  // handlers, which are themselves recreated every render and depend on the
+  // debounced-save + save-chain refs and the latest `settings`/`dirty`/`saving`.
+  // Correctly memoizing the JSX would require either listing all of those
+  // (defeating the memo) or hoisting the handlers into useCallback — a larger
+  // refactor that risks breaking the carefully-ordered save closures. Per the
+  // perf task's guidance, correctness wins here, so these stay as plain values.
   // ── LLM Connections ──
   const llmContent = (
     <>

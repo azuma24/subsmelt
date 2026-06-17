@@ -18,12 +18,18 @@ export type SSEEventName =
 export type SSEEventHandler = (type: SSEEventName, data: Record<string, unknown>) => void;
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 767px)").matches);
+  // Guard for non-DOM environments (e.g. SSR/tests); the initializer already
+  // captures the current match, so the effect only needs the change listener.
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches
+  );
 
   useEffect(() => {
     const mql = window.matchMedia("(max-width: 767px)");
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    setIsMobile(mql.matches);
+    // No redundant setIsMobile(mql.matches) here — the useState initializer
+    // already captured the initial value, so re-setting it forced an extra
+    // render on every mount.
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);
   }, []);
@@ -43,7 +49,10 @@ export function useJobsQuery() {
   return useQuery({
     queryKey: ["jobs"],
     queryFn: ({ signal }) => api.getJobs({ signal }),
-    refetchInterval: 10_000,
+    // SSE invalidates ["jobs"] reactively (see getSSEInvalidationKeys), so this
+    // timer is just a heartbeat to recover from a dropped connection. Relaxed
+    // 10s → 30s.
+    refetchInterval: 30_000,
   });
 }
 
@@ -51,7 +60,9 @@ export function useLogsQuery(level?: string, category?: string, jobId?: number |
   return useQuery<LogEntry[]>({
     queryKey: ["logs", level, category, jobId ?? null],
     queryFn: ({ signal }) => api.getLogs({ level: level || undefined, category: category || undefined, jobId: typeof jobId === "number" ? jobId : undefined, limit: 300 }, { signal }),
-    refetchInterval: 3_000,
+    // SSE invalidates ["logs"] reactively on job lifecycle events, so this timer
+    // is just a heartbeat. Relaxed 3s → 30s.
+    refetchInterval: 30_000,
   });
 }
 
@@ -59,7 +70,9 @@ export function useQueueStatusQuery() {
   return useQuery<QueueStatus>({
     queryKey: ["queue-status"],
     queryFn: ({ signal }) => api.getQueueStatus({ signal }),
-    refetchInterval: 5_000,
+    // SSE invalidates ["queue-status"] reactively on job progress/lifecycle
+    // events, so this timer is just a heartbeat. Relaxed 5s → 30s.
+    refetchInterval: 30_000,
   });
 }
 

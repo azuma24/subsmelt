@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -27,7 +27,13 @@ export function LogsPage({ isMobile }: { isMobile: boolean }) {
   const [follow, setFollow] = useState(true);
   const logsQuery = useLogsQuery(level, category, jobIdFilter);
   const logs = logsQuery.data || [];
-  const chronologicalLogs = [...(search ? logs.filter((entry) => entry.message.toLowerCase().includes(search.toLowerCase()) || (entry.meta && entry.meta.toLowerCase().includes(search.toLowerCase()))) : logs)].reverse();
+  // Filter (by search) then reverse to chronological order. Memoized so typing
+  // in an unrelated field or an SSE-driven re-render doesn't re-filter/re-copy
+  // the (up to 300) log entries on every render — only `logs`/`search` matter.
+  const chronologicalLogs = useMemo(
+    () => [...(search ? logs.filter((entry) => entry.message.toLowerCase().includes(search.toLowerCase()) || (entry.meta && entry.meta.toLowerCase().includes(search.toLowerCase()))) : logs)].reverse(),
+    [logs, search]
+  );
 
   useEffect(() => {
     setParams((prev) => {
@@ -180,11 +186,46 @@ const VIRTUALIZE_THRESHOLD = 200;
 // `virtualizer.measureElement` remeasures each mounted row's true height.
 const ROW_ESTIMATE = 28;
 
-// Renders the chronological log list. Logs auto-scroll to the latest entry when
-// `follow` is on. Two code paths share the same `LogRow` markup so behavior and
-// styling stay identical whether or not the list is windowed.
+// Picks the plain or windowed renderer by entry count. Splitting into two
+// components (mirroring JobsTableDesktop's VirtualJobRows pattern) means the
+// non-virtual path never instantiates `useVirtualizer` and never runs the
+// virtualizer-driven scroll effect — those costs only exist above the
+// threshold. Both paths share the same `LogRow` markup so behavior/styling and
+// the follow-mode auto-scroll stay identical to the original single-component.
 function LogList({ logs, search, follow }: { logs: LogEntry[]; search: string; follow: boolean }) {
-  const shouldVirtualize = logs.length > VIRTUALIZE_THRESHOLD;
+  return logs.length > VIRTUALIZE_THRESHOLD ? (
+    <VirtualLogList logs={logs} search={search} follow={follow} />
+  ) : (
+    <PlainLogList logs={logs} search={search} follow={follow} />
+  );
+}
+
+// Non-windowed list: renders every row. Auto-scroll (follow mode) sets the
+// container's scrollTop to the bottom directly. No virtualizer is created here.
+function PlainLogList({ logs, search, follow }: { logs: LogEntry[]; search: string; follow: boolean }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Newest entries are at the end (chronological order). Re-run when new entries
+  // arrive (length changes) or follow toggles on, matching the original.
+  useEffect(() => {
+    if (!follow) return;
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [logs.length, follow]);
+
+  return (
+    <div ref={scrollRef} className="flex-1 overflow-y-auto px-3.5 py-2 md:px-[18px]">
+      <div>
+        {logs.map((entry) => (
+          <LogRow key={entry.id} entry={entry} search={search} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Windowed list: only rows near the viewport are mounted. Auto-scroll (follow
+// mode) drives the virtualizer to the last index.
+function VirtualLogList({ logs, search, follow }: { logs: LogEntry[]; search: string; follow: boolean }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
@@ -197,31 +238,13 @@ function LogList({ logs, search, follow }: { logs: LogEntry[]; search: string; f
     getItemKey: (index) => logs[index].id,
   });
 
-  // Auto-scroll-to-latest (follow mode). For the windowed path we drive the
-  // virtualizer to the last index; for the plain path we set scrollTop directly.
-  // Newest entries are at the end (chronological order), matching the original.
+  // Auto-scroll-to-latest (follow mode). Re-run when new entries arrive (length
+  // changes) or follow toggles on.
   useEffect(() => {
     if (!follow) return;
-    if (shouldVirtualize) {
-      if (logs.length > 0) virtualizer.scrollToIndex(logs.length - 1, { align: "end" });
-    } else if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-    // Re-run when new entries arrive (length changes) or follow toggles on.
+    if (logs.length > 0) virtualizer.scrollToIndex(logs.length - 1, { align: "end" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [logs.length, follow, shouldVirtualize]);
-
-  if (!shouldVirtualize) {
-    return (
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3.5 py-2 md:px-[18px]">
-        <div>
-          {logs.map((entry) => (
-            <LogRow key={entry.id} entry={entry} search={search} />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  }, [logs.length, follow]);
 
   return (
     <div
