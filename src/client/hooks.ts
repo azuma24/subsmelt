@@ -60,9 +60,10 @@ export function useLogsQuery(level?: string, category?: string, jobId?: number |
   return useQuery<LogEntry[]>({
     queryKey: ["logs", level, category, jobId ?? null],
     queryFn: ({ signal }) => api.getLogs({ level: level || undefined, category: category || undefined, jobId: typeof jobId === "number" ? jobId : undefined, limit: 300 }, { signal }),
-    // SSE invalidates ["logs"] reactively on job lifecycle events, so this timer
-    // is just a heartbeat. Relaxed 3s → 30s.
-    refetchInterval: 30_000,
+    // Logs are written (warn/error) WITHOUT a lifecycle SSE event during long
+    // jobs, so this timer is the only way fresh diagnostics appear while tailing.
+    // Keep it short (relaxed 3s → 8s, not 30s) so users don't miss warnings.
+    refetchInterval: 8_000,
   });
 }
 

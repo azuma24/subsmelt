@@ -386,8 +386,11 @@ const TOKEN_REJECTED_MESSAGE =
 // Throws the standard 401 message; otherwise returns the generic backend error.
 // Centralizes 401 handling so every backend call surfaces the same guidance.
 function throwBackendError(body: unknown, status: number): never {
-  if (status === 401) throw new Error(TOKEN_REJECTED_MESSAGE);
-  throw new Error(backendErrorMessage(body, status));
+  const err = status === 401 ? new Error(TOKEN_REJECTED_MESSAGE) : new Error(backendErrorMessage(body, status));
+  // Carry the backend HTTP status so callers can map a 5xx upstream failure to a
+  // 502 (instead of relying on message-text heuristics that drop the status).
+  (err as Error & { backendStatus?: number }).backendStatus = status;
+  throw err;
 }
 
 function backendErrorMessage(body: unknown, status: number): string {
