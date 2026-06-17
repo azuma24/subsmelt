@@ -87,7 +87,26 @@ The `vendor\` dir is gitignored — these binaries are never committed.
 
 ---
 
-## Build steps
+## Quickest path: one-click local build
+
+Copy the whole repo to a Windows machine and **double-click
+`packaging\windows\build-local.bat`**. It does everything below automatically:
+creates a build virtualenv, installs deps + cuDNN/cuBLAS + PyInstaller, runs
+`fetch-vendor.ps1`, builds the bundle, smoke-tests it, and (if Inno Setup is
+installed) compiles the installer. Prereq: Python 3.10–3.12 on PATH (Inno Setup
+optional — only needed for the `.exe` installer).
+
+- **Test the server without installing:** double-click `run-built-server.bat`
+  after the build, then open `http://127.0.0.1:8001/health` and `/version`.
+- **From a terminal** you can pass flags: `build-local.bat -Run`,
+  `build-local.bat -Version 0.5.0`, `build-local.bat -Clean`,
+  `build-local.bat -SkipInstaller`.
+
+The manual steps below are the same thing broken out, for when you want control.
+
+---
+
+## Build steps (manual)
 
 ```bat
 cd backend-whisper
