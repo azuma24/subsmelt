@@ -125,11 +125,11 @@ end;
 { ---- True if the bundled VC++ redist was dropped in at build time ---- }
 function VCRedistBundled: Boolean;
 begin
-  { ExpandConstant('{tmp}\vc_redist.x64.exe') only exists if the [Files] entry
-    copied it; the entry itself is gated on this same check, so we test the
-    source path the compiler embedded. We approximate by always returning True
-    and letting the [Files] 'Check' decide; if the source file is missing at
-    COMPILE time, ISCC errors — which is the desired "drop it in" enforcement. }
+  // The bundled vc_redist exists only if the [Files] entry copied it; that entry
+  // is gated on this same check. We return True and let the [Files] 'Check'
+  // decide; a missing source file at COMPILE time makes ISCC error, which is the
+  // desired "drop it in" enforcement. (Note: avoid Inno {-constants in { } block
+  // comments — the first } closes the comment early and breaks compilation.)
   Result := True;
 end;
 
