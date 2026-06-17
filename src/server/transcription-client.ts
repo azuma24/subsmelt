@@ -397,8 +397,16 @@ function backendErrorMessage(body: unknown, status: number): string {
     if (typeof record.error === "string") return record.error;
     if (typeof record.message === "string") return record.message;
     if (typeof detail === "string") return detail;
-    if (detail && typeof detail === "object" && typeof (detail as Record<string, unknown>).message === "string") {
-      return String((detail as Record<string, unknown>).message);
+    if (detail && typeof detail === "object") {
+      const d = detail as Record<string, unknown>;
+      if (typeof d.message === "string") return d.message;
+      // Some backend errors carry a structured code but no message (e.g. the
+      // 409 model_not_downloaded shape {code, model}). Render an actionable line
+      // instead of falling through to the useless "HTTP <status>" generic.
+      if (d.code === "model_not_downloaded" && typeof d.model === "string") {
+        return `Model "${d.model}" is not downloaded — download it in Settings → Speech to Text → Whisper Models first`;
+      }
+      if (typeof d.code === "string") return `Transcription failed (${d.code})`;
     }
   }
   return `Transcription backend returned HTTP ${status}`;

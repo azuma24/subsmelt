@@ -13,8 +13,6 @@ import {
   useTranscriptionHistoryQuery,
 } from "../../hooks";
 import type { ScannedFile, TranscriptionHistoryEntry } from "../../types";
-import { TranscriptionReadinessPanel } from "../settings/TranscriptionReadinessPanel";
-import { ModelManagerPanel } from "../settings/ModelManagerPanel";
 import { TranscriptionHistoryPanel } from "../dashboard/TranscriptionHistoryPanel";
 
 const str = (v: unknown, fallback = ""): string => (typeof v === "string" ? v : fallback);
@@ -378,8 +376,8 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
         </section>
       )}
 
-      <TranscriptionReadinessPanel settings={settings} healthQuery={healthQuery} dirty={false} />
-      <ModelManagerPanel enabled={backendConfigured} />
+      {/* Readiness + Model Manager live in Settings → Speech to Text; the Whisper
+          page focuses on picking files and transcribing. */}
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]">
         <TranscriptionHistoryPanel attempts={attempts} transcribingPath={activePath} isRetryPending={retryMutation.isPending} isTranscribePending={running} onRetry={onRetry} />
       </section>

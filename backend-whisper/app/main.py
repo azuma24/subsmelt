@@ -377,7 +377,10 @@ def validate_transcribe_request(request: TranscribeRequest) -> Path:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail={"code": "path_not_allowed", "message": str(exc)}) from exc
 
-    result = preflight_result(request)
+    try:
+        result = preflight_result(request)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail={"code": "path_not_allowed", "message": str(exc)}) from exc
     if not result.safe and not (ALLOW_UNSAFE or request.allow_unsafe):
         raise HTTPException(status_code=422, detail={
             "code": result.code,

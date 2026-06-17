@@ -735,6 +735,7 @@ async function transcribeRelayingProgress(
       token,
       signal: controller.signal,
       onProgress,
+      onPhase,
     });
   } catch (error: unknown) {
     if (error instanceof StreamingUnsupportedError) {

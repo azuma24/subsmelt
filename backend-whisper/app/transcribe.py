@@ -136,7 +136,9 @@ def _finalize_transcript(
     max_line_length = request.subtitle_quality.max_line_length if request.subtitle_quality else None
     count = write_transcript(processed, output_path, request.output_format, max_line_length=max_line_length)
     language = None if request.language == "auto" else request.language
-    detected_language = getattr(info, "language", None) or language or request.language
+    # Never report the literal "auto" — if detection produced nothing, return the
+    # explicit language (when given) or None, not the sentinel.
+    detected_language = getattr(info, "language", None) or language
     duration = getattr(info, "duration", None)
     return TranscribeResponse(
         ok=True,
@@ -161,7 +163,9 @@ def _finalize_content(collected: list, info: object, request: TranscribeRequest)
         count = write_transcript(processed, out_path, request.output_format, max_line_length=max_line_length)
         content = out_path.read_text(encoding="utf-8")
     language = None if request.language == "auto" else request.language
-    detected_language = getattr(info, "language", None) or language or request.language
+    # Never report the literal "auto" — if detection produced nothing, return the
+    # explicit language (when given) or None, not the sentinel.
+    detected_language = getattr(info, "language", None) or language
     duration = getattr(info, "duration", None)
     return {
         "ok": True,
