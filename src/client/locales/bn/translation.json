@@ -629,7 +629,14 @@
         "cachePending": "নির্বাচিত মডেলের জন্য ব্যাকএন্ড স্বাস্থ্য রিপোর্ট করলে ক্যাশ বিবরণ দেখা যাবে।",
         "currentDefaults": "বর্তমান অনুরোধ ডিফল্ট: {{device}} / {{computeType}}-এ {{model}}, আউটপুট {{output}}।",
         "backendMessage": "ব্যাকএন্ড বার্তা: {{message}}",
-        "firstRunQuiet": "মডেল ডাউনলোড বা ওয়ার্ম-আপ চলাকালীন প্রথম ট্রান্সক্রিপশন রান কিছুক্ষণ নীরব থাকতে পারে।"
+        "firstRunQuiet": "মডেল ডাউনলোড বা ওয়ার্ম-আপ চলাকালীন প্রথম ট্রান্সক্রিপশন রান কিছুক্ষণ নীরব থাকতে পারে।",
+        "serverVersion": "Server version",
+        "transportMode": "Transport mode",
+        "transport_auto": "Auto",
+        "transport_shared": "Shared filesystem",
+        "transport_upload": "Upload",
+        "gpus": "GPUs",
+        "noGpu": "none detected (CPU)"
       },
       "transport": "File transport",
       "transportAuto": "Auto (recommended)",

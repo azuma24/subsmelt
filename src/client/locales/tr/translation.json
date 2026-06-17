@@ -629,7 +629,14 @@
         "cachePending": "Önbellek ayrıntıları, arka uç seçilen model için sağlık bildirdiğinde görünür.",
         "currentDefaults": "Geçerli istek varsayılanları: {{device}} üzerinde {{model}} / {{computeType}}, çıktı {{output}}.",
         "backendMessage": "Arka uç mesajı: {{message}}",
-        "firstRunQuiet": "İlk transkripsiyon çalıştırmaları, model indirilirken veya ısınırken bir süre sessiz kalabilir."
+        "firstRunQuiet": "İlk transkripsiyon çalıştırmaları, model indirilirken veya ısınırken bir süre sessiz kalabilir.",
+        "serverVersion": "Server version",
+        "transportMode": "Transport mode",
+        "transport_auto": "Auto",
+        "transport_shared": "Shared filesystem",
+        "transport_upload": "Upload",
+        "gpus": "GPUs",
+        "noGpu": "none detected (CPU)"
       },
       "transport": "File transport",
       "transportAuto": "Auto (recommended)",

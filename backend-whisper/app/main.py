@@ -42,6 +42,7 @@ from .schemas import (
     TranscribeResponse,
     UploadTranscribeResponse,
 )
+from .version import TRANSPORT_MODES, backend_version
 from .model_loader import (
     CudaOutOfMemoryError,
     CudaUnavailableError,
@@ -64,7 +65,7 @@ MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/media")
 ALLOW_UNSAFE = os.environ.get("SUBSMELT_WHISPER_ALLOW_UNSAFE", "0") == "1"
 USE_FAKE_TRANSCRIBE = os.environ.get("SUBSMELT_WHISPER_FAKE", "0") == "1"
 
-app = FastAPI(title="Subsmelt Whisper Backend", version="0.1.0")
+app = FastAPI(title="Subsmelt Whisper Backend", version=backend_version())
 
 
 def _configured_token() -> str:
@@ -129,6 +130,11 @@ def capabilities() -> dict:
         devices.append("cuda")
         compute_types = ["int8", "float32", "float16", "int8_float16"]
     return {
+        # version + transportModes (plan Phase 4/5): surfaced via /health and
+        # /version so the SubSmelt readiness panel can show the server version and
+        # which file transports (shared/upload) the backend supports.
+        "version": backend_version(),
+        "transportModes": TRANSPORT_MODES,
         # authRequired tells the client a shared-secret token must be sent on
         # the gated routes (/preflight, /transcribe, /transcribe/stream). It is
         # surfaced via /health (which stays open) so an unauthenticated
@@ -162,6 +168,23 @@ def health(model: str = Query(default="small")) -> HealthResponse:
         capabilities=capabilities(),
         model_cache=describe_model_cache(model, free_ram),
     )
+
+
+@app.get("/version")
+def version() -> dict:
+    """Backend version + capabilities + supported transports (plan Phase 5).
+
+    Open (no auth) like ``/health`` so a client can learn the server version and
+    transport modes before presenting a token. ``capabilities`` already embeds
+    ``version``/``transportModes``; they are also hoisted to the top level here
+    for a stable, minimal contract.
+    """
+    caps = capabilities()
+    return {
+        "version": backend_version(),
+        "transportModes": TRANSPORT_MODES,
+        "capabilities": caps,
+    }
 
 
 @app.get("/models")

@@ -629,7 +629,14 @@
         "cachePending": "Podrobnosti o mezipaměti se zobrazí, jakmile backend nahlásí stav pro vybraný model.",
         "currentDefaults": "Aktuální výchozí nastavení požadavku: {{model}} na {{device}} / {{computeType}}, výstup {{output}}.",
         "backendMessage": "Zpráva backendu: {{message}}",
-        "firstRunQuiet": "První běhy přepisu mohou chvíli zůstat tiché, zatímco se model stahuje nebo zahřívá."
+        "firstRunQuiet": "První běhy přepisu mohou chvíli zůstat tiché, zatímco se model stahuje nebo zahřívá.",
+        "serverVersion": "Server version",
+        "transportMode": "Transport mode",
+        "transport_auto": "Auto",
+        "transport_shared": "Shared filesystem",
+        "transport_upload": "Upload",
+        "gpus": "GPUs",
+        "noGpu": "none detected (CPU)"
       },
       "transport": "File transport",
       "transportAuto": "Auto (recommended)",

@@ -217,6 +217,9 @@ export interface TranscriptionHealth {
       warning?: string;
     };
     capabilities?: {
+      version?: string;
+      transportModes?: string[];
+      gpus?: { name?: string; total_vram_mb?: number; free_vram_mb?: number }[];
       models?: string[];
       devices?: string[];
       computeTypes?: string[];

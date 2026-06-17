@@ -629,7 +629,14 @@
         "cachePending": "Szczegóły pamięci podręcznej pojawią się, gdy backend zgłosi stan dla wybranego modelu.",
         "currentDefaults": "Bieżące domyślne ustawienia żądania: {{model}} na {{device}} / {{computeType}}, wyjście {{output}}.",
         "backendMessage": "Komunikat backendu: {{message}}",
-        "firstRunQuiet": "Pierwsze przebiegi transkrypcji mogą przez chwilę pozostać ciche, gdy model się pobiera lub rozgrzewa."
+        "firstRunQuiet": "Pierwsze przebiegi transkrypcji mogą przez chwilę pozostać ciche, gdy model się pobiera lub rozgrzewa.",
+        "serverVersion": "Server version",
+        "transportMode": "Transport mode",
+        "transport_auto": "Auto",
+        "transport_shared": "Shared filesystem",
+        "transport_upload": "Upload",
+        "gpus": "GPUs",
+        "noGpu": "none detected (CPU)"
       },
       "transport": "File transport",
       "transportAuto": "Auto (recommended)",

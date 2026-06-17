@@ -629,7 +629,14 @@
         "cachePending": "Деталі кешу з'являться, коли бекенд повідомить про стан для вибраної моделі.",
         "currentDefaults": "Поточні типові значення запиту: {{model}} на {{device}} / {{computeType}}, результат {{output}}.",
         "backendMessage": "Повідомлення бекенду: {{message}}",
-        "firstRunQuiet": "Перші запуски транскрипції можуть деякий час бути без ознак активності, доки модель завантажується чи прогрівається."
+        "firstRunQuiet": "Перші запуски транскрипції можуть деякий час бути без ознак активності, доки модель завантажується чи прогрівається.",
+        "serverVersion": "Server version",
+        "transportMode": "Transport mode",
+        "transport_auto": "Auto",
+        "transport_shared": "Shared filesystem",
+        "transport_upload": "Upload",
+        "gpus": "GPUs",
+        "noGpu": "none detected (CPU)"
       },
       "transport": "File transport",
       "transportAuto": "Auto (recommended)",

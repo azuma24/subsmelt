@@ -629,7 +629,14 @@
         "cachePending": "Cache details will appear when the backend reports health for the selected model.",
         "currentDefaults": "Current request defaults: {{model}} on {{device}} / {{computeType}}, output {{output}}.",
         "backendMessage": "Backend message: {{message}}",
-        "firstRunQuiet": "First transcription runs can stay quiet for a while while the model downloads or warms up."
+        "firstRunQuiet": "First transcription runs can stay quiet for a while while the model downloads or warms up.",
+        "serverVersion": "Server version",
+        "transportMode": "Transport mode",
+        "transport_auto": "Auto",
+        "transport_shared": "Shared filesystem",
+        "transport_upload": "Upload",
+        "gpus": "GPUs",
+        "noGpu": "none detected (CPU)"
       },
       "transport": "File transport",
       "transportAuto": "Auto (recommended)",

@@ -629,7 +629,14 @@
         "cachePending": "جزئیات کش وقتی بک‌اند سلامت مدل انتخاب‌شده را گزارش دهد ظاهر خواهد شد.",
         "currentDefaults": "پیش‌فرض‌های درخواست فعلی: {{model}} روی {{device}} / {{computeType}}، خروجی {{output}}.",
         "backendMessage": "پیام بک‌اند: {{message}}",
-        "firstRunQuiet": "اولین اجراهای رونویسی می‌توانند مدتی ساکت بمانند در حالی که مدل دانلود می‌شود یا گرم می‌شود."
+        "firstRunQuiet": "اولین اجراهای رونویسی می‌توانند مدتی ساکت بمانند در حالی که مدل دانلود می‌شود یا گرم می‌شود.",
+        "serverVersion": "Server version",
+        "transportMode": "Transport mode",
+        "transport_auto": "Auto",
+        "transport_shared": "Shared filesystem",
+        "transport_upload": "Upload",
+        "gpus": "GPUs",
+        "noGpu": "none detected (CPU)"
       },
       "transport": "File transport",
       "transportAuto": "Auto (recommended)",
