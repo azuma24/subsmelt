@@ -126,6 +126,18 @@ try {
             } else {
                 Warn "tray build did not produce dist\whisper-tray.exe"
             }
+
+            # Native GUI app (Tkinter window + tray). Same small-deps build.
+            Info "building native GUI exe (whisper-gui.exe)"
+            & $VenvPy -m PyInstaller (Join-Path $WinDir "whisper-gui.spec") --clean --noconfirm
+            $guiBuilt = Join-Path $BackendRoot "dist\whisper-gui.exe"
+            $guiDest  = Join-Path $BackendRoot "dist\whisper-server\whisper-gui.exe"
+            if (Test-Path $guiBuilt) {
+                Copy-Item -Force $guiBuilt $guiDest
+                Ok "GUI exe built and placed next to run_server.exe: $guiDest"
+            } else {
+                Warn "GUI build did not produce dist\whisper-gui.exe"
+            }
         }
     }
 
