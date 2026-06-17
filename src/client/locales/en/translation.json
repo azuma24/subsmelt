@@ -3,9 +3,17 @@
     "dashboard": "Dashboard",
     "languages": "Translations",
     "translations": "Translations",
+    "whisper": "Whisper",
     "convert": "Convert",
     "logs": "Logs",
     "settings": "Settings"
+  },
+  "whisper": {
+    "title": "Whisper — Speech to Text",
+    "subtitle": "Backend readiness, model downloads, and recent transcriptions. Select videos to transcribe on the Dashboard.",
+    "disabledNotice": "Speech-to-text is disabled.",
+    "openSettings": "Open Settings",
+    "transcribeHint": "To transcribe, open the Dashboard, scan your library, and use the per-file or batch Transcribe actions."
   },
   "convert": {
     "title": "Subtitle Converter",
