@@ -6,7 +6,7 @@ import os
 # installer / run_server launcher can stamp the shipped version without a code
 # change; falls back to this default for source/dev runs. Keep this default in
 # step with the SubSmelt app version when cutting a coordinated release.
-_DEFAULT_VERSION = "0.4.5"
+_DEFAULT_VERSION = "0.4.6"
 
 # The two file-transport modes the backend supports (plan Phase 1/2):
 #   shared — Model A: backend reads/writes a shared filesystem path.
