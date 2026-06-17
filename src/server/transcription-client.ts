@@ -669,6 +669,9 @@ async function consumeTranscriptionNdjson(
   body: ReadableStream<Uint8Array>,
   onProgress?: (update: TranscriptionProgressUpdate) => void,
   onPhase?: (phase: string) => void,
+  // Optional abort signal so a cancelled run surfaces "Transcription cancelled"
+  // rather than the generic "ended without result" when the stream is torn down.
+  signal?: AbortSignal,
 ): Promise<BackendTranscriptionResponse> {
   const decoder = new TextDecoder();
   let buffer = "";
@@ -692,20 +695,35 @@ async function consumeTranscriptionNdjson(
     }
   };
 
-  for await (const chunk of body as unknown as AsyncIterable<Uint8Array>) {
-    buffer += decoder.decode(chunk, { stream: true });
-    let newlineIndex = buffer.indexOf("\n");
-    while (newlineIndex !== -1) {
-      handleLine(buffer.slice(0, newlineIndex));
-      buffer = buffer.slice(newlineIndex + 1);
-      newlineIndex = buffer.indexOf("\n");
+  try {
+    for await (const chunk of body as unknown as AsyncIterable<Uint8Array>) {
+      buffer += decoder.decode(chunk, { stream: true });
+      let newlineIndex = buffer.indexOf("\n");
+      while (newlineIndex !== -1) {
+        handleLine(buffer.slice(0, newlineIndex));
+        buffer = buffer.slice(newlineIndex + 1);
+        newlineIndex = buffer.indexOf("\n");
+      }
     }
+    buffer += decoder.decode();
+    if (buffer.trim()) handleLine(buffer);
+  } catch (error: unknown) {
+    // Aborting the request rejects the stream iterator with AbortError; surface
+    // it as the standard cancellation message instead of leaking a raw error.
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Transcription cancelled");
+    }
+    throw error;
   }
-  buffer += decoder.decode();
-  if (buffer.trim()) handleLine(buffer);
 
   if (streamError) throw new Error(streamError);
-  if (!result) throw new Error("Transcription stream ended without a result");
+  if (!result) {
+    // The stream ended cleanly without a result line. If an abort was involved
+    // (race where iteration finished as the signal fired), report cancellation
+    // rather than a confusing "ended without result".
+    if (signal?.aborted) throw new Error("Transcription cancelled");
+    throw new Error("Transcription stream ended without a result");
+  }
   return result;
 }
 
@@ -789,7 +807,7 @@ export async function transcribeWithBackendUploadStreaming(
   }
 
   try {
-    return await consumeTranscriptionNdjson(response.body as ReadableStream<Uint8Array>, options?.onProgress, options?.onPhase);
+    return await consumeTranscriptionNdjson(response.body as ReadableStream<Uint8Array>, options?.onProgress, options?.onPhase, controller.signal);
   } catch (error: unknown) {
     if (error instanceof Error && error.name === "AbortError") {
       throw new Error("Transcription cancelled");
@@ -852,7 +870,7 @@ export async function transcribeUrlWithBackendStreaming(
   }
 
   try {
-    return await consumeTranscriptionNdjson(response.body as ReadableStream<Uint8Array>, options?.onProgress, options?.onPhase);
+    return await consumeTranscriptionNdjson(response.body as ReadableStream<Uint8Array>, options?.onProgress, options?.onPhase, controller.signal);
   } catch (error: unknown) {
     if (error instanceof Error && error.name === "AbortError") throw new Error("Transcription cancelled");
     throw error;

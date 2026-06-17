@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import type { TranscribePostAction, TranscriptionAdvancedOptions, TranscriptionOutputFormat, TranscriptionSubtitleQualityOptions } from "./transcription-client.js";
@@ -73,9 +74,25 @@ export class TranscriptionHistoryStore {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
   }
 
+  // In-memory cache is the source of truth once loaded. Serializing disk writes
+  // through the chained promise below (instead of reading back from disk on each
+  // op) avoids a read-after-write hazard where a deferred flush hasn't landed yet.
+  private cache: TranscriptionHistoryEntry[] | null = null;
+
+  // Serializes persistence through a single chained promise so concurrent
+  // startAttempt/finishAttempt read-modify-write ops cannot interleave their disk
+  // writes and lose updates. Each call's read+mutate runs synchronously in one
+  // tick against the in-memory cache (atomic on the event loop), and the
+  // resulting JSON snapshot is appended to this chain to flush in FIFO order.
+  private writeChain: Promise<void> = Promise.resolve();
+
   private read(): TranscriptionHistoryEntry[] {
-    if (!fs.existsSync(this.filePath)) return [];
-    return safeJsonParse(fs.readFileSync(this.filePath, "utf8"));
+    if (this.cache === null) {
+      this.cache = fs.existsSync(this.filePath)
+        ? safeJsonParse(fs.readFileSync(this.filePath, "utf8"))
+        : [];
+    }
+    return this.cache;
   }
 
   private write(entries: TranscriptionHistoryEntry[]): void {
@@ -83,7 +100,17 @@ export class TranscriptionHistoryStore {
       .slice()
       .sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt))
       .slice(0, HISTORY_LIMIT);
+    // Update the cache synchronously so the next read sees this write, then
+    // enqueue the disk flush onto the serialized chain.
+    this.cache = trimmed;
     const json = JSON.stringify(trimmed, null, 2);
+    this.writeChain = this.writeChain.then(() => this.flush(json));
+    // Swallow rejection on the retained chain so one failed flush can't reject
+    // every subsequent enqueued write; flush() already falls back internally.
+    this.writeChain.catch(() => {});
+  }
+
+  private flush(json: string): void {
     const tmpPath = `${this.filePath}.tmp`;
     fs.writeFileSync(tmpPath, json, "utf8");
     try {
@@ -96,7 +123,9 @@ export class TranscriptionHistoryStore {
 
   startAttempt(input: StartAttemptInput): TranscriptionHistoryEntry {
     const entry: TranscriptionHistoryEntry = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      // crypto.randomUUID() avoids the collision risk of Date.now()+Math.random()
+      // when multiple attempts start within the same millisecond under concurrency.
+      id: crypto.randomUUID(),
       inputPath: input.inputPath,
       outputPath: input.outputPath,
       model: input.model,

@@ -703,6 +703,13 @@ async function withTranscriptionSlot<T>(fn: () => Promise<T>): Promise<T> {
 // AbortController. POST /api/transcribe/cancel aborts the matching controller,
 // which closes the streaming HTTP request → the backend detects the disconnect
 // → stops segment iteration. Entries are removed when the attempt settles.
+//
+// ASSUMPTION: at most one in-flight run per media path. Keying by path means a
+// second concurrent run of the SAME path would overwrite this entry and the
+// first run would become uncancellable (cancel only reaches the active/latest
+// registered run). The UI/queue gate one run per file so this is acceptable;
+// the finally-block below only deletes the entry when attemptId still matches,
+// so a settling run never clobbers a newer run's registration.
 const inFlightTranscriptions = new Map<string, { controller: AbortController; attemptId: string }>();
 
 // Resolves to true when a streaming run succeeded, so we know whether to skip
@@ -769,6 +776,15 @@ async function transcribeRelayingProgress(
 function isCancellationError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error ?? "");
   return /Transcription cancelled/i.test(message);
+}
+
+// Picks the HTTP status for a failed transcription. A backend 5xx/507 (e.g. CUDA
+// OOM), an unreachable/timed-out backend, or a refused connection is an upstream
+// failure → 502 Bad Gateway. Everything else is treated as a client/config error
+// → 400. Heuristic on the error message since errors bubble up as plain Error.
+function transcriptionErrorStatus(error: unknown): number {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /backend|HTTP 5\d\d|unavailable|ECONNREFUSED|timed out/i.test(message) ? 502 : 400;
 }
 
 // Extract per-run transcription overrides from a request body. Only string
@@ -873,7 +889,12 @@ async function runTranscriptionAttempt(opts: {
       finishedAt: new Date().toISOString(),
       errorSummary: cancelled ? "Transcription cancelled" : summary,
     });
-    broadcast("transcription:progress", { path: opts.videoPath, cancelled, error: true });
+    // A cancel is not a failure: broadcast {cancelled:true} WITHOUT error so the
+    // client renders "cancelled" rather than an error state. Real failures still
+    // carry error:true.
+    broadcast("transcription:progress", cancelled
+      ? { path: opts.videoPath, cancelled: true }
+      : { path: opts.videoPath, error: true });
     throw new Error(cancelled ? "Transcription cancelled" : summary);
   } finally {
     const current = inFlightTranscriptions.get(opts.videoPath);
@@ -977,7 +998,8 @@ app.post("/api/transcribe", async (req, res) => {
     return res.json({ ok: true, attemptId, stage: "complete", ...transcriptionResult, postAction, scanResult });
   } catch (error: any) {
     logger.error("system", `Transcription failed: ${error?.message || error}`);
-    return res.status(400).json({ error: error?.message || "Transcription failed" });
+    // 502 when the backend itself failed/was unreachable; 400 for client errors.
+    return res.status(transcriptionErrorStatus(error)).json({ error: error?.message || "Transcription failed" });
   }
 });
 
@@ -1030,7 +1052,8 @@ app.post("/api/transcribe/url", async (req, res) => {
   } catch (error: any) {
     broadcast("transcription:progress", { path: url, error: true });
     logger.error("system", `URL transcription failed: ${error?.message || error}`);
-    return res.status(400).json({ error: error?.message || "URL transcription failed" });
+    // 502 when the backend itself failed/was unreachable; 400 for client errors.
+    return res.status(transcriptionErrorStatus(error)).json({ error: error?.message || "URL transcription failed" });
   }
 });
 
@@ -1123,6 +1146,34 @@ function sanitizeLlmEndpoint(raw: string): string | null {
   return trimmed.replace(/\/+$/, "");
 }
 
+// Default timeout (ms) for the model-listing external fetches. Mirrors the
+// SHORT_REQUEST_TIMEOUT_MS used by the transcription client so a stalled provider
+// endpoint can't pin a worker indefinitely.
+const MODELS_FETCH_TIMEOUT_MS = 10_000;
+
+// fetch() with an AbortController timeout. On timeout, surfaces a clear
+// "<label> timed out after Ns" error (mirrors fetchWithTimeout in
+// transcription-client.ts / the /api/llm-health AbortController pattern).
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  label: string,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error: any) {
+    if (error?.name === "AbortError") {
+      throw new Error(`${label} timed out after ${Math.round(timeoutMs / 1000)}s`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 type ModelsResult =
   | { status: number; body: { error: string } }
   | { status: 200; body: { models: string[]; provider: string } };
@@ -1141,9 +1192,9 @@ async function listModels(
     if (provider === "openai") {
       const apiKey = keyOverride || settings.cloud_api_key_openai || "";
       if (!apiKey) return { status: 400, body: { error: "No OpenAI API key configured" } };
-      const resp = await fetch("https://api.openai.com/v1/models", {
+      const resp = await fetchWithTimeout("https://api.openai.com/v1/models", {
         headers: { Authorization: `Bearer ${apiKey}` },
-      });
+      }, MODELS_FETCH_TIMEOUT_MS, "OpenAI model list");
       if (!resp.ok) return { status: resp.status, body: { error: `OpenAI returned ${resp.status}` } };
       const data = await resp.json() as any;
       const models: string[] = (data?.data || [])
@@ -1158,12 +1209,12 @@ async function listModels(
     if (provider === "anthropic") {
       const apiKey = keyOverride || settings.cloud_api_key_anthropic || "";
       if (!apiKey) return { status: 400, body: { error: "No Anthropic API key configured" } };
-      const resp = await fetch("https://api.anthropic.com/v1/models", {
+      const resp = await fetchWithTimeout("https://api.anthropic.com/v1/models", {
         headers: {
           "x-api-key": apiKey,
           "anthropic-version": "2023-06-01",
         },
-      });
+      }, MODELS_FETCH_TIMEOUT_MS, "Anthropic model list");
       if (!resp.ok) return { status: resp.status, body: { error: `Anthropic returned ${resp.status}` } };
       const data = await resp.json() as any;
       const models: string[] = (data?.data || [])
@@ -1176,8 +1227,9 @@ async function listModels(
     if (provider === "gemini") {
       const apiKey = keyOverride || settings.cloud_api_key_gemini || "";
       if (!apiKey) return { status: 400, body: { error: "No Gemini API key configured" } };
-      const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}&pageSize=100`
+      const resp = await fetchWithTimeout(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}&pageSize=100`,
+        {}, MODELS_FETCH_TIMEOUT_MS, "Gemini model list",
       );
       if (!resp.ok) return { status: resp.status, body: { error: `Gemini returned ${resp.status}` } };
       const data = await resp.json() as any;
@@ -1199,9 +1251,9 @@ async function listModels(
     }
     const apiKey = keyOverride || settings.api_key || "";
     const url = endpoint + "/models";
-    const resp = await fetch(url, {
+    const resp = await fetchWithTimeout(url, {
       headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
-    });
+    }, MODELS_FETCH_TIMEOUT_MS, "LLM model list");
     if (!resp.ok) return { status: resp.status, body: { error: `LLM returned ${resp.status}` } };
     const data = await resp.json() as any;
     const models: string[] = (data?.data || data?.models || [])
