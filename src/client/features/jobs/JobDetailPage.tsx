@@ -45,7 +45,7 @@ export function JobDetailPage() {
       </section>
 
       <section className="rounded-3xl border border-gray-800 bg-gray-900/80 p-5 md:p-6">
-        <h2 className="text-lg font-semibold">Context</h2>
+        <h2 className="text-lg font-semibold">{t("jobDetail.context")}</h2>
         {previewQuery.isLoading && <div className="mt-4 text-sm text-gray-500">{t("app.loadingPreview")}</div>}
         {previewQuery.data?.analysis && (
           <div className="mt-4 rounded-2xl border border-gray-800 bg-gray-950/40 p-4">
@@ -53,7 +53,7 @@ export function JobDetailPage() {
           </div>
         )}
         {!previewQuery.isLoading && !previewQuery.data?.analysis && (
-          <div className="mt-4 text-sm text-gray-500">No context analysis available yet.</div>
+          <div className="mt-4 text-sm text-gray-500">{t("jobDetail.noContext")}</div>
         )}
       </section>
 

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { TranscriptionHistoryEntry } from "../../types";
 
 interface TranscriptionHistoryPanelProps {
@@ -15,17 +16,18 @@ export function TranscriptionHistoryPanel({
   isTranscribePending,
   onRetry,
 }: TranscriptionHistoryPanelProps) {
+  const { t } = useTranslation();
   return (
     <div className="p-3.5">
       <div className="flex items-center justify-between gap-3 mb-3">
         <div>
-          <h2 className="text-[13.5px] font-semibold text-[var(--text)]">Recent transcriptions</h2>
-          <p className="text-[11px] text-[var(--text-3)]">History is JSON-backed and safe to keep outside the jobs queue.</p>
+          <h2 className="text-[13.5px] font-semibold text-[var(--text)]">{t("transcriptionHistory.title")}</h2>
+          <p className="text-[11px] text-[var(--text-3)]">{t("transcriptionHistory.description")}</p>
         </div>
-        <span className="text-[11px] text-[var(--text-3)]">{attempts.length} shown</span>
+        <span className="text-[11px] text-[var(--text-3)]">{t("transcriptionHistory.shown", { count: attempts.length })}</span>
       </div>
       {attempts.length === 0 ? (
-        <div className="text-[13px] text-[var(--text-3)]">No transcription attempts yet.</div>
+        <div className="text-[13px] text-[var(--text-3)]">{t("transcriptionHistory.empty")}</div>
       ) : (
         <div className="space-y-2">
           {attempts.map((attempt) => {
@@ -36,7 +38,7 @@ export function TranscriptionHistoryPanel({
                 <div className="min-w-0">
                   <div className="truncate text-[13px] font-medium text-[var(--text)]">{title}</div>
                   <div className="mt-1 text-[11px] text-[var(--text-3)]">
-                    {attempt.model} • {attempt.language} • {attempt.outputFormat.toUpperCase()} • {attempt.postAction === "transcribe_and_translate" ? "queue translate" : "transcribe only"}
+                    {attempt.model} • {attempt.language} • {attempt.outputFormat.toUpperCase()} • {attempt.postAction === "transcribe_and_translate" ? t("transcriptionHistory.postQueueTranslate") : t("transcriptionHistory.postTranscribeOnly")}
                   </div>
                   <div className="mt-1 text-[11px] text-[var(--text-3)]">
                     {attempt.status === "failed" ? (attempt.errorSummary || "Transcription failed") : attempt.finishedAt || attempt.startedAt}
@@ -52,7 +54,7 @@ export function TranscriptionHistoryPanel({
                     disabled={activeRetry || isTranscribePending}
                     className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs font-medium text-[var(--text)] disabled:opacity-40"
                   >
-                    {activeRetry ? "Retrying…" : "Retry"}
+                    {activeRetry ? t("transcriptionHistory.retrying") : t("transcriptionHistory.retry")}
                   </button>
                 </div>
               </div>

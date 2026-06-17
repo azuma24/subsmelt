@@ -715,7 +715,9 @@
   },
   "jobDetail": {
     "title": "任務 #{{id}}",
-    "notFound": "找不到此任務"
+    "notFound": "找不到此任務",
+    "context": "Context",
+    "noContext": "No context analysis available yet."
   },
   "logs": {
     "title": "日誌",
@@ -894,5 +896,15 @@
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
     "urlFailed": "URL transcription failed"
+  },
+  "transcriptionHistory": {
+    "title": "Recent transcriptions",
+    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "empty": "No transcription attempts yet.",
+    "shown": "{{count}} shown",
+    "retry": "Retry",
+    "retrying": "Retrying…",
+    "postQueueTranslate": "queue translate",
+    "postTranscribeOnly": "transcribe only"
   }
 }

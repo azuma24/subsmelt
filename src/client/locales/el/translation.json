@@ -715,7 +715,9 @@
   },
   "jobDetail": {
     "title": "Εργασία #{{id}}",
-    "notFound": "Η εργασία δεν βρέθηκε"
+    "notFound": "Η εργασία δεν βρέθηκε",
+    "context": "Context",
+    "noContext": "No context analysis available yet."
   },
   "logs": {
     "title": "Καταγραφές",
@@ -894,5 +896,15 @@
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
     "urlFailed": "URL transcription failed"
+  },
+  "transcriptionHistory": {
+    "title": "Recent transcriptions",
+    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "empty": "No transcription attempts yet.",
+    "shown": "{{count}} shown",
+    "retry": "Retry",
+    "retrying": "Retrying…",
+    "postQueueTranslate": "queue translate",
+    "postTranscribeOnly": "transcribe only"
   }
 }

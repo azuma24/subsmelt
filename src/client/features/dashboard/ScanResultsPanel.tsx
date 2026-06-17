@@ -28,11 +28,15 @@ interface ScanResultsPanelProps {
   transcriptionProgressByPath?: Record<string, ManualTranscriptionProgress>;
   isQueueing: boolean;
   newJobsCount: number;
+  mediaDir?: string;
 }
 
-export function getScanGroupName(file: ScannedFile): string {
+export function getScanGroupName(file: ScannedFile, mediaDir?: string): string {
   const path = file.videoPath || file.subtitles[0]?.srtPath || "";
-  const marker = "/media/";
+  // Derive the top-level group from the configured media directory so installs
+  // with a non-default root (e.g. /mnt/media) group correctly. Fall back to the
+  // historical "/media/" marker when mediaDir is unknown so behavior is unchanged.
+  const marker = mediaDir ? `${mediaDir.replace(/\/+$/, "")}/` : "/media/";
   const idx = path.indexOf(marker);
   if (idx >= 0) {
     const rest = path.slice(idx + marker.length);
@@ -123,6 +127,7 @@ export function ScanResultsPanel({
   transcriptionProgressByPath = {},
   isQueueing,
   newJobsCount,
+  mediaDir,
 }: ScanResultsPanelProps) {
   const { t } = useTranslation();
   const selectedPaths = selectedVideoPaths ?? new Set<string>();
@@ -146,11 +151,11 @@ export function ScanResultsPanel({
   const groups = useMemo(() => {
     const grouped = new Map<string, ScannedFile[]>();
     filteredFiles.forEach((file) => {
-      const group = getScanGroupName(file);
+      const group = getScanGroupName(file, mediaDir);
       grouped.set(group, [...(grouped.get(group) || []), file]);
     });
     return Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [filteredFiles]);
+  }, [filteredFiles, mediaDir]);
   // Only act on selections that are still visible under the current filter/search,
   // so the bulk action never transcribes files the user can no longer see.
   const visibleSelectedPaths = useMemo(() => {
