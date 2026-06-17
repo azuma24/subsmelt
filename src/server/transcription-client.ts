@@ -351,7 +351,9 @@ export function buildTranscriptionRequest(options: BuildTranscriptionRequestOpti
   const mergedAdvanced =
     ov.speaker_diarization === true
       ? { ...(advancedOptions ?? {}), speaker_diarization: true }
-      : advancedOptions;
+      : ov.speaker_diarization === false
+        ? { ...(advancedOptions ?? {}), speaker_diarization: false }
+        : advancedOptions;
 
   return {
     input_path: backendInputPath,
@@ -658,6 +660,7 @@ async function buildUploadForm(request: BackendTranscriptionRequest, filePath: s
 async function consumeTranscriptionNdjson(
   body: ReadableStream<Uint8Array>,
   onProgress?: (update: TranscriptionProgressUpdate) => void,
+  onPhase?: (phase: string) => void,
 ): Promise<BackendTranscriptionResponse> {
   const decoder = new TextDecoder();
   let buffer = "";
@@ -671,6 +674,8 @@ async function consumeTranscriptionNdjson(
     if (type === "progress") {
       const update = toProgressUpdate(record);
       if (update && onProgress) onProgress(update);
+    } else if (type === "phase") {
+      if (typeof record.phase === "string" && onPhase) onPhase(record.phase);
     } else if (type === "result") {
       const { type: _t, ...rest } = record;
       result = rest as unknown as BackendTranscriptionResponse;
@@ -776,7 +781,7 @@ export async function transcribeWithBackendUploadStreaming(
   }
 
   try {
-    return await consumeTranscriptionNdjson(response.body as ReadableStream<Uint8Array>, options?.onProgress);
+    return await consumeTranscriptionNdjson(response.body as ReadableStream<Uint8Array>, options?.onProgress, options?.onPhase);
   } catch (error: unknown) {
     if (error instanceof Error && error.name === "AbortError") {
       throw new Error("Transcription cancelled");

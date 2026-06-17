@@ -104,6 +104,17 @@ datas = [
 # model, assets/silero_vad*.onnx). collect_submodules does NOT pick these up, so
 # without this the frozen exe raises ONNXRuntime NO_SUCHFILE when use_vad=True.
 datas += collect_data_files("faster_whisper")
+# onnxruntime runs that VAD model — collect its data files + native libs so the
+# VAD path is fully self-contained (same failure class as the missing .onnx).
+datas += collect_data_files("onnxruntime")
+binaries += collect_dynamic_libs("onnxruntime")
+hiddenimports += collect_submodules("onnxruntime")
+# uvicorn imports app.main:app from a runtime STRING, so PyInstaller's static
+# analysis can miss it — collect the app package (and pynvml for GPU detection)
+# explicitly so the frozen exe can always start and probe the GPU.
+hiddenimports += collect_submodules("app")
+hiddenimports += ["pynvml"]
+_ffmpeg = os.path.join(SPEC_DIR, "vendor", "ffmpeg.exe")
 if os.path.isfile(_ffmpeg):
     datas.append((_ffmpeg, "."))
 else:

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -142,6 +142,9 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const [fileProgress, setFileProgress] = useState<Record<string, FileProgress>>({});
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const cancelRef = useRef(false);
+  // Synchronous mirror of activePath so cancelBatch always targets the file the
+  // loop is actually on (state can lag a render behind).
+  const activePathRef = useRef<string | null>(null);
 
   // Default-expand the top-level folders when the tree (re)builds.
   useEffect(() => {
@@ -163,8 +166,9 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
     });
   }, [videoFiles]);
 
-  // Live per-file progress from the server's SSE broadcast.
-  useSSE((type, data) => {
+  // Live per-file progress from the server's SSE broadcast. Stable callback so
+  // useSSE's ref-sync effect doesn't churn every render.
+  useSSE(useCallback((type, data) => {
     if (type !== "transcription:progress") return;
     const d = data as { path?: string; pct?: number; done?: boolean; error?: boolean; cancelled?: boolean; phase?: string };
     if (!d.path) return;
@@ -183,7 +187,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
         },
       };
     });
-  });
+  }, []));
 
   const toggle = (vp: string) =>
     setSelected((prev) => {
@@ -204,8 +208,9 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
 
   const cancelBatch = async () => {
     cancelRef.current = true;
-    if (activePath) {
-      try { await api.cancelTranscription({ path: activePath }); } catch { /* best-effort */ }
+    const target = activePathRef.current;
+    if (target) {
+      try { await api.cancelTranscription({ path: target }); } catch { /* best-effort */ }
     }
   };
 
@@ -222,10 +227,12 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
     }
     setRunning(true);
     cancelRef.current = false;
+    setFileProgress({});  // drop stale badges from a previous run
     setProgress({ done: 0, total: paths.length });
     let ok = 0;
     for (let i = 0; i < paths.length; i++) {
       if (cancelRef.current) break;
+      activePathRef.current = paths[i];
       setActivePath(paths[i]);
       try {
         await api.transcribeVideo({
@@ -245,6 +252,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
       }
       setProgress({ done: i + 1, total: paths.length });
     }
+    activePathRef.current = null;
     setActivePath(null);
     setRunning(false);
     setProgress(null);
@@ -303,12 +311,17 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
                 {FORMATS.map((f) => <option key={f} value={f}>{f.toUpperCase()}</option>)}
               </select>
             </label>
-            {canDiarize && (
+            {canDiarize ? (
               <label className="flex items-center gap-2 text-[11px] text-[var(--text-2)]">
                 <input type="checkbox" checked={diarize} onChange={(e) => setDiarize(e.target.checked)} className="h-4 w-4 accent-blue-500" />
                 {t("whisper.diarize")}
               </label>
-            )}
+            ) : caps ? (
+              <label className="flex items-center gap-2 text-[11px] text-[var(--text-3)] opacity-60" title={t("whisper.diarizeUnavailable")}>
+                <input type="checkbox" disabled className="h-4 w-4" />
+                {t("whisper.diarize")}
+              </label>
+            ) : null}
           </div>
 
           {/* Actions */}

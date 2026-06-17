@@ -37,7 +37,8 @@
     "overwriteHint": "Transcribing a file that already has a subtitle of the same name overwrites it.",
     "batchDone": "Transcribed {{ok}}/{{total}} to {{format}}.",
     "diarize": "Identify speakers",
-    "diarizing": "Identifying speakers…"
+    "diarizing": "Identifying speakers…",
+    "diarizeUnavailable": "Speaker diarization unavailable — backend needs pyannote installed and a Hugging Face token."
   },
   "convert": {
     "title": "Subtitle Converter",
