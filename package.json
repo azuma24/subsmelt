@@ -4,6 +4,9 @@
   "type": "module",
   "description": "Self-hosted batch subtitle translator using LLM",
   "license": "MIT",
+  "engines": {
+    "node": ">=20 <25"
+  },
   "scripts": {
     "dev": "concurrently \"tsx watch src/server/index.ts\" \"vite\"",
     "build": "vite build && tsc -p tsconfig.server.json",
