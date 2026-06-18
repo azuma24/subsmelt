@@ -129,7 +129,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const [device, setDevice] = useState("");
   const [computeType, setComputeType] = useState("");
   const [language, setLanguage] = useState("");
-  const [format, setFormat] = useState<OutputFormat>("srt");
+  const [format, setFormat] = useState("");
   // null = follow the saved default; true/false = explicit per-run override.
   const [diarize, setDiarize] = useState<boolean | null>(null);
   const [urlValue, setUrlValue] = useState("");
@@ -157,6 +157,14 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const computeOptions = COMPUTE_BY_DEVICE[effDevice] ?? ["int8"];
   const rawCompute = eff(computeType, "transcription_compute_type", "int8");
   const effCompute = computeOptions.includes(rawCompute) ? rawCompute : computeOptions[0];
+  const rawFormat = eff(format, "transcription_output_format", "srt");
+  const effFormat: OutputFormat = (FORMATS as string[]).includes(rawFormat) ? (rawFormat as OutputFormat) : "srt";
+
+  // Whisper-section selectors are write-through: changing one updates local state
+  // for instant UI and persists to settings so it survives a reload (these all
+  // fall back to the saved setting via eff()).
+  const persistSetting = useMutationWithInvalidation((patch: Record<string, string>) => api.saveSettings(patch));
+  const saveSetting = useCallback((key: string, value: string) => { persistSetting.mutate({ [key]: value }); }, [persistSetting]);
 
   // Look up downloaded status for a given model id from the cached models list.
   const isModelDownloaded = useCallback((modelId: string): boolean | undefined => {
@@ -248,13 +256,17 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
         addToast(t("whisper.modelDownloading", { model: newModelId }), "info");
         await downloadModel(newModelId);
         addToast(t("whisper.modelDownloadDone", { model: newModelId }), "success");
+        saveSetting("transcription_model", newModelId);
       } catch (e: unknown) {
         addToast(t("whisper.modelDownloadFailed", { model: newModelId, message: getErrorMessage(e) }), "error");
         // Revert on download failure too.
         setModel(previousModel);
       }
+    } else {
+      // Already downloaded (or list not yet loaded): commit + persist.
+      saveSetting("transcription_model", newModelId);
     }
-  }, [model, isModelDownloaded, modelDownloads, whisperModels, t, confirm, addToast, downloadModel]);
+  }, [model, isModelDownloaded, modelDownloads, whisperModels, t, confirm, addToast, downloadModel, saveSetting]);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [running, setRunning] = useState(false);
@@ -364,7 +376,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
       try {
         await api.transcribeVideo({
           videoPath: paths[i],
-          outputFormat: format,
+          outputFormat: effFormat,
           postAction: "transcribe_only",
           model: effModel,
           language: effLang,
@@ -384,7 +396,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
     setRunning(false);
     setProgress(null);
     setSelected(new Set());
-    addToast(t("whisper.batchDone", { ok, total: paths.length, format: format.toUpperCase() }), ok > 0 ? "success" : "error");
+    addToast(t("whisper.batchDone", { ok, total: paths.length, format: effFormat.toUpperCase() }), ok > 0 ? "success" : "error");
     scanQuery.refetch();
     historyQuery.refetch();
   };
@@ -395,7 +407,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
     setUrlBusy(true);
     try {
       const res = await api.transcribeUrl({
-        url, outputFormat: format, model: effModel, language: effLang,
+        url, outputFormat: effFormat, model: effModel, language: effLang,
         device: effDevice, computeType: effCompute, speakerDiarization: canDiarize && effDiarize,
       });
       // No local media file for a URL — hand the rendered subtitle to the browser.
@@ -403,7 +415,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
       const href = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = href;
-      const safeExt = (FORMATS as string[]).includes(res.outputFormat) ? res.outputFormat : format;
+      const safeExt = (FORMATS as string[]).includes(res.outputFormat) ? res.outputFormat : effFormat;
       a.download = `transcript.${safeExt}`;
       document.body.appendChild(a);
       a.click();
@@ -460,22 +472,22 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
               )}
             </label>
             <label className="flex flex-col gap-1 text-[11px] text-[var(--text-2)]">{t("whisper.device")}
-              <select value={effDevice} onChange={(e) => setDevice(e.target.value)} className={selectCls}>
+              <select value={effDevice} onChange={(e) => { setDevice(e.target.value); saveSetting("transcription_device", e.target.value); }} className={selectCls}>
                 {deviceOptions.map((d) => <option key={d} value={d}>{d}</option>)}
               </select>
             </label>
             <label className="flex flex-col gap-1 text-[11px] text-[var(--text-2)]">{t("whisper.compute")}
-              <select value={effCompute} onChange={(e) => setComputeType(e.target.value)} className={selectCls}>
+              <select value={effCompute} onChange={(e) => { setComputeType(e.target.value); saveSetting("transcription_compute_type", e.target.value); }} className={selectCls}>
                 {computeOptions.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </label>
             <label className="flex flex-col gap-1 text-[11px] text-[var(--text-2)]">{t("whisper.language")}
-              <select value={effLang} onChange={(e) => setLanguage(e.target.value)} className={selectCls}>
+              <select value={effLang} onChange={(e) => { setLanguage(e.target.value); saveSetting("transcription_language", e.target.value); }} className={selectCls}>
                 {COMMON_LANGS.map((l) => <option key={l} value={l}>{l}</option>)}
               </select>
             </label>
             <label className="flex flex-col gap-1 text-[11px] text-[var(--text-2)]">{t("whisper.format")}
-              <select value={format} onChange={(e) => setFormat(e.target.value as OutputFormat)} className={selectCls}>
+              <select value={effFormat} onChange={(e) => { setFormat(e.target.value); saveSetting("transcription_output_format", e.target.value); }} className={selectCls}>
                 {FORMATS.map((f) => <option key={f} value={f}>{f.toUpperCase()}</option>)}
               </select>
             </label>
