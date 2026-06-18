@@ -1,4 +1,5 @@
 import { openAsBlob } from "node:fs";
+import { stat } from "node:fs/promises";
 import path from "node:path";
 
 export const transcribePostActionValues = ["transcribe_only", "transcribe_and_translate"] as const;
@@ -8,6 +9,9 @@ export type LowRamBehavior = "ask" | "downgrade" | "skip" | "run_anyway";
 
 // Short timeout (ms) for lightweight backend calls (health, preflight).
 const SHORT_REQUEST_TIMEOUT_MS = 10_000;
+// Hard cap on upload-transport file size (5 GB). Larger files must use shared-FS
+// transport; uploading them risks exhausting memory/disk on either end.
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024 * 1024;
 // Default timeout (ms) for /transcribe when no setting is supplied (30 minutes).
 const DEFAULT_TRANSCRIBE_TIMEOUT_MS = 1_800_000;
 
@@ -33,6 +37,15 @@ async function fetchWithTimeout(
   } finally {
     clearTimeout(timer);
   }
+}
+
+// Distinguishes an external cancel from an internal timeout when our
+// AbortController fires. If the caller's signal aborted, it's a real
+// cancellation; otherwise the timeout timer fired, so report a timeout error
+// matching fetchWithTimeout's "<label> timed out after Ns" wording.
+function abortReasonError(externalSignal: AbortSignal | undefined, label: string, timeoutMs: number): Error {
+  if (externalSignal?.aborted) return new Error("Transcription cancelled");
+  return new Error(`${label} timed out after ${Math.round(timeoutMs / 1000)}s`);
 }
 
 export interface TranscriptionSettings {
@@ -165,10 +178,11 @@ export type TranscriptionTransportMode = "shared" | "upload";
  * Resolves which file transport to use (plan Phase 2).
  *
  * - "shared"/"upload" in settings force that mode.
- * - "auto" (default): upload when a token is configured but no path mapping is
- *   set — the remote Windows-server case where no shared filesystem exists.
- *   Otherwise shared path mode (local same-host / Docker volume, or an explicit
- *   path mapping that resolves on the backend), preserving prior behaviour.
+ * - An explicit path mapping signals shared-FS intent → shared.
+ * - "auto" (default): inspect the backend URL host. A loopback/local host shares
+ *   the filesystem with the SubSmelt server (local same-host / Docker volume) →
+ *   shared. A remote host cannot see local paths → upload. If the URL can't be
+ *   parsed, fall back to the token-based heuristic (token ⇒ remote ⇒ upload).
  */
 export function resolveTransportMode(settings: TranscriptionSettings): TranscriptionTransportMode {
   const explicit = (settings.transcription_transport || "").trim().toLowerCase();
@@ -177,8 +191,20 @@ export function resolveTransportMode(settings: TranscriptionSettings): Transcrip
   const hasMapping = Boolean(
     settings.transcription_path_map_from?.trim() && settings.transcription_path_map_to?.trim(),
   );
-  const hasToken = Boolean(settings.transcription_backend_token?.trim());
-  return hasToken && !hasMapping ? "upload" : "shared";
+  if (hasMapping) return "shared";
+
+  const backendUrl = (settings.transcription_backend_url || process.env.WHISPER_BACKEND_URL || "").trim();
+  try {
+    // Loopback hosts share the local filesystem; only truly remote hosts need an
+    // upload because they cannot read paths visible to the SubSmelt server.
+    const host = new URL(backendUrl).hostname.toLowerCase();
+    const loopback = host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "0.0.0.0";
+    return loopback ? "shared" : "upload";
+  } catch {
+    // URL missing/unparseable: keep the prior token-based heuristic as a safety net.
+    const hasToken = Boolean(settings.transcription_backend_token?.trim());
+    return hasToken ? "upload" : "shared";
+  }
 }
 
 export function normalizeTranscriptionBackendUrl(url: string): string {
@@ -583,7 +609,7 @@ export async function transcribeWithBackendStreaming(
     clearTimeout(timer);
     externalSignal?.removeEventListener("abort", onExternalAbort);
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("Transcription cancelled");
+      throw abortReasonError(externalSignal, "Transcription backend stream", timeoutMs);
     }
     throw error;
   }
@@ -594,9 +620,11 @@ export async function transcribeWithBackendStreaming(
     throw new StreamingUnsupportedError();
   }
   if (!response.ok || !response.body) {
-    const body = await response.json().catch(() => ({}));
+    // Clear the timer/listener before reading the error body so a hung .json()
+    // can't leave the timer armed and fire a stray abort.
     clearTimeout(timer);
     externalSignal?.removeEventListener("abort", onExternalAbort);
+    const body = await response.json().catch(() => ({}));
     throwBackendError(body, response.status);
   }
 
@@ -636,7 +664,7 @@ export async function transcribeWithBackendStreaming(
     if (buffer.trim()) handleLine(buffer);
   } catch (error: unknown) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("Transcription cancelled");
+      throw abortReasonError(externalSignal, "Transcription backend stream", timeoutMs);
     }
     throw error;
   } finally {
@@ -644,7 +672,11 @@ export async function transcribeWithBackendStreaming(
     externalSignal?.removeEventListener("abort", onExternalAbort);
   }
 
-  if (streamError) throw new Error(streamError);
+  if (streamError) {
+    const err = new Error(streamError);
+    (err as Error & { backendStatus?: number }).backendStatus = 500;
+    throw err;
+  }
   if (!result) throw new Error("Transcription stream ended without a result");
   return result;
 }
@@ -652,12 +684,19 @@ export async function transcribeWithBackendStreaming(
 // ======== Upload transport (Model B, plan Phase 2) ========
 // The media bytes are uploaded as multipart instead of pointing the backend at a
 // shared path; the backend returns subtitle CONTENT which the caller writes
-// locally. `openAsBlob` streams the file from disk (no full in-memory copy).
+// locally. `openAsBlob` reads the file from disk; note undici may still buffer
+// parts of the multipart body in memory, so large files are capped below.
 
 // Builds the multipart body: the request JSON (minus input_path, which is
 // meaningless server-side in upload mode) plus the media file.
 async function buildUploadForm(request: BackendTranscriptionRequest, filePath: string): Promise<FormData> {
   const { input_path: _ignored, ...rest } = request;
+  const { size } = await stat(filePath);
+  if (size > MAX_UPLOAD_BYTES) {
+    throw new Error(
+      `Media file is too large to upload (${size} bytes > ${MAX_UPLOAD_BYTES} byte cap); use shared-filesystem transport instead`,
+    );
+  }
   const blob = await openAsBlob(filePath);
   const form = new FormData();
   form.append("request", JSON.stringify(rest));
@@ -672,9 +711,13 @@ async function consumeTranscriptionNdjson(
   body: ReadableStream<Uint8Array>,
   onProgress?: (update: TranscriptionProgressUpdate) => void,
   onPhase?: (phase: string) => void,
-  // Optional abort signal so a cancelled run surfaces "Transcription cancelled"
-  // rather than the generic "ended without result" when the stream is torn down.
+  // Internal controller signal (fires on external cancel OR timeout) so a torn-down
+  // stream surfaces a clear message rather than "ended without result".
   signal?: AbortSignal,
+  // External (caller) signal + timeout context to tell cancel apart from timeout.
+  externalSignal?: AbortSignal,
+  label = "Transcription backend stream",
+  timeoutMs = 0,
 ): Promise<BackendTranscriptionResponse> {
   const decoder = new TextDecoder();
   let buffer = "";
@@ -711,20 +754,24 @@ async function consumeTranscriptionNdjson(
     buffer += decoder.decode();
     if (buffer.trim()) handleLine(buffer);
   } catch (error: unknown) {
-    // Aborting the request rejects the stream iterator with AbortError; surface
-    // it as the standard cancellation message instead of leaking a raw error.
+    // Aborting the request rejects the stream iterator with AbortError; map it to
+    // cancellation (external signal) or a timeout error (internal timer fired).
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("Transcription cancelled");
+      throw abortReasonError(externalSignal, label, timeoutMs);
     }
     throw error;
   }
 
-  if (streamError) throw new Error(streamError);
+  if (streamError) {
+    const err = new Error(streamError);
+    (err as Error & { backendStatus?: number }).backendStatus = 500;
+    throw err;
+  }
   if (!result) {
     // The stream ended cleanly without a result line. If an abort was involved
     // (race where iteration finished as the signal fired), report cancellation
-    // rather than a confusing "ended without result".
-    if (signal?.aborted) throw new Error("Transcription cancelled");
+    // or timeout rather than a confusing "ended without result".
+    if (signal?.aborted) throw abortReasonError(externalSignal, label, timeoutMs);
     throw new Error("Transcription stream ended without a result");
   }
   return result;
@@ -792,7 +839,7 @@ export async function transcribeWithBackendUploadStreaming(
     clearTimeout(timer);
     externalSignal?.removeEventListener("abort", onExternalAbort);
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("Transcription cancelled");
+      throw abortReasonError(externalSignal, "Transcription backend upload stream", timeoutMs);
     }
     throw error;
   }
@@ -803,17 +850,21 @@ export async function transcribeWithBackendUploadStreaming(
     throw new StreamingUnsupportedError();
   }
   if (!response.ok || !response.body) {
-    const body = await response.json().catch(() => ({}));
+    // Clear the timer/listener before reading the error body so a hung .json()
+    // can't leave the timer armed and fire a stray abort.
     clearTimeout(timer);
     externalSignal?.removeEventListener("abort", onExternalAbort);
+    const body = await response.json().catch(() => ({}));
     throwBackendError(body, response.status);
   }
 
+  const label = "Transcription backend upload stream";
   try {
-    return await consumeTranscriptionNdjson(response.body as ReadableStream<Uint8Array>, options?.onProgress, options?.onPhase, controller.signal);
+    return await consumeTranscriptionNdjson(
+      response.body as ReadableStream<Uint8Array>, options?.onProgress, options?.onPhase, controller.signal, externalSignal, label, timeoutMs);
   } catch (error: unknown) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("Transcription cancelled");
+      throw abortReasonError(externalSignal, label, timeoutMs);
     }
     throw error;
   } finally {
@@ -856,7 +907,9 @@ export async function transcribeUrlWithBackendStreaming(
   } catch (error: unknown) {
     clearTimeout(timer);
     externalSignal?.removeEventListener("abort", onExternalAbort);
-    if (error instanceof Error && error.name === "AbortError") throw new Error("Transcription cancelled");
+    if (error instanceof Error && error.name === "AbortError") {
+      throw abortReasonError(externalSignal, "Transcription backend URL stream", timeoutMs);
+    }
     throw error;
   }
 
@@ -866,16 +919,22 @@ export async function transcribeUrlWithBackendStreaming(
     throw new StreamingUnsupportedError();
   }
   if (!response.ok || !response.body) {
-    const errBody = await response.json().catch(() => ({}));
+    // Clear the timer/listener before reading the error body so a hung .json()
+    // can't leave the timer armed and fire a stray abort.
     clearTimeout(timer);
     externalSignal?.removeEventListener("abort", onExternalAbort);
+    const errBody = await response.json().catch(() => ({}));
     throwBackendError(errBody, response.status);
   }
 
+  const label = "Transcription backend URL stream";
   try {
-    return await consumeTranscriptionNdjson(response.body as ReadableStream<Uint8Array>, options?.onProgress, options?.onPhase, controller.signal);
+    return await consumeTranscriptionNdjson(
+      response.body as ReadableStream<Uint8Array>, options?.onProgress, options?.onPhase, controller.signal, externalSignal, label, timeoutMs);
   } catch (error: unknown) {
-    if (error instanceof Error && error.name === "AbortError") throw new Error("Transcription cancelled");
+    if (error instanceof Error && error.name === "AbortError") {
+      throw abortReasonError(externalSignal, label, timeoutMs);
+    }
     throw error;
   } finally {
     clearTimeout(timer);
@@ -995,8 +1054,10 @@ export async function downloadBackendModel(
   }
 
   if (!response.ok || !response.body) {
-    const body = await response.json().catch(() => ({}));
+    // Clear the timer before reading the error body so a hung .json() can't leave
+    // the timer armed and fire a stray abort.
     clearTimeout(timer);
+    const body = await response.json().catch(() => ({}));
     throwBackendError(body, response.status);
   }
 
@@ -1039,7 +1100,11 @@ export async function downloadBackendModel(
     clearTimeout(timer);
   }
 
-  if (streamError) throw new Error(streamError);
+  if (streamError) {
+    const err = new Error(streamError);
+    (err as Error & { backendStatus?: number }).backendStatus = 500;
+    throw err;
+  }
   if (!result) throw new Error("Model download stream ended without a result");
   return result;
 }

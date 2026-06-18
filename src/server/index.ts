@@ -47,6 +47,7 @@ import { estimateCost } from "./pricing.js";
 import type { CloudProvider } from "./translator.js";
 import {
   applyPreflightPolicy,
+  assertMediaPathAllowed,
   buildTranscriptionRequest,
   fetchTranscriptionHealth,
   localTranscriptionOutputPath,
@@ -168,6 +169,7 @@ app.delete("/api/tasks/:id", (req, res) => {
 const CONVERT_TARGET_FORMATS = ["srt", "vtt", "ass", "ssa"] as const;
 const MAX_CONVERT_FILES = 50;
 const MAX_CONVERT_FILE_BYTES = 10 * 1024 * 1024; // 10 MB per file
+const MAX_SUBTITLE_BYTES = 50 * 1024 * 1024; // 50 MB cap for written subtitle content
 
 app.post("/api/convert", (req, res) => {
   const body = req.body ?? {};
@@ -683,7 +685,10 @@ function acquireTranscriptionSlot(): Promise<void> {
 function releaseTranscriptionSlot(): void {
   transcriptionActive = Math.max(0, transcriptionActive - 1);
   const limit = transcriptionMaxConcurrent();
-  if (transcriptionActive < limit) {
+  // Drain as many waiters as the current limit allows. Each waiter callback
+  // increments `transcriptionActive` itself, so we re-check the bound every
+  // iteration to avoid over-admitting.
+  while (transcriptionActive < limit && transcriptionWaiters.length > 0) {
     const next = transcriptionWaiters.shift();
     if (next) next();
   }
@@ -872,7 +877,21 @@ async function runTranscriptionAttempt(opts: {
       if (typeof result.content !== "string") {
         throw new Error("Upload transcription returned no subtitle content");
       }
-      await fs.promises.writeFile(outputPath, result.content, "utf-8");
+      const contentBytes = Buffer.byteLength(result.content, "utf-8");
+      if (contentBytes > MAX_SUBTITLE_BYTES) {
+        throw new Error(`Subtitle content too large (${contentBytes} bytes, max ${MAX_SUBTITLE_BYTES})`);
+      }
+      // Atomic write: write to a temp file in the same dir, then rename. This
+      // avoids leaving a half-written subtitle file if the process dies mid-write.
+      await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
+      const tmpPath = `${outputPath}.tmp`;
+      await fs.promises.writeFile(tmpPath, result.content, "utf-8");
+      try {
+        await fs.promises.rename(tmpPath, outputPath);
+      } catch (renameError) {
+        await fs.promises.unlink(tmpPath).catch(() => {});
+        throw renameError;
+      }
     }
     const finishedAt = new Date().toISOString();
     const durationSeconds = typeof result.duration_seconds === "number"
@@ -936,6 +955,12 @@ app.post("/api/transcribe/preflight", async (req, res) => {
   if (!backendUrl) return res.status(400).json({ error: "Transcription backend URL is not configured" });
   const videoPath = typeof req.body?.videoPath === "string" ? req.body.videoPath : "";
   if (!videoPath) return res.status(400).json({ error: "videoPath is required" });
+  // Validate the path is inside MEDIA_DIR before any downstream processing.
+  try {
+    assertMediaPathAllowed(videoPath, MEDIA_DIR);
+  } catch (error: any) {
+    return res.status(400).json({ error: error?.message || "Invalid media path" });
+  }
   try {
     const request = buildTranscriptionRequest({
       videoPath,
@@ -978,7 +1003,8 @@ app.post("/api/transcribe/history/:id/retry", async (req, res) => {
     return res.json({ ok: true, attemptId, ...transcriptionResult, postAction: attempt.postAction, scanResult });
   } catch (error: any) {
     logger.error("system", `Transcription retry failed: ${error?.message || error}`);
-    return res.status(400).json({ error: error?.message || "Transcription retry failed" });
+    // 502 when the backend itself failed/was unreachable; 400 for client errors.
+    return res.status(transcriptionErrorStatus(error)).json({ error: error?.message || "Transcription retry failed" });
   }
 });
 
@@ -986,6 +1012,13 @@ app.post("/api/transcribe", async (req, res) => {
   const settings = getAllSettings();
   const videoPath = typeof req.body?.videoPath === "string" ? req.body.videoPath : "";
   if (!videoPath) return res.status(400).json({ error: "videoPath is required" });
+  // Validate the path is inside MEDIA_DIR before it is recorded in history,
+  // broadcast over SSE, or used as a map key by any downstream processing.
+  try {
+    assertMediaPathAllowed(videoPath, MEDIA_DIR);
+  } catch (error: any) {
+    return res.status(400).json({ error: error?.message || "Invalid media path" });
+  }
   const requestedPostAction = req.body?.postAction as TranscribePostAction | undefined;
   const postAction = requestedPostAction && transcribePostActionValues.includes(requestedPostAction) ? requestedPostAction : "transcribe_only";
 

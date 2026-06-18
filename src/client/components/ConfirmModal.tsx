@@ -29,7 +29,12 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 
   const confirm = useCallback((opts: ConfirmOptions): Promise<boolean> => {
     return new Promise((resolve) => {
-      setState({ opts, resolve });
+      setState((prev) => {
+        // If a dialog is already pending, resolve it as false (superseded) before
+        // replacing it with the new request so the first caller never hangs.
+        prev?.resolve(false);
+        return { opts, resolve };
+      });
     });
   }, []);
 

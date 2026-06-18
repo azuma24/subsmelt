@@ -3,16 +3,20 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import * as api from "../../api";
+import { getErrorMessage } from "../../lib";
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmModal";
+import { ProgressSmall } from "../../ui/primitives";
 import {
   useMutationWithInvalidation,
+  useModelDownload,
   useSettingsQuery,
   useSSE,
   useTranscriptionHealthQuery,
   useTranscriptionHistoryQuery,
+  useWhisperModelsQuery,
 } from "../../hooks";
-import type { ScannedFile, TranscriptionHistoryEntry } from "../../types";
+import type { ScannedFile, TranscriptionHistoryEntry, WhisperModel } from "../../types";
 import { TranscriptionHistoryPanel } from "../dashboard/TranscriptionHistoryPanel";
 
 const str = (v: unknown, fallback = ""): string => (typeof v === "string" ? v : fallback);
@@ -97,6 +101,15 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const retryMutation = useMutationWithInvalidation((id: string) => api.retryTranscriptionAttempt(id));
   const onRetry = (attempt: TranscriptionHistoryEntry) => retryMutation.mutate(attempt.id);
 
+  // Whisper models list — used to check downloaded flag before running.
+  // Only query when the backend is configured; the models endpoint proxies to
+  // the whisper backend and will 502 if it's not reachable.
+  const modelsQuery = useWhisperModelsQuery(backendConfigured && enabled);
+  const whisperModels: WhisperModel[] = modelsQuery.data?.models ?? [];
+
+  // Live download progress state + the downloadModel action.
+  const { downloads: modelDownloads, downloadModel } = useModelDownload(() => { /* no external callback needed */ });
+
   // Library file list (non-mutating preview scan of MEDIA_DIR).
   const scanQuery = useQuery({
     queryKey: ["whisper-library"],
@@ -144,6 +157,104 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const computeOptions = COMPUTE_BY_DEVICE[effDevice] ?? ["int8"];
   const rawCompute = eff(computeType, "transcription_compute_type", "int8");
   const effCompute = computeOptions.includes(rawCompute) ? rawCompute : computeOptions[0];
+
+  // Look up downloaded status for a given model id from the cached models list.
+  const isModelDownloaded = useCallback((modelId: string): boolean | undefined => {
+    if (whisperModels.length === 0) return undefined; // list not loaded yet
+    const entry = whisperModels.find((m) => m.id === modelId);
+    if (!entry) return undefined; // model not in list
+    return entry.downloaded;
+  }, [whisperModels]);
+
+  /**
+   * Prompts the user to confirm a model download, then runs it.
+   * Returns true when the model is ready (either was already downloaded, or
+   * download confirmed+completed). Returns false when the user declines or
+   * the models list hasn't loaded yet.
+   */
+  const ensureModelDownloaded = useCallback(async (modelId: string): Promise<boolean> => {
+    const downloaded = isModelDownloaded(modelId);
+
+    // Models list not yet loaded — don't let an unknown state slip through.
+    if (downloaded === undefined) {
+      if (modelsQuery.isLoading) {
+        addToast(t("whisper.modelsStillLoading"), "info");
+      }
+      return false;
+    }
+
+    if (downloaded === true) return true;
+
+    // Guard: if already downloading, don't stack a second dialog.
+    if (modelDownloads[modelId]?.active) {
+      return false;
+    }
+
+    const entry = whisperModels.find((m) => m.id === modelId);
+    const size = entry?.sizeMb;
+    const message = typeof size === "number" && size > 0
+      ? t("whisper.modelNotDownloadedMessage", { model: modelId, size: `${Math.round(size)} MB` })
+      : t("whisper.modelNotDownloadedMessageNoSize", { model: modelId });
+
+    const ok = await confirm({
+      title: t("whisper.modelNotDownloadedTitle"),
+      message,
+      confirmLabel: t("settings.models.download"),
+    });
+    if (!ok) return false;
+
+    try {
+      addToast(t("whisper.modelDownloading", { model: modelId }), "info");
+      await downloadModel(modelId);
+      addToast(t("whisper.modelDownloadDone", { model: modelId }), "success");
+      return true;
+    } catch (e: unknown) {
+      addToast(t("whisper.modelDownloadFailed", { model: modelId, message: getErrorMessage(e) }), "error");
+      return false;
+    }
+  }, [isModelDownloaded, modelsQuery.isLoading, modelDownloads, whisperModels, t, confirm, addToast, downloadModel]);
+
+  // Handle model picker selection: if the chosen model is not downloaded,
+  // prompt the user before committing the selection.
+  const handleModelChange = useCallback(async (newModelId: string) => {
+    const previousModel = model; // capture before any state change
+    setModel(newModelId);
+
+    const downloaded = isModelDownloaded(newModelId);
+    if (downloaded === false) {
+      // Guard: if already downloading this model, skip re-prompting.
+      if (modelDownloads[newModelId]?.active) return;
+
+      const entry = whisperModels.find((m) => m.id === newModelId);
+      const size = entry?.sizeMb;
+      const message = typeof size === "number" && size > 0
+        ? t("whisper.modelNotDownloadedMessage", { model: newModelId, size: `${Math.round(size)} MB` })
+        : t("whisper.modelNotDownloadedMessageNoSize", { model: newModelId });
+
+      const ok = await confirm({
+        title: t("whisper.modelNotDownloadedTitle"),
+        message,
+        confirmLabel: t("settings.models.download"),
+      });
+
+      if (!ok) {
+        // Revert the selection to the previous model.
+        setModel(previousModel);
+        return;
+      }
+
+      // User confirmed: start download. Keep model selected so the label updates.
+      try {
+        addToast(t("whisper.modelDownloading", { model: newModelId }), "info");
+        await downloadModel(newModelId);
+        addToast(t("whisper.modelDownloadDone", { model: newModelId }), "success");
+      } catch (e: unknown) {
+        addToast(t("whisper.modelDownloadFailed", { model: newModelId, message: getErrorMessage(e) }), "error");
+        // Revert on download failure too.
+        setModel(previousModel);
+      }
+    }
+  }, [model, isModelDownloaded, modelDownloads, whisperModels, t, confirm, addToast, downloadModel]);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [running, setRunning] = useState(false);
@@ -227,6 +338,12 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const transcribeSelected = async () => {
     const paths = Array.from(selected);
     if (paths.length === 0) return;
+
+    // Gate 1: check the selected model is downloaded before we start the batch.
+    // On decline, cancel the run (leave model selected, do nothing else).
+    const modelReady = await ensureModelDownloaded(effModel);
+    if (!modelReady) return;
+
     const withSubs = videoFiles.filter((f) => f.videoPath && selected.has(f.videoPath) && f.subtitles.length > 0);
     if (withSubs.length > 0) {
       const ok = await confirm({
@@ -326,9 +443,21 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
           {/* Per-run options */}
           <div className="mt-3 flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1 text-[11px] text-[var(--text-2)]">{t("whisper.model")}
-              <select value={effModel} onChange={(e) => setModel(e.target.value)} className={selectCls}>
-                {modelOptions.map((m) => <option key={m} value={m}>{m}</option>)}
+              <select
+                value={effModel}
+                onChange={(e) => { void handleModelChange(e.target.value); }}
+                className={selectCls}
+              >
+                {modelOptions.map((m) => {
+                  const info = whisperModels.find((wm) => wm.id === m);
+                  const notDl = info && !info.downloaded;
+                  return <option key={m} value={m}>{m}{notDl ? " ▽" : ""}</option>;
+                })}
               </select>
+              {/* Not-downloaded badge for the currently-selected model */}
+              {isModelDownloaded(effModel) === false && modelDownloads[effModel]?.active !== true && (
+                <span className="text-[10px] text-[var(--yellow)]">{t("settings.models.notDownloaded")}</span>
+              )}
             </label>
             <label className="flex flex-col gap-1 text-[11px] text-[var(--text-2)]">{t("whisper.device")}
               <select value={effDevice} onChange={(e) => setDevice(e.target.value)} className={selectCls}>
@@ -363,6 +492,14 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
             ) : null}
           </div>
 
+          {/* Model download progress — shown when a model is being downloaded */}
+          {Object.entries(modelDownloads).filter(([, dl]) => dl.active).map(([modelId, dl]) => (
+            <div key={modelId} className="mt-2 flex items-center gap-3 rounded-lg border border-[var(--yellow-border)] bg-[var(--yellow-dim)] px-3 py-2">
+              <span className="text-[11px] text-[var(--yellow)] shrink-0">{t("whisper.modelDownloading", { model: modelId })}</span>
+              <div className="flex-1"><ProgressSmall pct={dl.pct} large /></div>
+            </div>
+          ))}
+
           {/* URL / YouTube input (only when backend has yt-dlp) */}
           {canUrl && (
             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -383,7 +520,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
 
           {/* Actions */}
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button type="button" disabled={running || selected.size === 0} onClick={transcribeSelected}
+            <button type="button" disabled={running || selected.size === 0 || Object.values(modelDownloads).some((dl) => dl.active)} onClick={transcribeSelected}
               className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white disabled:opacity-40">
               {running && progress ? t("whisper.transcribingProgress", { done: progress.done, total: progress.total }) : t("whisper.transcribeSelected", { count: selected.size })}
             </button>

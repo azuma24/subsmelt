@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "./api";
 import type { Job, JobPreview, LlmHealth, LogEntry, QueueStatus, Task, TranscriptionHealth, TranscriptionHistoryEntry } from "./types";
@@ -294,3 +294,83 @@ export function useMutationWithInvalidation<TData = unknown, TVars = void>(
   const invalidate = useInvalidateApp();
   return useMutation({ mutationFn: fn, onSuccess: invalidate });
 }
+
+export function useWhisperModelsQuery(enabled = true) {
+  return useQuery({
+    queryKey: ["whisper-models"],
+    queryFn: ({ signal }) => api.listWhisperModels({ signal }),
+    enabled,
+    staleTime: 15_000,
+  });
+}
+
+// Per-model download progress state returned by useModelDownload.
+export interface ModelDownloadProgress {
+  active: boolean;
+  pct: number;
+}
+
+/**
+ * Returns the live download-progress map (keyed by model id) plus a
+ * `downloadModel` function that kicks off a download, streams progress via
+ * SSE, invalidates the models query on completion, and resolves when done.
+ *
+ * The caller must already subscribe to SSE (WhisperPage calls useSSE itself).
+ * We wire the SSE listener here so the hook is self-contained.
+ */
+export function useModelDownload(
+  onProgress: (downloads: Record<string, ModelDownloadProgress>) => void,
+) {
+  const queryClient = useQueryClient();
+  const [downloads, setDownloads] = useState<Record<string, ModelDownloadProgress>>({});
+
+  // Keep the onProgress callback stable via ref so the SSE handler doesn't
+  // need to be re-registered on every render.
+  const onProgressRef = useRef(onProgress);
+  useEffect(() => { onProgressRef.current = onProgress; }, [onProgress]);
+
+  // Sync to caller whenever downloads changes.
+  useEffect(() => { onProgressRef.current(downloads); }, [downloads]);
+
+  // Listen for model:download SSE events and update progress state.
+  useSSE(
+    useCallback((type, data) => {
+      if (type !== "model:download") return;
+      const model = typeof data.model === "string" ? data.model : "";
+      if (!model) return;
+      if (data.error === true || data.done === true) {
+        setDownloads((prev) => {
+          const next = { ...prev };
+          delete next[model];
+          return next;
+        });
+        return;
+      }
+      if (typeof data.pct === "number") {
+        const pct = Math.max(0, Math.min(100, data.pct));
+        setDownloads((prev) => ({ ...prev, [model]: { active: true, pct } }));
+      }
+    }, []),
+  );
+
+  /**
+   * Starts a model download and waits for it to finish (or throw).
+   * Invalidates ["whisper-models"] after a successful download.
+   */
+  const downloadModel = useCallback(async (model: string): Promise<void> => {
+    setDownloads((prev) => ({ ...prev, [model]: { active: true, pct: prev[model]?.pct ?? 0 } }));
+    try {
+      await api.downloadWhisperModel(model);
+      await queryClient.invalidateQueries({ queryKey: ["whisper-models"] });
+    } finally {
+      setDownloads((prev) => {
+        const next = { ...prev };
+        delete next[model];
+        return next;
+      });
+    }
+  }, [queryClient]);
+
+  return { downloads, downloadModel };
+}
+
