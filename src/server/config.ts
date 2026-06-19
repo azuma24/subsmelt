@@ -180,7 +180,11 @@ function saveConfig(config: ConfigData): void {
     fs.renameSync(tmpPath, CONFIG_FILE);
   } catch {
     fs.writeFileSync(CONFIG_FILE, json, "utf8");
-    try { fs.unlinkSync(tmpPath); } catch {}
+    try {
+      fs.unlinkSync(tmpPath);
+    } catch (e) {
+      console.error(`[Config] Failed to remove temp file ${tmpPath}:`, e);
+    }
   }
 }
 
@@ -195,6 +199,14 @@ export function getSetting(key: string): string {
 
 export function setSetting(key: string, value: string): void {
   _config.settings[key] = value;
+  saveConfig(_config);
+}
+
+// Batch variant: mutate the in-memory config once for all keys in `patch`, then
+// persist with a SINGLE saveConfig. Avoids N disk writes per multi-key save and
+// the concurrent-request clobber window of calling setSetting in a loop.
+export function setSettings(patch: Record<string, string>): void {
+  _config.settings = { ..._config.settings, ...patch };
   saveConfig(_config);
 }
 

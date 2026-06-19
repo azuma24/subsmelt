@@ -9,6 +9,18 @@ const REQUEST_TIMEOUT_MS = 8000;
 
 type NotifyFormat = "json" | "discord" | "slack";
 
+// Guard against SSRF: only allow http(s) webhook URLs. Rejects file://,
+// gopher://, and any non-http scheme that fetch would otherwise follow.
+function isHttpUrl(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  return parsed.protocol === "http:" || parsed.protocol === "https:";
+}
+
 function parseEvents(raw: string): Set<string> {
   return new Set(
     raw
@@ -58,6 +70,10 @@ function buildBody(format: NotifyFormat, event: string, payload: Record<string, 
 // POST the formatted body to the webhook. Throws on transport/HTTP failure so
 // callers that care (the test endpoint) can surface the reason.
 async function postWebhook(webhookUrl: string, event: string, payload: Record<string, unknown>): Promise<void> {
+  if (!isHttpUrl(webhookUrl)) {
+    throw new Error("Webhook URL must use http:// or https://");
+  }
+
   const rawFormat = getSetting("notify_format").trim().toLowerCase();
   const format: NotifyFormat = rawFormat === "discord" || rawFormat === "slack" ? rawFormat : "json";
 

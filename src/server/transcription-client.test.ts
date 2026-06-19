@@ -51,6 +51,33 @@ test("resolveTransportMode defaults to auto behaviour when unset", () => {
   assert.equal(resolveTransportMode({ transcription_backend_token: "t" }), "upload");
 });
 
+test("resolveTransportMode auto: backend host decides when no token is set", () => {
+  // Remote host, no token, no mapping → no shared FS → upload (the prod-500 fix).
+  assert.equal(
+    resolveTransportMode({ transcription_transport: "auto", transcription_backend_url: "http://192.168.1.25:8001" }),
+    "upload",
+  );
+  // Loopback host → same machine → shared.
+  assert.equal(
+    resolveTransportMode({ transcription_transport: "auto", transcription_backend_url: "http://127.0.0.1:8001" }),
+    "shared",
+  );
+  assert.equal(
+    resolveTransportMode({ transcription_transport: "auto", transcription_backend_url: "http://localhost:8001" }),
+    "shared",
+  );
+  // Remote host but explicit path mapping → operator wired a shared mount → shared.
+  assert.equal(
+    resolveTransportMode({
+      transcription_transport: "auto",
+      transcription_backend_url: "http://192.168.1.25:8001",
+      transcription_path_map_from: "/media",
+      transcription_path_map_to: "/srv/media",
+    }),
+    "shared",
+  );
+});
+
 test("buildTranscriptionRequest keeps whisper behavior app-owned", () => {
   const request = buildTranscriptionRequest({
     videoPath: "/media/anime/Episode 01.mkv",

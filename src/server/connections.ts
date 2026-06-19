@@ -1,3 +1,4 @@
+import { logger } from "./logger.js";
 import type { CloudProvider } from "./translator.js";
 
 // ── Multi-connection model ────────────────────────────────────────────────
@@ -120,6 +121,12 @@ export function parseConnections(s: Record<string, string>): LlmConnection[] {
       if (Array.isArray(arr) && arr.length > 0) {
         return arr.map(normalizeConnection);
       }
+      // Parsed but not a usable array — behavior unchanged (migrate), but warn
+      // so a malformed `llm_connections` setting isn't silently ignored.
+      logger.warn(
+        "system",
+        "llm_connections parsed to a non-array (or empty); falling back to legacy flat keys"
+      );
     } catch {
       // fall through to migration
     }
@@ -161,7 +168,16 @@ export function resolveConnectionPool(s: Record<string, string>): {
   let chosen: LlmConnection[];
   if (mode === "single") {
     const activeId = s.active_connection_id || s.cloud_provider || "local";
-    const active = all.find((c) => c.id === activeId) || all[0];
+    const matched = all.find((c) => c.id === activeId);
+    if (!matched && all.length > 0) {
+      // Behavior unchanged (use all[0]), but warn so a stale/invalid active id
+      // isn't silently resolved to an unexpected connection.
+      logger.warn(
+        "system",
+        `Active connection id "${activeId}" not found; falling back to "${all[0].id}"`
+      );
+    }
+    const active = matched || all[0];
     chosen = active ? [active] : [];
   } else {
     chosen = all

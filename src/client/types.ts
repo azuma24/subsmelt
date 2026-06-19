@@ -57,6 +57,7 @@ export interface SubtitleEntry {
 export interface ScannedFile {
   videoPath: string | null;
   videoName: string | null;
+  videoMtime: number | null;
   subtitles: SubtitleEntry[];
 }
 
