@@ -7,6 +7,7 @@ import {
   AUTO_SOURCE_LANGUAGE,
   getAllSettings,
   setSetting,
+  setSettings,
   getSetting,
   isWritableSettingKey,
   getTasks,
@@ -109,15 +110,26 @@ app.post("/api/settings", (req, res) => {
   // keys are silently skipped and reported back in `rejected` so a misbehaving
   // or malicious client can't inject arbitrary config entries.
   const rejected: string[] = [];
+  // Build a validated patch first, then write once via setSettings (a single
+  // disk write, no per-key concurrent-clobber window).
+  const patch: Record<string, string> = {};
   for (const [key, value] of Object.entries(settings)) {
     if (key.startsWith("_")) continue;
     if (!isWritableSettingKey(key)) {
       rejected.push(key);
       continue;
     }
-    setSetting(key, String(value));
+    // Only accept string values. Non-strings (arrays/objects/numbers/booleans)
+    // are rejected rather than silently coerced via String(value) — e.g.
+    // ["a"] must not become "a".
+    if (typeof value !== "string") {
+      rejected.push(key);
+      continue;
+    }
+    patch[key] = value;
     changedKeys.push(key);
   }
+  if (changedKeys.length > 0) setSettings(patch);
   logger.info("system", `Settings updated: ${changedKeys.join(", ")}`);
   if (rejected.length > 0) {
     logger.info("system", `Settings rejected (unknown keys): ${rejected.join(", ")}`);
@@ -404,6 +416,15 @@ app.get("/api/jobs/:id/preview", (req, res) => {
   const job = getJob(id) as any;
   if (!job) return res.status(404).json({ error: "Job not found" });
 
+  // Defense-in-depth: the paths come from the DB but still hit the filesystem,
+  // so confirm they live under MEDIA_DIR before reading.
+  try {
+    assertMediaPathAllowed(job.srt_path, MEDIA_DIR);
+    if (job.output_path) assertMediaPathAllowed(job.output_path, MEDIA_DIR);
+  } catch (error: any) {
+    return res.status(400).json({ error: error?.message || "Invalid media path" });
+  }
+
   try {
     const srcExt = path.extname(job.srt_path).slice(1).toLowerCase();
     const srcContent = readSubtitleFileText(job.srt_path);
@@ -461,6 +482,14 @@ app.put("/api/jobs/:id/cues", (req, res) => {
   const job = getJob(id) as any;
   if (!job) return res.status(404).json({ error: "Job not found" });
 
+  // Defense-in-depth: confirm the DB-stored output path is under MEDIA_DIR
+  // before we write to it.
+  try {
+    assertMediaPathAllowed(job.output_path, MEDIA_DIR);
+  } catch (error: any) {
+    return res.status(400).json({ error: error?.message || "Invalid media path" });
+  }
+
   const rawEdits = (req.body as { edits?: unknown })?.edits;
   if (!Array.isArray(rawEdits)) {
     return res.status(400).json({ error: "edits must be an array" });
@@ -498,6 +527,13 @@ app.get("/api/jobs/:id/download", (req, res) => {
   const id = parseInt(req.params.id, 10);
   const job = getJob(id) as any;
   if (!job) return res.status(404).json({ error: "Job not found" });
+  // Defense-in-depth: confirm the DB-stored output path is under MEDIA_DIR
+  // before reading it off disk.
+  try {
+    assertMediaPathAllowed(job.output_path, MEDIA_DIR);
+  } catch (error: any) {
+    return res.status(400).json({ error: error?.message || "Invalid media path" });
+  }
   if (!fs.existsSync(job.output_path)) {
     return res.status(404).json({ error: "Output file not found" });
   }
@@ -684,10 +720,10 @@ function acquireTranscriptionSlot(): Promise<void> {
 
 function releaseTranscriptionSlot(): void {
   transcriptionActive = Math.max(0, transcriptionActive - 1);
+  // Capture the limit ONCE: re-reading it inside the loop could let a setting
+  // change mid-drain over-admit waiters. Each waiter callback increments
+  // `transcriptionActive` itself, so we re-check that bound every iteration.
   const limit = transcriptionMaxConcurrent();
-  // Drain as many waiters as the current limit allows. Each waiter callback
-  // increments `transcriptionActive` itself, so we re-check the bound every
-  // iteration to avoid over-admitting.
   while (transcriptionActive < limit && transcriptionWaiters.length > 0) {
     const next = transcriptionWaiters.shift();
     if (next) next();
@@ -884,7 +920,10 @@ async function runTranscriptionAttempt(opts: {
       // Atomic write: write to a temp file in the same dir, then rename. This
       // avoids leaving a half-written subtitle file if the process dies mid-write.
       await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
-      const tmpPath = `${outputPath}.tmp`;
+      // Unique tmp name (pid + timestamp): two runs targeting the same
+      // outputPath (e.g. via the retry route, which bypasses the in-flight map)
+      // would otherwise collide on a fixed `${outputPath}.tmp`.
+      const tmpPath = `${outputPath}.${process.pid}.${Date.now()}.tmp`;
       await fs.promises.writeFile(tmpPath, result.content, "utf-8");
       try {
         await fs.promises.rename(tmpPath, outputPath);
@@ -985,6 +1024,14 @@ app.get("/api/transcribe/history", (req, res) => {
 app.post("/api/transcribe/history/:id/retry", async (req, res) => {
   const attempt = transcriptionHistory.get(req.params.id);
   if (!attempt) return res.status(404).json({ error: "Transcription attempt not found" });
+  // Re-validate the stored input path against the CURRENT MEDIA_DIR before
+  // re-running — MEDIA_DIR (or the stored path) may have changed since the
+  // original attempt.
+  try {
+    assertMediaPathAllowed(attempt.inputPath, MEDIA_DIR);
+  } catch (error: any) {
+    return res.status(400).json({ error: error?.message || "Invalid media path" });
+  }
   try {
     const { result, attemptId } = await runTranscriptionAttempt({
       videoPath: attempt.inputPath,
@@ -1104,6 +1151,12 @@ app.post("/api/transcribe/url", async (req, res) => {
 app.post("/api/transcribe/cancel", (req, res) => {
   const videoPath = typeof req.body?.path === "string" ? req.body.path : "";
   if (!videoPath) return res.status(400).json({ error: "path is required" });
+  // Validate the path is inside MEDIA_DIR before using it as a map key.
+  try {
+    assertMediaPathAllowed(videoPath, MEDIA_DIR);
+  } catch (error: any) {
+    return res.status(400).json({ error: error?.message || "Invalid media path" });
+  }
   const entry = inFlightTranscriptions.get(videoPath);
   if (!entry) return res.status(404).json({ ok: false, error: "No in-flight transcription for that path" });
   entry.controller.abort();
@@ -1136,6 +1189,11 @@ app.post("/api/whisper/models/download", async (req, res) => {
   if (!backendUrl) return res.status(400).json({ error: "Transcription backend URL is not configured" });
   const model = typeof req.body?.model === "string" ? req.body.model.trim() : "";
   if (!model) return res.status(400).json({ error: "model is required" });
+  // Reject anything outside a safe charset before forwarding to the backend —
+  // blocks "../" path traversal and other injection into the model name.
+  if (!/^[A-Za-z0-9._-]+$/.test(model)) {
+    return res.status(400).json({ error: "Invalid model name" });
+  }
 
   try {
     const result = await downloadBackendModel(backendUrl, model, {
@@ -1161,6 +1219,11 @@ app.delete("/api/whisper/models/:model", async (req, res) => {
   if (!backendUrl) return res.status(400).json({ error: "Transcription backend URL is not configured" });
   const model = typeof req.params.model === "string" ? req.params.model : "";
   if (!model) return res.status(400).json({ error: "model is required" });
+  // Reject anything outside a safe charset before forwarding to the backend —
+  // blocks "../" path traversal and other injection into the model name.
+  if (!/^[A-Za-z0-9._-]+$/.test(model)) {
+    return res.status(400).json({ error: "Invalid model name" });
+  }
   try {
     const result = await deleteBackendModel(backendUrl, model, settings.transcription_backend_token);
     logger.info("system", `Deleted whisper model ${model}${typeof result.freedMb === "number" ? ` (freed ${result.freedMb} MB)` : ""}`);

@@ -193,7 +193,7 @@ export function resolveTransportMode(settings: TranscriptionSettings): Transcrip
   );
   if (hasMapping) return "shared";
 
-  const backendUrl = (settings.transcription_backend_url || process.env.WHISPER_BACKEND_URL || "").trim();
+  const backendUrl = (settings.transcription_backend_url || "").trim();
   try {
     // Loopback hosts share the local filesystem; only truly remote hosts need an
     // upload because they cannot read paths visible to the SubSmelt server.

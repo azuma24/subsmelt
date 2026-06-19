@@ -333,22 +333,24 @@ export function useModelDownload(
   useEffect(() => { onProgressRef.current(downloads); }, [downloads]);
 
   // Listen for model:download SSE events and update progress state.
+  // NOTE: we intentionally do NOT delete the entry on error/done here — the
+  // downloadModel finally block is the single authoritative place that clears
+  // the entry once the HTTP promise settles. Deleting here while the HTTP call
+  // is still in flight would allow a second parallel download to start because
+  // the active guard would see no entry. Only pct updates are applied via SSE.
   useSSE(
     useCallback((type, data) => {
       if (type !== "model:download") return;
       const model = typeof data.model === "string" ? data.model : "";
       if (!model) return;
-      if (data.error === true || data.done === true) {
-        setDownloads((prev) => {
-          const next = { ...prev };
-          delete next[model];
-          return next;
-        });
-        return;
-      }
       if (typeof data.pct === "number") {
         const pct = Math.max(0, Math.min(100, data.pct));
-        setDownloads((prev) => ({ ...prev, [model]: { active: true, pct } }));
+        setDownloads((prev) => {
+          // Only update if the entry already exists (i.e. the HTTP call is active);
+          // ignore stray SSE events that arrive after the entry was cleared.
+          if (!prev[model]) return prev;
+          return { ...prev, [model]: { active: true, pct } };
+        });
       }
     }, []),
   );

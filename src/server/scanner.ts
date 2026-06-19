@@ -90,6 +90,7 @@ function walkDir(dir: string, results: string[] = [], depth = 999): string[] {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.name.startsWith(".")) continue; // skip hidden
+      if (entry.isSymbolicLink()) continue; // skip symlinks to avoid cycles
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         if (depth > 0) walkDir(fullPath, results, depth - 1);

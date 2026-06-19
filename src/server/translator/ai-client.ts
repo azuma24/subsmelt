@@ -120,6 +120,26 @@ export function parseRetryAfter(value: string | null | undefined, now = Date.now
   return null;
 }
 
+/**
+ * Validate that a user-configured host is an http(s) URL. This is a self-hosted,
+ * user-owned endpoint, so we deliberately do NOT block loopback/LAN here
+ * (localhost LM Studio is the common case) — we only enforce the scheme to keep
+ * non-http schemes (file:, ftp:, data:, …) out of the HTTP client. SSRF range
+ * checks live at the probe-fetch layer (probeModelContext) where an outbound
+ * request is actually made on the user's behalf.
+ */
+export function assertHttpScheme(apiHost: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(apiHost);
+  } catch {
+    throw new Error(`Invalid API host URL: ${apiHost}`);
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error(`API host must use http(s): ${apiHost}`);
+  }
+}
+
 export function getAi({ apiKey, apiHost, provider }: { apiKey: string; apiHost: string; provider?: CloudProvider }) {
   switch (provider) {
     case "openai":
@@ -129,6 +149,9 @@ export function getAi({ apiKey, apiHost, provider }: { apiKey: string; apiHost: 
     case "gemini":
       return createGoogleGenerativeAI({ apiKey: apiKey || "" });
     default:
+      // Enforce http(s) on the user-configured baseURL before it reaches the
+      // HTTP client. Keeps non-http schemes out; LAN/loopback hosts are allowed.
+      assertHttpScheme(apiHost);
       return createOpenAICompatible({
         name: "openai",
         apiKey: apiKey || "sk-dummy",
@@ -222,7 +245,11 @@ export async function retryTranslate<T>(
         msg.includes("did not match schema") ||
         msg.includes("validation") ||
         msg.includes("empty single-line translation") ||
-        error?.status >= 429;
+        // Only retry rate-limit (429) and transient server errors (5xx).
+        // Permanent 4xx like 400 (bad request) / 401 (invalid key) must NOT
+        // be retried — they only waste tokens/time and never succeed.
+        error?.status === 429 ||
+        error?.status >= 500;
       if (!isRetryable) throw error;
       // Rate-limit aware backoff: when the server says 429/503, honor Retry-After
       // (capped) instead of the default exponential schedule. A 429 with no

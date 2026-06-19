@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ModalShell } from "./ModalShell";
 
@@ -27,6 +27,10 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     resolve: (v: boolean) => void;
   } | null>(null);
 
+  // Always points at the latest pending resolver so button handlers don't close
+  // over a stale render-time value when state is replaced mid-tick.
+  const resolverRef = useRef<((v: boolean) => void) | null>(null);
+
   const confirm = useCallback((opts: ConfirmOptions): Promise<boolean> => {
     return new Promise((resolve) => {
       setState((prev) => {
@@ -35,11 +39,17 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
         prev?.resolve(false);
         return { opts, resolve };
       });
+      // Update the ref synchronously so handleClose always reaches the correct
+      // resolver even if the button is clicked before the next render commits.
+      resolverRef.current = resolve;
     });
   }, []);
 
   const handleClose = (result: boolean) => {
-    state?.resolve(result);
+    // Resolve via ref to guarantee we hit the latest pending promise, then clear
+    // so a stale close can't accidentally resolve a subsequent dialog.
+    resolverRef.current?.(result);
+    resolverRef.current = null;
     setState(null);
   };
 

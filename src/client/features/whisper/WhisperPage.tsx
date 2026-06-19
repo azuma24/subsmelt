@@ -472,7 +472,17 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
               )}
             </label>
             <label className="flex flex-col gap-1 text-[11px] text-[var(--text-2)]">{t("whisper.device")}
-              <select value={effDevice} onChange={(e) => { setDevice(e.target.value); saveSetting("transcription_device", e.target.value); }} className={selectCls}>
+              <select value={effDevice} onChange={(e) => {
+                const newDevice = e.target.value;
+                setDevice(newDevice);
+                // Clamp the current compute type into the valid set for the new device
+                // so the persisted setting never becomes invalid (e.g. cpu+float16).
+                const validComputes = COMPUTE_BY_DEVICE[newDevice] ?? ["int8"];
+                const currentCompute = computeType || str(settings.transcription_compute_type, "int8");
+                const clampedCompute = validComputes.includes(currentCompute) ? currentCompute : validComputes[0];
+                if (clampedCompute !== computeType) setComputeType(clampedCompute);
+                persistSetting.mutate({ transcription_device: newDevice, transcription_compute_type: clampedCompute });
+              }} className={selectCls}>
                 {deviceOptions.map((d) => <option key={d} value={d}>{d}</option>)}
               </select>
             </label>

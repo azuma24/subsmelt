@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { logger } from "../logger.js";
 import type { LlmMode, ResolvedConnection } from "../connections.js";
 import type { CloudProvider, TokenUsage } from "./ai-client.js";
 import {
@@ -33,6 +34,49 @@ import {
 
 // ── Dynamic model context probing ────────────────────────────────────────────
 
+/**
+ * Best-effort safety check for an outbound probe URL.
+ *
+ * The probe fetches a user-configured `apiHost`, so a malicious/misconfigured
+ * value could point at internal infrastructure (SSRF). This endpoint is
+ * user-owned and self-hosted, and the common deployment is a local LM Studio on
+ * localhost/LAN — so we deliberately do NOT hard-block private/loopback hosts
+ * (that would break legitimate use). Instead we:
+ *   - require an http(s) scheme (hard requirement), and
+ *   - log a warning when the host resolves to a loopback/link-local/private
+ *     range so the operator has visibility, while still allowing the request.
+ *
+ * Returns false only when the scheme is invalid — the one case worth blocking
+ * outright. Private-range hosts return true but emit a warning.
+ */
+export function isSafeHttpUrl(rawUrl: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+
+  const host = parsed.hostname.toLowerCase();
+  const isPrivate =
+    host === "localhost" ||
+    host === "0.0.0.0" ||
+    host === "::1" ||
+    /^127\./.test(host) ||
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^169\.254\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
+  if (isPrivate) {
+    logger.warn(
+      "translate",
+      `Model-context probe targets a private/loopback host (${host}); allowing (self-hosted endpoint), but verify this is intended.`
+    );
+  }
+  return true;
+}
+
 export interface ModelContextInfo {
   /** Maximum context window in tokens, or null if unknown */
   maxContextTokens: number | null;
@@ -65,6 +109,10 @@ export async function probeModelContext(
     // Strip /v1 or trailing path — LM Studio native API is at the root
     const base = apiHost.replace(/\/v1\/?$/, "").replace(/\/$/, "");
     const url = `${base}/api/v0/models`;
+
+    // SSRF guard: only http(s) probes are allowed; private-range hosts are
+    // permitted (self-hosted) but warn via isSafeHttpUrl. Invalid scheme → bail.
+    if (!isSafeHttpUrl(url)) return FALLBACK;
 
     const resp = await fetch(url, { signal: AbortSignal.timeout(5000) });
     if (!resp.ok) return FALLBACK;
@@ -584,20 +632,27 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       // Reuse the connection that produced pass-1 (falls back to the primary
       // only when pass-1 came from the single-line fallback path).
       const refineConn = pass1Conn ?? connOrder[0];
-      const refined = await refineChunk(coreText, translatedWindow as string[], {
-        apiKey: refineConn.apiKey,
-        apiHost: refineConn.apiHost,
-        model: refineConn.model,
-        provider: refineConn.provider,
-        lang: opts.lang,
-        additional: effectiveAdditional,
-        temperature: opts.temperature,
-        abortSignal: opts.abortSignal,
-        disableToolCalls: opts.disableToolCalls,
-        requestTimeoutMs: jobTimeoutMs,
-        onUsage: opts.onUsage,
-      });
-      if (refined) translatedWindow = refined;
+      // A refine failure (null, mismatch, network/abort/schema throw) must never
+      // discard a good pass-1 translation. Catch any throw and keep pass-1.
+      try {
+        const refined = await refineChunk(coreText, translatedWindow as string[], {
+          apiKey: refineConn.apiKey,
+          apiHost: refineConn.apiHost,
+          model: refineConn.model,
+          provider: refineConn.provider,
+          lang: opts.lang,
+          additional: effectiveAdditional,
+          temperature: opts.temperature,
+          abortSignal: opts.abortSignal,
+          disableToolCalls: opts.disableToolCalls,
+          requestTimeoutMs: jobTimeoutMs,
+          onUsage: opts.onUsage,
+        });
+        if (refined) translatedWindow = refined;
+      } catch (e: any) {
+        if (e?.message === "STOP_REQUESTED") throw e;
+        // Keep the pass-1 translatedWindow untouched (same as the null case).
+      }
     }
 
     // Write translations back — offset is now relative to coreStart
@@ -614,14 +669,24 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     }
 
     completedCues += chunkCompleted;
-    opts.onProgress?.(completedCues, totalCues);
+    // Clamp: a cue counted here (string translatedText, incl. "") can also match
+    // the post-pass `untranslated` filter (which treats "" as untranslated),
+    // so without clamping progress could briefly exceed 100%.
+    opts.onProgress?.(Math.min(completedCues, totalCues), totalCues);
 
     // Partial save — serialize via promise chain to prevent concurrent file writes.
     // Each processChunk call appends to the chain; writes never interleave.
     saveChain = saveChain.then(() => {
       try {
         saveTranslated(opts.outputPath, parsed, outputExt, subtitle);
-      } catch {}
+      } catch (e: any) {
+        // Best-effort partial save — never throw (the final write at job end is
+        // authoritative), but don't swallow silently: surface it for operators.
+        logger.warn(
+          "translate",
+          `Partial save failed for ${opts.outputPath}: ${e?.message || e}`
+        );
+      }
     });
   }
 
@@ -638,13 +703,35 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // Launch `concurrency` workers in parallel
   await Promise.all(Array.from({ length: concurrency }, (_, i) => worker(i)));
 
-  // Fallback for untranslated
+  // Fallback for untranslated — covers cues missed by the chunk + single-line
+  // passes (including empty-string translations the filter treats as missing).
   const untranslated = subtitle.filter((l: SubtitleCue) => !l.data?.translatedText);
   for (const cue of untranslated) {
     if (cue?.data) {
-      cue.data.translatedText = await translateSingleWithFallback(cue.data.text || "", connections, 5);
+      try {
+        cue.data.translatedText = await translateSingleWithFallback(cue.data.text || "", connections, 5);
+      } catch (e: any) {
+        if (e?.message === "STOP_REQUESTED") throw e;
+        // Every cue must end with some text — never drop a line from output.
+        // When even the per-line fallback can't translate, pass the source
+        // through so the cue still appears (untranslated, but present).
+        logger.warn(
+          "translate",
+          `Per-line fallback failed for a cue; passing source text through: ${e?.message || e}`
+        );
+        cue.data.translatedText = cue.data.text || "";
+      }
       completedCues++;
-      opts.onProgress?.(completedCues, totalCues);
+      opts.onProgress?.(Math.min(completedCues, totalCues), totalCues);
+    }
+  }
+
+  // Safety net: guarantee no cue is left without translatedText (which would
+  // drop the line from the rendered output). Any cue that somehow slipped
+  // through every pass gets a source passthrough.
+  for (const cue of subtitle) {
+    if (cue?.data && typeof cue.data.translatedText !== "string") {
+      cue.data.translatedText = cue.data.text || "";
     }
   }
 
