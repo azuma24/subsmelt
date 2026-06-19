@@ -3,6 +3,10 @@ services:
     environment:
       # Optional wiring only. Model/language/VAD/automation stay in the web Settings UI.
       - WHISPER_BACKEND_URL=http://whisper-backend:8001
+      # Both services mount the same /media, so the backend reads files in place
+      # (zero-copy). Pin shared transport; otherwise auto would pick upload for the
+      # non-loopback backend hostname and stream every file over HTTP.
+      - WHISPER_TRANSPORT=shared
 
   whisper-backend:
     build: ./backend-whisper
