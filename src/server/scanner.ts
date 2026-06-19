@@ -249,6 +249,7 @@ function applyPattern(
 export interface ScannedFile {
   videoPath: string | null;
   videoName: string | null;
+  videoMtime: number | null;
   subtitles: {
     srtPath: string;
     srtName: string;
@@ -345,9 +346,12 @@ export function scanFolder(createJobs = true): ScanResult {
 
   // Pre-populate video entries (even those without subtitles)
   for (const vf of videoFiles) {
+    let videoMtime: number | null = null;
+    try { videoMtime = fs.statSync(vf).mtimeMs; } catch { /* skip on stat error */ }
     grouped.set(vf, {
       videoPath: vf,
       videoName: path.basename(vf),
+      videoMtime,
       subtitles: [],
     });
   }
@@ -408,9 +412,14 @@ export function scanFolder(createJobs = true): ScanResult {
 
     const groupKey = videoPath || `orphan:${srtPath}`;
     if (!grouped.has(groupKey)) {
+      let videoMtime: number | null = null;
+      if (videoPath) {
+        try { videoMtime = fs.statSync(videoPath).mtimeMs; } catch { /* skip on stat error */ }
+      }
       grouped.set(groupKey, {
         videoPath,
         videoName: videoPath ? path.basename(videoPath) : null,
+        videoMtime,
         subtitles: [],
       });
     }

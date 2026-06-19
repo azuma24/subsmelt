@@ -36,6 +36,9 @@ const COMPUTE_BY_DEVICE: Record<string, string[]> = {
 
 interface FileProgress { pct?: number; done?: boolean; error?: boolean; cancelled?: boolean; phase?: string }
 
+type SortBy = "name" | "date";
+type SortDir = "asc" | "desc";
+
 interface TreeNode {
   name: string;
   path: string;          // folder path key (relative)
@@ -52,7 +55,7 @@ function relSegments(videoPath: string): string[] {
   return rest.split(/[\\/]/).filter(Boolean);
 }
 
-function buildFolderTree(files: ScannedFile[]): TreeNode {
+function buildFolderTree(files: ScannedFile[], sortBy: SortBy, sortDir: SortDir): TreeNode {
   const root: TreeNode = { name: "", path: "", children: [], files: [], allPaths: [] };
   const byPath = new Map<string, TreeNode>([["", root]]);
   for (const f of files) {
@@ -72,9 +75,23 @@ function buildFolderTree(files: ScannedFile[]): TreeNode {
     }
     node.files.push(f);
   }
+  const dirMul = sortDir === "asc" ? 1 : -1;
   const fill = (n: TreeNode): string[] => {
-    n.children.sort((a, b) => a.name.localeCompare(b.name));
-    n.files.sort((a, b) => (a.videoName || "").localeCompare(b.videoName || ""));
+    // Folders sort by name only (no single mtime); direction still applies so
+    // the whole tree flips consistently when the user toggles asc/desc.
+    n.children.sort((a, b) => a.name.localeCompare(b.name) * dirMul);
+    // Files sort by the chosen key; nulls for date are placed last regardless of direction.
+    n.files.sort((a, b) => {
+      if (sortBy === "date") {
+        const am = a.videoMtime ?? null;
+        const bm = b.videoMtime ?? null;
+        if (am === null && bm === null) return 0;
+        if (am === null) return 1;
+        if (bm === null) return -1;
+        return (am - bm) * dirMul;
+      }
+      return (a.videoName || "").localeCompare(b.videoName || "") * dirMul;
+    });
     const own = n.files.map((f) => f.videoPath as string);
     const kids = n.children.flatMap(fill);
     n.allPaths = [...own, ...kids];
@@ -120,9 +137,15 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
     () => (scanQuery.data?.files ?? []).filter((f) => Boolean(f.videoPath)),
     [scanQuery.data],
   );
+
+  // Sort controls: key (name or date) and direction. Re-sorting is memo-only —
+  // no refetch needed. Default: by name, ascending (mirrors classic file-explorer UX).
+  const [sortBy, setSortBy] = useState<SortBy>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
   // Build a navigable folder tree from the file paths so subfolders can be
   // expanded and selected individually (not collapsed into one top-level group).
-  const tree = useMemo(() => buildFolderTree(videoFiles), [videoFiles]);
+  const tree = useMemo(() => buildFolderTree(videoFiles, sortBy, sortDir), [videoFiles, sortBy, sortDir]);
 
   // Per-run options (default from Settings + advertised capabilities).
   const [model, setModel] = useState("");
@@ -560,16 +583,46 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
               className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-2)] disabled:opacity-40">
               {t("whisper.clear")}
             </button>
-            <button type="button" onClick={() => scanQuery.refetch()} disabled={scanQuery.isFetching}
-              className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-2)]">
-              {scanQuery.isFetching ? t("whisper.scanning") : t("whisper.rescan")}
-            </button>
             <span aria-live="polite" className="sr-only">
               {running && progress ? t("whisper.transcribingProgress", { done: progress.done, total: progress.total }) : ""}
             </span>
           </div>
 
-          <div className="mt-3 max-h-[40vh] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+          {/* File-browser header: sort controls + refresh */}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-[11px] text-[var(--text-3)]">{t("whisper.sortAriaLabel")}:</span>
+            <select
+              aria-label={t("whisper.sortAriaLabel")}
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortBy)}
+              className={selectCls}
+            >
+              <option value="name">{t("whisper.sortByName")}</option>
+              <option value="date">{t("whisper.sortByDate")}</option>
+            </select>
+            <button
+              type="button"
+              aria-label={sortDir === "asc" ? t("whisper.sortAsc") : t("whisper.sortDesc")}
+              onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+              className="rounded-lg border border-[var(--border)] px-2 py-1.5 text-[12px] text-[var(--text-2)] leading-none"
+            >
+              {sortDir === "asc" ? "↑" : "↓"}
+            </button>
+            <button
+              type="button"
+              aria-label={t("whisper.refreshAriaLabel")}
+              onClick={() => { void scanQuery.refetch(); }}
+              disabled={scanQuery.isFetching}
+              className="ml-auto rounded-lg border border-[var(--border)] px-3 py-1.5 text-[12px] text-[var(--text-2)] disabled:opacity-40 flex items-center gap-1.5"
+            >
+              {scanQuery.isFetching
+                ? <><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--accent)]" aria-hidden="true" />{t("whisper.scanning")}</>
+                : <>↻ {t("whisper.refresh")}</>
+              }
+            </button>
+          </div>
+
+          <div className="mt-2 max-h-[40vh] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)]">
             {scanQuery.isLoading && <div className="px-4 py-6 text-center text-xs text-[var(--text-3)]">{t("whisper.scanning")}</div>}
             {!scanQuery.isLoading && videoFiles.length === 0 && (
               <div className="px-4 py-6 text-center text-xs text-[var(--text-3)]">{t("whisper.noVideos")}</div>

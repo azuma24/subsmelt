@@ -51,7 +51,14 @@
     "modelDownloadDone": "Model {{model}} downloaded.",
     "modelDownloadFailed": "Failed to download model {{model}}: {{message}}",
     "modelDownloadCancelled": "Download cancelled — model not selected.",
-    "modelsStillLoading": "Model list still loading, try again in a moment."
+    "modelsStillLoading": "Model list still loading, try again in a moment.",
+    "refresh": "Refresh",
+    "sortByName": "Name",
+    "sortByDate": "Date",
+    "sortAsc": "Ascending",
+    "sortDesc": "Descending",
+    "sortAriaLabel": "Sort files",
+    "refreshAriaLabel": "Refresh file list"
   },
   "convert": {
     "title": "Subtitle Converter",
