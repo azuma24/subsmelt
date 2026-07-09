@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "Stahování zrušeno — nebyl vybrán žádný model.",
+    "modelDownloadDone": "Model {{model}} stažen.",
+    "modelDownloadFailed": "Stažení modelu {{model}} se nezdařilo: {{message}}",
+    "modelDownloading": "Stahování {{model}}…",
+    "modelNotDownloadedMessage": "Model „{{model}}“ ({{size}}) ještě není stažen. Stáhnout nyní?",
+    "modelNotDownloadedMessageNoSize": "Model „{{model}}“ ještě není stažen. Stáhnout nyní?",
+    "modelNotDownloadedTitle": "Model není stažen",
+    "modelsStillLoading": "Seznam modelů se stále načítá, zkuste to za chvíli znovu.",
+    "refresh": "Obnovit",
+    "refreshAriaLabel": "Obnovit seznam souborů",
+    "sortAriaLabel": "Seřadit soubory",
+    "sortAsc": "Vzestupně",
+    "sortByDate": "Datum",
+    "sortByName": "Název",
+    "sortDesc": "Sestupně"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

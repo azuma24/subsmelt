@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "ダウンロードをキャンセルしました — モデルが未選択です。",
+    "modelDownloadDone": "モデル {{model}} をダウンロードしました。",
+    "modelDownloadFailed": "モデル {{model}} のダウンロードに失敗しました：{{message}}",
+    "modelDownloading": "{{model}} をダウンロード中…",
+    "modelNotDownloadedMessage": "モデル「{{model}}」（{{size}}）はまだダウンロードされていません。今すぐダウンロードしますか？",
+    "modelNotDownloadedMessageNoSize": "モデル「{{model}}」はまだダウンロードされていません。今すぐダウンロードしますか？",
+    "modelNotDownloadedTitle": "モデルが未ダウンロード",
+    "modelsStillLoading": "モデル一覧を読み込み中です。しばらくしてからもう一度お試しください。",
+    "refresh": "更新",
+    "refreshAriaLabel": "ファイル一覧を更新",
+    "sortAriaLabel": "ファイルを並べ替え",
+    "sortAsc": "昇順",
+    "sortByDate": "日付",
+    "sortByName": "名前",
+    "sortDesc": "降順"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

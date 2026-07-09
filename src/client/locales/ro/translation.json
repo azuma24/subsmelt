@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "Descărcare anulată — niciun model selectat.",
+    "modelDownloadDone": "Modelul {{model}} a fost descărcat.",
+    "modelDownloadFailed": "Descărcarea modelului {{model}} a eșuat: {{message}}",
+    "modelDownloading": "Se descarcă {{model}}…",
+    "modelNotDownloadedMessage": "Modelul „{{model}}” ({{size}}) nu este încă descărcat. Îl descărcați acum?",
+    "modelNotDownloadedMessageNoSize": "Modelul „{{model}}” nu este încă descărcat. Îl descărcați acum?",
+    "modelNotDownloadedTitle": "Model nedescărcat",
+    "modelsStillLoading": "Lista de modele se încarcă încă, încercați din nou peste un moment.",
+    "refresh": "Reîmprospătează",
+    "refreshAriaLabel": "Reîmprospătează lista de fișiere",
+    "sortAriaLabel": "Sortează fișierele",
+    "sortAsc": "Crescător",
+    "sortByDate": "Dată",
+    "sortByName": "Nume",
+    "sortDesc": "Descrescător"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

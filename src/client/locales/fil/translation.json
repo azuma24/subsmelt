@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "Kanselado ang pag-download — walang napiling modelo.",
+    "modelDownloadDone": "Na-download ang modelong {{model}}.",
+    "modelDownloadFailed": "Nabigong i-download ang modelong {{model}}: {{message}}",
+    "modelDownloading": "Dina-download ang {{model}}…",
+    "modelNotDownloadedMessage": "Hindi pa na-download ang modelong \"{{model}}\" ({{size}}). I-download na ngayon?",
+    "modelNotDownloadedMessageNoSize": "Hindi pa na-download ang modelong \"{{model}}\". I-download na ngayon?",
+    "modelNotDownloadedTitle": "Hindi naka-download ang modelo",
+    "modelsStillLoading": "Naglo-load pa ang listahan ng mga modelo, subukan ulit mamaya.",
+    "refresh": "I-refresh",
+    "refreshAriaLabel": "I-refresh ang listahan ng file",
+    "sortAriaLabel": "Ayusin ang mga file",
+    "sortAsc": "Pataas",
+    "sortByDate": "Petsa",
+    "sortByName": "Pangalan",
+    "sortDesc": "Pababa"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

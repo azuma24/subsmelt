@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "பதிவிறக்கம் ரத்துசெய்யப்பட்டது — மாதிரி தேர்ந்தெடுக்கப்படவில்லை.",
+    "modelDownloadDone": "மாதிரி {{model}} பதிவிறக்கப்பட்டது.",
+    "modelDownloadFailed": "மாதிரி {{model}} பதிவிறக்கம் தோல்வியடைந்தது: {{message}}",
+    "modelDownloading": "{{model}} பதிவிறக்கப்படுகிறது…",
+    "modelNotDownloadedMessage": "மாதிரி \"{{model}}\" ({{size}}) இன்னும் பதிவிறக்கப்படவில்லை. இப்போது பதிவிறக்கவா?",
+    "modelNotDownloadedMessageNoSize": "மாதிரி \"{{model}}\" இன்னும் பதிவிறக்கப்படவில்லை. இப்போது பதிவிறக்கவா?",
+    "modelNotDownloadedTitle": "மாதிரி பதிவிறக்கப்படவில்லை",
+    "modelsStillLoading": "மாதிரி பட்டியல் இன்னும் ஏற்றப்படுகிறது, சிறிது நேரத்தில் மீண்டும் முயற்சிக்கவும்.",
+    "refresh": "புதுப்பி",
+    "refreshAriaLabel": "கோப்புப் பட்டியலைப் புதுப்பி",
+    "sortAriaLabel": "கோப்புகளை வரிசைப்படுத்து",
+    "sortAsc": "ஏறுவரிசை",
+    "sortByDate": "தேதி",
+    "sortByName": "பெயர்",
+    "sortDesc": "இறங்குவரிசை"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

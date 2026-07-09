@@ -1,7 +1,37 @@
-import type { Dispatch, SetStateAction } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { NAV_ITEMS } from "./constants";
+import { getThemePref, setThemePref, THEME_PREFS, type ThemePref } from "../lib/theme";
+
+const THEME_ICON: Record<ThemePref, string> = { system: "🖥", dark: "🌙", light: "☀️" };
+
+/** One-click theme cycle (System → Dark → Light) in the global chrome, mirroring
+ *  the Settings → Interface control. Persists via setThemePref. */
+function ThemeToggle() {
+  const { t } = useTranslation();
+  const [pref, setPref] = useState<ThemePref>(getThemePref());
+  const cycle = () => {
+    // Read fresh from storage, not the closed-over state: the Settings → Interface
+    // control writes the same key without notifying us, so `pref` can be stale.
+    const next = THEME_PREFS[(THEME_PREFS.indexOf(getThemePref()) + 1) % THEME_PREFS.length];
+    setPref(next);
+    setThemePref(next);
+  };
+  const label = t(`settings.interface.theme_${pref}`);
+  return (
+    <button
+      type="button"
+      onClick={cycle}
+      aria-label={`${t("settings.interface.theme")}: ${label}`}
+      title={`${t("settings.interface.theme")}: ${label}`}
+      className="mt-1.5 flex w-full items-center gap-2 rounded-[7px] border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1.5 text-[11.5px] text-[var(--text-2)] transition-colors hover:text-[var(--text)] hover:border-[var(--accent-border)]"
+    >
+      <span className="w-[18px] shrink-0 text-center text-sm leading-none">{THEME_ICON[pref]}</span>
+      <span className="hidden lg:inline">{label}</span>
+    </button>
+  );
+}
 
 interface DesktopSidebarProps {
   collapsed?: boolean;
@@ -81,6 +111,7 @@ export function DesktopSidebar({
             <span className="truncate font-mono text-[11px] text-[var(--text-2)]">{modelName}</span>
           </div>
         )}
+        <ThemeToggle />
       </div>
     </nav>
   );

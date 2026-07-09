@@ -521,14 +521,12 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
       {/* ── Content ── */}
       <div className="flex-1 space-y-4 p-3.5 md:p-[18px]">
 
-        {/* L1: Hero band — StatusStrip (replaces 4 stat cards) */}
+        {/* L1: Cockpit metric band — status filters + token usage in one row */}
         <DashboardHero
           statusSegments={statusSegments}
           statusFilter={statusFilter}
           activeJobs={activeJobs}
           pendingJobs={pendingJobs}
-          doneJobs={doneJobs}
-          errorJobs={errorJobs}
           usageTotals={usageTotals}
           tokenBudget={tokenBudget}
           onSelectStatus={selectStatus}

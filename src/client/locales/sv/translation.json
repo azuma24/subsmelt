@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "Nedladdning avbruten — ingen modell vald.",
+    "modelDownloadDone": "Modellen {{model}} har laddats ned.",
+    "modelDownloadFailed": "Det gick inte att ladda ned modellen {{model}}: {{message}}",
+    "modelDownloading": "Laddar ned {{model}}…",
+    "modelNotDownloadedMessage": "Modellen \"{{model}}\" ({{size}}) har inte laddats ned ännu. Ladda ned nu?",
+    "modelNotDownloadedMessageNoSize": "Modellen \"{{model}}\" har inte laddats ned ännu. Ladda ned nu?",
+    "modelNotDownloadedTitle": "Modellen är inte nedladdad",
+    "modelsStillLoading": "Modellistan laddas fortfarande, försök igen om en stund.",
+    "refresh": "Uppdatera",
+    "refreshAriaLabel": "Uppdatera fillistan",
+    "sortAriaLabel": "Sortera filer",
+    "sortAsc": "Stigande",
+    "sortByDate": "Datum",
+    "sortByName": "Namn",
+    "sortDesc": "Fallande"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

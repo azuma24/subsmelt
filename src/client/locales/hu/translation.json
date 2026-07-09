@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "Letöltés megszakítva — nincs kiválasztva modell.",
+    "modelDownloadDone": "{{model}} modell letöltve.",
+    "modelDownloadFailed": "Nem sikerült letölteni a(z) {{model}} modellt: {{message}}",
+    "modelDownloading": "{{model}} letöltése…",
+    "modelNotDownloadedMessage": "A(z) „{{model}}” ({{size}}) modell még nincs letöltve. Letölti most?",
+    "modelNotDownloadedMessageNoSize": "A(z) „{{model}}” modell még nincs letöltve. Letölti most?",
+    "modelNotDownloadedTitle": "A modell nincs letöltve",
+    "modelsStillLoading": "A modellek listája még betöltődik, próbáld újra egy pillanat múlva.",
+    "refresh": "Frissítés",
+    "refreshAriaLabel": "Fájllista frissítése",
+    "sortAriaLabel": "Fájlok rendezése",
+    "sortAsc": "Növekvő",
+    "sortByDate": "Dátum",
+    "sortByName": "Név",
+    "sortDesc": "Csökkenő"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

@@ -1,6 +1,5 @@
 import type { TFunction } from "i18next";
 import type { JobRow } from "../../types";
-import { StatusStrip, StatCard } from "../../ui/primitives";
 import { ActiveJobCard } from "./ActiveJobCard";
 import { formatTokens, formatCost } from "../../lib";
 
@@ -17,8 +16,6 @@ interface DashboardHeroProps {
   statusFilter: string;
   activeJobs: JobRow[];
   pendingJobs: JobRow[];
-  doneJobs: JobRow[];
-  errorJobs: JobRow[];
   /** Summed token usage + approximate cost across all visible jobs. */
   usageTotals: { inputTokens: number; outputTokens: number; cost: number; hasCost: boolean };
   /** Soft monthly token budget (0 = unlimited) — display-only indicator. */
@@ -27,13 +24,14 @@ interface DashboardHeroProps {
   t: TFunction;
 }
 
+// Cockpit Grid metric band — one full-width row of dense cells (status filters +
+// token usage), replacing the old StatusStrip + duplicate stat-card grid. Big
+// mono numerals, tiny uppercase labels, hairline dividers.
 export function DashboardHero({
   statusSegments,
   statusFilter,
   activeJobs,
   pendingJobs,
-  doneJobs,
-  errorJobs,
   usageTotals,
   tokenBudget,
   onSelectStatus,
@@ -45,45 +43,43 @@ export function DashboardHero({
     ? t("dashboard.stat.tokenBudget", { used: formatTokens(totalTokens), budget: formatTokens(tokenBudget) })
     : costStr;
   const overBudget = tokenBudget > 0 && totalTokens > tokenBudget;
-  const tokenCardLabel = `${t("dashboard.stat.tokens")} · ${budgetStr}`;
+
+  const cellLabel = "text-[10px] font-medium uppercase tracking-[0.7px] leading-none";
+  const cellValue = "mt-2 font-mono text-[20px] font-semibold tabular-nums leading-none";
+
   return (
-    <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:gap-4">
-      {/* Left: Status strip + active job */}
-      <div className="min-w-0 flex-1 space-y-3">
-        {/* StatusStrip — condensed stat row, each segment clickable to filter */}
-        <StatusStrip
-          segments={statusSegments}
-          activeKey={statusFilter}
-          onSelect={onSelectStatus}
-        />
-        {activeJobs.length > 0 && (
-          <div className="flex flex-col gap-2">
-            {activeJobs.map((j, i) => (
-              <ActiveJobCard key={j.id} job={j} pendingCount={i === 0 ? pendingJobs.length : 0} />
-            ))}
-          </div>
-        )}
-      </div>
-      {/* Right: quick-stat cards (kept for xl layout, condensed) — xl:w-[34rem] */}
-      <div className="grid grid-cols-2 gap-[10px] sm:grid-cols-2 xl:grid-cols-4 xl:w-[34rem]">
-        <StatCard label={t("dashboard.stat.pending")} value={pendingJobs.length} color="text-[var(--yellow)]" onClick={() => onSelectStatus("pending")} />
-        <StatCard label={t("dashboard.stat.translating")} value={activeJobs.length} color="text-[var(--accent)]" onClick={() => onSelectStatus("translating")} />
-        <StatCard label={t("dashboard.stat.done")} value={doneJobs.length} color="text-[var(--green)]" onClick={() => onSelectStatus("done")} />
-        <StatCard
-          label={t("dashboard.stat.errors")}
-          value={errorJobs.length}
-          color="text-[var(--red)]"
-          onClick={() => onSelectStatus("error")}
-        />
-        {/* Tokens / est. cost — unobtrusive, spans the full width below the 4 cards */}
-        <div className="col-span-2 xl:col-span-4">
-          <StatCard
-            label={tokenCardLabel}
-            value={formatTokens(totalTokens)}
-            color={overBudget ? "text-[var(--red)]" : "text-[var(--text)]"}
-          />
+    <div className="flex flex-col gap-3">
+      {/* Hairline grid: gap-px over a border-colored bg draws the dividers and
+          stays responsive — 2 cols on phones, 3 on small, all 6 in a row on lg. */}
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--border)] sm:grid-cols-3 lg:grid-cols-6">
+        {statusSegments.map((seg) => {
+          const isActive = statusFilter === seg.key;
+          return (
+            <button
+              key={seg.key}
+              type="button"
+              onClick={() => onSelectStatus(seg.key)}
+              className={`px-3.5 py-2.5 text-left transition-colors ${isActive ? "bg-[var(--surface-2)]" : "bg-[var(--surface)] hover:bg-[var(--surface-2)]"}`}
+            >
+              <div className={`${cellLabel} ${isActive ? "text-[var(--accent)]" : "text-[var(--text-3)]"}`}>{seg.label}</div>
+              <div className={`${cellValue} ${isActive ? seg.activeColor : seg.color}`}>{seg.count}</div>
+            </button>
+          );
+        })}
+        {/* Tokens / est. cost — display-only trailing cell, not a filter. */}
+        <div className="bg-[var(--surface)] px-3.5 py-2.5">
+          <div className={`${cellLabel} truncate text-[var(--text-3)]`}>{t("dashboard.stat.tokens")} · {budgetStr}</div>
+          <div className={`${cellValue} ${overBudget ? "text-[var(--red)]" : "text-[var(--text)]"}`}>{formatTokens(totalTokens)}</div>
         </div>
       </div>
+
+      {activeJobs.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {activeJobs.map((j, i) => (
+            <ActiveJobCard key={j.id} job={j} pendingCount={i === 0 ? pendingJobs.length : 0} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

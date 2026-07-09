@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "Η λήψη ακυρώθηκε — δεν επιλέχθηκε μοντέλο.",
+    "modelDownloadDone": "Το μοντέλο {{model}} λήφθηκε.",
+    "modelDownloadFailed": "Αποτυχία λήψης του μοντέλου {{model}}: {{message}}",
+    "modelDownloading": "Λήψη {{model}}…",
+    "modelNotDownloadedMessage": "Το μοντέλο «{{model}}» ({{size}}) δεν έχει ληφθεί ακόμη. Λήψη τώρα;",
+    "modelNotDownloadedMessageNoSize": "Το μοντέλο «{{model}}» δεν έχει ληφθεί ακόμη. Λήψη τώρα;",
+    "modelNotDownloadedTitle": "Το μοντέλο δεν έχει ληφθεί",
+    "modelsStillLoading": "Η λίστα μοντέλων φορτώνεται ακόμη, δοκιμάστε ξανά σε λίγο.",
+    "refresh": "Ανανέωση",
+    "refreshAriaLabel": "Ανανέωση λίστας αρχείων",
+    "sortAriaLabel": "Ταξινόμηση αρχείων",
+    "sortAsc": "Αύξουσα",
+    "sortByDate": "Ημερομηνία",
+    "sortByName": "Όνομα",
+    "sortDesc": "Φθίνουσα"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

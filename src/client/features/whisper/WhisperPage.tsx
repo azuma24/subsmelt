@@ -23,6 +23,8 @@ import { TranscriptionHistoryPanel } from "../dashboard/TranscriptionHistoryPane
 
 const str = (v: unknown, fallback = ""): string => (typeof v === "string" ? v : fallback);
 const baseName = (p: string): string => p.split(/[\\/]/).pop() || p;
+const validSortBy = (value: unknown): SortBy => (value === "name" || value === "date" ? value : "date");
+const validSortDir = (value: unknown): SortDir => (value === "asc" || value === "desc" ? value : "desc");
 
 type OutputFormat = "srt" | "ass" | "vtt" | "txt";
 const FORMATS: OutputFormat[] = ["srt", "ass", "vtt", "txt"];
@@ -76,9 +78,9 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   );
 
   // Sort controls: key (name or date) and direction. Re-sorting is memo-only —
-  // no refetch needed. Default: by name, ascending (mirrors classic file-explorer UX).
-  const [sortBy, setSortBy] = useState<SortBy>("name");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  // no refetch needed. Defaults: newest files first.
+  const [sortBy, setSortBy] = useState<SortBy>("date");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   // Build a navigable folder tree from the file paths so subfolders can be
   // expanded and selected individually (not collapsed into one top-level group).
@@ -125,6 +127,25 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   // fall back to the saved setting via eff()).
   const persistSetting = useMutationWithInvalidation((patch: Record<string, string>) => api.saveSettings(patch));
   const saveSetting = useCallback((key: string, value: string) => { persistSetting.mutate({ [key]: value }); }, [persistSetting]);
+
+  useEffect(() => {
+    if (!settingsQuery.isSuccess) return;
+    setSortBy(validSortBy(settings.transcription_sort_by));
+    setSortDir(validSortDir(settings.transcription_sort_dir));
+  }, [settings.transcription_sort_by, settings.transcription_sort_dir, settingsQuery.isSuccess]);
+
+  const handleSortByChange = useCallback((value: SortBy) => {
+    setSortBy(value);
+    saveSetting("transcription_sort_by", value);
+  }, [saveSetting]);
+
+  const toggleSortDir = useCallback(() => {
+    setSortDir((current) => {
+      const next: SortDir = current === "asc" ? "desc" : "asc";
+      saveSetting("transcription_sort_dir", next);
+      return next;
+    });
+  }, [saveSetting]);
 
   // Look up downloaded status for a given model id from the cached models list.
   const isModelDownloaded = useCallback((modelId: string): boolean | undefined => {
@@ -531,7 +552,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
             <select
               aria-label={t("whisper.sortAriaLabel")}
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortBy)}
+              onChange={(e) => handleSortByChange(e.target.value as SortBy)}
               className={selectCls}
             >
               <option value="name">{t("whisper.sortByName")}</option>
@@ -540,7 +561,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
             <button
               type="button"
               aria-label={sortDir === "asc" ? t("whisper.sortAsc") : t("whisper.sortDesc")}
-              onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+              onClick={toggleSortDir}
               className="rounded-lg border border-[var(--border)] px-2 py-1.5 text-[12px] text-[var(--text-2)] leading-none"
             >
               {sortDir === "asc" ? "↑" : "↓"}

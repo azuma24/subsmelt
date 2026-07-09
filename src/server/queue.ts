@@ -16,6 +16,27 @@ const activeJobIds = new Set<number>();
 const abortControllers = new Set<AbortController>();
 // Hard ceiling on concurrent translation workers (matches the per-file connection cap).
 const MAX_WORKERS = 32;
+const offlineConnectionIds = new Set<string>();
+const connectionLockTails = new Map<string, Promise<void>>();
+
+async function acquireConnectionLock(conn: ResolvedConnection): Promise<() => void> {
+  const previous = connectionLockTails.get(conn.id) ?? Promise.resolve();
+  let releaseCurrent!: () => void;
+  const current = new Promise<void>((resolve) => { releaseCurrent = resolve; });
+  connectionLockTails.set(conn.id, previous.then(() => current));
+  await previous;
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    releaseCurrent();
+  };
+}
+
+function availablePool(pool: ResolvedConnection[]): ResolvedConnection[] {
+  const available = pool.filter((conn) => !offlineConnectionIds.has(conn.id));
+  return available.length > 0 ? available : pool;
+}
 
 export function isQueueRunning() {
   return isRunning;
@@ -42,6 +63,8 @@ export async function processQueue(onlyIds?: number[]) {
   if (isRunning) return;
   isRunning = true;
   shouldStop = false;
+  offlineConnectionIds.clear();
+  connectionLockTails.clear();
 
   const filter = onlyIds && onlyIds.length > 0 ? new Set(onlyIds) : null;
   const allPending = getJobs("pending") as any[];
@@ -78,6 +101,8 @@ export async function processQueue(onlyIds?: number[]) {
     currentJobId = null;
     activeJobIds.clear();
     abortControllers.clear();
+    offlineConnectionIds.clear();
+    connectionLockTails.clear();
   }
 }
 
@@ -128,7 +153,8 @@ function hasPendingJobs(filter: Set<number> | null): boolean {
  */
 async function adaptiveWorker(index: number, filter: Set<number> | null) {
   while (!shouldStop) {
-    const { mode, pool } = resolveConnectionPool(getAllSettings());
+    const { mode, pool: resolvedPool } = resolveConnectionPool(getAllSettings());
+    const pool = availablePool(resolvedPool);
     const parallel = mode === "parallel" && pool.length > 1;
     const concurrency = parallel ? pool.length : 1;
 
@@ -148,7 +174,14 @@ async function adaptiveWorker(index: number, filter: Set<number> | null) {
       ? [pool[index], ...pool.filter((_, j) => j !== index)]
       : pool;
     const jobMode: LlmMode = parallel ? "fallback" : mode;
-    const stopped = await runJob(job, order, jobMode);
+    const primary = order[0];
+    const releasePrimary = primary ? await acquireConnectionLock(primary) : undefined;
+    let stopped = false;
+    try {
+      stopped = await runJob(job, order, jobMode, primary ? new Set([primary.id]) : new Set<string>());
+    } finally {
+      releasePrimary?.();
+    }
     if (stopped) break;
   }
 }
@@ -158,7 +191,12 @@ async function adaptiveWorker(index: number, filter: Set<number> | null) {
  * Returns true when the job was interrupted by a stop request so the caller
  * can break its loop.
  */
-async function runJob(job: any, conns: ResolvedConnection[], llmModeForJob: LlmMode): Promise<boolean> {
+async function runJob(
+  job: any,
+  conns: ResolvedConnection[],
+  llmModeForJob: LlmMode,
+  reservedConnectionIds: Set<string> = new Set()
+): Promise<boolean> {
   const srtName = job.srt_path.split("/").pop() || job.srt_path;
   const task = getTask(job.task_id);
   const langCode = task?.lang_code || "?";
@@ -222,6 +260,12 @@ async function runJob(job: any, conns: ResolvedConnection[], llmModeForJob: LlmM
       onConnectionError: ({ id, label, error }) => {
         logger.warn("translate", `LLM connection failed, cascading to next: ${label} (${id}) — ${error}`, job.id, { stage: "llm_connection_error" });
       },
+      onConnectionUnavailable: ({ id, label, error }) => {
+        offlineConnectionIds.add(id);
+        logger.warn("translate", `LLM connection unavailable after 5 attempts; skipping for this queue run: ${label} (${id}) — ${error}`, job.id, { stage: "llm_connection_unavailable" });
+      },
+      acquireConnection: acquireConnectionLock,
+      reservedConnectionIds,
       prompt: promptToUse,
       lang: targetLang || "English",
       sourceLang: task?.source_lang || "Automatic",

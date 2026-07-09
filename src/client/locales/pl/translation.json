@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "Anulowano pobieranie — nie wybrano modelu.",
+    "modelDownloadDone": "Pobrano model {{model}}.",
+    "modelDownloadFailed": "Nie udało się pobrać modelu {{model}}: {{message}}",
+    "modelDownloading": "Pobieranie {{model}}…",
+    "modelNotDownloadedMessage": "Model „{{model}}” ({{size}}) nie został jeszcze pobrany. Pobrać teraz?",
+    "modelNotDownloadedMessageNoSize": "Model „{{model}}” nie został jeszcze pobrany. Pobrać teraz?",
+    "modelNotDownloadedTitle": "Model nie został pobrany",
+    "modelsStillLoading": "Lista modeli wciąż się ładuje, spróbuj ponownie za chwilę.",
+    "refresh": "Odśwież",
+    "refreshAriaLabel": "Odśwież listę plików",
+    "sortAriaLabel": "Sortuj pliki",
+    "sortAsc": "Rosnąco",
+    "sortByDate": "Data",
+    "sortByName": "Nazwa",
+    "sortDesc": "Malejąco"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

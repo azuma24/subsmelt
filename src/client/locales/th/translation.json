@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "ยกเลิกการดาวน์โหลดแล้ว — ยังไม่ได้เลือกโมเดล",
+    "modelDownloadDone": "ดาวน์โหลดโมเดล {{model}} แล้ว",
+    "modelDownloadFailed": "ดาวน์โหลดโมเดล {{model}} ไม่สำเร็จ: {{message}}",
+    "modelDownloading": "กำลังดาวน์โหลด {{model}}…",
+    "modelNotDownloadedMessage": "ยังไม่ได้ดาวน์โหลดโมเดล \"{{model}}\" ({{size}}) ดาวน์โหลดตอนนี้หรือไม่?",
+    "modelNotDownloadedMessageNoSize": "ยังไม่ได้ดาวน์โหลดโมเดล \"{{model}}\" ดาวน์โหลดตอนนี้หรือไม่?",
+    "modelNotDownloadedTitle": "ยังไม่ได้ดาวน์โหลดโมเดล",
+    "modelsStillLoading": "กำลังโหลดรายการโมเดล โปรดลองอีกครั้งในอีกสักครู่",
+    "refresh": "รีเฟรช",
+    "refreshAriaLabel": "รีเฟรชรายการไฟล์",
+    "sortAriaLabel": "จัดเรียงไฟล์",
+    "sortAsc": "จากน้อยไปมาก",
+    "sortByDate": "วันที่",
+    "sortByName": "ชื่อ",
+    "sortDesc": "จากมากไปน้อย"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "ডাউনলোড বাতিল করা হয়েছে — কোনো মডেল নির্বাচন করা হয়নি।",
+    "modelDownloadDone": "মডেল {{model}} ডাউনলোড হয়েছে।",
+    "modelDownloadFailed": "মডেল {{model}} ডাউনলোড করা ব্যর্থ হয়েছে: {{message}}",
+    "modelDownloading": "{{model}} ডাউনলোড হচ্ছে…",
+    "modelNotDownloadedMessage": "মডেল \"{{model}}\" ({{size}}) এখনও ডাউনলোড করা হয়নি। এখনই ডাউনলোড করবেন?",
+    "modelNotDownloadedMessageNoSize": "মডেল \"{{model}}\" এখনও ডাউনলোড করা হয়নি। এখনই ডাউনলোড করবেন?",
+    "modelNotDownloadedTitle": "মডেল ডাউনলোড করা হয়নি",
+    "modelsStillLoading": "মডেলের তালিকা এখনও লোড হচ্ছে, কিছুক্ষণ পরে আবার চেষ্টা করুন।",
+    "refresh": "রিফ্রেশ",
+    "refreshAriaLabel": "ফাইলের তালিকা রিফ্রেশ করুন",
+    "sortAriaLabel": "ফাইল সাজান",
+    "sortAsc": "ঊর্ধ্বক্রম",
+    "sortByDate": "তারিখ",
+    "sortByName": "নাম",
+    "sortDesc": "অধঃক্রম"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

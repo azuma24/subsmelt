@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "Download annullato — nessun modello selezionato.",
+    "modelDownloadDone": "Modello {{model}} scaricato.",
+    "modelDownloadFailed": "Impossibile scaricare il modello {{model}}: {{message}}",
+    "modelDownloading": "Download di {{model}}…",
+    "modelNotDownloadedMessage": "Il modello «{{model}}» ({{size}}) non è ancora stato scaricato. Scaricarlo ora?",
+    "modelNotDownloadedMessageNoSize": "Il modello «{{model}}» non è ancora stato scaricato. Scaricarlo ora?",
+    "modelNotDownloadedTitle": "Modello non scaricato",
+    "modelsStillLoading": "L'elenco dei modelli è ancora in caricamento, riprova tra un momento.",
+    "refresh": "Aggiorna",
+    "refreshAriaLabel": "Aggiorna elenco file",
+    "sortAriaLabel": "Ordina file",
+    "sortAsc": "Crescente",
+    "sortByDate": "Data",
+    "sortByName": "Nome",
+    "sortDesc": "Decrescente"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

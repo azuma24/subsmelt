@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "Загрузка отменена — модель не выбрана.",
+    "modelDownloadDone": "Модель {{model}} загружена.",
+    "modelDownloadFailed": "Не удалось загрузить модель {{model}}: {{message}}",
+    "modelDownloading": "Загрузка {{model}}…",
+    "modelNotDownloadedMessage": "Модель «{{model}}» ({{size}}) ещё не загружена. Загрузить сейчас?",
+    "modelNotDownloadedMessageNoSize": "Модель «{{model}}» ещё не загружена. Загрузить сейчас?",
+    "modelNotDownloadedTitle": "Модель не загружена",
+    "modelsStillLoading": "Список моделей ещё загружается, повторите попытку через мгновение.",
+    "refresh": "Обновить",
+    "refreshAriaLabel": "Обновить список файлов",
+    "sortAriaLabel": "Сортировать файлы",
+    "sortAsc": "По возрастанию",
+    "sortByDate": "Дата",
+    "sortByName": "Имя",
+    "sortDesc": "По убыванию"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

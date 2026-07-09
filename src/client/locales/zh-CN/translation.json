@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "下载已取消 — 未选择模型。",
+    "modelDownloadDone": "已下载模型 {{model}}。",
+    "modelDownloadFailed": "下载模型 {{model}} 失败：{{message}}",
+    "modelDownloading": "正在下载 {{model}}…",
+    "modelNotDownloadedMessage": "模型“{{model}}”（{{size}}）尚未下载。立即下载吗？",
+    "modelNotDownloadedMessageNoSize": "模型“{{model}}”尚未下载。立即下载吗？",
+    "modelNotDownloadedTitle": "模型未下载",
+    "modelsStillLoading": "模型列表仍在加载，请稍后重试。",
+    "refresh": "刷新",
+    "refreshAriaLabel": "刷新文件列表",
+    "sortAriaLabel": "排序文件",
+    "sortAsc": "升序",
+    "sortByDate": "日期",
+    "sortByName": "名称",
+    "sortDesc": "降序"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

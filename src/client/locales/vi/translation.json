@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "Đã hủy tải xuống — chưa chọn mô hình.",
+    "modelDownloadDone": "Đã tải xuống mô hình {{model}}.",
+    "modelDownloadFailed": "Không tải được mô hình {{model}}: {{message}}",
+    "modelDownloading": "Đang tải xuống {{model}}…",
+    "modelNotDownloadedMessage": "Mô hình \"{{model}}\" ({{size}}) chưa được tải xuống. Tải xuống ngay?",
+    "modelNotDownloadedMessageNoSize": "Mô hình \"{{model}}\" chưa được tải xuống. Tải xuống ngay?",
+    "modelNotDownloadedTitle": "Mô hình chưa được tải xuống",
+    "modelsStillLoading": "Danh sách mô hình vẫn đang tải, vui lòng thử lại sau giây lát.",
+    "refresh": "Làm mới",
+    "refreshAriaLabel": "Làm mới danh sách tệp",
+    "sortAriaLabel": "Sắp xếp tệp",
+    "sortAsc": "Tăng dần",
+    "sortByDate": "Ngày",
+    "sortByName": "Tên",
+    "sortDesc": "Giảm dần"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

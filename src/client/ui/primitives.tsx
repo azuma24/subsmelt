@@ -25,7 +25,7 @@ interface ActionButtonProps {
 
 export function ActionButton({ children, onClick, className = "", variant = "primary", size = "md", disabled = false, busy = false }: ActionButtonProps) {
   const cls = {
-    primary: "bg-[var(--accent)] hover:brightness-110 text-white",
+    primary: "bg-[var(--accent)] hover:brightness-110 text-[var(--on-accent)]",
     success: "bg-[var(--green)] hover:brightness-110 text-black font-semibold",
     danger: "bg-transparent text-[var(--red)] border border-[var(--red-border)] hover:bg-[var(--red-dim)]",
     ghost: "bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text)] border border-[var(--border)]",
@@ -33,19 +33,6 @@ export function ActionButton({ children, onClick, className = "", variant = "pri
   }[variant];
   const sizeCls = size === "sm" ? "px-3 py-1.5 text-[12px]" : "px-4 py-2.5 text-[13px]";
   return <button onClick={onClick} disabled={disabled || busy} className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg text-center font-medium leading-6 transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${sizeCls} ${cls} ${className}`}>{children}</button>;
-}
-
-export function StatCard({ label, value, color, onClick }: { label: string; value: number | string; color: string; onClick?: () => void }) {
-  const base = "rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5";
-  if (onClick) {
-    return (
-      <button onClick={onClick} className={`${base} text-left w-full cursor-pointer hover:border-[var(--accent-border)] transition-colors`}>
-        <div className={`text-[26px] font-bold tabular-nums leading-none ${color}`}>{value}</div>
-        <div className="mt-1.5 text-[11.5px] text-[var(--text-2)]">{label}</div>
-      </button>
-    );
-  }
-  return <div className={base}><div className={`text-[26px] font-bold tabular-nums leading-none ${color}`}>{value}</div><div className="mt-1.5 text-[11.5px] text-[var(--text-2)]">{label}</div></div>;
 }
 
 export function StatusBadge({ job, compact = false }: { job: JobRow; compact?: boolean }) {
@@ -351,41 +338,6 @@ export function SelectionBar({ count, children, onClear, clearLabel, summaryLabe
           {clearLabel}
         </button>
       </div>
-    </div>
-  );
-}
-
-interface StatusStripSegment {
-  key: string;
-  label: string;
-  count: number;
-  color: string;
-  activeColor: string;
-}
-
-interface StatusStripProps {
-  segments: StatusStripSegment[];
-  activeKey: string;
-  onSelect: (key: string) => void;
-}
-
-export function StatusStrip({ segments, activeKey, onSelect }: StatusStripProps) {
-  return (
-    <div className="flex overflow-hidden rounded-xl border border-[var(--border)] divide-x divide-[var(--border)]">
-      {segments.map((seg) => {
-        const isActive = activeKey === seg.key;
-        return (
-          <button
-            key={seg.key}
-            type="button"
-            onClick={() => onSelect(seg.key)}
-            className={`flex-1 min-h-[44px] px-3 py-2 text-center transition-colors ${isActive ? "bg-[var(--surface-3)]" : "bg-[var(--surface)] hover:bg-[var(--surface-2)]"}`}
-          >
-            <div className={`text-[22px] font-bold tabular-nums leading-none ${isActive ? seg.activeColor : seg.color}`}>{seg.count}</div>
-            <div className="mt-1 text-[11px] text-[var(--text-2)] leading-6">{seg.label}</div>
-          </button>
-        );
-      })}
     </div>
   );
 }

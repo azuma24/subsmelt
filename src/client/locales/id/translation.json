@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "Unduhan dibatalkan — tidak ada model yang dipilih.",
+    "modelDownloadDone": "Model {{model}} telah diunduh.",
+    "modelDownloadFailed": "Gagal mengunduh model {{model}}: {{message}}",
+    "modelDownloading": "Mengunduh {{model}}…",
+    "modelNotDownloadedMessage": "Model \"{{model}}\" ({{size}}) belum diunduh. Unduh sekarang?",
+    "modelNotDownloadedMessageNoSize": "Model \"{{model}}\" belum diunduh. Unduh sekarang?",
+    "modelNotDownloadedTitle": "Model belum diunduh",
+    "modelsStillLoading": "Daftar model masih dimuat, coba lagi sebentar lagi.",
+    "refresh": "Segarkan",
+    "refreshAriaLabel": "Segarkan daftar berkas",
+    "sortAriaLabel": "Urutkan berkas",
+    "sortAsc": "Menaik",
+    "sortByDate": "Tanggal",
+    "sortByName": "Nama",
+    "sortDesc": "Menurun"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

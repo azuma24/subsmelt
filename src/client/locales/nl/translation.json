@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "Download geannuleerd — geen model geselecteerd.",
+    "modelDownloadDone": "Model {{model}} gedownload.",
+    "modelDownloadFailed": "Model {{model}} downloaden mislukt: {{message}}",
+    "modelDownloading": "{{model}} downloaden…",
+    "modelNotDownloadedMessage": "Model \"{{model}}\" ({{size}}) is nog niet gedownload. Nu downloaden?",
+    "modelNotDownloadedMessageNoSize": "Model \"{{model}}\" is nog niet gedownload. Nu downloaden?",
+    "modelNotDownloadedTitle": "Model niet gedownload",
+    "modelsStillLoading": "Modellijst wordt nog geladen, probeer het zo opnieuw.",
+    "refresh": "Vernieuwen",
+    "refreshAriaLabel": "Bestandslijst vernieuwen",
+    "sortAriaLabel": "Bestanden sorteren",
+    "sortAsc": "Oplopend",
+    "sortByDate": "Datum",
+    "sortByName": "Naam",
+    "sortDesc": "Aflopend"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

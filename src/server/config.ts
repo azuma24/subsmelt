@@ -99,6 +99,8 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   transcription_language: "auto",
   transcription_use_vad: "1",
   transcription_output_format: "srt",
+  transcription_sort_by: "date",
+  transcription_sort_dir: "desc",
   transcription_max_line_length: "42",
   transcription_max_subtitle_duration: "6",
   transcription_merge_short_segments: "0",

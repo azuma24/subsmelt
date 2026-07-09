@@ -312,6 +312,16 @@ export interface TranslateFileOptions {
   onConnectionUsed?: (info: { id: string; label: string }) => void;
   /** Fired when a connection exhausts its retries and the job cascades to the next. */
   onConnectionError?: (info: { id: string; label: string; error: string }) => void;
+  /** Fired when a connection fails its 5×/5s availability probe and is skipped. */
+  onConnectionUnavailable?: (info: { id: string; label: string; error: string }) => void;
+  /**
+   * Optional cross-job connection mutex. Queue-level parallel jobs reserve their
+   * primary connection for the whole file; fallback users wait here until that
+   * primary job releases it.
+   */
+  acquireConnection?: (conn: ResolvedConnection) => Promise<() => void>;
+  /** Connections already reserved by this job (so translateFile must not re-lock). */
+  reservedConnectionIds?: Iterable<string>;
   /**
    * Token-usage aggregator. Fired incrementally after each successful LLM call
    * (analysis, chunk, single, refine) for this file so a caller can live-update a
@@ -335,13 +345,95 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     ? opts.connections
     : [{ id: "default", label: "default", apiKey: opts.apiKey, apiHost: opts.apiHost, model: opts.model, provider: opts.provider }];
   const llmMode: LlmMode = opts.llmMode || "single";
-  const primary = connections[0];
   const usedConnIds = new Set<string>();
   const markUsed = (c: ResolvedConnection) => {
     if (usedConnIds.has(c.id)) return;
     usedConnIds.add(c.id);
     opts.onConnectionUsed?.({ id: c.id, label: c.label });
   };
+  const reservedConnectionIds = new Set(opts.reservedConnectionIds ?? []);
+  const unavailableConnIds = new Set<string>();
+  const verifiedConnIds = new Set<string>();
+  const OFFLINE_ATTEMPTS = 5;
+  const OFFLINE_RETRY_MS = 5_000;
+
+  const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+  function connectionModelsUrl(conn: ResolvedConnection): string | null {
+    // Cloud SDK providers do not share a single /models endpoint/auth shape;
+    // they fail fast inside their SDK call. The availability probe is for local
+    // / OpenAI-compatible sources, where an offline LM Studio/Ollama/vLLM host
+    // otherwise gets retried for every chunk.
+    if (conn.provider) return null;
+    try {
+      const base = new URL(conn.apiHost);
+      base.pathname = `${base.pathname.replace(/\/$/, "")}/models`;
+      base.search = "";
+      base.hash = "";
+      return base.toString();
+    } catch {
+      return null;
+    }
+  }
+
+  function offlineMessage(error: unknown): string {
+    const err = error as any;
+    return String(err?.message || err?.cause?.message || error || "connection unavailable");
+  }
+
+  async function ensureConnectionReady(conn: ResolvedConnection): Promise<void> {
+    if (unavailableConnIds.has(conn.id)) {
+      throw new Error(`Connection marked unavailable: ${conn.label}`);
+    }
+    if (verifiedConnIds.has(conn.id)) return;
+
+    const modelsUrl = connectionModelsUrl(conn);
+    if (!modelsUrl) {
+      verifiedConnIds.add(conn.id);
+      return;
+    }
+
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= OFFLINE_ATTEMPTS; attempt++) {
+      if (opts.abortSignal?.aborted) throw new Error("STOP_REQUESTED");
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort("connection_probe_timeout"), OFFLINE_RETRY_MS);
+      try {
+        const res = await fetch(modelsUrl, {
+          method: "GET",
+          headers: conn.apiKey ? { Authorization: `Bearer ${conn.apiKey}` } : undefined,
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status} from ${modelsUrl}`);
+        verifiedConnIds.add(conn.id);
+        return;
+      } catch (error) {
+        lastErr = error;
+        if (attempt >= OFFLINE_ATTEMPTS) break;
+        opts.onRetry?.(attempt, error, OFFLINE_RETRY_MS);
+        await delay(OFFLINE_RETRY_MS);
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    unavailableConnIds.add(conn.id);
+    const error = offlineMessage(lastErr);
+    opts.onConnectionUnavailable?.({ id: conn.id, label: conn.label, error });
+    throw new Error(`Connection unavailable after ${OFFLINE_ATTEMPTS} attempts: ${conn.label} — ${error}`);
+  }
+
+  async function withConnection<T>(conn: ResolvedConnection, fn: () => Promise<T>): Promise<T> {
+    await ensureConnectionReady(conn);
+    const release = reservedConnectionIds.has(conn.id)
+      ? undefined
+      : await opts.acquireConnection?.(conn);
+    try {
+      return await fn();
+    } finally {
+      release?.();
+    }
+  }
 
   let subtitle: SubtitleCue[];
   if (Array.isArray(parsed)) {
@@ -378,18 +470,35 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
 
   // Context analysis runs for every file regardless of length — short clips
   // (tech talks, interviews) still carry glossary-worthy terms worth pinning.
-  const analysis = await analyzeSubtitlesForContext(allTexts, {
-    apiKey: primary.apiKey,
-    apiHost: primary.apiHost,
-    model: primary.model,
-    provider: primary.provider,
-    lang: opts.lang,
-    temperature: 0.3,
-    abortSignal: opts.abortSignal,
-    maxAnalysisLines: opts.maxAnalysisLines,
-    requestTimeoutMs: jobTimeoutMs,
-    onUsage: opts.onUsage,
-  });
+  // It uses the same connection fallback/availability gate as translation so a
+  // down primary source doesn't fail the job before chunk fallback can start.
+  let analysis = "";
+  let analysisErr: unknown;
+  for (const conn of connections) {
+    try {
+      analysis = await withConnection(conn, () => analyzeSubtitlesForContext(allTexts, {
+        apiKey: conn.apiKey,
+        apiHost: conn.apiHost,
+        model: conn.model,
+        provider: conn.provider,
+        lang: opts.lang,
+        temperature: 0.3,
+        abortSignal: opts.abortSignal,
+        maxAnalysisLines: opts.maxAnalysisLines,
+        requestTimeoutMs: jobTimeoutMs,
+        onUsage: opts.onUsage,
+      }));
+      markUsed(conn);
+      break;
+    } catch (e: any) {
+      if (e?.message === "STOP_REQUESTED") throw e;
+      analysisErr = e;
+      opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(e?.message || e) });
+    }
+  }
+  if (!analysis && analysisErr && connections.every((c) => unavailableConnIds.has(c.id))) {
+    throw analysisErr;
+  }
 
   if (analysis) {
     effectiveAdditional = `${effectiveAdditional ? `${effectiveAdditional}\n\n` : ""}[Context]\n${analysis}`;
@@ -446,7 +555,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   ): Promise<{ result: string[]; conn: ResolvedConnection } | null> {
     for (const conn of order) {
       try {
-        const result = await retryTranslate(
+        const result = await withConnection(conn, () => retryTranslate(
           (attempt) => {
             const attemptTemp = Math.max(
               0.1,
@@ -474,7 +583,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
           2,
           1000,
           opts.onRetry
-        );
+        ));
         markUsed(conn);
         return { result, conn };
       } catch (e: any) {
@@ -494,7 +603,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     let lastErr: unknown;
     for (const conn of order) {
       try {
-        const r = await retryTranslate(
+        const r = await withConnection(conn, () => retryTranslate(
           (_) =>
             translateSingle(lineText, {
               apiKey: conn.apiKey,
@@ -511,7 +620,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
           retries,
           1000,
           opts.onRetry
-        );
+        ));
         markUsed(conn);
         return r;
       } catch (e: any) {
@@ -635,7 +744,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       // A refine failure (null, mismatch, network/abort/schema throw) must never
       // discard a good pass-1 translation. Catch any throw and keep pass-1.
       try {
-        const refined = await refineChunk(coreText, translatedWindow as string[], {
+        const refined = await withConnection(refineConn, () => refineChunk(coreText, translatedWindow as string[], {
           apiKey: refineConn.apiKey,
           apiHost: refineConn.apiHost,
           model: refineConn.model,
@@ -647,7 +756,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
           disableToolCalls: opts.disableToolCalls,
           requestTimeoutMs: jobTimeoutMs,
           onUsage: opts.onUsage,
-        });
+        }));
         if (refined) translatedWindow = refined;
       } catch (e: any) {
         if (e?.message === "STOP_REQUESTED") throw e;

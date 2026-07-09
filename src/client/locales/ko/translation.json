@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "다운로드가 취소되었습니다 — 모델이 선택되지 않았습니다.",
+    "modelDownloadDone": "모델 {{model}}을(를) 다운로드했습니다.",
+    "modelDownloadFailed": "모델 {{model}} 다운로드에 실패했습니다: {{message}}",
+    "modelDownloading": "{{model}} 다운로드 중…",
+    "modelNotDownloadedMessage": "모델 \"{{model}}\"({{size}})이(가) 아직 다운로드되지 않았습니다. 지금 다운로드할까요?",
+    "modelNotDownloadedMessageNoSize": "모델 \"{{model}}\"이(가) 아직 다운로드되지 않았습니다. 지금 다운로드할까요?",
+    "modelNotDownloadedTitle": "모델이 다운로드되지 않음",
+    "modelsStillLoading": "모델 목록을 아직 불러오는 중입니다. 잠시 후 다시 시도하세요.",
+    "refresh": "새로고침",
+    "refreshAriaLabel": "파일 목록 새로고침",
+    "sortAriaLabel": "파일 정렬",
+    "sortAsc": "오름차순",
+    "sortByDate": "날짜",
+    "sortByName": "이름",
+    "sortDesc": "내림차순"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

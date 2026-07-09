@@ -39,12 +39,11 @@ test("shared controls avoid tiny helper text and preserve touch-friendly targets
   assert.match(primitives, /leading-6/);
 });
 
-test("dashboard hero uses intentional desktop action grouping", () => {
-  assert.match(dashboard, /aria-label=\{t\("dashboard\.hero\.scanActions"\)\}/);
-  assert.match(dashboard, /xl:flex-row/);
-  assert.match(dashboard, /sm:grid-cols-2/);
-  assert.match(dashboard, /xl:w-\[34rem\]/);
-  assert.match(dashboard, /sm:col-span-2/);
+test("dashboard hero metric band stays a responsive hairline grid", () => {
+  // Cockpit Grid band: status filters + tokens in one row on desktop, wrapping
+  // to 2-3 rows on narrow screens (gap-px over a border bg draws the dividers).
+  assert.match(dashboard, /grid-cols-2 gap-px[^"]*sm:grid-cols-3 lg:grid-cols-6/);
+  assert.match(dashboard, /font-mono text-\[20px\] font-semibold tabular-nums/);
 });
 
 test("dashboard keeps small desktop layouts readable before switching to mobile", () => {

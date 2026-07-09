@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "تم إلغاء التنزيل — لم يتم تحديد نموذج.",
+    "modelDownloadDone": "تم تنزيل النموذج {{model}}.",
+    "modelDownloadFailed": "فشل تنزيل النموذج {{model}}: {{message}}",
+    "modelDownloading": "جارٍ تنزيل {{model}}…",
+    "modelNotDownloadedMessage": "النموذج «{{model}}» ({{size}}) لم يُنزَّل بعد. هل تريد تنزيله الآن؟",
+    "modelNotDownloadedMessageNoSize": "النموذج «{{model}}» لم يُنزَّل بعد. هل تريد تنزيله الآن؟",
+    "modelNotDownloadedTitle": "النموذج غير مُنزَّل",
+    "modelsStillLoading": "لا تزال قائمة النماذج قيد التحميل، أعد المحاولة بعد لحظة.",
+    "refresh": "تحديث",
+    "refreshAriaLabel": "تحديث قائمة الملفات",
+    "sortAriaLabel": "ترتيب الملفات",
+    "sortAsc": "تصاعدي",
+    "sortByDate": "التاريخ",
+    "sortByName": "الاسم",
+    "sortDesc": "تنازلي"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

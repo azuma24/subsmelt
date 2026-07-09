@@ -14,9 +14,15 @@
   --text: #e6edf3;
   --text-2: #8b949e;
   --text-3: #484f58;
-  --accent: #4493f8;
-  --accent-dim: rgba(68, 147, 248, 0.10);
-  --accent-border: rgba(68, 147, 248, 0.25);
+  /* Cockpit Grid accent — cyan. Bright enough to read as text/links/borders on
+     the dark surfaces (its dominant use); primary buttons use dark text (see
+     ActionButton) since white-on-cyan would fail contrast. */
+  --accent: #22d3ee;
+  --accent-dim: rgba(34, 211, 238, 0.12);
+  --accent-border: rgba(34, 211, 238, 0.30);
+  /* Foreground for filled-accent surfaces (primary buttons). Dark here because
+     the dark-theme cyan is bright; the light theme flips this to white. */
+  --on-accent: #04222a;
   --green: #3fb950;
   --green-dim: rgba(63, 185, 80, 0.10);
   --green-border: rgba(63, 185, 80, 0.28);
@@ -42,9 +48,11 @@ html[data-theme="light"] {
   --text: #1f2328;
   --text-2: #59636e;
   --text-3: #818b96;
-  --accent: #0969da;
-  --accent-dim: rgba(9, 105, 218, 0.08);
-  --accent-border: rgba(9, 105, 218, 0.30);
+  /* Cyan-700 in light mode — darker so cyan text/links stay legible on white. */
+  --accent: #0e7490;
+  --accent-dim: rgba(14, 116, 144, 0.08);
+  --accent-border: rgba(14, 116, 144, 0.32);
+  --on-accent: #ffffff;
   --green: #1a7f37;
   --green-dim: rgba(26, 127, 55, 0.10);
   --green-border: rgba(26, 127, 55, 0.30);

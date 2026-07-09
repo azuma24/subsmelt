@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "İndirme iptal edildi — model seçilmedi.",
+    "modelDownloadDone": "{{model}} modeli indirildi.",
+    "modelDownloadFailed": "{{model}} modeli indirilemedi: {{message}}",
+    "modelDownloading": "{{model}} indiriliyor…",
+    "modelNotDownloadedMessage": "\"{{model}}\" ({{size}}) modeli henüz indirilmedi. Şimdi indirilsin mi?",
+    "modelNotDownloadedMessageNoSize": "\"{{model}}\" modeli henüz indirilmedi. Şimdi indirilsin mi?",
+    "modelNotDownloadedTitle": "Model indirilmedi",
+    "modelsStillLoading": "Model listesi hâlâ yükleniyor, birazdan tekrar deneyin.",
+    "refresh": "Yenile",
+    "refreshAriaLabel": "Dosya listesini yenile",
+    "sortAriaLabel": "Dosyaları sırala",
+    "sortAsc": "Artan",
+    "sortByDate": "Tarih",
+    "sortByName": "Ad",
+    "sortDesc": "Azalan"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

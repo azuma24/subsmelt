@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "ההורדה בוטלה — לא נבחר מודל.",
+    "modelDownloadDone": "המודל {{model}} הורד.",
+    "modelDownloadFailed": "הורדת המודל {{model}} נכשלה: {{message}}",
+    "modelDownloading": "מוריד את {{model}}…",
+    "modelNotDownloadedMessage": "המודל \"{{model}}\" ({{size}}) עדיין לא הורד. להוריד עכשיו?",
+    "modelNotDownloadedMessageNoSize": "המודל \"{{model}}\" עדיין לא הורד. להוריד עכשיו?",
+    "modelNotDownloadedTitle": "המודל לא הורד",
+    "modelsStillLoading": "רשימת המודלים עדיין נטענת, נסה שוב בעוד רגע.",
+    "refresh": "רענן",
+    "refreshAriaLabel": "רענן את רשימת הקבצים",
+    "sortAriaLabel": "מיין קבצים",
+    "sortAsc": "עולה",
+    "sortByDate": "תאריך",
+    "sortByName": "שם",
+    "sortDesc": "יורד"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

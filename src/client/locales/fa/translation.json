@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "دانلود لغو شد — مدلی انتخاب نشده است.",
+    "modelDownloadDone": "مدل {{model}} دانلود شد.",
+    "modelDownloadFailed": "دانلود مدل {{model}} ناموفق بود: {{message}}",
+    "modelDownloading": "در حال دانلود {{model}}…",
+    "modelNotDownloadedMessage": "مدل «{{model}}» ({{size}}) هنوز دانلود نشده است. اکنون دانلود شود؟",
+    "modelNotDownloadedMessageNoSize": "مدل «{{model}}» هنوز دانلود نشده است. اکنون دانلود شود؟",
+    "modelNotDownloadedTitle": "مدل دانلود نشده است",
+    "modelsStillLoading": "فهرست مدل‌ها هنوز در حال بارگذاری است، لحظه‌ای دیگر دوباره تلاش کنید.",
+    "refresh": "تازه‌سازی",
+    "refreshAriaLabel": "تازه‌سازی فهرست فایل‌ها",
+    "sortAriaLabel": "مرتب‌سازی فایل‌ها",
+    "sortAsc": "صعودی",
+    "sortByDate": "تاریخ",
+    "sortByName": "نام",
+    "sortDesc": "نزولی"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

@@ -895,7 +895,22 @@
     "urlButton": "Transcribe URL",
     "urlBusy": "Fetching & transcribing…",
     "urlDone": "Transcribed {{segments}} segments — download started.",
-    "urlFailed": "URL transcription failed"
+    "urlFailed": "URL transcription failed",
+    "modelDownloadCancelled": "Muat turun dibatalkan — tiada model dipilih.",
+    "modelDownloadDone": "Model {{model}} dimuat turun.",
+    "modelDownloadFailed": "Gagal memuat turun model {{model}}: {{message}}",
+    "modelDownloading": "Memuat turun {{model}}…",
+    "modelNotDownloadedMessage": "Model \"{{model}}\" ({{size}}) belum dimuat turun. Muat turun sekarang?",
+    "modelNotDownloadedMessageNoSize": "Model \"{{model}}\" belum dimuat turun. Muat turun sekarang?",
+    "modelNotDownloadedTitle": "Model belum dimuat turun",
+    "modelsStillLoading": "Senarai model masih dimuatkan, cuba lagi sebentar lagi.",
+    "refresh": "Segar semula",
+    "refreshAriaLabel": "Segar semula senarai fail",
+    "sortAriaLabel": "Isih fail",
+    "sortAsc": "Menaik",
+    "sortByDate": "Tarikh",
+    "sortByName": "Nama",
+    "sortDesc": "Menurun"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
