@@ -13,6 +13,7 @@ import { JobCardMobile } from "./JobCardMobile";
 import { JobDetailsDrawer } from "./JobDetailsDrawer";
 import { PreviewOverlay } from "./PreviewOverlay";
 import { ScanResultsPanel, getScanGroupName, type ScanFilter } from "./ScanResultsPanel";
+import { validDashboardSortBy, validDashboardSortDir, type DashboardSortBy, type DashboardSortDir } from "./scanSort";
 import { useDashboardDerivedState } from "./useDashboardDerivedState";
 import { DashboardHero } from "./DashboardHero";
 import { QueueToolbar } from "./QueueToolbar";
@@ -48,6 +49,8 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const [scanResult, setScanResult] = useState<ScannedFile[] | null>(null);
   const [scanListFilter, setScanListFilter] = useState<ScanFilter>("all");
   const [scanSearch, setScanSearch] = useState("");
+  const [dashboardSortBy, setDashboardSortBy] = useState<DashboardSortBy>("date");
+  const [dashboardSortDir, setDashboardSortDir] = useState<DashboardSortDir>("desc");
   const [expandedScanGroups, setExpandedScanGroups] = useState<Set<string>>(new Set());
   const [previewJobId, setPreviewJobId] = useState<number | null>(null);
   const [previewSearch, setPreviewSearch] = useState("");
@@ -80,6 +83,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const transcribeMutation = useMutationWithInvalidation((payload: { videoPath: string; postAction: TranscribePostAction }) => api.transcribeVideo(payload));
   const retryTranscriptionMutation = useMutationWithInvalidation((id: string) => api.retryTranscriptionAttempt(id));
   const cancelTranscriptionMutation = useMutationWithInvalidation((videoPath: string) => api.cancelTranscription({ path: videoPath }));
+  const saveDashboardSortMutation = useMutationWithInvalidation((patch: Record<string, string>) => api.saveSettings(patch));
 
   const jobs: JobRow[] = jobsQuery.data?.jobs || [];
   const queueRunning = Boolean(queueStatusQuery.data?.running ?? jobsQuery.data?.queueRunning ?? false);
@@ -93,6 +97,25 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const transcriptionEnabled = str(settings.transcription_enabled, "0") === "1";
   const transcriptionAttempts = transcriptionHistoryQuery.data?.attempts || [];
   const tokenBudget = Math.max(0, parseInt(str(settings.monthly_token_budget, "0"), 10) || 0);
+
+  useEffect(() => {
+    if (!settingsQuery.isSuccess) return;
+    setDashboardSortBy(validDashboardSortBy(settings.dashboard_sort_by));
+    setDashboardSortDir(validDashboardSortDir(settings.dashboard_sort_dir));
+  }, [settings.dashboard_sort_by, settings.dashboard_sort_dir, settingsQuery.isSuccess]);
+
+  const handleDashboardSortByChange = (value: DashboardSortBy) => {
+    setDashboardSortBy(value);
+    saveDashboardSortMutation.mutate({ dashboard_sort_by: value });
+  };
+
+  const handleDashboardSortDirToggle = () => {
+    setDashboardSortDir((current) => {
+      const next: DashboardSortDir = current === "asc" ? "desc" : "asc";
+      saveDashboardSortMutation.mutate({ dashboard_sort_dir: next });
+      return next;
+    });
+  };
 
   // Summed token usage + approximate cost across all jobs (display-only).
   const usageTotals = jobs.reduce(
@@ -691,6 +714,10 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
                 isQueueing={scanMutation.isPending}
                 newJobsCount={scanResult.flatMap((file) => file.subtitles.flatMap((sub) => sub.tasks)).filter((task) => task.status === "new").length}
                 mediaDir={mediaDir}
+                sortBy={dashboardSortBy}
+                sortDir={dashboardSortDir}
+                onSortByChange={handleDashboardSortByChange}
+                onToggleSortDir={handleDashboardSortDirToggle}
               />
             </div>
           )}
