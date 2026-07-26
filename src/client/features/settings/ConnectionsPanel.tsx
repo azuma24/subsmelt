@@ -5,6 +5,7 @@ import type { LlmConnection, LlmMode, LlmProvider } from "../../types";
 
 const PROVIDERS: LlmProvider[] = ["local", "openai", "anthropic", "gemini"];
 const DEFAULT_LOCAL_ENDPOINT = "http://localhost:8000/v1";
+const REDACTED_SECRET = "__SUBSMELT_SECRET_REDACTED__";
 
 const MODE_HELP_KEY: Record<LlmMode, string> = {
   single: "settings.connections.modeHelpSingle",
@@ -113,7 +114,7 @@ export function ConnectionsPanel({ settings, update, addToast, isMobile }: Conne
         method: "POST",
         body: JSON.stringify({
           provider: c.provider,
-          ...(c.apiKey ? { key: c.apiKey } : {}),
+          ...(c.apiKey && c.apiKey !== REDACTED_SECRET ? { key: c.apiKey } : {}),
           ...(c.provider === "local" && c.endpoint ? { endpoint: c.endpoint } : {}),
         }),
       });
@@ -131,7 +132,7 @@ export function ConnectionsPanel({ settings, update, addToast, isMobile }: Conne
     try {
       const result = await api.testConnection({
         provider: c.provider,
-        apiKey: c.apiKey,
+        ...(c.apiKey !== REDACTED_SECRET ? { apiKey: c.apiKey } : {}),
         model: c.model,
         endpoint: c.endpoint,
       });
@@ -245,9 +246,9 @@ export function ConnectionsPanel({ settings, update, addToast, isMobile }: Conne
                   <div className="flex gap-2">
                     <input
                       type={showKey ? "text" : "password"}
-                      value={c.apiKey}
+                      value={c.apiKey === REDACTED_SECRET ? "" : c.apiKey}
+                      placeholder={c.apiKey === REDACTED_SECRET ? "••••••••" : c.provider === "local" ? t("settings.connections.apiKeyPlaceholderLocal") : t("settings.connections.apiKeyPlaceholder")}
                       onChange={(e) => updateConn(c.id, { apiKey: e.target.value })}
-                      placeholder={c.provider === "local" ? t("settings.connections.apiKeyPlaceholderLocal") : t("settings.connections.apiKeyPlaceholder")}
                       className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13px] text-[var(--text)] outline-none focus:border-[var(--accent)]"
                     />
                     <button
