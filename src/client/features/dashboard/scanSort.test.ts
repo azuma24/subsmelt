@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import type { ScannedFile } from "../../types.js";
-import { latestFileMtime, sortScanFiles, sortScanGroups, type ScanGroup } from "./scanSort.js";
+import { latestFileMtime, scanFileKey, sortScanFiles, sortScanGroups, type ScanGroup } from "./scanSort.js";
 
 function file(videoPath: string, videoName: string, videoMtime: number | null): ScannedFile {
   return { videoPath, videoName, videoMtime, subtitles: [] };
@@ -23,6 +23,16 @@ test("dashboard date sort keeps files without a date last", () => {
     file("/media/old.mp4", "old.mp4", 100),
   ];
   assert.deepEqual(sortScanFiles(files, "date", "desc").map((item) => item.videoName), ["old.mp4", "unknown.mp4"]);
+});
+
+test("dashboard sorting uses subtitle names for orphan entries", () => {
+  const files: ScannedFile[] = [
+    { videoPath: null, videoName: null, videoMtime: null, subtitles: [{ srtPath: "/media/zeta.srt", srtName: "zeta.srt", tasks: [] }] },
+    { videoPath: null, videoName: null, videoMtime: null, subtitles: [{ srtPath: "/media/alpha.srt", srtName: "alpha.srt", tasks: [] }] },
+  ];
+  assert.deepEqual(sortScanFiles(files, "name", "asc").map((item) => item.subtitles[0]?.srtName), ["alpha.srt", "zeta.srt"]);
+  assert.deepEqual(sortScanFiles(files, "name", "desc").map((item) => item.subtitles[0]?.srtName), ["zeta.srt", "alpha.srt"]);
+  assert.notEqual(scanFileKey(files[0]), scanFileKey(files[1]));
 });
 
 test("folder date is the latest known descendant file date", () => {

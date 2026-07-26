@@ -28,13 +28,23 @@ export function latestFileMtime(files: ScannedFile[]): number | null {
   }, null);
 }
 
+export function scanFileSortName(file: ScannedFile): string {
+  return file.videoName || file.subtitles[0]?.srtName || file.subtitles[0]?.srtPath || "";
+}
+
+export function scanFileKey(file: ScannedFile): string {
+  return file.videoPath || file.subtitles[0]?.srtPath || scanFileSortName(file);
+}
+
 export function sortScanFiles(files: ScannedFile[], sortBy: DashboardSortBy, sortDir: DashboardSortDir): ScannedFile[] {
   return [...files].sort((a, b) => {
     if (sortBy === "date") {
       const byDate = compareNullableMtime(a.videoMtime, b.videoMtime, sortDir);
       if (byDate !== 0) return byDate;
     }
-    return (a.videoName || "").localeCompare(b.videoName || "") * (sortDir === "asc" ? 1 : -1);
+    const byName = scanFileSortName(a).localeCompare(scanFileSortName(b));
+    if (byName !== 0) return byName * (sortDir === "asc" ? 1 : -1);
+    return scanFileKey(a).localeCompare(scanFileKey(b)) * (sortDir === "asc" ? 1 : -1);
   });
 }
 

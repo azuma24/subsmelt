@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { JobRow, ManualTranscriptionStage, ScannedFile, TaskStatus } from "../../types";
 import { STATUS_ICON } from "../../app/constants";
 import { isManualTranscriptionBusy, type ManualTranscriptionProgress, type TranscribePostAction } from "./transcription-progress";
-import { sortScanFiles, sortScanGroups, type DashboardSortBy, type DashboardSortDir } from "./scanSort";
+import { scanFileKey, sortScanFiles, sortScanGroups, type DashboardSortBy, type DashboardSortDir } from "./scanSort";
 
 export type ScanFilter = "all" | "new" | "missing" | "orphans";
 
@@ -294,9 +294,9 @@ export function ScanResultsPanel({
                 </button>
                 {expanded && (
                   <div className="border-t border-gray-800/60 bg-gray-950/30">
-                    {groupFiles.map((file, i) => (
+                    {groupFiles.map((file) => (
                       <CompactScanFileRow
-                        key={`${group}-${i}`}
+                        key={scanFileKey(file)}
                         file={file}
                         jobsById={jobsById}
                         selectedIds={selectedIds}
