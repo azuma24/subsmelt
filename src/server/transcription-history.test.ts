@@ -53,6 +53,65 @@ test("history store records attempts and keeps newest entries first", () => {
   assert.equal(recent[1]?.durationSeconds, 5);
 });
 
+test("clear removes finished attempts and keeps running ones", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-history-clear-"));
+  const filePath = path.join(tmpDir, "transcription-history.json");
+  const store = new TranscriptionHistoryStore(filePath);
+
+  const done = store.startAttempt({
+    inputPath: "/media/show/Episode 05.mkv",
+    outputPath: "/media/show/Episode 05.srt",
+    model: "small",
+    language: "auto",
+    outputFormat: "srt",
+    postAction: "transcribe_only",
+  });
+  store.finishAttempt(done.id, { status: "succeeded", durationSeconds: 4 });
+  const running = store.startAttempt({
+    inputPath: "/media/show/Episode 06.mkv",
+    outputPath: "/media/show/Episode 06.srt",
+    model: "small",
+    language: "auto",
+    outputFormat: "srt",
+    postAction: "transcribe_only",
+  });
+
+  assert.equal(store.clear(), 1);
+  assert.equal(store.get(done.id), undefined);
+  assert.equal(store.get(running.id)?.status, "running");
+  // Clearing again is a no-op while the running attempt is still in flight.
+  assert.equal(store.clear(), 0);
+});
+
+test("remove deletes a single attempt and reports unknown ids", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-history-remove-"));
+  const store = new TranscriptionHistoryStore(path.join(tmpDir, "transcription-history.json"));
+
+  const first = store.startAttempt({
+    inputPath: "/media/show/Episode 07.mkv",
+    outputPath: "/media/show/Episode 07.srt",
+    model: "small",
+    language: "auto",
+    outputFormat: "srt",
+    postAction: "transcribe_only",
+  });
+  const second = store.startAttempt({
+    inputPath: "/media/show/Episode 08.mkv",
+    outputPath: "/media/show/Episode 08.srt",
+    model: "small",
+    language: "auto",
+    outputFormat: "srt",
+    postAction: "transcribe_only",
+  });
+  store.finishAttempt(first.id, { status: "failed", errorSummary: "nope" });
+
+  assert.equal(store.remove(first.id), true);
+  assert.equal(store.get(first.id), undefined);
+  assert.equal(store.remove(first.id), false);
+  assert.equal(store.listRecent().length, 1);
+  assert.equal(store.listRecent()[0]?.id, second.id);
+});
+
 test("reconcileRunning marks lingering running attempts as failed", () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-history-reconcile-"));
   const store = new TranscriptionHistoryStore(path.join(tmpDir, "transcription-history.json"));

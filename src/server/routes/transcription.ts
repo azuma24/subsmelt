@@ -370,6 +370,21 @@ export function registerTranscriptionRoutes(app: Express): void {
     res.json({ attempts: transcriptionHistory.listRecent(Number.isFinite(limit) ? limit : 20) });
   });
 
+  // Clears finished attempts only — an in-flight attempt keeps its entry so the
+  // running transcription can still report its result.
+  app.delete("/api/transcribe/history", (_req, res) => {
+    const removed = transcriptionHistory.clear();
+    logger.info("system", `Cleared ${removed} transcription history ${removed === 1 ? "entry" : "entries"}`);
+    res.json({ ok: true, removed });
+  });
+
+  app.delete("/api/transcribe/history/:id", (req, res) => {
+    if (!transcriptionHistory.remove(req.params.id)) {
+      return res.status(404).json({ error: "Transcription attempt not found" });
+    }
+    return res.json({ ok: true, removed: 1 });
+  });
+
   app.post("/api/transcribe/history/:id/retry", async (req, res) => {
     const attempt = transcriptionHistory.get(req.params.id);
     if (!attempt) return res.status(404).json({ error: "Transcription attempt not found" });

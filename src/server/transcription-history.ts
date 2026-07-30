@@ -179,6 +179,28 @@ export class TranscriptionHistoryStore {
     return reconciled;
   }
 
+  /**
+   * Drops every finished attempt from history. Attempts still marked "running"
+   * are kept so an in-flight transcription can still be finished (and stays
+   * visible to the user). Returns the number of entries removed.
+   */
+  clear(): number {
+    const entries = this.read();
+    const kept = entries.filter((entry) => entry.status === "running");
+    const removed = entries.length - kept.length;
+    if (removed > 0) this.write(kept);
+    return removed;
+  }
+
+  /** Removes a single attempt by id. Returns false when the id is unknown. */
+  remove(id: string): boolean {
+    const entries = this.read();
+    const kept = entries.filter((entry) => entry.id !== id);
+    if (kept.length === entries.length) return false;
+    this.write(kept);
+    return true;
+  }
+
   listRecent(limit = 20): TranscriptionHistoryEntry[] {
     return this.read().slice(0, Math.max(1, limit));
   }
