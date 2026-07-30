@@ -43,10 +43,18 @@ except Exception:  # pragma: no cover
     Image = ImageDraw = None  # type: ignore
     _HAS_TRAY = False
 
+try:
+    from server_launch import ServerExecutableNotFound, resolve_server_command
+except ImportError:  # pragma: no cover - this file's dir isn't on sys.path yet
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from server_launch import ServerExecutableNotFound, resolve_server_command
+
 DATA_DIR = Path(os.environ.get("SUBSMELT_DATA_DIR", r"C:\ProgramData\SubSmelt"))
 LOG_DIR = DATA_DIR / "logs"
 CONFIG_PATH = DATA_DIR / "config.json"
 CREATE_NO_WINDOW = 0x08000000  # Windows: don't open a console for the child
+# Unfrozen fallback: the repo's own launcher script.
+DEV_SERVER_SCRIPT = Path(__file__).resolve().parents[3] / "run_server.py"
 
 
 # ---------------------------------------------------------------------------
@@ -61,9 +69,7 @@ class ServerController:
 
     @staticmethod
     def _command() -> list[str]:
-        if getattr(sys, "frozen", False):
-            return [str(Path(sys.executable).parent / "run_server.exe")]
-        return [sys.executable, str(Path(__file__).resolve().parents[3] / "run_server.py")]
+        return resolve_server_command(DEV_SERVER_SCRIPT)
 
     def running(self) -> bool:
         return self._proc is not None and self._proc.poll() is None
@@ -79,11 +85,17 @@ class ServerController:
         else:
             env.pop("SUBSMELT_WHISPER_TOKEN", None)
         flags = CREATE_NO_WINDOW if os.name == "nt" else 0
+        # Resolve first: a missing server exe gets a path-by-path explanation
+        # instead of a bare "[WinError 2] The system cannot find the file specified".
         try:
-            self._proc = subprocess.Popen(self._command(), env=env, creationflags=flags)
+            command = self._command()
+        except ServerExecutableNotFound as exc:
+            return f"failed to start: {exc}"
+        try:
+            self._proc = subprocess.Popen(command, env=env, creationflags=flags)
             return f"started on http://{host}:{port}"
         except Exception as exc:  # pragma: no cover - environment dependent
-            return f"failed to start: {exc}"
+            return f"failed to start: {command[0]}: {exc}"
 
     def stop(self) -> str:
         if not self.running():

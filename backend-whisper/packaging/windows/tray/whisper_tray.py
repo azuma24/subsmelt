@@ -35,11 +35,19 @@ except Exception:  # pragma: no cover - deps absent outside the tray build
     Image = ImageDraw = None  # type: ignore
     _HAS_TRAY = False
 
+try:
+    from server_launch import ServerExecutableNotFound, resolve_server_command
+except ImportError:  # pragma: no cover - this file's dir isn't on sys.path yet
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from server_launch import ServerExecutableNotFound, resolve_server_command
+
 SERVICE_NAME = os.environ.get("SUBSMELT_WHISPER_SERVICE", "SubSmeltWhisper")
 DATA_DIR = Path(os.environ.get("SUBSMELT_DATA_DIR", r"C:\ProgramData\SubSmelt"))
 CONFIG_PATH = DATA_DIR / "config.json"
 LOG_DIR = DATA_DIR / "logs"
 DEFAULT_PORT = os.environ.get("SUBSMELT_WHISPER_PORT", "8001")
+# Unfrozen fallback: the repo's own launcher script.
+DEV_SERVER_SCRIPT = Path(__file__).resolve().parents[3] / "run_server.py"
 
 
 # ---------------------------------------------------------------------------
@@ -73,12 +81,11 @@ _server_proc: "subprocess.Popen | None" = None
 def _server_command() -> list[str]:
     """Resolve how to launch the server in standalone mode.
 
-    Frozen (whisper-tray.exe): run the sibling run_server.exe in the same dir.
-    Dev: run the repo's run_server.py with the current interpreter.
+    Frozen (whisper-tray.exe): the run_server executable, searched across the
+    layouts the build can produce. Dev: the repo's run_server.py with the current
+    interpreter. Raises ServerExecutableNotFound when nothing resolves.
     """
-    if getattr(sys, "frozen", False):
-        return [str(Path(sys.executable).parent / "run_server.exe")]
-    return [sys.executable, str(Path(__file__).resolve().parents[3] / "run_server.py")]
+    return resolve_server_command(DEV_SERVER_SCRIPT)
 
 
 def server_process_running() -> bool:
@@ -91,7 +98,11 @@ def start_server_process(_icon=None, _item=None) -> None:
     if server_process_running():
         print("[tray] server already running.")
         return
-    cmd = _server_command()
+    try:
+        cmd = _server_command()
+    except ServerExecutableNotFound as exc:
+        print(f"[tray] failed to start server: {exc}")
+        return
     try:
         # CREATE_NEW_PROCESS_GROUP lets us signal it independently on Windows.
         creationflags = 0x00000200 if _is_windows() else 0  # CREATE_NEW_PROCESS_GROUP

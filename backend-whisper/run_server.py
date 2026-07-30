@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SubSmelt Whisper backend launcher (Phase 3 Windows packaging entrypoint).
+r"""SubSmelt Whisper backend launcher (Phase 3 Windows packaging entrypoint).
 
 This is a *thin* programmatic launcher for the existing FastAPI app
 (``app.main:app``). It exists so the service can be frozen by PyInstaller
@@ -24,8 +24,13 @@ Config (all optional; sensible localhost defaults):
     SUBSMELT_WHISPER_MEDIA_ROOT  allowed media root -> exported as MEDIA_ROOT
     SUBSMELT_FFMPEG          path to bundled ffmpeg.exe (consumed by app/audio.py)
     SUBSMELT_WHISPER_CONFIG  path to a JSON config file (env vars win over it)
+                             Windows default: %SUBSMELT_DATA_DIR%\config.json
+                             (C:\ProgramData\SubSmelt\config.json)
     SUBSMELT_WHISPER_LOG_LEVEL   uvicorn log level (default "info")
-    SUBSMELT_WHISPER_LOG_FILE    path to a rotating log file (5MB×5; default: console only)
+    SUBSMELT_WHISPER_LOG_FILE    path to a rotating log file (5MB×5)
+                             Windows default: <data dir>\logs\whisper-server.log;
+                             other platforms: console only
+    SUBSMELT_DATA_DIR        Windows data dir holding config.json + logs\
 
 Binding note (mirrors plan §1/Phase 1): we only auto-widen the default bind to
 0.0.0.0 when a token is configured. Without a token we stay on 127.0.0.1 so a
@@ -53,6 +58,40 @@ from pathlib import Path
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8001
 DEFAULT_LOG_LEVEL = "info"
+
+# Windows packaging defaults. The installer, the tray app and the GUI all treat
+# %ProgramData%\SubSmelt as the data dir — without these defaults the server read
+# no config.json and wrote no log file unless SUBSMELT_WHISPER_CONFIG /
+# SUBSMELT_WHISPER_LOG_FILE were set by hand, so the "Open config" / "Open logs"
+# buttons showed an empty config and an empty logs folder. Windows-only on
+# purpose: containers keep env-only config and console logging.
+DEFAULT_WINDOWS_DATA_DIR = r"C:\ProgramData\SubSmelt"
+DEFAULT_CONFIG_FILE_NAME = "config.json"
+DEFAULT_LOG_FILE_NAME = "whisper-server.log"
+
+
+def default_data_dir(env: dict[str, str] | None = None,
+                     windows: bool | None = None) -> Path | None:
+    """Data dir the Windows packaging writes to, or None on other platforms."""
+    environ = os.environ if env is None else env
+    if windows is None:
+        windows = os.name == "nt"
+    if not windows:
+        return None
+    override = (environ.get("SUBSMELT_DATA_DIR") or "").strip()
+    return Path(override) if override else Path(DEFAULT_WINDOWS_DATA_DIR)
+
+
+def default_config_path(env: dict[str, str] | None = None,
+                        windows: bool | None = None) -> str | None:
+    base = default_data_dir(env, windows)
+    return str(base / DEFAULT_CONFIG_FILE_NAME) if base else None
+
+
+def default_log_file(env: dict[str, str] | None = None,
+                     windows: bool | None = None) -> str | None:
+    base = default_data_dir(env, windows)
+    return str(base / "logs" / DEFAULT_LOG_FILE_NAME) if base else None
 
 
 @dataclass(frozen=True)
@@ -105,7 +144,8 @@ def _load_config_file(path: str | None) -> dict:
 
 def load_config() -> ServerConfig:
     """Resolve configuration from env vars, falling back to an optional JSON file."""
-    file_cfg = _load_config_file(os.environ.get("SUBSMELT_WHISPER_CONFIG"))
+    config_path = os.environ.get("SUBSMELT_WHISPER_CONFIG") or default_config_path()
+    file_cfg = _load_config_file(config_path)
 
     def pick(env_key: str, file_key: str, default: str | None = None) -> str | None:
         value = os.environ.get(env_key)
@@ -139,7 +179,7 @@ def load_config() -> ServerConfig:
         ffmpeg=pick("SUBSMELT_FFMPEG", "ffmpeg", None),
         log_level=pick("SUBSMELT_WHISPER_LOG_LEVEL", "log_level", DEFAULT_LOG_LEVEL)
         or DEFAULT_LOG_LEVEL,
-        log_file=pick("SUBSMELT_WHISPER_LOG_FILE", "log_file", None),
+        log_file=pick("SUBSMELT_WHISPER_LOG_FILE", "log_file", default_log_file()),
     )
 
 

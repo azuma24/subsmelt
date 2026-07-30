@@ -121,7 +121,9 @@ try {
             $trayBuilt = Join-Path $BackendRoot "dist\whisper-tray.exe"
             $trayDest  = Join-Path $BackendRoot "dist\whisper-server\whisper-tray.exe"
             if (Test-Path $trayBuilt) {
-                Copy-Item -Force $trayBuilt $trayDest
+                # Move (not copy): a stray dist\whisper-tray.exe has no sibling
+                # run_server.exe, so double-clicking it could only ever fail.
+                Move-Item -Force $trayBuilt $trayDest
                 Ok "tray exe built and placed next to run_server.exe: $trayDest"
             } else {
                 Warn "tray build did not produce dist\whisper-tray.exe"
@@ -133,7 +135,8 @@ try {
             $guiBuilt = Join-Path $BackendRoot "dist\whisper-gui.exe"
             $guiDest  = Join-Path $BackendRoot "dist\whisper-server\whisper-gui.exe"
             if (Test-Path $guiBuilt) {
-                Copy-Item -Force $guiBuilt $guiDest
+                # Move (not copy) for the same reason as the tray exe above.
+                Move-Item -Force $guiBuilt $guiDest
                 Ok "GUI exe built and placed next to run_server.exe: $guiDest"
             } else {
                 Warn "GUI build did not produce dist\whisper-gui.exe"

@@ -13,9 +13,10 @@ import os
 from PyInstaller.utils.hooks import collect_submodules
 
 SPEC_DIR = os.path.abspath(SPECPATH)
-GUI_SCRIPT = os.path.join(SPEC_DIR, "tray", "whisper_gui.py")
+TRAY_DIR = os.path.join(SPEC_DIR, "tray")
+GUI_SCRIPT = os.path.join(TRAY_DIR, "whisper_gui.py")
 
-hiddenimports = []
+hiddenimports = ["server_launch"]
 hiddenimports += collect_submodules("pystray")
 hiddenimports += collect_submodules("PIL")
 
@@ -23,7 +24,10 @@ block_cipher = None
 
 a = Analysis(
     [GUI_SCRIPT],
-    pathex=[SPEC_DIR],
+    # TRAY_DIR on pathex + the explicit hiddenimport keep server_launch.py
+    # (the run_server.exe resolver shared with the other controller) in the
+    # frozen bundle; without it the app cannot locate the server.
+    pathex=[SPEC_DIR, TRAY_DIR],
     binaries=[],
     datas=[],
     hiddenimports=hiddenimports,
