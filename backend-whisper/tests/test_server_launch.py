@@ -4,6 +4,7 @@ server_launch.py lives under packaging/windows/tray/ (it is frozen into the tray
 and GUI exes, not into the server), so it is loaded here by path.
 """
 import importlib.util
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -107,6 +108,48 @@ class WindowsDataDirDefaultsTests(unittest.TestCase):
     def test_non_windows_keeps_env_only_config_and_console_logging(self):
         self.assertIsNone(run_server.default_config_path(env={}, windows=False))
         self.assertIsNone(run_server.default_log_file(env={}, windows=False))
+
+
+class BindDefaultTests(unittest.TestCase):
+    """The default bind is 0.0.0.0 so a containerised SubSmelt can reach it."""
+
+    def setUp(self) -> None:
+        self._saved = {
+            key: os.environ.pop(key, None)
+            for key in ("SUBSMELT_WHISPER_HOST", "SUBSMELT_WHISPER_TOKEN",
+                        "SUBSMELT_WHISPER_CONFIG", "SUBSMELT_WHISPER_PORT")
+        }
+        self.addCleanup(self._restore)
+
+    def _restore(self) -> None:
+        for key, value in self._saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+    def test_defaults_to_all_interfaces_without_a_token(self):
+        self.assertEqual(run_server.load_config().host, "0.0.0.0")
+
+    def test_explicit_host_still_wins(self):
+        os.environ["SUBSMELT_WHISPER_HOST"] = "127.0.0.1"
+        self.assertEqual(run_server.load_config().host, "127.0.0.1")
+
+    def _config(self, host: str, token: str | None) -> "run_server.ServerConfig":
+        return run_server.ServerConfig(
+            host=host, port=8001, model_dir=None, token=token, media_root=None,
+            ffmpeg=None, log_level="info", log_file=None,
+        )
+
+    def test_wide_bind_without_token_warns(self):
+        warnings = run_server.exposure_warnings(self._config("0.0.0.0", None))
+        self.assertTrue(warnings)
+        self.assertIn("NO token", warnings[0])
+        self.assertIn("SUBSMELT_WHISPER_TOKEN", " ".join(warnings))
+
+    def test_no_warning_when_token_set_or_loopback(self):
+        self.assertEqual(run_server.exposure_warnings(self._config("0.0.0.0", "s3cr3t")), [])
+        self.assertEqual(run_server.exposure_warnings(self._config("127.0.0.1", None)), [])
 
 
 if __name__ == "__main__":

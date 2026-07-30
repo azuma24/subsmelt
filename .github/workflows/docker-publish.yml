@@ -12,7 +12,12 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  # Never publish an image that has not passed the test gate.
+  test:
+    uses: ./.github/workflows/ci.yml
+
   build-and-push:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read

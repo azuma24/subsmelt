@@ -162,7 +162,8 @@ class WhisperGuiApp:
 
         # Host
         ttk.Label(frm, text="Bind address:").grid(row=1, column=0, sticky="w", **pad)
-        self.host_var = tk.StringVar(value="127.0.0.1")
+        # Matches run_server's default bind: SubSmelt usually runs elsewhere.
+        self.host_var = tk.StringVar(value="0.0.0.0")
         ttk.Radiobutton(frm, text="127.0.0.1 (local only)", variable=self.host_var,
                         value="127.0.0.1").grid(row=1, column=1, sticky="w")
         ttk.Radiobutton(frm, text="0.0.0.0 (LAN/remote)", variable=self.host_var,

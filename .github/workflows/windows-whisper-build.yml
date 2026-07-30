@@ -19,7 +19,12 @@ permissions:
   contents: write   # needed to create/attach release assets on tag
 
 jobs:
+  # Never ship an installer that has not passed the test gate.
+  test:
+    uses: ./.github/workflows/ci.yml
+
   build:
+    needs: test
     runs-on: windows-latest
     defaults:
       run:
@@ -77,6 +82,22 @@ jobs:
           if (-not (Test-Path $exe)) { throw "build did not produce $exe" }
           & $exe --print-config
           if ($LASTEXITCODE -ne 0) { throw "run_server.exe --print-config exited $LASTEXITCODE" }
+
+      # The tray + GUI controllers ship INSIDE the bundle (they launch and stop
+      # run_server.exe). They are small onefile builds with no CUDA deps; both
+      # specs move their exe next to run_server.exe, which is where their
+      # server-resolution logic looks first.
+      - name: Build tray + GUI controllers
+        run: |
+          pip install pystray pillow
+          pyinstaller packaging/windows/whisper-tray.spec --clean --noconfirm
+          pyinstaller packaging/windows/whisper-gui.spec --clean --noconfirm
+          foreach ($app in 'whisper-tray', 'whisper-gui') {
+            $built = "dist/$app.exe"
+            if (-not (Test-Path $built)) { throw "build did not produce $built" }
+            Move-Item -Force $built "dist/whisper-server/$app.exe"
+          }
+          Get-ChildItem dist/whisper-server/*.exe | Select-Object Name, Length
 
       # Inno Setup compiles installer.iss -> Output\SubSmeltWhisperBackend-Setup-<ver>.exe
       - name: Install Inno Setup

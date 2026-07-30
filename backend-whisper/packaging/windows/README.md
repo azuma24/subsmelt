@@ -108,10 +108,13 @@ optional — only needed for the `.exe` installer).
 - **Tray-only (no window):** double-click `run-tray.bat` — a tray icon with
   Start / Stop / Restart / Open health page / Open logs / Quit. `build-local.bat`
   builds `whisper-tray.exe`. Skip both extra exes with `-SkipTray`.
-- **Remote/LAN access:** the server binds `127.0.0.1` by default and only widens
-  to `0.0.0.0` when a token is set (so a fresh run is never exposed
-  unauthenticated). To reach it from another machine: `set
-  SUBSMELT_WHISPER_TOKEN=<secret>` before launching, and open the firewall port:
+- **Remote/LAN access:** the server binds `0.0.0.0` by default, because SubSmelt
+  normally runs in Docker or on another machine and could not reach a
+  loopback-only backend. **Without `SUBSMELT_WHISPER_TOKEN` set, every host on
+  your network can use the backend** — the launcher warns loudly at startup when
+  it binds wide with no token. Set a token: `set SUBSMELT_WHISPER_TOKEN=<secret>`
+  before launching (or `SUBSMELT_WHISPER_HOST=127.0.0.1` for a local-only
+  backend), and open the firewall port:
   `netsh advfirewall firewall add rule name="SubSmelt Whisper" dir=in action=allow protocol=TCP localport=8001`.
 - **From a terminal** you can pass flags: `build-local.bat -Run`,
   `build-local.bat -Version 0.5.0`, `build-local.bat -Clean`,
@@ -186,12 +189,16 @@ optional JSON config (`SUBSMELT_WHISPER_CONFIG`):
 
 | Env var | Meaning | Default |
 |---|---|---|
-| `SUBSMELT_WHISPER_HOST` | bind host | `127.0.0.1` (`0.0.0.0` when a token is set) |
+| `SUBSMELT_WHISPER_HOST` | bind host | `0.0.0.0` (set `127.0.0.1` for local-only) |
 | `SUBSMELT_WHISPER_PORT` | bind port | `8001` |
 | `SUBSMELT_WHISPER_MODEL_DIR` | model cache → `HF_HOME` | — |
 | `SUBSMELT_WHISPER_TOKEN` | shared-secret bearer token (Phase 1) | — |
 | `SUBSMELT_WHISPER_MEDIA_ROOT` | allowed media root → `MEDIA_ROOT` | — |
 | `SUBSMELT_FFMPEG` | path to bundled `ffmpeg.exe` | `ffmpeg` on PATH |
+| `SUBSMELT_DATA_DIR` | data dir holding `config.json` + `logs\` | `C:\ProgramData\SubSmelt` |
+| `SUBSMELT_WHISPER_CONFIG` | JSON config file | `<data dir>\config.json` |
+| `SUBSMELT_WHISPER_LOG_FILE` | rotating log file (5 MB x 5) | `<data dir>\logs\whisper-server.log` |
+| `SUBSMELT_WHISPER_VERSION` | version reported by `/health` | stamped by the installer |
 
 `install-service.ps1` writes these as **machine-scope** env vars so the
 LocalSystem service sees them.

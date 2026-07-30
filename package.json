@@ -1,6 +1,6 @@
 {
   "name": "subsmelt",
-  "version": "0.4.9",
+  "version": "0.5.0",
   "type": "module",
   "description": "Self-hosted batch subtitle translator using LLM",
   "license": "MIT",
@@ -10,7 +10,9 @@
   "scripts": {
     "dev": "concurrently \"tsx watch src/server/index.ts\" \"vite\"",
     "build": "vite build && tsc -p tsconfig.server.json",
-    "start": "node dist/server/index.js"
+    "start": "node dist/server/index.js",
+    "test": "tsx --test $(git ls-files '*.test.ts' '*.test.tsx')",
+    "typecheck": "tsc -p tsconfig.server.json --noEmit"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.81",

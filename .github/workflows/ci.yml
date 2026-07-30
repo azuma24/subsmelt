@@ -1,0 +1,66 @@
+name: CI
+
+# Test gate for both halves of the project. Runs on every PR and on pushes to
+# main, and is what the release workflows (docker-publish, windows-whisper-build)
+# wait for before publishing anything.
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: SubSmelt app (TypeScript)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.3
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck (server)
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  backend:
+    name: Whisper backend (Python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend-whisper
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      # requirements.txt only: the optional diarization/URL extras pull ~2 GB of
+      # torch and are gated at runtime, so the suite must pass without them.
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+
+      - name: Test
+        run: python -m pytest tests -q
