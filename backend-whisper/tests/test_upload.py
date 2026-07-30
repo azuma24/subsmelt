@@ -103,10 +103,12 @@ class UploadEndpointTests(unittest.TestCase):
     def test_undownloaded_model_is_409(self):
         # A valid request for a model that is not in the cache must be refused with
         # 409 model_not_downloaded — the upload path never auto-downloads either.
-        # RAM is pinned high: large-v3's preflight otherwise refuses with 422
-        # insufficient_ram on a small build host before the cache check runs, so
-        # the assertion below would depend on the machine's free memory.
-        with mock.patch.object(main_module, "available_ram_mb", return_value=64000):
+        # The upload preflight gate runs before the model-cache check, so pin
+        # everything it inspects: a small build host refuses large-v3 with 422
+        # insufficient_ram, and a host without ffmpeg refuses with 422
+        # ffmpeg_missing. Neither is what this test is about.
+        with mock.patch.object(main_module, "available_ram_mb", return_value=64000), \
+             mock.patch.object(main_module, "ffmpeg_available", return_value=True):
             resp = self.client.post(
                 "/transcribe/upload",
                 files=self._file(),
