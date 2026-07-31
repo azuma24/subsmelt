@@ -65,8 +65,23 @@ Source: "uninstall-service.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "vendor\vc_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall; Check: VCRedistBundled
 
 [Icons]
+; The GUI and tray controllers ship inside the bundle (built by
+; windows-whisper-build.yml). Without these entries they install with nothing
+; pointing at them, so a user has no way to find the app they are meant to use.
+; Both are gated on the exe actually being present: a bundle built locally with
+; -SkipTray has neither, and a shortcut to a missing file is worse than none.
+Name: "{group}\{#MyAppName}";           Filename: "{app}\whisper-gui.exe";  Check: GuiBundled
+Name: "{commondesktop}\{#MyAppName}";   Filename: "{app}\whisper-gui.exe";  Check: GuiBundled; Tasks: desktopicon
+Name: "{group}\Whisper Tray";           Filename: "{app}\whisper-tray.exe"; Check: TrayBundled
 Name: "{group}\Open Whisper Config";    Filename: "notepad.exe"; Parameters: """{commonappdata}\SubSmelt\config.json"""
 Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
+
+[Tasks]
+; No Check here: [Tasks] is evaluated while the wizard runs, BEFORE [Files]
+; copies anything, so a FileExists probe against {app} would always be False and
+; the checkbox would never appear. The [Icons] entry above stays gated instead,
+; so ticking this on a bundle without the GUI simply creates no shortcut.
+Name: "desktopicon"; Description: "Create a desktop shortcut for the control window"; GroupDescription: "Shortcuts:"
 
 [Run]
 ; ---------------------------------------------------------------------------
@@ -120,6 +135,17 @@ begin
   Result := PortPage.Values[0];
   if Trim(Result) = '' then
     Result := '{#MyDefaultPort}';
+end;
+
+{ ---- True when the optional controller exes made it into the bundle ---- }
+function GuiBundled: Boolean;
+begin
+  Result := FileExists(ExpandConstant('{app}\whisper-gui.exe'));
+end;
+
+function TrayBundled: Boolean;
+begin
+  Result := FileExists(ExpandConstant('{app}\whisper-tray.exe'));
 end;
 
 { ---- True if the bundled VC++ redist was dropped in at build time ---- }
