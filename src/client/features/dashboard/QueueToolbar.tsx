@@ -112,7 +112,7 @@ export function QueueToolbar({
                 className={`whitespace-nowrap rounded-[6px] px-[11px] py-[3px] text-[12px] transition-colors ${activeTab === tab.key ? "bg-[var(--surface-3)] font-medium text-[var(--text)]" : "text-[var(--text-2)] hover:text-[var(--text)]"}`}
               >
                 {tab.label}
-                {tab.count > 0 && <span className={`ml-1 text-[11px] ${tab.key === "error" ? "text-[var(--red)]" : "text-[var(--text-3)]"}`}>{tab.count}</span>}
+                {tab.count > 0 && <span className="ml-1 text-[11px] text-[var(--text-3)]">{tab.count}</span>}
               </button>
             ))}
           </div>

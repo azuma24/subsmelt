@@ -12,5 +12,7 @@
     "resolveJsonModule": true,
     "declaration": false
   },
-  "include": ["src/server"]
+  "include": [
+    "src/server"
+  ]
 }

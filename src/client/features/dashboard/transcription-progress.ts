@@ -1,5 +1,8 @@
 import type { ManualTranscriptionStage, TranscribePostAction } from "../../types";
 
+// Re-exported so consumers of this module get the stage/action pair from one place.
+export type { TranscribePostAction };
+
 export interface ManualTranscriptionProgress {
   postAction: TranscribePostAction;
   stage: ManualTranscriptionStage;

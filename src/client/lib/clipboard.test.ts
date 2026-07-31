@@ -26,6 +26,7 @@ test("copyText reports a failure instead of throwing when clipboard rejects", as
   const result = await copyText("hello", { clipboard });
 
   assert.equal(result.ok, false);
+  assert.ok(result.error);
   assert.match(result.error, /permission denied/);
 });
 
@@ -33,5 +34,6 @@ test("copyText reports a failure when no clipboard is available", async () => {
   const result = await copyText("hello", { clipboard: undefined });
 
   assert.equal(result.ok, false);
+  assert.ok(result.error);
   assert.match(result.error, /clipboard unavailable/i);
 });

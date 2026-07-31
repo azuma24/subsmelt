@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "./api";
-import type { Job, JobPreview, LlmHealth, LogEntry, QueueStatus, Task, TranscriptionHealth, TranscriptionHistoryEntry } from "./types";
+import type { JobPreview, JobRow, LlmHealth, LogEntry, QueueStatus, Task, TranscriptionHealth, TranscriptionHistoryEntry } from "./types";
 
 export type SSEEventName =
   | "job:progress"
@@ -43,6 +43,12 @@ export function useSettingsQuery() {
 
 export function useTasksQuery() {
   return useQuery<Task[]>({ queryKey: ["tasks"], queryFn: ({ signal }) => api.getTasks({ signal }), staleTime: 10_000 });
+}
+
+export interface JobsResponse {
+  jobs: JobRow[];
+  queueRunning: boolean;
+  currentJobId: number | null;
 }
 
 export function useJobsQuery() {
@@ -245,9 +251,17 @@ function ensureSse(queryClient: ReturnType<typeof useQueryClient>): SseSingleton
       if (name === "job:progress") {
         const { jobId, completed, total } = data as { jobId?: number; completed?: number; total?: number };
         if (typeof jobId === "number" && typeof completed === "number" && typeof total === "number") {
-          queryClient.setQueryData(["jobs"], (old: Job[] | undefined) => {
+          // GET /jobs returns an envelope, not a bare array. This updater used a
+          // `Job[]` type that no longer exists, so `old.map` threw on every
+          // job:progress event and the optimistic update never landed.
+          queryClient.setQueryData<JobsResponse>(["jobs"], (old) => {
             if (!old) return old;
-            return old.map((job) => (job.id === jobId ? { ...job, completed_cues: completed, total_cues: total } : job));
+            return {
+              ...old,
+              jobs: old.jobs.map((job) =>
+                job.id === jobId ? { ...job, completed_cues: completed, total_cues: total } : job
+              ),
+            };
           });
           invalidator.schedule([["queue-status"]]);
           return;

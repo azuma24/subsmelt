@@ -19,7 +19,7 @@ test("SSE invalidation keys are targeted by event type", () => {
 });
 
 test("createDebouncedInvalidator batches duplicate keys until flushed", () => {
-  const invalidated: unknown[][] = [];
+  const invalidated: ReadonlyArray<unknown>[] = [];
   const invalidator = createDebouncedInvalidator((queryKey) => invalidated.push(queryKey), 250);
 
   invalidator.schedule([["jobs"], ["queue-status"]]);

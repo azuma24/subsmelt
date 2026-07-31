@@ -26,8 +26,9 @@ test("getBool reads string-booleans and real booleans", () => {
   assert.equal(getBool({ _watcher_running: false }, "_watcher_running"), false);
   assert.equal(getBool({}, "refine_pass"), false);
   assert.equal(getBool({}, "refine_pass", true), true);
-  // arbitrary string that isn't "1" → false
-  assert.equal(getBool({ auto_translate: "yes" }, "auto_translate"), false);
+  // arbitrary string that isn't "1" → false. The cast is the point: the server
+  // can hand back any string, and getBool must not treat it as true.
+  assert.equal(getBool({ auto_translate: "yes" } as unknown as ClientSettings, "auto_translate"), false);
 });
 
 test("isJsonBlobSetting recognizes only the two blob keys", () => {
