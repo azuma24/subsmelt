@@ -7,6 +7,12 @@ interface TranscriptionHistoryPanelProps {
   isRetryPending: boolean;
   isTranscribePending: boolean;
   onRetry: (attempt: TranscriptionHistoryEntry) => void;
+  /** Omit to hide the clear/remove controls (read-only panel). */
+  onClear?: () => void;
+  onRemove?: (attempt: TranscriptionHistoryEntry) => void;
+  isClearPending?: boolean;
+  /** Id of the entry currently being removed, so only its button shows pending. */
+  removingId?: string | null;
 }
 
 export function TranscriptionHistoryPanel({
@@ -15,8 +21,15 @@ export function TranscriptionHistoryPanel({
   isRetryPending,
   isTranscribePending,
   onRetry,
+  onClear,
+  onRemove,
+  isClearPending = false,
+  removingId = null,
 }: TranscriptionHistoryPanelProps) {
   const { t } = useTranslation();
+  // Running attempts are never cleared server-side, so the button is only useful
+  // while at least one finished entry is listed.
+  const clearableCount = attempts.filter((attempt) => attempt.status !== "running").length;
   return (
     <div className="p-3.5">
       <div className="flex items-center justify-between gap-3 mb-3">
@@ -24,7 +37,19 @@ export function TranscriptionHistoryPanel({
           <h2 className="text-[13.5px] font-semibold text-[var(--text)]">{t("transcriptionHistory.title")}</h2>
           <p className="text-[11px] text-[var(--text-3)]">{t("transcriptionHistory.description")}</p>
         </div>
-        <span className="text-[11px] text-[var(--text-3)]">{t("transcriptionHistory.shown", { count: attempts.length })}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] text-[var(--text-3)]">{t("transcriptionHistory.shown", { count: attempts.length })}</span>
+          {onClear && (
+            <button
+              type="button"
+              onClick={onClear}
+              disabled={isClearPending || clearableCount === 0}
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-[11px] font-medium text-[var(--text)] disabled:opacity-40"
+            >
+              {isClearPending ? t("transcriptionHistory.clearing") : t("transcriptionHistory.clear")}
+            </button>
+          )}
+        </div>
       </div>
       {attempts.length === 0 ? (
         <div className="text-[13px] text-[var(--text-3)]">{t("transcriptionHistory.empty")}</div>
@@ -56,6 +81,18 @@ export function TranscriptionHistoryPanel({
                   >
                     {activeRetry ? t("transcriptionHistory.retrying") : t("transcriptionHistory.retry")}
                   </button>
+                  {onRemove && (
+                    <button
+                      type="button"
+                      onClick={() => onRemove(attempt)}
+                      disabled={removingId === attempt.id || attempt.status === "running"}
+                      title={t("transcriptionHistory.remove")}
+                      aria-label={t("transcriptionHistory.remove")}
+                      className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs font-medium text-[var(--text-3)] disabled:opacity-40"
+                    >
+                      {t("transcriptionHistory.remove")}
+                    </button>
+                  )}
                 </div>
               </div>
             );

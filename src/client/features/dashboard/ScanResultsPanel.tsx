@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { JobRow, ManualTranscriptionStage, ScannedFile, TaskStatus } from "../../types";
 import { STATUS_ICON } from "../../app/constants";
 import { isManualTranscriptionBusy, type ManualTranscriptionProgress, type TranscribePostAction } from "./transcription-progress";
+import { scanFileKey, sortScanFiles, sortScanGroups, type DashboardSortBy, type DashboardSortDir } from "./scanSort";
 
 export type ScanFilter = "all" | "new" | "missing" | "orphans";
 
@@ -29,6 +30,10 @@ interface ScanResultsPanelProps {
   isQueueing: boolean;
   newJobsCount: number;
   mediaDir?: string;
+  sortBy: DashboardSortBy;
+  sortDir: DashboardSortDir;
+  onSortByChange: (value: DashboardSortBy) => void;
+  onToggleSortDir: () => void;
 }
 
 export function getScanGroupName(file: ScannedFile, mediaDir?: string): string {
@@ -128,6 +133,10 @@ export function ScanResultsPanel({
   isQueueing,
   newJobsCount,
   mediaDir,
+  sortBy,
+  sortDir,
+  onSortByChange,
+  onToggleSortDir,
 }: ScanResultsPanelProps) {
   const { t } = useTranslation();
   const selectedPaths = selectedVideoPaths ?? new Set<string>();
@@ -154,8 +163,12 @@ export function ScanResultsPanel({
       const group = getScanGroupName(file, mediaDir);
       grouped.set(group, [...(grouped.get(group) || []), file]);
     });
-    return Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [filteredFiles, mediaDir]);
+    return sortScanGroups(
+      Array.from(grouped.entries()).map(([name, groupFiles]) => [name, sortScanFiles(groupFiles, sortBy, sortDir)]),
+      sortBy,
+      sortDir,
+    );
+  }, [filteredFiles, mediaDir, sortBy, sortDir]);
   // Only act on selections that are still visible under the current filter/search,
   // so the bulk action never transcribes files the user can no longer see.
   const visibleSelectedPaths = useMemo(() => {
@@ -243,6 +256,27 @@ export function ScanResultsPanel({
           placeholder={t("app.scanSearchPlaceholder")}
           className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-3 py-3 text-sm text-gray-200"
         />
+        <div className="flex flex-wrap items-center gap-2">
+          <label htmlFor="dashboard-scan-sort" className="text-xs text-gray-500">{t("whisper.sortAriaLabel")}</label>
+          <select
+            id="dashboard-scan-sort"
+            value={sortBy}
+            onChange={(event) => onSortByChange(event.target.value as DashboardSortBy)}
+            className="rounded-lg border border-gray-700 bg-gray-800 px-2.5 py-2 text-xs text-gray-200"
+          >
+            <option value="name">{t("whisper.sortByName")}</option>
+            <option value="date">{t("whisper.sortByDate")}</option>
+          </select>
+          <button
+            type="button"
+            onClick={onToggleSortDir}
+            className="rounded-lg border border-gray-700 bg-gray-800 px-2.5 py-2 text-xs text-gray-200"
+            aria-label={sortDir === "asc" ? t("whisper.sortAsc") : t("whisper.sortDesc")}
+            title={sortDir === "asc" ? t("whisper.sortAsc") : t("whisper.sortDesc")}
+          >
+            {sortDir === "asc" ? "↑" : "↓"}
+          </button>
+        </div>
       </div>
       <div className="max-h-[50vh] overflow-y-auto">
         {groups.length === 0 && <div className="px-4 py-6 text-center text-gray-500 text-sm"><div>{t("app.scanNoMatch")}</div><div className="mt-1 text-xs text-gray-600">{t("dashboard.emptyScanHint")}</div></div>}
@@ -260,9 +294,9 @@ export function ScanResultsPanel({
                 </button>
                 {expanded && (
                   <div className="border-t border-gray-800/60 bg-gray-950/30">
-                    {groupFiles.map((file, i) => (
+                    {groupFiles.map((file) => (
                       <CompactScanFileRow
-                        key={`${group}-${i}`}
+                        key={scanFileKey(file)}
                         file={file}
                         jobsById={jobsById}
                         selectedIds={selectedIds}

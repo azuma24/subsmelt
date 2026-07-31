@@ -159,6 +159,9 @@ export type ConvertTargetFormat = "srt" | "vtt" | "ass" | "ssa";
 export interface ConvertRequest {
   files: { name: string; content: string }[];
   targetFormat: ConvertTargetFormat;
+  translate?: boolean;
+  sourceLang?: string;
+  targetLang?: string;
 }
 export interface ConvertResponse {
   files: { name: string; content: string }[];
@@ -195,6 +198,10 @@ export const transcribeUrl = (payload: TranscribeUrlRequest) =>
   fetchJSON<TranscribeUrlResponse>("/transcribe/url", { method: "POST", body: JSON.stringify(payload) });
 export const getTranscriptionHistory = (limit = 10, opts?: FetchOpts) =>
   fetchJSON<{ attempts: TranscriptionHistoryEntry[] }>(`/transcribe/history?limit=${limit}`, opts);
+export const clearTranscriptionHistory = () =>
+  fetchJSON<{ ok: boolean; removed: number }>("/transcribe/history", { method: "DELETE" });
+export const deleteTranscriptionAttempt = (id: string) =>
+  fetchJSON<{ ok: boolean; removed: number }>(`/transcribe/history/${encodeURIComponent(id)}`, { method: "DELETE" });
 export const retryTranscriptionAttempt = (id: string) =>
   fetchJSON<TranscribeResponse>(`/transcribe/history/${id}/retry`, { method: "POST" });
 export const cancelTranscription = (payload: { path: string }) =>

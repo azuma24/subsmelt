@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SubSmelt Whisper backend launcher (Phase 3 Windows packaging entrypoint).
+r"""SubSmelt Whisper backend launcher (Phase 3 Windows packaging entrypoint).
 
 This is a *thin* programmatic launcher for the existing FastAPI app
 (``app.main:app``). It exists so the service can be frozen by PyInstaller
@@ -17,20 +17,26 @@ It does three jobs and then hands off to uvicorn:
      ``cudnn_ops64_9.dll not found`` — the #1 packaging footgun (plan §4).
 
 Config (all optional; sensible localhost defaults):
-    SUBSMELT_WHISPER_HOST    bind host   (default 127.0.0.1; see note below)
+    SUBSMELT_WHISPER_HOST    bind host   (default 0.0.0.0; see note below)
     SUBSMELT_WHISPER_PORT    bind port   (default 8001)
     SUBSMELT_WHISPER_MODEL_DIR   model cache dir -> exported as HF_HOME/XDG_CACHE_HOME
     SUBSMELT_WHISPER_TOKEN   shared-secret bearer token (Phase 1 auth)
     SUBSMELT_WHISPER_MEDIA_ROOT  allowed media root -> exported as MEDIA_ROOT
     SUBSMELT_FFMPEG          path to bundled ffmpeg.exe (consumed by app/audio.py)
     SUBSMELT_WHISPER_CONFIG  path to a JSON config file (env vars win over it)
+                             Windows default: %SUBSMELT_DATA_DIR%\config.json
+                             (C:\ProgramData\SubSmelt\config.json)
     SUBSMELT_WHISPER_LOG_LEVEL   uvicorn log level (default "info")
-    SUBSMELT_WHISPER_LOG_FILE    path to a rotating log file (5MB×5; default: console only)
+    SUBSMELT_WHISPER_LOG_FILE    path to a rotating log file (5MB×5)
+                             Windows default: <data dir>\logs\whisper-server.log;
+                             other platforms: console only
+    SUBSMELT_DATA_DIR        Windows data dir holding config.json + logs\
 
-Binding note (mirrors plan §1/Phase 1): we only auto-widen the default bind to
-0.0.0.0 when a token is configured. Without a token we stay on 127.0.0.1 so a
-fresh install is never exposed to the network unauthenticated. An explicit
-SUBSMELT_WHISPER_HOST always wins.
+Binding note: the default bind is 0.0.0.0, because SubSmelt normally runs in a
+container or on another machine and a loopback-only backend is unreachable from
+there. A wide bind with no SUBSMELT_WHISPER_TOKEN is warned about loudly at
+startup; set the token, or SUBSMELT_WHISPER_HOST=127.0.0.1 for a local-only
+backend. An explicit SUBSMELT_WHISPER_HOST always wins.
 
 Usage:
     python run_server.py            # start the server
@@ -50,9 +56,44 @@ from pathlib import Path
 # Configuration
 # ---------------------------------------------------------------------------
 
-DEFAULT_HOST = "127.0.0.1"
+DEFAULT_HOST = "0.0.0.0"
+LOOPBACK_HOST = "127.0.0.1"
 DEFAULT_PORT = 8001
 DEFAULT_LOG_LEVEL = "info"
+
+# Windows packaging defaults. The installer, the tray app and the GUI all treat
+# %ProgramData%\SubSmelt as the data dir — without these defaults the server read
+# no config.json and wrote no log file unless SUBSMELT_WHISPER_CONFIG /
+# SUBSMELT_WHISPER_LOG_FILE were set by hand, so the "Open config" / "Open logs"
+# buttons showed an empty config and an empty logs folder. Windows-only on
+# purpose: containers keep env-only config and console logging.
+DEFAULT_WINDOWS_DATA_DIR = r"C:\ProgramData\SubSmelt"
+DEFAULT_CONFIG_FILE_NAME = "config.json"
+DEFAULT_LOG_FILE_NAME = "whisper-server.log"
+
+
+def default_data_dir(env: dict[str, str] | None = None,
+                     windows: bool | None = None) -> Path | None:
+    """Data dir the Windows packaging writes to, or None on other platforms."""
+    environ = os.environ if env is None else env
+    if windows is None:
+        windows = os.name == "nt"
+    if not windows:
+        return None
+    override = (environ.get("SUBSMELT_DATA_DIR") or "").strip()
+    return Path(override) if override else Path(DEFAULT_WINDOWS_DATA_DIR)
+
+
+def default_config_path(env: dict[str, str] | None = None,
+                        windows: bool | None = None) -> str | None:
+    base = default_data_dir(env, windows)
+    return str(base / DEFAULT_CONFIG_FILE_NAME) if base else None
+
+
+def default_log_file(env: dict[str, str] | None = None,
+                     windows: bool | None = None) -> str | None:
+    base = default_data_dir(env, windows)
+    return str(base / "logs" / DEFAULT_LOG_FILE_NAME) if base else None
 
 
 @dataclass(frozen=True)
@@ -105,7 +146,8 @@ def _load_config_file(path: str | None) -> dict:
 
 def load_config() -> ServerConfig:
     """Resolve configuration from env vars, falling back to an optional JSON file."""
-    file_cfg = _load_config_file(os.environ.get("SUBSMELT_WHISPER_CONFIG"))
+    config_path = os.environ.get("SUBSMELT_WHISPER_CONFIG") or default_config_path()
+    file_cfg = _load_config_file(config_path)
 
     def pick(env_key: str, file_key: str, default: str | None = None) -> str | None:
         value = os.environ.get(env_key)
@@ -118,9 +160,10 @@ def load_config() -> ServerConfig:
 
     token = pick("SUBSMELT_WHISPER_TOKEN", "token", None)
 
-    # Default bind: localhost unless a token is set (Phase 1 rule).
-    default_host = "0.0.0.0" if token else DEFAULT_HOST
-    host = pick("SUBSMELT_WHISPER_HOST", "host", default_host) or DEFAULT_HOST
+    # Default bind: all interfaces. SubSmelt normally runs in Docker or on another
+    # box, so a loopback-only backend is unreachable in the common deployment.
+    # Binding wide without a token is warned about loudly at startup instead.
+    host = pick("SUBSMELT_WHISPER_HOST", "host", DEFAULT_HOST) or DEFAULT_HOST
 
     port_raw = pick("SUBSMELT_WHISPER_PORT", "port", str(DEFAULT_PORT))
     try:
@@ -139,7 +182,7 @@ def load_config() -> ServerConfig:
         ffmpeg=pick("SUBSMELT_FFMPEG", "ffmpeg", None),
         log_level=pick("SUBSMELT_WHISPER_LOG_LEVEL", "log_level", DEFAULT_LOG_LEVEL)
         or DEFAULT_LOG_LEVEL,
-        log_file=pick("SUBSMELT_WHISPER_LOG_FILE", "log_file", None),
+        log_file=pick("SUBSMELT_WHISPER_LOG_FILE", "log_file", default_log_file()),
     )
 
 
@@ -249,6 +292,23 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def exposure_warnings(config: "ServerConfig") -> list[str]:
+    """Warn when the server is reachable off-box without a token.
+
+    The default bind is 0.0.0.0 so a containerised or remote SubSmelt can reach
+    the backend. That means an unconfigured install answers to the whole LAN, so
+    say it plainly rather than leaving it to be discovered.
+    """
+    if config.host == LOOPBACK_HOST or config.token:
+        return []
+    return [
+        f"[run_server] WARNING: listening on {config.host} with NO token — every "
+        "host on this network can use this backend.",
+        "[run_server] WARNING: set SUBSMELT_WHISPER_TOKEN (or bind "
+        f"SUBSMELT_WHISPER_HOST={LOOPBACK_HOST}) to lock it down.",
+    ]
+
+
 def configure_file_logging(config: "ServerConfig") -> bool:
     """Attach a rotating file handler when SUBSMELT_WHISPER_LOG_FILE is set.
 
@@ -319,6 +379,8 @@ def main(argv: list[str] | None = None) -> int:
         f"[run_server] starting uvicorn on {config.host}:{config.port} "
         f"(gpu={'yes' if gpu_ok else 'no'})"
     )
+    for line in exposure_warnings(config):
+        print(line, file=sys.stderr)
     # Pass the import string (not the app object) so uvicorn owns the lifecycle;
     # reload is intentionally off for a service.
     run_kwargs = {

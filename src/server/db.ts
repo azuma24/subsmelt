@@ -49,6 +49,12 @@ if (!jobColumns.some((c) => c.name === "output_tokens")) {
   db.exec("ALTER TABLE jobs ADD COLUMN output_tokens INTEGER DEFAULT 0");
 }
 
+// Queue workers claim pending jobs by status/priority rather than materializing
+// the full pending table on every poll.
+db.exec(
+  "CREATE INDEX IF NOT EXISTS idx_jobs_pending_priority ON jobs (status, priority DESC, created_at ASC, id ASC)"
+);
+
 // --- Schema: Logs ---
 
 db.exec(`
@@ -138,6 +144,35 @@ export function getJobs(status?: string) {
   return db
     .prepare(`SELECT * FROM jobs ORDER BY priority DESC, created_at DESC`)
     .all();
+}
+
+export function countPendingJobs(ids?: Set<number> | null): number {
+  if (!ids || ids.size === 0) {
+    return (db.prepare("SELECT COUNT(*) AS count FROM jobs WHERE status = 'pending'").get() as { count: number }).count;
+  }
+  const values = Array.from(ids);
+  const placeholders = values.map(() => "?").join(",");
+  return (
+    db
+      .prepare(`SELECT COUNT(*) AS count FROM jobs WHERE status = 'pending' AND id IN (${placeholders})`)
+      .get(...values) as { count: number }
+  ).count;
+}
+
+export function claimPendingJob(ids?: Set<number> | null) {
+  const values = ids && ids.size > 0 ? Array.from(ids) : [];
+  const filter = values.length > 0 ? ` AND id IN (${values.map(() => "?").join(",")})` : "";
+  const select = db.prepare(
+    `SELECT * FROM jobs WHERE status = 'pending'${filter} ORDER BY priority DESC, created_at ASC, id ASC LIMIT 1`
+  );
+  const claim = db.prepare(
+    "UPDATE jobs SET status = 'translating', error = NULL, analysis_context = NULL, used_connections = NULL, input_tokens = 0, output_tokens = 0 WHERE id = ? AND status = 'pending'"
+  );
+  return db.transaction(() => {
+    const job = select.get(...values) as any;
+    if (!job || claim.run(job.id).changes !== 1) return null;
+    return job;
+  })();
 }
 
 export function getJob(id: number) {

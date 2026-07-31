@@ -31,6 +31,7 @@ import { assertMediaPathAllowed } from "../transcription-client.js";
 import { isWatcherRunning } from "../watcher.js";
 import { getAllSettings } from "../config.js";
 import { logger } from "../logger.js";
+import { parsePositiveInteger, parsePositiveIntegerArray } from "./validation.js";
 
 // Enrich job rows with task data (since settings/tasks are in config, not SQL JOIN).
 // Also surfaces token usage + an APPROXIMATE est_cost: jobs don't store which
@@ -121,8 +122,9 @@ export function registerJobsRoutes(app: Express): void {
 
   app.post("/api/jobs/reorder", (req, res) => {
     const { jobIds } = req.body;
-    if (!Array.isArray(jobIds)) return res.status(400).json({ error: "jobIds must be an array" });
-    reorderJobs(jobIds);
+    const ids = parsePositiveIntegerArray(jobIds);
+    if (!ids) return res.status(400).json({ error: "jobIds must be an array of positive integers" });
+    reorderJobs(ids);
     res.json({ ok: true });
   });
 
@@ -301,9 +303,10 @@ export function registerJobsRoutes(app: Express): void {
   app.post("/api/queue/start", (req, res) => {
     if (isQueueRunning()) return res.json({ ok: true, message: "Already running" });
     const rawIds = (req.body as { ids?: unknown })?.ids;
-    const ids = Array.isArray(rawIds)
-      ? rawIds.filter((v): v is number => typeof v === "number" && Number.isFinite(v))
-      : undefined;
+    const ids = rawIds === undefined ? undefined : parsePositiveIntegerArray(rawIds);
+    if (rawIds !== undefined && !ids) {
+      return res.status(400).json({ error: "ids must be an array of positive integers" });
+    }
     processQueue(ids && ids.length > 0 ? ids : undefined);
     res.json({ ok: true, message: "Queue started", count: ids?.length ?? null });
   });

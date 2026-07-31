@@ -15,11 +15,12 @@ import os
 from PyInstaller.utils.hooks import collect_submodules
 
 SPEC_DIR = os.path.abspath(SPECPATH)                       # .../packaging/windows
-TRAY_SCRIPT = os.path.join(SPEC_DIR, "tray", "whisper_tray.py")
+TRAY_DIR = os.path.join(SPEC_DIR, "tray")
+TRAY_SCRIPT = os.path.join(TRAY_DIR, "whisper_tray.py")
 
 # pystray picks a backend dynamically (win32 on Windows); pull its submodules and
 # PIL so the frozen exe has them.
-hiddenimports = []
+hiddenimports = ["server_launch"]
 hiddenimports += collect_submodules("pystray")
 hiddenimports += collect_submodules("PIL")
 
@@ -27,7 +28,10 @@ block_cipher = None
 
 a = Analysis(
     [TRAY_SCRIPT],
-    pathex=[SPEC_DIR],
+    # TRAY_DIR on pathex + the explicit hiddenimport keep server_launch.py
+    # (the run_server.exe resolver shared with the other controller) in the
+    # frozen bundle; without it the app cannot locate the server.
+    pathex=[SPEC_DIR, TRAY_DIR],
     binaries=[],
     datas=[],
     hiddenimports=hiddenimports,

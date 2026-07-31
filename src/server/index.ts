@@ -20,6 +20,7 @@ import { getLogs, clearLogs } from "./db.js";
 import { addSSEClient, broadcast } from "./sse.js";
 import { notifyTest } from "./notify.js";
 import { startWatcher, stopWatcher, isWatcherRunning } from "./watcher.js";
+import { MAX_LOG_LIMIT, MAX_LOG_OFFSET, parseBoundedNonNegativeInt } from "./routes/validation.js";
 import type { TranscribePostAction } from "./transcription-client.js";
 import { registerSettingsTasksRoutes } from "./routes/settings-tasks.js";
 import { registerJobsRoutes } from "./routes/jobs.js";
@@ -138,8 +139,8 @@ app.get("/api/logs", (req, res) => {
       level: level as string | undefined,
       category: category as string | undefined,
       jobId: Number.isFinite(parsedJobId) ? parsedJobId : undefined,
-      limit: limit ? parseInt(limit as string, 10) : 100,
-      offset: offset ? parseInt(offset as string, 10) : 0,
+      limit: parseBoundedNonNegativeInt(limit, 100, MAX_LOG_LIMIT),
+      offset: parseBoundedNonNegativeInt(offset, 0, MAX_LOG_OFFSET),
     })
   );
 });

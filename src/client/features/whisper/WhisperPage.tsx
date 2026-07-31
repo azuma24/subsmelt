@@ -57,6 +57,42 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const retryMutation = useMutationWithInvalidation((id: string) => api.retryTranscriptionAttempt(id));
   const onRetry = (attempt: TranscriptionHistoryEntry) => retryMutation.mutate(attempt.id);
 
+  // History clearing only drops list entries — subtitle files on disk are kept,
+  // and the server refuses to clear attempts that are still running.
+  const clearHistoryMutation = useMutationWithInvalidation(() => api.clearTranscriptionHistory());
+  const removeAttemptMutation = useMutationWithInvalidation((id: string) => api.deleteTranscriptionAttempt(id));
+  const [removingId, setRemovingId] = useState<string | null>(null);
+
+  const onClearHistory = async () => {
+    const clearable = attempts.filter((attempt) => attempt.status !== "running").length;
+    if (clearable === 0) return;
+    const ok = await confirm({
+      title: t("transcriptionHistory.clearTitle"),
+      message: t("transcriptionHistory.clearConfirm", { count: clearable }),
+      confirmLabel: t("transcriptionHistory.clear"),
+    });
+    if (!ok) return;
+    try {
+      const result = await clearHistoryMutation.mutateAsync();
+      addToast(t("transcriptionHistory.cleared", { count: result.removed }), "success");
+    } catch (e: unknown) {
+      addToast(t("transcriptionHistory.clearFailed", { message: getErrorMessage(e) }), "error");
+    }
+    historyQuery.refetch();
+  };
+
+  const onRemoveAttempt = async (attempt: TranscriptionHistoryEntry) => {
+    setRemovingId(attempt.id);
+    try {
+      await removeAttemptMutation.mutateAsync(attempt.id);
+    } catch (e: unknown) {
+      addToast(t("transcriptionHistory.clearFailed", { message: getErrorMessage(e) }), "error");
+    } finally {
+      setRemovingId(null);
+    }
+    historyQuery.refetch();
+  };
+
   // Whisper models list — used to check downloaded flag before running.
   // Only query when the backend is configured; the models endpoint proxies to
   // the whisper backend and will 502 if it's not reachable.
@@ -367,7 +403,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
         });
         ok += 1;
       } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : "failed";
+        const msg = e instanceof Error ? e.message : t("whisper.failedFallback");
         if (!/cancelled/i.test(msg)) addToast(`${baseName(paths[i])}: ${msg}`, "error");
       }
       setProgress({ done: i + 1, total: paths.length });
@@ -405,7 +441,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
       addToast(t("whisper.urlDone", { segments: res.segments ?? 0 }), "success");
       setUrlValue("");
     } catch (e: unknown) {
-      addToast(`${t("whisper.urlFailed")}: ${e instanceof Error ? e.message : "failed"}`, "error");
+      addToast(`${t("whisper.urlFailed")}: ${e instanceof Error ? e.message : t("whisper.failedFallback")}`, "error");
     } finally {
       setUrlBusy(false);
     }
@@ -611,7 +647,17 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
       {/* Readiness + Model Manager live in Settings → Speech to Text; the Whisper
           page focuses on picking files and transcribing. */}
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]">
-        <TranscriptionHistoryPanel attempts={attempts} transcribingPath={activePath} isRetryPending={retryMutation.isPending} isTranscribePending={running} onRetry={onRetry} />
+        <TranscriptionHistoryPanel
+          attempts={attempts}
+          transcribingPath={activePath}
+          isRetryPending={retryMutation.isPending}
+          isTranscribePending={running}
+          onRetry={onRetry}
+          onClear={onClearHistory}
+          onRemove={onRemoveAttempt}
+          isClearPending={clearHistoryMutation.isPending}
+          removingId={removingId}
+        />
       </section>
     </div>
   );

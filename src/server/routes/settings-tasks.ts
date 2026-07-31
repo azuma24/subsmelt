@@ -1,4 +1,7 @@
 import type { Express } from "express";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import {
   AUTO_SOURCE_LANGUAGE,
   getAllSettings,
@@ -12,7 +15,8 @@ import {
 } from "../config.js";
 import { scanFolder, MEDIA_DIR } from "../scanner.js";
 import { startAutoScan, stopAutoScan } from "../queue.js";
-import { convertSubtitle } from "../translator.js";
+import { convertSubtitle, probeModelContext, summarizeTranslationError, translateFile } from "../translator.js";
+import { resolveConnectionPool } from "../connections.js";
 import { logger } from "../logger.js";
 import { isWatcherRunning, restartWatcher } from "../watcher.js";
 
@@ -23,12 +27,70 @@ import { isWatcherRunning, restartWatcher } from "../watcher.js";
 const CONVERT_TARGET_FORMATS = ["srt", "vtt", "ass", "ssa"] as const;
 const MAX_CONVERT_FILES = 50;
 const MAX_CONVERT_FILE_BYTES = 10 * 1024 * 1024; // 10 MB per file
+export const REDACTED_SECRET = "__SUBSMELT_SECRET_REDACTED__";
+const SECRET_SETTING_KEYS = new Set([
+  "api_key",
+  "cloud_api_key_openai",
+  "cloud_api_key_anthropic",
+  "cloud_api_key_gemini",
+  "transcription_backend_token",
+]);
+
+function redactSettings(settings: Record<string, string>): Record<string, string> {
+  const redacted = { ...settings };
+  for (const key of SECRET_SETTING_KEYS) {
+    if (redacted[key]) redacted[key] = REDACTED_SECRET;
+  }
+
+  if (redacted.llm_connections) {
+    try {
+      const connections = JSON.parse(redacted.llm_connections);
+      if (Array.isArray(connections)) {
+        redacted.llm_connections = JSON.stringify(
+          connections.map((connection) =>
+            connection && typeof connection === "object" && connection.apiKey
+              ? { ...connection, apiKey: REDACTED_SECRET }
+              : connection
+          )
+        );
+      }
+    } catch {
+      // Preserve malformed settings for the existing client-side recovery path.
+    }
+  }
+  return redacted;
+}
+
+function restoreRedactedConnections(value: string): string {
+  try {
+    const incoming = JSON.parse(value);
+    const existing = JSON.parse(getSetting("llm_connections") || "[]");
+    if (!Array.isArray(incoming) || !Array.isArray(existing)) return value;
+    const existingById = new Map(existing.map((connection) => [connection?.id, connection]));
+    return JSON.stringify(
+      incoming.map((connection) => {
+        const previous = existingById.get(connection?.id);
+        if (
+          connection &&
+          typeof connection === "object" &&
+          connection.apiKey === REDACTED_SECRET &&
+          previous?.apiKey
+        ) {
+          return { ...connection, apiKey: previous.apiKey };
+        }
+        return connection;
+      })
+    );
+  } catch {
+    return value;
+  }
+}
 
 export function registerSettingsTasksRoutes(app: Express): void {
   // ======== Settings ========
   app.get("/api/settings", (_req, res) => {
     res.json({
-      ...getAllSettings(),
+      ...redactSettings(getAllSettings()),
       _media_dir: MEDIA_DIR,
       _watcher_running: isWatcherRunning(),
     });
@@ -58,7 +120,14 @@ export function registerSettingsTasksRoutes(app: Express): void {
         rejected.push(key);
         continue;
       }
-      patch[key] = value;
+      // Secret values are never returned by GET. A client that saves unrelated
+      // settings therefore sends the redaction marker back; preserve the
+      // existing secret in that case, while an empty/new value still edits it.
+      patch[key] = SECRET_SETTING_KEYS.has(key) && value === REDACTED_SECRET
+        ? getSetting(key)
+        : key === "llm_connections"
+          ? restoreRedactedConnections(value)
+          : value;
       changedKeys.push(key);
     }
     if (changedKeys.length > 0) setSettings(patch);
@@ -105,14 +174,20 @@ export function registerSettingsTasksRoutes(app: Express): void {
     res.json({ ok: true });
   });
 
-  // ======== Subtitle Format Converter ========
-  app.post("/api/convert", (req, res) => {
+  // ======== Subtitle Format Converter / Translator ========
+  app.post("/api/convert", async (req, res) => {
     const body = req.body ?? {};
     const targetFormat = String(body.targetFormat || "").toLowerCase();
+    const translate = body.translate === true;
+    const sourceLang = String(body.sourceLang || AUTO_SOURCE_LANGUAGE).trim() || AUTO_SOURCE_LANGUAGE;
+    const targetLang = String(body.targetLang || "").trim();
     const files = Array.isArray(body.files) ? body.files : null;
 
     if (!CONVERT_TARGET_FORMATS.includes(targetFormat as (typeof CONVERT_TARGET_FORMATS)[number])) {
       return res.status(400).json({ error: `Unsupported target format. Use one of: ${CONVERT_TARGET_FORMATS.join(", ")}` });
+    }
+    if (translate && !targetLang) {
+      return res.status(400).json({ error: "targetLang is required when translate is enabled" });
     }
     if (!files) {
       return res.status(400).json({ error: "files must be an array of { name, content }" });
@@ -132,22 +207,76 @@ export function registerSettingsTasksRoutes(app: Express): void {
 
     const outputs: { name: string; content: string }[] = [];
     const errors: { name: string; error: string }[] = [];
+    const settings = getAllSettings();
+    const { mode, pool } = resolveConnectionPool(settings);
+    const primary = pool[0];
+    const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-convert-"));
 
-    for (const file of files) {
-      const name = String(file?.name || "subtitle");
-      const content = typeof file?.content === "string" ? file.content : "";
-      const dotIndex = name.lastIndexOf(".");
-      const baseName = dotIndex > 0 ? name.slice(0, dotIndex) : name;
-      const sourceExt = dotIndex >= 0 ? name.slice(dotIndex + 1).toLowerCase() : "";
-      try {
-        const converted = convertSubtitle(content, sourceExt, targetFormat);
-        outputs.push({ name: `${baseName}.${targetFormat}`, content: converted });
-      } catch (error) {
-        errors.push({ name, error: error instanceof Error ? error.message : String(error) });
+    try {
+      for (const file of files) {
+        const name = String(file?.name || "subtitle");
+        const content = typeof file?.content === "string" ? file.content : "";
+        const dotIndex = name.lastIndexOf(".");
+        const baseName = dotIndex > 0 ? name.slice(0, dotIndex) : name;
+        const sourceExt = dotIndex >= 0 ? name.slice(dotIndex + 1).toLowerCase() : "";
+        const outName = `${baseName}${translate ? ".translated" : ""}.${targetFormat}`;
+        try {
+          if (!translate) {
+            const converted = convertSubtitle(content, sourceExt, targetFormat);
+            outputs.push({ name: outName, content: converted });
+            continue;
+          }
+
+          if (!primary) throw new Error("No usable LLM connection configured");
+          const inputPath = path.join(tmpRoot, `${outputs.length}-${baseName}.${sourceExt || "srt"}`);
+          const outputPath = path.join(tmpRoot, `${outputs.length}-${baseName}.translated.${targetFormat}`);
+          fs.writeFileSync(inputPath, content, "utf8");
+
+          const chunkSize = parseInt(settings.chunk_size || "20", 10);
+          const apiHost = primary.apiHost || settings.llm_endpoint || "http://localhost:8000/v1";
+          const model = primary.model || "";
+          const ctxInfo = await probeModelContext(apiHost, model, chunkSize);
+          const configuredParallel = Math.max(1, Math.min(8, parseInt(settings.parallel_chunks || "1", 10)));
+          const parallelChunks = configuredParallel > 1 ? configuredParallel : ctxInfo.recommendedParallelChunks;
+          const requestTimeoutMs = Math.max(5_000, parseInt(settings.request_timeout_s || "300", 10) * 1000);
+
+          await translateFile({
+            srtPath: inputPath,
+            outputPath,
+            apiKey: primary.apiKey || "",
+            apiHost,
+            model,
+            provider: primary.provider,
+            connections: pool,
+            llmMode: mode,
+            prompt: settings.prompt || "",
+            lang: targetLang,
+            sourceLang,
+            additional: settings.additional_context || "",
+            temperature: parseFloat(settings.temperature || "0.7"),
+            chunkSize,
+            contextSize: parseInt(settings.context_window || "5", 10),
+            parallelChunks,
+            maxAnalysisLines: ctxInfo.recommendedAnalysisLines,
+            requestTimeoutMs,
+            disableToolCalls: settings.disable_tool_calls === "1",
+            refinePass: settings.refine_pass === "1",
+            seriesMemory: false,
+            onRetry: (attempt, error, backoff) => {
+              const diagnostics = summarizeTranslationError(error);
+              logger.warn("translate", `Convert retry ${attempt}: ${diagnostics.message} (backoff ${backoff}ms)`);
+            },
+          });
+          outputs.push({ name: outName, content: fs.readFileSync(outputPath, "utf8") });
+        } catch (error) {
+          errors.push({ name, error: error instanceof Error ? error.message : String(error) });
+        }
       }
+    } finally {
+      fs.rmSync(tmpRoot, { recursive: true, force: true });
     }
 
-    logger.info("system", `Converted ${outputs.length}/${files.length} subtitle file(s) → ${targetFormat}`);
+    logger.info("system", `${translate ? "Translated+converted" : "Converted"} ${outputs.length}/${files.length} subtitle file(s) → ${targetFormat}`);
     res.json({ files: outputs, errors });
   });
 }

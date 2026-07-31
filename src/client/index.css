@@ -5,33 +5,32 @@
 :root {
   color-scheme: dark;
 
-  --bg: #07090f;
-  --surface: #0d1117;
-  --surface-2: #161b27;
-  --surface-3: #1c2333;
-  --border: #21283a;
-  --border-sub: #171e2c;
-  --text: #e6edf3;
-  --text-2: #8b949e;
-  --text-3: #484f58;
-  /* Cockpit Grid accent — cyan. Bright enough to read as text/links/borders on
-     the dark surfaces (its dominant use); primary buttons use dark text (see
-     ActionButton) since white-on-cyan would fail contrast. */
-  --accent: #22d3ee;
-  --accent-dim: rgba(34, 211, 238, 0.12);
-  --accent-border: rgba(34, 211, 238, 0.30);
-  /* Foreground for filled-accent surfaces (primary buttons). Dark here because
-     the dark-theme cyan is bright; the light theme flips this to white. */
-  --on-accent: #04222a;
-  --green: #3fb950;
-  --green-dim: rgba(63, 185, 80, 0.10);
-  --green-border: rgba(63, 185, 80, 0.28);
-  --yellow: #d29922;
-  --yellow-dim: rgba(210, 153, 34, 0.10);
-  --yellow-border: rgba(210, 153, 34, 0.28);
-  --red: #f85149;
-  --red-dim: rgba(248, 81, 73, 0.10);
-  --red-border: rgba(248, 81, 73, 0.28);
+  --bg: #0b1020;
+  --surface: #111827;
+  --surface-2: #172033;
+  --surface-3: #1e293b;
+  --border: #334155;
+  --border-sub: #243044;
+  --text: #f1f5f9;
+  --text-2: #cbd5e1;
+  --text-3: #94a3b8;
+  /* Softer blue accent on lifted dark surfaces. It keeps Subsmelt's cockpit feel
+     but gives text, borders, and selected states more separation from panels. */
+  --accent: #60a5fa;
+  --accent-dim: rgba(96, 165, 250, 0.14);
+  --accent-border: rgba(96, 165, 250, 0.34);
+  /* Foreground for filled-accent surfaces (primary buttons). Dark text maintains
+     strong contrast against the lighter blue accent. */
+  --on-accent: #0b1020;
+  --green: #4ade80;
+  --green-dim: rgba(74, 222, 128, 0.13);
+  --green-border: rgba(74, 222, 128, 0.32);
+  --yellow: #facc15;
+  --yellow-dim: rgba(250, 204, 21, 0.13);
+  --yellow-border: rgba(250, 204, 21, 0.32);
+  --red: #fb7185;
+  --red-dim: rgba(251, 113, 133, 0.13);
+  --red-border: rgba(251, 113, 133, 0.32);
 }
 
 /* Light theme — applied when <html data-theme="light"> is set. The default

@@ -108,8 +108,30 @@ def total_ram_mb() -> int:
     return 0
 
 
+# Sentinel for "free space could not be measured" — negative so it can never be
+# mistaken for a real reading of 0 MB (which would read as "disk full").
+DISK_FREE_UNKNOWN = -1
+
+
 def disk_free_mb(path: str | os.PathLike[str]) -> int:
-    usage = shutil.disk_usage(path)
+    """Free space in MB for the filesystem holding ``path``.
+
+    ``shutil.disk_usage`` needs a path that exists — a media root on an offline
+    mount or a not-yet-created directory made it raise, which surfaced as an
+    opaque 500 from /transcribe and /transcribe/preflight. Walk up to the first
+    existing ancestor instead, and report -1 ("unknown") if even that fails so
+    callers can fail open rather than read 0 as "disk full".
+    """
+    probe = Path(path)
+    while not probe.exists():
+        parent = probe.parent
+        if parent == probe:
+            break
+        probe = parent
+    try:
+        usage = shutil.disk_usage(probe)
+    except OSError:
+        return DISK_FREE_UNKNOWN
     return int(usage.free / 1024 / 1024)
 
 
@@ -175,6 +197,16 @@ def evaluate_disk_safety(input_size_mb: int, available_disk_mb: int) -> DiskSafe
     # ffmpeg extraction plus output can temporarily need substantially more than
     # the source file. Keep a simple conservative floor for self-hosted users.
     required_disk_mb = max(2048, int(input_size_mb * 1.5))
+    # Unmeasurable free space fails OPEN, matching evaluate_model_safety's
+    # ram_unknown: refusing every transcription over an unknown reading is worse
+    # than proceeding, and the code lets the UI warn instead.
+    if available_disk_mb < 0:
+        return {
+            "safe": True,
+            "code": "disk_unknown",
+            "available_disk_mb": available_disk_mb,
+            "required_disk_mb": required_disk_mb,
+        }
     safe = available_disk_mb >= required_disk_mb
     return {
         "safe": safe,

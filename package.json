@@ -1,6 +1,6 @@
 {
   "name": "subsmelt",
-  "version": "0.4.9",
+  "version": "0.5.0",
   "type": "module",
   "description": "Self-hosted batch subtitle translator using LLM",
   "license": "MIT",
@@ -10,7 +10,9 @@
   "scripts": {
     "dev": "concurrently \"tsx watch src/server/index.ts\" \"vite\"",
     "build": "vite build && tsc -p tsconfig.server.json",
-    "start": "node dist/server/index.js"
+    "start": "node dist/server/index.js",
+    "test": "tsx --test $(git ls-files '*.test.ts' '*.test.tsx')",
+    "typecheck": "tsc -p tsconfig.server.json --noEmit"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.81",
@@ -25,14 +27,14 @@
     "better-sqlite3": "^11.7.0",
     "chokidar": "^4.0.0",
     "cors": "^2.8.5",
-    "express": "^4.21.0",
+    "express": "^4.22.2",
     "i18next": "^26.0.3",
     "i18next-browser-languagedetector": "^8.2.1",
     "iconv-lite": "^0.7.2",
     "jschardet": "^3.1.4",
     "jszip": "^3.10.1",
     "react-i18next": "^17.0.2",
-    "react-router-dom": "^7.14.0",
+    "react-router-dom": "^7.18.1",
     "subtitle": "^4.2.1",
     "tiny-async-pool": "^2.1.0",
     "zod": "^3.23.8"
@@ -53,7 +55,7 @@
     "react-dom": "^18.3.1",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.0",
-    "typescript": "^5.6.0",
+    "typescript": "^7.0.2",
     "vite": "^6.0.0"
   }
 }

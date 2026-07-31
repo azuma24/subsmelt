@@ -58,11 +58,12 @@
     "sortAsc": "Ascending",
     "sortDesc": "Descending",
     "sortAriaLabel": "Sort files",
-    "refreshAriaLabel": "Refresh file list"
+    "refreshAriaLabel": "Refresh file list",
+    "failedFallback": "failed"
   },
   "convert": {
     "title": "Subtitle Converter",
-    "description": "Convert subtitle files between formats (SRT, VTT, ASS, SSA) right in your browser. No translation — pure format conversion. Drop one or many files, pick a target format, and download.",
+    "description": "Convert subtitle formats, or translate subtitles and convert them in one step. Drop one or many files, choose languages if needed, pick an output format, then download.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
     "browse": "Browse for subtitle files",
@@ -80,7 +81,19 @@
     "failed": "Conversion failed. Please try again.",
     "unsupported": "Skipped {{count}} unsupported file(s). Only .srt, .vtt, .ass, .ssa are accepted.",
     "fileTooLarge": "File is too large (max 10MB per file).",
-    "tooManyFiles": "Too many files (max 50)."
+    "tooManyFiles": "Too many files (max 50).",
+    "translateToggle": "Translate subtitles too",
+    "translateToggleHelp": "Uses your saved LLM connections, then writes the result in the selected subtitle format. Leave off for format-only conversion.",
+    "sourceLanguage": "From language",
+    "sourceAuto": "Auto-detect",
+    "targetLanguage": "To language",
+    "translateAndConvert": "Translate & convert",
+    "translating": "Translating & converting…",
+    "translateDownloadReady": "Translated and converted {{count}} file(s) to {{format}} — download started.",
+    "downloadsReady": "{{count}} download(s) ready",
+    "downloadsReadyHelp": "The download was started automatically. You can download again below.",
+    "downloadFile": "Download file",
+    "downloadZip": "Download ZIP"
   },
   "common": {
     "save": "Save",
@@ -809,7 +822,14 @@
     "retry": "Retry",
     "retrying": "Retrying…",
     "postQueueTranslate": "queue translate",
-    "postTranscribeOnly": "transcribe only"
+    "postTranscribeOnly": "transcribe only",
+    "clear": "Clear",
+    "clearing": "Clearing…",
+    "remove": "Remove",
+    "clearTitle": "Clear transcription history?",
+    "clearConfirm": "Remove {{count}} finished entries from this list? Subtitle files are not deleted.",
+    "cleared": "Cleared {{count}} entries.",
+    "clearFailed": "Could not clear history: {{message}}"
   },
   "logs": {
     "title": "Logs",

@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { getJobs, updateJob, getJob, addJobUsage } from "./db.js";
+import { countPendingJobs, claimPendingJob, updateJob, getJob, addJobUsage } from "./db.js";
 import { getAllSettings, getTask, getSetting } from "./config.js";
 import { summarizeTranslationError, translateFile, probeModelContext } from "./translator.js";
 import { resolveConnectionPool, type ResolvedConnection, type LlmMode } from "./connections.js";
@@ -67,8 +67,7 @@ export async function processQueue(onlyIds?: number[]) {
   connectionLockTails.clear();
 
   const filter = onlyIds && onlyIds.length > 0 ? new Set(onlyIds) : null;
-  const allPending = getJobs("pending") as any[];
-  const pendingCount = filter ? allPending.filter((j) => filter.has(j.id)).length : allPending.length;
+  const pendingCount = countPendingJobs(filter);
   logger.info("queue", `Queue started (${pendingCount} pending jobs${filter ? ", selected subset" : ""})`);
 
   try {
@@ -114,12 +113,8 @@ export async function processQueue(onlyIds?: number[]) {
  */
 function claimNextJob(filter: Set<number> | null): any | null {
   while (!shouldStop) {
-    const all = getJobs("pending") as any[];
-    const pending = filter ? all.filter((j) => filter.has(j.id)) : all;
-    if (pending.length === 0) return null;
-
-    // Sorted by priority DESC, created_at ASC — first item is highest priority.
-    const job = pending[0];
+    const job = claimPendingJob(filter) as any;
+    if (!job) return null;
 
     if (fs.existsSync(job.output_path) && !job.force) {
       logger.info("queue", `Skipping job ${job.id}: output already exists (${job.output_path})`, job.id);
@@ -127,7 +122,6 @@ function claimNextJob(filter: Set<number> | null): any | null {
       continue;
     }
 
-    updateJob(job.id, { status: "translating", error: null, analysis_context: null, used_connections: null, input_tokens: 0, output_tokens: 0 });
     activeJobIds.add(job.id);
     currentJobId = job.id;
     return job;
@@ -138,8 +132,7 @@ function claimNextJob(filter: Set<number> | null): any | null {
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 function hasPendingJobs(filter: Set<number> | null): boolean {
-  const all = getJobs("pending") as any[];
-  return (filter ? all.filter((j) => filter.has(j.id)) : all).length > 0;
+  return countPendingJobs(filter) > 0;
 }
 
 /**

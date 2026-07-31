@@ -26,8 +26,12 @@
     Model cache directory (HF_HOME). Models are downloaded here by the manager.
 
 .PARAMETER Token
-    Optional shared-secret bearer token (Phase 1 auth). When set, the server
-    binds 0.0.0.0; otherwise localhost only.
+    Optional shared-secret bearer token (Phase 1 auth). The server binds 0.0.0.0
+    by default, so without a token it answers to every host on the network.
+
+.PARAMETER Version
+    Version string stamped into SUBSMELT_WHISPER_VERSION so /health reports the
+    shipped version instead of the source default.
 
 .EXAMPLE
     .\install-service.ps1 -Port 8001 -ModelDir "C:\ProgramData\SubSmelt\models"
@@ -40,6 +44,7 @@ param(
     [string]$ModelDir = "C:\ProgramData\SubSmelt\models",
     [string]$MediaRoot = "C:\ProgramData\SubSmelt\media",
     [string]$Token = "",
+    [string]$Version = "",
     [string]$DisplayName = "SubSmelt Whisper Backend"
 )
 
@@ -69,6 +74,12 @@ Write-Host "Configuring machine environment variables..."
 [Environment]::SetEnvironmentVariable("SUBSMELT_WHISPER_MEDIA_ROOT", $MediaRoot, "Machine")
 if ($Token -ne "") {
     [Environment]::SetEnvironmentVariable("SUBSMELT_WHISPER_TOKEN", $Token, "Machine")
+} else {
+    Write-Warning "No token set: the backend binds 0.0.0.0 and will accept requests from any host on this network."
+}
+# Stamp the shipped version so /health does not report the source-tree default.
+if ($Version -ne "") {
+    [Environment]::SetEnvironmentVariable("SUBSMELT_WHISPER_VERSION", $Version, "Machine")
 }
 # Point ffmpeg at the bundled exe (sits next to run_server.exe in the onedir output).
 $ffmpeg = Join-Path (Split-Path $ExePath -Parent) "ffmpeg.exe"

@@ -25,7 +25,7 @@
 ; The #ifndef guard lets a command-line /D win; falls back to this default for
 ; local manual compiles.
 #ifndef MyAppVersion
-  #define MyAppVersion "0.4.2"
+  #define MyAppVersion "0.5.0"
 #endif
 #define MyAppPublisher "SubSmelt"
 #define MyServiceName "SubSmeltWhisper"
@@ -82,7 +82,7 @@ Filename: "{tmp}\vc_redist.x64.exe"; Parameters: "/install /quiet /norestart"; \
 ;    Port comes from the wizard page (default 8001). ExecutionPolicy Bypass so an
 ;    unsigned script runs; the script itself asserts admin.
 Filename: "powershell.exe"; \
-    Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\install-service.ps1"" -ExePath ""{app}\run_server.exe"" -ServiceName ""{#MyServiceName}"" -Port {code:GetPort} -ModelDir ""{commonappdata}\SubSmelt\models"" -MediaRoot ""{commonappdata}\SubSmelt\media"""; \
+    Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\install-service.ps1"" -ExePath ""{app}\run_server.exe"" -ServiceName ""{#MyServiceName}"" -Port {code:GetPort} -Version ""{#MyAppVersion}"" -ModelDir ""{commonappdata}\SubSmelt\models"" -MediaRoot ""{commonappdata}\SubSmelt\media"""; \
     StatusMsg: "Registering Windows Service..."; Flags: runhidden waituntilterminated
 
 ; 3) Windows Firewall rule for the inbound port (only meaningful for remote use).

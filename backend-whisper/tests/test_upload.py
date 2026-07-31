@@ -1,6 +1,7 @@
 import io
 import os
 import unittest
+from unittest import mock
 from pathlib import Path
 
 # --- Direct fake-function tests (no fastapi/faster-whisper needed) ---
@@ -102,11 +103,17 @@ class UploadEndpointTests(unittest.TestCase):
     def test_undownloaded_model_is_409(self):
         # A valid request for a model that is not in the cache must be refused with
         # 409 model_not_downloaded — the upload path never auto-downloads either.
-        resp = self.client.post(
-            "/transcribe/upload",
-            files=self._file(),
-            data={"request": '{"model": "large-v3", "language": "en"}'},
-        )
+        # The upload preflight gate runs before the model-cache check, so pin
+        # everything it inspects: a small build host refuses large-v3 with 422
+        # insufficient_ram, and a host without ffmpeg refuses with 422
+        # ffmpeg_missing. Neither is what this test is about.
+        with mock.patch.object(main_module, "available_ram_mb", return_value=64000), \
+             mock.patch.object(main_module, "ffmpeg_available", return_value=True):
+            resp = self.client.post(
+                "/transcribe/upload",
+                files=self._file(),
+                data={"request": '{"model": "large-v3", "language": "en"}'},
+            )
         # 409 when the model is absent; if a test host happens to have it cached the
         # fake path returns content instead — accept either, but never a silent
         # auto-download.

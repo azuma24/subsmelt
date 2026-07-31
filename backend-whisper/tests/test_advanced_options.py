@@ -40,6 +40,10 @@ class AdvancedOptionsTests(unittest.TestCase):
         })
 
     def test_unsupported_heavy_features_are_explicitly_reported(self):
+        # bgm_separation has no implementation, so it is always reported here.
+        # speaker_diarization is NOT: it is a real (optional) pipeline gated at
+        # the capability level by pyannote + an HF token, so requesting it is
+        # valid whenever the backend advertises it.
         request = TranscribeRequest(
             input_path="/media/movie.mkv",
             advanced_options=AdvancedSttOptions(
@@ -48,7 +52,7 @@ class AdvancedOptionsTests(unittest.TestCase):
             ),
         )
 
-        self.assertEqual(unsupported_advanced_features(request), ["speaker_diarization", "bgm_separation"])
+        self.assertEqual(unsupported_advanced_features(request), ["bgm_separation"])
 
 
 if __name__ == "__main__":
