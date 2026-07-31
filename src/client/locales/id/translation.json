@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Analysing context…"
+    "analysing": "Analysing context…",
+    "etaLeft": "~{{time}} lagi",
+    "cuesPerMinute": "{{rate}} baris/menit",
+    "queueEta": "~{{time}} untuk antrean"
   },
   "translation_languages": {
     "title": "Terjemahan",
@@ -940,6 +943,9 @@
     "clearTitle": "Bersihkan riwayat transkripsi?",
     "clearConfirm": "Hapus {{count}} entri selesai dari daftar ini? Berkas subtitle tidak dihapus.",
     "cleared": "{{count}} entri dibersihkan.",
-    "clearFailed": "Tidak dapat membersihkan riwayat: {{message}}"
+    "clearFailed": "Tidak dapat membersihkan riwayat: {{message}}",
+    "attempts": "{{count}} percobaan",
+    "retryAllFailed": "Coba lagi {{count}} yang gagal",
+    "retriedAll": "Mencoba ulang {{ok}} dari {{total}} berkas."
   }
 }

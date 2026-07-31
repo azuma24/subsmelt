@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Analyserar kontext…"
+    "analysing": "Analyserar kontext…",
+    "etaLeft": "~{{time}} kvar",
+    "cuesPerMinute": "{{rate}} textrader/min",
+    "queueEta": "~{{time}} för kön"
   },
   "translation_languages": {
     "title": "Översättningar",
@@ -940,6 +943,9 @@
     "clearTitle": "Rensa transkriberingshistoriken?",
     "clearConfirm": "Ta bort {{count}} avslutade poster från listan? Undertextfiler tas inte bort.",
     "cleared": "{{count}} poster rensade.",
-    "clearFailed": "Kunde inte rensa historiken: {{message}}"
+    "clearFailed": "Kunde inte rensa historiken: {{message}}",
+    "attempts": "{{count}} försök",
+    "retryAllFailed": "Försök om {{count}} misslyckade",
+    "retriedAll": "Försökte om {{ok}} av {{total}} filer."
   }
 }

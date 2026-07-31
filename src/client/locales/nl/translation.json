@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Context analyseren…"
+    "analysing": "Context analyseren…",
+    "etaLeft": "nog ~{{time}}",
+    "cuesPerMinute": "{{rate}} regels/min",
+    "queueEta": "~{{time}} voor de wachtrij"
   },
   "translation_languages": {
     "title": "Vertalingen",
@@ -940,6 +943,9 @@
     "clearTitle": "Transcriptiegeschiedenis wissen?",
     "clearConfirm": "{{count}} afgeronde items uit deze lijst verwijderen? Ondertitelbestanden worden niet verwijderd.",
     "cleared": "{{count}} items gewist.",
-    "clearFailed": "Kan geschiedenis niet wissen: {{message}}"
+    "clearFailed": "Kan geschiedenis niet wissen: {{message}}",
+    "attempts": "{{count}} pogingen",
+    "retryAllFailed": "{{count}} mislukte opnieuw proberen",
+    "retriedAll": "{{ok}} van {{total}} bestanden opnieuw geprobeerd."
   }
 }

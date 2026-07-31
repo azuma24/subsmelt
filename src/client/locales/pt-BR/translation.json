@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Analysing context…"
+    "analysing": "Analysing context…",
+    "etaLeft": "~{{time}} restante",
+    "cuesPerMinute": "{{rate}} legendas/min",
+    "queueEta": "~{{time}} para a fila"
   },
   "translation_languages": {
     "title": "Traduções",
@@ -940,6 +943,9 @@
     "clearTitle": "Limpar o histórico de transcrições?",
     "clearConfirm": "Remover {{count}} entradas concluídas desta lista? Os arquivos de legenda não são excluídos.",
     "cleared": "{{count}} entradas limpas.",
-    "clearFailed": "Não foi possível limpar o histórico: {{message}}"
+    "clearFailed": "Não foi possível limpar o histórico: {{message}}",
+    "attempts": "{{count}} tentativas",
+    "retryAllFailed": "Tentar novamente {{count}} com falha",
+    "retriedAll": "{{ok}} de {{total}} arquivos repetidos."
   }
 }

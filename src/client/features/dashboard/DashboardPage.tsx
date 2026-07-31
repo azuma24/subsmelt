@@ -550,6 +550,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
           statusFilter={statusFilter}
           activeJobs={activeJobs}
           pendingJobs={pendingJobs}
+          completedJobs={doneJobs}
           usageTotals={usageTotals}
           tokenBudget={tokenBudget}
           onSelectStatus={selectStatus}

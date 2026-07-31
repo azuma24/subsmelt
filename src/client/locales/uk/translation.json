@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Аналіз контексту…"
+    "analysing": "Аналіз контексту…",
+    "etaLeft": "залишилось ~{{time}}",
+    "cuesPerMinute": "{{rate}} субтитрів/хв",
+    "queueEta": "~{{time}} на чергу"
   },
   "translation_languages": {
     "title": "Переклади",
@@ -940,6 +943,9 @@
     "clearTitle": "Очистити історію транскрипцій?",
     "clearConfirm": "Видалити {{count}} завершених записів із цього списку? Файли субтитрів не видаляються.",
     "cleared": "Очищено записів: {{count}}.",
-    "clearFailed": "Не вдалося очистити історію: {{message}}"
+    "clearFailed": "Не вдалося очистити історію: {{message}}",
+    "attempts": "спроб: {{count}}",
+    "retryAllFailed": "Повторити {{count}} невдалих",
+    "retriedAll": "Повторено файлів: {{ok}} з {{total}}."
   }
 }

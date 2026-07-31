@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Analysing context…"
+    "analysing": "Analysing context…",
+    "etaLeft": "~{{time}} शेष",
+    "cuesPerMinute": "{{rate}} क्यू/मिनट",
+    "queueEta": "कतार के लिए ~{{time}}"
   },
   "translation_languages": {
     "title": "अनुवाद",
@@ -940,6 +943,9 @@
     "clearTitle": "ट्रांसक्रिप्शन इतिहास साफ़ करें?",
     "clearConfirm": "इस सूची से {{count}} पूर्ण प्रविष्टियाँ हटाएँ? सबटाइटल फ़ाइलें नहीं हटाई जाएँगी।",
     "cleared": "{{count}} प्रविष्टियाँ साफ़ की गईं।",
-    "clearFailed": "इतिहास साफ़ नहीं हो सका: {{message}}"
+    "clearFailed": "इतिहास साफ़ नहीं हो सका: {{message}}",
+    "attempts": "{{count}} प्रयास",
+    "retryAllFailed": "{{count}} विफल पुनः प्रयास करें",
+    "retriedAll": "{{total}} में से {{ok}} फ़ाइलें पुनः प्रयास की गईं।"
   }
 }

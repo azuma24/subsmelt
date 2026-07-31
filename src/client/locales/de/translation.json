@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Analysing context…"
+    "analysing": "Analysing context…",
+    "etaLeft": "noch ~{{time}}",
+    "cuesPerMinute": "{{rate}} Zeilen/Min",
+    "queueEta": "~{{time}} für die Warteschlange"
   },
   "translation_languages": {
     "title": "Übersetzungen",
@@ -940,6 +943,9 @@
     "clearTitle": "Transkriptionsverlauf leeren?",
     "clearConfirm": "{{count}} abgeschlossene Einträge aus dieser Liste entfernen? Untertiteldateien werden nicht gelöscht.",
     "cleared": "{{count}} Einträge geleert.",
-    "clearFailed": "Verlauf konnte nicht geleert werden: {{message}}"
+    "clearFailed": "Verlauf konnte nicht geleert werden: {{message}}",
+    "attempts": "{{count}} Versuche",
+    "retryAllFailed": "{{count}} fehlgeschlagene wiederholen",
+    "retriedAll": "{{ok}} von {{total}} Dateien wiederholt."
   }
 }

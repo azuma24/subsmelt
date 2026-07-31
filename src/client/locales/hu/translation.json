@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Kontextus elemzése…"
+    "analysing": "Kontextus elemzése…",
+    "etaLeft": "~{{time}} van hátra",
+    "cuesPerMinute": "{{rate}} felirat/perc",
+    "queueEta": "~{{time}} a sorhoz"
   },
   "translation_languages": {
     "title": "Fordítások",
@@ -940,6 +943,9 @@
     "clearTitle": "Törli az átiratok előzményeit?",
     "clearConfirm": "Eltávolít {{count}} befejezett bejegyzést a listáról? A feliratfájlok megmaradnak.",
     "cleared": "{{count}} bejegyzés törölve.",
-    "clearFailed": "Az előzmények törlése nem sikerült: {{message}}"
+    "clearFailed": "Az előzmények törlése nem sikerült: {{message}}",
+    "attempts": "{{count}} próbálkozás",
+    "retryAllFailed": "{{count}} sikertelen újrapróbálása",
+    "retriedAll": "{{total}} fájlból {{ok}} újrapróbálva."
   }
 }

@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Se analizează contextul…"
+    "analysing": "Se analizează contextul…",
+    "etaLeft": "~{{time}} rămase",
+    "cuesPerMinute": "{{rate}} subtitrări/min",
+    "queueEta": "~{{time}} pentru coadă"
   },
   "translation_languages": {
     "title": "Traduceri",
@@ -940,6 +943,9 @@
     "clearTitle": "Golești istoricul transcrierilor?",
     "clearConfirm": "Elimini {{count}} intrări finalizate din această listă? Fișierele de subtitrare nu sunt șterse.",
     "cleared": "{{count}} intrări golite.",
-    "clearFailed": "Istoricul nu a putut fi golit: {{message}}"
+    "clearFailed": "Istoricul nu a putut fi golit: {{message}}",
+    "attempts": "{{count}} încercări",
+    "retryAllFailed": "Reîncearcă {{count}} eșuate",
+    "retriedAll": "S-au reîncercat {{ok}} din {{total}} fișiere."
   }
 }

@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Analysing context…"
+    "analysing": "Analysing context…",
+    "etaLeft": "約剩 {{time}}",
+    "cuesPerMinute": "{{rate}} 條/分鐘",
+    "queueEta": "佇列約需 {{time}}"
   },
   "translation_languages": {
     "title": "翻譯",
@@ -940,6 +943,9 @@
     "clearTitle": "清除轉錄紀錄？",
     "clearConfirm": "從此清單移除 {{count}} 筆已完成的紀錄？字幕檔案不會被刪除。",
     "cleared": "已清除 {{count}} 筆紀錄。",
-    "clearFailed": "無法清除紀錄：{{message}}"
+    "clearFailed": "無法清除紀錄：{{message}}",
+    "attempts": "{{count}} 次嘗試",
+    "retryAllFailed": "重試 {{count}} 個失敗項",
+    "retriedAll": "已重試 {{total}} 個檔案中的 {{ok}} 個。"
   }
 }

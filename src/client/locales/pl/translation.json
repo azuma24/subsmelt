@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Analizowanie kontekstu…"
+    "analysing": "Analizowanie kontekstu…",
+    "etaLeft": "pozostało ~{{time}}",
+    "cuesPerMinute": "{{rate}} napisów/min",
+    "queueEta": "~{{time}} dla kolejki"
   },
   "translation_languages": {
     "title": "Tłumaczenia",
@@ -940,6 +943,9 @@
     "clearTitle": "Wyczyścić historię transkrypcji?",
     "clearConfirm": "Usunąć {{count}} zakończonych wpisów z tej listy? Pliki napisów nie zostaną usunięte.",
     "cleared": "Wyczyszczono {{count}} wpisów.",
-    "clearFailed": "Nie udało się wyczyścić historii: {{message}}"
+    "clearFailed": "Nie udało się wyczyścić historii: {{message}}",
+    "attempts": "{{count}} prób",
+    "retryAllFailed": "Ponów {{count}} nieudanych",
+    "retriedAll": "Ponowiono {{ok}} z {{total}} plików."
   }
 }

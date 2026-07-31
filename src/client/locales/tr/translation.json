@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Bağlam analiz ediliyor…"
+    "analysing": "Bağlam analiz ediliyor…",
+    "etaLeft": "~{{time}} kaldı",
+    "cuesPerMinute": "{{rate}} altyazı/dk",
+    "queueEta": "kuyruk için ~{{time}}"
   },
   "translation_languages": {
     "title": "Çeviriler",
@@ -940,6 +943,9 @@
     "clearTitle": "Transkripsiyon geçmişi temizlensin mi?",
     "clearConfirm": "Tamamlanan {{count}} kayıt bu listeden kaldırılsın mı? Altyazı dosyaları silinmez.",
     "cleared": "{{count}} kayıt temizlendi.",
-    "clearFailed": "Geçmiş temizlenemedi: {{message}}"
+    "clearFailed": "Geçmiş temizlenemedi: {{message}}",
+    "attempts": "{{count}} deneme",
+    "retryAllFailed": "{{count}} başarısızı yeniden dene",
+    "retriedAll": "{{total}} dosyadan {{ok}} tanesi yeniden denendi."
   }
 }

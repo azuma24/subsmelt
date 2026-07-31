@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Sinusuri ang konteksto…"
+    "analysing": "Sinusuri ang konteksto…",
+    "etaLeft": "~{{time}} na lang",
+    "cuesPerMinute": "{{rate}} cue/min",
+    "queueEta": "~{{time}} para sa pila"
   },
   "translation_languages": {
     "title": "Mga Salin",
@@ -940,6 +943,9 @@
     "clearTitle": "I-clear ang kasaysayan ng transcription?",
     "clearConfirm": "Alisin ang {{count}} tapos na entry sa listahang ito? Hindi buburahin ang mga subtitle file.",
     "cleared": "Na-clear ang {{count}} entry.",
-    "clearFailed": "Hindi ma-clear ang kasaysayan: {{message}}"
+    "clearFailed": "Hindi ma-clear ang kasaysayan: {{message}}",
+    "attempts": "{{count}} pagsubok",
+    "retryAllFailed": "Ulitin ang {{count}} nabigo",
+    "retriedAll": "Inulit ang {{ok}} sa {{total}} file."
   }
 }

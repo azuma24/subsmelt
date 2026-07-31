@@ -27,6 +27,7 @@ db.exec(`
     error TEXT,
     analysis_context TEXT,
     duration_seconds REAL,
+    started_at TEXT,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now')),
     UNIQUE(srt_path, task_id)
@@ -47,6 +48,12 @@ if (!jobColumns.some((c) => c.name === "input_tokens")) {
 }
 if (!jobColumns.some((c) => c.name === "output_tokens")) {
   db.exec("ALTER TABLE jobs ADD COLUMN output_tokens INTEGER DEFAULT 0");
+}
+// When the job was claimed. updated_at moves on every progress write, so it
+// cannot serve as a start time — without this there is no elapsed to project an
+// ETA from.
+if (!jobColumns.some((c) => c.name === "started_at")) {
+  db.exec("ALTER TABLE jobs ADD COLUMN started_at TEXT");
 }
 
 // Queue workers claim pending jobs by status/priority rather than materializing
@@ -166,7 +173,7 @@ export function claimPendingJob(ids?: Set<number> | null) {
     `SELECT * FROM jobs WHERE status = 'pending'${filter} ORDER BY priority DESC, created_at ASC, id ASC LIMIT 1`
   );
   const claim = db.prepare(
-    "UPDATE jobs SET status = 'translating', error = NULL, analysis_context = NULL, used_connections = NULL, input_tokens = 0, output_tokens = 0 WHERE id = ? AND status = 'pending'"
+    "UPDATE jobs SET status = 'translating', error = NULL, analysis_context = NULL, used_connections = NULL, input_tokens = 0, output_tokens = 0, started_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND status = 'pending'"
   );
   return db.transaction(() => {
     const job = select.get(...values) as any;

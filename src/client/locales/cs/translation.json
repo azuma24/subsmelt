@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Analýza kontextu…"
+    "analysing": "Analýza kontextu…",
+    "etaLeft": "zbývá ~{{time}}",
+    "cuesPerMinute": "{{rate}} titulků/min",
+    "queueEta": "~{{time}} pro frontu"
   },
   "translation_languages": {
     "title": "Překlady",
@@ -940,6 +943,9 @@
     "clearTitle": "Vymazat historii přepisů?",
     "clearConfirm": "Odebrat ze seznamu {{count}} dokončených záznamů? Soubory titulků zůstanou zachovány.",
     "cleared": "Vymazáno {{count}} záznamů.",
-    "clearFailed": "Historii se nepodařilo vymazat: {{message}}"
+    "clearFailed": "Historii se nepodařilo vymazat: {{message}}",
+    "attempts": "{{count}} pokusů",
+    "retryAllFailed": "Opakovat {{count}} neúspěšných",
+    "retriedAll": "Zopakováno {{ok}} z {{total}} souborů."
   }
 }

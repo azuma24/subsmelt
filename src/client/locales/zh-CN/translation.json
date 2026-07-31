@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Analysing context…"
+    "analysing": "Analysing context…",
+    "etaLeft": "约剩 {{time}}",
+    "cuesPerMinute": "{{rate}} 条/分钟",
+    "queueEta": "队列约需 {{time}}"
   },
   "translation_languages": {
     "title": "翻译",
@@ -940,6 +943,9 @@
     "clearTitle": "清空转录历史？",
     "clearConfirm": "从此列表中移除 {{count}} 条已完成的记录？字幕文件不会被删除。",
     "cleared": "已清空 {{count}} 条记录。",
-    "clearFailed": "无法清空历史：{{message}}"
+    "clearFailed": "无法清空历史：{{message}}",
+    "attempts": "{{count}} 次尝试",
+    "retryAllFailed": "重试 {{count}} 个失败项",
+    "retriedAll": "已重试 {{total}} 个文件中的 {{ok}} 个。"
   }
 }

@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "প্রসঙ্গ বিশ্লেষণ হচ্ছে…"
+    "analysing": "প্রসঙ্গ বিশ্লেষণ হচ্ছে…",
+    "etaLeft": "~{{time}} বাকি",
+    "cuesPerMinute": "{{rate}} কিউ/মিনিট",
+    "queueEta": "সারির জন্য ~{{time}}"
   },
   "translation_languages": {
     "title": "অনুবাদসমূহ",
@@ -940,6 +943,9 @@
     "clearTitle": "ট্রান্সক্রিপশন ইতিহাস মুছবেন?",
     "clearConfirm": "এই তালিকা থেকে {{count}}টি সম্পন্ন এন্ট্রি সরাবেন? সাবটাইটেল ফাইল মুছে ফেলা হবে না।",
     "cleared": "{{count}}টি এন্ট্রি মোছা হয়েছে।",
-    "clearFailed": "ইতিহাস মোছা যায়নি: {{message}}"
+    "clearFailed": "ইতিহাস মোছা যায়নি: {{message}}",
+    "attempts": "{{count}}টি প্রচেষ্টা",
+    "retryAllFailed": "{{count}}টি ব্যর্থ পুনরায় চেষ্টা",
+    "retriedAll": "{{total}}টির মধ্যে {{ok}}টি ফাইল পুনরায় চেষ্টা করা হয়েছে।"
   }
 }

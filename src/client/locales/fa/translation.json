@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "در حال تحلیل زمینه…"
+    "analysing": "در حال تحلیل زمینه…",
+    "etaLeft": "~{{time}} باقی‌مانده",
+    "cuesPerMinute": "{{rate}} زیرنویس/دقیقه",
+    "queueEta": "~{{time}} برای صف"
   },
   "translation_languages": {
     "title": "ترجمه‌ها",
@@ -940,6 +943,9 @@
     "clearTitle": "تاریخچه رونویسی پاک شود؟",
     "clearConfirm": "{{count}} مورد پایان‌یافته از این فهرست حذف شود؟ فایل‌های زیرنویس حذف نمی‌شوند.",
     "cleared": "{{count}} مورد پاک شد.",
-    "clearFailed": "پاک‌سازی تاریخچه ممکن نشد: {{message}}"
+    "clearFailed": "پاک‌سازی تاریخچه ممکن نشد: {{message}}",
+    "attempts": "{{count}} تلاش",
+    "retryAllFailed": "تلاش دوباره برای {{count}} ناموفق",
+    "retriedAll": "{{ok}} از {{total}} فایل دوباره تلاش شد."
   }
 }

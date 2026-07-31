@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "מנתח הקשר…"
+    "analysing": "מנתח הקשר…",
+    "etaLeft": "נותרו ~{{time}}",
+    "cuesPerMinute": "{{rate}} כתוביות/דקה",
+    "queueEta": "~{{time}} לתור"
   },
   "translation_languages": {
     "title": "תרגומים",
@@ -940,6 +943,9 @@
     "clearTitle": "לנקות את היסטוריית התמלולים?",
     "clearConfirm": "להסיר {{count}} רשומות שהסתיימו מהרשימה? קובצי הכתוביות לא יימחקו.",
     "cleared": "נוקו {{count}} רשומות.",
-    "clearFailed": "לא ניתן לנקות את ההיסטוריה: {{message}}"
+    "clearFailed": "לא ניתן לנקות את ההיסטוריה: {{message}}",
+    "attempts": "{{count}} ניסיונות",
+    "retryAllFailed": "נסה שוב {{count}} כשלונות",
+    "retriedAll": "בוצע ניסיון חוזר ל-{{ok}} מתוך {{total}} קבצים."
   }
 }

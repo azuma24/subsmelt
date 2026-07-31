@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "சூழலைப் பகுப்பாய்வு செய்கிறது…"
+    "analysing": "சூழலைப் பகுப்பாய்வு செய்கிறது…",
+    "etaLeft": "~{{time}} மீதம்",
+    "cuesPerMinute": "{{rate}} வசனங்கள்/நிமிடம்",
+    "queueEta": "வரிசைக்கு ~{{time}}"
   },
   "translation_languages": {
     "title": "மொழிபெயர்ப்புகள்",
@@ -940,6 +943,9 @@
     "clearTitle": "படியெடுப்பு வரலாற்றை அழிக்கவா?",
     "clearConfirm": "இந்தப் பட்டியலிலிருந்து முடிந்த {{count}} உள்ளீடுகளை நீக்கவா? வசன கோப்புகள் நீக்கப்படாது.",
     "cleared": "{{count}} உள்ளீடுகள் அழிக்கப்பட்டன.",
-    "clearFailed": "வரலாற்றை அழிக்க முடியவில்லை: {{message}}"
+    "clearFailed": "வரலாற்றை அழிக்க முடியவில்லை: {{message}}",
+    "attempts": "{{count}} முயற்சிகள்",
+    "retryAllFailed": "தோல்வியடைந்த {{count}} மீண்டும் முயற்சி",
+    "retriedAll": "{{total}} இல் {{ok}} கோப்புகள் மீண்டும் முயற்சிக்கப்பட்டன."
   }
 }

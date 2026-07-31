@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Ανάλυση πλαισίου…"
+    "analysing": "Ανάλυση πλαισίου…",
+    "etaLeft": "απομένουν ~{{time}}",
+    "cuesPerMinute": "{{rate}} ατάκες/λεπτό",
+    "queueEta": "~{{time}} για την ουρά"
   },
   "translation_languages": {
     "title": "Μεταφράσεις",
@@ -940,6 +943,9 @@
     "clearTitle": "Εκκαθάριση ιστορικού μεταγραφών;",
     "clearConfirm": "Αφαίρεση {{count}} ολοκληρωμένων καταχωρήσεων από τη λίστα; Τα αρχεία υποτίτλων δεν διαγράφονται.",
     "cleared": "Εκκαθαρίστηκαν {{count}} καταχωρήσεις.",
-    "clearFailed": "Δεν ήταν δυνατή η εκκαθάριση του ιστορικού: {{message}}"
+    "clearFailed": "Δεν ήταν δυνατή η εκκαθάριση του ιστορικού: {{message}}",
+    "attempts": "{{count}} προσπάθειες",
+    "retryAllFailed": "Επανάληψη {{count}} αποτυχιών",
+    "retriedAll": "Επαναλήφθηκαν {{ok}} από {{total}} αρχεία."
   }
 }

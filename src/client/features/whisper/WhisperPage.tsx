@@ -81,6 +81,22 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
     historyQuery.refetch();
   };
 
+  // Retries run one after another: firing every failed file at once would stack
+  // concurrent transcriptions on a backend that just demonstrated it is unhappy.
+  const onRetryAllFailed = async (targets: TranscriptionHistoryEntry[]) => {
+    let ok = 0;
+    for (const target of targets) {
+      try {
+        await retryMutation.mutateAsync(target.id);
+        ok += 1;
+      } catch (e: unknown) {
+        addToast(`${baseName(target.inputPath)}: ${getErrorMessage(e)}`, "error");
+      }
+    }
+    addToast(t("transcriptionHistory.retriedAll", { ok, total: targets.length }), ok > 0 ? "success" : "error");
+    historyQuery.refetch();
+  };
+
   const onRemoveAttempt = async (attempt: TranscriptionHistoryEntry) => {
     setRemovingId(attempt.id);
     try {
@@ -655,6 +671,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
           onRetry={onRetry}
           onClear={onClearHistory}
           onRemove={onRemoveAttempt}
+          onRetryAllFailed={onRetryAllFailed}
           isClearPending={clearHistoryMutation.isPending}
           removingId={removingId}
         />

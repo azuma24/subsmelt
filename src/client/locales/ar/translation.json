@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Analysing context…"
+    "analysing": "Analysing context…",
+    "etaLeft": "يتبقى ~{{time}}",
+    "cuesPerMinute": "{{rate}} مقطع/دقيقة",
+    "queueEta": "~{{time}} لقائمة الانتظار"
   },
   "translation_languages": {
     "title": "الترجمات",
@@ -940,6 +943,9 @@
     "clearTitle": "مسح سجل التفريغ؟",
     "clearConfirm": "إزالة {{count}} من الإدخالات المنتهية من هذه القائمة؟ لن يتم حذف ملفات الترجمة.",
     "cleared": "تم مسح {{count}} إدخالاً.",
-    "clearFailed": "تعذّر مسح السجل: {{message}}"
+    "clearFailed": "تعذّر مسح السجل: {{message}}",
+    "attempts": "{{count}} محاولات",
+    "retryAllFailed": "إعادة محاولة {{count}} فاشلة",
+    "retriedAll": "أُعيدت محاولة {{ok}} من {{total}} ملفات."
   }
 }

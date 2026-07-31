@@ -349,7 +349,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Analysing context…"
+    "analysing": "Analysing context…",
+    "etaLeft": "~{{time}} left",
+    "cuesPerMinute": "{{rate}} cues/min",
+    "queueEta": "~{{time}} for the queue"
   },
   "translation_languages": {
     "title": "Translations",
@@ -829,7 +832,10 @@
     "clearTitle": "Clear transcription history?",
     "clearConfirm": "Remove {{count}} finished entries from this list? Subtitle files are not deleted.",
     "cleared": "Cleared {{count}} entries.",
-    "clearFailed": "Could not clear history: {{message}}"
+    "clearFailed": "Could not clear history: {{message}}",
+    "attempts": "{{count}} attempts",
+    "retryAllFailed": "Retry {{count}} failed",
+    "retriedAll": "Retried {{ok}} of {{total}} files."
   },
   "logs": {
     "title": "Logs",

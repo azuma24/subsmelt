@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Analysing context…"
+    "analysing": "Analysing context…",
+    "etaLeft": "残り約{{time}}",
+    "cuesPerMinute": "{{rate}} 字幕/分",
+    "queueEta": "キュー全体で約{{time}}"
   },
   "translation_languages": {
     "title": "翻訳",
@@ -940,6 +943,9 @@
     "clearTitle": "文字起こし履歴をクリアしますか？",
     "clearConfirm": "完了済みの {{count}} 件をこのリストから削除しますか？字幕ファイルは削除されません。",
     "cleared": "{{count}} 件をクリアしました。",
-    "clearFailed": "履歴をクリアできませんでした: {{message}}"
+    "clearFailed": "履歴をクリアできませんでした: {{message}}",
+    "attempts": "{{count}} 回試行",
+    "retryAllFailed": "失敗した{{count}}件を再試行",
+    "retriedAll": "{{total}} 件中 {{ok}} 件を再試行しました。"
   }
 }

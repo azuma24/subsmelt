@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Analysing context…"
+    "analysing": "Analysing context…",
+    "etaLeft": "~{{time}} restante",
+    "cuesPerMinute": "{{rate}} subtítulos/min",
+    "queueEta": "~{{time}} para la cola"
   },
   "translation_languages": {
     "title": "Traducciones",
@@ -940,6 +943,9 @@
     "clearTitle": "¿Limpiar el historial de transcripciones?",
     "clearConfirm": "¿Quitar {{count}} entradas finalizadas de esta lista? Los archivos de subtítulos no se eliminan.",
     "cleared": "Se limpiaron {{count}} entradas.",
-    "clearFailed": "No se pudo limpiar el historial: {{message}}"
+    "clearFailed": "No se pudo limpiar el historial: {{message}}",
+    "attempts": "{{count}} intentos",
+    "retryAllFailed": "Reintentar {{count}} fallidos",
+    "retriedAll": "Se reintentaron {{ok}} de {{total}} archivos."
   }
 }

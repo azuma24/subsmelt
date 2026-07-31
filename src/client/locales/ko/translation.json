@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Analysing context…"
+    "analysing": "Analysing context…",
+    "etaLeft": "약 {{time}} 남음",
+    "cuesPerMinute": "{{rate}} 자막/분",
+    "queueEta": "대기열 약 {{time}}"
   },
   "translation_languages": {
     "title": "번역",
@@ -940,6 +943,9 @@
     "clearTitle": "전사 기록을 지울까요?",
     "clearConfirm": "완료된 항목 {{count}}개를 목록에서 제거할까요? 자막 파일은 삭제되지 않습니다.",
     "cleared": "{{count}}개 항목을 지웠습니다.",
-    "clearFailed": "기록을 지우지 못했습니다: {{message}}"
+    "clearFailed": "기록을 지우지 못했습니다: {{message}}",
+    "attempts": "{{count}}회 시도",
+    "retryAllFailed": "실패한 {{count}}개 재시도",
+    "retriedAll": "{{total}}개 중 {{ok}}개 파일을 재시도했습니다."
   }
 }

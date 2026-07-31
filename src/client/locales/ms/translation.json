@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Menganalisis konteks…"
+    "analysing": "Menganalisis konteks…",
+    "etaLeft": "~{{time}} lagi",
+    "cuesPerMinute": "{{rate}} baris/min",
+    "queueEta": "~{{time}} untuk baris gilir"
   },
   "translation_languages": {
     "title": "Terjemahan",
@@ -940,6 +943,9 @@
     "clearTitle": "Kosongkan sejarah transkripsi?",
     "clearConfirm": "Buang {{count}} entri selesai daripada senarai ini? Fail sari kata tidak dipadamkan.",
     "cleared": "{{count}} entri dikosongkan.",
-    "clearFailed": "Tidak dapat mengosongkan sejarah: {{message}}"
+    "clearFailed": "Tidak dapat mengosongkan sejarah: {{message}}",
+    "attempts": "{{count}} percubaan",
+    "retryAllFailed": "Cuba semula {{count}} gagal",
+    "retriedAll": "Mencuba semula {{ok}} daripada {{total}} fail."
   }
 }

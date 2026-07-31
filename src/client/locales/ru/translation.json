@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Analysing context…"
+    "analysing": "Analysing context…",
+    "etaLeft": "осталось ~{{time}}",
+    "cuesPerMinute": "{{rate}} субтитров/мин",
+    "queueEta": "~{{time}} на очередь"
   },
   "translation_languages": {
     "title": "Переводы",
@@ -940,6 +943,9 @@
     "clearTitle": "Очистить историю транскрипций?",
     "clearConfirm": "Удалить {{count}} завершённых записей из этого списка? Файлы субтитров не удаляются.",
     "cleared": "Очищено записей: {{count}}.",
-    "clearFailed": "Не удалось очистить историю: {{message}}"
+    "clearFailed": "Не удалось очистить историю: {{message}}",
+    "attempts": "попыток: {{count}}",
+    "retryAllFailed": "Повторить {{count}} неудачных",
+    "retriedAll": "Повторено файлов: {{ok}} из {{total}}."
   }
 }

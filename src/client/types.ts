@@ -29,6 +29,8 @@ export interface JobRow {
   output_tokens?: number;
   /** APPROXIMATE estimated USD cost; null for unknown/local models (tokens still tracked). */
   est_cost?: number | null;
+  /** When the job was claimed (SQLite UTC timestamp); null while pending. */
+  started_at?: string | null;
 }
 
 export interface QueueStatus {

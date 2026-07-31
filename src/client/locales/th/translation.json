@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Analysing context…"
+    "analysing": "Analysing context…",
+    "etaLeft": "เหลือ ~{{time}}",
+    "cuesPerMinute": "{{rate}} คำบรรยาย/นาที",
+    "queueEta": "~{{time}} สำหรับคิว"
   },
   "translation_languages": {
     "title": "การแปล",
@@ -940,6 +943,9 @@
     "clearTitle": "ล้างประวัติการถอดเสียงหรือไม่",
     "clearConfirm": "นำรายการที่เสร็จแล้ว {{count}} รายการออกจากรายการนี้หรือไม่ ไฟล์คำบรรยายจะไม่ถูกลบ",
     "cleared": "ล้างแล้ว {{count}} รายการ",
-    "clearFailed": "ล้างประวัติไม่สำเร็จ: {{message}}"
+    "clearFailed": "ล้างประวัติไม่สำเร็จ: {{message}}",
+    "attempts": "{{count}} ครั้ง",
+    "retryAllFailed": "ลองใหม่ {{count}} รายการที่ล้มเหลว",
+    "retriedAll": "ลองใหม่ {{ok}} จาก {{total}} ไฟล์"
   }
 }

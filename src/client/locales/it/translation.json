@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Analysing context…"
+    "analysing": "Analysing context…",
+    "etaLeft": "~{{time}} rimanenti",
+    "cuesPerMinute": "{{rate}} battute/min",
+    "queueEta": "~{{time}} per la coda"
   },
   "translation_languages": {
     "title": "Traduzioni",
@@ -940,6 +943,9 @@
     "clearTitle": "Svuotare la cronologia delle trascrizioni?",
     "clearConfirm": "Rimuovere {{count}} voci completate da questo elenco? I file dei sottotitoli non vengono eliminati.",
     "cleared": "{{count}} voci svuotate.",
-    "clearFailed": "Impossibile svuotare la cronologia: {{message}}"
+    "clearFailed": "Impossibile svuotare la cronologia: {{message}}",
+    "attempts": "{{count}} tentativi",
+    "retryAllFailed": "Riprova {{count}} falliti",
+    "retriedAll": "Riprovati {{ok}} di {{total}} file."
   }
 }

@@ -254,7 +254,10 @@
       "costLocal": "local",
       "costApprox": "Approximate — based on listed model pricing; actual cost may differ."
     },
-    "analysing": "Analysing context…"
+    "analysing": "Analysing context…",
+    "etaLeft": "còn ~{{time}}",
+    "cuesPerMinute": "{{rate}} phụ đề/phút",
+    "queueEta": "~{{time}} cho hàng đợi"
   },
   "translation_languages": {
     "title": "Bản dịch",
@@ -940,6 +943,9 @@
     "clearTitle": "Xóa lịch sử chuyển giọng nói thành văn bản?",
     "clearConfirm": "Gỡ {{count}} mục đã hoàn tất khỏi danh sách này? Tệp phụ đề sẽ không bị xóa.",
     "cleared": "Đã xóa {{count}} mục.",
-    "clearFailed": "Không thể xóa lịch sử: {{message}}"
+    "clearFailed": "Không thể xóa lịch sử: {{message}}",
+    "attempts": "{{count}} lần thử",
+    "retryAllFailed": "Thử lại {{count}} lỗi",
+    "retriedAll": "Đã thử lại {{ok}} trong {{total}} tệp."
   }
 }
