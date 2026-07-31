@@ -6,6 +6,7 @@ import { resolveConnectionPool, type ResolvedConnection, type LlmMode } from "./
 import { logger } from "./logger.js";
 import { broadcast } from "./sse.js";
 import { notify } from "./notify.js";
+import { acquireConnectionLock, resetConnectionLocks } from "./connection-lock.js";
 
 let isRunning = false;
 let shouldStop = false;
@@ -17,21 +18,6 @@ const abortControllers = new Set<AbortController>();
 // Hard ceiling on concurrent translation workers (matches the per-file connection cap).
 const MAX_WORKERS = 32;
 const offlineConnectionIds = new Set<string>();
-const connectionLockTails = new Map<string, Promise<void>>();
-
-async function acquireConnectionLock(conn: ResolvedConnection): Promise<() => void> {
-  const previous = connectionLockTails.get(conn.id) ?? Promise.resolve();
-  let releaseCurrent!: () => void;
-  const current = new Promise<void>((resolve) => { releaseCurrent = resolve; });
-  connectionLockTails.set(conn.id, previous.then(() => current));
-  await previous;
-  let released = false;
-  return () => {
-    if (released) return;
-    released = true;
-    releaseCurrent();
-  };
-}
 
 function availablePool(pool: ResolvedConnection[]): ResolvedConnection[] {
   const available = pool.filter((conn) => !offlineConnectionIds.has(conn.id));
@@ -64,7 +50,7 @@ export async function processQueue(onlyIds?: number[]) {
   isRunning = true;
   shouldStop = false;
   offlineConnectionIds.clear();
-  connectionLockTails.clear();
+  resetConnectionLocks();
 
   const filter = onlyIds && onlyIds.length > 0 ? new Set(onlyIds) : null;
   const pendingCount = countPendingJobs(filter);
@@ -101,7 +87,7 @@ export async function processQueue(onlyIds?: number[]) {
     activeJobIds.clear();
     abortControllers.clear();
     offlineConnectionIds.clear();
-    connectionLockTails.clear();
+    resetConnectionLocks();
   }
 }
 
@@ -145,6 +131,12 @@ function hasPendingJobs(filter: Set<number> | null): boolean {
  * A worker exits when the queue is drained (or stop is requested).
  */
 async function adaptiveWorker(index: number, filter: Set<number> | null) {
+  // Idle slots used to run a COUNT query every 500ms each; with several
+  // connections configured that is a constant stream of pointless queries for
+  // the whole run. Back off while idle, and reset as soon as this slot works.
+  const IDLE_MIN_MS = 500;
+  const IDLE_MAX_MS = 5_000;
+  let idleWaitMs = IDLE_MIN_MS;
   while (!shouldStop) {
     const { mode, pool: resolvedPool } = resolveConnectionPool(getAllSettings());
     const pool = availablePool(resolvedPool);
@@ -155,10 +147,13 @@ async function adaptiveWorker(index: number, filter: Set<number> | null) {
       // Not active under the current mode. Stay alive while anything is pending OR
       // in flight, so a mid-run widen to parallel can reactivate this slot; only
       // exit once the queue is fully drained.
-      if (!hasPendingJobs(filter) && activeJobIds.size === 0) break;
-      await delay(500);
+      // activeJobIds is in-memory: check it first so a busy queue never hits the DB.
+      if (activeJobIds.size === 0 && !hasPendingJobs(filter)) break;
+      await delay(idleWaitMs);
+      idleWaitMs = Math.min(idleWaitMs * 2, IDLE_MAX_MS);
       continue;
     }
+    idleWaitMs = IDLE_MIN_MS;
 
     const job = claimNextJob(filter);
     if (!job) break;

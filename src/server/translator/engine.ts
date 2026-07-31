@@ -346,6 +346,12 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // job finishes, so an interrupted run never leaves a partial file that looks
   // like a completed translation.
   const partialPath = partialOutputPath(opts.outputPath);
+  // Drop debris from a previous crashed run so this job starts from a clean file.
+  try {
+    fs.rmSync(partialPath, { force: true });
+  } catch {
+    // Non-fatal: the first partial save overwrites whatever is there anyway.
+  }
   const content = readSubtitleFileText(opts.srtPath);
   const parsed = parseSubtitle(content, sourceExt);
   // Use per-job timeout if provided, otherwise fall back to module default

@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 
 import type {
@@ -45,9 +46,36 @@ export function resolveTransportMode(settings: TranscriptionSettings): Transcrip
   }
 }
 
+/**
+ * Resolve symlinks as far as the path actually exists.
+ *
+ * A purely lexical resolve lets a symlink INSIDE the media dir point anywhere on
+ * the filesystem and still pass the prefix check. realpath needs an existing
+ * path, so walk up to the deepest existing ancestor, resolve that, and re-attach
+ * the remainder — output paths that do not exist yet still resolve sensibly.
+ */
+function resolveSymlinks(rawPath: string): string {
+  const resolved = path.resolve(rawPath);
+  let existing = resolved;
+  const trailing: string[] = [];
+  while (!fs.existsSync(existing)) {
+    const parent = path.dirname(existing);
+    if (parent === existing) return resolved;
+    trailing.unshift(path.basename(existing));
+    existing = parent;
+  }
+  try {
+    return path.join(fs.realpathSync(existing), ...trailing);
+  } catch {
+    return resolved;
+  }
+}
+
 export function assertMediaPathAllowed(inputPath: string, mediaDir: string): string {
-  const mediaRoot = path.resolve(mediaDir);
-  const resolved = path.resolve(inputPath);
+  // Both sides go through realpath so a symlinked MEDIA_DIR (common with Docker
+  // mounts) compares correctly, and a symlink inside it cannot escape.
+  const mediaRoot = resolveSymlinks(mediaDir);
+  const resolved = resolveSymlinks(inputPath);
   if (resolved !== mediaRoot && !resolved.startsWith(`${mediaRoot}${path.sep}`)) {
     throw new Error(`Transcription input is outside media directory: ${inputPath}`);
   }
