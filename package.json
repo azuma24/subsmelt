@@ -11,7 +11,7 @@
     "dev": "concurrently \"tsx watch src/server/index.ts\" \"vite\"",
     "build": "vite build && tsc -p tsconfig.server.json",
     "start": "node dist/server/index.js",
-    "test": "tsx --test $(git ls-files '*.test.ts' '*.test.tsx')",
+    "test": "tsx --test \"src/**/*.test.ts\" \"src/**/*.test.tsx\"",
     "typecheck": "tsc -p tsconfig.server.json --noEmit"
   },
   "dependencies": {

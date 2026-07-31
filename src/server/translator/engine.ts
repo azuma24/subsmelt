@@ -282,7 +282,7 @@ export interface TranslateFileOptions {
   /** Per-job request timeout in ms. Overrides the module default (300s). */
   requestTimeoutMs?: number;
   onProgress?: (completed: number, total: number) => void;
-  onRetry?: (attempt: number, error: unknown, backoff: number) => void;
+  onRetry?: (attempt: number, error: unknown, backoff: number, maxRetries?: number) => void;
   onAnalysis?: (analysis: string) => void;
   abortSignal?: AbortSignal;
   disableToolCalls?: boolean;
@@ -331,13 +331,62 @@ export interface TranslateFileOptions {
   onUsage?: (u: TokenUsage) => void;
 }
 
+/** Suffix for in-progress translations; renamed onto the real path when done. */
+export const PARTIAL_SUFFIX = ".part";
+
+/** Path incremental saves are written to while a translation is in flight. */
+export function partialOutputPath(outputPath: string): string {
+  return `${outputPath}${PARTIAL_SUFFIX}`;
+}
+
 export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   const sourceExt = path.extname(opts.srtPath).slice(1).toLowerCase();
   const outputExt = path.extname(opts.outputPath).slice(1).toLowerCase() || sourceExt;
+  // Incremental progress lands here and is renamed onto outputPath only when the
+  // job finishes, so an interrupted run never leaves a partial file that looks
+  // like a completed translation.
+  const partialPath = partialOutputPath(opts.outputPath);
   const content = readSubtitleFileText(opts.srtPath);
   const parsed = parseSubtitle(content, sourceExt);
   // Use per-job timeout if provided, otherwise fall back to module default
   const jobTimeoutMs = opts.requestTimeoutMs;
+
+  // ── Runaway-fallback guards ─────────────────────────────────────────────
+  // The per-line fallback used to inherit the full job timeout AND its own retry
+  // budget, so one unresponsive backend could turn a single 20-line chunk into
+  // hours of sequential 5-minute stalls (the job looked hung). Per-line work is
+  // small, so it gets a short timeout, one retry, and gives up early.
+  // requestTimeoutMs is optional; when unset the per-line cap stands on its own.
+  const SINGLE_LINE_TIMEOUT_MS = jobTimeoutMs ? Math.min(jobTimeoutMs, 60_000) : 60_000;
+  const SINGLE_LINE_RETRIES = 1;
+  const SINGLE_LINE_FAILURE_LIMIT = 3;
+
+  // Per-job connection breaker: a backend that keeps timing out is dropped for
+  // the rest of the job instead of costing a full timeout on every chunk.
+  const CONNECTION_TIMEOUT_LIMIT = 3;
+  const connectionTimeouts = new Map<string, number>();
+  const disabledConnections = new Set<string>();
+
+  function noteConnectionFailure(conn: ResolvedConnection, error: unknown): void {
+    const message = String((error as any)?.message || error).toLowerCase();
+    // Only transport stalls justify dropping a connection. A schema mismatch is
+    // the model misbehaving on one chunk, not the endpoint being down.
+    if (!message.includes("timeout") && !message.includes("network")) return;
+    const count = (connectionTimeouts.get(conn.id) ?? 0) + 1;
+    connectionTimeouts.set(conn.id, count);
+    if (count >= CONNECTION_TIMEOUT_LIMIT && !disabledConnections.has(conn.id)) {
+      disabledConnections.add(conn.id);
+      opts.onConnectionUnavailable?.({
+        id: conn.id,
+        label: conn.label,
+        error: `${count} timeouts in this job — skipping for the rest of it`,
+      });
+    }
+  }
+
+  function liveConnections(order: ResolvedConnection[]): ResolvedConnection[] {
+    return order.filter((conn) => !disabledConnections.has(conn.id));
+  }
 
   // Resolve the connection pool. Falls back to the single legacy fields so
   // existing callers (and single mode) behave exactly as before.
@@ -553,7 +602,11 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     order: ResolvedConnection[],
     contextPromptPrefix: string
   ): Promise<{ result: string[]; conn: ResolvedConnection } | null> {
-    for (const conn of order) {
+    const usable = liveConnections(order);
+    if (usable.length === 0) {
+      throw new Error("All LLM connections timed out repeatedly — aborting job");
+    }
+    for (const conn of usable) {
       try {
         const result = await withConnection(conn, () => retryTranslate(
           (attempt) => {
@@ -589,6 +642,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       } catch (e: any) {
         if (e?.message === "STOP_REQUESTED") throw e;
         // exhausted retries on this connection — cascade to the next
+        noteConnectionFailure(conn, e);
         opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(e?.message || e) });
       }
     }
@@ -598,10 +652,15 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   async function translateSingleWithFallback(
     lineText: string,
     order: ResolvedConnection[],
-    retries = 3
+    retries = SINGLE_LINE_RETRIES,
+    timeoutMs = SINGLE_LINE_TIMEOUT_MS
   ): Promise<string> {
     let lastErr: unknown;
-    for (const conn of order) {
+    const usable = liveConnections(order);
+    if (usable.length === 0) {
+      throw new Error("All LLM connections timed out repeatedly — aborting job");
+    }
+    for (const conn of usable) {
       try {
         const r = await withConnection(conn, () => retryTranslate(
           (_) =>
@@ -614,7 +673,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
               temperature: opts.temperature,
               abortSignal: opts.abortSignal,
               disableToolCalls: opts.disableToolCalls,
-              requestTimeoutMs: jobTimeoutMs,
+              requestTimeoutMs: timeoutMs,
               onUsage: opts.onUsage,
             }),
           retries,
@@ -626,6 +685,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       } catch (e: any) {
         if (e?.message === "STOP_REQUESTED") throw e;
         lastErr = e;
+        noteConnectionFailure(conn, e);
         opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(e?.message || e) });
       }
     }
@@ -727,10 +787,24 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     // Single-line fallback — translatedWindow is now core-only (coreText.length)
     if (!translatedWindow) {
       translatedWindow = new Array(coreText.length).fill(null);
+      // Bail out once the backend is clearly not answering: without this, a
+      // chunk whose every line times out walked the whole chunk sequentially at
+      // one full job timeout per line, which is what made jobs look hung.
+      let consecutiveFailures = 0;
       for (const idx of coreIndices) {
         const lineText = subtitle[idx]?.data?.text || "";
-        const single = await translateSingleWithFallback(lineText, connOrder);
-        translatedWindow![idx - coreStart] = single;
+        try {
+          translatedWindow![idx - coreStart] = await translateSingleWithFallback(lineText, connOrder);
+          consecutiveFailures = 0;
+        } catch (e: any) {
+          if (e?.message === "STOP_REQUESTED") throw e;
+          consecutiveFailures += 1;
+          if (consecutiveFailures >= SINGLE_LINE_FAILURE_LIMIT) {
+            throw new Error(
+              `Per-line fallback aborted after ${consecutiveFailures} consecutive failures: ${e?.message || e}`
+            );
+          }
+        }
       }
     }
 
@@ -787,13 +861,13 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     // Each processChunk call appends to the chain; writes never interleave.
     saveChain = saveChain.then(() => {
       try {
-        saveTranslated(opts.outputPath, parsed, outputExt, subtitle);
+        saveTranslated(partialPath, parsed, outputExt, subtitle);
       } catch (e: any) {
         // Best-effort partial save — never throw (the final write at job end is
         // authoritative), but don't swallow silently: surface it for operators.
         logger.warn(
           "translate",
-          `Partial save failed for ${opts.outputPath}: ${e?.message || e}`
+          `Partial save failed for ${partialPath}: ${e?.message || e}`
         );
       }
     });
@@ -818,7 +892,10 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   for (const cue of untranslated) {
     if (cue?.data) {
       try {
-        cue.data.translatedText = await translateSingleWithFallback(cue.data.text || "", connections, 5);
+        // Same bounded budget as the in-chunk fallback: this sweep runs once per
+        // leftover cue, so an unresponsive backend must not cost a full job
+        // timeout (times five retries) per line here either.
+        cue.data.translatedText = await translateSingleWithFallback(cue.data.text || "", connections);
       } catch (e: any) {
         if (e?.message === "STOP_REQUESTED") throw e;
         // Every cue must end with some text — never drop a line from output.
@@ -844,8 +921,12 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     }
   }
 
-  // Final write
-  saveTranslated(opts.outputPath, parsed, outputExt, subtitle);
+  // Final write: land the complete translation at the real output path and drop
+  // the partial. Renaming (rather than writing in place mid-run) is what keeps a
+  // crashed or stopped job from leaving a truncated subtitle that the queue would
+  // then treat as finished work and skip.
+  saveTranslated(partialPath, parsed, outputExt, subtitle);
+  fs.renameSync(partialPath, opts.outputPath);
 }
 
 /** Test LLM connection by translating a simple phrase */

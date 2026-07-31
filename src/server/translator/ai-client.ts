@@ -227,7 +227,7 @@ export async function retryTranslate<T>(
   fn: (attempt: number) => Promise<T>,
   maxRetries = 5,
   delay = 1000,
-  onRetry?: (attempt: number, error: unknown, backoff: number) => void
+  onRetry?: (attempt: number, error: unknown, backoff: number, maxRetries?: number) => void
 ): Promise<T> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -258,7 +258,8 @@ export async function retryTranslate<T>(
       const exponential =
         delay * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 250);
       const backoff = rateLimitMs && rateLimitMs > 0 ? rateLimitMs : exponential;
-      onRetry?.(attempt, error, backoff);
+      // maxRetries is threaded through so callers can log a truthful "n/N".
+      onRetry?.(attempt, error, backoff, maxRetries);
       await new Promise((r) => setTimeout(r, backoff));
     }
   }

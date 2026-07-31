@@ -207,6 +207,10 @@ async function runJob(
 
   const usedConnLabels: string[] = [];
   const usedConnIds = new Set<string>();
+  // Latest cue total seen from onProgress. `job` is the row as claimed, so
+  // reading job.total_cues after the run always printed "?" — the DB was updated,
+  // the local object was not.
+  let lastTotalCues = 0;
 
   try {
     if (conns.length === 0) throw new Error("No usable LLM connection configured");
@@ -275,6 +279,7 @@ async function runJob(
       abortSignal: jobAbort.signal,
       onProgress: (completed, total) => {
         if (shouldStop) throw new Error("STOP_REQUESTED");
+        lastTotalCues = total;
         updateJob(job.id, {
           completed_cues: completed,
           total_cues: total,
@@ -286,11 +291,11 @@ async function runJob(
           pct: total > 0 ? Math.round((completed / total) * 100) : 0,
         });
       },
-      onRetry: (attempt, error, backoff) => {
+      onRetry: (attempt, error, backoff, maxRetries) => {
         const diagnostics = summarizeTranslationError(error);
         logger.warn(
           "translate",
-          `Retry ${attempt}/5: ${diagnostics.message} (backoff ${backoff}ms)`,
+          `Retry ${attempt}/${maxRetries ?? "?"}: ${diagnostics.message} (backoff ${backoff}ms)`,
           job.id,
           {
             stage: "translate_retry",
@@ -323,7 +328,7 @@ async function runJob(
     const durStr = formatDuration(durationSeconds);
     logger.info(
       "translate",
-      `Completed: ${srtName} → ${langCode} in ${durStr} (${job.total_cues || "?"} cues)`,
+      `Completed: ${srtName} → ${langCode} in ${durStr} (${lastTotalCues || job.total_cues || "?"} cues)`,
       job.id
     );
     broadcast("job:done", { jobId: job.id, durationSeconds, srtName, langCode });
