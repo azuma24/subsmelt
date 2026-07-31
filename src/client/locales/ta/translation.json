@@ -926,7 +926,11 @@
     "sortByDate": "Date",
     "sortByName": "Name",
     "sortDesc": "Descending",
-    "failedFallback": "failed"
+    "failedFallback": "failed",
+    "filterPlaceholder": "கோப்புகள் அல்லது கோப்புறைகளை வடிகட்டு…",
+    "hideWithSubtitles": "வசனங்கள் உள்ள கோப்புகளை மறை",
+    "filteredCount": "{{total}} இல் {{shown}} கோப்புகள் காட்டப்படுகின்றன",
+    "noMatchingVideos": "இந்த வடிப்பானுக்கு எந்தக் கோப்பும் பொருந்தவில்லை."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

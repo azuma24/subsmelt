@@ -926,7 +926,11 @@
     "sortByDate": "Date",
     "sortByName": "Name",
     "sortDesc": "Descending",
-    "failedFallback": "failed"
+    "failedFallback": "failed",
+    "filterPlaceholder": "Lọc tệp hoặc thư mục…",
+    "hideWithSubtitles": "Ẩn tệp đã có phụ đề",
+    "filteredCount": "Hiển thị {{shown}} trong {{total}} tệp",
+    "noMatchingVideos": "Không có tệp nào khớp với bộ lọc này."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

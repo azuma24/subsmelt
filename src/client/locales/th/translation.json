@@ -926,7 +926,11 @@
     "sortByDate": "Date",
     "sortByName": "Name",
     "sortDesc": "Descending",
-    "failedFallback": "failed"
+    "failedFallback": "failed",
+    "filterPlaceholder": "กรองไฟล์หรือโฟลเดอร์…",
+    "hideWithSubtitles": "ซ่อนไฟล์ที่มีคำบรรยาย",
+    "filteredCount": "แสดง {{shown}} จาก {{total}} ไฟล์",
+    "noMatchingVideos": "ไม่มีไฟล์ที่ตรงกับตัวกรองนี้"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

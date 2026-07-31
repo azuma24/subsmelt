@@ -926,7 +926,11 @@
     "sortByDate": "Fecha",
     "sortByName": "Nombre",
     "sortDesc": "Descendente",
-    "failedFallback": "falló"
+    "failedFallback": "falló",
+    "filterPlaceholder": "Filtrar archivos o carpetas…",
+    "hideWithSubtitles": "Ocultar archivos con subtítulos",
+    "filteredCount": "Mostrando {{shown}} de {{total}} archivos",
+    "noMatchingVideos": "Ningún archivo coincide con este filtro."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

@@ -123,15 +123,22 @@ export function registerSettingsTasksRoutes(app: Express): void {
       // Secret values are never returned by GET. A client that saves unrelated
       // settings therefore sends the redaction marker back; preserve the
       // existing secret in that case, while an empty/new value still edits it.
-      patch[key] = SECRET_SETTING_KEYS.has(key) && value === REDACTED_SECRET
+      const resolved = SECRET_SETTING_KEYS.has(key) && value === REDACTED_SECRET
         ? getSetting(key)
         : key === "llm_connections"
           ? restoreRedactedConnections(value)
           : value;
+      // Clients (the Settings page included) PUT the whole settings object, so
+      // most keys in any given request are unchanged. Writing and logging all of
+      // them buried real edits under ~60 keys of noise on every save.
+      if (resolved === getSetting(key)) continue;
+      patch[key] = resolved;
       changedKeys.push(key);
     }
-    if (changedKeys.length > 0) setSettings(patch);
-    logger.info("system", `Settings updated: ${changedKeys.join(", ")}`);
+    if (changedKeys.length > 0) {
+      setSettings(patch);
+      logger.info("system", `Settings updated: ${changedKeys.join(", ")}`);
+    }
     if (rejected.length > 0) {
       logger.info("system", `Settings rejected (unknown keys): ${rejected.join(", ")}`);
     }

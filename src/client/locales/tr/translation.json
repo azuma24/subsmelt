@@ -926,7 +926,11 @@
     "sortByDate": "Date",
     "sortByName": "Name",
     "sortDesc": "Descending",
-    "failedFallback": "failed"
+    "failedFallback": "failed",
+    "filterPlaceholder": "Dosya veya klasör filtrele…",
+    "hideWithSubtitles": "Altyazılı dosyaları gizle",
+    "filteredCount": "{{total}} dosyadan {{shown}} tanesi gösteriliyor",
+    "noMatchingVideos": "Bu filtreyle eşleşen dosya yok."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

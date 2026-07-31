@@ -926,7 +926,11 @@
     "sortByDate": "Date",
     "sortByName": "Name",
     "sortDesc": "Descending",
-    "failedFallback": "failed"
+    "failedFallback": "failed",
+    "filterPlaceholder": "Fájlok vagy mappák szűrése…",
+    "hideWithSubtitles": "Feliratos fájlok elrejtése",
+    "filteredCount": "{{total}} fájlból {{shown}} látható",
+    "noMatchingVideos": "Egyetlen fájl sem felel meg a szűrőnek."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

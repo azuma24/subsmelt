@@ -926,7 +926,11 @@
     "sortByDate": "Date",
     "sortByName": "Name",
     "sortDesc": "Descending",
-    "failedFallback": "failed"
+    "failedFallback": "failed",
+    "filterPlaceholder": "Filtrează fișiere sau foldere…",
+    "hideWithSubtitles": "Ascunde fișierele cu subtitrări",
+    "filteredCount": "Se afișează {{shown}} din {{total}} fișiere",
+    "noMatchingVideos": "Niciun fișier nu corespunde acestui filtru."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

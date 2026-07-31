@@ -926,7 +926,11 @@
     "sortByDate": "Date",
     "sortByName": "Name",
     "sortDesc": "Descending",
-    "failedFallback": "failed"
+    "failedFallback": "failed",
+    "filterPlaceholder": "סינון קבצים או תיקיות…",
+    "hideWithSubtitles": "הסתר קבצים עם כתוביות",
+    "filteredCount": "מוצגים {{shown}} מתוך {{total}} קבצים",
+    "noMatchingVideos": "אין קבצים התואמים לסינון זה."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

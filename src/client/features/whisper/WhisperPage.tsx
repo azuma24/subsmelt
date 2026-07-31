@@ -18,6 +18,7 @@ import {
 } from "../../hooks";
 import type { ScannedFile, TranscriptionHistoryEntry, WhisperModel } from "../../types";
 import { buildFolderTree } from "./folderTree";
+import { filterLibraryFiles } from "./libraryFilter";
 import type { SortBy, SortDir, TreeNode } from "./folderTree";
 import { TranscriptionHistoryPanel } from "../dashboard/TranscriptionHistoryPanel";
 
@@ -131,12 +132,20 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
 
   // Sort controls: key (name or date) and direction. Re-sorting is memo-only —
   // no refetch needed. Defaults: newest files first.
+  const [libraryQuery, setLibraryQuery] = useState("");
+  const [hideWithSubtitles, setHideWithSubtitles] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   // Build a navigable folder tree from the file paths so subfolders can be
   // expanded and selected individually (not collapsed into one top-level group).
-  const tree = useMemo(() => buildFolderTree(videoFiles, sortBy, sortDir), [videoFiles, sortBy, sortDir]);
+  // Filter before the tree is built so empty folders drop out with their files.
+  const visibleFiles = useMemo(
+    () => filterLibraryFiles(videoFiles, { query: libraryQuery, hideWithSubtitles }),
+    [videoFiles, libraryQuery, hideWithSubtitles],
+  );
+  const isFiltered = visibleFiles.length !== videoFiles.length;
+  const tree = useMemo(() => buildFolderTree(visibleFiles, sortBy, sortDir), [visibleFiles, sortBy, sortDir]);
 
   // Per-run options (default from Settings + advertised capabilities).
   const [model, setModel] = useState("");
@@ -370,7 +379,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
       return next;
     });
   };
-  const selectAll = () => setSelected(new Set(videoFiles.map((f) => f.videoPath as string)));
+  const selectAll = () => setSelected(new Set(visibleFiles.map((f) => f.videoPath as string)));
 
   const cancelBatch = async () => {
     cancelRef.current = true;
@@ -585,7 +594,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
                 {t("whisper.cancel")}
               </button>
             )}
-            <button type="button" onClick={selectAll} disabled={running || videoFiles.length === 0}
+            <button type="button" onClick={selectAll} disabled={running || visibleFiles.length === 0}
               className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-2)] disabled:opacity-40">
               {t("whisper.selectAll")}
             </button>
@@ -598,8 +607,24 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
             </span>
           </div>
 
-          {/* File-browser header: sort controls + refresh */}
+          {/* File-browser header: filter + sort controls + refresh */}
           <div className="mt-3 flex flex-wrap items-center gap-2">
+            <input
+              type="search"
+              value={libraryQuery}
+              onChange={(e) => setLibraryQuery(e.target.value)}
+              placeholder={t("whisper.filterPlaceholder")}
+              aria-label={t("whisper.filterPlaceholder")}
+              className="min-w-[180px] flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-[12px] text-[var(--text)] placeholder:text-[var(--text-3)]"
+            />
+            <label className="flex items-center gap-1.5 text-[11px] text-[var(--text-2)]">
+              <input
+                type="checkbox"
+                checked={hideWithSubtitles}
+                onChange={(e) => setHideWithSubtitles(e.target.checked)}
+              />
+              {t("whisper.hideWithSubtitles")}
+            </label>
             <span className="text-[11px] text-[var(--text-3)]">{t("whisper.sortAriaLabel")}:</span>
             <select
               aria-label={t("whisper.sortAriaLabel")}
@@ -632,10 +657,19 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
             </button>
           </div>
 
+          {isFiltered && (
+            <div className="mt-2 text-[11px] text-[var(--text-3)]">
+              {t("whisper.filteredCount", { shown: visibleFiles.length, total: videoFiles.length })}
+            </div>
+          )}
+
           <div className="mt-2 max-h-[40vh] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)]">
             {scanQuery.isLoading && <div className="px-4 py-6 text-center text-xs text-[var(--text-3)]">{t("whisper.scanning")}</div>}
             {!scanQuery.isLoading && videoFiles.length === 0 && (
               <div className="px-4 py-6 text-center text-xs text-[var(--text-3)]">{t("whisper.noVideos")}</div>
+            )}
+            {!scanQuery.isLoading && videoFiles.length > 0 && visibleFiles.length === 0 && (
+              <div className="px-4 py-6 text-center text-xs text-[var(--text-3)]">{t("whisper.noMatchingVideos")}</div>
             )}
             {!scanQuery.isLoading && tree.children.map((child) => (
               <FolderNodeView
