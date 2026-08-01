@@ -926,7 +926,11 @@
     "sortByDate": "Date",
     "sortByName": "Name",
     "sortDesc": "Descending",
-    "failedFallback": "failed"
+    "failedFallback": "failed",
+    "filterPlaceholder": "Saring berkas atau folder…",
+    "hideWithSubtitles": "Sembunyikan berkas bersubtitle",
+    "filteredCount": "Menampilkan {{shown}} dari {{total}} berkas",
+    "noMatchingVideos": "Tidak ada berkas yang cocok dengan saringan ini."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

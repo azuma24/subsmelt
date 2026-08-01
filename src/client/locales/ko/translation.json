@@ -926,7 +926,11 @@
     "sortByDate": "날짜",
     "sortByName": "이름",
     "sortDesc": "내림차순",
-    "failedFallback": "실패"
+    "failedFallback": "실패",
+    "filterPlaceholder": "파일 또는 폴더 필터…",
+    "hideWithSubtitles": "자막 있는 파일 숨기기",
+    "filteredCount": "{{total}}개 중 {{shown}}개 파일 표시 중",
+    "noMatchingVideos": "이 필터와 일치하는 파일이 없습니다."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

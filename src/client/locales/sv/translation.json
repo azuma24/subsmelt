@@ -926,7 +926,11 @@
     "sortByDate": "Date",
     "sortByName": "Name",
     "sortDesc": "Descending",
-    "failedFallback": "failed"
+    "failedFallback": "failed",
+    "filterPlaceholder": "Filtrera filer eller mappar…",
+    "hideWithSubtitles": "Dölj filer med undertexter",
+    "filteredCount": "Visar {{shown}} av {{total}} filer",
+    "noMatchingVideos": "Inga filer matchar filtret."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

@@ -926,7 +926,11 @@
     "sortByDate": "Date",
     "sortByName": "Name",
     "sortDesc": "Descending",
-    "failedFallback": "failed"
+    "failedFallback": "failed",
+    "filterPlaceholder": "Фільтр файлів або тек…",
+    "hideWithSubtitles": "Сховати файли із субтитрами",
+    "filteredCount": "Показано {{shown}} з {{total}} файлів",
+    "noMatchingVideos": "Немає файлів, що відповідають фільтру."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

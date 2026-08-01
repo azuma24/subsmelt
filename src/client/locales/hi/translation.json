@@ -926,7 +926,11 @@
     "sortByDate": "Date",
     "sortByName": "Name",
     "sortDesc": "Descending",
-    "failedFallback": "failed"
+    "failedFallback": "failed",
+    "filterPlaceholder": "फ़ाइलें या फ़ोल्डर फ़िल्टर करें…",
+    "hideWithSubtitles": "उपशीर्षक वाली फ़ाइलें छिपाएँ",
+    "filteredCount": "{{total}} में से {{shown}} फ़ाइलें दिख रही हैं",
+    "noMatchingVideos": "इस फ़िल्टर से कोई फ़ाइल मेल नहीं खाती।"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

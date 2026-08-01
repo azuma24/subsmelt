@@ -926,7 +926,11 @@
     "sortByDate": "Date",
     "sortByName": "Name",
     "sortDesc": "Descending",
-    "failedFallback": "failed"
+    "failedFallback": "failed",
+    "filterPlaceholder": "Tapis fail atau folder…",
+    "hideWithSubtitles": "Sembunyikan fail bersari kata",
+    "filteredCount": "Memaparkan {{shown}} daripada {{total}} fail",
+    "noMatchingVideos": "Tiada fail sepadan dengan penapis ini."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

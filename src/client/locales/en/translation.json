@@ -59,7 +59,11 @@
     "sortDesc": "Descending",
     "sortAriaLabel": "Sort files",
     "refreshAriaLabel": "Refresh file list",
-    "failedFallback": "failed"
+    "failedFallback": "failed",
+    "filterPlaceholder": "Filter files or folders…",
+    "hideWithSubtitles": "Hide files with subtitles",
+    "filteredCount": "Showing {{shown}} of {{total}} files",
+    "noMatchingVideos": "No files match this filter."
   },
   "convert": {
     "title": "Subtitle Converter",

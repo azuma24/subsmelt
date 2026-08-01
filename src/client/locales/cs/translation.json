@@ -926,7 +926,11 @@
     "sortByDate": "Date",
     "sortByName": "Name",
     "sortDesc": "Descending",
-    "failedFallback": "failed"
+    "failedFallback": "failed",
+    "filterPlaceholder": "Filtrovat soubory nebo složky…",
+    "hideWithSubtitles": "Skrýt soubory s titulky",
+    "filteredCount": "Zobrazeno {{shown}} z {{total}} souborů",
+    "noMatchingVideos": "Tomuto filtru neodpovídají žádné soubory."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

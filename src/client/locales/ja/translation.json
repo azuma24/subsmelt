@@ -926,7 +926,11 @@
     "sortByDate": "日付",
     "sortByName": "名前",
     "sortDesc": "降順",
-    "failedFallback": "失敗"
+    "failedFallback": "失敗",
+    "filterPlaceholder": "ファイルやフォルダーを絞り込み…",
+    "hideWithSubtitles": "字幕付きファイルを隠す",
+    "filteredCount": "{{total}} 件中 {{shown}} 件を表示",
+    "noMatchingVideos": "この条件に一致するファイルはありません。"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

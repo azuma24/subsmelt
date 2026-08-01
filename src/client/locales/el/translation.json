@@ -926,7 +926,11 @@
     "sortByDate": "Date",
     "sortByName": "Name",
     "sortDesc": "Descending",
-    "failedFallback": "failed"
+    "failedFallback": "failed",
+    "filterPlaceholder": "Φιλτράρισμα αρχείων ή φακέλων…",
+    "hideWithSubtitles": "Απόκρυψη αρχείων με υπότιτλους",
+    "filteredCount": "Εμφάνιση {{shown}} από {{total}} αρχεία",
+    "noMatchingVideos": "Κανένα αρχείο δεν ταιριάζει με αυτό το φίλτρο."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

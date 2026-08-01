@@ -926,7 +926,11 @@
     "sortByDate": "Date",
     "sortByName": "Name",
     "sortDesc": "Descending",
-    "failedFallback": "failed"
+    "failedFallback": "failed",
+    "filterPlaceholder": "I-filter ang mga file o folder…",
+    "hideWithSubtitles": "Itago ang mga file na may subtitle",
+    "filteredCount": "Ipinapakita ang {{shown}} sa {{total}} file",
+    "noMatchingVideos": "Walang file na tumutugma sa filter na ito."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

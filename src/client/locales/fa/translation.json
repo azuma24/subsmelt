@@ -926,7 +926,11 @@
     "sortByDate": "Date",
     "sortByName": "Name",
     "sortDesc": "Descending",
-    "failedFallback": "failed"
+    "failedFallback": "failed",
+    "filterPlaceholder": "فیلتر فایل‌ها یا پوشه‌ها…",
+    "hideWithSubtitles": "پنهان کردن فایل‌های دارای زیرنویس",
+    "filteredCount": "نمایش {{shown}} از {{total}} فایل",
+    "noMatchingVideos": "هیچ فایلی با این فیلتر مطابقت ندارد."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

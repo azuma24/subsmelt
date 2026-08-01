@@ -926,7 +926,11 @@
     "sortByDate": "日期",
     "sortByName": "名稱",
     "sortDesc": "遞減",
-    "failedFallback": "失敗"
+    "failedFallback": "失敗",
+    "filterPlaceholder": "篩選檔案或資料夾…",
+    "hideWithSubtitles": "隱藏已有字幕的檔案",
+    "filteredCount": "顯示 {{total}} 個檔案中的 {{shown}} 個",
+    "noMatchingVideos": "沒有檔案符合此篩選條件。"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

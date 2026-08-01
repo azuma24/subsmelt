@@ -926,7 +926,11 @@
     "sortByDate": "Date",
     "sortByName": "Name",
     "sortDesc": "Descending",
-    "failedFallback": "failed"
+    "failedFallback": "failed",
+    "filterPlaceholder": "Bestanden of mappen filteren…",
+    "hideWithSubtitles": "Bestanden met ondertitels verbergen",
+    "filteredCount": "{{shown}} van {{total}} bestanden getoond",
+    "noMatchingVideos": "Geen bestanden komen overeen met dit filter."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

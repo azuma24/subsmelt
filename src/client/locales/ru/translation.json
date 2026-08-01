@@ -926,7 +926,11 @@
     "sortByDate": "Дата",
     "sortByName": "Имя",
     "sortDesc": "По убыванию",
-    "failedFallback": "сбой"
+    "failedFallback": "сбой",
+    "filterPlaceholder": "Фильтр файлов или папок…",
+    "hideWithSubtitles": "Скрыть файлы с субтитрами",
+    "filteredCount": "Показано {{shown}} из {{total}} файлов",
+    "noMatchingVideos": "Нет файлов, соответствующих фильтру."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
