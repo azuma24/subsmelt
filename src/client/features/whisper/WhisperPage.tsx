@@ -145,6 +145,15 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
     [videoFiles, libraryQuery, hideWithSubtitles],
   );
   const isFiltered = visibleFiles.length !== videoFiles.length;
+  // Selections survive a filter change (so narrowing the view does not silently
+  // discard them), which means `selected` can hold paths that are no longer on
+  // screen. Every action works from the intersection instead — transcribing a
+  // file the user cannot see is worse than forgetting it was ticked. Mirrors how
+  // ScanResultsPanel intersects its selection with the filtered file list.
+  const visiblePaths = useMemo(
+    () => new Set(visibleFiles.map((f) => f.videoPath as string)),
+    [visibleFiles],
+  );
   const tree = useMemo(() => buildFolderTree(visibleFiles, sortBy, sortDir), [visibleFiles, sortBy, sortDir]);
 
   // Per-run options (default from Settings + advertised capabilities).
@@ -311,6 +320,11 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   }, [model, isModelDownloaded, modelDownloads, whisperModels, t, confirm, addToast, downloadModel, saveSetting]);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const selectedVisible = useMemo(
+    () => Array.from(selected).filter((path) => visiblePaths.has(path)),
+    [selected, visiblePaths],
+  );
+
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [activePath, setActivePath] = useState<string | null>(null);
@@ -390,7 +404,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   };
 
   const transcribeSelected = async () => {
-    const paths = Array.from(selected);
+    const paths = selectedVisible;
     if (paths.length === 0) return;
 
     // Gate 1: check the selected model is downloaded before we start the batch.
@@ -398,7 +412,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
     const modelReady = await ensureModelDownloaded(effModel);
     if (!modelReady) return;
 
-    const withSubs = videoFiles.filter((f) => f.videoPath && selected.has(f.videoPath) && f.subtitles.length > 0);
+    const withSubs = visibleFiles.filter((f) => f.videoPath && paths.includes(f.videoPath) && f.subtitles.length > 0);
     if (withSubs.length > 0) {
       const ok = await confirm({
         title: t("whisper.overwriteTitle"),
@@ -584,9 +598,9 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
 
           {/* Actions */}
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button type="button" disabled={running || selected.size === 0 || Object.values(modelDownloads).some((dl) => dl.active)} onClick={transcribeSelected}
+            <button type="button" disabled={running || selectedVisible.length === 0 || Object.values(modelDownloads).some((dl) => dl.active)} onClick={transcribeSelected}
               className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white disabled:opacity-40">
-              {running && progress ? t("whisper.transcribingProgress", { done: progress.done, total: progress.total }) : t("whisper.transcribeSelected", { count: selected.size })}
+              {running && progress ? t("whisper.transcribingProgress", { done: progress.done, total: progress.total }) : t("whisper.transcribeSelected", { count: selectedVisible.length })}
             </button>
             {running && (
               <button type="button" onClick={cancelBatch}
