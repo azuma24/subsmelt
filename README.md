@@ -34,16 +34,17 @@ The tradeoff is cost: each chunk is a real API call. SubSmelt minimises that wit
 - **Automatic context analysis** — For longer files, a pre-pass extracts a glossary of names and terms injected into every chunk
 - **Adaptive parallel workers** — Probes the model's actual context window via the LM Studio native API, then auto-tunes chunk count and parallelism
 - **Batch processing** — Scans your entire library and queues every subtitle file automatically
-- **Real-time progress** — Live job progress via Server-Sent Events, no page refresh needed
+- **Real-time progress** — Live job progress via Server-Sent Events, with a time-remaining estimate and throughput
+- **Failures that explain themselves** — Raw errors are mapped to a cause and a next step, with the original text kept alongside
 - **File watcher** — Drop a new subtitle into your media folder and it's auto-detected and queued within seconds
 - **Scan modes** — Recursive, root-only, or hand-picked subfolders
 - **Subtitle preview** — Side-by-side original vs translated view with full-text search
-- **Crash recovery** — Partial saves after each chunk; interrupted jobs resume where they left off
+- **Crash safety** — Work in progress is written to a `.part` file and only renamed on completion, so an interrupted job is retried rather than left as a truncated subtitle
 - **Smart skipping** — Already-translated files are detected and skipped
 - **Queue management** — Priority pinning, force re-translate, graceful stop, resumes on restart
 - **Supported formats** — `.srt`, `.vtt`, `.ass`, `.ssa`
 - **Optional speech-to-text** — Connect a faster-whisper backend to generate source subtitles when none exist
-- **Multi-language UI** — English, 繁體中文, 简体中文, 日本語, and 13 more
+- **Multi-language UI** — 32 locales including English, 繁體中文, 简体中文, 日本語, 한국어, Español, Français, Deutsch
 
 ---
 
@@ -155,6 +156,23 @@ SUBSMELT_WHISPER_FAKE=1 docker compose -f docker-compose.yml -f docker-compose.w
 
 ---
 
+## Security
+
+**SubSmelt has no authentication and listens on all interfaces.** Anything that
+can reach port 3000 can browse your media paths, change settings, and queue
+work. It is built for a trusted home network — put it behind a reverse proxy
+with auth, or restrict it at the firewall, before exposing it more widely.
+
+The optional Whisper backend also binds `0.0.0.0` by default, so that a
+containerised SubSmelt can reach it. **Set `SUBSMELT_WHISPER_TOKEN`** if it is
+reachable from anywhere you do not control; it warns at startup when it binds
+wide without one. `SUBSMELT_WHISPER_HOST=127.0.0.1` keeps it local-only.
+
+API keys are stored in `config.json` and are redacted from API responses, but
+that file is plaintext on disk — back it up somewhere private.
+
+---
+
 ## Volumes
 
 | Mount | Purpose |
@@ -212,18 +230,46 @@ docker buildx build --platform linux/amd64 -t subsmelt:latest .
 
 ---
 
+## Development
+
+```bash
+npm install
+npm run dev          # API (tsx watch) + Vite dev server
+npm test             # node:test across src/**/*.test.ts(x)
+npm run typecheck    # client AND server TypeScript projects
+npm run build        # typecheck, then vite build, then tsc for the server
+```
+
+The Python sidecar has its own suite, which must be run from its directory:
+
+```bash
+cd backend-whisper
+pip install -r requirements.txt pytest
+python -m pytest tests -q
+```
+
+`vite build` does not typecheck — run `npm run typecheck` before assuming a
+change is clean. CI runs both suites, both typechecks, the production build and a
+Docker image build on every pull request, and the release workflows depend on
+those checks passing.
+
+New to the codebase? Start with **[docs/HANDOFF.md](docs/HANDOFF.md)** — layout,
+the parts worth understanding first, the release process, and the known gaps.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Runtime | Node.js 22 LTS |
+| Runtime | Node.js 22 LTS (engines: >=20 <25) |
 | Backend | Express, better-sqlite3 |
 | Frontend | React 18, Vite, Tailwind CSS |
 | Real-time | Server-Sent Events |
 | Translation | Vercel AI SDK (local + OpenAI / Anthropic / Gemini) |
 | Optional STT | Python FastAPI sidecar + faster-whisper |
 | File watch | chokidar |
-| i18n | i18next (16 languages) |
+| i18n | i18next (32 locales) |
 | Container | Single Dockerfile, no external services required |
 
 ---

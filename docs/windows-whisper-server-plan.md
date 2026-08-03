@@ -1,5 +1,8 @@
 # Plan: Remote Whisper Backend — Windows CUDA Executable
 
+> **Historical build plan.** The packaging it describes shipped across 0.4.x–0.5.x.
+> For current behaviour see [../backend-whisper/packaging/windows/README.md](../backend-whisper/packaging/windows/README.md).
+
 > Goal: ship a standalone Windows application that runs the SubSmelt Whisper
 > backend with NVIDIA CUDA acceleration, downloads/manages models, and serves
 > transcription to a SubSmelt instance running on another machine.

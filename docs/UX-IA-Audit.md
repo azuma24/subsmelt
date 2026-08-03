@@ -1,5 +1,9 @@
 # SubSmelt — Information Architecture Audit & Progressive-Disclosure Redesign
 
+> **Historical (2026-06-13).** Partly implemented, and it predates the Whisper
+> and Convert pages. Read it for the reasoning, not as a description of the
+> current UI. Status: [HANDOFF.md](HANDOFF.md) §4.
+
 **Author:** Senior Staff UX Architect (audit)
 **Date:** 2026-06-13
 **Constraint:** Remove **zero** functionality. Every control and every piece of information remains reachable. We only change *default visibility* and *placement*.

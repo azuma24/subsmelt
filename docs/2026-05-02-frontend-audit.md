@@ -1,5 +1,8 @@
 # SubSmelt Frontend Audit
 
+> **Historical (2026-05-02).** Its P1 items shipped — see the Done section of
+> [TODO.md](TODO.md).
+
 Date: 2026-05-02 07:30:32 CST
 
 ## Scope

@@ -1,31 +1,67 @@
-# TODO — Documented, Not Yet Implemented
+# TODO — Open Items
 
-Features described in the docs but with no implementing code (surfaced by the graphify
-knowledge-graph audit: each was a degree-1 concept node with no edge into source).
-Source-of-truth specs live in the linked docs; this file just tracks build status.
+Known gaps with no work in progress. Context and rationale live in
+[HANDOFF.md](HANDOFF.md) §4; shipped work is in [../CHANGELOG.md](../CHANGELOG.md).
 
-## Performance & architecture
+## Security
 
-- [x] **Split route bundles with `React.lazy`** — Settings/Logs/Tasks/Job detail lazy-loaded
-  via `React.lazy` + `Suspense` in `App.tsx`; Dashboard stays eager. 4 separate chunks emitted.
-  Spec: [2026-05-02-frontend-audit.md](2026-05-02-frontend-audit.md) §4 (P1).
+- [ ] **SubSmelt has no authentication and binds `0.0.0.0`.** The README now says
+      so plainly, but there is no optional token or auth mode.
+- [ ] **Sign the Windows installer** — unsigned means a SmartScreen warning on
+      every download. Needs a code-signing certificate.
+- [ ] No rate limiting on either service.
 
-- [x] **Virtualize large lists/tables** — `@tanstack/react-virtual` windowing (threshold 200,
-  `scrollbarGutter: stable`, dynamic `measureElement`) applied to:
-  `JobsTableDesktop.tsx` (queue), `PreviewOverlay.tsx` (cue table, 700+ rows — header/filters/TSV
-  preserved, `scrollToIndex` for Jump-to-issue), `LogsPage.tsx` (variable-height rows + auto-scroll).
-  `ScanResultsPanel.tsx` intentionally NOT virtualized — it's a two-level collapsible group tree
-  with variable-height rows and small effective counts, not a flat list (wrong shape for windowing).
-  Spec: [2026-05-02-frontend-audit.md](2026-05-02-frontend-audit.md) §6 (P1).
+## Refactoring
 
-## Translation quality
+Sizes as of 0.5.2; the guideline is 200–400 lines typical, 800 max.
 
-- [x] **Refinement Pass (Pass 2)** — optional second LLM call per chunk for natural flow/tone,
-  toggleable in Settings → Translation Engine. Implemented in `translator.ts` (`refineChunk`),
-  default off (`refine_pass`), accepts refined output only on exact line-count match.
-  Spec: [../SUB_SMELT_IMPROVEMENT_PLAN.md](../SUB_SMELT_IMPROVEMENT_PLAN.md) §3.
+- [ ] `src/client/features/settings/MediaSourcesPanel.tsx` — 941 lines
+- [ ] `backend-whisper/app/main.py` — 816 lines
+- [ ] `src/client/features/whisper/WhisperPage.tsx` — 808 lines
+- [ ] `src/client/features/settings/SettingsPage.tsx` — section renderers of
+      112–189 lines each, naturally separate components
+
+## Whisper control app (Windows)
+
+- [ ] Status is never polled — a crashed backend still shows "● Running"
+- [ ] A failed start reports success: `Popen` returning is treated as "started",
+      so a port conflict with the installed service goes unnoticed
+- [ ] Host/port/token are session-only; the GUI never writes `config.json`, which
+      `run_server` now reads by default
+- [ ] No warning when binding `0.0.0.0` without a token
+- [ ] No model manager or diagnostics (the tray app has both)
+
+## Product / UX
+
+- [ ] The [UX/IA audit](UX-IA-Audit.md) never covered the **Whisper and Convert
+      pages** — the newest and most-used screens
+- [ ] "Skipped" jobs look identical to "done"; no "translate anyway" affordance
+- [ ] Status is conveyed by colour alone in several places
+- [ ] No first-run setup flow (~60 settings, no guided path)
+- [ ] Per-job token cost is tracked but never shown against the configured
+      monthly budget
+
+## Testing / infrastructure
+
+- [ ] The CI runner has no `ffmpeg`, so the backend's ffmpeg paths are only
+      exercised against mocks
+- [ ] 25 of 32 locales carry English text for the 0.5.2 error explanations
 
 ---
 
-_Audit method: `/graphify` → `graphify-out/apply_bridges.py`. Re-run the graph audit after
-building any of these to confirm the concept node now links to its implementing code._
+## Done
+
+- [x] **Split route bundles with `React.lazy`** — Settings/Logs/Tasks/Job detail
+      lazy-loaded via `React.lazy` + `Suspense` in `App.tsx`; Dashboard stays
+      eager. 4 separate chunks emitted.
+      Spec: [2026-05-02-frontend-audit.md](2026-05-02-frontend-audit.md) §4 (P1).
+- [x] **Virtualize large lists/tables** — `@tanstack/react-virtual` windowing
+      (threshold 200, `scrollbarGutter: stable`, dynamic `measureElement`) in
+      `JobsTableDesktop.tsx`, `PreviewOverlay.tsx` and `LogsPage.tsx`.
+      `ScanResultsPanel.tsx` is deliberately excluded: a two-level collapsible
+      tree with variable-height rows is the wrong shape for windowing.
+      Spec: [2026-05-02-frontend-audit.md](2026-05-02-frontend-audit.md) §6 (P1).
+- [x] **Refinement Pass (Pass 2)** — optional second LLM call per chunk for
+      natural flow/tone, toggleable in Settings → Translation Engine, default
+      off, accepted only on an exact line-count match.
+      Spec: [../SUB_SMELT_IMPROVEMENT_PLAN.md](../SUB_SMELT_IMPROVEMENT_PLAN.md) §3.
