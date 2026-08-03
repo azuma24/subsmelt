@@ -5,6 +5,10 @@ version number and are released together (`v0.5.2` and `whisper-v0.5.2`).
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.5.3] — 2026-08-04
+
 ### Added
 
 - `WHISPER_BACKEND_TOKEN` seeds the STT backend token from the environment.
