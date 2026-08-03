@@ -377,8 +377,6 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     opts.onConnectionUsed?.({ id: c.id, label: c.label });
   };
   const reservedConnectionIds = new Set(opts.reservedConnectionIds ?? []);
-  const unavailableConnIds = new Set<string>();
-  const verifiedConnIds = new Set<string>();
   // Connection probing, the per-job timeout breaker and the acquire/release
   // wrapper live in connection-health.ts — extracted so they can be tested.
   const health = createConnectionHealth({
@@ -453,7 +451,10 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(e?.message || e) });
     }
   }
-  if (!analysis && analysisErr && connections.every((c) => unavailableConnIds.has(c.id))) {
+  // Every connection failed its availability probe — surface the real error
+  // rather than letting the per-line fallback pass source text through and save
+  // the job as a successful translation.
+  if (!analysis && analysisErr && connections.every((c) => health.isUnavailable(c.id))) {
     throw analysisErr;
   }
 

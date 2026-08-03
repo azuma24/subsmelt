@@ -101,10 +101,19 @@ test("an unreachable connection is retried, then marked unavailable", async () =
   await assert.rejects(() => health.ensureReady(target), /Connection unavailable after 5 attempts/);
   assert.equal(calls, OFFLINE_ATTEMPTS);
   assert.equal(events.length, 1);
+  // The engine's all-offline guard reads this: without it, a job whose every
+  // connection is down finishes "successfully" with source text passed through.
+  assert.equal(health.isUnavailable("down"), true);
 
   // A second call fails immediately without probing again.
   await assert.rejects(() => health.ensureReady(target), /marked unavailable/);
   assert.equal(calls, OFFLINE_ATTEMPTS, "must not re-probe a known-dead connection");
+});
+
+test("a reachable connection is never marked unavailable", async () => {
+  const health = createConnectionHealth({ fetchImpl: async () => okResponse(), delayImpl: noDelay });
+  await health.ensureReady(conn("up"));
+  assert.equal(health.isUnavailable("up"), false);
 });
 
 test("cloud SDK providers skip the probe entirely", async () => {

@@ -43,6 +43,8 @@ export interface ConnectionHealth {
   /** The subset of `order` not yet dropped by the breaker. */
   live(order: ResolvedConnection[]): ResolvedConnection[];
   isDisabled(id: string): boolean;
+  /** True once a probe has failed all its attempts for this connection. */
+  isUnavailable(id: string): boolean;
   /** Probe availability once per job; throws when the connection is unreachable. */
   ensureReady(conn: ResolvedConnection): Promise<void>;
   /** ensureReady + lock acquisition around `fn`, releasing in a finally. */
@@ -183,6 +185,7 @@ export function createConnectionHealth(options: ConnectionHealthOptions = {}): C
     noteFailure,
     live: (order) => order.filter((conn) => !disabled.has(conn.id)),
     isDisabled: (id) => disabled.has(id),
+    isUnavailable: (id) => unavailable.has(id),
     ensureReady,
     withConnection,
   };
