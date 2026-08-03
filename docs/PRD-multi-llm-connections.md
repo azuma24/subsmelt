@@ -1,5 +1,7 @@
 # PRD: Multiple LLM Connections (Fallback & Parallel Translation)
 
+> **Historical PRD.** The feature shipped; this records the original intent.
+
 **Status:** Draft
 **Author:** azuma24
 **Date:** 2026-06-13

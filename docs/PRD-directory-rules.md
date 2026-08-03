@@ -1,5 +1,7 @@
 # PRD — Directory Rules (per-directory translation control)
 
+> **Historical PRD.** The feature shipped; this records the original intent.
+
 Status: approved for build · Owner: azuma24 · Date: 2026-06-14
 Branch: `feat/directory-rules`
 
