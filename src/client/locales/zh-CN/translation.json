@@ -839,7 +839,26 @@
     "retry": "Retry",
     "reload": "Reload",
     "boundaryTitle": "Something went wrong.",
-    "boundaryMessage": "An unexpected error occurred while rendering this page."
+    "boundaryMessage": "An unexpected error occurred while rendering this page.",
+    "backend-unreachable": "无法连接后端 — 请检查 Whisper 服务是否运行以及设置中的 URL。",
+    "connection-dropped": "后端在请求中途关闭了连接 — 可能已崩溃或重启，请查看其日志。",
+    "timeout": "后端响应超时 — 请在设置中调高超时时间，或改用更小的模型。",
+    "auth": "后端拒绝了令牌 — 请检查设置中的后端令牌。",
+    "rate-limit": "服务商限流 — 将会重试；若持续出现请降低并行块数。",
+    "model-missing": "该模型尚未下载 — 请在设置 → 模型中下载。",
+    "insufficient-ram": "内存不足以运行该模型 — 请选择更小的模型。",
+    "insufficient-disk": "磁盘剩余空间不足以写入输出。",
+    "ffmpeg-missing": "后端未找到 ffmpeg — 请安装它或设置 SUBSMELT_FFMPEG。",
+    "server-missing": "无法启动后端程序 — 请重新安装或检查安装路径。",
+    "schema": "模型返回了无法使用的响应 — 将会重试；换一个模型可能有帮助。",
+    "cancelled": "已取消。",
+    "interrupted": "因服务器重启而中断 — 后端恢复后请重试。",
+    "translation": {
+      "backend-unreachable": "无法连接 LLM 端点 — 请检查设置 → 连接中的 URL，以及服务器是否运行。",
+      "auth": "LLM 服务商拒绝了 API 密钥 — 请在设置 → 连接中检查。",
+      "timeout": "LLM 响应超时 — 请在设置中调高超时时间，或减小分块大小。",
+      "model-missing": "配置的模型在该端点不可用 — 请在设置 → 连接中检查模型名称。"
+    }
   },
   "convert": {
     "title": "字幕转换器",
@@ -950,6 +969,7 @@
     "clearFailed": "无法清空历史：{{message}}",
     "attempts": "{{count}} 次尝试",
     "retryAllFailed": "重试 {{count}} 个失败项",
-    "retriedAll": "已重试 {{total}} 个文件中的 {{ok}} 个。"
+    "retriedAll": "已重试 {{total}} 个文件中的 {{ok}} 个。",
+    "failedFallback": "转录失败。"
   }
 }

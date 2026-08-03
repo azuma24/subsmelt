@@ -839,7 +839,26 @@
     "retry": "Retry",
     "reload": "Reload",
     "boundaryTitle": "Something went wrong.",
-    "boundaryMessage": "An unexpected error occurred while rendering this page."
+    "boundaryMessage": "An unexpected error occurred while rendering this page.",
+    "backend-unreachable": "Backend inaccesible: comprueba que el servicio Whisper está activo y la URL en Ajustes.",
+    "connection-dropped": "El backend cerró la conexión a mitad de la petición: puede haberse caído o reiniciado; revisa sus registros.",
+    "timeout": "El backend tardó demasiado en responder: aumenta el tiempo de espera en Ajustes o usa un modelo más pequeño.",
+    "auth": "El backend rechazó el token: comprueba el token en Ajustes.",
+    "rate-limit": "El proveedor limitó la tasa de peticiones: se reintentará; reduce los fragmentos paralelos si persiste.",
+    "model-missing": "Ese modelo no está descargado: descárgalo en Ajustes → Modelos.",
+    "insufficient-ram": "No hay memoria suficiente para este modelo: elige uno más pequeño.",
+    "insufficient-disk": "No hay espacio libre suficiente en disco para la salida.",
+    "ffmpeg-missing": "No se encontró ffmpeg en el backend: instálalo o define SUBSMELT_FFMPEG.",
+    "server-missing": "No se pudo iniciar el programa del backend: reinstálalo o comprueba la ruta de instalación.",
+    "schema": "El modelo devolvió una respuesta inutilizable: se reintentará; otro modelo puede ayudar.",
+    "cancelled": "Cancelado.",
+    "interrupted": "Interrumpido por un reinicio del servidor: reinténtalo cuando el backend esté activo.",
+    "translation": {
+      "backend-unreachable": "Endpoint del LLM inaccesible: comprueba la URL en Ajustes → Conexiones y que el servidor esté activo.",
+      "auth": "El proveedor del LLM rechazó la clave de API: compruébala en Ajustes → Conexiones.",
+      "timeout": "El LLM tardó demasiado en responder: aumenta el tiempo de espera en Ajustes o reduce el tamaño de fragmento.",
+      "model-missing": "El modelo configurado no está disponible en ese endpoint: comprueba el nombre en Ajustes → Conexiones."
+    }
   },
   "convert": {
     "title": "Conversor de subtítulos",
@@ -950,6 +969,7 @@
     "clearFailed": "No se pudo limpiar el historial: {{message}}",
     "attempts": "{{count}} intentos",
     "retryAllFailed": "Reintentar {{count}} fallidos",
-    "retriedAll": "Se reintentaron {{ok}} de {{total}} archivos."
+    "retriedAll": "Se reintentaron {{ok}} de {{total}} archivos.",
+    "failedFallback": "La transcripción falló."
   }
 }

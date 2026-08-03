@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TranscriptionHistoryEntry } from "../../types";
 import { groupTranscriptionAttempts, retryableGroups, type TranscriptionGroup } from "./transcription-groups";
+import { classifyError, errorHintKeys } from "../../lib/errorTaxonomy";
 
 interface TranscriptionHistoryPanelProps {
   attempts: TranscriptionHistoryEntry[];
@@ -105,9 +106,30 @@ export function TranscriptionHistoryPanel({
                     <div className="mt-1 text-[11px] text-[var(--text-3)]">
                       {latest.model} • {latest.language} • {latest.outputFormat.toUpperCase()} • {latest.postAction === "transcribe_and_translate" ? t("transcriptionHistory.postQueueTranslate") : t("transcriptionHistory.postTranscribeOnly")}
                     </div>
-                    <div className="mt-1 text-[11px] text-[var(--text-3)]">
-                      {latest.status === "failed" ? (latest.errorSummary || "Transcription failed") : latest.finishedAt || latest.startedAt}
-                    </div>
+                    {latest.status === "failed" ? (
+                      (() => {
+                        const hint = errorHintKeys(classifyError(latest.errorSummary));
+                        return (
+                          <>
+                            <div className="mt-1 text-[11px] text-[var(--text-2)]">
+                              {hint ? t(hint) : latest.errorSummary || t("transcriptionHistory.failedFallback")}
+                            </div>
+                            {/* The raw text is rendered, not just a title tooltip:
+                                tooltips are unreachable on touch and cannot be
+                                selected, and this is what a bug report needs. */}
+                            {hint && latest.errorSummary && (
+                              <div className="mt-0.5 select-all break-words font-mono text-[10px] text-[var(--text-3)]">
+                                {latest.errorSummary}
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()
+                    ) : (
+                      <div className="mt-1 text-[11px] text-[var(--text-3)]">
+                        {latest.finishedAt || latest.startedAt}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     {hasHistory && (

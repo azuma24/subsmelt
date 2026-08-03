@@ -839,7 +839,26 @@
     "retry": "Retry",
     "reload": "Reload",
     "boundaryTitle": "Something went wrong.",
-    "boundaryMessage": "An unexpected error occurred while rendering this page."
+    "boundaryMessage": "An unexpected error occurred while rendering this page.",
+    "backend-unreachable": "Backend injoignable : vérifiez que le service Whisper tourne et l'URL dans les Réglages.",
+    "connection-dropped": "Le backend a fermé la connexion en cours de requête : il a peut-être planté ou redémarré ; consultez ses journaux.",
+    "timeout": "Le backend a mis trop de temps à répondre : augmentez le délai dans les Réglages ou utilisez un modèle plus petit.",
+    "auth": "Le backend a rejeté le jeton : vérifiez le jeton dans les Réglages.",
+    "rate-limit": "Le fournisseur a limité le débit : nouvelle tentative en cours ; réduisez les segments parallèles si cela persiste.",
+    "model-missing": "Ce modèle n'est pas téléchargé : téléchargez-le dans Réglages → Modèles.",
+    "insufficient-ram": "Mémoire insuffisante pour ce modèle : choisissez-en un plus petit.",
+    "insufficient-disk": "Espace disque insuffisant pour la sortie.",
+    "ffmpeg-missing": "ffmpeg est introuvable sur le backend : installez-le ou définissez SUBSMELT_FFMPEG.",
+    "server-missing": "Impossible de démarrer le programme du backend : réinstallez-le ou vérifiez le chemin d'installation.",
+    "schema": "Le modèle a renvoyé une réponse inutilisable : nouvelle tentative ; un autre modèle peut aider.",
+    "cancelled": "Annulé.",
+    "interrupted": "Interrompu par un redémarrage du serveur : réessayez une fois le backend relancé.",
+    "translation": {
+      "backend-unreachable": "Endpoint LLM injoignable : vérifiez l'URL dans Réglages → Connexions et que le serveur tourne.",
+      "auth": "Le fournisseur LLM a rejeté la clé API : vérifiez-la dans Réglages → Connexions.",
+      "timeout": "Le LLM a mis trop de temps à répondre : augmentez le délai dans les Réglages ou réduisez la taille des segments.",
+      "model-missing": "Le modèle configuré n'est pas disponible sur cet endpoint : vérifiez son nom dans Réglages → Connexions."
+    }
   },
   "convert": {
     "title": "Convertisseur de sous-titres",
@@ -950,6 +969,7 @@
     "clearFailed": "Impossible d'effacer l'historique : {{message}}",
     "attempts": "{{count}} tentatives",
     "retryAllFailed": "Réessayer {{count}} échecs",
-    "retriedAll": "{{ok}} fichiers sur {{total}} réessayés."
+    "retriedAll": "{{ok}} fichiers sur {{total}} réessayés.",
+    "failedFallback": "Échec de la transcription."
   }
 }
