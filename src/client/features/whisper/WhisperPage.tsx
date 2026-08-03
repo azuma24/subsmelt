@@ -21,8 +21,8 @@ import { buildFolderTree } from "./folderTree";
 import { filterLibraryFiles } from "./libraryFilter";
 import type { SortBy, SortDir, TreeNode } from "./folderTree";
 import { TranscriptionHistoryPanel } from "../dashboard/TranscriptionHistoryPanel";
+import { str } from "../../lib/settings-value";
 
-const str = (v: unknown, fallback = ""): string => (typeof v === "string" ? v : fallback);
 const baseName = (p: string): string => p.split(/[\\/]/).pop() || p;
 const validSortBy = (value: unknown): SortBy => (value === "name" || value === "date" ? value : "date");
 const validSortDir = (value: unknown): SortDir => (value === "asc" || value === "desc" ? value : "desc");

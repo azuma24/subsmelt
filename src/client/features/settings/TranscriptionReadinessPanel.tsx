@@ -2,6 +2,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { TranscriptionHealth } from "../../types";
 import { ActionButton } from "../../ui/primitives";
+import { str } from "../../lib/settings-value";
 
 const MODEL_RAM_MB: Record<string, { required: number; recommended: number }> = {
   tiny: { required: 2048, recommended: 4096 },
@@ -16,7 +17,6 @@ const MODEL_RAM_MB: Record<string, { required: number; recommended: number }> = 
   "large-v3-turbo": { required: 12288, recommended: 24576 },
 };
 
-const str = (v: unknown, fallback = ""): string => (typeof v === "string" ? v : fallback);
 
 function formatMb(value?: number, unknownLabel = "unknown"): string {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return unknownLabel;
