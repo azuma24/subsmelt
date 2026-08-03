@@ -170,7 +170,18 @@ wide without one. `SUBSMELT_WHISPER_HOST=127.0.0.1` keeps it local-only.
 
 Set the token in **both places** — the backend enforces it and SubSmelt has to
 send it. Put the same secret in **Settings → Speech-to-text → Backend token**, or
-every health, model and transcription request comes back `401`.
+pass it as `WHISPER_BACKEND_TOKEN` to the SubSmelt container; otherwise every
+health, model and transcription request comes back `401`.
+
+```yaml
+services:
+  subsmelt:
+    environment:
+      - WHISPER_BACKEND_TOKEN=${WHISPER_TOKEN}
+  whisper-backend:
+    environment:
+      - SUBSMELT_WHISPER_TOKEN=${WHISPER_TOKEN}
+```
 
 API keys are stored in `config.json` and are redacted from API responses, but
 that file is plaintext on disk — back it up somewhere private.
@@ -200,6 +211,8 @@ that file is plaintext on disk — back it up somewhere private.
 | `API_KEY` | — | Override API key on startup |
 | `MODEL` | — | Override model name on startup |
 | `WHISPER_BACKEND_URL` | — | Optional speech-to-text backend URL |
+| `WHISPER_BACKEND_TOKEN` | — | Shared secret for the STT backend — must match its `SUBSMELT_WHISPER_TOKEN` |
+| `WHISPER_TRANSPORT` | `auto` | `shared` (backend reads `/media` directly) or `upload` |
 
 ---
 

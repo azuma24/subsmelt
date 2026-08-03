@@ -131,7 +131,9 @@ Nothing here is in progress. Ordered by what I would fix first.
   README note added in 0.5.2.
 - **The Whisper backend binds `0.0.0.0` by default** and only warns when no token
   is set (changed in 0.5.0 — a loopback-only backend is unreachable from a
-  container).
+  container). The token has to be set on both sides: `SUBSMELT_WHISPER_TOKEN` on
+  the backend and `WHISPER_BACKEND_TOKEN` (or the Settings field) on the app,
+  otherwise every request 401s.
 - **The Windows installer is unsigned**, so SmartScreen warns on every download.
   Needs a certificate.
 - No rate limiting on either service.
