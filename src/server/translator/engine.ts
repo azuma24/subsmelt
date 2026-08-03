@@ -18,6 +18,8 @@ import {
   tryJsonParse,
   type SubtitleCue,
 } from "./utils.js";
+import { createConnectionHealth } from "./connection-health.js";
+import { SINGLE_LINE_RETRIES, runLineFallback, singleLineTimeoutMs } from "./fallback-policy.js";
 import { buildTranslationSystemPrompt } from "./prompt.js";
 import { refineChunk } from "./prompt.js";
 import {
@@ -357,42 +359,10 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // Use per-job timeout if provided, otherwise fall back to module default
   const jobTimeoutMs = opts.requestTimeoutMs;
 
-  // ── Runaway-fallback guards ─────────────────────────────────────────────
-  // The per-line fallback used to inherit the full job timeout AND its own retry
-  // budget, so one unresponsive backend could turn a single 20-line chunk into
-  // hours of sequential 5-minute stalls (the job looked hung). Per-line work is
-  // small, so it gets a short timeout, one retry, and gives up early.
-  // requestTimeoutMs is optional; when unset the per-line cap stands on its own.
-  const SINGLE_LINE_TIMEOUT_MS = jobTimeoutMs ? Math.min(jobTimeoutMs, 60_000) : 60_000;
-  const SINGLE_LINE_RETRIES = 1;
-  const SINGLE_LINE_FAILURE_LIMIT = 3;
-
-  // Per-job connection breaker: a backend that keeps timing out is dropped for
-  // the rest of the job instead of costing a full timeout on every chunk.
-  const CONNECTION_TIMEOUT_LIMIT = 3;
-  const connectionTimeouts = new Map<string, number>();
-  const disabledConnections = new Set<string>();
-
-  function noteConnectionFailure(conn: ResolvedConnection, error: unknown): void {
-    const message = String((error as any)?.message || error).toLowerCase();
-    // Only transport stalls justify dropping a connection. A schema mismatch is
-    // the model misbehaving on one chunk, not the endpoint being down.
-    if (!message.includes("timeout") && !message.includes("network")) return;
-    const count = (connectionTimeouts.get(conn.id) ?? 0) + 1;
-    connectionTimeouts.set(conn.id, count);
-    if (count >= CONNECTION_TIMEOUT_LIMIT && !disabledConnections.has(conn.id)) {
-      disabledConnections.add(conn.id);
-      opts.onConnectionUnavailable?.({
-        id: conn.id,
-        label: conn.label,
-        error: `${count} timeouts in this job — skipping for the rest of it`,
-      });
-    }
-  }
-
-  function liveConnections(order: ResolvedConnection[]): ResolvedConnection[] {
-    return order.filter((conn) => !disabledConnections.has(conn.id));
-  }
+  // Budgets for the cascade/fallback path live in fallback-policy.ts, where they
+  // are covered by tests — they are the fix for a job that could run for hours
+  // instead of failing.
+  const SINGLE_LINE_TIMEOUT_MS = singleLineTimeoutMs(jobTimeoutMs);
 
   // Resolve the connection pool. Falls back to the single legacy fields so
   // existing callers (and single mode) behave exactly as before.
@@ -407,88 +377,18 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     opts.onConnectionUsed?.({ id: c.id, label: c.label });
   };
   const reservedConnectionIds = new Set(opts.reservedConnectionIds ?? []);
-  const unavailableConnIds = new Set<string>();
-  const verifiedConnIds = new Set<string>();
-  const OFFLINE_ATTEMPTS = 5;
-  const OFFLINE_RETRY_MS = 5_000;
-
-  const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-
-  function connectionModelsUrl(conn: ResolvedConnection): string | null {
-    // Cloud SDK providers do not share a single /models endpoint/auth shape;
-    // they fail fast inside their SDK call. The availability probe is for local
-    // / OpenAI-compatible sources, where an offline LM Studio/Ollama/vLLM host
-    // otherwise gets retried for every chunk.
-    if (conn.provider) return null;
-    try {
-      const base = new URL(conn.apiHost);
-      base.pathname = `${base.pathname.replace(/\/$/, "")}/models`;
-      base.search = "";
-      base.hash = "";
-      return base.toString();
-    } catch {
-      return null;
-    }
-  }
-
-  function offlineMessage(error: unknown): string {
-    const err = error as any;
-    return String(err?.message || err?.cause?.message || error || "connection unavailable");
-  }
-
-  async function ensureConnectionReady(conn: ResolvedConnection): Promise<void> {
-    if (unavailableConnIds.has(conn.id)) {
-      throw new Error(`Connection marked unavailable: ${conn.label}`);
-    }
-    if (verifiedConnIds.has(conn.id)) return;
-
-    const modelsUrl = connectionModelsUrl(conn);
-    if (!modelsUrl) {
-      verifiedConnIds.add(conn.id);
-      return;
-    }
-
-    let lastErr: unknown;
-    for (let attempt = 1; attempt <= OFFLINE_ATTEMPTS; attempt++) {
-      if (opts.abortSignal?.aborted) throw new Error("STOP_REQUESTED");
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort("connection_probe_timeout"), OFFLINE_RETRY_MS);
-      try {
-        const res = await fetch(modelsUrl, {
-          method: "GET",
-          headers: conn.apiKey ? { Authorization: `Bearer ${conn.apiKey}` } : undefined,
-          signal: controller.signal,
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status} from ${modelsUrl}`);
-        verifiedConnIds.add(conn.id);
-        return;
-      } catch (error) {
-        lastErr = error;
-        if (attempt >= OFFLINE_ATTEMPTS) break;
-        opts.onRetry?.(attempt, error, OFFLINE_RETRY_MS);
-        await delay(OFFLINE_RETRY_MS);
-      } finally {
-        clearTimeout(timer);
-      }
-    }
-
-    unavailableConnIds.add(conn.id);
-    const error = offlineMessage(lastErr);
-    opts.onConnectionUnavailable?.({ id: conn.id, label: conn.label, error });
-    throw new Error(`Connection unavailable after ${OFFLINE_ATTEMPTS} attempts: ${conn.label} — ${error}`);
-  }
-
-  async function withConnection<T>(conn: ResolvedConnection, fn: () => Promise<T>): Promise<T> {
-    await ensureConnectionReady(conn);
-    const release = reservedConnectionIds.has(conn.id)
-      ? undefined
-      : await opts.acquireConnection?.(conn);
-    try {
-      return await fn();
-    } finally {
-      release?.();
-    }
-  }
+  // Connection probing, the per-job timeout breaker and the acquire/release
+  // wrapper live in connection-health.ts — extracted so they can be tested.
+  const health = createConnectionHealth({
+    onConnectionUnavailable: opts.onConnectionUnavailable,
+    onRetry: opts.onRetry,
+    acquireConnection: opts.acquireConnection,
+    reservedConnectionIds: reservedConnectionIds,
+    abortSignal: opts.abortSignal,
+  });
+  const withConnection = health.withConnection;
+  const liveConnections = health.live;
+  const noteConnectionFailure = health.noteFailure;
 
   let subtitle: SubtitleCue[];
   if (Array.isArray(parsed)) {
@@ -551,7 +451,10 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(e?.message || e) });
     }
   }
-  if (!analysis && analysisErr && connections.every((c) => unavailableConnIds.has(c.id))) {
+  // Every connection failed its availability probe — surface the real error
+  // rather than letting the per-line fallback pass source text through and save
+  // the job as a successful translation.
+  if (!analysis && analysisErr && connections.every((c) => health.isUnavailable(c.id))) {
     throw analysisErr;
   }
 
@@ -733,7 +636,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     const contextStart = Math.max(0, coreStart - contextSize);
     const contextEnd = Math.min(subtitle.length - 1, coreEnd + contextSize);
 
-    let translatedWindow: string[] | null = null;
+    let translatedWindow: (string | null)[] | null = null;
 
     // Build separate context prefix and core-only payload.
     // Previously we sent the full window (core + context padding) and asked the
@@ -792,26 +695,16 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
 
     // Single-line fallback — translatedWindow is now core-only (coreText.length)
     if (!translatedWindow) {
+      // Bails out once the backend is clearly not answering, instead of walking
+      // every line at one full timeout each (see fallback-policy.ts).
+      const { translations } = await runLineFallback(
+        coreIndices.map((idx) => subtitle[idx]?.data?.text || ""),
+        { translateLine: (lineText) => translateSingleWithFallback(lineText, connOrder) },
+      );
       translatedWindow = new Array(coreText.length).fill(null);
-      // Bail out once the backend is clearly not answering: without this, a
-      // chunk whose every line times out walked the whole chunk sequentially at
-      // one full job timeout per line, which is what made jobs look hung.
-      let consecutiveFailures = 0;
-      for (const idx of coreIndices) {
-        const lineText = subtitle[idx]?.data?.text || "";
-        try {
-          translatedWindow![idx - coreStart] = await translateSingleWithFallback(lineText, connOrder);
-          consecutiveFailures = 0;
-        } catch (e: any) {
-          if (e?.message === "STOP_REQUESTED") throw e;
-          consecutiveFailures += 1;
-          if (consecutiveFailures >= SINGLE_LINE_FAILURE_LIMIT) {
-            throw new Error(
-              `Per-line fallback aborted after ${consecutiveFailures} consecutive failures: ${e?.message || e}`
-            );
-          }
-        }
-      }
+      coreIndices.forEach((idx, i) => {
+        translatedWindow![idx - coreStart] = translations[i];
+      });
     }
 
     // Refinement Pass (Pass 2) — optional editor pass over the pass-1 output.
