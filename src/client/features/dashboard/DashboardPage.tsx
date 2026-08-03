@@ -25,15 +25,13 @@ import {
   transitionManualTranscriptionProgress,
   type ManualTranscriptionProgress,
 } from "./transcription-progress";
+import { str } from "../../lib/settings-value";
+import type { DashboardTab } from "./tabs";
 
 type ScanResultMode = "preview" | "queued";
-type DashboardTab = "queue" | "transcription" | "scan";
 
 const SETUP_DISMISSED_KEY = "subsmelt_setup_dismissed";
 
-function str(v: unknown, fallback = ""): string {
-  return typeof v === "string" ? v : fallback;
-}
 
 export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const { t } = useTranslation();

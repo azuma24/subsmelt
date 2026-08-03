@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import type { LlmConnection, LlmMode, LlmProvider } from "../../types";
+import { FORM_CONTROL_CLS, FORM_LABEL_CLS } from "../../ui/form-classes";
 
 const PROVIDERS: LlmProvider[] = ["local", "openai", "anthropic", "gemini"];
 const DEFAULT_LOCAL_ENDPOINT = "http://localhost:8000/v1";
@@ -13,10 +14,9 @@ const MODE_HELP_KEY: Record<LlmMode, string> = {
   parallel: "settings.connections.modeHelpParallel",
 };
 
-const inputCls =
-  "w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[13px] text-[var(--text)] outline-none focus:border-[var(--accent)]";
+const inputCls = FORM_CONTROL_CLS;
 const selectCls = inputCls;
-const labelCls = "mb-1.5 block text-[12px] font-medium text-[var(--text-2)]";
+const labelCls = FORM_LABEL_CLS;
 
 type ToastFn = (message: string, type: "success" | "error" | "info") => void;
 

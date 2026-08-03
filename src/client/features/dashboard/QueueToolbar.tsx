@@ -1,16 +1,10 @@
 import type { TFunction } from "i18next";
+import type { DashboardTab, DashboardTabItem } from "./tabs";
 import { Accordion } from "../../ui/primitives";
 
-type DashboardTab = "queue" | "transcription" | "scan";
 
 interface FilterTab {
   key: string;
-  label: string;
-  count: number;
-}
-
-interface DashboardTabItem {
-  key: DashboardTab;
   label: string;
   count: number;
 }

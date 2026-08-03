@@ -14,13 +14,14 @@ import { MediaSourcesPanel } from "./MediaSourcesPanel";
 import { TranscriptionReadinessPanel } from "./TranscriptionReadinessPanel";
 import { ModelManagerPanel } from "./ModelManagerPanel";
 import { JSON_BLOB_SETTINGS, getStr, validateJsonSetting, type JsonBlobSettingKey } from "./settings-model";
+import { str } from "../../lib/settings-value";
+import { FORM_CONTROL_CLS } from "../../ui/form-classes";
 
 // Thin wrappers over the typed accessors so existing call sites (str/bool) stay
 // terse. `settings` is still a Record<string, unknown> on the wire.
-const str = (v: unknown, fallback = ""): string => (typeof v === "string" ? v : fallback);
 const bool = (v: unknown): boolean => Boolean(v);
 
-const selectCls = "w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[13px] text-[var(--text)] outline-none focus:border-[var(--accent)]";
+const selectCls = FORM_CONTROL_CLS;
 const textareaCls = "w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[13px] text-[var(--text)] outline-none focus:border-[var(--accent)]";
 const labelCls = "mb-1.5 block text-[12px] font-medium text-[var(--text-2)]";
 
