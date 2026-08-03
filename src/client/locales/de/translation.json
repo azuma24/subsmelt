@@ -834,12 +834,19 @@
     }
   },
   "errors": {
-    "loading": "Loading…",
-    "loadFailed": "Something went wrong while loading this data.",
-    "retry": "Retry",
-    "reload": "Reload",
-    "boundaryTitle": "Something went wrong.",
-    "boundaryMessage": "An unexpected error occurred while rendering this page."
+    "backend-unreachable": "Backend nicht erreichbar – prüfe, ob der Whisper-Dienst läuft, und die URL in den Einstellungen.",
+    "connection-dropped": "Das Backend hat die Verbindung mitten in der Anfrage geschlossen – es ist womöglich abgestürzt oder neu gestartet; prüfe seine Logs.",
+    "timeout": "Das Backend hat zu lange gebraucht – erhöhe das Zeitlimit in den Einstellungen oder nimm ein kleineres Modell.",
+    "auth": "Das Backend hat den Token abgelehnt – prüfe den Backend-Token in den Einstellungen.",
+    "rate-limit": "Der Anbieter hat die Anfrage gedrosselt – es wird erneut versucht; reduziere parallele Blöcke, falls es bleibt.",
+    "model-missing": "Dieses Modell ist nicht heruntergeladen – lade es unter Einstellungen → Modelle.",
+    "insufficient-ram": "Zu wenig Arbeitsspeicher für dieses Modell – wähle ein kleineres.",
+    "insufficient-disk": "Zu wenig freier Speicherplatz für die Ausgabe.",
+    "ffmpeg-missing": "ffmpeg wurde auf dem Backend nicht gefunden – installiere es oder setze SUBSMELT_FFMPEG.",
+    "server-missing": "Das Backend-Programm konnte nicht gestartet werden – neu installieren oder Installationspfad prüfen.",
+    "schema": "Das Modell lieferte eine unbrauchbare Antwort – es wird erneut versucht; ein anderes Modell kann helfen.",
+    "cancelled": "Abgebrochen.",
+    "interrupted": "Durch einen Serverneustart unterbrochen – erneut versuchen, sobald das Backend läuft."
   },
   "convert": {
     "title": "Untertitel-Konverter",
@@ -950,6 +957,7 @@
     "clearFailed": "Verlauf konnte nicht geleert werden: {{message}}",
     "attempts": "{{count}} Versuche",
     "retryAllFailed": "{{count}} fehlgeschlagene wiederholen",
-    "retriedAll": "{{ok}} von {{total}} Dateien wiederholt."
+    "retriedAll": "{{ok}} von {{total}} Dateien wiederholt.",
+    "failedFallback": "Transkription fehlgeschlagen."
   }
 }

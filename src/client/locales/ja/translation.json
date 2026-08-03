@@ -834,12 +834,19 @@
     }
   },
   "errors": {
-    "loading": "Loading…",
-    "loadFailed": "Something went wrong while loading this data.",
-    "retry": "Retry",
-    "reload": "Reload",
-    "boundaryTitle": "Something went wrong.",
-    "boundaryMessage": "An unexpected error occurred while rendering this page."
+    "backend-unreachable": "バックエンドに接続できません。Whisper サービスの起動と設定の URL を確認してください。",
+    "connection-dropped": "リクエスト中にバックエンドが接続を閉じました。クラッシュまたは再起動の可能性があります。ログを確認してください。",
+    "timeout": "バックエンドの応答が遅すぎました。設定でタイムアウトを延ばすか、小さいモデルを使ってください。",
+    "auth": "バックエンドがトークンを拒否しました。設定のバックエンドトークンを確認してください。",
+    "rate-limit": "プロバイダーによるレート制限です。再試行します。続く場合は並列チャンク数を下げてください。",
+    "model-missing": "そのモデルは未ダウンロードです。設定 → モデルからダウンロードしてください。",
+    "insufficient-ram": "このモデルにはメモリが足りません。より小さいモデルを選んでください。",
+    "insufficient-disk": "出力用の空きディスク容量が足りません。",
+    "ffmpeg-missing": "バックエンドで ffmpeg が見つかりません。インストールするか SUBSMELT_FFMPEG を設定してください。",
+    "server-missing": "バックエンドのプログラムを起動できませんでした。再インストールするかインストール先を確認してください。",
+    "schema": "モデルが不正な応答を返しました。再試行します。別のモデルで改善する場合があります。",
+    "cancelled": "キャンセルされました。",
+    "interrupted": "サーバー再起動により中断されました。バックエンド復帰後に再試行してください。"
   },
   "convert": {
     "title": "字幕コンバーター",
@@ -950,6 +957,7 @@
     "clearFailed": "履歴をクリアできませんでした: {{message}}",
     "attempts": "{{count}} 回試行",
     "retryAllFailed": "失敗した{{count}}件を再試行",
-    "retriedAll": "{{total}} 件中 {{ok}} 件を再試行しました。"
+    "retriedAll": "{{total}} 件中 {{ok}} 件を再試行しました。",
+    "failedFallback": "文字起こしに失敗しました。"
   }
 }

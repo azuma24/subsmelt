@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TranscriptionHistoryEntry } from "../../types";
 import { groupTranscriptionAttempts, retryableGroups, type TranscriptionGroup } from "./transcription-groups";
+import { classifyError, errorHintKey } from "../../lib/errorTaxonomy";
 
 interface TranscriptionHistoryPanelProps {
   attempts: TranscriptionHistoryEntry[];
@@ -105,9 +106,25 @@ export function TranscriptionHistoryPanel({
                     <div className="mt-1 text-[11px] text-[var(--text-3)]">
                       {latest.model} • {latest.language} • {latest.outputFormat.toUpperCase()} • {latest.postAction === "transcribe_and_translate" ? t("transcriptionHistory.postQueueTranslate") : t("transcriptionHistory.postTranscribeOnly")}
                     </div>
-                    <div className="mt-1 text-[11px] text-[var(--text-3)]">
-                      {latest.status === "failed" ? (latest.errorSummary || "Transcription failed") : latest.finishedAt || latest.startedAt}
-                    </div>
+                    {latest.status === "failed" ? (
+                      <div className="mt-1 text-[11px]">
+                        {(() => {
+                          const hint = errorHintKey(classifyError(latest.errorSummary));
+                          // The raw text stays as the title so it is still
+                          // copyable for a bug report, and is the whole message
+                          // when the cause is not one we recognise.
+                          return (
+                            <span className="text-[var(--text-2)]" title={latest.errorSummary || undefined}>
+                              {hint ? t(hint) : latest.errorSummary || t("transcriptionHistory.failedFallback")}
+                            </span>
+                          );
+                        })()}
+                      </div>
+                    ) : (
+                      <div className="mt-1 text-[11px] text-[var(--text-3)]">
+                        {latest.finishedAt || latest.startedAt}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     {hasHistory && (

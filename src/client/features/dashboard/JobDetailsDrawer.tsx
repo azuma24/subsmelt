@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { classifyError, errorHintKey } from "../../lib/errorTaxonomy";
 import type { JobRow } from "../../types";
 import { Drawer, StatusBadge } from "../../ui/primitives";
 import { formatDur, formatTokens, formatCost } from "../../lib";
@@ -13,6 +14,7 @@ interface JobDetailsDrawerProps {
 
 export function JobDetailsDrawer({ job, open, onClose, onOpenLogs }: JobDetailsDrawerProps) {
   const { t } = useTranslation();
+  const errorHint = errorHintKey(classifyError(job?.error ?? null));
 
   if (!job) return null;
 
@@ -141,12 +143,13 @@ export function JobDetailsDrawer({ job, open, onClose, onOpenLogs }: JobDetailsD
           <div className="font-mono text-[13px] text-[var(--text)]">#{job.id}</div>
         </section>
 
-        {/* Error */}
+        {/* Error — plain-language cause first, raw text kept for bug reports */}
         {job.error && (
           <section>
             <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[var(--text-3)]">
               {t("dashboard.details.error")}
             </div>
+            {errorHint && <p className="mb-1.5 text-[12px] text-[var(--text-2)]">{t(errorHint)}</p>}
             <div className="select-all whitespace-pre-wrap rounded-lg bg-[var(--red-dim)] p-3 font-mono text-[11px] text-[var(--red)]">
               {job.error}
             </div>
