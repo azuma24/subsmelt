@@ -168,6 +168,10 @@ containerised SubSmelt can reach it. **Set `SUBSMELT_WHISPER_TOKEN`** if it is
 reachable from anywhere you do not control; it warns at startup when it binds
 wide without one. `SUBSMELT_WHISPER_HOST=127.0.0.1` keeps it local-only.
 
+Set the token in **both places** — the backend enforces it and SubSmelt has to
+send it. Put the same secret in **Settings → Speech-to-text → Backend token**, or
+every health, model and transcription request comes back `401`.
+
 API keys are stored in `config.json` and are redacted from API responses, but
 that file is plaintext on disk — back it up somewhere private.
 
@@ -233,7 +237,7 @@ docker buildx build --platform linux/amd64 -t subsmelt:latest .
 ## Development
 
 ```bash
-npm install
+npm ci --legacy-peer-deps   # see note below
 npm run dev          # API (tsx watch) + Vite dev server
 npm test             # node:test across src/**/*.test.ts(x)
 npm run typecheck    # client AND server TypeScript projects
@@ -247,6 +251,10 @@ cd backend-whisper
 pip install -r requirements.txt pytest
 python -m pytest tests -q
 ```
+
+`--legacy-peer-deps` is required: `i18next@26` declares an optional TypeScript
+peer of `^5 || ^6` while this repo is on TypeScript 7, which the npm bundled with
+Node 22 rejects outright. The Dockerfile and CI use the same flag.
 
 `vite build` does not typecheck — run `npm run typecheck` before assuming a
 change is clean. CI runs both suites, both typechecks, the production build and a

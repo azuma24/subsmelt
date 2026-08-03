@@ -74,7 +74,7 @@ beginning; there is no mid-file resume.
 ## 3. Working on it
 
 ```bash
-npm install
+npm ci --legacy-peer-deps   # the flag is required; see below
 npm run dev          # server (tsx watch) + vite, concurrently
 npm test             # node:test over src/**/*.test.ts(x)
 npm run typecheck    # client AND server projects
@@ -84,6 +84,10 @@ cd backend-whisper
 pip install -r requirements.txt pytest
 python -m pytest tests -q          # must be run from backend-whisper/
 ```
+
+`--legacy-peer-deps` is not optional: `i18next@26` declares an optional
+TypeScript peer of `^5 || ^6`, this repo is on TypeScript 7, and npm 10 (bundled
+with Node 22) refuses the install. The Dockerfile and CI pass the same flag.
 
 Client and server are separate TypeScript projects (`tsconfig.json` /
 `tsconfig.server.json`) with no project reference between them — the client never
