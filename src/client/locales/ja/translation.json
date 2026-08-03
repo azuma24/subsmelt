@@ -834,6 +834,12 @@
     }
   },
   "errors": {
+    "loading": "Loading…",
+    "loadFailed": "Something went wrong while loading this data.",
+    "retry": "Retry",
+    "reload": "Reload",
+    "boundaryTitle": "Something went wrong.",
+    "boundaryMessage": "An unexpected error occurred while rendering this page.",
     "backend-unreachable": "バックエンドに接続できません。Whisper サービスの起動と設定の URL を確認してください。",
     "connection-dropped": "リクエスト中にバックエンドが接続を閉じました。クラッシュまたは再起動の可能性があります。ログを確認してください。",
     "timeout": "バックエンドの応答が遅すぎました。設定でタイムアウトを延ばすか、小さいモデルを使ってください。",
@@ -846,7 +852,13 @@
     "server-missing": "バックエンドのプログラムを起動できませんでした。再インストールするかインストール先を確認してください。",
     "schema": "モデルが不正な応答を返しました。再試行します。別のモデルで改善する場合があります。",
     "cancelled": "キャンセルされました。",
-    "interrupted": "サーバー再起動により中断されました。バックエンド復帰後に再試行してください。"
+    "interrupted": "サーバー再起動により中断されました。バックエンド復帰後に再試行してください。",
+    "translation": {
+      "backend-unreachable": "LLM エンドポイントに接続できません。設定 → 接続の URL とサーバーの起動を確認してください。",
+      "auth": "LLM プロバイダーが API キーを拒否しました。設定 → 接続で確認してください。",
+      "timeout": "LLM の応答が遅すぎました。設定でタイムアウトを延ばすか、チャンクサイズを小さくしてください。",
+      "model-missing": "設定されたモデルはそのエンドポイントで利用できません。設定 → 接続でモデル名を確認してください。"
+    }
   },
   "convert": {
     "title": "字幕コンバーター",

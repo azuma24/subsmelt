@@ -834,6 +834,12 @@
     }
   },
   "errors": {
+    "loading": "Loading…",
+    "loadFailed": "Something went wrong while loading this data.",
+    "retry": "Retry",
+    "reload": "Reload",
+    "boundaryTitle": "Something went wrong.",
+    "boundaryMessage": "An unexpected error occurred while rendering this page.",
     "backend-unreachable": "Backend unreachable — check the Whisper service is running and the URL in Settings.",
     "connection-dropped": "The backend closed the connection mid-request — it may have crashed or restarted; check its logs.",
     "timeout": "The backend took too long to answer — raise the request timeout in Settings, or use a smaller model.",
@@ -846,7 +852,13 @@
     "server-missing": "The backend program could not be started — reinstall it, or check the install path.",
     "schema": "The model returned an unusable response — it will retry; a different model may help.",
     "cancelled": "Cancelled.",
-    "interrupted": "Interrupted by a server restart — retry when the backend is back up."
+    "interrupted": "Interrupted by a server restart — retry when the backend is back up.",
+    "translation": {
+      "backend-unreachable": "LLM endpoint unreachable — check the connection's URL in Settings → Connections and that the server is running.",
+      "auth": "The LLM provider rejected the API key — check it in Settings → Connections.",
+      "timeout": "The LLM took too long to answer — raise the request timeout in Settings, or reduce chunk size.",
+      "model-missing": "The configured model is not available on that endpoint — check the model name in Settings → Connections."
+    }
   },
   "convert": {
     "title": "Altyazı dönüştürücü",

@@ -61,10 +61,25 @@ export function classifyError(raw: string | null | undefined): ErrorCode {
 }
 
 /**
- * i18n key for the explanation, or null for "unknown" — there is nothing useful
- * to say about an error we do not recognise, so callers show the raw text alone
- * rather than a vacuous "something went wrong".
+ * Where the failure came from. The same raw string means different things in
+ * different places: `fetch failed` from a transcription is the Whisper service
+ * being down, while from a queue job it is the configured LLM endpoint — and
+ * sending the user to the wrong settings page is worse than saying nothing.
  */
-export function errorHintKey(code: ErrorCode): string | null {
-  return code === "unknown" ? null : `errors.${code}`;
+export type ErrorContext = "transcription" | "translation";
+
+/**
+ * i18n keys for the explanation, most specific first, or null for "unknown" —
+ * there is nothing useful to say about an error we do not recognise, so callers
+ * show the raw text alone rather than a vacuous "something went wrong".
+ *
+ * i18next resolves the first key that exists, so only the causes whose guidance
+ * actually differs need a context-specific override; the rest fall through to
+ * the shared sentence.
+ */
+export function errorHintKeys(code: ErrorCode, context: ErrorContext = "transcription"): string[] | null {
+  if (code === "unknown") return null;
+  return context === "transcription"
+    ? [`errors.${code}`]
+    : [`errors.${context}.${code}`, `errors.${code}`];
 }

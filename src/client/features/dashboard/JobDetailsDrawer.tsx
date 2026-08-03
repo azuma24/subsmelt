@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { classifyError, errorHintKey } from "../../lib/errorTaxonomy";
+import { classifyError, errorHintKeys } from "../../lib/errorTaxonomy";
 import type { JobRow } from "../../types";
 import { Drawer, StatusBadge } from "../../ui/primitives";
 import { formatDur, formatTokens, formatCost } from "../../lib";
@@ -14,7 +14,8 @@ interface JobDetailsDrawerProps {
 
 export function JobDetailsDrawer({ job, open, onClose, onOpenLogs }: JobDetailsDrawerProps) {
   const { t } = useTranslation();
-  const errorHint = errorHintKey(classifyError(job?.error ?? null));
+  // Queue jobs fail against the LLM connection, not the Whisper backend.
+  const errorHint = errorHintKeys(classifyError(job?.error ?? null), "translation");
 
   if (!job) return null;
 

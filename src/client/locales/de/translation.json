@@ -834,6 +834,12 @@
     }
   },
   "errors": {
+    "loading": "Loading…",
+    "loadFailed": "Something went wrong while loading this data.",
+    "retry": "Retry",
+    "reload": "Reload",
+    "boundaryTitle": "Something went wrong.",
+    "boundaryMessage": "An unexpected error occurred while rendering this page.",
     "backend-unreachable": "Backend nicht erreichbar – prüfe, ob der Whisper-Dienst läuft, und die URL in den Einstellungen.",
     "connection-dropped": "Das Backend hat die Verbindung mitten in der Anfrage geschlossen – es ist womöglich abgestürzt oder neu gestartet; prüfe seine Logs.",
     "timeout": "Das Backend hat zu lange gebraucht – erhöhe das Zeitlimit in den Einstellungen oder nimm ein kleineres Modell.",
@@ -846,7 +852,13 @@
     "server-missing": "Das Backend-Programm konnte nicht gestartet werden – neu installieren oder Installationspfad prüfen.",
     "schema": "Das Modell lieferte eine unbrauchbare Antwort – es wird erneut versucht; ein anderes Modell kann helfen.",
     "cancelled": "Abgebrochen.",
-    "interrupted": "Durch einen Serverneustart unterbrochen – erneut versuchen, sobald das Backend läuft."
+    "interrupted": "Durch einen Serverneustart unterbrochen – erneut versuchen, sobald das Backend läuft.",
+    "translation": {
+      "backend-unreachable": "LLM-Endpunkt nicht erreichbar – prüfe die URL unter Einstellungen → Verbindungen und ob der Server läuft.",
+      "auth": "Der LLM-Anbieter hat den API-Schlüssel abgelehnt – prüfe ihn unter Einstellungen → Verbindungen.",
+      "timeout": "Das LLM hat zu lange gebraucht – erhöhe das Zeitlimit in den Einstellungen oder verringere die Blockgröße.",
+      "model-missing": "Das konfigurierte Modell ist an diesem Endpunkt nicht verfügbar – prüfe den Modellnamen unter Einstellungen → Verbindungen."
+    }
   },
   "convert": {
     "title": "Untertitel-Konverter",

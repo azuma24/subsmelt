@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { classifyError, errorHintKey } from "./errorTaxonomy.js";
+import { classifyError, errorHintKeys } from "./errorTaxonomy.js";
 
 test("classifies the failures actually seen in the wild", () => {
   // Every string here was copied from a real log line.
@@ -47,7 +47,24 @@ test("unrecognised and empty input is unknown", () => {
 });
 
 test("unknown has no hint so callers fall back to the raw text", () => {
-  assert.equal(errorHintKey("unknown"), null);
-  assert.equal(errorHintKey("timeout"), "errors.timeout");
-  assert.equal(errorHintKey("backend-unreachable"), "errors.backend-unreachable");
+  assert.equal(errorHintKeys("unknown"), null);
+  assert.equal(errorHintKeys("unknown", "translation"), null);
+});
+
+test("transcription hints use the shared keys", () => {
+  assert.deepEqual(errorHintKeys("timeout"), ["errors.timeout"]);
+  assert.deepEqual(errorHintKeys("backend-unreachable"), ["errors.backend-unreachable"]);
+});
+
+test("translation hints prefer a context override, then fall back", () => {
+  // A queue job fails against the configured LLM endpoint, not the Whisper
+  // service, so pointing the user at the transcription settings would be wrong.
+  assert.deepEqual(errorHintKeys("backend-unreachable", "translation"), [
+    "errors.translation.backend-unreachable",
+    "errors.backend-unreachable",
+  ]);
+  assert.deepEqual(errorHintKeys("schema", "translation"), [
+    "errors.translation.schema",
+    "errors.schema",
+  ]);
 });

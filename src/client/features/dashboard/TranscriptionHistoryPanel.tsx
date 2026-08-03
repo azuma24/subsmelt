@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TranscriptionHistoryEntry } from "../../types";
 import { groupTranscriptionAttempts, retryableGroups, type TranscriptionGroup } from "./transcription-groups";
-import { classifyError, errorHintKey } from "../../lib/errorTaxonomy";
+import { classifyError, errorHintKeys } from "../../lib/errorTaxonomy";
 
 interface TranscriptionHistoryPanelProps {
   attempts: TranscriptionHistoryEntry[];
@@ -107,19 +107,24 @@ export function TranscriptionHistoryPanel({
                       {latest.model} • {latest.language} • {latest.outputFormat.toUpperCase()} • {latest.postAction === "transcribe_and_translate" ? t("transcriptionHistory.postQueueTranslate") : t("transcriptionHistory.postTranscribeOnly")}
                     </div>
                     {latest.status === "failed" ? (
-                      <div className="mt-1 text-[11px]">
-                        {(() => {
-                          const hint = errorHintKey(classifyError(latest.errorSummary));
-                          // The raw text stays as the title so it is still
-                          // copyable for a bug report, and is the whole message
-                          // when the cause is not one we recognise.
-                          return (
-                            <span className="text-[var(--text-2)]" title={latest.errorSummary || undefined}>
+                      (() => {
+                        const hint = errorHintKeys(classifyError(latest.errorSummary));
+                        return (
+                          <>
+                            <div className="mt-1 text-[11px] text-[var(--text-2)]">
                               {hint ? t(hint) : latest.errorSummary || t("transcriptionHistory.failedFallback")}
-                            </span>
-                          );
-                        })()}
-                      </div>
+                            </div>
+                            {/* The raw text is rendered, not just a title tooltip:
+                                tooltips are unreachable on touch and cannot be
+                                selected, and this is what a bug report needs. */}
+                            {hint && latest.errorSummary && (
+                              <div className="mt-0.5 select-all break-words font-mono text-[10px] text-[var(--text-3)]">
+                                {latest.errorSummary}
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()
                     ) : (
                       <div className="mt-1 text-[11px] text-[var(--text-3)]">
                         {latest.finishedAt || latest.startedAt}

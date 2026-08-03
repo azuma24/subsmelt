@@ -60,6 +60,22 @@ test("translated strings preserve interpolation placeholders", () => {
   }
 });
 
+test("shared query-state error keys survive taxonomy additions", () => {
+  // Regression guard: a locale script that REPLACED the `errors` object wiped
+  // these, and every consumer (QueryState, JobDetailPage, AppErrorBoundary)
+  // silently rendered raw key names instead. Parity alone cannot catch it —
+  // when every locale loses the same key they still match each other.
+  const SHARED_KEYS = ["loading", "loadFailed", "retry", "reload", "boundaryTitle", "boundaryMessage"];
+  for (const lang of LANGUAGES) {
+    const locale = loadLocale(lang.code);
+    const errors = locale.errors as JsonObject;
+    assert.equal(typeof errors, "object", `${lang.code} is missing the errors section`);
+    for (const key of SHARED_KEYS) {
+      assert.equal(typeof errors[key], "string", `${lang.code} lost errors.${key}`);
+    }
+  }
+});
+
 test("RTL locales are marked rtl and other bundled locales remain LTR", () => {
   const RTL_LOCALES = new Set(["ar", "fa", "he"]);
   for (const lang of LANGUAGES) {
