@@ -5,6 +5,14 @@ version number and are released together (`v0.5.2` and `whisper-v0.5.2`).
 
 ## [Unreleased]
 
+### Added
+
+- `WHISPER_BACKEND_TOKEN` seeds the STT backend token from the environment.
+  Arming `SUBSMELT_WHISPER_TOKEN` on the backend previously had no env-level
+  counterpart on the app, so a compose deployment following the security advice
+  got a 401 on every transcription request until someone typed the secret into
+  the UI.
+
 ### Changed
 
 - `translateFile` split into `connection-health.ts` (availability probing, the

@@ -295,3 +295,38 @@ export function deleteTask(id: number): void {
 export function getConfigFilePath(): string {
   return CONFIG_FILE;
 }
+
+/**
+ * Settings that can be seeded from the environment at startup.
+ *
+ * Deployments that configure the app entirely through compose need a way to set
+ * these without clicking through the UI. The token matters most: arming
+ * SUBSMELT_WHISPER_TOKEN on the backend without giving SubSmelt the same secret
+ * turns every transcription request into a 401, and before this there was no
+ * env-level way to supply it.
+ */
+export const ENV_SETTING_OVERRIDES: Record<string, string> = {
+  LLM_ENDPOINT: "llm_endpoint",
+  API_KEY: "api_key",
+  MODEL: "model",
+  WHISPER_BACKEND_URL: "transcription_backend_url",
+  WHISPER_BACKEND_TOKEN: "transcription_backend_token",
+  // Lets the compose shared-FS setup pin transport=shared (the backend reads
+  // /media in place); otherwise auto picks upload for a non-loopback host.
+  WHISPER_TRANSPORT: "transcription_transport",
+};
+
+/** Settings to seed from `env`, skipping unset and empty values. */
+export function envSettingOverrides(
+  env: Record<string, string | undefined> = process.env,
+): Record<string, string> {
+  const overrides: Record<string, string> = {};
+  for (const [envKey, settingKey] of Object.entries(ENV_SETTING_OVERRIDES)) {
+    const value = env[envKey];
+    // An empty string is a deliberate "leave it alone", not a value to store —
+    // compose files routinely declare a variable with no value.
+    if (value !== undefined && value !== "") overrides[settingKey] = value;
+  }
+  return overrides;
+}
+

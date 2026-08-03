@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import {
   getAllSettings,
   setSetting,
+  envSettingOverrides,
   getSetting,
 } from "./config.js";
 import { scanFolder, listSubfolders, listFolderTree, MEDIA_DIR } from "./scanner.js";
@@ -176,17 +177,8 @@ app.get("*", (_req, res) => {
 
 // ======== Start ========
 app.listen(PORT, "0.0.0.0", () => {
-  const envOverrides: Record<string, string | undefined> = {
-    llm_endpoint: process.env.LLM_ENDPOINT,
-    api_key: process.env.API_KEY,
-    model: process.env.MODEL,
-    transcription_backend_url: process.env.WHISPER_BACKEND_URL,
-    // Lets the compose shared-FS setup pin transport=shared (the backend reads
-    // /media in place); otherwise auto picks upload for a non-loopback host.
-    transcription_transport: process.env.WHISPER_TRANSPORT,
-  };
-  for (const [key, value] of Object.entries(envOverrides)) {
-    if (value !== undefined && value !== "") setSetting(key, value);
+  for (const [key, value] of Object.entries(envSettingOverrides())) {
+    setSetting(key, value);
   }
   // Reconcile any transcription attempts left "running" by a previous process
   // (e.g. crash/restart mid-transcription) so they no longer hang in history.
