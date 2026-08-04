@@ -33,7 +33,49 @@ def data_dir(env: dict[str, str] | None = None) -> Path:
 
 
 def config_path(env: dict[str, str] | None = None) -> Path:
-    return data_dir(env) / "config.json"
+    """The config file the SERVER will actually read.
+
+    run_server honours SUBSMELT_WHISPER_CONFIG ahead of the data directory, so
+    the window has to resolve it the same way — otherwise, in that supported
+    setup, it would sit editing a file the server never opens.
+    """
+    environ = os.environ if env is None else env
+    explicit = (environ.get("SUBSMELT_WHISPER_CONFIG") or "").strip()
+    if explicit:
+        return Path(explicit)
+    return data_dir(environ) / "config.json"
+
+
+# run_server gives environment variables precedence over config.json, and
+# install-service.ps1 sets these machine-wide for the installed service. When one
+# is present, saving the corresponding field here cannot change what the service
+# uses — say so rather than implying the setting took effect everywhere.
+SHADOWING_ENV_VARS = {
+    "host": "SUBSMELT_WHISPER_HOST",
+    "port": "SUBSMELT_WHISPER_PORT",
+    "token": "SUBSMELT_WHISPER_TOKEN",
+}
+
+
+def shadowed_by_env(env: dict[str, str] | None = None) -> list[str]:
+    """Environment variables that will override the saved config, if any."""
+    environ = os.environ if env is None else env
+    return [
+        name for name in SHADOWING_ENV_VARS.values()
+        if (environ.get(name) or "").strip()
+    ]
+
+
+def shadowed_note(names: list[str]) -> str | None:
+    """Explanation for settings that cannot reach the installed service."""
+    if not names:
+        return None
+    joined = ", ".join(sorted(names))
+    return (
+        f"Saved, but {joined} is set in the machine environment and takes "
+        "precedence over config.json. The installed service will keep using that "
+        "value; this window's own runs use the fields above."
+    )
 
 
 def load_config(path: Path) -> dict[str, str]:

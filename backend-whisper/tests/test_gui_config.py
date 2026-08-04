@@ -110,6 +110,47 @@ class ConfigPathTests(unittest.TestCase):
     def test_defaults_to_programdata(self):
         self.assertEqual(gui_config.config_path({}), Path(r"C:\ProgramData\SubSmelt") / "config.json")
 
+    def test_explicit_config_override_wins(self):
+        # run_server reads SUBSMELT_WHISPER_CONFIG ahead of the data dir; if the
+        # window ignored it, it would edit a file the server never opens.
+        env = {
+            "SUBSMELT_WHISPER_CONFIG": str(Path("E:/custom/whisper.json")),
+            "SUBSMELT_DATA_DIR": str(Path("D:/SubSmeltData")),
+        }
+        self.assertEqual(gui_config.config_path(env), Path("E:/custom/whisper.json"))
+
+    def test_blank_override_falls_through(self):
+        self.assertEqual(
+            gui_config.config_path({"SUBSMELT_WHISPER_CONFIG": "   ", "SUBSMELT_DATA_DIR": str(Path("D:/D"))}),
+            Path("D:/D") / "config.json",
+        )
+
+
+class EnvShadowingTests(unittest.TestCase):
+    def test_machine_env_vars_that_outrank_the_file_are_reported(self):
+        # install-service.ps1 always sets SUBSMELT_WHISPER_PORT machine-wide, and
+        # run_server gives env precedence — so saving a port here cannot change
+        # what the installed service uses, and the window must not imply it did.
+        names = gui_config.shadowed_by_env({"SUBSMELT_WHISPER_PORT": "8001"})
+        self.assertEqual(names, ["SUBSMELT_WHISPER_PORT"])
+
+        note = gui_config.shadowed_note(names)
+        self.assertIn("SUBSMELT_WHISPER_PORT", note)
+        self.assertIn("precedence", note)
+
+    def test_nothing_reported_when_the_environment_is_clean(self):
+        self.assertEqual(gui_config.shadowed_by_env({}), [])
+        self.assertEqual(gui_config.shadowed_by_env({"SUBSMELT_WHISPER_PORT": ""}), [])
+        self.assertIsNone(gui_config.shadowed_note([]))
+
+    def test_all_three_shadowing_variables_are_covered(self):
+        names = gui_config.shadowed_by_env({
+            "SUBSMELT_WHISPER_HOST": "0.0.0.0",
+            "SUBSMELT_WHISPER_PORT": "8001",
+            "SUBSMELT_WHISPER_TOKEN": "s3cr3t",
+        })
+        self.assertEqual(len(names), 3)
+
 
 if __name__ == "__main__":
     unittest.main()

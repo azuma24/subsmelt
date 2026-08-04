@@ -22,6 +22,7 @@ import os
 import subprocess
 import sys
 import threading
+import time
 import urllib.request
 import webbrowser
 from pathlib import Path
@@ -45,11 +46,13 @@ except Exception:  # pragma: no cover
 
 try:
     from server_launch import ServerExecutableNotFound, resolve_server_command
-    from gui_config import bind_warning, config_path, load_config, save_config
+    from gui_config import (bind_warning, config_path, load_config, save_config,
+                            shadowed_by_env, shadowed_note)
 except ImportError:  # pragma: no cover - this file's dir isn't on sys.path yet
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from server_launch import ServerExecutableNotFound, resolve_server_command
-    from gui_config import bind_warning, config_path, load_config, save_config
+    from gui_config import (bind_warning, config_path, load_config, save_config,
+                            shadowed_by_env, shadowed_note)
 
 DATA_DIR = Path(os.environ.get("SUBSMELT_DATA_DIR", r"C:\ProgramData\SubSmelt"))
 LOG_DIR = DATA_DIR / "logs"
@@ -165,9 +168,19 @@ class WhisperGuiApp:
     # showing "Running" indefinitely.
     STATUS_POLL_MS = 3_000
 
+    # Readiness is confirmed by /health, not by the process merely surviving:
+    # CUDA probing and importing app.main can outlast any fixed grace period, so
+    # a bind failure may arrive after the process looks alive.
+    READY_TIMEOUT_SECONDS = 45
+    READY_POLL_SECONDS = 1.0
+
     def __init__(self) -> None:
         self.ctl = ServerController()
         self.config_file = config_path()
+        # Settings the RUNNING child was launched with. The form fields can be
+        # edited while it runs, and the status line must describe the process,
+        # not whatever is currently typed.
+        self.active: "tuple[str, str, str] | None" = None
         self.saved = load_config(self.config_file)
         self.root = tk.Tk()
         self.root.title("SubSmelt Whisper Backend")
@@ -247,6 +260,9 @@ class WhisperGuiApp:
         saved_note = ""
         try:
             save_config(self.config_file, host, port, token)
+            note = shadowed_note(shadowed_by_env())
+            if note:
+                saved_note = f"\n\nNote: {note}"
         except OSError as exc:
             saved_note = f"\n\nCould not save {self.config_file}: {exc}"
 
@@ -259,8 +275,45 @@ class WhisperGuiApp:
         self._set_info("".join(lines) + saved_note)
         self._refresh_status()
 
+    def _await_ready(self, host: str, port: str, token: str) -> None:
+        """Poll /health until the server answers or the process dies."""
+        deadline = self.READY_TIMEOUT_SECONDS
+        while deadline > 0:
+            if not self.ctl.running():
+                self._post_info(
+                    f"Start failed: the server exited before answering /health.\n"
+                    f"Port {port} may already be in use by the installed service — "
+                    "check the log in the data directory."
+                )
+                self._post(self._refresh_status)
+                return
+            if fetch_health(host, port, token) is not None:
+                self._post_info(f"Ready: serving on http://{host}:{port}")
+                self._post(self._refresh_status)
+                return
+            time.sleep(self.READY_POLL_SECONDS)
+            deadline -= self.READY_POLL_SECONDS
+
+        self._post_info(
+            f"Started, but /health did not answer within {self.READY_TIMEOUT_SECONDS}s. "
+            "The process is alive — it may still be loading, or it may be wedged. "
+            "Open the logs to check."
+        )
+
+    def _post(self, fn) -> None:
+        """Run a callback on the Tk thread."""
+        try:
+            self.root.after(0, fn)
+        except Exception:  # pragma: no cover - window already destroyed
+            pass
+
+    def _post_info(self, text: str) -> None:
+        self._post(lambda: self._set_info(text))
+
     def on_stop(self) -> None:
-        self._set_info(f"Stop: {self.ctl.stop()}")
+        message = self.ctl.stop()
+        self.active = None
+        self._set_info(f"Stop: {message}")
         self._refresh_status()
 
     def on_restart(self) -> None:
@@ -301,12 +354,21 @@ class WhisperGuiApp:
 
     def _refresh_status(self) -> None:
         running = self.ctl.running()
-        host, port = self.host_var.get(), self.port_var.get()
-        if running:
+        if running and self.active:
+            # Describe the process that is actually running, not the form: the
+            # fields can be edited mid-run, and a status built from them would
+            # claim a new port, or drop the no-token warning, without anything
+            # having changed about the running server.
+            host, port, token = self.active
             label = f"● Running on {host}:{port}"
-            if bind_warning(host, self.token_var.get()):
+            if bind_warning(host, token):
                 label += "  ⚠ no token"
+            if (host, port, token) != (self.host_var.get(), self.port_var.get(), self.token_var.get()):
+                label += "  (restart to apply edits)"
+        elif running:
+            label = "● Running"
         else:
+            self.active = None
             label = "○ Stopped"
         self.status_var.set(label)
         if self._tray_icon is not None:
