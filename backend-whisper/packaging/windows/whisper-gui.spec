@@ -16,7 +16,7 @@ SPEC_DIR = os.path.abspath(SPECPATH)
 TRAY_DIR = os.path.join(SPEC_DIR, "tray")
 GUI_SCRIPT = os.path.join(TRAY_DIR, "whisper_gui.py")
 
-hiddenimports = ["server_launch"]
+hiddenimports = ["server_launch", "gui_config"]
 hiddenimports += collect_submodules("pystray")
 hiddenimports += collect_submodules("PIL")
 
@@ -24,9 +24,10 @@ block_cipher = None
 
 a = Analysis(
     [GUI_SCRIPT],
-    # TRAY_DIR on pathex + the explicit hiddenimport keep server_launch.py
-    # (the run_server.exe resolver shared with the other controller) in the
-    # frozen bundle; without it the app cannot locate the server.
+    # TRAY_DIR on pathex + the explicit hiddenimports keep server_launch.py (the
+    # run_server.exe resolver) and gui_config.py (settings persistence) in the
+    # frozen bundle; without them the app cannot locate the server or save
+    # anything.
     pathex=[SPEC_DIR, TRAY_DIR],
     binaries=[],
     datas=[],
