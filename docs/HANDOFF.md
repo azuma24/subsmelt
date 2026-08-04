@@ -1,6 +1,6 @@
 # SubSmelt — Handoff
 
-Orientation for someone picking this project up. Current as of **0.5.3**
+Orientation for someone picking this project up. Current as of **0.5.4**
 (2026-08-04). For what changed when, see [../CHANGELOG.md](../CHANGELOG.md); for
 how to run it, see [../README.md](../README.md).
 
@@ -107,8 +107,8 @@ Releasing is two tags on the same commit:
 ```bash
 # bump package.json, backend-whisper/app/version.py and
 # backend-whisper/packaging/windows/installer.iss together
-git tag -a v0.5.3 -m "SubSmelt 0.5.3" && git tag -a whisper-v0.5.3 -m "..."
-git push origin v0.5.3 whisper-v0.5.3
+git tag -a v0.5.4 -m "SubSmelt 0.5.4" && git tag -a whisper-v0.5.4 -m "..."
+git push origin v0.5.4 whisper-v0.5.4
 ```
 
 `v*` publishes the Docker image; `whisper-v*` builds the Windows installer and

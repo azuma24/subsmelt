@@ -5,12 +5,18 @@ version number and are released together (`v0.5.2` and `whisper-v0.5.2`).
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.5.4] — 2026-08-04
+
 ### Fixed
 
 - **Whisper control window (Windows).** It reported "started" as soon as `Popen`
   returned, so a server that could not bind — usually a port conflict with the
-  installed service — looked like a success; it now waits briefly and reports the
-  exit code and the likely cause. Status is polled every 3s instead of only on a
+  installed service — looked like a success. It now reports the exit code when the
+  process dies immediately, and otherwise polls `/health` in the background until
+  the server answers or exits, because CUDA probing and importing `app.main` can
+  outlast any fixed grace period. Status is polled every 3s instead of only on a
   button press, so a crashed backend no longer reads as "● Running". Host, port
   and token persist to `config.json` instead of being session-only. That file is
   resolved the way the launcher resolves it (`SUBSMELT_WHISPER_CONFIG` first,

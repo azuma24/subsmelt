@@ -13,7 +13,7 @@ Known gaps with no work in progress. Context and rationale live in
 
 ## Refactoring
 
-Sizes as of 0.5.3; the guideline is 200–400 lines typical, 800 max.
+Sizes as of 0.5.4; the guideline is 200–400 lines typical, 800 max.
 
 - [ ] `src/client/features/settings/MediaSourcesPanel.tsx` — 941 lines
 - [ ] `backend-whisper/app/main.py` — 816 lines
