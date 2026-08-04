@@ -23,13 +23,8 @@ Sizes as of 0.5.3; the guideline is 200–400 lines typical, 800 max.
 
 ## Whisper control app (Windows)
 
-- [ ] Status is never polled — a crashed backend still shows "● Running"
-- [ ] A failed start reports success: `Popen` returning is treated as "started",
-      so a port conflict with the installed service goes unnoticed
-- [ ] Host/port/token are session-only; the GUI never writes `config.json`, which
-      `run_server` now reads by default
-- [ ] No warning when binding `0.0.0.0` without a token
 - [ ] No model manager or diagnostics (the tray app has both)
+- [ ] Log tail in the window — it opens the folder, but cannot show the file
 
 ## Product / UX
 

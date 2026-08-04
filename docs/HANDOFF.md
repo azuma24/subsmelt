@@ -153,10 +153,8 @@ Nothing here is in progress. Ordered by what I would fix first.
 
 The [UX/IA audit](UX-IA-Audit.md) covers Dashboard, Tasks, Logs, Settings and the
 shell, but predates the **Whisper and Convert pages** — the two newest screens
-have never had that pass. Open items from the more recent review: the Whisper GUI
-does not poll status (a crashed backend still shows "Running"), reports a
-successful start even when the child exits immediately, does not persist its
-host/port/token, and does not warn about a wide bind with no token.
+have never had that pass. The Whisper control window still lacks the model manager and diagnostics the
+tray app has, and cannot tail the log (it opens the folder instead).
 
 ---
 
