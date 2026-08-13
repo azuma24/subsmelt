@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SubSmelt — UI Redesign Concept</title>
+<style>
+  :root {
+    --bg: #07090f;
+    --surface: #0d1117;
+    --surface-2: #161b27;
+    --surface-3: #1c2333;
+    --border: #21283a;
+    --border-sub: #171e2c;
+    --text: #e6edf3;
+    --text-2: #8b949e;
+    --text-3: #484f58;
+    --accent: #4493f8;
+    --accent-dim: rgba(68,147,248,0.1);
+    --accent-border: rgba(68,147,248,0.25);
+    --green: #3fb950;
+    --green-dim: rgba(63,185,80,0.1);
+    --green-border: rgba(63,185,80,0.28);
+    --yellow: #d29922;
+    --yellow-dim: rgba(210,153,34,0.1);
+    --yellow-border: rgba(210,153,34,0.28);
+    --red: #f85149;
+    --red-dim: rgba(248,81,73,0.1);
+    --red-border: rgba(248,81,73,0.28);
+    --r: 8px;
+    --r-lg: 12px;
+    --sidebar: 212px;
+    --topbar: 50px;
+    --font: -apple-system,BlinkMacSystemFont,"Segoe UI","SF Pro Text",sans-serif;
+    --mono: "SF Mono","Cascadia Code","Fira Code",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  button{font-family:var(--font);cursor:pointer}
+  input,select,textarea{font-family:var(--font)}
+  ::-webkit-scrollbar{width:5px;height:5px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+  /* ── VIEWPORT SWITCHER ── */
+  .viewport-bar{
+    position:fixed;top:0;left:0;right:0;height:40px;
+    background:#000;border-bottom:1px solid #1a1a2e;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    z-index:9999;
+  }
+  .vp-btn{
+    padding:4px 14px;border-radius:6px;font-size:12px;font-weight:500;
+    border:1px solid #2a2a3e;background:transparent;color:#666;transition:all .15s;
+  }
+  .vp-btn.active{background:#1a1a3e;border-color:#4493f8;color:#4493f8}
+  .vp-label{font-size:11px;color:#444;margin:0 4px}
+
+  .sim-wrap{
+    position:fixed;top:40px;left:0;right:0;bottom:0;
+    display:flex;align-items:flex-start;justify-content:center;
+    background:#030508;overflow:auto;
+  }
+
+  /* Desktop frame */
+  .desktop-frame{
+    width:100%;max-width:1280px;min-height:calc(100vh - 40px);
+    background:var(--bg);display:flex;flex-direction:column;
+  }
+
+  /* Mobile frame */
+  .mobile-frame{
+    width:390px;min-height:844px;margin:20px auto;
+    background:var(--bg);border-radius:44px;
+    border:2px solid #1c1c2e;
+    box-shadow:0 0 0 6px #0a0a14,0 20px 60px rgba(0,0,0,.8);
+    overflow:hidden;position:relative;display:flex;flex-direction:column;
+  }
+  .mobile-notch{
+    height:36px;background:#0d1117;display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .mobile-notch-pill{width:100px;height:8px;background:#1c1c2e;border-radius:4px}
+  .mobile-body{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .mobile-home-bar{height:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .mobile-home-pill{width:120px;height:4px;background:#1c1c2e;border-radius:2px}
+
+  /* ── SHARED LAYOUT ── */
+  .app-desktop{display:flex;height:100%;overflow:hidden;flex:1}
+  .app-mobile{display:flex;flex-direction:column;height:100%;overflow:hidden}
+
+  /* ── DESKTOP SIDEBAR ── */
+  .sidebar{
+    width:var(--sidebar);background:var(--surface);
+    border-right:1px solid var(--border);
+    display:flex;flex-direction:column;flex-shrink:0;
+  }
+  .sidebar-logo{
+    height:var(--topbar);padding:0 14px;
+    border-bottom:1px solid var(--border);
+    display:flex;align-items:center;gap:10px;
+  }
+  .logo-mark{
+    width:28px;height:28px;border-radius:7px;flex-shrink:0;
+    background:linear-gradient(135deg,#4493f8 0%,#a371f7 100%);
+    display:flex;align-items:center;justify-content:center;font-size:14px;
+  }
+  .logo-name{font-size:14px;font-weight:600;letter-spacing:-.3px}
+  .logo-ver{font-size:10px;color:var(--text-3);font-family:var(--mono)}
+
+  .sidebar-nav{flex:1;padding:6px;overflow-y:auto}
+  .nav-item{
+    display:flex;align-items:center;gap:9px;
+    padding:7px 9px;border-radius:var(--r);
+    font-size:13px;color:var(--text-2);
+    cursor:pointer;transition:all .1s;margin-bottom:2px;
+    border:1px solid transparent;position:relative;text-decoration:none;
+  }
+  .nav-item:hover{background:var(--surface-2);color:var(--text)}
+  .nav-item.active{background:var(--accent-dim);color:var(--accent);border-color:var(--accent-border)}
+  .nav-icon{width:18px;text-align:center;font-size:14px;flex-shrink:0}
+  .nav-badge{
+    margin-left:auto;background:var(--red);color:#fff;
+    font-size:9px;font-weight:700;border-radius:9px;
+    padding:1px 5px;min-width:17px;text-align:center;
+  }
+
+  .sidebar-foot{
+    padding:10px 12px;border-top:1px solid var(--border);
+  }
+  .foot-row{display:flex;align-items:center;gap:7px;padding:4px 2px;font-size:11.5px;color:var(--text-2);margin-bottom:3px}
+  .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+  .dot-green{background:var(--green);box-shadow:0 0 0 3px var(--green-dim)}
+  .dot-gray{background:var(--text-3)}
+  .dot-pulse{animation:dpulse 2s infinite}
+  @keyframes dpulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .model-pill{
+    display:flex;align-items:center;gap:5px;margin-top:5px;
+    background:var(--surface-2);border:1px solid var(--border);
+    border-radius:7px;padding:4px 8px;
+  }
+  .model-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0}
+  .model-name{font-size:10px;font-family:var(--mono);color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* ── TOPBAR ── */
+  .topbar{
+    height:var(--topbar);flex-shrink:0;
+    border-bottom:1px solid var(--border);
+    background:var(--surface);
+    display:flex;align-items:center;gap:10px;padding:0 18px;
+  }
+  .topbar-title{font-size:14px;font-weight:600;flex:1}
+  .topbar-actions{display:flex;gap:7px;align-items:center}
+
+  /* ── MAIN CONTENT ── */
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+  .scroll{flex:1;overflow-y:auto;padding:18px}
+  .scroll-sm{flex:1;overflow-y:auto;padding:14px}
+
+  /* ── BUTTONS ── */
+  .btn{
+    display:inline-flex;align-items:center;gap:5px;
+    padding:6px 13px;border-radius:var(--r);font-size:12.5px;
+    font-weight:500;border:none;transition:all .1s;white-space:nowrap;
+  }
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:hover{filter:brightness(1.1)}
+  .btn-ghost{background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
+  .btn-ghost:hover{background:var(--surface-3);border-color:#2d3748}
+  .btn-success{background:var(--green);color:#000;font-weight:600}
+  .btn-danger{background:transparent;color:var(--red);border:1px solid var(--red-border)}
+  .btn-sm{padding:4px 10px;font-size:11.5px}
+  .btn-icon{padding:5px 7px}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+
+  /* ── STATS ── */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 14px}
+  .stat-val{font-size:24px;font-weight:700;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+  .c-blue{color:var(--accent)}.c-green{color:var(--green)}.c-yellow{color:var(--yellow)}.c-red{color:var(--red)}
+  .stat-lbl{font-size:11.5px;color:var(--text-2);margin-top:3px}
+
+  /* ── ACTIVE JOB ── */
+  .active-job{
+    background:var(--surface);border:1px solid var(--accent-border);
+    border-radius:var(--r-lg);padding:13px 16px;margin-bottom:16px;
+    display:flex;align-items:center;gap:14px;
+  }
+  .aj-info{flex:1;min-width:0}
+  .aj-label{font-size:10px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:var(--accent);margin-bottom:3px}
+  .aj-file{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .aj-meta{font-size:11.5px;color:var(--text-2);margin-top:2px}
+  .aj-prog{flex:1;max-width:200px}
+  .prog-track{height:3px;background:var(--surface-3);border-radius:3px;overflow:hidden}
+  .prog-fill{height:3px;border-radius:3px;background:var(--accent);transition:width .4s}
+  .prog-txt{font-size:11px;color:var(--text-2);text-align:right;margin-top:4px;font-family:var(--mono)}
+
+  /* ── TOOLBAR ── */
+  .toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+  .toolbar-l{display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap}
+  .toolbar-r{display:flex;align-items:center;gap:8px}
+
+  .ftabs{display:flex;gap:1px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:2px}
+  .ftab{padding:3px 11px;border-radius:6px;font-size:12px;cursor:pointer;color:var(--text-2);transition:all .1s}
+  .ftab.active{background:var(--surface-3);color:var(--text);font-weight:500}
+  .ftab:hover:not(.active){color:var(--text)}
+  .ftab-count{color:var(--text-3);font-size:11px;margin-left:2px}
+  .ftab-count.red{color:var(--red)}
+
+  .srch{position:relative}
+  .srch-ico{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text-3);pointer-events:none}
+
+  /* ── TABLE ── */
+  .tbl{width:100%;border-collapse:collapse}
+  .tbl th{text-align:left;font-size:10.5px;font-weight:600;color:var(--text-3);letter-spacing:.4px;text-transform:uppercase;padding:7px 10px;border-bottom:1px solid var(--border)}
+  .tbl td{padding:9px 10px;border-bottom:1px solid var(--border-sub);vertical-align:middle}
+  .tbl tr.job-r:hover td{background:var(--surface-2)}
+  .tbl tr.job-r.active-r td{background:var(--accent-dim)}
+
+  .fcell{display:flex;align-items:center;gap:7px;min-width:0}
+  .ficon{font-size:13px;opacity:.5;flex-shrink:0}
+  .fname{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
+  .fpath{font-size:10.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
+
+  .bdg{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:16px;font-size:11.5px;font-weight:500}
+  .bdg-done{background:var(--green-dim);color:var(--green);border:1px solid var(--green-border)}
+  .bdg-active{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border)}
+  .bdg-pending{background:var(--surface-2);color:var(--text-2);border:1px solid var(--border)}
+  .bdg-error{background:var(--red-dim);color:var(--red);border:1px solid var(--red-border)}
+
+  .mprog{display:flex;align-items:center;gap:7px;min-width:90px}
+  .mbar{flex:1;height:3px;background:var(--surface-3);border-radius:3px}
+  .mfill{height:3px;border-radius:3px;background:var(--accent)}
+  .mpct{font-size:10.5px;color:var(--text-2);font-family:var(--mono);width:26px;text-align:right}
+
+  .row-acts{display:flex;gap:3px;opacity:0;transition:opacity .1s}
+  .job-r:hover .row-acts{opacity:1}
+  .icobtn{background:none;border:none;padding:3px 5px;border-radius:5px;color:var(--text-2);font-size:13px;transition:all .1s}
+  .icobtn:hover{background:var(--surface-3);color:var(--text)}
+
+  /* ── CHIP ── */
+  .chip{display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:14px;font-size:11px;background:var(--surface-3);color:var(--text-2);border:1px solid var(--border)}
+
+  /* ── SETTINGS LAYOUT ── */
+  .settings-wrap{display:grid;grid-template-columns:185px 1fr;gap:18px;max-width:920px}
+  .settings-sidenav{display:flex;flex-direction:column;gap:1px}
+  .snav-item{
+    padding:6px 9px;border-radius:var(--r);font-size:13px;
+    color:var(--text-2);cursor:pointer;transition:all .1s;border:1px solid transparent;
+  }
+  .snav-item:hover{background:var(--surface-2);color:var(--text)}
+  .snav-item.active{background:var(--accent-dim);color:var(--accent);border-color:var(--accent-border)}
+
+  /* ── SETTINGS SECTION CARD ── */
+  .sec{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--r-lg);padding:18px;margin-bottom:10px;
+  }
+  .sec-title{font-size:13.5px;font-weight:600;margin-bottom:3px}
+  .sec-desc{font-size:11.5px;color:var(--text-2);margin-bottom:14px}
+
+  /* ── FORM ── */
+  .frow{margin-bottom:13px}
+  .flbl{display:block;font-size:12px;font-weight:500;color:var(--text-2);margin-bottom:5px}
+  .fmuted{font-size:10.5px;color:var(--text-3);margin-top:4px}
+  .fi{
+    width:100%;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:var(--r);padding:7px 11px;color:var(--text);
+    font-size:13px;font-family:var(--font);outline:none;transition:border-color .1s;
+  }
+  .fi:focus{border-color:var(--accent)}
+  .fi-sel{
+    appearance:none;cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%238b949e' d='M5 7L0.5 2h9z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 9px center;
+    padding-right:26px;
+  }
+  .fi-ta{font-family:var(--mono);font-size:12px;resize:vertical;line-height:1.6}
+  .fi-sm{padding:5px 9px;font-size:12px}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+
+  /* ── TOGGLE ── */
+  .tgl{position:relative;width:34px;height:19px;flex-shrink:0}
+  .tgl input{opacity:0;width:0;height:0;position:absolute}
+  .tgl-track{position:absolute;inset:0;background:var(--surface-3);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .2s}
+  .tgl input:checked+.tgl-track{background:var(--accent);border-color:var(--accent)}
+  .tgl-thumb{position:absolute;top:2px;left:2px;width:13px;height:13px;background:#fff;border-radius:50%;pointer-events:none;transition:all .2s}
+  .tgl input:checked~.tgl-thumb{left:17px}
+
+  /* ── TOGGLE ROW ── */
+  .tgl-row{
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--surface-2);border:1px solid var(--border);
+    border-radius:var(--r);padding:10px 12px;gap:12px;
+  }
+  .tgl-row-info .tgl-row-title{font-size:13px;font-weight:500;color:var(--text)}
+  .tgl-row-info .tgl-row-desc{font-size:11px;color:var(--text-2);margin-top:2px}
+
+  /* ── PROVIDER TABS ── */
+  .ptabs{display:flex;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:14px}
+  .ptab{
+    flex:1;padding:7px 4px;text-align:center;font-size:12px;font-weight:500;
+    cursor:pointer;border:none;background:var(--surface-2);color:var(--text-2);
+    transition:all .1s;display:flex;flex-direction:column;align-items:center;gap:2px;
+  }
+  .ptab:not(:last-child){border-right:1px solid var(--border)}
+  .ptab:hover:not(.active){background:var(--surface-3);color:var(--text)}
+  .ptab.active{background:var(--accent-dim);color:var(--accent)}
+  .ptab-icon{font-size:15px}
+  .ptab-label{font-size:10.5px}
+
+  /* ── HEALTH CHIPS ── */
+  .health-row{display:flex;gap:5px;flex-wrap:wrap}
+  .hchip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:14px;font-size:11px}
+  .hchip-ok{background:var(--green-dim);color:var(--green);border:1px solid var(--green-border)}
+  .hchip-fail{background:var(--red-dim);color:var(--red);border:1px solid var(--red-border)}
+  .hchip-warn{background:var(--yellow-dim);color:var(--yellow);border:1px solid var(--yellow-border)}
+
+  /* ── INFO BANNER ── */
+  .info-banner{
+    background:rgba(68,147,248,.07);border:1px solid var(--accent-border);
+    border-radius:var(--r);padding:9px 12px;font-size:12px;color:#8bb8f8;
+    margin-bottom:12px;display:flex;align-items:center;gap:6px;
+  }
+
+  /* ── FOLDER TREE ── */
+  .folder-scroll{max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r);padding:6px;background:var(--surface-2)}
+  .folder-row{
+    display:flex;align-items:center;gap:6px;padding:5px 7px;
+    border-radius:6px;border:1px solid transparent;margin-bottom:2px;
+    transition:all .1s;
+  }
+  .folder-row.f-included{border-color:rgba(68,147,248,.2);background:var(--accent-dim)}
+  .folder-row.f-excluded{border-color:var(--red-border);background:var(--red-dim)}
+  .folder-row.f-default{border-color:var(--border-sub);background:var(--surface-3)}
+  .folder-row.f-default:hover{background:var(--surface-2)}
+  .folder-expand{width:20px;height:20px;border-radius:5px;border:none;background:transparent;color:var(--text-3);font-size:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .folder-expand:hover{background:var(--surface-2)}
+  .folder-name{font-size:12.5px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .folder-path{font-size:10px;color:var(--text-3);font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .folder-counts{display:flex;flex-wrap:wrap;gap:3px;margin-top:2px}
+  .fcount{font-size:9.5px;padding:1px 5px;border-radius:8px;background:var(--surface);color:var(--text-2);border:1px solid var(--border)}
+  .fcount-pend{background:var(--yellow-dim);color:var(--yellow);border-color:var(--yellow-border)}
+  .fcount-done{background:var(--green-dim);color:var(--green);border-color:var(--green-border)}
+  .fcount-err{background:var(--red-dim);color:var(--red);border-color:var(--red-border)}
+  .fbadge{font-size:9px;padding:1px 6px;border-radius:8px;font-weight:600;margin-left:auto;flex-shrink:0}
+  .fbadge-inc{background:rgba(68,147,248,.15);color:var(--accent)}
+  .fbadge-exc{background:var(--red-dim);color:var(--red)}
+  .fbadge-no{background:var(--surface);color:var(--text-3)}
+  .folder-actions{display:flex;gap:4px;flex-shrink:0}
+  .excl-btn{font-size:10px;padding:2px 7px;border-radius:5px;border:none;background:var(--red-dim);color:var(--red);cursor:pointer}
+  .excl-btn:hover{background:rgba(248,81,73,.2)}
+  .allow-btn{font-size:10px;padding:2px 7px;border-radius:5px;border:none;background:var(--surface-3);color:var(--text-2);cursor:pointer}
+  .allow-btn:hover{background:var(--surface-2)}
+
+  /* ── SCAN MODE RADIOS ── */
+  .radio-opt{
+    display:flex;align-items:flex-start;gap:9px;
+    border:1px solid var(--border);border-radius:var(--r);
+    background:var(--surface-2);padding:9px 11px;margin-bottom:6px;cursor:pointer;
+    transition:border-color .1s;
+  }
+  .radio-opt:has(input:checked){border-color:var(--accent-border);background:var(--accent-dim)}
+  .radio-opt input{margin-top:3px;accent-color:var(--accent)}
+
+  /* ── SCAN PROFILES ── */
+  .profile-chip{
+    display:flex;align-items:center;gap:6px;
+    background:var(--surface-2);border:1px solid var(--border);
+    border-radius:var(--r);padding:5px 8px;
+  }
+  .profile-name{font-size:12px;font-weight:500}
+  .profile-meta{font-size:10px;color:var(--text-3)}
+
+  /* ── SUMMARY BOX ── */
+  .summary-box{
+    background:var(--surface-2);border:1px solid var(--border);
+    border-radius:var(--r);padding:10px 12px;
+  }
+  .summary-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3);margin-bottom:3px}
+  .summary-val{font-size:13px;color:var(--text-2)}
+
+  /* ── MOBILE BOTTOM NAV ── */
+  .mob-nav{
+    height:58px;border-top:1px solid var(--border);
+    background:var(--surface);display:flex;align-items:center;
+    flex-shrink:0;
+  }
+  .mob-nav-item{
+    flex:1;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:3px;font-size:10.5px;
+    color:var(--text-2);cursor:pointer;padding:6px 0;position:relative;
+    border:none;background:none;transition:color .1s;
+  }
+  .mob-nav-item.active{color:var(--accent)}
+  .mob-nav-icon{font-size:19px}
+  .mob-badge{
+    position:absolute;top:5px;right:calc(50% - 18px);
+    background:var(--red);color:#fff;font-size:9px;font-weight:700;
+    border-radius:8px;padding:0 4px;min-width:15px;text-align:center;line-height:15px;
+  }
+
+  /* ── MOBILE TOPBAR ── */
+  .mob-topbar{
+    height:44px;flex-shrink:0;background:var(--surface);
+    border-bottom:1px solid var(--border);
+    display:flex;align-items:center;padding:0 14px;gap:8px;
+  }
+  .mob-topbar-title{font-size:15px;font-weight:600;flex:1}
+
+  /* ── MOBILE JOB CARD ── */
+  .mob-card{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--r-lg);padding:11px 12px;margin-bottom:8px;
+  }
+  .mob-card.mc-active{border-color:var(--accent-border);background:var(--accent-dim)}
+  .mob-card.mc-error{border-color:var(--red-border)}
+  .mob-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px}
+  .mob-fname{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;flex:1}
+  .mob-meta{font-size:11px;color:var(--text-2);margin-bottom:7px}
+  .mob-foot{display:flex;align-items:center;gap:8px}
+  .mob-acts{display:flex;gap:4px;margin-left:auto}
+
+  /* ── MISC ── */
+  hr{border:none;border-top:1px solid var(--border);margin:13px 0}
+  .sep{width:1px;height:18px;background:var(--border)}
+  .ver{text-align:center;font-size:10.5px;color:var(--text-3);padding:10px 0}
+
+  /* ── TWEAKS PANEL ── */
+  .tweaks-btn{
+    position:fixed;bottom:14px;right:14px;z-index:9998;
+    background:var(--surface-2);border:1px solid var(--border);
+    border-radius:16px;padding:6px 12px;font-size:11.5px;color:var(--text-2);
+    cursor:pointer;display:flex;align-items:center;gap:5px;
+    box-shadow:0 4px 16px rgba(0,0,0,.5);
+  }
+  .tweaks-btn:hover{background:var(--surface-3);color:var(--text)}
+  .tweaks-panel{
+    position:fixed;bottom:46px;right:14px;z-index:9998;
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--r-lg);padding:14px;width:210px;
+    box-shadow:0 8px 32px rgba(0,0,0,.6);display:none;
+  }
+  .tweaks-panel.open{display:block}
+  .tweaks-head{font-size:10.5px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:9px}
+  .tweaks-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;font-size:12.5px;color:var(--text-2)}
+  .tweaks-note{font-size:10.5px;color:var(--text-3);margin-top:5px}
+
+  /* ── PAGE VISIBILITY ── */
+  .page{display:none}
+  .page.active{display:flex;flex-direction:column;height:100%}
+
+  .settings-page-inner{display:none}
+  .settings-page-inner.active{display:block}
+</style>
+</head>
+<body>
+
+<!-- Viewport switcher bar -->
+<div class="viewport-bar">
+  <span class="vp-label">View as:</span>
+  <button class="vp-btn active" onclick="setVP('desktop')">🖥 Desktop</button>
+  <button class="vp-btn" onclick="setVP('mobile')">📱 Mobile</button>
+</div>
+
+<div class="sim-wrap" id="sim-wrap">
+
+  <!-- ═══════════════════════════ DESKTOP ═══════════════════════════ -->
+  <div class="desktop-frame" id="vp-desktop">
+    <div class="app-desktop" style="flex:1;min-height:0">
+
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <div class="sidebar-logo">
+          <div class="logo-mark">🎬</div>
+          <div>
+            <div class="logo-name">SubSmelt</div>
+            <div class="logo-ver">v0.3.13</div>
+          </div>
+        </div>
+        <nav class="sidebar-nav">
+          <div class="nav-item active" onclick="showDesktopPage('dashboard',this)">
+            <span class="nav-icon">⊞</span> Dashboard
+            <span class="nav-badge" id="d-err-badge">3</span>
+          </div>
+          <div class="nav-item" onclick="showDesktopPage('translations',this)">
+            <span class="nav-icon">🌐</span> Translations
+          </div>
+          <div class="nav-item" onclick="showDesktopPage('logs',this)">
+            <span class="nav-icon">📋</span> Logs
+          </div>
+          <div class="nav-item" onclick="showDesktopPage('settings',this)">
+            <span class="nav-icon">⚙</span> Settings
+          </div>
+        </nav>
+        <div class="sidebar-foot">
+          <div class="foot-row"><div class="dot dot-green dot-pulse"></div><span>Queue running</span></div>
+          <div class="foot-row"><div class="dot dot-gray"></div><span style="color:var(--text-3)">Watcher off</span></div>
+          <div class="model-pill"><div class="model-dot"></div><span class="model-name">gemini-2.5-flash</span></div>
+        </div>
+      </aside>
+
+      <!-- MAIN -->
+      <div class="main">
+
+        <!-- ── DASHBOARD PAGE ── -->
+        <div class="page active" id="dp-dashboard">
+          <div class="topbar">
+            <span class="topbar-title">Dashboard</span>
+            <div class="topbar-actions">
+              <button class="btn btn-ghost btn-sm">Scan Folders</button>
+              <div class="sep"></div>
+              <button class="btn btn-ghost btn-sm">⏹ Stop</button>
+              <button class="btn btn-primary btn-sm">▶ Run All</button>
+            </div>
+          </div>
+          <div class="scroll">
+            <div class="stats">
+              <div class="stat"><div class="stat-val c-blue">247</div><div class="stat-lbl">Total</div></div>
+              <div class="stat"><div class="stat-val c-green">211</div><div class="stat-lbl">Done</div></div>
+              <div class="stat"><div class="stat-val c-yellow">33</div><div class="stat-lbl">Pending</div></div>
+              <div class="stat"><div class="stat-val c-red">3</div><div class="stat-lbl">Errors</div></div>
+            </div>
+            <div class="active-job" id="d-active-job">
+              <div class="aj-info">
+                <div class="aj-label">Translating now</div>
+                <div class="aj-file">How This Ex-Meta L8 Engineer Ships 40 PRs a Day.srt → chi</div>
+                <div class="aj-meta">Gemini 2.5 Flash · 33 pending</div>
+              </div>
+              <div class="aj-prog">
+                <div class="prog-track"><div class="prog-fill" style="width:62%"></div></div>
+                <div class="prog-txt">62% · 430/695 cues</div>
+              </div>
+            </div>
+            <div class="toolbar">
+              <div class="toolbar-l">
+                <div class="ftabs" id="d-ftabs">
+                  <div class="ftab active" onclick="switchFTab(this,event)">All<span class="ftab-count"> 247</span></div>
+                  <div class="ftab" onclick="switchFTab(this,event)">Active<span class="ftab-count"> 1</span></div>
+                  <div class="ftab" onclick="switchFTab(this,event)">Pending<span class="ftab-count"> 33</span></div>
+                  <div class="ftab" onclick="switchFTab(this,event)">Done<span class="ftab-count"> 211</span></div>
+                  <div class="ftab" onclick="switchFTab(this,event)">Errors<span class="ftab-count red"> 3</span></div>
+                </div>
+                <div class="srch">
+                  <span class="srch-ico">🔍</span>
+                  <input class="fi fi-sm" style="padding-left:28px;width:190px" placeholder="Search files…">
+                </div>
+              </div>
+              <div class="toolbar-r">
+                <button class="btn btn-ghost btn-sm">Clear All</button>
+              </div>
+            </div>
+            <table class="tbl">
+              <thead><tr>
+                <th style="width:30px"><input type="checkbox"></th>
+                <th>File</th>
+                <th style="width:75px">Target</th>
+                <th style="width:88px">Status</th>
+                <th style="width:125px">Progress</th>
+                <th style="width:58px">Time</th>
+                <th style="width:72px"></th>
+              </tr></thead>
+              <tbody>
+                <tr class="job-r active-r">
+                  <td><input type="checkbox" checked></td>
+                  <td><div class="fcell"><span class="ficon">📄</span><div><div class="fname">How This Ex-Meta L8 Engineer Ships 40 PRs a Day.srt</div><div class="fpath">/media/youtube/tech</div></div></div></td>
+                  <td><span class="chip">chi</span></td>
+                  <td><span class="bdg bdg-active">● Active</span></td>
+                  <td><div class="mprog"><div class="mbar"><div class="mfill" style="width:62%"></div></div><span class="mpct">62%</span></div></td>
+                  <td style="font-size:11.5px;color:var(--text-2);font-family:var(--mono)">4m 12s</td>
+                  <td><div class="row-acts"><button class="icobtn">👁</button><button class="icobtn">📋</button></div></td>
+                </tr>
+                <tr class="job-r">
+                  <td><input type="checkbox"></td>
+                  <td><div class="fcell"><span class="ficon">📄</span><div><div class="fname">Building a Second Brain with AI — Full Tutorial.srt</div><div class="fpath">/media/youtube/productivity</div></div></div></td>
+                  <td><span class="chip">chi</span></td>
+                  <td><span class="bdg bdg-pending">● Pending</span></td>
+                  <td><div class="mprog"><div class="mbar"><div class="mfill" style="width:0"></div></div><span class="mpct" style="color:var(--text-3)">—</span></div></td>
+                  <td style="color:var(--text-3)">—</td>
+                  <td><div class="row-acts"><button class="icobtn">📌</button><button class="icobtn">🗑</button></div></td>
+                </tr>
+                <tr class="job-r">
+                  <td><input type="checkbox"></td>
+                  <td><div class="fcell"><span class="ficon">📄</span><div><div class="fname">The Architecture of Modern AI Systems.srt</div><div class="fpath">/media/youtube/tech</div></div></div></td>
+                  <td><span class="chip">chi</span></td>
+                  <td><span class="bdg bdg-done">✓ Done</span></td>
+                  <td><div class="mprog"><div class="mbar"><div class="mfill" style="width:100%;background:var(--green)"></div></div><span class="mpct" style="color:var(--green)">100%</span></div></td>
+                  <td style="font-size:11.5px;color:var(--text-2);font-family:var(--mono)">2m 04s</td>
+                  <td><div class="row-acts"><button class="icobtn">👁</button><button class="icobtn">🗑</button></div></td>
+                </tr>
+                <tr class="job-r">
+                  <td><input type="checkbox"></td>
+                  <td><div class="fcell"><span class="ficon">📄</span><div><div class="fname">Startups That Survive: Founder Lessons.srt</div><div class="fpath">/media/youtube/business</div></div></div></td>
+                  <td><span class="chip">chi</span></td>
+                  <td><span class="bdg bdg-error">✕ Error</span></td>
+                  <td><div class="mprog"><div class="mbar"><div class="mfill" style="width:38%;background:var(--red)"></div></div><span class="mpct" style="color:var(--red)">38%</span></div></td>
+                  <td style="font-size:11.5px;color:var(--text-2);font-family:var(--mono)">1m 47s</td>
+                  <td><div class="row-acts"><button class="icobtn">↺</button><button class="icobtn">📋</button><button class="icobtn">🗑</button></div></td>
+                </tr>
+                <tr class="job-r">
+                  <td><input type="checkbox"></td>
+                  <td><div class="fcell"><span class="ficon">📄</span><div><div class="fname">100 Days of Code — Final Results.srt</div><div class="fpath">/media/youtube/coding</div></div></div></td>
+                  <td><span class="chip">chi</span></td>
+                  <td><span class="bdg bdg-done">✓ Done</span></td>
+                  <td><div class="mprog"><div class="mbar"><div class="mfill" style="width:100%;background:var(--green)"></div></div><span class="mpct" style="color:var(--green)">100%</span></div></td>
+                  <td style="font-size:11.5px;color:var(--text-2);font-family:var(--mono)">53s</td>
+                  <td><div class="row-acts"><button class="icobtn">👁</button><button class="icobtn">🗑</button></div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── TRANSLATIONS PAGE ── -->
+        <div class="page" id="dp-translations">
+          <div class="topbar"><span class="topbar-title">Translations</span><div class="topbar-actions"><button class="btn btn-primary btn-sm">+ Add language</button></div></div>
+          <div class="scroll">
+            <p style="font-size:12.5px;color:var(--text-2);margin-bottom:14px">Each enabled target generates one output file per source subtitle.</p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:9px">
+              <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 14px;display:flex;align-items:center;gap:11px;cursor:pointer" onmouseenter="this.style.borderColor='#2d3748'" onmouseleave="this.style.borderColor='var(--border)'">
+                <span style="font-size:22px">🇹🇼</span>
+                <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:500">Traditional Chinese</div><div style="font-size:10.5px;color:var(--text-3);font-family:var(--mono);margin-top:1px">chi · {{name}}.chi.srt</div></div>
+                <div style="width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0"></div>
+              </div>
+              <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 14px;display:flex;align-items:center;gap:11px;cursor:pointer" onmouseenter="this.style.borderColor='#2d3748'" onmouseleave="this.style.borderColor='var(--border)'">
+                <span style="font-size:22px">🇨🇳</span>
+                <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:500">Simplified Chinese</div><div style="font-size:10.5px;color:var(--text-3);font-family:var(--mono);margin-top:1px">chs · {{name}}.chs.srt</div></div>
+                <div style="width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0"></div>
+              </div>
+              <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 14px;display:flex;align-items:center;gap:11px;cursor:pointer;border-style:dashed;opacity:.5">
+                <span style="font-size:22px;opacity:.3">＋</span>
+                <div><div style="font-size:13.5px;font-weight:500;color:var(--text-2)">Add a language</div><div style="font-size:11px;color:var(--text-3)">Click to configure</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── LOGS PAGE ── -->
+        <div class="page" id="dp-logs">
+          <div class="topbar">
+            <span class="topbar-title">Logs</span>
+            <div class="topbar-actions">
+              <select class="fi fi-sel fi-sm" style="width:105px">
+                <option>All levels</option><option>Info</option><option>Warn</option><option>Error</option>
+              </select>
+              <select class="fi fi-sel fi-sm" style="width:115px">
+                <option>All categories</option><option>queue</option><option>translate</option><option>system</option>
+              </select>
+              <div class="sep"></div>
+              <button class="btn btn-danger btn-sm">Clear logs</button>
+            </div>
+          </div>
+          <div class="scroll" style="padding-top:12px">
+            <div style="font-family:var(--mono);font-size:12px">
+              <div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--border-sub)"><span style="color:var(--text-3);width:55px;flex-shrink:0">13:22:04</span><span style="color:var(--accent);width:40px;flex-shrink:0;font-weight:600">INFO</span><span style="color:var(--text-3);width:60px;flex-shrink:0">queue</span><span style="color:var(--text-2)">Model context probe: maxCtx=262144 analysisLines=3495 parallelChunks=2 timeoutMs=300000</span></div>
+              <div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--border-sub)"><span style="color:var(--text-3);width:55px;flex-shrink:0">13:22:01</span><span style="color:var(--accent);width:40px;flex-shrink:0;font-weight:600">INFO</span><span style="color:var(--text-3);width:60px;flex-shrink:0">queue</span><span style="color:var(--text-2)">Started: How This Ex-Meta L8 Engineer Ships 40 PRs a Day.srt → chi (job #3415)</span></div>
+              <div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--border-sub)"><span style="color:var(--text-3);width:55px;flex-shrink:0">13:19:44</span><span style="color:var(--accent);width:40px;flex-shrink:0;font-weight:600">INFO</span><span style="color:var(--text-3);width:60px;flex-shrink:0">translate</span><span style="color:var(--text-2)">Done: 100 Days of Code — Final Results.srt → chi in 53s</span></div>
+              <div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--border-sub)"><span style="color:var(--text-3);width:55px;flex-shrink:0">13:18:51</span><span style="color:var(--yellow);width:40px;flex-shrink:0;font-weight:600">WARN</span><span style="color:var(--text-3);width:60px;flex-shrink:0">translate</span><span style="color:var(--text-2)">Retry 1/2: did not match schema (backoff 1150ms) — job #3412</span></div>
+              <div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--border-sub)"><span style="color:var(--text-3);width:55px;flex-shrink:0">13:17:39</span><span style="color:var(--red);width:40px;flex-shrink:0;font-weight:600">ERR</span><span style="color:var(--text-3);width:60px;flex-shrink:0">translate</span><span style="color:var(--text-2)">Failed: Startups That Survive.srt → chi: timeout after 300s</span></div>
+              <div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--border-sub)"><span style="color:var(--text-3);width:55px;flex-shrink:0">13:15:02</span><span style="color:var(--accent);width:40px;flex-shrink:0;font-weight:600">INFO</span><span style="color:var(--text-3);width:60px;flex-shrink:0">system</span><span style="color:var(--text-2)">Queue started · 33 jobs pending</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── SETTINGS PAGE ── -->
+        <div class="page" id="dp-settings">
+          <div class="topbar">
+            <span class="topbar-title">Settings</span>
+            <div class="topbar-actions">
+              <button class="btn btn-primary btn-sm">Save changes</button>
+            </div>
+          </div>
+          <div class="scroll">
+            <div class="settings-wrap">
+              <!-- settings side nav -->
+              <div class="settings-sidenav">
+                <div class="snav-item active" onclick="showSettingsSection(this,'llm')">LLM Connection</div>
+                <div class="snav-item" onclick="showSettingsSection(this,'engine')">Translation Engine</div>
+                <div class="snav-item" onclick="showSettingsSection(this,'sources')">Sources &amp; Monitoring</div>
+                <div class="snav-item" onclick="showSettingsSection(this,'stt')">Speech-to-Text</div>
+                <div class="snav-item" onclick="showSettingsSection(this,'iface')">Interface</div>
+              </div>
+
+              <!-- settings panels -->
+              <div>
+                <!-- LLM -->
+                <div class="settings-page-inner active" id="ds-llm">
+                  <div class="sec">
+                    <div class="sec-title">LLM Connection</div>
+                    <div class="sec-desc">Use a local self-hosted model, or connect to OpenAI, Anthropic, or Google Gemini.</div>
+                    <div class="ptabs" id="d-ptabs">
+                      <button class="ptab active" onclick="switchProvider(this,'local','d')"><span class="ptab-icon">🖥</span><span class="ptab-label">Local</span></button>
+                      <button class="ptab" onclick="switchProvider(this,'openai','d')"><span class="ptab-icon" style="font-size:13px;font-weight:700">⬡</span><span class="ptab-label">OpenAI</span></button>
+                      <button class="ptab" onclick="switchProvider(this,'anthropic','d')"><span class="ptab-icon">◈</span><span class="ptab-label">Anthropic</span></button>
+                      <button class="ptab" onclick="switchProvider(this,'gemini','d')"><span class="ptab-icon">✦</span><span class="ptab-label">Gemini</span></button>
+                    </div>
+                    <!-- Local panel -->
+                    <div id="d-prov-local">
+                      <div class="frow"><label class="flbl">API Type</label><select class="fi fi-sel" style="max-width:320px"><option>OpenAI-compatible (Ollama, vLLM, GPUStack)</option><option>LM Studio API</option></select></div>
+                      <div class="frow"><label class="flbl">Endpoint URL</label><input class="fi" value="http://192.168.1.25:1234/v1" style="max-width:320px"></div>
+                      <div class="frow"><label class="flbl">API Key <span style="color:var(--text-3)">(optional)</span></label><div style="display:flex;gap:7px;max-width:320px"><input class="fi" type="password" placeholder="Leave blank for local LLMs" style="flex:1"><button class="btn btn-ghost btn-icon">👁</button></div></div>
+                      <div class="frow">
+                        <div style="display:flex;align-items:center;justify-content:space-between;max-width:320px;margin-bottom:5px"><label class="flbl" style="margin:0">Model</label><button class="btn btn-ghost btn-sm" style="font-size:10.5px;padding:3px 8px">↻ Fetch models</button></div>
+                        <select class="fi fi-sel" style="max-width:320px"><option>google/gemma-4-12b</option><option>Qwen/Qwen2.5-72B-Instruct</option></select>
+                      </div>
+                      <div class="frow"><label class="flbl">Temperature: <span style="color:var(--accent);font-family:var(--mono)">0.7</span></label><input type="range" min="0" max="2" step="0.1" value="0.7" style="width:100%;max-width:320px;accent-color:var(--accent)"><p class="fmuted" style="max-width:320px">Sampling temperature. Lower = precise, higher = creative.</p></div>
+                      <div class="health-row" style="margin-bottom:12px">
+                        <span class="hchip hchip-ok">✓ Endpoint</span>
+                        <span class="hchip hchip-ok">✓ Model configured</span>
+                        <span class="hchip hchip-ok">✓ Model available</span>
+                      </div>
+                      <button class="btn btn-ghost btn-sm">Test connection</button>
+                    </div>
+                    <!-- OpenAI panel -->
+                    <div id="d-prov-openai" style="display:none">
+                      <div class="info-banner">🔒 API key stored locally and sent only to api.openai.com</div>
+                      <div class="frow"><label class="flbl">API Key</label><div style="display:flex;gap:7px;max-width:320px"><input class="fi" type="password" placeholder="sk-..." style="flex:1"><button class="btn btn-ghost btn-icon">👁</button></div><p class="fmuted">Get your key at platform.openai.com/api-keys</p></div>
+                      <div class="frow">
+                        <div style="display:flex;align-items:center;justify-content:space-between;max-width:320px;margin-bottom:5px"><label class="flbl" style="margin:0">Model</label><button class="btn btn-ghost btn-sm" style="font-size:10.5px;padding:3px 8px">↻ Fetch models</button></div>
+                        <div style="max-width:320px;border:1px dashed var(--border);border-radius:var(--r);padding:9px 11px;font-size:12px;color:var(--text-3)">Save your API key and click ↻ Fetch models</div>
+                        <p class="fmuted">Recommended: gpt-4o, gpt-4o-mini, gpt-4.1, gpt-4.1-mini</p>
+                      </div>
+                      <div class="frow"><label class="flbl">Temperature: <span style="color:var(--accent);font-family:var(--mono)">0.7</span></label><input type="range" min="0" max="2" step="0.1" value="0.7" style="width:100%;max-width:320px;accent-color:var(--accent)"></div>
+                      <button class="btn btn-ghost btn-sm">Test connection</button>
+                    </div>
+                    <!-- Anthropic panel -->
+                    <div id="d-prov-anthropic" style="display:none">
+                      <div class="info-banner">🔒 API key stored locally and sent only to api.anthropic.com</div>
+                      <div class="frow"><label class="flbl">API Key</label><div style="display:flex;gap:7px;max-width:320px"><input class="fi" type="password" placeholder="sk-ant-..." style="flex:1"><button class="btn btn-ghost btn-icon">👁</button></div><p class="fmuted">Get your key at console.anthropic.com/keys</p></div>
+                      <div class="frow">
+                        <div style="display:flex;align-items:center;justify-content:space-between;max-width:320px;margin-bottom:5px"><label class="flbl" style="margin:0">Model</label><button class="btn btn-ghost btn-sm" style="font-size:10.5px;padding:3px 8px">↻ Fetch models</button></div>
+                        <div style="max-width:320px;border:1px dashed var(--border);border-radius:var(--r);padding:9px 11px;font-size:12px;color:var(--text-3)">Save your API key and click ↻ Fetch models</div>
+                        <p class="fmuted">Recommended: claude-3-5-sonnet-20241022, claude-3-5-haiku-20241022</p>
+                      </div>
+                      <div class="frow"><label class="flbl">Temperature: <span style="color:var(--accent);font-family:var(--mono)">0.7</span></label><input type="range" min="0" max="2" step="0.1" value="0.7" style="width:100%;max-width:320px;accent-color:var(--accent)"></div>
+                      <button class="btn btn-ghost btn-sm">Test connection</button>
+                    </div>
+                    <!-- Gemini panel -->
+                    <div id="d-prov-gemini" style="display:none">
+                      <div class="info-banner">🔒 API key stored locally and sent only to generativelanguage.googleapis.com</div>
+                      <div class="frow"><label class="flbl">API Key</label><div style="display:flex;gap:7px;max-width:320px"><input class="fi" type="password" placeholder="AIza..." style="flex:1"><button class="btn btn-ghost btn-icon">👁</button></div><p class="fmuted">Get your key at aistudio.google.com/apikey</p></div>
+                      <div class="frow">
+                        <div style="display:flex;align-items:center;justify-content:space-between;max-width:320px;margin-bottom:5px"><label class="flbl" style="margin:0">Model</label><button class="btn btn-ghost btn-sm" style="font-size:10.5px;padding:3px 8px">↻ Fetch models</button></div>
+                        <select class="fi fi-sel" style="max-width:320px"><option>gemini-2.5-flash</option><option>gemini-2.5-pro</option><option>gemini-2.0-flash</option></select>
+                        <p class="fmuted">Recommended: gemini-2.5-flash · gemini-2.5-pro</p>
+                      </div>
+                      <div class="frow"><label class="flbl">Temperature: <span style="color:var(--accent);font-family:var(--mono)">0.7</span></label><input type="range" min="0" max="2" step="0.1" value="0.7" style="width:100%;max-width:320px;accent-color:var(--accent)"></div>
+                      <button class="btn btn-ghost btn-sm">Test connection</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- TRANSLATION ENGINE -->
+                <div class="settings-page-inner" id="ds-engine">
+                  <div class="sec">
+                    <div class="sec-title">Translation Engine</div>
+                    <div class="sec-desc">Controls how subtitle chunks are sent to the LLM.</div>
+                    <div class="frow">
+                      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px"><label class="flbl" style="margin:0">System Prompt</label><button style="font-size:10px;background:none;border:none;color:var(--text-3);cursor:pointer">Reset to default</button></div>
+                      <textarea class="fi fi-ta" rows="7">You are a professional subtitle translator.
+Translate all subtitles into {{lang}}.
+Note: {{additional}}
+Do not merge sentences, translate them individually.
+Return translated subtitles in same order and length as input.</textarea>
+                    </div>
+                    <div class="frow"><label class="flbl">Additional Context</label><textarea class="fi fi-ta" rows="3" placeholder="Character names, glossary, style notes — injected into {{additional}}"></textarea></div>
+                    <div class="grid2" style="max-width:480px;margin-bottom:13px">
+                      <div><label class="flbl">Chunk Size</label><input class="fi" type="number" value="20"><p class="fmuted">Lines per LLM call</p></div>
+                      <div><label class="flbl">Context Window</label><input class="fi" type="number" value="5"><p class="fmuted">Surrounding context lines</p></div>
+                      <div><label class="flbl">Parallel Chunks</label><input class="fi" type="number" value="2"><p class="fmuted">1–8 simultaneous chunks</p></div>
+                      <div><label class="flbl">Request Timeout (s)</label><input class="fi" type="number" value="300"><p class="fmuted">Raise for slow thinking models</p></div>
+                    </div>
+                    <div class="tgl-row" style="max-width:480px">
+                      <div class="tgl-row-info"><div class="tgl-row-title">Plain-text mode</div><div class="tgl-row-desc">Disable tool calls — recommended for most models</div></div>
+                      <label class="tgl"><input type="checkbox" checked><div class="tgl-track"></div><div class="tgl-thumb"></div></label>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- SOURCES & MONITORING — full fidelity -->
+                <div class="settings-page-inner" id="ds-sources">
+                  <div class="sec">
+                    <div class="sec-title">Sources &amp; Monitoring</div>
+                    <div class="sec-desc">Media folders mounted into the container. Control which ones are scanned.</div>
+                    <p style="font-size:12.5px;color:var(--text-2);margin-bottom:14px">These are the folders mounted into the container. Pick a scan mode below to control which ones are scanned.</p>
+
+                    <!-- Scan Profiles -->
+                    <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:13px">
+                      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px">
+                        <div><div style="font-size:13px;font-weight:500">Scan profiles</div><p class="fmuted" style="margin:0">Save and reload folder selections for common library slices.</p></div>
+                        <div style="display:flex;gap:6px;flex-shrink:0">
+                          <input class="fi fi-sm" placeholder="Anime, Movies…" style="width:130px">
+                          <button class="btn btn-primary btn-sm">Save profile</button>
+                        </div>
+                      </div>
+                      <div style="display:flex;flex-wrap:wrap;gap:6px">
+                        <div class="profile-chip"><div><div class="profile-name">Anime</div><div class="profile-meta">Recursive</div></div><button class="btn btn-ghost btn-sm" style="font-size:10px">Load</button><button style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:11px;padding:2px 4px">✕</button></div>
+                        <div class="profile-chip"><div><div class="profile-name">Movies</div><div class="profile-meta">Selected folders</div></div><button class="btn btn-ghost btn-sm" style="font-size:10px">Load</button><button style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:11px;padding:2px 4px">✕</button></div>
+                      </div>
+                    </div>
+
+                    <!-- Detected folders -->
+                    <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:13px">
+                      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:9px">
+                        <div><div style="font-size:13px;font-weight:500">Detected media folders</div><div style="font-size:11px;color:var(--text-2)">12 detected under <span style="font-family:var(--mono);color:var(--text-3)">/media</span></div></div>
+                        <button style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer">↻ Refresh</button>
+                      </div>
+                      <div style="display:flex;gap:7px;margin-bottom:8px;flex-wrap:wrap">
+                        <input class="fi fi-sm" placeholder="Search folders and subfolders…" style="flex:1;min-width:160px">
+                        <button class="btn btn-ghost btn-sm" style="font-size:10.5px">Select visible</button>
+                        <button class="btn btn-ghost btn-sm" style="font-size:10.5px">Clear selected</button>
+                        <button class="btn btn-ghost btn-sm" style="font-size:10.5px">Clear excluded</button>
+                      </div>
+                      <div class="folder-scroll">
+                        <div class="folder-row f-included">
+                          <button class="folder-expand">▾</button>
+                          <input type="checkbox" checked style="width:14px;height:14px;accent-color:var(--accent);flex-shrink:0">
+                          <div style="flex:1;min-width:0"><div class="folder-name">anime</div><div class="folder-path">/media/anime</div><div class="folder-counts"><span class="fcount">284 videos</span><span class="fcount">271 subtitles</span><span class="fcount-pend">12 pending</span><span class="fcount-done">242 done</span></div></div>
+                          <span class="fbadge fbadge-inc">Included</span>
+                        </div>
+                        <div class="folder-row f-default" style="padding-left:26px">
+                          <button class="folder-expand" style="opacity:.3" disabled></button>
+                          <input type="checkbox" checked style="width:14px;height:14px;accent-color:var(--accent);flex-shrink:0">
+                          <div style="flex:1;min-width:0"><div class="folder-name">naruto</div><div class="folder-path">/media/anime/naruto</div><div class="folder-counts"><span class="fcount">220 videos</span></div></div>
+                          <span class="fbadge fbadge-inc">Included</span>
+                        </div>
+                        <div class="folder-row f-excluded" style="padding-left:26px">
+                          <button class="folder-expand" style="opacity:.3" disabled></button>
+                          <input type="checkbox" style="width:14px;height:14px;accent-color:var(--accent);flex-shrink:0">
+                          <div style="flex:1;min-width:0"><div class="folder-name">filler-arcs</div><div class="folder-path">/media/anime/naruto/filler-arcs</div><div class="folder-counts"><span class="fcount">44 videos</span></div></div>
+                          <span class="fbadge fbadge-exc">Excluded</span>
+                          <div class="folder-actions"><button class="allow-btn">Allow</button></div>
+                        </div>
+                        <div class="folder-row f-included">
+                          <button class="folder-expand">▸</button>
+                          <input type="checkbox" checked style="width:14px;height:14px;accent-color:var(--accent);flex-shrink:0">
+                          <div style="flex:1;min-width:0"><div class="folder-name">movies</div><div class="folder-path">/media/movies</div><div class="folder-counts"><span class="fcount">189 videos</span><span class="fcount">150 subtitles</span><span class="fcount-done">138 done</span><span class="fcount-err">3 errors</span></div></div>
+                          <span class="fbadge fbadge-inc">Included</span>
+                          <div class="folder-actions"><button class="excl-btn">Exclude</button></div>
+                        </div>
+                        <div class="folder-row f-default">
+                          <button class="folder-expand">▸</button>
+                          <input type="checkbox" style="width:14px;height:14px;accent-color:var(--accent);flex-shrink:0">
+                          <div style="flex:1;min-width:0"><div class="folder-name">youtube</div><div class="folder-path">/media/youtube</div><div class="folder-counts"><span class="fcount">374 videos</span><span class="fcount">191 subtitles</span><span class="fcount-pend">21 pending</span></div></div>
+                          <span class="fbadge fbadge-no">Not included</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Scan mode -->
+                    <div class="frow">
+                      <label class="flbl">Scan Mode</label>
+                      <label class="radio-opt"><input type="radio" name="d-scan" checked><div><div style="font-size:13px">Recursive</div><p class="fmuted" style="margin:0">Scan all subfolders under the media mount</p></div></label>
+                      <label class="radio-opt"><input type="radio" name="d-scan"><div><div style="font-size:13px">Root only</div><p class="fmuted" style="margin:0">Scan only the top level of the media mount</p></div></label>
+                      <label class="radio-opt"><input type="radio" name="d-scan"><div><div style="font-size:13px">Selected folders</div><p class="fmuted" style="margin:0">Only scan the folders checked in the tree above</p></div></label>
+                    </div>
+
+                    <!-- Summary -->
+                    <div class="summary-box" style="margin-bottom:13px"><div class="summary-label">Scan summary</div><div class="summary-val">Scanning all 12 subfolders under /media, excluding 1 folder (filler-arcs)</div></div>
+
+                    <!-- Auto-translate toggle -->
+                    <div class="tgl-row" style="margin-bottom:9px">
+                      <div class="tgl-row-info"><div class="tgl-row-title">Auto-translate on scan</div><div class="tgl-row-desc">New jobs from a scan start translating automatically</div></div>
+                      <label class="tgl"><input type="checkbox" checked><div class="tgl-track"></div><div class="tgl-thumb"></div></label>
+                    </div>
+
+                    <!-- File watcher -->
+                    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:13px">
+                      <div><div style="font-size:13px;font-weight:500">File Watcher</div><div style="font-size:11px;color:var(--text-2);margin-top:2px">Auto-detect new subtitle files and add them to the queue</div></div>
+                      <button class="btn btn-ghost btn-sm">Start Watcher</button>
+                    </div>
+
+                    <!-- Extensions -->
+                    <div class="grid2" style="max-width:480px;margin-bottom:13px">
+                      <div><label class="flbl">Video extensions</label><input class="fi" value=".mkv,.mp4,.avi,.m4v,.ts,.wmv,.mov"><p class="fmuted">Comma-separated</p></div>
+                      <div><label class="flbl">Subtitle extensions</label><input class="fi" value=".srt,.ass,.ssa,.vtt"><p class="fmuted">Comma-separated</p></div>
+                    </div>
+                    <div style="max-width:480px"><label class="flbl">Auto-scan interval (minutes)</label><input class="fi" type="number" value="0" style="max-width:140px"><p class="fmuted">0 = disabled. Automatically trigger a scan on a schedule.</p></div>
+                  </div>
+                </div>
+
+                <!-- SPEECH-TO-TEXT — full fidelity -->
+                <div class="settings-page-inner" id="ds-stt">
+                  <div class="sec">
+                    <div class="sec-title">Speech-to-Text</div>
+                    <div class="sec-desc">Optional faster-whisper backend to generate source subtitles from audio/video when none exist.</div>
+
+                    <!-- Enable toggle -->
+                    <div class="tgl-row" style="margin-bottom:13px">
+                      <div class="tgl-row-info"><div class="tgl-row-title">Enable speech-to-text</div><div class="tgl-row-desc">Requires a faster-whisper sidecar container</div></div>
+                      <label class="tgl"><input type="checkbox" checked id="stt-enabled"><div class="tgl-track"></div><div class="tgl-thumb"></div></label>
+                    </div>
+
+                    <div class="frow"><label class="flbl">Backend URL</label><input class="fi" value="http://whisper-backend:8001" style="max-width:340px"><p class="fmuted">The faster-whisper HTTP backend. Must be reachable from the container.</p></div>
+
+                    <!-- Path mapping -->
+                    <div class="grid2" style="max-width:480px;margin-bottom:6px">
+                      <div><label class="flbl">Path map — from</label><input class="fi fi-sm" value="/media"><p class="fmuted">Path as seen by SubSmelt</p></div>
+                      <div><label class="flbl">Path map — to</label><input class="fi fi-sm" value="/srv/media"><p class="fmuted">Path as seen by the STT backend</p></div>
+                    </div>
+                    <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:8px 11px;font-size:11px;color:var(--text-2);font-family:var(--mono);margin-bottom:13px">/media/anime/Episode 01.mkv → /srv/media/anime/Episode 01.mkv</div>
+
+                    <!-- Model / language / output -->
+                    <div class="grid3" style="margin-bottom:13px">
+                      <div><label class="flbl">Whisper model</label><select class="fi fi-sel"><option>base</option><option selected>small</option><option>medium</option></select></div>
+                      <div><label class="flbl">Language</label><select class="fi fi-sel"><option value="auto" selected>Auto-detect</option><option>English</option><option>Japanese</option><option>Chinese</option><option>Korean</option></select></div>
+                      <div><label class="flbl">Output format</label><select class="fi fi-sel"><option selected>SRT</option><option>VTT</option><option>TXT</option></select></div>
+                    </div>
+
+                    <!-- Device / compute type / max concurrent -->
+                    <div class="grid3" style="margin-bottom:13px">
+                      <div><label class="flbl">Device</label><input class="fi fi-sm" value="cpu"><p class="fmuted">cpu, cuda, auto</p></div>
+                      <div><label class="flbl">Compute type</label><input class="fi fi-sm" value="int8"><p class="fmuted">int8, float16, float32</p></div>
+                      <div><label class="flbl">Max concurrent</label><input class="fi fi-sm" type="number" value="1"><p class="fmuted">Parallel transcriptions</p></div>
+                    </div>
+
+                    <!-- Line length / duration / merge -->
+                    <div class="grid3" style="margin-bottom:13px">
+                      <div><label class="flbl">Max line length</label><input class="fi fi-sm" type="number" value="42"><p class="fmuted">Characters per subtitle line</p></div>
+                      <div><label class="flbl">Max duration (s)</label><input class="fi fi-sm" type="number" value="6"><p class="fmuted">Max seconds per subtitle</p></div>
+                      <div style="padding-top:21px">
+                        <div class="tgl-row" style="padding:8px 10px">
+                          <div class="tgl-row-info"><div class="tgl-row-title" style="font-size:12px">Merge short segments</div><div class="tgl-row-desc" style="font-size:10.5px">Combine very short subtitles</div></div>
+                          <label class="tgl"><input type="checkbox"><div class="tgl-track"></div><div class="tgl-thumb"></div></label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Folder defaults & advanced STT JSON -->
+                    <div class="grid2" style="margin-bottom:13px">
+                      <div><label class="flbl">Per-folder defaults (JSON)</label><textarea class="fi fi-ta" rows="6" placeholder='[{"path":"/media/anime","language":"ja","model":"small"}]'>[]</textarea><p class="fmuted">Override model and language per folder path.</p></div>
+                      <div><label class="flbl">Advanced STT options (JSON)</label><textarea class="fi fi-ta" rows="6" placeholder='{"beam_size":5,"word_timestamps":true}'>{}</textarea><p class="fmuted">Passed directly to faster-whisper. E.g. beam_size, initial_prompt.</p></div>
+                    </div>
+
+                    <!-- VAD toggle -->
+                    <div class="tgl-row" style="margin-bottom:13px">
+                      <div class="tgl-row-info"><div class="tgl-row-title">Use VAD filter</div><div class="tgl-row-desc">Voice activity detection removes silence — recommended</div></div>
+                      <label class="tgl"><input type="checkbox" checked><div class="tgl-track"></div><div class="tgl-thumb"></div></label>
+                    </div>
+
+                    <!-- Missing subtitle / low RAM -->
+                    <div class="grid2" style="max-width:480px;margin-bottom:13px">
+                      <div><label class="flbl">When subtitle is missing</label>
+                        <select class="fi fi-sel">
+                          <option>Ask</option>
+                          <option selected>Auto-transcribe</option>
+                          <option>Auto-transcribe &amp; translate</option>
+                        </select>
+                      </div>
+                      <div><label class="flbl">When RAM is low</label>
+                        <select class="fi fi-sel">
+                          <option>Ask</option>
+                          <option selected>Downgrade model</option>
+                          <option>Skip</option>
+                          <option>Run anyway</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <!-- Readiness panel (static mockup) -->
+                    <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;margin-bottom:13px">
+                      <div style="font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:7px;text-transform:uppercase;letter-spacing:.4px">Backend readiness</div>
+                      <div class="health-row">
+                        <span class="hchip hchip-ok">✓ Backend reachable</span>
+                        <span class="hchip hchip-ok">✓ Model loaded</span>
+                        <span class="hchip hchip-warn">⚠ Low RAM (4.2 GB free)</span>
+                      </div>
+                    </div>
+
+                    <button class="btn btn-ghost btn-sm">Test speech-to-text</button>
+                  </div>
+                </div>
+
+                <!-- INTERFACE -->
+                <div class="settings-page-inner" id="ds-iface">
+                  <div class="sec">
+                    <div class="sec-title">Interface</div>
+                    <div class="sec-desc">Choose how SubSmelt should feel across this browser.</div>
+                    <div class="frow"><label class="flbl">Language</label><select class="fi fi-sel" style="max-width:240px"><option>English</option><option>繁體中文</option><option>简体中文</option><option>日本語</option><option>한국어</option><option>Français</option><option>Deutsch</option><option>Español</option></select><p class="fmuted">Saved in this browser and applied immediately.</p></div>
+                  </div>
+                </div>
+
+              </div><!-- end settings panels -->
+            </div><!-- end settings-wrap -->
+            <div class="ver">SubSmelt v0.3.13</div>
+          </div>
+        </div>
+
+      </div><!-- end .main -->
+    </div>
+  </div><!-- end desktop-frame -->
+
+
+  <!-- ═══════════════════════════ MOBILE ═══════════════════════════ -->
+  <div class="mobile-frame" id="vp-mobile" style="display:none">
+    <div class="mobile-notch"><div class="mobile-notch-pill"></div></div>
+    <div class="mobile-body">
+
+      <!-- MOBILE PAGES -->
+      <div class="page active" id="mp-dashboard" style="flex:1">
+        <div class="mob-topbar">
+          <span class="mob-topbar-title">Dashboard</span>
+          <button class="btn btn-ghost btn-sm" style="font-size:11.5px;padding:4px 10px">Scan</button>
+          <button class="btn btn-primary btn-sm" style="font-size:11.5px;padding:4px 10px">▶ Run All</button>
+        </div>
+        <div class="scroll-sm" style="flex:1">
+          <!-- Stats 2x2 on mobile -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:13px">
+            <div class="stat"><div class="stat-val c-blue" style="font-size:20px">247</div><div class="stat-lbl">Total</div></div>
+            <div class="stat"><div class="stat-val c-green" style="font-size:20px">211</div><div class="stat-lbl">Done</div></div>
+            <div class="stat"><div class="stat-val c-yellow" style="font-size:20px">33</div><div class="stat-lbl">Pending</div></div>
+            <div class="stat"><div class="stat-val c-red" style="font-size:20px">3</div><div class="stat-lbl">Errors</div></div>
+          </div>
+          <!-- Active job banner -->
+          <div class="mob-card mc-active" style="margin-bottom:12px">
+            <div class="aj-label">Translating now</div>
+            <div style="font-size:12.5px;font-weight:600;margin:3px 0">How This Ex-Meta L8 Engineer Ships 40 PRs a Day.srt → chi</div>
+            <div class="aj-meta">Gemini 2.5 Flash</div>
+            <div class="aj-prog" style="max-width:100%;margin-top:8px">
+              <div class="prog-track"><div class="prog-fill" style="width:62%"></div></div>
+              <div class="prog-txt" style="text-align:left">62% · 430/695 cues · 33 pending</div>
+            </div>
+          </div>
+          <!-- Filter strip -->
+          <div class="ftabs" style="margin-bottom:11px;overflow-x:auto">
+            <div class="ftab active" onclick="switchFTab(this,event)">All</div>
+            <div class="ftab" onclick="switchFTab(this,event)">Active</div>
+            <div class="ftab" onclick="switchFTab(this,event)">Pending</div>
+            <div class="ftab" onclick="switchFTab(this,event)">Done</div>
+            <div class="ftab" onclick="switchFTab(this,event)">Errors<span class="ftab-count red"> 3</span></div>
+          </div>
+          <!-- Job cards -->
+          <div class="mob-card mc-active">
+            <div class="mob-card-head"><div class="mob-fname">How This Ex-Meta L8 Engineer Ships 40 PRs a Day.srt</div><span class="bdg bdg-active" style="flex-shrink:0;font-size:10.5px">Active</span></div>
+            <div class="mob-meta">chi · Gemini 2.5 Flash</div>
+            <div class="mob-foot">
+              <div class="mprog" style="flex:1"><div class="mbar"><div class="mfill" style="width:62%"></div></div><span class="mpct">62%</span></div>
+              <div class="mob-acts"><button class="icobtn">👁</button><button class="icobtn">📋</button></div>
+            </div>
+          </div>
+          <div class="mob-card">
+            <div class="mob-card-head"><div class="mob-fname">Building a Second Brain with AI — Full Tutorial.srt</div><span class="bdg bdg-pending" style="flex-shrink:0;font-size:10.5px">Pending</span></div>
+            <div class="mob-meta">chi</div>
+            <div class="mob-foot">
+              <div style="display:flex;gap:5px;margin-left:auto">
+                <button class="btn btn-ghost btn-sm" style="font-size:11px">📌 Pin</button>
+                <button class="icobtn">🗑</button>
+              </div>
+            </div>
+          </div>
+          <div class="mob-card">
+            <div class="mob-card-head"><div class="mob-fname">The Architecture of Modern AI Systems.srt</div><span class="bdg bdg-done" style="flex-shrink:0;font-size:10.5px">Done</span></div>
+            <div class="mob-meta">chi · 2m 04s</div>
+            <div class="mob-foot">
+              <div class="mprog" style="flex:1"><div class="mbar"><div class="mfill" style="width:100%;background:var(--green)"></div></div><span class="mpct" style="color:var(--green)">100%</span></div>
+              <div class="mob-acts"><button class="icobtn">👁</button></div>
+            </div>
+          </div>
+          <div class="mob-card mc-error">
+            <div class="mob-card-head"><div class="mob-fname">Startups That Survive: Founder Lessons.srt</div><span class="bdg bdg-error" style="flex-shrink:0;font-size:10.5px">Error</span></div>
+            <div class="mob-meta">chi · Timeout after 300s</div>
+            <div class="mob-foot">
+              <div class="mprog" style="flex:1"><div class="mbar"><div class="mfill" style="width:38%;background:var(--red)"></div></div><span class="mpct" style="color:var(--red)">38%</span></div>
+              <div class="mob-acts"><button class="btn btn-ghost btn-sm" style="font-size:11px">↺ Retry</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="mp-translations" style="flex:1">
+        <div class="mob-topbar"><span class="mob-topbar-title">Translations</span><button class="btn btn-primary btn-sm" style="font-size:11.5px">+ Add</button></div>
+        <div class="scroll-sm">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:12px;display:flex;align-items:center;gap:10px">
+              <span style="font-size:22px">🇹🇼</span>
+              <div style="flex:1"><div style="font-size:13px;font-weight:500">Traditional Chinese</div><div style="font-size:10.5px;color:var(--text-3);font-family:var(--mono)">chi · {{name}}.chi.srt</div></div>
+              <div style="width:7px;height:7px;border-radius:50%;background:var(--green)"></div>
+            </div>
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:12px;display:flex;align-items:center;gap:10px">
+              <span style="font-size:22px">🇨🇳</span>
+              <div style="flex:1"><div style="font-size:13px;font-weight:500">Simplified Chinese</div><div style="font-size:10.5px;color:var(--text-3);font-family:var(--mono)">chs · {{name}}.chs.srt</div></div>
+              <div style="width:7px;height:7px;border-radius:50%;background:var(--green)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="mp-logs" style="flex:1">
+        <div class="mob-topbar"><span class="mob-topbar-title">Logs</span></div>
+        <div class="scroll-sm">
+          <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+            <select class="fi fi-sel fi-sm" style="flex:1"><option>All levels</option><option>Error</option><option>Warn</option></select>
+            <select class="fi fi-sel fi-sm" style="flex:1"><option>All categories</option><option>queue</option><option>translate</option></select>
+          </div>
+          <div style="font-family:var(--mono);font-size:11px">
+            <div style="padding:6px 0;border-bottom:1px solid var(--border-sub);color:var(--text-2)"><span style="color:var(--accent);font-weight:600">INFO </span><span style="color:var(--text-3)">13:22:04 queue </span>Context probe: maxCtx=262144 parallelChunks=2</div>
+            <div style="padding:6px 0;border-bottom:1px solid var(--border-sub);color:var(--text-2)"><span style="color:var(--accent);font-weight:600">INFO </span><span style="color:var(--text-3)">13:22:01 queue </span>Started: How This Ex-Meta…srt → chi</div>
+            <div style="padding:6px 0;border-bottom:1px solid var(--border-sub);color:var(--text-2)"><span style="color:var(--yellow);font-weight:600">WARN </span><span style="color:var(--text-3)">13:18:51 translate </span>Retry 1/2: schema mismatch</div>
+            <div style="padding:6px 0;border-bottom:1px solid var(--border-sub);color:var(--text-2)"><span style="color:var(--red);font-weight:600">ERR </span><span style="color:var(--text-3)">13:17:39 translate </span>Failed: timeout after 300s</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="mp-settings" style="flex:1;overflow:hidden;display:none;flex-direction:column">
+        <div class="mob-topbar"><span class="mob-topbar-title">Settings</span><button class="btn btn-primary btn-sm" style="font-size:11.5px">Save</button></div>
+        <div class="scroll-sm">
+          <!-- LLM Connection -->
+          <div class="sec" style="margin-bottom:10px">
+            <div class="sec-title">LLM Connection</div>
+            <div class="ptabs" id="m-ptabs" style="margin-bottom:12px">
+              <button class="ptab active" onclick="switchProvider(this,'local','m')"><span class="ptab-icon">🖥</span><span class="ptab-label">Local</span></button>
+              <button class="ptab" onclick="switchProvider(this,'openai','m')"><span class="ptab-icon" style="font-size:13px">⬡</span><span class="ptab-label">OpenAI</span></button>
+              <button class="ptab" onclick="switchProvider(this,'anthropic','m')"><span class="ptab-icon">◈</span><span class="ptab-label">Anthropic</span></button>
+              <button class="ptab" onclick="switchProvider(this,'gemini','m')"><span class="ptab-icon">✦</span><span class="ptab-label">Gemini</span></button>
+            </div>
+            <div id="m-prov-local">
+              <div class="frow"><label class="flbl">API Type</label><select class="fi fi-sel"><option>OpenAI-compatible</option><option>LM Studio API</option></select></div>
+              <div class="frow"><label class="flbl">Endpoint URL</label><input class="fi" value="http://192.168.1.25:1234/v1"></div>
+              <div class="frow"><label class="flbl">Model</label><div style="display:flex;gap:7px;margin-bottom:6px;justify-content:flex-end"><button class="btn btn-ghost btn-sm" style="font-size:10px">↻ Fetch</button></div><select class="fi fi-sel"><option>google/gemma-4-12b</option></select></div>
+              <div class="health-row" style="margin-bottom:11px"><span class="hchip hchip-ok">✓ Endpoint</span><span class="hchip hchip-ok">✓ Model</span></div>
+              <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center">Test connection</button>
+            </div>
+            <div id="m-prov-openai" style="display:none">
+              <div class="info-banner" style="font-size:11px">🔒 Sent only to api.openai.com</div>
+              <div class="frow"><label class="flbl">API Key</label><input class="fi" type="password" placeholder="sk-..."></div>
+              <div class="frow"><label class="flbl">Model</label><div style="display:flex;gap:7px;margin-bottom:6px;justify-content:flex-end"><button class="btn btn-ghost btn-sm" style="font-size:10px">↻ Fetch</button></div><div style="border:1px dashed var(--border);border-radius:var(--r);padding:8px;font-size:11.5px;color:var(--text-3)">Save key first, then fetch models</div></div>
+              <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:8px">Test connection</button>
+            </div>
+            <div id="m-prov-anthropic" style="display:none">
+              <div class="info-banner" style="font-size:11px">🔒 Sent only to api.anthropic.com</div>
+              <div class="frow"><label class="flbl">API Key</label><input class="fi" type="password" placeholder="sk-ant-..."></div>
+              <div class="frow"><label class="flbl">Model</label><div style="display:flex;gap:7px;margin-bottom:6px;justify-content:flex-end"><button class="btn btn-ghost btn-sm" style="font-size:10px">↻ Fetch</button></div><div style="border:1px dashed var(--border);border-radius:var(--r);padding:8px;font-size:11.5px;color:var(--text-3)">Save key first, then fetch models</div></div>
+              <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:8px">Test connection</button>
+            </div>
+            <div id="m-prov-gemini" style="display:none">
+              <div class="info-banner" style="font-size:11px">🔒 Sent only to generativelanguage.googleapis.com</div>
+              <div class="frow"><label class="flbl">API Key</label><input class="fi" type="password" placeholder="AIza..."></div>
+              <div class="frow"><label class="flbl">Model</label><div style="display:flex;gap:7px;margin-bottom:6px;justify-content:flex-end"><button class="btn btn-ghost btn-sm" style="font-size:10px">↻ Fetch</button></div><select class="fi fi-sel"><option>gemini-2.5-flash</option><option>gemini-2.5-pro</option></select></div>
+              <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:8px">Test connection</button>
+            </div>
+          </div>
+
+          <!-- Translation Engine (collapsed accordion on mobile) -->
+          <details class="sec" style="margin-bottom:10px">
+            <summary style="cursor:pointer;font-size:13.5px;font-weight:600;color:var(--text);list-style:none;display:flex;align-items:center;justify-content:space-between">Translation Engine <span style="font-size:12px;color:var(--text-3)">▸</span></summary>
+            <div style="margin-top:12px">
+              <div class="frow"><label class="flbl">Chunk Size</label><input class="fi" type="number" value="20"></div>
+              <div class="frow"><label class="flbl">Context Window</label><input class="fi" type="number" value="5"></div>
+              <div class="frow"><label class="flbl">Parallel Chunks</label><input class="fi" type="number" value="2"></div>
+              <div class="frow"><label class="flbl">Timeout (s)</label><input class="fi" type="number" value="300"></div>
+              <div class="tgl-row"><div class="tgl-row-info"><div class="tgl-row-title" style="font-size:12.5px">Plain-text mode</div></div><label class="tgl"><input type="checkbox" checked><div class="tgl-track"></div><div class="tgl-thumb"></div></label></div>
+            </div>
+          </details>
+
+          <!-- Sources (collapsed) -->
+          <details class="sec" style="margin-bottom:10px">
+            <summary style="cursor:pointer;font-size:13.5px;font-weight:600;color:var(--text);list-style:none;display:flex;align-items:center;justify-content:space-between">Sources &amp; Monitoring <span style="font-size:12px;color:var(--text-3)">▸</span></summary>
+            <div style="margin-top:12px">
+              <div class="tgl-row" style="margin-bottom:9px"><div class="tgl-row-info"><div class="tgl-row-title" style="font-size:12.5px">Auto-translate on scan</div></div><label class="tgl"><input type="checkbox" checked><div class="tgl-track"></div><div class="tgl-thumb"></div></label></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:9px 11px;margin-bottom:9px"><div style="font-size:12.5px;font-weight:500">File Watcher</div><button class="btn btn-ghost btn-sm" style="font-size:11px">Start</button></div>
+              <div class="frow"><label class="flbl">Scan mode</label><select class="fi fi-sel"><option>Recursive</option><option>Root only</option><option>Selected</option></select></div>
+            </div>
+          </details>
+
+          <!-- Speech-to-text (collapsed) -->
+          <details class="sec" style="margin-bottom:10px">
+            <summary style="cursor:pointer;font-size:13.5px;font-weight:600;color:var(--text);list-style:none;display:flex;align-items:center;justify-content:space-between">Speech-to-Text <span style="font-size:12px;color:var(--text-3)">▸</span></summary>
+            <div style="margin-top:12px">
+              <div class="tgl-row" style="margin-bottom:9px"><div class="tgl-row-info"><div class="tgl-row-title" style="font-size:12.5px">Enable STT</div><div class="tgl-row-desc">Requires faster-whisper sidecar</div></div><label class="tgl"><input type="checkbox" checked><div class="tgl-track"></div><div class="tgl-thumb"></div></label></div>
+              <div class="frow"><label class="flbl">Backend URL</label><input class="fi fi-sm" value="http://whisper-backend:8001"></div>
+              <div class="frow"><label class="flbl">Model</label><select class="fi fi-sel fi-sm"><option>base</option><option selected>small</option><option>medium</option></select></div>
+              <div class="frow"><label class="flbl">Language</label><select class="fi fi-sel fi-sm"><option selected>Auto-detect</option><option>English</option><option>Japanese</option></select></div>
+              <div class="frow"><label class="flbl">Missing subtitle</label><select class="fi fi-sel fi-sm"><option selected>Auto-transcribe</option><option>Ask</option></select></div>
+              <div class="frow"><label class="flbl">Low RAM</label><select class="fi fi-sel fi-sm"><option selected>Downgrade model</option><option>Ask</option></select></div>
+              <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center">Test STT</button>
+            </div>
+          </details>
+
+          <div class="ver">SubSmelt v0.3.13</div>
+        </div>
+      </div>
+
+      <!-- MOBILE BOTTOM NAV -->
+      <nav class="mob-nav">
+        <button class="mob-nav-item active" onclick="showMobilePage('dashboard',this)"><span class="mob-nav-icon">⊞</span><span>Dashboard</span><span class="mob-badge">3</span></button>
+        <button class="mob-nav-item" onclick="showMobilePage('translations',this)"><span class="mob-nav-icon">🌐</span><span>Languages</span></button>
+        <button class="mob-nav-item" onclick="showMobilePage('logs',this)"><span class="mob-nav-icon">📋</span><span>Logs</span></button>
+        <button class="mob-nav-item" onclick="showMobilePage('settings',this)"><span class="mob-nav-icon">⚙</span><span>Settings</span></button>
+      </nav>
+    </div>
+    <div class="mobile-home-bar"><div class="mobile-home-pill"></div></div>
+  </div>
+
+</div><!-- end sim-wrap -->
+
+<!-- Tweaks -->
+<button class="tweaks-btn" onclick="toggleTweaks()">🎛 Tweaks</button>
+<div class="tweaks-panel" id="tweaks">
+  <div class="tweaks-head">Prototype controls</div>
+  <div class="tweaks-row"><span>Active job banner</span><label class="tgl"><input type="checkbox" checked onchange="document.getElementById('d-active-job').style.display=this.checked?'flex':'none'"><div class="tgl-track"></div><div class="tgl-thumb"></div></label></div>
+  <div class="tweaks-row"><span>Error badge</span><label class="tgl"><input type="checkbox" checked onchange="document.getElementById('d-err-badge').style.display=this.checked?'inline-flex':'none'"><div class="tgl-track"></div><div class="tgl-thumb"></div></label></div>
+  <hr style="margin:8px 0;border-color:var(--border)">
+  <div class="tweaks-note">Use the view switcher at the top to toggle Desktop ↔ Mobile. Click nav items, filter tabs, provider tabs, and settings sub-nav to explore interactions.</div>
+</div>
+
+<script>
+  // Viewport switcher
+  function setVP(vp) {
+    document.querySelectorAll('.vp-btn').forEach(b=>b.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    document.getElementById('vp-desktop').style.display = vp==='desktop'?'flex':'none';
+    document.getElementById('vp-mobile').style.display  = vp==='mobile' ?'block':'none';
+    document.getElementById('sim-wrap').style.alignItems = vp==='mobile'?'flex-start':'stretch';
+  }
+  // init desktop fill height
+  document.getElementById('vp-desktop').style.display='flex';
+  document.getElementById('vp-desktop').style.minHeight='calc(100vh - 40px)';
+
+  // Desktop nav
+  function showDesktopPage(name, el) {
+    document.querySelectorAll('#vp-desktop .page').forEach(p=>p.classList.remove('active'));
+    document.getElementById('dp-'+name).classList.add('active');
+    document.querySelectorAll('.sidebar .nav-item').forEach(n=>n.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  // Mobile nav
+  function showMobilePage(name, el) {
+    document.querySelectorAll('#vp-mobile .page').forEach(p=>{p.classList.remove('active');p.style.display='none'});
+    const pg = document.getElementById('mp-'+name);
+    pg.classList.add('active');
+    pg.style.display='flex';
+    document.querySelectorAll('.mob-nav-item').forEach(n=>n.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  // Filter tabs
+  function switchFTab(el,e) {
+    e && e.stopPropagation();
+    const tabs = el.closest('.ftabs');
+    tabs.querySelectorAll('.ftab').forEach(t=>t.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  // Desktop settings sub-nav
+  function showSettingsSection(el, name) {
+    document.querySelectorAll('.settings-sidenav .snav-item').forEach(n=>n.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.settings-page-inner').forEach(p=>p.classList.remove('active'));
+    document.getElementById('ds-'+name).classList.add('active');
+  }
+
+  // Provider tabs
+  function switchProvider(el, name, prefix) {
+    const tabs = el.closest('.ptabs');
+    tabs.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
+    el.classList.add('active');
+    ['local','openai','anthropic','gemini'].forEach(p=>{
+      const panel = document.getElementById(prefix+'-prov-'+p);
+      if(panel) panel.style.display = p===name?'block':'none';
+    });
+  }
+
+  // Tweaks
+  function toggleTweaks() { document.getElementById('tweaks').classList.toggle('open'); }
+</script>
+</body>
+</html>

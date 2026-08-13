@@ -1,0 +1,69 @@
+# -*- mode: python ; coding: utf-8 -*-
+#
+# PyInstaller spec for the SubSmelt Whisper native GUI app (Tkinter + tray).
+#
+# WINDOWS-BUILD-ONLY. Produces a small WINDOWED onefile whisper-gui.exe (no
+# console). It launches/controls the sibling run_server.exe, so it must NOT
+# bundle the heavy server/CUDA deps — keep this tiny. build-local.ps1 copies it
+# into dist\whisper-server\ next to run_server.exe.
+#
+#     pyinstaller packaging\windows\whisper-gui.spec --clean --noconfirm
+import os
+
+from PyInstaller.utils.hooks import collect_submodules
+
+SPEC_DIR = os.path.abspath(SPECPATH)
+TRAY_DIR = os.path.join(SPEC_DIR, "tray")
+GUI_SCRIPT = os.path.join(TRAY_DIR, "whisper_gui.py")
+# backend-whisper/ — for app.version and app.token_gen only. app/__init__.py
+# is empty and both modules import nothing but stdlib, so this pulls in no
+# server weight.
+BACKEND_ROOT = os.path.abspath(os.path.join(SPEC_DIR, os.pardir, os.pardir))
+
+hiddenimports = ["server_launch", "gui_config", "app.version", "app.token_gen"]
+hiddenimports += collect_submodules("pystray")
+hiddenimports += collect_submodules("PIL")
+
+block_cipher = None
+
+a = Analysis(
+    [GUI_SCRIPT],
+    # TRAY_DIR on pathex + the explicit hiddenimports keep server_launch.py (the
+    # run_server.exe resolver) and gui_config.py (settings persistence) in the
+    # frozen bundle; without them the app cannot locate the server or save
+    # anything.
+    pathex=[SPEC_DIR, TRAY_DIR, BACKEND_ROOT],
+    binaries=[],
+    datas=[],
+    hiddenimports=hiddenimports,
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=["matplotlib", "numpy", "faster_whisper", "ctranslate2", "onnxruntime"],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=block_cipher,
+    noarchive=False,
+)
+
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    [],
+    name="whisper-gui",
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=False,
+    runtime_tmpdir=None,
+    console=False,            # windowed app: no console
+    disable_windowed_traceback=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+)

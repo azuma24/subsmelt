@@ -1,0 +1,10 @@
+# Optional URL/YouTube input dependency (NOT part of the lean base install).
+#
+# yt-dlp is pure-Python and light, but pulling remote media also needs ffmpeg
+# (already bundled / SUBSMELT_FFMPEG). Install where URL input is wanted:
+#
+#   pip install -r requirements.txt -r requirements-url.txt
+#
+# Runtime gating: capabilities.urlInput is true only when yt-dlp is importable,
+# so the Whisper page shows the URL box only when the backend can fetch.
+yt-dlp>=2024.12.13

@@ -1,0 +1,26 @@
+services:
+  subsmelt:
+    build: .
+    container_name: subsmelt
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount your media folders under /media — the app scans /media recursively.
+      # Organize however you like:
+      - /path/to/movies:/media/movies
+      - /path/to/anime:/media/anime
+      - /path/to/tv:/media/tv
+      # Or mount a single root:
+      # - /nas/media:/media
+      #
+      # Config (settings + translation tasks — version-control this)
+      - ./config:/app/config
+      # Data (jobs + logs — disposable, safe to wipe)
+      - ./data:/app/data
+    environment:
+      - TZ=America/New_York                  # Timezone for log timestamps
+      # Optional: override default LLM settings (also configurable in web UI)
+      # - LLM_ENDPOINT=http://192.168.1.18:8000/v1
+      # - API_KEY=
+      # - MODEL=Qwen/Qwen2.5-72B-Instruct
+    restart: unless-stopped

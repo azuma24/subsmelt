@@ -1,0 +1,348 @@
+import fs from "node:fs";
+import path from "node:path";
+import { migrateConnectionsFromFlat } from "./connections.js";
+import { computeLlmConfigured } from "./llm-configured.js";
+
+const CONFIG_DIR = process.env.CONFIG_DIR || "./config";
+const CONFIG_FILE = path.join(CONFIG_DIR, "config.json");
+
+fs.mkdirSync(CONFIG_DIR, { recursive: true });
+
+// --- Schema ---
+
+interface TranslationTask {
+  id: number;
+  source_lang: string;
+  target_lang: string;
+  output_pattern: string;
+  lang_code: string;
+  enabled: number;
+  prompt_override: string;
+  created_at: string;
+}
+
+interface ConfigData {
+  settings: Record<string, string>;
+  tasks: TranslationTask[];
+  _next_task_id: number;
+}
+
+export const AUTO_SOURCE_LANGUAGE = "Automatic";
+
+// --- Defaults ---
+
+const DEFAULT_SETTINGS: Record<string, string> = {
+  llm_endpoint: "http://localhost:8000/v1",
+  api_key: "",
+  model: "Qwen/Qwen2.5-72B-Instruct",
+  api_type: "openai",
+  // Cloud provider selection: "local" | "openai" | "anthropic" | "gemini"
+  cloud_provider: "local",
+  cloud_api_key_openai: "",
+  cloud_api_key_anthropic: "",
+  cloud_api_key_gemini: "",
+  cloud_model_openai: "gpt-4o",
+  cloud_model_anthropic: "claude-3-5-sonnet-20241022",
+  cloud_model_gemini: "gemini-2.5-flash",
+  // Multi-connection: JSON array of LlmConnection. Empty → migrated from the
+  // flat keys above at read time. llm_mode: single | fallback | parallel.
+  llm_connections: "",
+  llm_mode: "single",
+  active_connection_id: "",
+  scan_mode: "recursive",
+  scan_folders: "",
+  scan_exclude_folders: "",
+  scan_profiles: "[]",
+  // Per-directory translation control (see directory-rules.ts).
+  // directory_rules: JSON array of DirectoryRule. translate_without_video: global
+  // baseline for subtitles that have no companion video ("on" | "off").
+  directory_rules: "[]",
+  translate_without_video: "off",
+  temperature: "0.3",
+  chunk_size: "20",
+  context_window: "5",
+  parallel_chunks: "1",
+  request_timeout_s: "300",
+  disable_tool_calls: "1",
+  // Refinement Pass (Pass 2): optional second LLM editing call per chunk for
+  // natural flow/tone. Default off. Never degrades below pass-1 — a refined
+  // chunk is only accepted when it returns the exact same line count.
+  refine_pass: "0",
+  // Series-Wide Memory (§2): when "1", a .subsmelt_glossary.json file in each
+  // translated file's folder is loaded before analysis and updated after, so a
+  // series stays consistent across files. Default off — behavior unchanged.
+  series_memory: "0",
+  auto_scan_interval: "0",
+  // Soft monthly token budget for the cost/usage indicator. "0" = unlimited.
+  // Display-only: NEVER blocks or throttles translation — it only powers a
+  // visible "tokens used vs budget" hint in the UI.
+  monthly_token_budget: "0",
+  // Outbound webhook notifications. Empty webhook_url = disabled (default).
+  // notify_events: comma list of which SSE events trigger a webhook. Defaults
+  // to errors + queue-finished only, NOT every job:done (avoids per-file spam).
+  // notify_format: payload shape — "json" | "discord" | "slack".
+  notify_webhook_url: "",
+  notify_events: "job:error,queue:finished",
+  notify_format: "json",
+  watch_enabled: "0",
+  auto_translate: "1",
+  video_extensions: ".mkv,.mp4,.avi,.m4v,.ts,.wmv,.mov",
+  subtitle_extensions: ".srt,.ass,.ssa,.vtt",
+  transcription_enabled: "0",
+  transcription_backend_url: "",
+  // Optional shared-secret token (Phase 1 remote hardening). When non-empty it
+  // is sent as `Authorization: Bearer <token>` on every backend call. Empty =
+  // no auth header (localhost dev default; backend auth also disabled then).
+  transcription_backend_token: "",
+  transcription_model: "small",
+  transcription_device: "cpu",
+  transcription_compute_type: "int8",
+  transcription_language: "auto",
+  transcription_use_vad: "1",
+  transcription_output_format: "srt",
+  transcription_sort_by: "date",
+  transcription_sort_dir: "desc",
+  dashboard_sort_by: "date",
+  dashboard_sort_dir: "desc",
+  transcription_max_line_length: "42",
+  transcription_max_subtitle_duration: "6",
+  transcription_merge_short_segments: "0",
+  transcription_folder_defaults: "[]",
+  transcription_advanced_stt: "{}",
+  transcription_missing_subtitle_behavior: "ask",
+  transcription_low_ram_behavior: "ask",
+  transcription_max_concurrent: "1",
+  // Backend request timeout in seconds for /transcribe (default 30min). Health
+  // and preflight use a short fixed timeout in transcription-client.ts.
+  transcription_request_timeout_s: "1800",
+  transcription_path_map_from: "",
+  transcription_path_map_to: "",
+  // File transport mode (plan Phase 2). "auto" picks shared-FS path mode when a
+  // path mapping is set or no token is configured (local same-host), and upload
+  // mode when a token is set with no mapping (true remote). "shared" forces
+  // path mode (Model A); "upload" forces multipart upload (Model B).
+  transcription_transport: "auto",
+  additional_context: "",
+  prompt: `You are a professional subtitle translator.
+You will receive subtitle text in an automatically detected source language.
+Translate all subtitles into {{lang}}.
+Note: {{additional}}
+Do not merge sentences, translate them individually.
+Return the translated subtitles in the same order and length as the input.
+1. Detect the input subtitle language
+2. Translate the input subtitles into {{lang}}
+3. Convert names into {{lang}}
+4. Return only the translated text, no explanations`,
+};
+
+const DEFAULT_TASK: TranslationTask = {
+  id: 1,
+  source_lang: AUTO_SOURCE_LANGUAGE,
+  target_lang: "English",
+  output_pattern: "{{name}}.eng.srt",
+  lang_code: "eng",
+  enabled: 1,
+  prompt_override: "",
+  created_at: new Date().toISOString(),
+};
+
+// --- Load / Save ---
+
+function loadConfig(): ConfigData {
+  try {
+    if (fs.existsSync(CONFIG_FILE)) {
+      const raw = fs.readFileSync(CONFIG_FILE, "utf8");
+      const data = JSON.parse(raw) as ConfigData;
+      // Merge defaults for any missing settings
+      data.settings = { ...DEFAULT_SETTINGS, ...data.settings };
+      if (!data.tasks) data.tasks = [DEFAULT_TASK];
+      data.tasks = data.tasks.map((task) => ({
+        ...task,
+        source_lang: !task.source_lang || task.source_lang === "English" ? AUTO_SOURCE_LANGUAGE : task.source_lang,
+      }));
+      if (!data._next_task_id) data._next_task_id = Math.max(0, ...data.tasks.map((t) => t.id)) + 1;
+      return data;
+    }
+  } catch (e) {
+    console.error("[Config] Failed to load config.json, using defaults:", e);
+  }
+
+  // First run — create with defaults
+  const config: ConfigData = {
+    settings: { ...DEFAULT_SETTINGS },
+    tasks: [{ ...DEFAULT_TASK }],
+    _next_task_id: 2,
+  };
+  saveConfig(config);
+  return config;
+}
+
+function saveConfig(config: ConfigData): void {
+  const tmpPath = `${CONFIG_FILE}.tmp`;
+  const json = JSON.stringify(config, null, 2);
+  fs.writeFileSync(tmpPath, json, "utf8");
+  try {
+    fs.renameSync(tmpPath, CONFIG_FILE);
+  } catch {
+    fs.writeFileSync(CONFIG_FILE, json, "utf8");
+    try {
+      fs.unlinkSync(tmpPath);
+    } catch (e) {
+      console.error(`[Config] Failed to remove temp file ${tmpPath}:`, e);
+    }
+  }
+}
+
+// In-memory cache — loaded once, written on every mutation
+let _config: ConfigData = loadConfig();
+
+// --- Settings ---
+
+export function getSetting(key: string): string {
+  return _config.settings[key] ?? DEFAULT_SETTINGS[key] ?? "";
+}
+
+export function setSetting(key: string, value: string): void {
+  _config.settings[key] = value;
+  saveConfig(_config);
+}
+
+// Batch variant: mutate the in-memory config once for all keys in `patch`, then
+// persist with a SINGLE saveConfig. Avoids N disk writes per multi-key save and
+// the concurrent-request clobber window of calling setSetting in a loop.
+export function setSettings(patch: Record<string, string>): void {
+  _config.settings = { ..._config.settings, ...patch };
+  saveConfig(_config);
+}
+
+// Allow-list of writable setting keys for POST /api/settings. Derived from the
+// known schema (DEFAULT_SETTINGS) so it stays in sync automatically — any key
+// the UI legitimately persists has a default here. Requests carrying unknown
+// keys are rejected (skipped) by the route to avoid arbitrary config injection.
+const WRITABLE_SETTING_KEYS: ReadonlySet<string> = new Set(Object.keys(DEFAULT_SETTINGS));
+
+export function isWritableSettingKey(key: string): boolean {
+  return WRITABLE_SETTING_KEYS.has(key);
+}
+
+export function getAllSettings(): Record<string, string> {
+  const merged = { ...DEFAULT_SETTINGS, ..._config.settings };
+  // Backfill the connections array from legacy flat keys so the client and the
+  // queue always see a populated list, even before the first multi-connection save.
+  if (!merged.llm_connections || !merged.llm_connections.trim()) {
+    merged.llm_connections = JSON.stringify(migrateConnectionsFromFlat(merged));
+  }
+  return merged;
+}
+
+/**
+ * Has the operator actually configured an LLM, or is this still the shipped
+ * default? Surfaced to the UI as `_llm_configured`; see llm-configured.ts for
+ * why the merged settings can't answer this.
+ */
+export function isLlmConfigured(): boolean {
+  // Pass the connections the defaults would synthesize, so a seeded connection
+  // written back by an unrelated settings save isn't mistaken for real setup.
+  return computeLlmConfigured(
+    _config.settings,
+    DEFAULT_SETTINGS,
+    migrateConnectionsFromFlat(DEFAULT_SETTINGS),
+  );
+}
+
+// --- Translation Tasks ---
+
+export function getTasks(): TranslationTask[] {
+  return _config.tasks;
+}
+
+export function getTask(id: number): TranslationTask | undefined {
+  return _config.tasks.find((t) => t.id === id);
+}
+
+export function createTask(task: {
+  source_lang: string;
+  target_lang: string;
+  output_pattern: string;
+  lang_code: string;
+}): { lastInsertRowid: number } {
+  const id = _config._next_task_id++;
+  const newTask: TranslationTask = {
+    id,
+    source_lang: task.source_lang,
+    target_lang: task.target_lang,
+    output_pattern: task.output_pattern,
+    lang_code: task.lang_code,
+    enabled: 1,
+    prompt_override: "",
+    created_at: new Date().toISOString(),
+  };
+  _config.tasks.push(newTask);
+  saveConfig(_config);
+  return { lastInsertRowid: id };
+}
+
+export function updateTask(
+  id: number,
+  updates: Partial<{
+    source_lang: string;
+    target_lang: string;
+    output_pattern: string;
+    lang_code: string;
+    enabled: number;
+    prompt_override: string;
+  }>
+): void {
+  const task = _config.tasks.find((t) => t.id === id);
+  if (!task) return;
+  for (const [k, v] of Object.entries(updates)) {
+    if (v !== undefined) {
+      (task as any)[k] = v;
+    }
+  }
+  saveConfig(_config);
+}
+
+export function deleteTask(id: number): void {
+  _config.tasks = _config.tasks.filter((t) => t.id !== id);
+  saveConfig(_config);
+}
+
+export function getConfigFilePath(): string {
+  return CONFIG_FILE;
+}
+
+/**
+ * Settings that can be seeded from the environment at startup.
+ *
+ * Deployments that configure the app entirely through compose need a way to set
+ * these without clicking through the UI. The token matters most: arming
+ * SUBSMELT_WHISPER_TOKEN on the backend without giving SubSmelt the same secret
+ * turns every transcription request into a 401, and before this there was no
+ * env-level way to supply it.
+ */
+export const ENV_SETTING_OVERRIDES: Record<string, string> = {
+  LLM_ENDPOINT: "llm_endpoint",
+  API_KEY: "api_key",
+  MODEL: "model",
+  WHISPER_BACKEND_URL: "transcription_backend_url",
+  WHISPER_BACKEND_TOKEN: "transcription_backend_token",
+  // Lets the compose shared-FS setup pin transport=shared (the backend reads
+  // /media in place); otherwise auto picks upload for a non-loopback host.
+  WHISPER_TRANSPORT: "transcription_transport",
+};
+
+/** Settings to seed from `env`, skipping unset and empty values. */
+export function envSettingOverrides(
+  env: Record<string, string | undefined> = process.env,
+): Record<string, string> {
+  const overrides: Record<string, string> = {};
+  for (const [envKey, settingKey] of Object.entries(ENV_SETTING_OVERRIDES)) {
+    const value = env[envKey];
+    // An empty string is a deliberate "leave it alone", not a value to store —
+    // compose files routinely declare a variable with no value.
+    if (value !== undefined && value !== "") overrides[settingKey] = value;
+  }
+  return overrides;
+}
+

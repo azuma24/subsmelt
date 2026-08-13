@@ -1,0 +1,85 @@
+import { useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useJobPreview, useJobsQuery } from "../../hooks";
+import { formatDur } from "../../lib";
+import type { JobRow } from "../../types";
+import { DetailCard, EmptyHint, ProgressSmall, StatusBadge } from "../../ui/primitives";
+
+export function JobDetailPage() {
+  const { t } = useTranslation();
+  const { id } = useParams();
+  const jobId = Number(id);
+  const jobsQuery = useJobsQuery();
+  const previewQuery = useJobPreview(Number.isFinite(jobId) ? jobId : null);
+  const job = (jobsQuery.data?.jobs || []).find((j: JobRow) => j.id === jobId);
+
+  // Don't flash "not found" while the jobs list is still loading (deep-link nav).
+  if (jobsQuery.isLoading && !jobsQuery.data) {
+    return <div className="mx-auto max-w-4xl p-6"><EmptyHint text={t("errors.loading")} /></div>;
+  }
+  if (!job) {
+    return <div className="mx-auto max-w-4xl p-6"><EmptyHint text={t("jobDetail.notFound")} /></div>;
+  }
+
+  const pct = job.total_cues > 0 ? Math.round((job.completed_cues / job.total_cues) * 100) : 0;
+
+  return (
+    <div className="mx-auto max-w-[1200px] space-y-6 p-4 md:p-6">
+      <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 md:p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="min-w-0">
+            <div className="text-xs uppercase tracking-wide text-[var(--text-3)]">{t("jobDetail.title", { id: job.id })}</div>
+            <h1 className="mt-1 break-all text-2xl font-semibold">{job.srt_path.split("/").pop()}</h1>
+            <p className="mt-2 text-sm text-[var(--text-2)]">{job.target_lang} • {job.lang_code}</p>
+          </div>
+          <StatusBadge job={job} />
+        </div>
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <DetailCard label={t("app.sourcePath")} value={job.srt_path} mono />
+          <DetailCard label={t("app.outputPath")} value={job.output_path} mono />
+          <DetailCard label={t("app.duration")} value={job.duration_seconds ? formatDur(job.duration_seconds) : "—"} />
+          <DetailCard label={t("app.priorityForce")} value={`${job.priority > 0 ? t("app.pinned") : t("app.normal")} • ${job.force ? t("app.forceEnabled") : t("app.normalMode")}`} />
+        </div>
+        {job.status === "translating" && <div className="mt-5"><ProgressSmall pct={pct} large /><div className="mt-2 text-xs text-[var(--text-3)]">{t("dashboard.cues", { completed: job.completed_cues, total: job.total_cues })}</div></div>}
+        {job.error && <div className="mt-5 rounded-2xl border border-[var(--red-border)] bg-[var(--red-dim)] p-4 text-xs text-[var(--red)] whitespace-pre-wrap">{job.error}</div>}
+      </section>
+
+      <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 md:p-6">
+        <h2 className="text-lg font-semibold">{t("jobDetail.context")}</h2>
+        {previewQuery.isLoading && <div className="mt-4 text-sm text-[var(--text-3)]">{t("app.loadingPreview")}</div>}
+        {previewQuery.data?.analysis && (
+          <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
+            <pre className="whitespace-pre-wrap text-xs text-[var(--text)] leading-relaxed">{previewQuery.data.analysis}</pre>
+          </div>
+        )}
+        {!previewQuery.isLoading && !previewQuery.data?.analysis && (
+          <div className="mt-4 text-sm text-[var(--text-3)]">{t("jobDetail.noContext")}</div>
+        )}
+      </section>
+
+      <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 md:p-6">
+        <h2 className="text-lg font-semibold">{t("app.previewSample")}</h2>
+        {previewQuery.isLoading && <div className="mt-4 text-sm text-[var(--text-3)]">{t("app.loadingPreview")}</div>}
+        {previewQuery.data && (
+          <div className="mt-4 space-y-3">
+            {previewQuery.data.lines.slice(0, 8).map((line) => (
+              <div key={line.index} className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+                <div className="mb-2 flex items-center justify-between text-[11px] text-[var(--text-3)]"><span>#{line.index}</span></div>
+                <div className="space-y-2 text-xs">
+                  <div>
+                    <div className="mb-1 text-[10px] uppercase text-[var(--text-3)]">{t("dashboard.preview.colOriginal")}</div>
+                    <div className="text-[var(--text-2)]">{line.original}</div>
+                  </div>
+                  <div>
+                    <div className="mb-1 text-[10px] uppercase text-[var(--text-3)]">{t("dashboard.preview.colTranslated")}</div>
+                    <div className="text-[var(--text)]">{line.translated}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}

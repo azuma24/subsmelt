@@ -1,0 +1,29 @@
+services:
+  subsmelt:
+    environment:
+      # Optional wiring only. Model/language/VAD/automation stay in the web Settings UI.
+      - WHISPER_BACKEND_URL=http://whisper-backend:8001
+      # Both services mount the same /media, so the backend reads files in place
+      # (zero-copy). Pin shared transport; otherwise auto would pick upload for the
+      # non-loopback backend hostname and stream every file over HTTP.
+      - WHISPER_TRANSPORT=shared
+
+  whisper-backend:
+    build: ./backend-whisper
+    container_name: subsmelt-whisper
+    ports:
+      - "8001:8001"
+    environment:
+      - SUBSMELT_WHISPER_FAKE=${SUBSMELT_WHISPER_FAKE:-0}
+    volumes:
+      # Default mode: keep these media paths identical to the subsmelt service.
+      # If an external/LAN backend must mount media somewhere else, keep Subsmelt on /media
+      # and configure the optional path-mapping fields in Settings instead.
+      - /path/to/movies:/media/movies
+      - /path/to/anime:/media/anime
+      - /path/to/tv:/media/tv
+      # Persist downloaded faster-whisper models outside the image.
+      - ./models/whisper:/models
+      # Optional scratch/output access if needed by future features.
+      - ./data:/app/data
+    restart: unless-stopped
