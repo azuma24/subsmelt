@@ -6,7 +6,7 @@
     "logs": "Καταγραφές",
     "settings": "Ρυθμίσεις",
     "convert": "Μετατροπή",
-    "whisper": "Ομιλία σε κείμενο",
+    "whisper": "Μεταγραφή",
     "groupOperate": "Λειτουργία",
     "groupCreate": "Δημιουργία",
     "groupSystem": "Σύστημα",
@@ -28,7 +28,9 @@
     "confirm": "Επιβεβαίωση",
     "reset": "Επαναφορά στις προεπιλογές",
     "close": "Κλείσιμο",
-    "rowActions": "Ενέργειες γραμμής"
+    "rowActions": "Ενέργειες γραμμής",
+    "home": "Αρχική",
+    "openFolder": "Άνοιγμα φακέλου {{name}}"
   },
   "dashboard": {
     "title": "Πίνακας ελέγχου",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} λήψεις έτοιμες",
     "downloadsReadyHelp": "Η λήψη ξεκίνησε αυτόματα. Μπορείτε να κατεβάσετε ξανά παρακάτω.",
     "downloadFile": "Λήψη αρχείου",
-    "downloadZip": "Λήψη ZIP"
+    "downloadZip": "Λήψη ZIP",
+    "detecting": "Ανίχνευση γλώσσας…",
+    "detectedBadge": "Ανιχνεύθηκε: {{lang}}",
+    "detectUnknown": "Η γλώσσα δεν ανιχνεύθηκε",
+    "overrideLabel": "Παράκαμψη γλώσσας προέλευσης για {{name}}",
+    "targetPlaceholder": "π.χ. zh-TW, Japanese, 繁體中文",
+    "didYouMean": "Εννοούσατε:",
+    "ambiguousPick": "Το \"{{input}}\" είναι διφορούμενο — επιλέξτε ένα:",
+    "recentLabel": "Πρόσφατο:",
+    "sameLangWarning": "Η γλώσσα προέλευσης και προορισμού είναι και οι δύο {{lang}} — παράλειψη μετάφρασης για αυτό το αρχείο;",
+    "targetResolved": "Προορισμός: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — Ομιλία σε κείμενο",
+    "title": "Μεταγραφή — Ομιλία σε κείμενο",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",

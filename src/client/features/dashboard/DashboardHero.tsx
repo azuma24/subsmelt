@@ -79,7 +79,9 @@ export function DashboardHero({
               className={`px-3.5 py-2.5 text-left transition-colors ${isActive ? "bg-[var(--surface-2)]" : "bg-[var(--surface)] hover:bg-[var(--surface-2)]"}`}
             >
               <div className={`${cellLabel} ${isActive ? "text-[var(--accent)]" : "text-[var(--text-3)]"}`}>{seg.label}</div>
-              <div className={`${cellValue} ${isActive ? seg.activeColor : seg.color}`}>{seg.count}</div>
+              {/* A zero count stays muted — a red "0 errors" reads as an alarm
+                  about nothing. Status colors only earn their tone with content. */}
+              <div className={`${cellValue} ${seg.count === 0 && !isActive ? "text-[var(--text-3)]" : isActive ? seg.activeColor : seg.color}`}>{seg.count}</div>
             </button>
           );
         })}

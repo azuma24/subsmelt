@@ -9,6 +9,19 @@ export function isAutomaticSourceLanguage(sourceLang?: string): boolean {
   return !normalized || normalized === "automatic" || normalized === "auto" || normalized === "auto-detect" || normalized === "detect";
 }
 
+// Subtitle text lines can carry inline markup (HTML-like tags in SRT/VTT, ASS
+// override codes in {braces}); the model must translate around them, never
+// through them.
+const FORMAT_PRESERVATION_INSTRUCTION =
+  "Preserve cue timing, line breaks, and all inline formatting tags exactly — HTML-like tags such as <i>…</i>, VTT voice tags, and ASS/SSA override codes inside {curly braces}. Translate only the human-readable text.";
+
+function targetConventionInstruction(lang: string): string {
+  // zh-TW must read as native Taiwanese Mandarin, not script-converted zh-CN.
+  return /traditional chinese|zh-?tw|taiwan/i.test(lang)
+    ? "Write the output in Traditional Chinese following Taiwan (zh-TW) conventions, phrasing, and vocabulary — do not produce mechanically converted Simplified Chinese."
+    : "";
+}
+
 export function buildTranslationSystemPrompt(opts: { prompt: string; lang: string; sourceLang?: string; additional: string }): string {
   const sourceInstruction = isAutomaticSourceLanguage(opts.sourceLang)
     ? "Source subtitle language: detect automatically from the input cues. Translate every subtitle into the target language."
@@ -19,7 +32,9 @@ export function buildTranslationSystemPrompt(opts: { prompt: string; lang: strin
     .replaceAll("{{lang}}", opts.lang)
     .replaceAll("{{additional}}", opts.additional);
 
-  return `${sourceInstruction}\n\n${renderedPrompt}`;
+  const convention = targetConventionInstruction(opts.lang);
+  const header = [sourceInstruction, FORMAT_PRESERVATION_INSTRUCTION, ...(convention ? [convention] : [])].join("\n");
+  return `${header}\n\n${renderedPrompt}`;
 }
 
 /**

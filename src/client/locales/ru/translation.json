@@ -6,7 +6,7 @@
     "logs": "Журналы",
     "settings": "Настройки",
     "convert": "Конвертация",
-    "whisper": "Речь в текст",
+    "whisper": "Транскрипция",
     "groupOperate": "Работа",
     "groupCreate": "Создание",
     "groupSystem": "Система",
@@ -28,7 +28,9 @@
     "confirm": "Подтвердить",
     "reset": "Сбросить по умолчанию",
     "close": "Закрыть",
-    "rowActions": "Действия со строкой"
+    "rowActions": "Действия со строкой",
+    "home": "Главная",
+    "openFolder": "Открыть папку {{name}}"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -936,10 +938,20 @@
     "downloadsReady": "Готово загрузок: {{count}}",
     "downloadsReadyHelp": "Загрузка началась автоматически. Ниже можно скачать повторно.",
     "downloadFile": "Скачать файл",
-    "downloadZip": "Скачать ZIP"
+    "downloadZip": "Скачать ZIP",
+    "detecting": "Определение языка…",
+    "detectedBadge": "Определено: {{lang}}",
+    "detectUnknown": "Язык не определён",
+    "overrideLabel": "Переопределить язык источника для {{name}}",
+    "targetPlaceholder": "например: zh-TW, Japanese, 繁體中文",
+    "didYouMean": "Вы имели в виду:",
+    "ambiguousPick": "\"{{input}}\" неоднозначно — выберите один:",
+    "recentLabel": "Недавние:",
+    "sameLangWarning": "Источник и целевой язык — оба {{lang}} — пропустить перевод для этого файла?",
+    "targetResolved": "Целевой язык: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — Речь в текст",
+    "title": "Транскрипция — Речь в текст",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Открыть настройки",

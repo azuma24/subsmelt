@@ -6,7 +6,7 @@
     "logs": "日誌",
     "settings": "設定",
     "convert": "轉換",
-    "whisper": "語音轉文字",
+    "whisper": "轉錄",
     "groupOperate": "運作",
     "groupCreate": "建立",
     "groupSystem": "系統",
@@ -28,7 +28,9 @@
     "confirm": "確認",
     "reset": "重設為預設值",
     "close": "關閉",
-    "rowActions": "列操作"
+    "rowActions": "列操作",
+    "home": "首頁",
+    "openFolder": "打開資料夾 {{name}}"
   },
   "dashboard": {
     "title": "儀表板",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} 個下載已就緒",
     "downloadsReadyHelp": "下載已自動開始。你也可以在下方重新下載。",
     "downloadFile": "下載檔案",
-    "downloadZip": "下載 ZIP"
+    "downloadZip": "下載 ZIP",
+    "detecting": "正在檢測語言…",
+    "detectedBadge": "檢測到: {{lang}}",
+    "detectUnknown": "未檢測到語言",
+    "overrideLabel": "覆寫 {{name}} 的來源語言",
+    "targetPlaceholder": "例如: zh-TW, Japanese, 繁體中文",
+    "didYouMean": "您是指:",
+    "ambiguousPick": "\"{{input}}\" 不明確 — 請選擇一個:",
+    "recentLabel": "最近:",
+    "sameLangWarning": "來源和目標都是 {{lang}} — 跳過此檔案的翻譯?",
+    "targetResolved": "目標: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — 語音轉文字",
+    "title": "轉錄 — 語音轉文字",
     "subtitle": "從媒體庫選取檔案或資料夾，將它們轉錄成字幕。與翻譯功能分開。",
     "disabledNotice": "語音轉文字已停用。",
     "openSettings": "開啟設定",

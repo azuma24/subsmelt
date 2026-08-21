@@ -6,7 +6,7 @@
     "logs": "Protokolle",
     "settings": "Einstellungen",
     "convert": "Konvertieren",
-    "whisper": "Sprache zu Text",
+    "whisper": "Transkribieren",
     "groupOperate": "Betrieb",
     "groupCreate": "Erstellen",
     "groupSystem": "System",
@@ -28,7 +28,9 @@
     "confirm": "Bestätigen",
     "reset": "Auf Standard zurücksetzen",
     "close": "Schließen",
-    "rowActions": "Zeilenaktionen"
+    "rowActions": "Zeilenaktionen",
+    "home": "Start",
+    "openFolder": "Ordner öffnen {{name}}"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} Download(s) bereit",
     "downloadsReadyHelp": "Der Download wurde automatisch gestartet. Unten kannst du erneut herunterladen.",
     "downloadFile": "Datei herunterladen",
-    "downloadZip": "ZIP herunterladen"
+    "downloadZip": "ZIP herunterladen",
+    "detecting": "Sprache wird erkannt…",
+    "detectedBadge": "Erkannt: {{lang}}",
+    "detectUnknown": "Sprache nicht erkannt",
+    "overrideLabel": "Ausgangssprache für {{name}} überschreiben",
+    "targetPlaceholder": "z.B. zh-TW, Japanese, 繁體中文",
+    "didYouMean": "Meinten Sie:",
+    "ambiguousPick": "\"{{input}}\" ist mehrdeutig — wählen Sie einen aus:",
+    "recentLabel": "Kürzlich:",
+    "sameLangWarning": "Quell- und Zielsprache sind beide {{lang}} — Übersetzung für diese Datei überspringen?",
+    "targetResolved": "Ziel: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — Sprache zu Text",
+    "title": "Transkription — Sprache zu Text",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Einstellungen öffnen",

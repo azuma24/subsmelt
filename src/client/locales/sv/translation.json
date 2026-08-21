@@ -6,7 +6,7 @@
     "logs": "Loggar",
     "settings": "Inställningar",
     "convert": "Konvertera",
-    "whisper": "Tal till text",
+    "whisper": "Transkription",
     "groupOperate": "Drift",
     "groupCreate": "Skapa",
     "groupSystem": "System",
@@ -28,7 +28,9 @@
     "confirm": "Bekräfta",
     "reset": "Återställ till standard",
     "close": "Stäng",
-    "rowActions": "Radåtgärder"
+    "rowActions": "Radåtgärder",
+    "home": "Start",
+    "openFolder": "Öppna mapp {{name}}"
   },
   "dashboard": {
     "title": "Översikt",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} nedladdning(ar) klara",
     "downloadsReadyHelp": "Nedladdningen startade automatiskt. Du kan ladda ned igen nedan.",
     "downloadFile": "Ladda ned fil",
-    "downloadZip": "Ladda ned ZIP"
+    "downloadZip": "Ladda ned ZIP",
+    "detecting": "Detekterar språk…",
+    "detectedBadge": "Detekterat: {{lang}}",
+    "detectUnknown": "Språk inte detekterat",
+    "overrideLabel": "Åsidosätt källspråk för {{name}}",
+    "targetPlaceholder": "t.ex. zh-TW, Japanese, 繁體中文",
+    "didYouMean": "Menade du:",
+    "ambiguousPick": "\"{{input}}\" är tvetydigt — välj ett:",
+    "recentLabel": "Senaste:",
+    "sameLangWarning": "Källa och mål är båda {{lang}} — hoppa över översättning för den här filen?",
+    "targetResolved": "Mål: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — Tal till text",
+    "title": "Transkription — Tal till text",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",

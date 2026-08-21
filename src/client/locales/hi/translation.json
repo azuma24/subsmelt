@@ -6,7 +6,7 @@
     "logs": "लॉग",
     "settings": "सेटिंग्स",
     "convert": "कन्वर्ट",
-    "whisper": "आवाज़ से पाठ",
+    "whisper": "प्रतिलेखन",
     "groupOperate": "संचालन",
     "groupCreate": "बनाएँ",
     "groupSystem": "सिस्टम",
@@ -28,7 +28,9 @@
     "confirm": "पुष्टि करें",
     "reset": "डिफ़ॉल्ट पर रीसेट करें",
     "close": "बंद करें",
-    "rowActions": "पंक्ति क्रियाएँ"
+    "rowActions": "पंक्ति क्रियाएँ",
+    "home": "होम",
+    "openFolder": "फ़ोल्डर खोलें {{name}}"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} डाउनलोड तैयार",
     "downloadsReadyHelp": "डाउनलोड अपने-आप शुरू हो गया। नीचे से फिर डाउनलोड कर सकते हैं।",
     "downloadFile": "फ़ाइल डाउनलोड करें",
-    "downloadZip": "ZIP डाउनलोड करें"
+    "downloadZip": "ZIP डाउनलोड करें",
+    "detecting": "भाषा का पता लगाया जा रहा है…",
+    "detectedBadge": "पता चला: {{lang}}",
+    "detectUnknown": "भाषा का पता नहीं चला",
+    "overrideLabel": "{{name}} के लिए स्रोत भाषा को ओवरराइड करें",
+    "targetPlaceholder": "उदाहरण के लिए: zh-TW, Japanese, 繁體中文",
+    "didYouMean": "क्या आप मतलब रखते हैं:",
+    "ambiguousPick": "\"{{input}}\" अस्पष्ट है — एक चुनें:",
+    "recentLabel": "हाल ही में:",
+    "sameLangWarning": "स्रोत और लक्ष्य दोनों {{lang}} हैं — इस फाइल के लिए अनुवाद छोड़ें?",
+    "targetResolved": "लक्ष्य: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — आवाज़ से पाठ",
+    "title": "प्रतिलेखन — आवाज़ से पाठ",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",

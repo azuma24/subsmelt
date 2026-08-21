@@ -6,7 +6,7 @@
     "logs": "Registros",
     "settings": "Configuración",
     "convert": "Convertir",
-    "whisper": "Voz a texto",
+    "whisper": "Transcribir",
     "groupOperate": "Operación",
     "groupCreate": "Crear",
     "groupSystem": "Sistema",
@@ -28,7 +28,9 @@
     "confirm": "Confirmar",
     "reset": "Restablecer valores predeterminados",
     "close": "Cerrar",
-    "rowActions": "Acciones de fila"
+    "rowActions": "Acciones de fila",
+    "home": "Inicio",
+    "openFolder": "Abrir carpeta {{name}}"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} descarga(s) listas",
     "downloadsReadyHelp": "La descarga empezó automáticamente. Puedes descargar otra vez abajo.",
     "downloadFile": "Descargar archivo",
-    "downloadZip": "Descargar ZIP"
+    "downloadZip": "Descargar ZIP",
+    "detecting": "Detectando idioma…",
+    "detectedBadge": "Detectado: {{lang}}",
+    "detectUnknown": "Idioma no detectado",
+    "overrideLabel": "Reemplazar idioma de origen para {{name}}",
+    "targetPlaceholder": "p.ej. zh-TW, Japanese, 繁體中文",
+    "didYouMean": "¿Quisiste decir:",
+    "ambiguousPick": "\"{{input}}\" es ambiguo — elige uno:",
+    "recentLabel": "Recientes:",
+    "sameLangWarning": "El origen y el destino son ambos {{lang}} — ¿omitir traducción para este archivo?",
+    "targetResolved": "Destino: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — Voz a texto",
+    "title": "Transcripción — Voz a texto",
     "subtitle": "Elige archivos o carpetas de tu biblioteca multimedia y transcríbelos a subtítulos. Separado de la traducción.",
     "disabledNotice": "La voz a texto está desactivada.",
     "openSettings": "Abrir ajustes",

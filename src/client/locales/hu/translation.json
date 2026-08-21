@@ -6,7 +6,7 @@
     "logs": "Naplók",
     "settings": "Beállítások",
     "convert": "Konvertálás",
-    "whisper": "Beszédből szöveg",
+    "whisper": "Átírás",
     "groupOperate": "Működtetés",
     "groupCreate": "Létrehozás",
     "groupSystem": "Rendszer",
@@ -28,7 +28,9 @@
     "confirm": "Megerősítés",
     "reset": "Visszaállítás alapértékre",
     "close": "Bezárás",
-    "rowActions": "Sor műveletei"
+    "rowActions": "Sor műveletei",
+    "home": "Kezdőlap",
+    "openFolder": "Mappa megnyitása {{name}}"
   },
   "dashboard": {
     "title": "Vezérlőpult",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} letöltés kész",
     "downloadsReadyHelp": "A letöltés automatikusan elindult. Lent újra letöltheted.",
     "downloadFile": "Fájl letöltése",
-    "downloadZip": "ZIP letöltése"
+    "downloadZip": "ZIP letöltése",
+    "detecting": "Nyelv felismerése…",
+    "detectedBadge": "Felismerve: {{lang}}",
+    "detectUnknown": "Nem ismerték fel a nyelvet",
+    "overrideLabel": "Forrásnyelv felülírása a {{name}} fájlhoz",
+    "targetPlaceholder": "pl. zh-TW, Japanese, 繁體中文",
+    "didYouMean": "Erre gondolt:",
+    "ambiguousPick": "A \"{{input}}\" kétértelmű — válasszon egyet:",
+    "recentLabel": "Legutóbbi:",
+    "sameLangWarning": "A forrás és a cél is {{lang}} — átugorja a fordítást ehhez a fájlhoz?",
+    "targetResolved": "Cél: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — Beszédből szöveg",
+    "title": "Átírás — Beszédből szöveg",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",

@@ -187,11 +187,20 @@ export function registerSettingsTasksRoutes(app: Express): void {
 
   // ======== Subtitle Format Converter / Translator ========
   app.post("/api/convert", async (req, res) => {
+    // Language names/codes end up inside the LLM system prompt — cap length
+    // and strip control characters and template-ish braces so request input
+    // can't restructure the prompt.
+    const sanitizeLanguageInput = (value: string): string =>
+      value.replace(/[\r\n\t]+/g, " ").replace(/[{}<>]/g, "").trim().slice(0, 60);
     const body = req.body ?? {};
     const targetFormat = String(body.targetFormat || "").toLowerCase();
     const translate = body.translate === true;
-    const sourceLang = String(body.sourceLang || AUTO_SOURCE_LANGUAGE).trim() || AUTO_SOURCE_LANGUAGE;
-    const targetLang = String(body.targetLang || "").trim();
+    const sourceLang = sanitizeLanguageInput(String(body.sourceLang || "")) || AUTO_SOURCE_LANGUAGE;
+    const targetLang = sanitizeLanguageInput(String(body.targetLang || ""));
+    // Canonical BCP-47 code for output filenames (e.g. "zh-TW"); targetLang
+    // stays the rich language name the prompt wants. Sanitized because it lands
+    // in a filename.
+    const targetCode = String(body.targetCode || "").trim().replace(/[^A-Za-z0-9-]/g, "");
     const files = Array.isArray(body.files) ? body.files : null;
 
     if (!CONVERT_TARGET_FORMATS.includes(targetFormat as (typeof CONVERT_TARGET_FORMATS)[number])) {
@@ -225,14 +234,24 @@ export function registerSettingsTasksRoutes(app: Express): void {
 
     try {
       for (const file of files) {
-        const name = String(file?.name || "subtitle");
+        // The client sends a browser File name, but this is a plain JSON API —
+        // strip any directory components so a crafted name can never traverse
+        // out of tmpRoot or produce a path-carrying output filename.
+        const name = path.basename(String(file?.name || "subtitle")).replace(/[\\/\0]/g, "_") || "subtitle";
         const content = typeof file?.content === "string" ? file.content : "";
+        // Per-file overrides: detected/overridden source language, and a skip
+        // flag for files whose source already equals the target.
+        const fileSourceLang = sanitizeLanguageInput(String(file?.sourceLang || "")) || sourceLang;
+        const skipTranslate = file?.skip === true;
+        const translateThis = translate && !skipTranslate;
         const dotIndex = name.lastIndexOf(".");
         const baseName = dotIndex > 0 ? name.slice(0, dotIndex) : name;
         const sourceExt = dotIndex >= 0 ? name.slice(dotIndex + 1).toLowerCase() : "";
-        const outName = `${baseName}${translate ? ".translated" : ""}.${targetFormat}`;
+        const outName = translateThis
+          ? `${baseName}.${targetCode || "translated"}.${targetFormat}`
+          : `${baseName}.${targetFormat}`;
         try {
-          if (!translate) {
+          if (!translateThis) {
             const converted = convertSubtitle(content, sourceExt, targetFormat);
             outputs.push({ name: outName, content: converted });
             continue;
@@ -262,7 +281,7 @@ export function registerSettingsTasksRoutes(app: Express): void {
             llmMode: mode,
             prompt: settings.prompt || "",
             lang: targetLang,
-            sourceLang,
+            sourceLang: fileSourceLang,
             additional: settings.additional_context || "",
             temperature: parseFloat(settings.temperature || "0.3"),
             chunkSize,

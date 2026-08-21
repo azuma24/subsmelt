@@ -6,7 +6,7 @@
     "logs": "Dzienniki",
     "settings": "Ustawienia",
     "convert": "Konwertuj",
-    "whisper": "Mowa na tekst",
+    "whisper": "Transkrypcja",
     "groupOperate": "Działanie",
     "groupCreate": "Tworzenie",
     "groupSystem": "System",
@@ -28,7 +28,9 @@
     "confirm": "Potwierdź",
     "reset": "Przywróć domyślne",
     "close": "Zamknij",
-    "rowActions": "Akcje wiersza"
+    "rowActions": "Akcje wiersza",
+    "home": "Strona główna",
+    "openFolder": "Otwórz folder {{name}}"
   },
   "dashboard": {
     "title": "Panel",
@@ -936,10 +938,20 @@
     "downloadsReady": "Gotowe pobrania: {{count}}",
     "downloadsReadyHelp": "Pobieranie rozpoczęło się automatycznie. Możesz pobrać ponownie poniżej.",
     "downloadFile": "Pobierz plik",
-    "downloadZip": "Pobierz ZIP"
+    "downloadZip": "Pobierz ZIP",
+    "detecting": "Wykrywanie języka…",
+    "detectedBadge": "Wykryto: {{lang}}",
+    "detectUnknown": "Język nie został wykryty",
+    "overrideLabel": "Zastąp język źródłowy dla {{name}}",
+    "targetPlaceholder": "np. zh-TW, Japanese, 繁體中文",
+    "didYouMean": "Czy chciałeś powiedzieć:",
+    "ambiguousPick": "\"{{input}}\" jest niejednoznaczne — wybierz jedno:",
+    "recentLabel": "Ostatnie:",
+    "sameLangWarning": "Zarówno źródło jak i cel są {{lang}} — pominąć tłumaczenie dla tego pliku?",
+    "targetResolved": "Cel: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — Mowa na tekst",
+    "title": "Transkrypcja — Mowa na tekst",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",

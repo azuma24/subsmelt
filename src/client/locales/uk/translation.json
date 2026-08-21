@@ -6,7 +6,7 @@
     "logs": "Журнали",
     "settings": "Налаштування",
     "convert": "Конвертувати",
-    "whisper": "Мовлення в текст",
+    "whisper": "Транскрипція",
     "groupOperate": "Робота",
     "groupCreate": "Створення",
     "groupSystem": "Система",
@@ -28,7 +28,9 @@
     "confirm": "Підтвердити",
     "reset": "Скинути до типового",
     "close": "Закрити",
-    "rowActions": "Дії з рядком"
+    "rowActions": "Дії з рядком",
+    "home": "Головна",
+    "openFolder": "Відкрити папку {{name}}"
   },
   "dashboard": {
     "title": "Панель",
@@ -936,10 +938,20 @@
     "downloadsReady": "Готово завантажень: {{count}}",
     "downloadsReadyHelp": "Завантаження почалося автоматично. Нижче можна завантажити знову.",
     "downloadFile": "Завантажити файл",
-    "downloadZip": "Завантажити ZIP"
+    "downloadZip": "Завантажити ZIP",
+    "detecting": "Визначення мови…",
+    "detectedBadge": "Виявлено: {{lang}}",
+    "detectUnknown": "Мову не виявлено",
+    "overrideLabel": "Перевизначити вихідну мову для {{name}}",
+    "targetPlaceholder": "наприклад: zh-TW, Japanese, 繁體中文",
+    "didYouMean": "Ви мали на увазі:",
+    "ambiguousPick": "\"{{input}}\" є неоднозначним — виберіть один:",
+    "recentLabel": "Недавні:",
+    "sameLangWarning": "Вихідна та цільова мови обидва {{lang}} — пропустити переклад для цього файлу?",
+    "targetResolved": "Ціль: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — Мовлення в текст",
+    "title": "Транскрипція — Мовлення в текст",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",

@@ -6,7 +6,7 @@
     "logs": "Log",
     "settings": "Impostazioni",
     "convert": "Converti",
-    "whisper": "Da voce a testo",
+    "whisper": "Trascrivi",
     "groupOperate": "Operatività",
     "groupCreate": "Creazione",
     "groupSystem": "Sistema",
@@ -28,7 +28,9 @@
     "confirm": "Conferma",
     "reset": "Ripristina predefiniti",
     "close": "Chiudi",
-    "rowActions": "Azioni riga"
+    "rowActions": "Azioni riga",
+    "home": "Home",
+    "openFolder": "Apri cartella {{name}}"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} download pronti",
     "downloadsReadyHelp": "Il download è stato avviato automaticamente. Puoi scaricare di nuovo qui sotto.",
     "downloadFile": "Scarica file",
-    "downloadZip": "Scarica ZIP"
+    "downloadZip": "Scarica ZIP",
+    "detecting": "Rilevamento della lingua…",
+    "detectedBadge": "Rilevato: {{lang}}",
+    "detectUnknown": "Lingua non rilevata",
+    "overrideLabel": "Sostituisci lingua di origine per {{name}}",
+    "targetPlaceholder": "ad es. zh-TW, Japanese, 繁體中文",
+    "didYouMean": "Intendevi dire:",
+    "ambiguousPick": "\"{{input}}\" è ambiguo — scegline uno:",
+    "recentLabel": "Recenti:",
+    "sameLangWarning": "Sia l'origine che il destinatario sono {{lang}} — saltare la traduzione per questo file?",
+    "targetResolved": "Destinazione: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — Da voce a testo",
+    "title": "Trascrizione — Da voce a testo",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",

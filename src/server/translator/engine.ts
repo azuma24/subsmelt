@@ -13,9 +13,6 @@ import {
   readSubtitleFileText,
   saveTranslated,
   splitIntoChunks,
-  sanitizeSecrets,
-  toSnippet,
-  tryJsonParse,
   type SubtitleCue,
 } from "./utils.js";
 import { createConnectionHealth } from "./connection-health.js";
@@ -24,242 +21,19 @@ import { buildTranslationSystemPrompt } from "./prompt.js";
 import { refineChunk } from "./prompt.js";
 import {
   analyzeSubtitlesForContext,
+  buildChunkGlossary,
   buildChunkGlossaryBlock,
   buildSeriesGlossarySeed,
   loadSeriesGlossary,
   mergeSeriesGlossary,
-  parseGlossaryFromAnalysis,
   scanForGlossaryTerms,
-  type GlossaryEntry,
   type SeriesGlossary,
 } from "./context.js";
-
-// ── Dynamic model context probing ────────────────────────────────────────────
-
-/**
- * Best-effort safety check for an outbound probe URL.
- *
- * The probe fetches a user-configured `apiHost`, so a malicious/misconfigured
- * value could point at internal infrastructure (SSRF). This endpoint is
- * user-owned and self-hosted, and the common deployment is a local LM Studio on
- * localhost/LAN — so we deliberately do NOT hard-block private/loopback hosts
- * (that would break legitimate use). Instead we:
- *   - require an http(s) scheme (hard requirement), and
- *   - log a warning when the host resolves to a loopback/link-local/private
- *     range so the operator has visibility, while still allowing the request.
- *
- * Returns false only when the scheme is invalid — the one case worth blocking
- * outright. Private-range hosts return true but emit a warning.
- */
-export function isSafeHttpUrl(rawUrl: string): boolean {
-  let parsed: URL;
-  try {
-    parsed = new URL(rawUrl);
-  } catch {
-    return false;
-  }
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
-
-  const host = parsed.hostname.toLowerCase();
-  const isPrivate =
-    host === "localhost" ||
-    host === "0.0.0.0" ||
-    host === "::1" ||
-    /^127\./.test(host) ||
-    /^10\./.test(host) ||
-    /^192\.168\./.test(host) ||
-    /^169\.254\./.test(host) ||
-    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
-  if (isPrivate) {
-    logger.warn(
-      "translate",
-      `Model-context probe targets a private/loopback host (${host}); allowing (self-hosted endpoint), but verify this is intended.`
-    );
-  }
-  return true;
-}
-
-export interface ModelContextInfo {
-  /** Maximum context window in tokens, or null if unknown */
-  maxContextTokens: number | null;
-  /** Recommended parallel chunks based on context size */
-  recommendedParallelChunks: number;
-  /** Recommended max lines for context analysis */
-  recommendedAnalysisLines: number;
-}
-
-/**
- * Probe the LM Studio native API (/api/v0/models) to get the active model's
- * context window size, then derive safe defaults for analysis line cap and
- * parallel chunk count.
- *
- * Falls back gracefully if the endpoint isn't LM Studio or the call fails —
- * returns conservative defaults so any OpenAI-compatible host works.
- */
-export async function probeModelContext(
-  apiHost: string,
-  model: string,
-  chunkSize = 20
-): Promise<ModelContextInfo> {
-  const FALLBACK: ModelContextInfo = {
-    maxContextTokens: null,
-    recommendedParallelChunks: 1,
-    recommendedAnalysisLines: 2000,
-  };
-
-  try {
-    // Strip /v1 or trailing path — LM Studio native API is at the root
-    const base = apiHost.replace(/\/v1\/?$/, "").replace(/\/$/, "");
-    const url = `${base}/api/v0/models`;
-
-    // SSRF guard: only http(s) probes are allowed; private-range hosts are
-    // permitted (self-hosted) but warn via isSafeHttpUrl. Invalid scheme → bail.
-    if (!isSafeHttpUrl(url)) return FALLBACK;
-
-    const resp = await fetch(url, { signal: AbortSignal.timeout(5000) });
-    if (!resp.ok) return FALLBACK;
-
-    const json = (await resp.json()) as { data?: Array<{ id: string; max_context_length?: number }> };
-    const models = json?.data ?? [];
-    if (models.length === 0) return FALLBACK;
-
-    // Find the configured model by ID (case-insensitive prefix match)
-    const modelLower = model.toLowerCase();
-    const match =
-      models.find((m) => m.id.toLowerCase() === modelLower) ??
-      models.find((m) => m.id.toLowerCase().includes(modelLower.split("/").pop() ?? modelLower)) ??
-      models[0]; // fallback: first loaded model
-
-    const maxCtx = match?.max_context_length ?? null;
-    if (!maxCtx) return FALLBACK;
-
-    // Analysis lines: use up to 25% of context for the analysis prompt.
-    // Rough estimate: 1 subtitle line ≈ 60 chars ≈ 15 tokens.
-    // Leave ~20% headroom for system prompt + response.
-    const tokensForAnalysis = Math.floor(maxCtx * 0.20);
-    const tokensPerLine = 15;
-    const recommendedAnalysisLines = Math.max(
-      200,
-      Math.min(5000, Math.floor(tokensForAnalysis / tokensPerLine))
-    );
-
-    // Parallel chunks: how many chunk-sized windows fit in 40% of context.
-    // Each chunk = chunkSize cues × ~30 tokens per cue (input + output buffer).
-    // Cap at 2 — beyond that, parallel requests on a single GPU thrash memory
-    // and cause timeouts faster than they save time.
-    const tokensPerChunk = chunkSize * 30;
-    const tokensForParallel = Math.floor(maxCtx * 0.40);
-    const recommendedParallelChunks = Math.max(
-      1,
-      Math.min(2, Math.floor(tokensForParallel / tokensPerChunk))
-    );
-
-    return { maxContextTokens: maxCtx, recommendedParallelChunks, recommendedAnalysisLines };
-  } catch {
-    return FALLBACK;
-  }
-}
-
-// ── Error diagnostics ─────────────────────────────────────────────────────────
-
-export interface TranslationErrorDiagnostics {
-  message: string;
-  status?: number;
-  code?: string;
-  causeMessage?: string;
-  responseSnippet?: string;
-}
-
-export function summarizeTranslationError(error: unknown): TranslationErrorDiagnostics {
-  const err = error as any;
-  const status: number | undefined =
-    typeof err?.status === "number"
-      ? err.status
-      : typeof err?.statusCode === "number"
-      ? err.statusCode
-      : typeof err?.response?.status === "number"
-      ? err.response.status
-      : undefined;
-
-  const code = typeof err?.code === "string" ? err.code : undefined;
-
-  const causeMessage =
-    typeof err?.cause?.message === "string"
-      ? sanitizeSecrets(err.cause.message)
-      : undefined;
-
-  const responseBodyRaw =
-    err?.responseBody ?? err?.response?.body ?? err?.body ?? err?.data ?? err?.cause?.responseBody;
-
-  const parsed =
-    typeof responseBodyRaw === "string" ? tryJsonParse(responseBodyRaw) ?? responseBodyRaw : responseBodyRaw;
-  const responseSnippet = toSnippet(parsed);
-
-  // Build the most informative message possible — AI SDK APICallError often has
-  // empty .message when LM Studio returns HTTP errors with empty body or
-  // {"error":{"message":""}}. Fall through a chain of richer fields.
-  let baseMessage: string;
-  if (typeof err?.message === "string" && err.message.trim().length > 0) {
-    baseMessage = sanitizeSecrets(err.message.trim());
-  } else if (causeMessage && causeMessage.trim().length > 0) {
-    baseMessage = `Connection error: ${causeMessage}`;
-  } else {
-    const bodyMsg = extractErrorMessageFromBody(parsed);
-    if (bodyMsg) {
-      baseMessage = sanitizeSecrets(bodyMsg);
-    } else if (responseBodyRaw) {
-      baseMessage = status
-        ? `HTTP ${status} error (empty/unparseable response body)`
-        : "Empty error response from LLM server";
-    } else if (status) {
-      baseMessage = `HTTP ${status} error from LLM server (no body)`;
-    } else if (typeof err?.name === "string" && err.name !== "Error") {
-      baseMessage = `LLM error: ${err.name}`;
-    } else if (typeof error === "string" && (error as string).trim()) {
-      baseMessage = sanitizeSecrets((error as string).trim());
-    } else {
-      baseMessage = "Unknown translation error";
-    }
-  }
-
-  const parts = [
-    status ? `HTTP ${status}` : null,
-    code ? `code=${code}` : null,
-    baseMessage,
-  ].filter(Boolean);
-
-  return {
-    message: parts.join(" | "),
-    status,
-    code,
-    causeMessage,
-    responseSnippet,
-  };
-}
-
-/** Extract a human-readable message from a parsed API error body. */
-function extractErrorMessageFromBody(parsed: unknown): string | null {
-  if (!parsed || typeof parsed !== "object") {
-    if (typeof parsed === "string" && parsed.trim()) return parsed.trim().slice(0, 300);
-    return null;
-  }
-  const obj = parsed as Record<string, unknown>;
-  // OpenAI-style: { error: { message: "..." } }
-  if (obj.error && typeof obj.error === "object") {
-    const errObj = obj.error as Record<string, unknown>;
-    if (typeof errObj.message === "string" && errObj.message.trim())
-      return errObj.message.trim().slice(0, 300);
-    if (typeof errObj.type === "string" && errObj.type.trim())
-      return `error type: ${errObj.type.trim()}`;
-  }
-  // Flat: { message: "..." }
-  if (typeof obj.message === "string" && obj.message.trim())
-    return obj.message.trim().slice(0, 300);
-  // FastAPI-style: { detail: "..." }
-  if (typeof obj.detail === "string" && obj.detail.trim())
-    return obj.detail.trim().slice(0, 300);
-  return null;
-}
+export { isSafeHttpUrl, type ModelContextInfo, probeModelContext } from "./context-probe.js";
+export {
+  type TranslationErrorDiagnostics,
+  summarizeTranslationError,
+} from "./error-diagnostics.js";
 
 // ── Core translation loop ─────────────────────────────────────────────────────
 
@@ -467,18 +241,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // {term, translation} pairs once, then merge the series glossary on top so
   // every known term is available for per-chunk scanning. Purely additive: if
   // nothing parses, this is an empty list and chunk prompts are unchanged.
-  const parsedGlossary = parseGlossaryFromAnalysis(analysis);
-  const glossaryByTerm = new Map<string, GlossaryEntry>();
-  for (const e of parsedGlossary) glossaryByTerm.set(e.term.toLowerCase(), e);
-  if (seriesGlossary) {
-    for (const [term, translation] of Object.entries(seriesGlossary.terms)) {
-      const key = term.toLowerCase();
-      if (term.trim() && translation.trim() && !glossaryByTerm.has(key)) {
-        glossaryByTerm.set(key, { term, translation });
-      }
-    }
-  }
-  const chunkGlossary: GlossaryEntry[] = Array.from(glossaryByTerm.values());
+  const { chunkGlossary, parsedGlossary } = buildChunkGlossary(analysis, seriesGlossary);
 
   // Series-Wide Memory (§2) — merge newly-extracted terms back into the series
   // file so the next file in this folder inherits them. Best-effort, never fatal.

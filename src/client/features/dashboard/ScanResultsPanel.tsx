@@ -1,11 +1,18 @@
-import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useMemo, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import type { JobRow, ManualTranscriptionStage, ScannedFile, TaskStatus } from "../../types";
-import { STATUS_ICON } from "../../app/constants";
-import { isManualTranscriptionBusy, type ManualTranscriptionProgress, type TranscribePostAction } from "./transcription-progress";
-import { scanFileKey, sortScanFiles, sortScanGroups, type DashboardSortBy, type DashboardSortDir } from "./scanSort";
+import type { JobRow, ScannedFile } from "../../types";
+import type { ManualTranscriptionProgress, TranscribePostAction } from "./transcription-progress";
+import { compareScanFiles, scanFileKey, type DashboardSortBy, type DashboardSortDir } from "./scanSort";
+import { useIsMobile } from "../../hooks";
+import { buildPathTree, collectFolderPaths, relativeDisplayPath } from "../../components/file-tree/build";
+import { FileTreeView, type FileRowContext } from "../../components/file-tree/FileTreeView";
+import { usePersistedExpansion } from "../../components/file-tree/use-persisted-expansion";
+import { useDrillDown } from "../../components/file-tree/use-drill-down";
+import { matchesScanFilter, matchesScanSearch, pathOf, type ScanFilter } from "./scan-file-status";
+import { CompactScanFileRow } from "./CompactScanFileRow";
+import { ScanFolderRow } from "./ScanFolderRow";
 
-export type ScanFilter = "all" | "new" | "missing" | "orphans";
+export type { ScanFilter } from "./scan-file-status";
 
 interface ScanResultsPanelProps {
   files: ScannedFile[];
@@ -13,8 +20,6 @@ interface ScanResultsPanelProps {
   setFilter: (v: ScanFilter) => void;
   search: string;
   setSearch: (v: string) => void;
-  expandedGroups: Set<string>;
-  setExpandedGroups: Dispatch<SetStateAction<Set<string>>>;
   jobsById: Map<number, JobRow>;
   selectedIds: Set<number>;
   setSelectedIds: Dispatch<SetStateAction<Set<number>>>;
@@ -36,88 +41,12 @@ interface ScanResultsPanelProps {
   onToggleSortDir: () => void;
 }
 
-export function getScanGroupName(file: ScannedFile, mediaDir?: string): string {
-  const path = file.videoPath || file.subtitles[0]?.srtPath || "";
-  // Derive the top-level group from the configured media directory so installs
-  // with a non-default root (e.g. /mnt/media) group correctly. Fall back to the
-  // historical "/media/" marker when mediaDir is unknown so behavior is unchanged.
-  const marker = mediaDir ? `${mediaDir.replace(/\/+$/, "")}/` : "/media/";
-  const idx = path.indexOf(marker);
-  if (idx >= 0) {
-    const rest = path.slice(idx + marker.length);
-    return rest.split("/")[0] || "root";
-  }
-  return file.videoName ? "library" : "orphans";
-}
-
-function getTaskStatus(task: TaskStatus, jobsById: Map<number, JobRow>): string {
-  const liveJob = task.jobId === null ? null : jobsById.get(task.jobId);
-  if (liveJob) return liveJob.status;
-  if (task.jobId !== null && ["pending", "translating", "error"].includes(task.status)) return "new";
-  return task.status;
-}
-
-function getPendingJobIds(file: ScannedFile, jobsById: Map<number, JobRow>): number[] {
-  return file.subtitles.flatMap((sub) =>
-    sub.tasks
-      .filter((task) => task.jobId !== null && jobsById.get(task.jobId)?.status === "pending")
-      .map((task) => task.jobId as number)
-  );
-}
-
-function stageTone(stage: ManualTranscriptionStage): string {
-  switch (stage) {
-    case "complete":
-      return "text-[var(--green)]";
-    case "skipped":
-      return "text-[var(--yellow)]";
-    case "failed":
-      return "text-[var(--red)]";
-    case "cancelled":
-      return "text-[var(--text-2)]";
-    case "cancelling":
-      return "text-[var(--yellow)]";
-    default:
-      return "text-[var(--accent)]";
-  }
-}
-
-function stageText(
-  progress: ManualTranscriptionProgress,
-  t: (key: string, opts?: Record<string, unknown>) => string,
-): string {
-  switch (progress.stage) {
-    case "preflighting":
-      return t("scan.transcription.preflighting");
-    case "transcribing":
-      return typeof progress.pct === "number"
-        ? t("scan.transcription.progressPct", { pct: Math.round(progress.pct) })
-        : t("scan.transcription.transcribing");
-    case "queueing":
-      return t("scan.transcription.queueing");
-    case "complete":
-      return progress.postAction === "transcribe_and_translate"
-        ? t("scan.transcription.completeQueued")
-        : t("scan.transcription.completeSubtitle");
-    case "skipped":
-      return progress.message || t("scan.transcription.skipped");
-    case "failed":
-      return progress.message || t("scan.transcription.failed");
-    case "cancelling":
-      return t("scan.transcription.cancelling");
-    case "cancelled":
-      return t("scan.transcription.cancelled");
-  }
-}
-
 export function ScanResultsPanel({
   files,
   filter,
   setFilter,
   search,
   setSearch,
-  expandedGroups,
-  setExpandedGroups,
   jobsById,
   selectedIds,
   setSelectedIds,
@@ -139,48 +68,54 @@ export function ScanResultsPanel({
   onToggleSortDir,
 }: ScanResultsPanelProps) {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const selectedPaths = selectedVideoPaths ?? new Set<string>();
   const batchEnabled = transcriptionEnabled && Boolean(onBatchTranscribe && setSelectedVideoPaths);
+  const marker = mediaDir ? `${mediaDir.replace(/\/+$/, "")}/` : "/media/";
 
-  const filteredFiles = useMemo(() => {
+  // The category chips (all/new/missing/orphans) apply before the tree is
+  // built, so an empty folder drops out along with its files. Text search
+  // narrows further but switches to a flat list instead of pruning the tree.
+  const categoryFiltered = useMemo(
+    () => files.filter((file) => matchesScanFilter(file, filter, jobsById)),
+    [files, filter, jobsById],
+  );
+  const searchActive = search.trim().length > 0;
+  const searchMatches = useMemo(() => {
+    if (!searchActive) return [];
     const query = search.toLowerCase();
-    return files.filter((file) => {
-      const matchesSearch = !query || `${file.videoName || ""} ${file.subtitles.map((s) => s.srtName).join(" ")}`.toLowerCase().includes(query);
-      if (!matchesSearch) return false;
-      if (filter === "orphans") return !file.videoName;
-      if (filter === "missing") return !!file.videoName && file.subtitles.length === 0;
-      if (filter === "new") return file.subtitles.some((sub) => sub.tasks.some((task) => {
-        const status = getTaskStatus(task, jobsById);
-        return status === "new" || status === "pending";
-      }));
-      return true;
-    });
-  }, [files, filter, jobsById, search]);
+    return categoryFiltered
+      .filter((file) => matchesScanSearch(file, query))
+      .sort((a, b) => compareScanFiles(a, b, sortBy, sortDir));
+  }, [categoryFiltered, search, searchActive, sortBy, sortDir]);
+  const visibleFiles = searchActive ? searchMatches : categoryFiltered;
 
-  const groups = useMemo(() => {
-    const grouped = new Map<string, ScannedFile[]>();
-    filteredFiles.forEach((file) => {
-      const group = getScanGroupName(file, mediaDir);
-      grouped.set(group, [...(grouped.get(group) || []), file]);
-    });
-    return sortScanGroups(
-      Array.from(grouped.entries()).map(([name, groupFiles]) => [name, sortScanFiles(groupFiles, sortBy, sortDir)]),
-      sortBy,
-      sortDir,
-    );
-  }, [filteredFiles, mediaDir, sortBy, sortDir]);
+  const tree = useMemo(() => buildPathTree(categoryFiltered, {
+    pathOf,
+    marker,
+    compareFiles: (a, b) => compareScanFiles(a, b, sortBy, sortDir),
+    compareFolders: (a, b) => a.localeCompare(b) * (sortDir === "asc" ? 1 : -1),
+  }), [categoryFiltered, marker, sortBy, sortDir]);
+
+  // Expansion is persisted against the full (category- and search-unfiltered)
+  // set of folders, so narrowing a chip or a search query can't silently
+  // discard a user's expand/collapse state.
+  const fullTree = useMemo(() => buildPathTree(files, {
+    pathOf,
+    marker,
+    compareFiles: (a, b) => compareScanFiles(a, b, sortBy, sortDir),
+    compareFolders: (a, b) => a.localeCompare(b) * (sortDir === "asc" ? 1 : -1),
+  }), [files, marker, sortBy, sortDir]);
+  const folderPaths = useMemo(() => collectFolderPaths(fullTree.children), [fullTree]);
+  const expansion = usePersistedExpansion("scan", folderPaths);
+  const drill = useDrillDown(tree.children, isMobile && !searchActive);
+
   // Only act on selections that are still visible under the current filter/search,
   // so the bulk action never transcribes files the user can no longer see.
   const visibleSelectedPaths = useMemo(() => {
-    const visible = new Set(filteredFiles.map((f) => f.videoPath).filter(Boolean) as string[]);
+    const visible = new Set(visibleFiles.map((f) => f.videoPath).filter(Boolean) as string[]);
     return Array.from(selectedPaths).filter((p) => visible.has(p));
-  }, [filteredFiles, selectedPaths]);
-
-  const toggleGroup = (group: string) => setExpandedGroups((prev) => {
-    const next = new Set(prev);
-    if (next.has(group)) next.delete(group); else next.add(group);
-    return next;
-  });
+  }, [visibleFiles, selectedPaths]);
 
   return (
     <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
@@ -195,7 +130,7 @@ export function ScanResultsPanel({
           <p className="text-xs text-[var(--text-3)]">{mode === "preview" ? t("app.scanPreviewHint") : t("app.scanGroupedHint")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-[var(--text-3)]">{t("dashboard.entries", { count: filteredFiles.length })}</span>
+          <span className="text-xs text-[var(--text-3)]">{t("dashboard.entries", { count: visibleFiles.length })}</span>
           {batchEnabled && visibleSelectedPaths.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -279,237 +214,66 @@ export function ScanResultsPanel({
         </div>
       </div>
       <div className="max-h-[50vh] overflow-y-auto">
-        {groups.length === 0 && <div className="px-4 py-6 text-center text-[var(--text-3)] text-sm"><div>{t("app.scanNoMatch")}</div><div className="mt-1 text-xs text-[var(--text-3)]">{t("dashboard.emptyScanHint")}</div></div>}
-        <div className="divide-y divide-[var(--border-sub)]">
-          {groups.map(([group, groupFiles]) => {
-            const expanded = expandedGroups.has(group);
-            return (
-              <div key={group}>
-                <button onClick={() => toggleGroup(group)} className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-[var(--surface-2)]">
-                  <div>
-                    <div className="text-sm font-medium text-[var(--text)]">{group}</div>
-                    <div className="text-[11px] text-[var(--text-3)]">{t("app.scanItems", { count: groupFiles.length })}</div>
-                  </div>
-                  <div className="text-xs text-[var(--text-3)]">{expanded ? t("app.scanHide") : t("app.scanShow")}</div>
-                </button>
-                {expanded && (
-                  <div className="border-t border-[var(--border)] bg-[var(--surface-2)]">
-                    {groupFiles.map((file) => (
-                      <CompactScanFileRow
-                        key={scanFileKey(file)}
-                        file={file}
-                        jobsById={jobsById}
-                        selectedIds={selectedIds}
-                        setSelectedIds={setSelectedIds}
-                        onTranscribe={onTranscribe}
-                        onCancelTranscribe={onCancelTranscribe}
-                        selectedVideoPaths={selectedPaths}
-                        setSelectedVideoPaths={setSelectedVideoPaths}
-                        batchEnabled={batchEnabled}
-                        transcriptionEnabled={transcriptionEnabled}
-                        transcriptionProgressByPath={transcriptionProgressByPath}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        {visibleFiles.length === 0 && <div className="px-4 py-6 text-center text-[var(--text-3)] text-sm"><div>{t("app.scanNoMatch")}</div><div className="mt-1 text-xs text-[var(--text-3)]">{t("dashboard.emptyScanHint")}</div></div>}
+        {visibleFiles.length > 0 && searchActive && (
+          <div>
+            {searchMatches.map((file) => (
+              <CompactScanFileRow
+                key={scanFileKey(file)}
+                file={file}
+                padLeftPx={16}
+                relPath={relativeDisplayPath(pathOf(file), marker)}
+                jobsById={jobsById}
+                selectedIds={selectedIds}
+                setSelectedIds={setSelectedIds}
+                onTranscribe={onTranscribe}
+                onCancelTranscribe={onCancelTranscribe}
+                selectedVideoPaths={selectedPaths}
+                setSelectedVideoPaths={setSelectedVideoPaths}
+                batchEnabled={batchEnabled}
+                transcriptionEnabled={transcriptionEnabled}
+                transcriptionProgressByPath={transcriptionProgressByPath}
+              />
+            ))}
+          </div>
+        )}
+        {visibleFiles.length > 0 && !searchActive && (
+          <FileTreeView
+            roots={tree.children}
+            rootFiles={tree.files}
+            isMobile={isMobile}
+            expansion={expansion}
+            drill={drill}
+            homeLabel={t("common.home")}
+            fileKey={scanFileKey}
+            renderFolderRow={(node, ctx) => (
+              <ScanFolderRow
+                node={node}
+                ctx={ctx}
+                batchEnabled={batchEnabled}
+                selectedVideoPaths={selectedPaths}
+                setSelectedVideoPaths={setSelectedVideoPaths}
+              />
+            )}
+            renderFile={(file, ctx: FileRowContext) => (
+              <CompactScanFileRow
+                file={file}
+                padLeftPx={ctx.padLeftPx}
+                jobsById={jobsById}
+                selectedIds={selectedIds}
+                setSelectedIds={setSelectedIds}
+                onTranscribe={onTranscribe}
+                onCancelTranscribe={onCancelTranscribe}
+                selectedVideoPaths={selectedPaths}
+                setSelectedVideoPaths={setSelectedVideoPaths}
+                batchEnabled={batchEnabled}
+                transcriptionEnabled={transcriptionEnabled}
+                transcriptionProgressByPath={transcriptionProgressByPath}
+              />
+            )}
+          />
+        )}
       </div>
     </section>
-  );
-}
-
-function CompactScanFileRow({
-  file,
-  jobsById,
-  selectedIds,
-  setSelectedIds,
-  onTranscribe,
-  onCancelTranscribe,
-  selectedVideoPaths,
-  setSelectedVideoPaths,
-  batchEnabled,
-  transcriptionEnabled,
-  transcriptionProgressByPath,
-}: {
-  file: ScannedFile;
-  jobsById: Map<number, JobRow>;
-  selectedIds: Set<number>;
-  setSelectedIds: Dispatch<SetStateAction<Set<number>>>;
-  onTranscribe?: (videoPath: string, postAction: TranscribePostAction) => void;
-  onCancelTranscribe?: (videoPath: string) => void;
-  selectedVideoPaths: Set<string>;
-  setSelectedVideoPaths?: Dispatch<SetStateAction<Set<string>>>;
-  batchEnabled: boolean;
-  transcriptionEnabled: boolean;
-  transcriptionProgressByPath: Record<string, ManualTranscriptionProgress>;
-}) {
-  const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const hasNew = file.subtitles.some((sub) => sub.tasks.some((task) => {
-    const status = getTaskStatus(task, jobsById);
-    return status === "new" || status === "pending";
-  }));
-  const missing = file.videoName && file.subtitles.length === 0;
-  const orphan = !file.videoName;
-  const pendingJobIds = getPendingJobIds(file, jobsById);
-  const selectedPendingCount = pendingJobIds.filter((id) => selectedIds.has(id)).length;
-  const allPendingSelected = pendingJobIds.length > 0 && selectedPendingCount === pendingJobIds.length;
-  const somePendingSelected = selectedPendingCount > 0 && !allPendingSelected;
-  const progress = file.videoPath ? transcriptionProgressByPath[file.videoPath] : undefined;
-  const isBusy = isManualTranscriptionBusy(progress);
-  // Cancel is only meaningful while the backend is actively transcribing (a
-  // stream is open); preflight/cancelling phases have nothing to abort yet.
-  const canCancel = Boolean(
-    onCancelTranscribe && file.videoPath && progress && progress.stage === "transcribing",
-  );
-
-  const togglePendingJobs = () => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (allPendingSelected) pendingJobIds.forEach((id) => next.delete(id));
-      else pendingJobIds.forEach((id) => next.add(id));
-      return next;
-    });
-  };
-
-  return (
-    <div className="border-b border-[var(--border-sub)] last:border-b-0">
-      <div className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-[var(--surface-2)] ${allPendingSelected || somePendingSelected ? "bg-[var(--accent-dim)]" : ""}`}>
-        {batchEnabled && file.videoPath && (
-          <input
-            type="checkbox"
-            checked={selectedVideoPaths.has(file.videoPath)}
-            disabled={isBusy}
-            onChange={() => {
-              const vp = file.videoPath as string;
-              setSelectedVideoPaths?.((prev) => {
-                const next = new Set(prev);
-                if (next.has(vp)) next.delete(vp); else next.add(vp);
-                return next;
-              });
-            }}
-            className="h-4 w-4 shrink-0 accent-[var(--green)]"
-            title={t("scan.transcription.selectForTranscription")}
-            aria-label={t("scan.transcription.selectForTranscription")}
-          />
-        )}
-        {pendingJobIds.length > 0 && (
-          <input
-            type="checkbox"
-            checked={allPendingSelected}
-            ref={(el) => {
-              if (el) el.indeterminate = somePendingSelected;
-            }}
-            onChange={togglePendingJobs}
-            className="h-4 w-4 shrink-0 accent-[var(--accent)]"
-            aria-label={t("app.scanSelectPending")}
-          />
-        )}
-        <button type="button" onClick={() => setOpen(!open)} className="min-w-0 flex-1 text-left">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 text-sm text-[var(--text)]">
-              <span className="text-[var(--text-3)]">{file.videoName ? "🎬" : "📝"}</span>
-              <span className="truncate font-medium">{file.videoName || t("dashboard.orphanSubtitle")}</span>
-            </div>
-            <div className="mt-1 flex flex-wrap gap-2 text-[10px] text-[var(--text-3)]">
-              {hasNew && <span className="rounded-full bg-[var(--accent-dim)] px-2 py-0.5 text-[var(--accent)]">{t("app.scanNewJobs")}</span>}
-              {pendingJobIds.length > 0 && <span className="rounded-full bg-[var(--yellow-dim)] px-2 py-0.5 text-[var(--yellow)]">{t("app.scanPendingJobs", { count: pendingJobIds.length })}</span>}
-              {missing && <span className="rounded-full bg-[var(--yellow-dim)] px-2 py-0.5 text-[var(--yellow)]">{t("app.scanMissingSubtitles")}</span>}
-              {orphan && <span className="rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[var(--text-2)]">{t("app.scanOrphan")}</span>}
-              <span>{t("app.subtitleCount", { count: file.subtitles.length })}</span>
-              {progress && <span className={stageTone(progress.stage)}>{stageText(progress, t)}</span>}
-            </div>
-          </div>
-        </button>
-        <button type="button" onClick={() => setOpen(!open)} className="text-xs text-[var(--text-3)]">{open ? t("app.scanHide") : t("app.scanDetails")}</button>
-      </div>
-      {open && (
-        <div className="px-4 pb-4">
-          <div className="mb-2 flex items-center justify-end">
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[var(--text-2)] hover:text-[var(--text)]"
-              aria-label={t("common.close")}
-              title={t("common.close")}
-            >
-              ×
-            </button>
-          </div>
-          {file.subtitles.length === 0 && file.videoName && (
-            <div className="space-y-2 rounded-2xl border border-[var(--yellow-border)] bg-[var(--yellow-dim)] p-3">
-              <div className="text-xs text-[var(--yellow)]">{t("dashboard.noSubtitleFound")}</div>
-              {transcriptionEnabled && file.videoPath && onTranscribe ? (
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      disabled={isBusy}
-                      onClick={() => onTranscribe(file.videoPath as string, "transcribe_only")}
-                      className="rounded-lg bg-[var(--surface-2)] px-3 py-2 text-xs font-medium text-[var(--text)] disabled:opacity-50"
-                    >
-                      {progress?.postAction === "transcribe_only" && isBusy ? t("scan.transcription.working") : t("scan.transcription.transcribe")}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isBusy}
-                      onClick={() => onTranscribe(file.videoPath as string, "transcribe_and_translate")}
-                      className="rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-medium text-[var(--on-accent)] hover:brightness-110 disabled:opacity-50"
-                    >
-                      {progress?.postAction === "transcribe_and_translate" && isBusy ? t("scan.transcription.working") : t("scan.transcription.transcribeTranslate")}
-                    </button>
-                    {canCancel && (
-                      <button
-                        type="button"
-                        onClick={() => onCancelTranscribe?.(file.videoPath as string)}
-                        className="rounded-lg border border-[var(--red-border)] bg-[var(--red-dim)] px-3 py-2 text-xs font-medium text-[var(--red)] hover:bg-[var(--red-dim)]"
-                      >
-                        {t("scan.transcription.cancel")}
-                      </button>
-                    )}
-                    {progress && (
-                      <div className={`text-[11px] ${stageTone(progress.stage)}`}>
-                        {stageText(progress, t)}
-                      </div>
-                    )}
-                  </div>
-                  {progress?.stage === "transcribing" && typeof progress.pct === "number" && (
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]" aria-hidden="true">
-                      <div
-                        className="h-full rounded-full bg-[var(--accent)] transition-[width] duration-300"
-                        style={{ width: `${Math.max(0, Math.min(100, progress.pct))}%` }}
-                      />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-[11px] text-[var(--text-3)]">{t("scan.transcription.enableHint")}</div>
-              )}
-            </div>
-          )}
-          {file.subtitles.map((sub, j) => (
-            <div key={j} className="mt-2 rounded-2xl bg-[var(--surface)] p-3">
-              <div className="text-xs text-[var(--text-2)]">{sub.srtName}</div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {sub.tasks.map((task, k) => {
-                  const status = getTaskStatus(task, jobsById);
-                  return (
-                    <span
-                      key={k}
-                      className={`rounded-full px-2 py-1 text-[10px] font-medium ${status === "done" ? "bg-[var(--green-dim)] text-[var(--green)]" : status === "error" ? "bg-[var(--red-dim)] text-[var(--red)]" : status === "translating" ? "bg-[var(--accent-dim)] text-[var(--accent)]" : status === "pending" ? "bg-[var(--yellow-dim)] text-[var(--yellow)]" : "bg-[var(--surface-2)] text-[var(--text-3)]"}`}
-                    >
-                      {task.langCode} {STATUS_ICON[status]}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }

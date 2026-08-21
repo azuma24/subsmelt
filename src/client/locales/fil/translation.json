@@ -6,7 +6,7 @@
     "logs": "Mga Log",
     "settings": "Mga Setting",
     "convert": "I-convert",
-    "whisper": "Speech to text",
+    "whisper": "Transkripsiyon",
     "groupOperate": "Operasyon",
     "groupCreate": "Gumawa",
     "groupSystem": "Sistema",
@@ -28,7 +28,9 @@
     "confirm": "Kumpirmahin",
     "reset": "I-reset sa default",
     "close": "Isara",
-    "rowActions": "Mga aksyon sa row"
+    "rowActions": "Mga aksyon sa row",
+    "home": "Home",
+    "openFolder": "Buksan ang folder {{name}}"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -936,10 +938,20 @@
     "downloadsReady": "Handa na ang {{count}} download",
     "downloadsReadyHelp": "Awtomatikong nagsimula ang download. Maaari mong i-download muli sa ibaba.",
     "downloadFile": "I-download ang file",
-    "downloadZip": "I-download ang ZIP"
+    "downloadZip": "I-download ang ZIP",
+    "detecting": "Nag-detect ng wika…",
+    "detectedBadge": "Natukoy: {{lang}}",
+    "detectUnknown": "Hindi natukoy ang wika",
+    "overrideLabel": "I-override ang pinagmulang wika para sa {{name}}",
+    "targetPlaceholder": "hal. zh-TW, Japanese, 繁體中文",
+    "didYouMean": "Ibig mo bang sabihin:",
+    "ambiguousPick": "Ang \"{{input}}\" ay malabo — pumili ng isa:",
+    "recentLabel": "Nakaraang:",
+    "sameLangWarning": "Ang pinagmula at target ay parehong {{lang}} — laktawan ang pagsasalin para sa file na ito?",
+    "targetResolved": "Target: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — Speech to text",
+    "title": "Transkripsiyon — Speech to text",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",

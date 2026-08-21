@@ -3,8 +3,10 @@ import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import type { FolderNode, Task } from "../../types";
 import { DirectoryRulesSection } from "./media-sources/DirectoryRulesSection";
-import { FolderTree } from "./media-sources/FolderTree";
+import { FolderTree, toSettingsTree } from "./media-sources/FolderTree";
 import { ScanProfilesSection } from "./media-sources/ScanProfilesSection";
+import { usePersistedExpansion, type TreeExpansion } from "../../components/file-tree/use-persisted-expansion";
+import { useDrillDown } from "../../components/file-tree/use-drill-down";
 import {
   SCAN_MODES,
   collectNodePaths,
@@ -68,7 +70,6 @@ export function MediaSourcesPanel({
   const { t } = useTranslation();
   const [folderRoot, setFolderRoot] = useState<FolderNode | null>(null);
   const [folderSearch, setFolderSearch] = useState("");
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -79,7 +80,6 @@ export function MediaSourcesPanel({
     try {
       const data = await api.getFolderTree();
       setFolderRoot(data.root);
-      setExpandedFolders(new Set(data.root.children.map((node) => node.path)));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
       setFolderRoot(null);
@@ -128,6 +128,18 @@ export function MediaSourcesPanel({
   const allSubfolders = useMemo(() => folderRoot ? flattenFolderTree(folderRoot.children) : [], [folderRoot]);
   const visibleTree = useMemo(() => filterTree(folderRoot?.children || [], folderSearch), [folderRoot, folderSearch]);
   const visibleFolders = useMemo(() => collectNodePaths(visibleTree), [visibleTree]);
+
+  // Expand/collapse is persisted per folder in localStorage (default
+  // collapsed), pruned against the full unfiltered tree so a narrower search
+  // can't silently discard state. While searching, every visible folder is
+  // forced open instead so matches aren't hidden behind a collapsed parent.
+  const searchActive = folderSearch.trim().length > 0;
+  const persistedExpansion = usePersistedExpansion("mediaSources", allSubfolders);
+  const expansion: TreeExpansion = searchActive
+    ? { expanded: new Set(visibleFolders), toggleExpand: persistedExpansion.toggleExpand }
+    : persistedExpansion;
+  const adaptedRoots = useMemo(() => toSettingsTree(visibleTree), [visibleTree]);
+  const drill = useDrillDown(adaptedRoots, isMobile && !searchActive);
 
   const toggleIncludedFolder = (folder: string) => {
     if (excluded.includes(folder)) {
@@ -261,14 +273,14 @@ export function MediaSourcesPanel({
         ) : (
           <div className={`${isMobile ? "max-h-80" : "max-h-96"} overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--surface)] p-1.5`}>
             <FolderTree
-              nodes={visibleTree}
+              nodes={adaptedRoots}
               mediaDir={mediaDir}
               mode={mode}
               selected={selected}
               excluded={excluded}
-              expandedFolders={expandedFolders}
-              setExpandedFolders={setExpandedFolders}
-              searchActive={folderSearch.trim().length > 0}
+              isMobile={isMobile}
+              expansion={expansion}
+              drill={drill}
               onToggleIncluded={toggleIncludedFolder}
               onToggleExcluded={toggleExcludedFolder}
               tasks={tasks}

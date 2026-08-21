@@ -6,7 +6,7 @@
     "logs": "Protokoly",
     "settings": "Nastavení",
     "convert": "Převést",
-    "whisper": "Řeč na text",
+    "whisper": "Přepis",
     "groupOperate": "Provoz",
     "groupCreate": "Vytváření",
     "groupSystem": "Systém",
@@ -28,7 +28,9 @@
     "confirm": "Potvrdit",
     "reset": "Obnovit výchozí",
     "close": "Zavřít",
-    "rowActions": "Akce řádku"
+    "rowActions": "Akce řádku",
+    "home": "Domů",
+    "openFolder": "Otevřít složku {{name}}"
   },
   "dashboard": {
     "title": "Přehled",
@@ -936,10 +938,20 @@
     "downloadsReady": "Připraveno {{count}} stažení",
     "downloadsReadyHelp": "Stahování začalo automaticky. Níže můžete stáhnout znovu.",
     "downloadFile": "Stáhnout soubor",
-    "downloadZip": "Stáhnout ZIP"
+    "downloadZip": "Stáhnout ZIP",
+    "detecting": "Detekuje se jazyk…",
+    "detectedBadge": "Detekován: {{lang}}",
+    "detectUnknown": "Jazyk nebyl detekován",
+    "overrideLabel": "Přepsat zdrojový jazyk pro {{name}}",
+    "targetPlaceholder": "Např. zh-TW, Japanese, 繁體中文",
+    "didYouMean": "Mysleli jste:",
+    "ambiguousPick": "\"{{input}}\" je nejednoznačné — vyberte si:",
+    "recentLabel": "Nedávné:",
+    "sameLangWarning": "Zdrojový a cílový jazyk jsou oba {{lang}} — přeskočit překlad pro tento soubor?",
+    "targetResolved": "Cíl: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — Řeč na text",
+    "title": "Přepis — Řeč na text",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",

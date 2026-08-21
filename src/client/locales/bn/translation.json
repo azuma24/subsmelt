@@ -6,7 +6,7 @@
     "logs": "লগসমূহ",
     "settings": "সেটিংস",
     "convert": "রূপান্তর",
-    "whisper": "বক্তব্য থেকে লেখা",
+    "whisper": "প্রতিলিপি",
     "groupOperate": "পরিচালনা",
     "groupCreate": "তৈরি",
     "groupSystem": "সিস্টেম",
@@ -28,7 +28,9 @@
     "confirm": "নিশ্চিত করুন",
     "reset": "ডিফল্টে রিসেট করুন",
     "close": "বন্ধ করুন",
-    "rowActions": "সারির ক্রিয়া"
+    "rowActions": "সারির ক্রিয়া",
+    "home": "হোম",
+    "openFolder": "ফোল্ডার খুলুন {{name}}"
   },
   "dashboard": {
     "title": "ড্যাশবোর্ড",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} ডাউনলোড প্রস্তুত",
     "downloadsReadyHelp": "ডাউনলোড স্বয়ংক্রিয়ভাবে শুরু হয়েছে। নিচে আবার ডাউনলোড করতে পারেন।",
     "downloadFile": "ফাইল ডাউনলোড",
-    "downloadZip": "ZIP ডাউনলোড"
+    "downloadZip": "ZIP ডাউনলোড",
+    "detecting": "ভাষা সনাক্ত করছি…",
+    "detectedBadge": "সনাক্ত করা হয়েছে: {{lang}}",
+    "detectUnknown": "ভাষা সনাক্ত করা হয়নি",
+    "overrideLabel": "{{name}} এর জন্য উৎস ভাষা ওভাররাইড করুন",
+    "targetPlaceholder": "উদাহরণ: zh-TW, Japanese, 繁體中文",
+    "didYouMean": "আপনি কি বলতে চাইলেন:",
+    "ambiguousPick": "\"{{input}}\" অস্পষ্ট — একটি বেছে নিন:",
+    "recentLabel": "সম্প্রতি:",
+    "sameLangWarning": "উৎস এবং লক্ষ্য উভয়ই {{lang}} — এই ফাইলের জন্য অনুবাদ এড়িয়ে যাব?",
+    "targetResolved": "লক্ষ্য: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — বক্তব্য থেকে লেখা",
+    "title": "প্রতিলিপি — বক্তব্য থেকে লেখা",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",

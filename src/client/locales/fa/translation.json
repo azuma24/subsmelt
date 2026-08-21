@@ -6,7 +6,7 @@
     "logs": "گزارش‌ها",
     "settings": "تنظیمات",
     "convert": "تبدیل",
-    "whisper": "گفتار به نوشتار",
+    "whisper": "رونوشت",
     "groupOperate": "عملیات",
     "groupCreate": "ایجاد",
     "groupSystem": "سیستم",
@@ -28,7 +28,9 @@
     "confirm": "تأیید",
     "reset": "بازنشانی به پیش‌فرض",
     "close": "بستن",
-    "rowActions": "کنش‌های ردیف"
+    "rowActions": "کنش‌های ردیف",
+    "home": "خانه",
+    "openFolder": "باز کردن پوشه {{name}}"
   },
   "dashboard": {
     "title": "داشبورد",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} دانلود آماده است",
     "downloadsReadyHelp": "دانلود خودکار شروع شد. می‌توانید دوباره از پایین دانلود کنید.",
     "downloadFile": "دانلود پرونده",
-    "downloadZip": "دانلود ZIP"
+    "downloadZip": "دانلود ZIP",
+    "detecting": "درحال تشخیص زبان…",
+    "detectedBadge": "شناسایی شد: {{lang}}",
+    "detectUnknown": "زبان شناسایی نشد",
+    "overrideLabel": "لغو زبان منبع برای {{name}}",
+    "targetPlaceholder": "به عنوان مثال: zh-TW, Japanese, 繁體中文",
+    "didYouMean": "منظورتان این است:",
+    "ambiguousPick": "\"{{input}}\" مبهم است — یکی را انتخاب کنید:",
+    "recentLabel": "اخیر:",
+    "sameLangWarning": "منبع و مقصد هر دو {{lang}} هستند — آیا ترجمه این فایل را رد کنید؟",
+    "targetResolved": "هدف: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — گفتار به نوشتار",
+    "title": "رونوشت — گفتار به نوشتار",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",

@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useJobActions } from "../../hooks/useJobActions";
 import type { JobRow } from "../../types";
-import { ActionButton, ProgressSmall, StatusBadge } from "../../ui/primitives";
+import { ActionButton, ProgressSmall, RowActionsMenu, StatusBadge } from "../../ui/primitives";
 
 interface JobCardMobileProps {
   job: JobRow;
@@ -49,7 +49,25 @@ export function JobCardMobile({
             {reason && <div className="mt-1 inline-flex rounded-full bg-[var(--red-dim)] px-2 py-0.5 text-[10px] text-[var(--red)]">{t(`dashboard.errorReason.${reason}`)}</div>}
           </div>
         </div>
-        <StatusBadge job={job} compact />
+        <div className="flex shrink-0 items-center gap-1.5">
+          <StatusBadge job={job} compact />
+          {/* Secondary actions (pin, logs, delete) collapse into one menu — the
+              old stacked full-width buttons made every card ~3 rows taller. */}
+          <RowActionsMenu
+            items={[
+              ...(isPending
+                ? [job.priority > 0
+                    ? { label: t("dashboard.action.unpin"), onClick: () => jobActions.unpin(job.id), disabled: jobActions.isUnpinning }
+                    : { label: t("dashboard.action.pin"), onClick: () => jobActions.pin(job.id), disabled: jobActions.isPinning }]
+                : []),
+              ...(job.status === "error"
+                ? [{ label: t("dashboard.action.logs"), onClick: () => onOpenLogs(job.id) }]
+                : []),
+              { label: t("dashboard.action.details"), onClick: () => onOpenDetails(job) },
+              { label: t("dashboard.action.delete"), onClick: () => { void jobActions.remove(job.id); }, danger: true, disabled: jobActions.isDeleting },
+            ]}
+          />
+        </div>
       </div>
       {job.status === "translating" && <div className="mt-3"><ProgressSmall pct={pct} /></div>}
       <div className="mt-3 grid grid-cols-2 gap-2">
@@ -78,32 +96,6 @@ export function JobCardMobile({
           >{t("dashboard.action.open")}</button>
         )}
       </div>
-      {isPending && (
-        <div className="mt-2">
-          {job.priority > 0 ? (
-            <ActionButton size="sm" variant="ghost" className="w-full" busy={jobActions.isUnpinning} onClick={() => jobActions.unpin(job.id)}>{t("dashboard.action.unpin")}</ActionButton>
-          ) : (
-            <ActionButton size="sm" variant="ghost" className="w-full" busy={jobActions.isPinning} onClick={() => jobActions.pin(job.id)}>{t("dashboard.action.pin")}</ActionButton>
-          )}
-        </div>
-      )}
-      {job.status === "error" && (
-        <button
-          type="button"
-          onClick={() => onOpenLogs(job.id)}
-          className="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-center text-[12px] font-medium text-[var(--text)]"
-        >
-          {t("dashboard.action.logs")}
-        </button>
-      )}
-      <button
-        type="button"
-        onClick={() => { void jobActions.remove(job.id); }}
-        disabled={jobActions.isDeleting}
-        className="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-center text-[12px] font-medium text-[var(--text-3)] hover:text-[var(--red)] disabled:opacity-40"
-      >
-        {t("dashboard.action.delete")}
-      </button>
     </div>
   );
 }

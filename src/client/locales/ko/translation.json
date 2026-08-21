@@ -6,7 +6,7 @@
     "logs": "로그",
     "settings": "설정",
     "convert": "변환",
-    "whisper": "음성 텍스트 변환",
+    "whisper": "전사",
     "groupOperate": "운영",
     "groupCreate": "만들기",
     "groupSystem": "시스템",
@@ -28,7 +28,9 @@
     "confirm": "확인",
     "reset": "기본값으로 재설정",
     "close": "닫기",
-    "rowActions": "행 작업"
+    "rowActions": "행 작업",
+    "home": "홈",
+    "openFolder": "폴더 열기 {{name}}"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}}개 다운로드 준비됨",
     "downloadsReadyHelp": "다운로드가 자동으로 시작되었습니다. 아래에서 다시 다운로드할 수 있습니다.",
     "downloadFile": "파일 다운로드",
-    "downloadZip": "ZIP 다운로드"
+    "downloadZip": "ZIP 다운로드",
+    "detecting": "언어 감지 중…",
+    "detectedBadge": "감지됨: {{lang}}",
+    "detectUnknown": "언어를 감지하지 못했습니다",
+    "overrideLabel": "{{name}}의 원본 언어 무시",
+    "targetPlaceholder": "예: zh-TW, Japanese, 繁體中文",
+    "didYouMean": "혹시 이 뜻인가요:",
+    "ambiguousPick": "\"{{input}}\"은(는) 모호합니다 — 하나를 선택하세요:",
+    "recentLabel": "최근:",
+    "sameLangWarning": "원본과 대상이 모두 {{lang}}입니다 — 이 파일의 번역을 건너뛰시겠습니까?",
+    "targetResolved": "대상: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — 음성 텍스트 변환",
+    "title": "전사 — 음성 텍스트 변환",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "설정 열기",

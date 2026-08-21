@@ -157,11 +157,14 @@ export const testNotification = () =>
 // Subtitle format converter
 export type ConvertTargetFormat = "srt" | "vtt" | "ass" | "ssa";
 export interface ConvertRequest {
-  files: { name: string; content: string }[];
+  files: { name: string; content: string; sourceLang?: string; skip?: boolean }[];
   targetFormat: ConvertTargetFormat;
   translate?: boolean;
   sourceLang?: string;
+  /** Rich language name for the LLM prompt (e.g. "Traditional Chinese (Taiwan)"). */
   targetLang?: string;
+  /** Canonical BCP-47 code for output filenames (e.g. "zh-TW"). */
+  targetCode?: string;
 }
 export interface ConvertResponse {
   files: { name: string; content: string }[];

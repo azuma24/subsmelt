@@ -256,3 +256,38 @@ export function buildSeriesGlossarySeed(series: SeriesGlossary): string {
   if (lines.length === 0) return "";
   return `[Series Glossary]\n${lines.join("\n")}`;
 }
+
+/** The two glossary views a translateFile job needs, derived once per file. */
+export interface ChunkGlossaryResult {
+  /** Every known term (parsed from this file's analysis + prior series terms),
+   *  deduped by lowercase term, for per-chunk scanning. */
+  chunkGlossary: GlossaryEntry[];
+  /** Only the terms freshly parsed from THIS file's analysis — what gets
+   *  merged back into the series glossary file. */
+  parsedGlossary: GlossaryEntry[];
+}
+
+/**
+ * Active Glossary Injection (§1) — parse the analysis blob into structured
+ * {term, translation} pairs once, then merge the series glossary on top so
+ * every known term is available for per-chunk scanning. Purely additive: if
+ * nothing parses, this is an empty list and chunk prompts are unchanged.
+ */
+export function buildChunkGlossary(
+  analysis: string,
+  seriesGlossary: SeriesGlossary | null
+): ChunkGlossaryResult {
+  const parsedGlossary = parseGlossaryFromAnalysis(analysis);
+  const glossaryByTerm = new Map<string, GlossaryEntry>();
+  for (const e of parsedGlossary) glossaryByTerm.set(e.term.toLowerCase(), e);
+  if (seriesGlossary) {
+    for (const [term, translation] of Object.entries(seriesGlossary.terms)) {
+      const key = term.toLowerCase();
+      if (term.trim() && translation.trim() && !glossaryByTerm.has(key)) {
+        glossaryByTerm.set(key, { term, translation });
+      }
+    }
+  }
+  const chunkGlossary: GlossaryEntry[] = Array.from(glossaryByTerm.values());
+  return { chunkGlossary, parsedGlossary };
+}

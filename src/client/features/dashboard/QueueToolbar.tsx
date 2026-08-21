@@ -77,43 +77,33 @@ export function QueueToolbar({
       {showQueueControls && (
         <>
           {/* Recovery / bulk actions: visible, not buried in the collapsed
-              "Filters" accordion where they used to live. */}
-          <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t("dashboard.bulkActionsLabel")}>
-            <ActionButton
-              size="sm"
-              variant="ghost"
-              onClick={onSelectVisiblePending}
-              disabled={visiblePendingIds.length === 0}
-            >
-              {t("dashboard.selectVisiblePending", { count: visiblePendingIds.length })}
-            </ActionButton>
-            <ActionButton
-              size="sm"
-              variant="warning"
-              onClick={onRetryVisibleErrors}
-              disabled={visibleErrorIds.length === 0}
-              busy={isRetryPending}
-            >
-              {t("dashboard.retryVisibleErrors", { count: visibleErrorIds.length })}
-            </ActionButton>
-            <ActionButton
-              size="sm"
-              variant="ghost"
-              onClick={onRetranslateVisible}
-              disabled={visibleRetranslatableIds.length === 0}
-              busy={isForcePending}
-            >
-              {t("dashboard.retranslateVisible", { count: visibleRetranslatableIds.length })}
-            </ActionButton>
-            <ActionButton
-              size="sm"
-              variant="danger"
-              onClick={onClearAll}
-              disabled={jobsCount === 0}
-            >
-              {t("dashboard.clearAll")}
-            </ActionButton>
-          </div>
+              "Filters" accordion where they used to live. A zero-count action
+              is hidden rather than rendered disabled — four gray buttons above
+              the list were pure noise when nothing was actionable. */}
+          {(visiblePendingIds.length > 0 || visibleErrorIds.length > 0 || visibleRetranslatableIds.length > 0 || jobsCount > 0) && (
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t("dashboard.bulkActionsLabel")}>
+              {visiblePendingIds.length > 0 && (
+                <ActionButton size="sm" variant="ghost" onClick={onSelectVisiblePending}>
+                  {t("dashboard.selectVisiblePending", { count: visiblePendingIds.length })}
+                </ActionButton>
+              )}
+              {visibleErrorIds.length > 0 && (
+                <ActionButton size="sm" variant="warning" onClick={onRetryVisibleErrors} busy={isRetryPending}>
+                  {t("dashboard.retryVisibleErrors", { count: visibleErrorIds.length })}
+                </ActionButton>
+              )}
+              {visibleRetranslatableIds.length > 0 && (
+                <ActionButton size="sm" variant="ghost" onClick={onRetranslateVisible} busy={isForcePending}>
+                  {t("dashboard.retranslateVisible", { count: visibleRetranslatableIds.length })}
+                </ActionButton>
+              )}
+              {jobsCount > 0 && (
+                <ActionButton size="sm" variant="danger" onClick={onClearAll}>
+                  {t("dashboard.clearAll")}
+                </ActionButton>
+              )}
+            </div>
+          )}
 
           {/* L3: Filters accordion — folder + target selects + clear filters. */}
           <Accordion title={t("dashboard.filtersLabel")} defaultOpen={hasQueueFilters}>

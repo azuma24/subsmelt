@@ -3,32 +3,25 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
-import { useJobsQuery, useMutationWithInvalidation, useQueueStatusQuery, useSettingsQuery, useSSE, useTasksQuery, useTranscriptionHistoryQuery } from "../../hooks";
+import { useJobsQuery, useMutationWithInvalidation, useQueueStatusQuery, useSettingsQuery, useTasksQuery, useTranscriptionHistoryQuery } from "../../hooks";
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmModal";
-import type { JobRow, ScannedFile, TranscribePostAction, TranscriptionHistoryEntry } from "../../types";
-import { ActionButton, EmptyHint, SelectionBar } from "../../ui/primitives";
+import type { JobRow, ScannedFile } from "../../types";
+import { ActionButton, EmptyHint, RowActionsMenu, SelectionBar } from "../../ui/primitives";
 import { JobsTableDesktop } from "./JobsTableDesktop";
 import { JobCardMobile } from "./JobCardMobile";
 import { JobDetailsDrawer } from "./JobDetailsDrawer";
 import { PreviewOverlay } from "./PreviewOverlay";
-import { ScanResultsPanel, getScanGroupName, type ScanFilter } from "./ScanResultsPanel";
+import { ScanResultsPanel, type ScanFilter } from "./ScanResultsPanel";
 import { validDashboardSortBy, validDashboardSortDir, type DashboardSortBy, type DashboardSortDir } from "./scanSort";
 import { useDashboardDerivedState } from "./useDashboardDerivedState";
 import { DashboardHero } from "./DashboardHero";
 import { QueueToolbar } from "./QueueToolbar";
 import { TranscriptionHistoryPanel } from "./TranscriptionHistoryPanel";
 import { ScanConfirmModal, type ScanPlan } from "./ScanConfirmModal";
-import {
-  createManualTranscriptionProgress,
-  isManualTranscriptionBusy,
-  transitionManualTranscriptionProgress,
-  type ManualTranscriptionProgress,
-} from "./transcription-progress";
+import { useManualTranscription, type ScanResultMode } from "./useManualTranscription";
 import { str } from "../../lib/settings-value";
 import type { DashboardTab } from "./tabs";
-
-type ScanResultMode = "preview" | "queued";
 
 const SETUP_DISMISSED_KEY = "subsmelt_setup_dismissed";
 
@@ -49,7 +42,6 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const [scanSearch, setScanSearch] = useState("");
   const [dashboardSortBy, setDashboardSortBy] = useState<DashboardSortBy>("date");
   const [dashboardSortDir, setDashboardSortDir] = useState<DashboardSortDir>("desc");
-  const [expandedScanGroups, setExpandedScanGroups] = useState<Set<string>>(new Set());
   const [previewJobId, setPreviewJobId] = useState<number | null>(null);
   const [previewSearch, setPreviewSearch] = useState("");
   const [detailsJob, setDetailsJob] = useState<JobRow | null>(null);
@@ -61,8 +53,6 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const [folderFilter, setFolderFilter] = useState("all");
   const [targetFilter, setTargetFilter] = useState("all");
   const [scanPlan, setScanPlan] = useState<ScanPlan | null>(null);
-  const [transcriptionProgressByPath, setTranscriptionProgressByPath] = useState<Record<string, ManualTranscriptionProgress>>({});
-  const [transcribingPath, setTranscribingPath] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DashboardTab>("queue");
   // Auto-hide onboarding: read from localStorage
   const [setupDismissed, setSetupDismissed] = useState(() => {
@@ -78,10 +68,23 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const deleteSelectedMutation = useMutationWithInvalidation((ids: number[]) => api.deleteJobsApi(ids));
   const retrySelectedMutation = useMutationWithInvalidation((ids: number[]) => api.retryJobsApi(ids));
   const forceSelectedMutation = useMutationWithInvalidation((ids: number[]) => api.forceJobsApi(ids));
-  const transcribeMutation = useMutationWithInvalidation((payload: { videoPath: string; postAction: TranscribePostAction }) => api.transcribeVideo(payload));
-  const retryTranscriptionMutation = useMutationWithInvalidation((id: string) => api.retryTranscriptionAttempt(id));
-  const cancelTranscriptionMutation = useMutationWithInvalidation((videoPath: string) => api.cancelTranscription({ path: videoPath }));
   const saveDashboardSortMutation = useMutationWithInvalidation((patch: Record<string, string>) => api.saveSettings(patch));
+
+  const {
+    transcriptionProgressByPath,
+    transcribingPath,
+    isTranscribePending,
+    isRetryPending,
+    handleTranscribe,
+    handleCancelTranscription,
+    handleBatchTranscribe,
+    handleRetryTranscription,
+  } = useManualTranscription({
+    setScanResult,
+    setScanResultMode,
+    setSelectedVideoPaths,
+    refreshScanPreview: () => scanPreviewMutation.mutateAsync(),
+  });
 
   const jobs: JobRow[] = jobsQuery.data?.jobs || [];
   const queueRunning = Boolean(queueStatusQuery.data?.running ?? jobsQuery.data?.queueRunning ?? false);
@@ -175,25 +178,12 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
     });
   }, [jobs]);
 
-  const expandInterestingScanGroups = (files: ScannedFile[]) => {
-    const initialGroups = new Set<string>();
-    files.forEach((file: ScannedFile) => {
-      const group = getScanGroupName(file, mediaDir);
-      const hasNew = file.subtitles.some((sub) => sub.tasks.some((task) => task.status === "new" || task.status === "pending"));
-      const missing = file.videoName && file.subtitles.length === 0;
-      const orphan = !file.videoName;
-      if (hasNew || missing || orphan) initialGroups.add(group);
-    });
-    setExpandedScanGroups(initialGroups);
-  };
-
   const handlePreviewScan = async () => {
     try {
       const result = await scanPreviewMutation.mutateAsync();
       setScanResult(result.files);
       setSelectedVideoPaths(new Set());
       setScanResultMode("preview");
-      expandInterestingScanGroups(result.files);
       setActiveTab("scan");
       addToast(t("dashboard.toast.scanPreviewComplete", { total: result.totalSubtitles, newJobs: result.newJobs }), "info");
     } catch (e: unknown) {
@@ -233,7 +223,6 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
       setScanResult(result.files);
       setSelectedVideoPaths(new Set());
       setScanResultMode("queued");
-      expandInterestingScanGroups(result.files);
       setScanPlan(null);
       setActiveTab("scan");
       addToast(t("dashboard.toast.scanComplete", { total: result.totalSubtitles, newJobs: result.newJobs }), "info");
@@ -324,147 +313,6 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
     addToast(t("dashboard.toast.forceSelectedStarted", { count: result.updated }), "info");
   };
 
-  const updateTranscriptionProgress = (
-    videoPath: string,
-    updater: ManualTranscriptionProgress | ((current: ManualTranscriptionProgress) => ManualTranscriptionProgress),
-  ) => {
-    setTranscriptionProgressByPath((prev) => {
-      const current = prev[videoPath];
-      if (!current) return prev;
-      const next = typeof updater === "function"
-        ? (updater as (current: ManualTranscriptionProgress) => ManualTranscriptionProgress)(current)
-        : updater;
-      return { ...prev, [videoPath]: next };
-    });
-  };
-
-  // Subscribe to live per-segment transcription progress. The backend emits
-  // transcription:progress { path, pct, processedSeconds, totalSeconds } as it
-  // processes the faster-whisper segment generator; we match by path and feed
-  // the real percentage into the progress state machine.
-  useSSE((type, data) => {
-    if (type !== "transcription:progress") return;
-    const videoPath = typeof data.path === "string" ? data.path : "";
-    if (!videoPath) return;
-    if (data.cancelled === true) {
-      updateTranscriptionProgress(videoPath, (current) =>
-        transitionManualTranscriptionProgress(current, { type: "cancelled" }),
-      );
-      return;
-    }
-    if (typeof data.pct === "number") {
-      const pct = data.pct;
-      updateTranscriptionProgress(videoPath, (current) =>
-        transitionManualTranscriptionProgress(current, { type: "progress", pct }),
-      );
-    }
-  });
-
-  const handleCancelTranscription = async (videoPath: string) => {
-    updateTranscriptionProgress(videoPath, (current) =>
-      transitionManualTranscriptionProgress(current, { type: "cancel-requested" }),
-    );
-    try {
-      await cancelTranscriptionMutation.mutateAsync(videoPath);
-    } catch (e: unknown) {
-      addToast(t("dashboard.toast.cancelFailed", { error: getErrorMessage(e) }), "error");
-    }
-  };
-
-  const handleTranscribe = async (videoPath: string, postAction: TranscribePostAction, opts?: { skipRescan?: boolean }) => {
-    setTranscriptionProgressByPath((prev) => ({
-      ...prev,
-      [videoPath]: createManualTranscriptionProgress(postAction),
-    }));
-    try {
-      await api.preflightTranscription({ videoPath, postAction });
-      updateTranscriptionProgress(videoPath, (current) =>
-        transitionManualTranscriptionProgress(current, { type: "preflight-passed" }),
-      );
-
-      const result = await transcribeMutation.mutateAsync({ videoPath, postAction });
-      if (postAction === "transcribe_and_translate") {
-        updateTranscriptionProgress(videoPath, (current) =>
-          transitionManualTranscriptionProgress(current, { type: "backend-finished" }),
-        );
-      }
-
-      // In batch mode the caller does a single rescan after all files finish —
-      // skip the per-file refresh (avoids N scans + N re-renders mid-batch).
-      if (opts?.skipRescan) {
-        // no-op: leave scan state for the batch caller to refresh once
-      } else if (result.scanResult?.files) {
-        setScanResult(result.scanResult.files);
-        setScanResultMode(postAction === "transcribe_and_translate" ? "queued" : "preview");
-        expandInterestingScanGroups(result.scanResult.files);
-      } else {
-        const refreshed = await scanPreviewMutation.mutateAsync();
-        setScanResult(refreshed.files);
-        setScanResultMode("preview");
-        expandInterestingScanGroups(refreshed.files);
-      }
-      updateTranscriptionProgress(videoPath, (current) =>
-        transitionManualTranscriptionProgress(
-          current,
-          postAction === "transcribe_and_translate" ? { type: "scan-queued" } : { type: "backend-finished" },
-        ),
-      );
-      addToast(
-        postAction === "transcribe_and_translate"
-          ? t("dashboard.toast.transcriptionCompleteQueued")
-          : t("dashboard.toast.transcriptionCompleteGenerated"),
-        "success",
-      );
-    } catch (e: unknown) {
-      const message = getErrorMessage(e);
-      updateTranscriptionProgress(videoPath, (current) =>
-        transitionManualTranscriptionProgress(current, { type: "error", message }),
-      );
-      addToast(t("dashboard.toast.transcriptionFailed", { message }), "error");
-    }
-  };
-
-  // Batch transcription: run the same single-file flow for each selected video,
-  // sequentially so per-file progress is visible and the server's transcription
-  // semaphore still bounds concurrency. Reuses handleTranscribe wholesale.
-  const handleBatchTranscribe = async (videoPaths: string[], postAction: TranscribePostAction) => {
-    setSelectedVideoPaths(new Set());
-    // Skip files already transcribing so we don't clobber their live progress or
-    // double-issue requests. Each file is isolated (handleTranscribe catches its
-    // own errors), so one failure never aborts the rest.
-    const runnable = videoPaths.filter((p) => !isManualTranscriptionBusy(transcriptionProgressByPath[p]));
-    if (runnable.length === 0) return;
-    for (const videoPath of runnable) {
-      await handleTranscribe(videoPath, postAction, { skipRescan: true });
-    }
-    // One scan refresh after the whole batch (instead of one per file).
-    try {
-      const refreshed = await scanPreviewMutation.mutateAsync();
-      setScanResult(refreshed.files);
-      setScanResultMode(postAction === "transcribe_and_translate" ? "queued" : "preview");
-      expandInterestingScanGroups(refreshed.files);
-    } catch {
-      // Non-fatal: transcription already completed; the next manual scan will sync.
-    }
-  };
-
-  const handleRetryTranscription = async (attempt: TranscriptionHistoryEntry) => {
-    setTranscribingPath(attempt.inputPath);
-    try {
-      const result = await retryTranscriptionMutation.mutateAsync(attempt.id);
-      if (result.scanResult?.files) {
-        setScanResult(result.scanResult.files);
-        setScanResultMode(attempt.postAction === "transcribe_and_translate" ? "queued" : "preview");
-        expandInterestingScanGroups(result.scanResult.files);
-      }
-      addToast(t("dashboard.toast.transcriptionRetried"), "success");
-    } catch (e: unknown) {
-      addToast(t("dashboard.toast.retryFailed", { error: getErrorMessage(e) }), "error");
-    } finally {
-      setTranscribingPath(null);
-    }
-  };
-
   const toggleSelectedJob = (id: number) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -527,13 +375,27 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
           className="flex items-center gap-1.5"
           aria-label={t("dashboard.hero.scanActions")}
         >
-          <ActionButton variant="ghost" size="sm" onClick={handlePreviewScan} busy={scanPreviewMutation.isPending} disabled={scanMutation.isPending}>
-            {scanPreviewMutation.isPending ? t("dashboard.previewing") : t("dashboard.previewScan")}
-          </ActionButton>
-          <ActionButton variant="ghost" size="sm" onClick={handleScan} busy={scanMutation.isPending} disabled={scanPreviewMutation.isPending}>
-            {scanMutation.isPending ? t("dashboard.scanning") : t("dashboard.scanFolders")}
-          </ActionButton>
-          <span className="mx-0.5 hidden h-[18px] w-px bg-[var(--border)] sm:block" />
+          {/* At phone widths three buttons wrap the 50px topbar onto two cramped
+              lines — the scan actions collapse into a menu and only the primary
+              Run/Stop control stays out. */}
+          {isMobile ? (
+            <RowActionsMenu
+              items={[
+                { label: scanPreviewMutation.isPending ? t("dashboard.previewing") : t("dashboard.previewScan"), onClick: handlePreviewScan, disabled: scanPreviewMutation.isPending || scanMutation.isPending },
+                { label: scanMutation.isPending ? t("dashboard.scanning") : t("dashboard.scanFolders"), onClick: handleScan, disabled: scanMutation.isPending || scanPreviewMutation.isPending },
+              ]}
+            />
+          ) : (
+            <>
+              <ActionButton variant="ghost" size="sm" onClick={handlePreviewScan} busy={scanPreviewMutation.isPending} disabled={scanMutation.isPending}>
+                {scanPreviewMutation.isPending ? t("dashboard.previewing") : t("dashboard.previewScan")}
+              </ActionButton>
+              <ActionButton variant="ghost" size="sm" onClick={handleScan} busy={scanMutation.isPending} disabled={scanPreviewMutation.isPending}>
+                {scanMutation.isPending ? t("dashboard.scanning") : t("dashboard.scanFolders")}
+              </ActionButton>
+              <span className="mx-0.5 hidden h-[18px] w-px bg-[var(--border)] sm:block" />
+            </>
+          )}
           {queueRunning ? (
             <ActionButton variant="danger" size="sm" onClick={handleStop}>{t("dashboard.stop")}</ActionButton>
           ) : (
@@ -673,8 +535,8 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
             <TranscriptionHistoryPanel
               attempts={transcriptionAttempts}
               transcribingPath={transcribingPath}
-              isRetryPending={retryTranscriptionMutation.isPending}
-              isTranscribePending={transcribeMutation.isPending}
+              isRetryPending={isRetryPending}
+              isTranscribePending={isTranscribePending}
               onRetry={handleRetryTranscription}
             />
           )}
@@ -687,8 +549,6 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
                 setFilter={setScanListFilter}
                 search={scanSearch}
                 setSearch={setScanSearch}
-                expandedGroups={expandedScanGroups}
-                setExpandedGroups={setExpandedScanGroups}
                 jobsById={jobsById}
                 selectedIds={selectedIds}
                 setSelectedIds={setSelectedIds}

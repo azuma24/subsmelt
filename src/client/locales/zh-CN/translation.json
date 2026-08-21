@@ -6,7 +6,7 @@
     "logs": "日志",
     "settings": "设置",
     "convert": "转换",
-    "whisper": "语音转文字",
+    "whisper": "转录",
     "groupOperate": "运行",
     "groupCreate": "创建",
     "groupSystem": "系统",
@@ -28,7 +28,9 @@
     "confirm": "确认",
     "reset": "重置为默认值",
     "close": "关闭",
-    "rowActions": "行操作"
+    "rowActions": "行操作",
+    "home": "首页",
+    "openFolder": "打开文件夹 {{name}}"
   },
   "dashboard": {
     "title": "仪表板",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} 个下载已就绪",
     "downloadsReadyHelp": "下载已自动开始。你也可以在下方重新下载。",
     "downloadFile": "下载文件",
-    "downloadZip": "下载 ZIP"
+    "downloadZip": "下载 ZIP",
+    "detecting": "正在检测语言…",
+    "detectedBadge": "检测到: {{lang}}",
+    "detectUnknown": "未检测到语言",
+    "overrideLabel": "覆盖 {{name}} 的源语言",
+    "targetPlaceholder": "例如: zh-TW, Japanese, 繁體中文",
+    "didYouMean": "您是指:",
+    "ambiguousPick": "\"{{input}}\" 不明确 — 请选择一个:",
+    "recentLabel": "最近:",
+    "sameLangWarning": "源和目标都是 {{lang}} — 跳过此文件的翻译?",
+    "targetResolved": "目标: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — 语音转文字",
+    "title": "转录 — 语音转文字",
     "subtitle": "从媒体库选择文件或文件夹，并将它们转录为字幕。与翻译功能分开。",
     "disabledNotice": "语音转文字已禁用。",
     "openSettings": "打开设置",

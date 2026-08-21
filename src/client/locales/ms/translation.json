@@ -6,7 +6,7 @@
     "logs": "Log",
     "settings": "Tetapan",
     "convert": "Tukar",
-    "whisper": "Pertuturan ke teks",
+    "whisper": "Transkripsi",
     "groupOperate": "Operasi",
     "groupCreate": "Cipta",
     "groupSystem": "Sistem",
@@ -28,7 +28,9 @@
     "confirm": "Sahkan",
     "reset": "Set semula ke lalai",
     "close": "Tutup",
-    "rowActions": "Tindakan baris"
+    "rowActions": "Tindakan baris",
+    "home": "Laman Utama",
+    "openFolder": "Buka folder {{name}}"
   },
   "dashboard": {
     "title": "Papan Pemuka",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} muat turun sedia",
     "downloadsReadyHelp": "Muat turun bermula secara automatik. Anda boleh muat turun semula di bawah.",
     "downloadFile": "Muat turun fail",
-    "downloadZip": "Muat turun ZIP"
+    "downloadZip": "Muat turun ZIP",
+    "detecting": "Mengesan bahasa…",
+    "detectedBadge": "Dikesan: {{lang}}",
+    "detectUnknown": "Bahasa tidak dikesan",
+    "overrideLabel": "Gantikan bahasa sumber untuk {{name}}",
+    "targetPlaceholder": "cth. zh-TW, Japanese, 繁體中文",
+    "didYouMean": "Adakah maksud anda:",
+    "ambiguousPick": "\"{{input}}\" adalah samar — pilih satu:",
+    "recentLabel": "Terbaru:",
+    "sameLangWarning": "Sumber dan sasaran adalah {{lang}} — langkau terjemahan untuk fail ini?",
+    "targetResolved": "Sasaran: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — Pertuturan ke teks",
+    "title": "Transkripsi — Pertuturan ke teks",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",

@@ -6,7 +6,7 @@
     "logs": "ログ",
     "settings": "設定",
     "convert": "変換",
-    "whisper": "音声文字起こし",
+    "whisper": "文字起こし",
     "groupOperate": "運用",
     "groupCreate": "作成",
     "groupSystem": "システム",
@@ -28,7 +28,9 @@
     "confirm": "確認",
     "reset": "デフォルトに戻す",
     "close": "閉じる",
-    "rowActions": "行の操作"
+    "rowActions": "行の操作",
+    "home": "ホーム",
+    "openFolder": "フォルダを開く {{name}}"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} 件のダウンロード準備完了",
     "downloadsReadyHelp": "ダウンロードは自動で開始されました。下から再ダウンロードできます。",
     "downloadFile": "ファイルをダウンロード",
-    "downloadZip": "ZIP をダウンロード"
+    "downloadZip": "ZIP をダウンロード",
+    "detecting": "言語を検出中…",
+    "detectedBadge": "検出: {{lang}}",
+    "detectUnknown": "言語が検出されませんでした",
+    "overrideLabel": "{{name}}のソース言語をオーバーライド",
+    "targetPlaceholder": "例: zh-TW, Japanese, 繁體中文",
+    "didYouMean": "もしかして:",
+    "ambiguousPick": "\"{{input}}\"は曖昧です — いずれかを選択してください:",
+    "recentLabel": "最近:",
+    "sameLangWarning": "ソースとターゲットの両方が{{lang}}です — このファイルの翻訳をスキップしますか?",
+    "targetResolved": "ターゲット: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — 音声文字起こし",
+    "title": "文字起こし — 音声をテキストに",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "設定を開く",

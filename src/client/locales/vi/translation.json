@@ -6,7 +6,7 @@
     "logs": "Nhật ký",
     "settings": "Cài đặt",
     "convert": "Chuyển đổi",
-    "whisper": "Giọng nói thành văn bản",
+    "whisper": "Chuyển âm",
     "groupOperate": "Vận hành",
     "groupCreate": "Tạo",
     "groupSystem": "Hệ thống",
@@ -28,7 +28,9 @@
     "confirm": "Xác nhận",
     "reset": "Đặt lại mặc định",
     "close": "Đóng",
-    "rowActions": "Thao tác hàng"
+    "rowActions": "Thao tác hàng",
+    "home": "Trang chủ",
+    "openFolder": "Mở thư mục {{name}}"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} lượt tải đã sẵn sàng",
     "downloadsReadyHelp": "Tải xuống đã tự động bắt đầu. Bạn có thể tải lại bên dưới.",
     "downloadFile": "Tải tệp",
-    "downloadZip": "Tải ZIP"
+    "downloadZip": "Tải ZIP",
+    "detecting": "Đang phát hiện ngôn ngữ…",
+    "detectedBadge": "Phát hiện: {{lang}}",
+    "detectUnknown": "Không phát hiện ngôn ngữ",
+    "overrideLabel": "Ghi đè ngôn ngữ nguồn cho {{name}}",
+    "targetPlaceholder": "ví dụ: zh-TW, Japanese, 繁體中文",
+    "didYouMean": "Bạn có ý là:",
+    "ambiguousPick": "\"{{input}}\" không rõ ràng — chọn một:",
+    "recentLabel": "Gần đây:",
+    "sameLangWarning": "Nguồn và đích đều là {{lang}} — bỏ qua dịch cho tệp này?",
+    "targetResolved": "Đích: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — Giọng nói thành văn bản",
+    "title": "Chuyển âm — Giọng nói thành văn bản",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",

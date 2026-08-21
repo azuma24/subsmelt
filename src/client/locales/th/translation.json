@@ -6,7 +6,7 @@
     "logs": "บันทึก",
     "settings": "การตั้งค่า",
     "convert": "แปลง",
-    "whisper": "เสียงเป็นข้อความ",
+    "whisper": "การถอดเสียง",
     "groupOperate": "การดำเนินงาน",
     "groupCreate": "สร้าง",
     "groupSystem": "ระบบ",
@@ -28,7 +28,9 @@
     "confirm": "ยืนยัน",
     "reset": "รีเซ็ตเป็นค่าเริ่มต้น",
     "close": "ปิด",
-    "rowActions": "การดำเนินการของแถว"
+    "rowActions": "การดำเนินการของแถว",
+    "home": "หน้าแรก",
+    "openFolder": "เปิดโฟลเดอร์ {{name}}"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -936,10 +938,20 @@
     "downloadsReady": "พร้อมดาวน์โหลด {{count}} รายการ",
     "downloadsReadyHelp": "การดาวน์โหลดเริ่มอัตโนมัติ ดาวน์โหลดซ้ำได้ด้านล่าง",
     "downloadFile": "ดาวน์โหลดไฟล์",
-    "downloadZip": "ดาวน์โหลด ZIP"
+    "downloadZip": "ดาวน์โหลด ZIP",
+    "detecting": "กำลังตรวจสอบภาษา…",
+    "detectedBadge": "ตรวจพบ: {{lang}}",
+    "detectUnknown": "ไม่พบภาษา",
+    "overrideLabel": "เขียนทับภาษาต้นทางสำหรับ {{name}}",
+    "targetPlaceholder": "เช่น zh-TW, Japanese, 繁體中文",
+    "didYouMean": "คุณหมายถึง:",
+    "ambiguousPick": "\"{{input}}\" คลุมเครือ — เลือกอันหนึ่ง:",
+    "recentLabel": "ล่าสุด:",
+    "sameLangWarning": "แหล่งที่มาและเป้าหมายเป็น {{lang}} — ข้ามการแปลไฟล์นี้ไปก่อนหรือไม่",
+    "targetResolved": "เป้าหมาย: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — เสียงเป็นข้อความ",
+    "title": "การถอดเสียง — เสียงเป็นข้อความ",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",

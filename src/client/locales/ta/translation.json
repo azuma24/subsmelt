@@ -6,7 +6,7 @@
     "logs": "பதிவுகள்",
     "settings": "அமைப்புகள்",
     "convert": "மாற்று",
-    "whisper": "பேச்சை உரையாக",
+    "whisper": "படியெழுத்து",
     "groupOperate": "இயக்கம்",
     "groupCreate": "உருவாக்கம்",
     "groupSystem": "சிஸ்டம்",
@@ -28,7 +28,9 @@
     "confirm": "உறுதிப்படுத்து",
     "reset": "இயல்புநிலைக்கு மீட்டமை",
     "close": "மூடு",
-    "rowActions": "வரிசை செயல்கள்"
+    "rowActions": "வரிசை செயல்கள்",
+    "home": "முகப்பு",
+    "openFolder": "ஃபோல்டர் திறக்கவும் {{name}}"
   },
   "dashboard": {
     "title": "டாஷ்போர்டு",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} பதிவிறக்கம் தயார்",
     "downloadsReadyHelp": "பதிவிறக்கம் தானாக தொடங்கியது. கீழே மீண்டும் பதிவிறக்கலாம்.",
     "downloadFile": "கோப்பைப் பதிவிறக்கு",
-    "downloadZip": "ZIP பதிவிறக்கு"
+    "downloadZip": "ZIP பதிவிறக்கு",
+    "detecting": "மொழிக் கண்டறிந்து கொண்டுள்ளது…",
+    "detectedBadge": "கண்டறியப்பட்டது: {{lang}}",
+    "detectUnknown": "மொழி கண்டறியப்படவில்லை",
+    "overrideLabel": "{{name}} க்கு மூல மொழியை மேலெழுதவும்",
+    "targetPlaceholder": "எ.கா. zh-TW, Japanese, 繁體中文",
+    "didYouMean": "உங்கள் பொருள்:",
+    "ambiguousPick": "\"{{input}}\" தெளிவற்றது — ஒன்றைத் தேர்ந்தெடுக்கவும்:",
+    "recentLabel": "சமீபத்தியவை:",
+    "sameLangWarning": "மூலம் மற்றும் இலக்கு இரண்டும் {{lang}} — இந்த கோப்பின் மொழிபெயர்ப்பைத் தவிர்க்கவும்?",
+    "targetResolved": "இலக்கு: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — பேச்சை உரையாக",
+    "title": "படியெழுத்து — பேச்சை உரையாக",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",

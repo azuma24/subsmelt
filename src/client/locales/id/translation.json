@@ -6,7 +6,7 @@
     "logs": "Log",
     "settings": "Pengaturan",
     "convert": "Konversi",
-    "whisper": "Ucapan ke teks",
+    "whisper": "Transkripsi",
     "groupOperate": "Operasi",
     "groupCreate": "Buat",
     "groupSystem": "Sistem",
@@ -28,7 +28,9 @@
     "confirm": "Konfirmasi",
     "reset": "Atur ulang ke bawaan",
     "close": "Tutup",
-    "rowActions": "Tindakan baris"
+    "rowActions": "Tindakan baris",
+    "home": "Beranda",
+    "openFolder": "Buka folder {{name}}"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} unduhan siap",
     "downloadsReadyHelp": "Unduhan dimulai otomatis. Anda dapat mengunduh lagi di bawah.",
     "downloadFile": "Unduh file",
-    "downloadZip": "Unduh ZIP"
+    "downloadZip": "Unduh ZIP",
+    "detecting": "Mendeteksi bahasa…",
+    "detectedBadge": "Terdeteksi: {{lang}}",
+    "detectUnknown": "Bahasa tidak terdeteksi",
+    "overrideLabel": "Ganti bahasa sumber untuk {{name}}",
+    "targetPlaceholder": "mis. zh-TW, Japanese, 繁體中文",
+    "didYouMean": "Maksud Anda:",
+    "ambiguousPick": "\"{{input}}\" ambigu — pilih salah satu:",
+    "recentLabel": "Terbaru:",
+    "sameLangWarning": "Sumber dan target keduanya {{lang}} — lewati terjemahan untuk file ini?",
+    "targetResolved": "Target: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — Ucapan ke teks",
+    "title": "Transkripsi — Ucapan ke teks",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",

@@ -1,6 +1,6 @@
 {
   "name": "subsmelt",
-  "version": "0.5.6",
+  "version": "0.5.7",
   "type": "module",
   "description": "Self-hosted batch subtitle translator using LLM",
   "license": "MIT",
@@ -28,6 +28,7 @@
     "chokidar": "^4.0.0",
     "cors": "^2.8.5",
     "express": "^4.22.2",
+    "franc-min": "^6.2.0",
     "i18next": "^26.0.3",
     "i18next-browser-languagedetector": "^8.2.1",
     "iconv-lite": "^0.7.2",

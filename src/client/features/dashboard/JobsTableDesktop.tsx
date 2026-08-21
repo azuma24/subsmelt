@@ -4,7 +4,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { formatDur } from "../../lib";
 import { useJobActions } from "../../hooks/useJobActions";
 import type { JobRow } from "../../types";
-import { MiniBtn, ProgressSmall, StatusBadge } from "../../ui/primitives";
+import { MiniBtn, ProgressSmall, RowActionsMenu, StatusBadge } from "../../ui/primitives";
 
 interface JobsTableDesktopProps {
   jobs: JobRow[];
@@ -20,10 +20,12 @@ const TH = "px-[10px] py-[7px] text-left text-[10.5px] font-semibold uppercase t
 const TD = "px-[10px] py-[9px] align-middle border-b border-[var(--border-sub)]";
 
 // Shared column template so the header row and the virtualized body rows stay
-// pixel-aligned. Mirrors the original <th>/<td> column order:
-// select | file | target | status | progress | time | actions
+// pixel-aligned. Column order: select | file | target | status | progress |
+// time | actions. Every track must be either fixed or fr — the header and each
+// row are separate grid containers, so a `max-content` track resolves per row
+// and the columns drift out of alignment.
 const GRID_COLS =
-  "32px minmax(0,1fr) max-content max-content 160px max-content minmax(0,1fr)";
+  "32px minmax(0,1fr) 140px 190px 160px 90px minmax(0,1fr)";
 // Estimated row height in px (matches py-[9px] padding + 13px line content).
 // react-virtual measures actual heights, so this is only an initial estimate.
 const ROW_ESTIMATE = 46;
@@ -111,43 +113,49 @@ export function JobsTableDesktop({
             </div>
           </div>
         </div>
-        <div className={`${TD} text-[12px] text-[var(--text-2)] whitespace-nowrap`} role="cell">{job.target_lang}<br /><span className="text-[var(--text-3)]">{job.lang_code}</span></div>
-        <div className={`${TD} whitespace-nowrap`} role="cell">
-          <StatusBadge job={job} />
-          {reason && (
-            <span className="ml-2 rounded-full bg-[var(--red-dim)] px-2 py-0.5 text-[10px] text-[var(--red)]">{t(`dashboard.errorReason.${reason}`)}</span>
-          )}
+        {/* Fixed-width columns wrap instead of nowrap-overflowing: long target
+            names ("Traditional Chinese (Taiwan)") take a second line. One muted
+            line — the queue mostly shares a single target, so this column is
+            context, not content. */}
+        <div className={`${TD} text-[11.5px] text-[var(--text-3)]`} role="cell">{job.target_lang} · {job.lang_code}</div>
+        <div className={TD} role="cell">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <StatusBadge job={job} />
+            {reason && (
+              <span className="rounded-full bg-[var(--red-dim)] px-2 py-0.5 text-[10px] text-[var(--red)]">{t(`dashboard.errorReason.${reason}`)}</span>
+            )}
+          </div>
         </div>
         <div className={`${TD} flex items-center`} role="cell">{job.status === "translating" ? <ProgressSmall pct={pct} /> : job.status === "done" ? <span className="text-[10px] text-[var(--text-3)]">{t("dashboard.cues", { completed: job.completed_cues, total: job.total_cues })}</span> : null}</div>
         <div className={`${TD} font-mono text-[11.5px] text-[var(--text-2)] whitespace-nowrap`} role="cell">{job.duration_seconds ? formatDur(job.duration_seconds) : ""}</div>
         <div className={TD} role="cell">
-          {/* Row actions stay visible at all times. They used to be `opacity-0
-              group-hover:opacity-100`, which hid every one of them from touch
-              users and put keyboard focus on invisible controls. */}
-          <div className="flex flex-wrap gap-1.5">
+          {/* One primary action per status; everything else lives behind the ⋯
+              menu. 46 rows of Preview/Re-translate/Details/× was visual noise,
+              and the delete glyph wrapped onto its own orphan line. */}
+          <div className="flex items-center gap-1.5">
+            {(job.status === "done" || job.status === "translating") && <MiniBtn onClick={() => onPreview(job.id)}>{t("dashboard.action.preview")}</MiniBtn>}
+            {job.status === "error" && <MiniBtn color="yellow" onClick={() => jobActions.retry(job.id)}>{t("dashboard.action.retry")}</MiniBtn>}
+            {/* A skipped job was never translated, so "Re-translate" is the wrong
+                promise — it gets its own wording and a highlighted treatment. */}
+            {isSkipped && <MiniBtn color="yellow" onClick={() => jobActions.retranslate(job.id)}>{t("dashboard.action.translateAnyway")}</MiniBtn>}
             {isPending && job.priority > 0 && (
               <MiniBtn onClick={() => jobActions.unpin(job.id)}>{t("dashboard.action.unpin")}</MiniBtn>
             )}
             {isPending && job.priority <= 0 && (
               <MiniBtn onClick={() => jobActions.pin(job.id)}>{t("dashboard.action.pin")}</MiniBtn>
             )}
-            {(job.status === "done" || job.status === "translating") && <MiniBtn onClick={() => onPreview(job.id)}>{t("dashboard.action.preview")}</MiniBtn>}
-            {job.status === "error" && <MiniBtn color="yellow" onClick={() => jobActions.retry(job.id)}>{t("dashboard.action.retry")}</MiniBtn>}
-            {/* A skipped job was never translated, so "Re-translate" is the wrong
-                promise — it gets its own wording and a highlighted treatment. */}
-            {isSkipped && <MiniBtn color="yellow" onClick={() => jobActions.retranslate(job.id)}>{t("dashboard.action.translateAnyway")}</MiniBtn>}
-            {job.status === "done" && <MiniBtn onClick={() => jobActions.retranslate(job.id)}>{t("dashboard.action.retranslate")}</MiniBtn>}
-            {job.status === "error" && <MiniBtn onClick={() => onOpenLogs(job.id)}>{t("dashboard.action.logs")}</MiniBtn>}
-            <button
-              onClick={() => onOpenDetails(job)}
-              className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 text-[11px] text-[var(--text-2)] hover:text-[var(--text)]"
-            >{t("dashboard.action.details")}</button>
-            <button
-              onClick={() => { void jobActions.remove(job.id); }}
-              disabled={jobActions.isDeleting}
-              className="rounded-md px-1.5 text-[var(--text-3)] hover:text-[var(--red)] disabled:opacity-40"
-              aria-label={t("dashboard.action.delete")}
-            >×</button>
+            <RowActionsMenu
+              items={[
+                ...(job.status === "done"
+                  ? [{ label: t("dashboard.action.retranslate"), onClick: () => jobActions.retranslate(job.id) }]
+                  : []),
+                ...(job.status === "error"
+                  ? [{ label: t("dashboard.action.logs"), onClick: () => onOpenLogs(job.id) }]
+                  : []),
+                { label: t("dashboard.action.details"), onClick: () => onOpenDetails(job) },
+                { label: t("dashboard.action.delete"), onClick: () => { void jobActions.remove(job.id); }, danger: true, disabled: jobActions.isDeleting },
+              ]}
+            />
           </div>
         </div>
       </>
@@ -165,7 +173,9 @@ export function JobsTableDesktop({
 
   return (
     <div className="overflow-x-auto">
-      <div className="min-w-[820px] text-[13px]" role="table">
+      {/* Fixed tracks sum to 612px; 900px keeps the two flexible columns
+          (file, actions) usable before horizontal scroll kicks in. */}
+      <div className="min-w-[900px] text-[13px]" role="table">
         {/* Header row — shares the grid template with body rows for column alignment. */}
         <div role="row" className="grid" style={{ gridTemplateColumns: GRID_COLS }}>
           <div className={TH} role="columnheader">

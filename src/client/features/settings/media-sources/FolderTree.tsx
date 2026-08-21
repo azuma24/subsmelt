@@ -1,6 +1,9 @@
-import { useState, type Dispatch, type SetStateAction } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FolderNode, Task } from "../../../types";
+import { FileTreeView, type FolderRowContext } from "../../../components/file-tree/FileTreeView";
+import type { TreeExpansion } from "../../../components/file-tree/use-persisted-expansion";
+import type { DrillDownState } from "../../../components/file-tree/use-drill-down";
 import {
   TRI_STATES,
   hasDescendant,
@@ -10,6 +13,20 @@ import {
   type TriState,
 } from "./model";
 
+/**
+ * FolderNode carries no `files` field (Settings folders have no per-file
+ * rows), but FileTreeView's generic shell requires one on every node. This
+ * adapts the API tree once, immutably, into the shape FileTreeView needs.
+ */
+export type SettingsTreeNode = Omit<FolderNode, "children"> & {
+  children: SettingsTreeNode[];
+  files: never[];
+};
+
+export function toSettingsTree(nodes: FolderNode[]): SettingsTreeNode[] {
+  return nodes.map((node) => ({ ...node, children: toSettingsTree(node.children), files: [] }));
+}
+
 interface FolderTreeSharedProps {
   tasks: Task[];
   rules: DirectoryRule[];
@@ -18,29 +35,43 @@ interface FolderTreeSharedProps {
 }
 
 /** Everything a row needs that is identical for every row in the tree. */
-interface FolderTreeContext extends FolderTreeSharedProps {
+interface FolderTreeRowSharedProps extends FolderTreeSharedProps {
   mediaDir: string;
   mode: ScanMode;
   selected: string[];
   excluded: string[];
-  expandedFolders: Set<string>;
-  setExpandedFolders: Dispatch<SetStateAction<Set<string>>>;
-  searchActive: boolean;
   onToggleIncluded: (folder: string) => void;
   onToggleExcluded: (folder: string) => void;
 }
 
-interface FolderTreeProps extends FolderTreeContext {
-  nodes: FolderNode[];
+export interface FolderTreeProps extends FolderTreeRowSharedProps {
+  nodes: SettingsTreeNode[];
+  isMobile: boolean;
+  expansion: TreeExpansion;
+  drill: DrillDownState<SettingsTreeNode>;
 }
 
-export function FolderTree({ nodes, ...rest }: FolderTreeProps) {
+/**
+ * Structural shell (indent, rails, sticky-off tall rows, mobile drill-down)
+ * comes from the shared FileTreeView; this component only supplies row
+ * content via FolderTreeRow. Rows are tall (checkbox + counts + rules
+ * button), hence `sticky={false}` — the view's sticky offsets assume 36px.
+ */
+export function FolderTree({ nodes, isMobile, expansion, drill, ...rowProps }: FolderTreeProps) {
+  const { t } = useTranslation();
   return (
-    <div className="space-y-1">
-      {nodes.map((node) => (
-        <FolderTreeRow key={node.path} node={node} depth={0} {...rest} />
-      ))}
-    </div>
+    <FileTreeView
+      sticky={false}
+      roots={nodes}
+      rootFiles={[]}
+      isMobile={isMobile}
+      expansion={expansion}
+      drill={drill}
+      homeLabel={t("common.home")}
+      fileKey={() => ""}
+      renderFile={() => null}
+      renderFolderRow={(node, ctx) => <FolderTreeRow node={node} ctx={ctx} {...rowProps} />}
+    />
   );
 }
 
@@ -146,24 +177,21 @@ function FolderRulesEditor({
 
 function FolderTreeRow({
   node,
-  depth,
+  ctx,
   mediaDir,
   mode,
   selected,
   excluded,
-  expandedFolders,
-  setExpandedFolders,
-  searchActive,
   onToggleIncluded,
   onToggleExcluded,
   tasks,
   rules,
   upsertRule,
   removeRuleForPath,
-}: FolderTreeContext & { node: FolderNode; depth: number }) {
+}: FolderTreeRowSharedProps & { node: SettingsTreeNode; ctx: FolderRowContext }) {
   const { t } = useTranslation();
   const hasChildren = node.children.length > 0;
-  const expanded = searchActive || expandedFolders.has(node.path);
+  const isDrill = ctx.mode === "drill";
   const ownSelected = selected.includes(node.path);
   const included = mode === "recursive" || pathMatchesScope(node.path, selected);
   const excludedHere = pathMatchesScope(node.path, excluded);
@@ -178,15 +206,6 @@ function FolderTreeRow({
   const rule = rules.find((r) => r.path === node.path);
   const hasRule = rule !== undefined;
 
-  const toggleExpanded = () => {
-    setExpandedFolders((prev) => {
-      const next = new Set(prev);
-      if (next.has(node.path)) next.delete(node.path);
-      else next.add(node.path);
-      return next;
-    });
-  };
-
   const ruleSummaryChip = (() => {
     if (!hasRule) return null;
     const parts: string[] = [];
@@ -199,6 +218,23 @@ function FolderTreeRow({
     return parts.length > 0 ? parts.join(", ") : null;
   })();
 
+  const body = (
+    <>
+      <div className="truncate text-[12.5px] font-medium text-[var(--text)]">
+        {ctx.ancestorHint && <span className="text-[10px] font-normal text-[var(--text-3)]">{ctx.ancestorHint} / </span>}
+        {node.name}
+      </div>
+      <div className="truncate font-mono text-[10px] text-[var(--text-3)]">{mediaDir}/{node.path}</div>
+      <div className="mt-1 flex flex-wrap gap-1 text-[9.5px] text-[var(--text-2)]">
+        <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5">{t("settings.sources.folderCountVideos", { count: node.counts.videos })}</span>
+        <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5">{t("settings.sources.folderCountSubtitles", { count: node.counts.subtitles })}</span>
+        {node.counts.pendingJobs > 0 && <span className="rounded-full border border-[var(--yellow-border)] bg-[var(--yellow-dim)] px-2 py-0.5 text-[var(--yellow)]">{t("settings.sources.folderCountPending", { count: node.counts.pendingJobs })}</span>}
+        {node.counts.completeJobs > 0 && <span className="rounded-full border border-[var(--green-border)] bg-[var(--green-dim)] px-2 py-0.5 text-[var(--green)]">{t("settings.sources.folderCountComplete", { count: node.counts.completeJobs })}</span>}
+        {node.counts.errorJobs > 0 && <span className="rounded-full border border-[var(--red-border)] bg-[var(--red-dim)] px-2 py-0.5 text-[var(--red)]">{t("settings.sources.folderCountErrors", { count: node.counts.errorJobs })}</span>}
+      </div>
+    </>
+  );
+
   return (
     <div>
       <div
@@ -209,17 +245,19 @@ function FolderTreeRow({
               ? "border-[var(--accent-border)] bg-[var(--accent-dim)]"
               : "border-[var(--border-sub)] bg-[var(--surface-3)]"
         }`}
-        style={{ paddingLeft: `${8 + depth * 18}px` }}
+        style={{ paddingLeft: `${ctx.padLeftPx}px` }}
       >
-        <button
-          type="button"
-          onClick={toggleExpanded}
-          disabled={!hasChildren}
-          className="h-6 w-6 shrink-0 rounded-md text-xs text-[var(--text-3)] hover:bg-[var(--surface-2)] disabled:opacity-20"
-          aria-label={expanded ? t("settings.sources.collapseFolder") : t("settings.sources.expandFolder")}
-        >
-          {hasChildren ? (expanded ? "▾" : "▸") : ""}
-        </button>
+        {!isDrill && (
+          <button
+            type="button"
+            onClick={ctx.onActivate}
+            disabled={!hasChildren}
+            className="h-6 w-6 shrink-0 rounded-md text-xs text-[var(--text-3)] hover:bg-[var(--surface-2)] disabled:opacity-20"
+            aria-label={ctx.open ? t("settings.sources.collapseFolder") : t("settings.sources.expandFolder")}
+          >
+            {hasChildren ? (ctx.open ? "▾" : "▸") : ""}
+          </button>
+        )}
         {interactive && (
           <input
             type="checkbox"
@@ -232,17 +270,20 @@ function FolderTreeRow({
             className="h-4 w-4 shrink-0 accent-[var(--accent)]"
           />
         )}
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-[12.5px] font-medium text-[var(--text)]">{node.name}</div>
-          <div className="truncate font-mono text-[10px] text-[var(--text-3)]">{mediaDir}/{node.path}</div>
-          <div className="mt-1 flex flex-wrap gap-1 text-[9.5px] text-[var(--text-2)]">
-            <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5">{t("settings.sources.folderCountVideos", { count: node.counts.videos })}</span>
-            <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5">{t("settings.sources.folderCountSubtitles", { count: node.counts.subtitles })}</span>
-            {node.counts.pendingJobs > 0 && <span className="rounded-full border border-[var(--yellow-border)] bg-[var(--yellow-dim)] px-2 py-0.5 text-[var(--yellow)]">{t("settings.sources.folderCountPending", { count: node.counts.pendingJobs })}</span>}
-            {node.counts.completeJobs > 0 && <span className="rounded-full border border-[var(--green-border)] bg-[var(--green-dim)] px-2 py-0.5 text-[var(--green)]">{t("settings.sources.folderCountComplete", { count: node.counts.completeJobs })}</span>}
-            {node.counts.errorJobs > 0 && <span className="rounded-full border border-[var(--red-border)] bg-[var(--red-dim)] px-2 py-0.5 text-[var(--red)]">{t("settings.sources.folderCountErrors", { count: node.counts.errorJobs })}</span>}
-          </div>
-        </div>
+        {/* A childless folder has nothing to drill into — keep it a plain row
+            rather than navigating to an empty list. */}
+        {isDrill && hasChildren ? (
+          <button
+            type="button"
+            onClick={ctx.onActivate}
+            aria-label={t("common.openFolder", { name: node.name })}
+            className="min-w-0 flex-1 text-left"
+          >
+            {body}
+          </button>
+        ) : (
+          <div className="min-w-0 flex-1">{body}</div>
+        )}
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold ${
           excludedHere ? "bg-[var(--red-dim)] text-[var(--red)]" : checked ? "bg-[var(--accent-dim)] text-[var(--accent)]" : "bg-[var(--surface)] text-[var(--text-3)]"
         }`}>
@@ -274,6 +315,7 @@ function FolderTreeRow({
             <span className="ml-1 opacity-75">{ruleSummaryChip}</span>
           )}
         </button>
+        {isDrill && hasChildren && <span aria-hidden="true" className="shrink-0 text-[var(--text-3)]">›</span>}
       </div>
       {rulesOpen && (
         <FolderRulesEditor
@@ -284,30 +326,6 @@ function FolderTreeRow({
           removeRuleForPath={removeRuleForPath}
           onClose={() => setRulesOpen(false)}
         />
-      )}
-      {hasChildren && expanded && (
-        <div className="mt-1 space-y-1">
-          {node.children.map((child) => (
-            <FolderTreeRow
-              key={child.path}
-              node={child}
-              depth={depth + 1}
-              mediaDir={mediaDir}
-              mode={mode}
-              selected={selected}
-              excluded={excluded}
-              expandedFolders={expandedFolders}
-              setExpandedFolders={setExpandedFolders}
-              searchActive={searchActive}
-              onToggleIncluded={onToggleIncluded}
-              onToggleExcluded={onToggleExcluded}
-              tasks={tasks}
-              rules={rules}
-              upsertRule={upsertRule}
-              removeRuleForPath={removeRuleForPath}
-            />
-          ))}
-        </div>
       )}
     </div>
   );

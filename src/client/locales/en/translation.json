@@ -3,7 +3,7 @@
     "dashboard": "Dashboard",
     "languages": "Translations",
     "translations": "Translations",
-    "whisper": "Whisper",
+    "whisper": "Transcribe",
     "convert": "Convert",
     "logs": "Logs",
     "settings": "Settings",
@@ -13,7 +13,7 @@
     "more": "More"
   },
   "whisper": {
-    "title": "Whisper — Speech to Text",
+    "title": "Transcribe — Speech to Text",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -113,7 +113,17 @@
     "downloadsReady": "{{count}} download(s) ready",
     "downloadsReadyHelp": "The download was started automatically. You can download again below.",
     "downloadFile": "Download file",
-    "downloadZip": "Download ZIP"
+    "downloadZip": "Download ZIP",
+    "detecting": "Detecting language…",
+    "detectedBadge": "Detected: {{lang}}",
+    "detectUnknown": "Language not detected",
+    "overrideLabel": "Override source language for {{name}}",
+    "targetPlaceholder": "e.g. zh-TW, Japanese, 繁體中文",
+    "didYouMean": "Did you mean:",
+    "ambiguousPick": "“{{input}}” is ambiguous — pick one:",
+    "recentLabel": "Recent:",
+    "sameLangWarning": "Source and target are both {{lang}} — skip translation for this file?",
+    "targetResolved": "Target: {{name}} ({{code}})"
   },
   "common": {
     "save": "Save",
@@ -131,7 +141,9 @@
     "confirm": "Confirm",
     "reset": "Reset to default",
     "close": "Close",
-    "rowActions": "Row actions"
+    "rowActions": "Row actions",
+    "home": "Home",
+    "openFolder": "Open folder {{name}}"
   },
   "errors": {
     "loading": "Loading…",

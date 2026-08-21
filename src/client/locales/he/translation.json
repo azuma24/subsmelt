@@ -6,7 +6,7 @@
     "logs": "יומנים",
     "settings": "הגדרות",
     "convert": "המרה",
-    "whisper": "דיבור לטקסט",
+    "whisper": "תמלול",
     "groupOperate": "תפעול",
     "groupCreate": "יצירה",
     "groupSystem": "מערכת",
@@ -28,7 +28,9 @@
     "confirm": "אישור",
     "reset": "איפוס לברירת מחדל",
     "close": "סגירה",
-    "rowActions": "פעולות שורה"
+    "rowActions": "פעולות שורה",
+    "home": "בית",
+    "openFolder": "פתח תיקייה {{name}}"
   },
   "dashboard": {
     "title": "לוח בקרה",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} הורדות מוכנות",
     "downloadsReadyHelp": "ההורדה התחילה אוטומטית. אפשר להוריד שוב למטה.",
     "downloadFile": "הורד קובץ",
-    "downloadZip": "הורד ZIP"
+    "downloadZip": "הורד ZIP",
+    "detecting": "זיהוי שפה…",
+    "detectedBadge": "זוהה: {{lang}}",
+    "detectUnknown": "לא זוהתה שפה",
+    "overrideLabel": "הגדרת שפה מקורית ל-{{name}}",
+    "targetPlaceholder": "למשל: zh-TW, Japanese, 繁體中文",
+    "didYouMean": "כוונת:",
+    "ambiguousPick": "\"{{input}}\" דו-משמעי — בחר אחד:",
+    "recentLabel": "אחרון:",
+    "sameLangWarning": "המקור והיעד הם שניהם {{lang}} — לדלג על תרגום לקובץ זה?",
+    "targetResolved": "יעד: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — דיבור לטקסט",
+    "title": "תמלול — דיבור לטקסט",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",

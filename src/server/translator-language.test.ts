@@ -24,6 +24,38 @@ test("translation system prompt injects automatic source detection and target la
   assert.match(prompt, /Prefer concise subtitles/);
 });
 
+test("translation system prompt always instructs tag and line-break preservation", () => {
+  const prompt = buildTranslationSystemPrompt({
+    prompt: "Translate into {{lang}}.",
+    sourceLang: "Automatic",
+    lang: "French",
+    additional: "",
+  });
+
+  assert.match(prompt, /preserve/i);
+  assert.match(prompt, /formatting tags/i);
+  assert.match(prompt, /line breaks/i);
+});
+
+test("Traditional Chinese targets get Taiwan-convention instructions, others do not", () => {
+  const zhTw = buildTranslationSystemPrompt({
+    prompt: "Translate into {{lang}}.",
+    sourceLang: "Automatic",
+    lang: "Traditional Chinese (Taiwan)",
+    additional: "",
+  });
+  assert.match(zhTw, /Taiwan/);
+  assert.match(zhTw, /not .*mechanical/i);
+
+  const french = buildTranslationSystemPrompt({
+    prompt: "Translate into {{lang}}.",
+    sourceLang: "Automatic",
+    lang: "French",
+    additional: "",
+  });
+  assert.doesNotMatch(french, /Taiwan/);
+});
+
 test("translation system prompt preserves explicit source languages for legacy custom tasks", () => {
   const prompt = buildTranslationSystemPrompt({
     prompt: "Translate from {{source_lang}} into {{lang}}.",

@@ -36,16 +36,18 @@ export function scanFileKey(file: ScannedFile): string {
   return file.videoPath || file.subtitles[0]?.srtPath || scanFileSortName(file);
 }
 
+export function compareScanFiles(a: ScannedFile, b: ScannedFile, sortBy: DashboardSortBy, sortDir: DashboardSortDir): number {
+  if (sortBy === "date") {
+    const byDate = compareNullableMtime(a.videoMtime, b.videoMtime, sortDir);
+    if (byDate !== 0) return byDate;
+  }
+  const byName = scanFileSortName(a).localeCompare(scanFileSortName(b));
+  if (byName !== 0) return byName * (sortDir === "asc" ? 1 : -1);
+  return scanFileKey(a).localeCompare(scanFileKey(b)) * (sortDir === "asc" ? 1 : -1);
+}
+
 export function sortScanFiles(files: ScannedFile[], sortBy: DashboardSortBy, sortDir: DashboardSortDir): ScannedFile[] {
-  return [...files].sort((a, b) => {
-    if (sortBy === "date") {
-      const byDate = compareNullableMtime(a.videoMtime, b.videoMtime, sortDir);
-      if (byDate !== 0) return byDate;
-    }
-    const byName = scanFileSortName(a).localeCompare(scanFileSortName(b));
-    if (byName !== 0) return byName * (sortDir === "asc" ? 1 : -1);
-    return scanFileKey(a).localeCompare(scanFileKey(b)) * (sortDir === "asc" ? 1 : -1);
-  });
+  return [...files].sort((a, b) => compareScanFiles(a, b, sortBy, sortDir));
 }
 
 export function sortScanGroups(groups: ScanGroup[], sortBy: DashboardSortBy, sortDir: DashboardSortDir): ScanGroup[] {

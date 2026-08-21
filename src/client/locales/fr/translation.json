@@ -6,7 +6,7 @@
     "logs": "Journaux",
     "settings": "Paramètres",
     "convert": "Convertir",
-    "whisper": "Transcription vocale",
+    "whisper": "Transcrire",
     "groupOperate": "Pilotage",
     "groupCreate": "Création",
     "groupSystem": "Système",
@@ -28,7 +28,9 @@
     "confirm": "Confirmer",
     "reset": "Rétablir les valeurs par défaut",
     "close": "Fermer",
-    "rowActions": "Actions de ligne"
+    "rowActions": "Actions de ligne",
+    "home": "Accueil",
+    "openFolder": "Ouvrir le dossier {{name}}"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} téléchargement(s) prêt(s)",
     "downloadsReadyHelp": "Le téléchargement a démarré automatiquement. Vous pouvez le relancer ci-dessous.",
     "downloadFile": "Télécharger le fichier",
-    "downloadZip": "Télécharger le ZIP"
+    "downloadZip": "Télécharger le ZIP",
+    "detecting": "Détection de la langue…",
+    "detectedBadge": "Détecté : {{lang}}",
+    "detectUnknown": "Langue non détectée",
+    "overrideLabel": "Remplacer la langue source pour {{name}}",
+    "targetPlaceholder": "p.ex. zh-TW, Japanese, 繁體中文",
+    "didYouMean": "Vouliez-vous dire :",
+    "ambiguousPick": "\"{{input}}\" est ambigu — choisissez-en un :",
+    "recentLabel": "Récents :",
+    "sameLangWarning": "La source et la cible sont toutes les deux {{lang}} — ignorer la traduction pour ce fichier ?",
+    "targetResolved": "Cible : {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — Transcription vocale",
+    "title": "Transcription — Parole en texte",
     "subtitle": "Choisissez des fichiers ou dossiers de votre médiathèque et transcrivez-les en sous-titres. Séparé de la traduction.",
     "disabledNotice": "La transcription vocale est désactivée.",
     "openSettings": "Ouvrir les réglages",

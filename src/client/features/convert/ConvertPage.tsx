@@ -1,91 +1,76 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import type { ConvertTargetFormat } from "../../api";
 import { ApiError } from "../../api";
-import { PRESETS } from "../../app/constants";
 import { useToast } from "../../components/Toast";
 import { ActionButton } from "../../ui/primitives";
 import { InlineError } from "../../ui/QueryState";
 import { AUTO_SOURCE_LANG } from "../tasks/translation-defaults";
+import type { KeyValueStorage } from "../../components/file-tree/expansion-store";
+import { findLanguage } from "./language-table";
+import { resolveTargetLanguage } from "./resolve-language";
+import { sampleCueText } from "./cue-sample";
+import { detectSampleLanguage } from "./detect-language";
+import { loadRecentTargets, pushRecentTarget } from "./recent-targets";
+import { TargetLanguageField } from "./TargetLanguageField";
+import { DropZone } from "./DropZone";
+import { StagedFileList, effectiveSource, type StagedFile, type FileRunStatus } from "./StagedFileList";
+import { isSupported, triggerDownload, buildZipBlob, type OutputFile } from "./download-outputs";
 
-const ACCEPTED_EXTS = ["srt", "vtt", "ass", "ssa"] as const;
-const ACCEPT_ATTR = ACCEPTED_EXTS.map((e) => `.${e}`).join(",");
 const TARGET_FORMATS: ConvertTargetFormat[] = ["srt", "vtt", "ass", "ssa"];
-const LANGUAGE_OPTIONS = PRESETS.map((preset) => ({ label: preset.label, value: preset.target_lang }));
 
-interface StagedFile {
-  id: string;
-  file: File;
-}
-
-interface OutputFile {
-  name: string;
-  content: string;
-}
-
-function extOf(name: string): string {
-  const dot = name.lastIndexOf(".");
-  return dot >= 0 ? name.slice(dot + 1).toLowerCase() : "";
-}
-
-function isSupported(name: string): boolean {
-  return (ACCEPTED_EXTS as readonly string[]).includes(extOf(name));
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function triggerDownload(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
+function getBrowserStorage(): KeyValueStorage | null {
   try {
-    a.click();
-  } finally {
-    a.remove();
-    // Revoke on next tick so the download has a chance to start.
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return typeof window === "undefined" ? null : window.localStorage;
+  } catch {
+    return null;
   }
-}
-
-async function buildZipBlob(files: OutputFile[]): Promise<Blob> {
-  const { default: JSZip } = await import("jszip");
-  const zip = new JSZip();
-  const used = new Map<string, number>();
-  for (const out of files) {
-    const count = used.get(out.name) ?? 0;
-    used.set(out.name, count + 1);
-    const dot = out.name.lastIndexOf(".");
-    const entryName =
-      count === 0
-        ? out.name
-        : dot > 0
-          ? `${out.name.slice(0, dot)}(${count})${out.name.slice(dot)}`
-          : `${out.name}(${count})`;
-    zip.file(entryName, out.content);
-  }
-  return zip.generateAsync({ type: "blob" });
 }
 
 export function ConvertPage({ isMobile }: { isMobile: boolean }) {
   const { t } = useTranslation();
   const { addToast } = useToast();
-  const inputRef = useRef<HTMLInputElement>(null);
   const [staged, setStaged] = useState<StagedFile[]>([]);
   const [translate, setTranslate] = useState(false);
-  const [sourceLang, setSourceLang] = useState(AUTO_SOURCE_LANG);
-  const [targetLang, setTargetLang] = useState("English");
+  const [targetInput, setTargetInput] = useState("");
   const [targetFormat, setTargetFormat] = useState<ConvertTargetFormat>("srt");
-  const [isDragging, setIsDragging] = useState(false);
   const [converting, setConverting] = useState(false);
   const [fileErrors, setFileErrors] = useState<{ name: string; error: string }[]>([]);
   const [lastOutputs, setLastOutputs] = useState<OutputFile[]>([]);
+  const [fileStatus, setFileStatus] = useState<Record<string, FileRunStatus>>({});
+
+  const storage = useMemo(getBrowserStorage, []);
+  const [recents, setRecents] = useState<string[]>(() => (storage ? loadRecentTargets(storage) : []));
+  const resolution = useMemo(() => resolveTargetLanguage(targetInput), [targetInput]);
+  const resolvedTarget = resolution.status === "resolved" ? resolution.language : null;
+
+  // Detect each staged file's source language once translation is enabled.
+  // Sequential and cancellable; results land per file as they arrive.
+  useEffect(() => {
+    if (!translate) return;
+    const todo = staged.filter((s) => s.detected === undefined);
+    if (todo.length === 0) return;
+    let cancelled = false;
+    void (async () => {
+      for (const item of todo) {
+        const text = await item.file.text().catch(() => "");
+        const code = detectSampleLanguage(sampleCueText(text));
+        if (cancelled) return;
+        setStaged((prev) => prev.map((s) => (s.id === item.id ? { ...s, detected: code } : s)));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [translate, staged]);
+
+  const pickTarget = useCallback((entry: { code: string; englishName: string }) => {
+    setTargetInput(entry.code);
+  }, []);
+
+  const setOverride = (id: string, code: string | null) =>
+    setStaged((prev) => prev.map((s) => (s.id === id ? { ...s, override: code } : s)));
+  const setSkip = (id: string, skip: boolean) =>
+    setStaged((prev) => prev.map((s) => (s.id === id ? { ...s, skip } : s)));
 
   const addFiles = useCallback(
     (incoming: FileList | File[]) => {
@@ -99,10 +84,16 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
       setStaged((prev) => {
         const merged = [...prev];
         for (const file of supported) {
-          merged.push({ id: `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2)}`, file });
+          merged.push({
+            id: `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
+            file,
+            override: null,
+            skip: false,
+          });
         }
         return merged;
       });
+      setFileStatus({});
       // The staged set changed, so any prior per-file errors/outputs now refer to
       // a stale list — clear them (mirrors clearFiles).
       setFileErrors([]);
@@ -111,24 +102,17 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
     [addToast, t],
   );
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragging(false);
-      if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files);
-    },
-    [addFiles],
-  );
-
   const removeFile = (id: string) => {
     setStaged((prev) => prev.filter((f) => f.id !== id));
     setFileErrors([]);
     setLastOutputs([]);
+    setFileStatus({});
   };
   const clearFiles = () => {
     setStaged([]);
     setFileErrors([]);
     setLastOutputs([]);
+    setFileStatus({});
   };
 
   const downloadOutputs = async (files = lastOutputs) => {
@@ -144,43 +128,60 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
 
   const handleConvert = async () => {
     if (staged.length === 0 || converting) return;
+    if (translate && !resolvedTarget) return;
     setConverting(true);
     setFileErrors([]);
     setLastOutputs([]);
-    try {
-      const files = await Promise.all(
-        staged.map(async ({ file }) => ({ name: file.name, content: await file.text() })),
-      );
-      const res = await api.convertSubtitles({
-        files,
-        targetFormat,
-        translate,
-        sourceLang,
-        targetLang,
-      });
+    setFileStatus({});
 
-      if (res.errors.length > 0) {
-        setFileErrors(res.errors);
+    // One request per file: per-file progress, and one failure never aborts
+    // the rest of the batch.
+    const outputs: OutputFile[] = [];
+    const errors: { name: string; error: string }[] = [];
+    for (const item of staged) {
+      setFileStatus((prev) => ({ ...prev, [item.id]: "working" }));
+      let ok = false;
+      try {
+        const content = await item.file.text();
+        const source = effectiveSource(item);
+        const res = await api.convertSubtitles({
+          files: [{
+            name: item.file.name,
+            content,
+            sourceLang: source ? findLanguage(source)?.promptName ?? AUTO_SOURCE_LANG : AUTO_SOURCE_LANG,
+            skip: item.skip,
+          }],
+          targetFormat,
+          translate,
+          sourceLang: AUTO_SOURCE_LANG,
+          targetLang: resolvedTarget?.promptName,
+          targetCode: resolvedTarget?.code,
+        });
+        outputs.push(...res.files);
+        errors.push(...res.errors);
+        ok = res.errors.length === 0 && res.files.length > 0;
+      } catch (error) {
+        errors.push({ name: item.file.name, error: error instanceof ApiError ? error.message : t("convert.failed") });
       }
-
-      if (res.files.length === 0) {
-        addToast(t("convert.allFailed"), "error", true);
-        return;
-      }
-
-      setLastOutputs(res.files);
-      await downloadOutputs(res.files);
-
-      addToast(
-        t(translate ? "convert.translateDownloadReady" : "convert.downloadReady", { count: res.files.length, format: targetFormat.toUpperCase() }),
-        "success",
-      );
-    } catch (error) {
-      const message = error instanceof ApiError ? error.message : t("convert.failed");
-      addToast(message, "error", true);
-    } finally {
-      setConverting(false);
+      setFileStatus((prev) => ({ ...prev, [item.id]: ok ? "done" : "error" }));
     }
+
+    setConverting(false);
+    if (errors.length > 0) setFileErrors(errors);
+    if (outputs.length === 0) {
+      addToast(t("convert.allFailed"), "error", true);
+      return;
+    }
+
+    if (translate && resolvedTarget && storage) {
+      setRecents(pushRecentTarget(storage, resolvedTarget.code));
+    }
+    setLastOutputs(outputs);
+    await downloadOutputs(outputs);
+    addToast(
+      t(translate ? "convert.translateDownloadReady" : "convert.downloadReady", { count: outputs.length, format: targetFormat.toUpperCase() }),
+      "success",
+    );
   };
 
   return (
@@ -195,86 +196,19 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
         <div className="mx-auto flex max-w-[680px] flex-col gap-4">
           <p className="text-[13px] leading-6 text-[var(--text-2)]">{t("convert.description")}</p>
 
-          {/* Drop zone */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label={t("convert.browse")}
-            onClick={() => inputRef.current?.click()}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                inputRef.current?.click();
-              }
-            }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={handleDrop}
-            className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-12 text-center transition-colors ${
-              isDragging
-                ? "border-[var(--accent)] bg-[var(--accent-dim)]"
-                : "border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--accent-border)]"
-            }`}
-          >
-            <span className="text-3xl" aria-hidden="true">📂</span>
-            <p className="text-[13px] font-medium text-[var(--text)]">{t("convert.dropzone")}</p>
-            <p className="text-[11.5px] text-[var(--text-3)]">{t("convert.dropzoneHint")}</p>
-            <input
-              ref={inputRef}
-              type="file"
-              multiple
-              accept={ACCEPT_ATTR}
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files?.length) addFiles(e.target.files);
-                e.target.value = "";
-              }}
-            />
-          </div>
+          <DropZone onFiles={addFiles} />
 
-          {/* Staged file list — the dropzone above already serves as the empty state */}
-          {staged.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] font-medium text-[var(--text-2)]">
-                  {t("convert.staged", { count: staged.length })}
-                </span>
-                <button
-                  type="button"
-                  onClick={clearFiles}
-                  className="rounded-md px-2.5 py-1 text-[11.5px] font-medium text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
-                >
-                  {t("convert.clearAll")}
-                </button>
-              </div>
-              <ul className="flex flex-col gap-1.5">
-                {staged.map(({ id, file }) => (
-                  <li
-                    key={id}
-                    className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
-                  >
-                    <span className="font-mono text-[10.5px] uppercase text-[var(--accent)]">{extOf(file.name) || "?"}</span>
-                    <span className="min-w-0 flex-1 truncate text-[12.5px] text-[var(--text)]" title={file.name}>
-                      {file.name}
-                    </span>
-                    <span className="shrink-0 text-[11px] tabular-nums text-[var(--text-3)]">{formatBytes(file.size)}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeFile(id)}
-                      aria-label={t("convert.remove")}
-                      title={t("convert.remove")}
-                      className="shrink-0 rounded-md px-2 py-1 text-[12px] text-[var(--text-3)] transition-colors hover:bg-[var(--red-dim)] hover:text-[var(--red)]"
-                    >
-                      ✕
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <StagedFileList
+            staged={staged}
+            translate={translate}
+            resolvedTarget={resolvedTarget}
+            fileStatus={fileStatus}
+            converting={converting}
+            setOverride={setOverride}
+            setSkip={setSkip}
+            removeFile={removeFile}
+            clearFiles={clearFiles}
+          />
 
           {/* Per-file errors */}
           {fileErrors.length > 0 && (
@@ -321,32 +255,16 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
                 </label>
 
                 {translate && (
-                  <div className={`mt-4 grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
-                    <label className="flex flex-col gap-1.5">
-                      <span className="text-[12px] font-medium text-[var(--text-2)]">{t("convert.sourceLanguage")}</span>
-                      <select
-                        value={sourceLang}
-                        onChange={(e) => setSourceLang(e.target.value)}
-                        className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[13px] text-[var(--text)] outline-none focus:border-[var(--accent)]"
-                      >
-                        <option value={AUTO_SOURCE_LANG}>{t("convert.sourceAuto")}</option>
-                        {LANGUAGE_OPTIONS.map((lang) => (
-                          <option key={lang.value} value={lang.value}>{lang.label}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="flex flex-col gap-1.5">
-                      <span className="text-[12px] font-medium text-[var(--text-2)]">{t("convert.targetLanguage")}</span>
-                      <select
-                        value={targetLang}
-                        onChange={(e) => setTargetLang(e.target.value)}
-                        className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[13px] text-[var(--text)] outline-none focus:border-[var(--accent)]"
-                      >
-                        {LANGUAGE_OPTIONS.map((lang) => (
-                          <option key={lang.value} value={lang.value}>{lang.label}</option>
-                        ))}
-                      </select>
-                    </label>
+                  <div className={`mt-4 ${isMobile ? "" : "max-w-[420px]"}`}>
+                    {/* Source language is auto-detected per file (badges on the
+                        rows above); only the target needs input. */}
+                    <TargetLanguageField
+                      value={targetInput}
+                      onChange={setTargetInput}
+                      resolution={resolution}
+                      recents={recents}
+                      onPick={pickTarget}
+                    />
                   </div>
                 )}
               </div>
@@ -361,7 +279,7 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
             <ActionButton
               variant="primary"
               onClick={handleConvert}
-              disabled={staged.length === 0}
+              disabled={staged.length === 0 || (translate && !resolvedTarget)}
               busy={converting}
               className={isMobile ? "w-full" : ""}
             >

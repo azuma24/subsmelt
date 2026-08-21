@@ -6,7 +6,7 @@
     "logs": "Jurnale",
     "settings": "Setări",
     "convert": "Conversie",
-    "whisper": "Vorbire în text",
+    "whisper": "Transcriere",
     "groupOperate": "Operare",
     "groupCreate": "Creare",
     "groupSystem": "Sistem",
@@ -28,7 +28,9 @@
     "confirm": "Confirmă",
     "reset": "Revino la valoarea implicită",
     "close": "Închide",
-    "rowActions": "Acțiuni rând"
+    "rowActions": "Acțiuni rând",
+    "home": "Acasă",
+    "openFolder": "Deschideți folder {{name}}"
   },
   "dashboard": {
     "title": "Tablou de bord",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} descărcări gata",
     "downloadsReadyHelp": "Descărcarea a pornit automat. Poți descărca din nou mai jos.",
     "downloadFile": "Descarcă fișier",
-    "downloadZip": "Descarcă ZIP"
+    "downloadZip": "Descarcă ZIP",
+    "detecting": "Detectarea limbii…",
+    "detectedBadge": "Detectat: {{lang}}",
+    "detectUnknown": "Limbă nedetectată",
+    "overrideLabel": "Suprascrie limba sursă pentru {{name}}",
+    "targetPlaceholder": "de ex. zh-TW, Japanese, 繁體中文",
+    "didYouMean": "Ați vrut să spuneți:",
+    "ambiguousPick": "\"{{input}}\" este ambiguu — alegeți-l pe unu:",
+    "recentLabel": "Recent:",
+    "sameLangWarning": "Sursa și ținta sunt ambele {{lang}} — săriți traducerea pentru acest fișier?",
+    "targetResolved": "Țintă: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — Vorbire în text",
+    "title": "Transcriere — Vorbire în text",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",

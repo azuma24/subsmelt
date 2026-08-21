@@ -6,7 +6,7 @@
     "logs": "Logboeken",
     "settings": "Instellingen",
     "convert": "Converteren",
-    "whisper": "Spraak naar tekst",
+    "whisper": "Transcribeer",
     "groupOperate": "Uitvoering",
     "groupCreate": "Aanmaken",
     "groupSystem": "Systeem",
@@ -28,7 +28,9 @@
     "confirm": "Bevestigen",
     "reset": "Terugzetten naar standaard",
     "close": "Sluiten",
-    "rowActions": "Rijacties"
+    "rowActions": "Rijacties",
+    "home": "Start",
+    "openFolder": "Map openen {{name}}"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} download(s) klaar",
     "downloadsReadyHelp": "De download is automatisch gestart. Je kunt hieronder opnieuw downloaden.",
     "downloadFile": "Bestand downloaden",
-    "downloadZip": "ZIP downloaden"
+    "downloadZip": "ZIP downloaden",
+    "detecting": "Taal detecteren…",
+    "detectedBadge": "Gedetecteerd: {{lang}}",
+    "detectUnknown": "Taal niet gedetecteerd",
+    "overrideLabel": "Brontaal voor {{name}} negeren",
+    "targetPlaceholder": "bijv. zh-TW, Japanese, 繁體中文",
+    "didYouMean": "Bedoelde u:",
+    "ambiguousPick": "\"{{input}}\" is dubbelzinnig — kies er een:",
+    "recentLabel": "Recent:",
+    "sameLangWarning": "Bron en doel zijn beide {{lang}} — vertaling voor dit bestand overslaan?",
+    "targetResolved": "Doel: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — Spraak naar tekst",
+    "title": "Transcriptie — Spraak naar tekst",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",

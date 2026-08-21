@@ -6,7 +6,7 @@
     "logs": "السجلات",
     "settings": "الإعدادات",
     "convert": "تحويل",
-    "whisper": "تحويل الكلام إلى نص",
+    "whisper": "نسخ صوتي",
     "groupOperate": "التشغيل",
     "groupCreate": "الإنشاء",
     "groupSystem": "النظام",
@@ -28,7 +28,9 @@
     "confirm": "تأكيد",
     "reset": "إعادة التعيين إلى الافتراضي",
     "close": "إغلاق",
-    "rowActions": "إجراءات الصف"
+    "rowActions": "إجراءات الصف",
+    "home": "الرئيسية",
+    "openFolder": "فتح المجلد {{name}}"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -936,10 +938,20 @@
     "downloadsReady": "{{count}} تنزيل جاهز",
     "downloadsReadyHelp": "بدأ التنزيل تلقائيًا. يمكنك التنزيل مرة أخرى أدناه.",
     "downloadFile": "تنزيل الملف",
-    "downloadZip": "تنزيل ZIP"
+    "downloadZip": "تنزيل ZIP",
+    "detecting": "جاري الكشف عن اللغة…",
+    "detectedBadge": "مكتشوف: {{lang}}",
+    "detectUnknown": "لم يتم الكشف عن اللغة",
+    "overrideLabel": "تجاوز اللغة المصدر لـ {{name}}",
+    "targetPlaceholder": "على سبيل المثال: zh-TW, Japanese, 繁體中文",
+    "didYouMean": "هل تقصد:",
+    "ambiguousPick": "\"{{input}}\" غامض — اختر أحدهما:",
+    "recentLabel": "الأخيرة:",
+    "sameLangWarning": "المصدر والهدف كلاهما {{lang}} — هل تتخطى الترجمة لهذا الملف؟",
+    "targetResolved": "الهدف: {{name}} ({{code}})"
   },
   "whisper": {
-    "title": "Whisper — تحويل الكلام إلى نص",
+    "title": "نسخ صوتي — تحويل الكلام إلى نص",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
