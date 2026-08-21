@@ -432,7 +432,9 @@
       "requestTimeoutHint": "等待單次 LLM 回應的最長秒數。對於速度慢或較大的思考型模型請調高（例如 600）。",
       "disableToolCalls": "停用工具呼叫（使用純文字模式）",
       "refinePass": "潤稿階段（第 2 遍）",
-      "refinePassHint": "再執行一次 LLM 編輯，讓譯文更自然流暢——品質更好，但約需 2 倍的 token 成本且速度較慢。若編輯失敗，則回退至第一遍的譯文。預設關閉。"
+      "refinePassHint": "再執行一次 LLM 編輯，讓譯文更自然流暢——品質更好，但約需 2 倍的 token 成本且速度較慢。若編輯失敗，則回退至第一遍的譯文。預設關閉。",
+      "titleSidecar": "翻譯標題附屬檔案",
+      "titleSidecarHint": "每次翻譯後，將翻譯成目標語言的媒體標題儲存到輸出旁的 .subsmelt_titles.json 檔案中。已記錄的標題將被跳過。磁碟上的檔案名稱永遠不會變更。預設關閉。"
     },
     "sources": {
       "title": "來源與監控",

@@ -432,7 +432,9 @@
       "requestTimeoutHint": "Max antal sekunder att vänta på ett enskilt LLM-svar. Öka för långsamma/stora resonemangsmodeller (t.ex. 600).",
       "disableToolCalls": "Inaktivera verktygsanrop (använd klartextläge)",
       "refinePass": "Förfiningssteg (andra passet)",
-      "refinePassHint": "Kör ett andra LLM-redigeringspass så att översättningarna läser mer naturligt — bättre kvalitet, men ungefär 2× tokenkostnaden och långsammare. Om redigeringen misslyckas används översättningen från första passet. Av som standard."
+      "refinePassHint": "Kör ett andra LLM-redigeringspass så att översättningarna läser mer naturligt — bättre kvalitet, men ungefär 2× tokenkostnaden och långsammare. Om redigeringen misslyckas används översättningen från första passet. Av som standard.",
+      "titleSidecar": "Översatt titel (sidofil)",
+      "titleSidecarHint": "Efter varje översättning sparas mediatiteln, översatt till målspråket, i en .subsmelt_titles.json-fil bredvid utdata. Titlar som redan registrerats hoppas över. Filnamn på disken ändras aldrig. Av som standard."
     },
     "sources": {
       "title": "Källor och övervakning",

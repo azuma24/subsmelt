@@ -8,7 +8,15 @@ export {
   extractUsage,
   parseRetryAfter,
   rateLimitRetryDelayMs,
+  translateSingle,
 } from "./translator/ai-client.js";
+
+export {
+  type TitleSidecar,
+  cleanMediaTitle,
+  ensureTranslatedTitle,
+  loadTitleSidecar,
+} from "./translator/title-sidecar.js";
 
 export {
   type ModelContextInfo,

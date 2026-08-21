@@ -432,7 +432,9 @@
       "requestTimeoutHint": "Maximale Wartezeit in Sekunden auf eine einzelne LLM-Antwort. Für langsame oder große Reasoning-Modelle erhöhen (z. B. 600).",
       "disableToolCalls": "Tool-Aufrufe deaktivieren (Klartextmodus verwenden)",
       "refinePass": "Überarbeitungsdurchlauf (2. Durchlauf)",
-      "refinePassHint": "Führt einen zweiten LLM-Bearbeitungsdurchlauf aus, damit sich Übersetzungen natürlicher lesen — bessere Qualität, aber etwa doppelte Token-Kosten und langsamer. Schlägt die Bearbeitung fehl, wird die Übersetzung des ersten Durchlaufs verwendet. Standardmäßig aus."
+      "refinePassHint": "Führt einen zweiten LLM-Bearbeitungsdurchlauf aus, damit sich Übersetzungen natürlicher lesen — bessere Qualität, aber etwa doppelte Token-Kosten und langsamer. Schlägt die Bearbeitung fehl, wird die Übersetzung des ersten Durchlaufs verwendet. Standardmäßig aus.",
+      "titleSidecar": "Übersetzter Titel (Sidecar-Datei)",
+      "titleSidecarHint": "Speichert nach jeder Übersetzung den in die Zielsprache übersetzten Medientitel in einer .subsmelt_titles.json-Datei neben der Ausgabe. Bereits erfasste Titel werden übersprungen. Dateinamen auf der Festplatte werden nie geändert. Standardmäßig aus."
     },
     "sources": {
       "title": "Sources & Monitoring",

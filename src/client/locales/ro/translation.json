@@ -432,7 +432,9 @@
       "requestTimeoutHint": "Numărul maxim de secunde de așteptare pentru un singur răspuns LLM. Crește-l pentru modele lente/mari de raționament (de exemplu 600).",
       "disableToolCalls": "Dezactivează apelurile de unelte (folosește mod text simplu)",
       "refinePass": "Etapă de rafinare (a 2-a trecere)",
-      "refinePassHint": "Rulează o a doua trecere de editare cu LLM pentru ca traducerile să sune mai natural — calitate mai bună, dar de circa 2× costul în tokenuri și mai lent. Dacă editarea eșuează, se folosește traducerea din prima trecere. Dezactivat implicit."
+      "refinePassHint": "Rulează o a doua trecere de editare cu LLM pentru ca traducerile să sune mai natural — calitate mai bună, dar de circa 2× costul în tokenuri și mai lent. Dacă editarea eșuează, se folosește traducerea din prima trecere. Dezactivat implicit.",
+      "titleSidecar": "Fișier însoțitor pentru titlul tradus",
+      "titleSidecarHint": "După fiecare traducere, salvează titlul media tradus în limba țintă într-un fișier .subsmelt_titles.json, alături de rezultat. Titlurile deja înregistrate sunt omise. Numele fișierelor de pe disc nu sunt niciodată modificate. Dezactivat implicit."
     },
     "sources": {
       "title": "Surse și monitorizare",

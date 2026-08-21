@@ -432,7 +432,9 @@
       "requestTimeoutHint": "Saat maksimum untuk menunggu satu respons LLM. Tingkatkan untuk model berfikir yang perlahan/besar (cth. 600).",
       "disableToolCalls": "Lumpuhkan panggilan alat (gunakan mod teks biasa)",
       "refinePass": "Pusingan penambahbaikan (pusingan ke-2)",
-      "refinePassHint": "Menjalankan pusingan penyuntingan LLM kedua supaya terjemahan berbunyi lebih semula jadi — kualiti lebih baik, tetapi kira-kira 2× kos token dan lebih perlahan. Jika penyuntingan gagal, terjemahan pusingan pertama digunakan. Dimatikan secara lalai."
+      "refinePassHint": "Menjalankan pusingan penyuntingan LLM kedua supaya terjemahan berbunyi lebih semula jadi — kualiti lebih baik, tetapi kira-kira 2× kos token dan lebih perlahan. Jika penyuntingan gagal, terjemahan pusingan pertama digunakan. Dimatikan secara lalai.",
+      "titleSidecar": "Fail sampingan tajuk terjemahan",
+      "titleSidecarHint": "Selepas setiap terjemahan, menyimpan tajuk media yang diterjemahkan ke bahasa sasaran dalam fail .subsmelt_titles.json di sebelah output. Tajuk yang sudah direkodkan akan dilangkau. Nama fail pada cakera tidak pernah diubah. Dimatikan secara lalai."
     },
     "sources": {
       "title": "Sumber & Pemantauan",

@@ -7,6 +7,24 @@ version number and are released together (`v0.5.6` and `whisper-v0.5.6`).
 
 Nothing yet.
 
+## [0.5.8] — 2026-08-22
+
+App-only release (the Whisper backend is unchanged; `whisper-v0.5.6` remains
+current).
+
+### Added
+
+- **Translated Title Sidecar** (Settings → Translation Engine, default off).
+  After each translation, the media filename's title — release tags stripped
+  (`Inception.2010.1080p.BluRay.x264-SPARKS` → `Inception`) — is translated
+  into the target language with the configured LLM and cached in a
+  `.subsmelt_titles.json` sidecar next to the output. Cached titles are never
+  re-translated (force re-translate refreshes them); jobs skipped because
+  their subtitle already exists get a title backfill after the queue run.
+  Translated titles appear on the language chips in Dashboard scan results
+  and in the logs. Scans prune sidecar entries for media that no longer
+  exists. Filenames on disk are never changed.
+
 ## [0.5.7] — 2026-08-21
 
 App-only release (the Whisper backend is unchanged; `whisper-v0.5.6` remains

@@ -432,7 +432,9 @@
       "requestTimeoutHint": "等待单次 LLM 响应的最长秒数。对于速度慢或较大的思考型模型请调高（例如 600）。",
       "disableToolCalls": "禁用工具调用（使用纯文本模式）",
       "refinePass": "润色阶段（第 2 遍）",
-      "refinePassHint": "再运行一次 LLM 编辑，让译文更自然流畅——质量更好，但约需 2 倍的 token 成本且速度更慢。若编辑失败，则退回第一遍的译文。默认关闭。"
+      "refinePassHint": "再运行一次 LLM 编辑，让译文更自然流畅——质量更好，但约需 2 倍的 token 成本且速度更慢。若编辑失败，则退回第一遍的译文。默认关闭。",
+      "titleSidecar": "翻译标题附属文件",
+      "titleSidecarHint": "每次翻译后，将翻译成目标语言的媒体标题保存到输出文件旁的 .subsmelt_titles.json 文件中。已记录的标题将被跳过。磁盘上的文件名永远不会更改。默认关闭。"
     },
     "sources": {
       "title": "来源与监控",

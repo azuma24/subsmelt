@@ -432,7 +432,9 @@
       "requestTimeoutHint": "Nombre maximal de secondes d'attente pour une réponse du LLM. Augmentez-le pour les modèles de raisonnement lents ou volumineux (p. ex. 600).",
       "disableToolCalls": "Désactiver les appels d'outils (mode texte brut)",
       "refinePass": "Passe d'affinage (2e passe)",
-      "refinePassHint": "Exécute une seconde passe d'édition par le LLM pour rendre les traductions plus naturelles : meilleure qualité, mais environ 2 fois le coût en jetons et plus lent. En cas d'échec de l'édition, la traduction de la première passe est conservée. Désactivé par défaut."
+      "refinePassHint": "Exécute une seconde passe d'édition par le LLM pour rendre les traductions plus naturelles : meilleure qualité, mais environ 2 fois le coût en jetons et plus lent. En cas d'échec de l'édition, la traduction de la première passe est conservée. Désactivé par défaut.",
+      "titleSidecar": "Fichier annexe du titre traduit",
+      "titleSidecarHint": "Après chaque traduction, enregistre le titre du média traduit dans la langue cible dans un fichier .subsmelt_titles.json à côté de la sortie. Les titres déjà enregistrés sont ignorés. Les noms de fichiers sur le disque ne sont jamais modifiés. Désactivé par défaut."
     },
     "sources": {
       "title": "Sources & Monitoring",

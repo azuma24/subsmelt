@@ -4,6 +4,7 @@ import { getSetting, getTasks } from "./config.js";
 import { createJob, getJobBySrtAndTask, getJobs } from "./db.js";
 import { parseRules, resolveDirectoryRule } from "./directory-rules.js";
 import { logger } from "./logger.js";
+import { loadTitleSidecar, getTitle, pruneTitleSidecarQueued, type TitleSidecar } from "./translator/title-sidecar.js";
 
 export const MEDIA_DIR = process.env.MEDIA_DIR || "/media";
 
@@ -222,7 +223,7 @@ function pathIsInScope(relativePath: string, folders: string[]): boolean {
 }
 
 /** Strip known language suffix from a subtitle stem: "Movie.en" → "Movie" */
-function stripLangSuffix(stem: string): string {
+export function stripLangSuffix(stem: string): string {
   const parts = stem.split(".");
   if (parts.length > 1) {
     const last = parts[parts.length - 1].toLowerCase();
@@ -261,6 +262,7 @@ export interface ScannedFile {
       outputName: string;
       status: "done" | "pending" | "translating" | "error" | "skipped" | "new";
       jobId: number | null;
+      translatedTitle: string | null;
     }[];
   }[];
 }
@@ -358,6 +360,18 @@ export function scanFolder(createJobs = true): ScanResult {
 
   let newJobs = 0;
 
+  // Per-folder title sidecar cache for this scan, plus the media bases still
+  // present per folder (used to prune stale sidecar entries afterwards).
+  const titleSidecars = new Map<string, TitleSidecar>();
+  const titleBasesByDir = new Map<string, Set<string>>();
+  const sidecarFor = (dir: string): TitleSidecar => {
+    const cached = titleSidecars.get(dir);
+    if (cached) return cached;
+    const loaded = loadTitleSidecar(dir);
+    titleSidecars.set(dir, loaded);
+    return loaded;
+  };
+
   for (const srtPath of srtFiles) {
     const ext = path.extname(srtPath);
     const extNoDot = ext.slice(1).toLowerCase();
@@ -430,6 +444,12 @@ export function scanFolder(createJobs = true): ScanResult {
       tasks: [],
     };
 
+    // Same base rule as the queue's title step: video stem when present,
+    // else the language-suffix-stripped subtitle stem.
+    const titleBase = videoPath ? path.basename(videoPath, path.extname(videoPath)) : baseStem;
+    const dirBases = titleBasesByDir.get(dir) ?? new Set<string>();
+    titleBasesByDir.set(dir, dirBases.add(titleBase));
+
     // For each effective task, compute output and check status
     for (const task of effectiveTasks) {
       const outputName = applyPattern(task.output_pattern, baseStem, task.lang_code, extNoDot);
@@ -479,6 +499,7 @@ export function scanFolder(createJobs = true): ScanResult {
         outputName,
         status,
         jobId,
+        translatedTitle: getTitle(sidecarFor(path.dirname(outputPath)), titleBase, task.lang_code) ?? null,
       });
     }
 
@@ -496,6 +517,14 @@ export function scanFolder(createJobs = true): ScanResult {
       "scan",
       `Scan complete: ${srtFiles.length} subtitle files, ${videoFiles.length} videos, ${newJobs} new jobs created`
     );
+  }
+
+  // Drop sidecar titles for media that no longer exists in scanned folders.
+  // Queued behind the per-directory title lock so a prune never interleaves
+  // with an in-flight title write from the queue (fire-and-forget: scan
+  // results don't depend on prune completion).
+  if (getSetting("title_sidecar") === "1") {
+    for (const [dir, bases] of titleBasesByDir) void pruneTitleSidecarQueued(dir, bases);
   }
 
   return { files, newJobs, totalSubtitles: srtFiles.length };

@@ -72,6 +72,12 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   // translated file's folder is loaded before analysis and updated after, so a
   // series stays consistent across files. Default off — behavior unchanged.
   series_memory: "0",
+  // Translated Title Sidecar: when "1", after each successful translation the
+  // media filename's title (release/quality tags stripped) is translated into
+  // the target language and stored in a .subsmelt_titles.json sidecar next to
+  // the output file. Titles already recorded for a language are skipped.
+  // Default off — filenames on disk are never changed.
+  title_sidecar: "0",
   auto_scan_interval: "0",
   // Soft monthly token budget for the cost/usage indicator. "0" = unlimited.
   // Display-only: NEVER blocks or throttles translation — it only powers a

@@ -432,7 +432,9 @@
       "requestTimeoutHint": "Pinakamaraming segundo na hihintayin para sa isang LLM response. Dagdagan para sa mabagal/malaking thinking model (hal. 600).",
       "disableToolCalls": "I-disable ang tool calls (gamitin ang plain-text mode)",
       "refinePass": "Yugto ng paghahasa (ika-2 pass)",
-      "refinePassHint": "Nagpapatakbo ng pangalawang pag-edit ng LLM para mas natural basahin ang mga salin — mas mahusay na kalidad, ngunit humigit-kumulang 2× ang gastos sa token at mas mabagal. Kung mabigo ang pag-edit, ginagamit ang salin mula sa unang pass. Naka-off bilang default."
+      "refinePassHint": "Nagpapatakbo ng pangalawang pag-edit ng LLM para mas natural basahin ang mga salin — mas mahusay na kalidad, ngunit humigit-kumulang 2× ang gastos sa token at mas mabagal. Kung mabigo ang pag-edit, ginagamit ang salin mula sa unang pass. Naka-off bilang default.",
+      "titleSidecar": "Isinaling pamagat (sidecar file)",
+      "titleSidecarHint": "Pagkatapos ng bawat pagsasalin, isinasave ang pamagat ng media na isinalin sa target na wika sa isang .subsmelt_titles.json file sa tabi ng output. Nilalaktawan ang mga pamagat na naitala na. Hindi kailanman binabago ang mga filename sa disk. Naka-off bilang default."
     },
     "sources": {
       "title": "Mga Source at Pagmamanman",

@@ -58,6 +58,12 @@ export function EngineSection({ settings, isMobile, updateAndSaveDebounced }: En
             checked={settings.refine_pass === "1"}
             onChange={(checked) => updateAndSaveDebounced("refine_pass", checked ? "1" : "0")}
           />
+          <ToggleRow
+            title={t("settings.translationEngine.titleSidecar")}
+            description={t("settings.translationEngine.titleSidecarHint")}
+            checked={settings.title_sidecar === "1"}
+            onChange={(checked) => updateAndSaveDebounced("title_sidecar", checked ? "1" : "0")}
+          />
         </div>
       </Accordion>
     </>

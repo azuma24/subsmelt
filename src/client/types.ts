@@ -48,6 +48,7 @@ export interface TaskStatus {
   outputName: string;
   status: string;
   jobId: number | null;
+  translatedTitle?: string | null;
 }
 
 export interface SubtitleEntry {

@@ -432,7 +432,9 @@
       "requestTimeoutHint": "Số giây tối đa chờ một phản hồi từ LLM. Tăng lên với các mô hình suy luận chậm hoặc lớn (ví dụ 600).",
       "disableToolCalls": "Tắt gọi công cụ (dùng chế độ văn bản thuần)",
       "refinePass": "Bước tinh chỉnh (lượt 2)",
-      "refinePassHint": "Chạy thêm một lượt biên tập bằng LLM để bản dịch đọc tự nhiên hơn — chất lượng tốt hơn nhưng tốn khoảng 2× token và chậm hơn. Nếu biên tập thất bại, sẽ dùng bản dịch của lượt đầu. Mặc định tắt."
+      "refinePassHint": "Chạy thêm một lượt biên tập bằng LLM để bản dịch đọc tự nhiên hơn — chất lượng tốt hơn nhưng tốn khoảng 2× token và chậm hơn. Nếu biên tập thất bại, sẽ dùng bản dịch của lượt đầu. Mặc định tắt.",
+      "titleSidecar": "Tệp phụ tiêu đề đã dịch",
+      "titleSidecarHint": "Sau mỗi lần dịch, lưu tiêu đề media đã dịch sang ngôn ngữ đích vào tệp .subsmelt_titles.json bên cạnh tệp đầu ra. Các tiêu đề đã ghi sẽ được bỏ qua. Tên tệp trên đĩa không bao giờ bị thay đổi. Mặc định tắt."
     },
     "sources": {
       "title": "Sources & Monitoring",

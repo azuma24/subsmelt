@@ -71,6 +71,7 @@ export interface ClientSettings {
   disable_tool_calls?: StringBool;
   refine_pass?: StringBool;
   series_memory?: StringBool;
+  title_sidecar?: StringBool;
   additional_context?: string;
   prompt?: string;
 

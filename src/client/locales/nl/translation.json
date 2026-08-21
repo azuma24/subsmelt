@@ -432,7 +432,9 @@
       "requestTimeoutHint": "Maximaal aantal seconden om op één LLM-respons te wachten. Verhoog voor trage/grote denkmodellen (bv. 600).",
       "disableToolCalls": "Tool calls uitschakelen (platte-tekstmodus gebruiken)",
       "refinePass": "Verfijningsronde (2e ronde)",
-      "refinePassHint": "Voert een tweede LLM-bewerkingsronde uit zodat vertalingen natuurlijker lezen — betere kwaliteit, maar ongeveer 2× de tokenkosten en trager. Mislukt de bewerking, dan wordt de vertaling van de eerste ronde gebruikt. Standaard uit."
+      "refinePassHint": "Voert een tweede LLM-bewerkingsronde uit zodat vertalingen natuurlijker lezen — betere kwaliteit, maar ongeveer 2× de tokenkosten en trager. Mislukt de bewerking, dan wordt de vertaling van de eerste ronde gebruikt. Standaard uit.",
+      "titleSidecar": "Vertaalde titel (bijbestand)",
+      "titleSidecarHint": "Slaat na elke vertaling de mediatitel, vertaald naar de doeltaal, op in een .subsmelt_titles.json-bestand naast de uitvoer. Reeds vastgelegde titels worden overgeslagen. Bestandsnamen op schijf worden nooit gewijzigd. Standaard uit."
     },
     "sources": {
       "title": "Bronnen & monitoring",

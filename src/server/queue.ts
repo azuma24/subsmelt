@@ -1,12 +1,14 @@
 import fs from "node:fs";
+import path from "node:path";
 import { countPendingJobs, claimPendingJob, updateJob, getJob, addJobUsage } from "./db.js";
 import { getAllSettings, getTask, getSetting } from "./config.js";
-import { summarizeTranslationError, translateFile, probeModelContext } from "./translator.js";
+import { summarizeTranslationError, translateFile, probeModelContext, translateSingle, ensureTranslatedTitle, cleanMediaTitle } from "./translator.js";
 import { resolveConnectionPool, type ResolvedConnection, type LlmMode } from "./connections.js";
 import { logger } from "./logger.js";
 import { broadcast } from "./sse.js";
 import { notify } from "./notify.js";
 import { acquireConnectionLock, resetConnectionLocks } from "./connection-lock.js";
+import { stripLangSuffix } from "./scanner.js";
 
 let isRunning = false;
 let shouldStop = false;
@@ -17,6 +19,22 @@ const activeJobIds = new Set<number>();
 const abortControllers = new Set<AbortController>();
 // Hard ceiling on concurrent translation workers (matches the per-file connection cap).
 const MAX_WORKERS = 32;
+// Dedicated system prompt for translating a short media title — the subtitle
+// prompt template assumes cue-by-cue input and produces noisy output for a
+// single title string.
+const titleTranslationPrompt = (lang: string) =>
+  `Translate the following movie or series title into ${lang}. Return only the translated title, nothing else.`;
+
+// Jobs skipped because their subtitle output already exists still deserve a
+// title-sidecar entry (repair for titles missed before the setting was on or
+// after a failed title call). Collected during claim, processed after the run.
+const titleRepairJobs: any[] = [];
+
+/** Media base stem for the title sidecar: video stem, else srt stem minus language suffix. */
+function titleBaseForJob(job: any): string {
+  if (job.video_path) return path.basename(job.video_path, path.extname(job.video_path));
+  return stripLangSuffix(path.basename(job.srt_path, path.extname(job.srt_path)));
+}
 const offlineConnectionIds = new Set<string>();
 
 function availablePool(pool: ResolvedConnection[]): ResolvedConnection[] {
@@ -79,8 +97,10 @@ export async function processQueue(onlyIds?: number[]) {
       logger.info("queue", "Queue finished — no more pending jobs");
       broadcast("queue:finished", {});
       void notify("queue:finished", {});
+      await repairMissingTitles();
     }
   } finally {
+    titleRepairJobs.length = 0;
     isRunning = false;
     shouldStop = false;
     currentJobId = null;
@@ -105,6 +125,7 @@ function claimNextJob(filter: Set<number> | null): any | null {
     if (fs.existsSync(job.output_path) && !job.force) {
       logger.info("queue", `Skipping job ${job.id}: output already exists (${job.output_path})`, job.id);
       updateJob(job.id, { status: "skipped" });
+      titleRepairJobs.push(job);
       continue;
     }
 
@@ -116,6 +137,54 @@ function claimNextJob(filter: Set<number> | null): any | null {
 }
 
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Backfill title-sidecar entries for jobs whose subtitle output already
+ * existed (skipped at claim time). Cached titles make this a cheap no-op per
+ * folder+language; only genuinely missing titles hit the LLM. Non-fatal.
+ */
+async function repairMissingTitles() {
+  const jobs = titleRepairJobs.splice(0);
+  const settings = getAllSettings();
+  if (settings.title_sidecar !== "1" || jobs.length === 0) return;
+
+  const { pool } = resolveConnectionPool(settings);
+  const primary = availablePool(pool)[0];
+  if (!primary) return;
+  const apiHost = primary.apiHost || settings.llm_endpoint || "http://localhost:8000/v1";
+  const requestTimeoutMs = Math.max(5_000, parseInt(settings.request_timeout_s || "300", 10) * 1000);
+
+  for (const job of jobs) {
+    if (shouldStop) return;
+    try {
+      const task = getTask(job.task_id);
+      const langCode = task?.lang_code || "?";
+      const targetLang = task?.target_lang || "";
+      const base = titleBaseForJob(job);
+      const title = await ensureTranslatedTitle({
+        outputDir: path.dirname(job.output_path),
+        base,
+        langCode,
+        translate: (text) =>
+          translateSingle(text, {
+            apiKey: primary.apiKey || "",
+            apiHost,
+            model: primary.model || "",
+            provider: primary.provider,
+            systemPrompt: titleTranslationPrompt(targetLang || "English"),
+            temperature: parseFloat(settings.temperature || "0.3"),
+            disableToolCalls: settings.disable_tool_calls === "1",
+            requestTimeoutMs,
+          }),
+      });
+      if (title !== cleanMediaTitle(base)) {
+        logger.info("translate", `Translated title (${langCode}): ${title}`, job.id, { stage: "title_sidecar", title, langCode });
+      }
+    } catch (error: any) {
+      logger.warn("queue", `Title repair failed (non-fatal): ${error?.message || error}`, job.id, { stage: "title_sidecar" });
+    }
+  }
+}
 
 function hasPendingJobs(filter: Set<number> | null): boolean {
   return countPendingJobs(filter) > 0;
@@ -313,6 +382,7 @@ async function runJob(
     });
 
     const durationSeconds = (Date.now() - startTime) / 1000;
+    const wasForced = !!job.force;
     updateJob(job.id, {
       status: "done",
       duration_seconds: durationSeconds,
@@ -328,6 +398,36 @@ async function runJob(
     );
     broadcast("job:done", { jobId: job.id, durationSeconds, srtName, langCode });
     void notify("job:done", { jobId: job.id, durationSeconds, srtName, langCode });
+
+    if (settings.title_sidecar === "1") {
+      try {
+        const base = titleBaseForJob(job);
+        const title = await ensureTranslatedTitle({
+          outputDir: path.dirname(job.output_path),
+          base,
+          langCode,
+          force: wasForced,
+          translate: (text) =>
+            translateSingle(text, {
+              apiKey,
+              apiHost,
+              model,
+              provider: primary.provider,
+              systemPrompt: titleTranslationPrompt(targetLang || "English"),
+              temperature: parseFloat(settings.temperature || "0.3"),
+              disableToolCalls: settings.disable_tool_calls === "1",
+              requestTimeoutMs,
+              abortSignal: jobAbort.signal,
+              onUsage: (u) => addJobUsage(job.id, u.inputTokens, u.outputTokens),
+            }),
+        });
+        if (title !== cleanMediaTitle(base)) {
+          logger.info("translate", `Translated title (${langCode}): ${title} — ${srtName}`, job.id, { stage: "title_sidecar", title, langCode });
+        }
+      } catch (error: any) {
+        logger.warn("queue", `Title sidecar failed (non-fatal): ${error?.message || error}`, job.id, { stage: "title_sidecar" });
+      }
+    }
     return false;
   } catch (error: any) {
     const durationSeconds = (Date.now() - startTime) / 1000;

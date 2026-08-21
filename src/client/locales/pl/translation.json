@@ -432,7 +432,9 @@
       "requestTimeoutHint": "Maksymalna liczba sekund oczekiwania na pojedynczą odpowiedź LLM. Zwiększ dla wolnych/dużych modeli myślących (np. 600).",
       "disableToolCalls": "Wyłącz wywołania narzędzi (tryb zwykłego tekstu)",
       "refinePass": "Przebieg dopracowania (2. przebieg)",
-      "refinePassHint": "Uruchamia drugi przebieg redakcji LLM, aby tłumaczenia brzmiały naturalniej — lepsza jakość, ale około 2× koszt tokenów i wolniej. Jeśli redakcja się nie powiedzie, używane jest tłumaczenie z pierwszego przebiegu. Domyślnie wyłączone."
+      "refinePassHint": "Uruchamia drugi przebieg redakcji LLM, aby tłumaczenia brzmiały naturalniej — lepsza jakość, ale około 2× koszt tokenów i wolniej. Jeśli redakcja się nie powiedzie, używane jest tłumaczenie z pierwszego przebiegu. Domyślnie wyłączone.",
+      "titleSidecar": "Przetłumaczony tytuł (plik towarzyszący)",
+      "titleSidecarHint": "Po każdym tłumaczeniu zapisuje tytuł materiału przetłumaczony na język docelowy w pliku .subsmelt_titles.json obok pliku wyjściowego. Tytuły już zapisane są pomijane. Nazwy plików na dysku nigdy nie są zmieniane. Domyślnie wyłączone."
     },
     "sources": {
       "title": "Źródła i monitorowanie",

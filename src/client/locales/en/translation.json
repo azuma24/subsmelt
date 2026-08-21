@@ -572,7 +572,9 @@
       "requestTimeoutHint": "Max seconds to wait for a single LLM response. Increase for slow/large thinking models (e.g. 600).",
       "disableToolCalls": "Disable tool calls (use plain-text mode)",
       "refinePass": "Refinement Pass (Pass 2)",
-      "refinePassHint": "Runs a second LLM editing pass to make translations read more naturally — better quality, but ~2× the token cost and slower. Falls back to the first-pass translation if the edit fails. Default off."
+      "refinePassHint": "Runs a second LLM editing pass to make translations read more naturally — better quality, but ~2× the token cost and slower. Falls back to the first-pass translation if the edit fails. Default off.",
+      "titleSidecar": "Translated Title Sidecar",
+      "titleSidecarHint": "After each translation, stores the media title translated into the target language in a .subsmelt_titles.json file next to the output. Titles already recorded are skipped. Filenames on disk are never changed. Default off."
     },
     "sources": {
       "title": "Sources & Monitoring",

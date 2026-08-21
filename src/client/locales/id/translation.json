@@ -432,7 +432,9 @@
       "requestTimeoutHint": "Detik maksimum menunggu satu respons LLM. Naikkan untuk model penalaran yang lambat atau besar (mis. 600).",
       "disableToolCalls": "Nonaktifkan panggilan alat (gunakan mode teks biasa)",
       "refinePass": "Tahap penyempurnaan (lintasan ke-2)",
-      "refinePassHint": "Menjalankan lintasan penyuntingan LLM kedua agar terjemahan terbaca lebih alami — kualitas lebih baik, tetapi biaya token sekitar 2× dan lebih lambat. Jika penyuntingan gagal, digunakan terjemahan lintasan pertama. Nonaktif secara bawaan."
+      "refinePassHint": "Menjalankan lintasan penyuntingan LLM kedua agar terjemahan terbaca lebih alami — kualitas lebih baik, tetapi biaya token sekitar 2× dan lebih lambat. Jika penyuntingan gagal, digunakan terjemahan lintasan pertama. Nonaktif secara bawaan.",
+      "titleSidecar": "Berkas pendamping judul terjemahan",
+      "titleSidecarHint": "Setelah setiap terjemahan, menyimpan judul media yang diterjemahkan ke bahasa target dalam berkas .subsmelt_titles.json di sebelah output. Judul yang sudah tercatat akan dilewati. Nama berkas di disk tidak pernah diubah. Nonaktif secara bawaan."
     },
     "sources": {
       "title": "Sources & Monitoring",

@@ -194,8 +194,10 @@ export function CompactScanFileRow({
                     <span
                       key={k}
                       className={`rounded-full px-2 py-1 text-[10px] font-medium ${status === "done" ? "bg-[var(--green-dim)] text-[var(--green)]" : status === "error" ? "bg-[var(--red-dim)] text-[var(--red)]" : status === "translating" ? "bg-[var(--accent-dim)] text-[var(--accent)]" : status === "pending" ? "bg-[var(--yellow-dim)] text-[var(--yellow)]" : "bg-[var(--surface-2)] text-[var(--text-3)]"}`}
+                      title={task.translatedTitle || undefined}
                     >
                       {task.langCode} {STATUS_ICON[status]}
+                      {task.translatedTitle ? <span className="ml-1 inline-block max-w-[10rem] truncate align-bottom font-normal text-[var(--text-2)]">{task.translatedTitle}</span> : null}
                     </span>
                   );
                 })}

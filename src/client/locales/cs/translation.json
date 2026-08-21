@@ -432,7 +432,9 @@
       "requestTimeoutHint": "Max. počet sekund čekání na jednu odpověď LLM. Zvyšte u pomalých/velkých přemýšlejících modelů (např. 600).",
       "disableToolCalls": "Zakázat volání nástrojů (použít režim prostého textu)",
       "refinePass": "Průchod vylepšení (2. průchod)",
-      "refinePassHint": "Spustí druhý editační průchod LLM, aby překlady zněly přirozeněji — lepší kvalita, ale zhruba 2× vyšší náklady na tokeny a pomalejší. Pokud editace selže, použije se překlad z prvního průchodu. Ve výchozím stavu vypnuto."
+      "refinePassHint": "Spustí druhý editační průchod LLM, aby překlady zněly přirozeněji — lepší kvalita, ale zhruba 2× vyšší náklady na tokeny a pomalejší. Pokud editace selže, použije se překlad z prvního průchodu. Ve výchozím stavu vypnuto.",
+      "titleSidecar": "Přeložený název (doprovodný soubor)",
+      "titleSidecarHint": "Po každém překladu uloží název média přeložený do cílového jazyka do souboru .subsmelt_titles.json vedle výstupu. Již zaznamenané názvy se přeskočí. Názvy souborů na disku se nikdy nemění. Ve výchozím stavu vypnuto."
     },
     "sources": {
       "title": "Zdroje a sledování",

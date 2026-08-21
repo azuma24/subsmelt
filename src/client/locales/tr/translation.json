@@ -432,7 +432,9 @@
       "requestTimeoutHint": "Tek bir LLM yanıtı için beklenecek azami saniye. Yavaş/büyük düşünen modeller için artırın (örn. 600).",
       "disableToolCalls": "Araç çağrılarını devre dışı bırak (düz metin modunu kullan)",
       "refinePass": "İyileştirme turu (2. tur)",
-      "refinePassHint": "Çevirilerin daha doğal okunması için ikinci bir LLM düzenleme turu çalıştırır — daha iyi kalite, ancak yaklaşık 2 kat jeton maliyeti ve daha yavaş. Düzenleme başarısız olursa ilk turun çevirisi kullanılır. Varsayılan olarak kapalı."
+      "refinePassHint": "Çevirilerin daha doğal okunması için ikinci bir LLM düzenleme turu çalıştırır — daha iyi kalite, ancak yaklaşık 2 kat jeton maliyeti ve daha yavaş. Düzenleme başarısız olursa ilk turun çevirisi kullanılır. Varsayılan olarak kapalı.",
+      "titleSidecar": "Çevrilmiş başlık yan dosyası",
+      "titleSidecarHint": "Her çeviriden sonra, ortam başlığını hedef dile çevrilmiş olarak çıktının yanındaki bir .subsmelt_titles.json dosyasına kaydeder. Zaten kaydedilmiş başlıklar atlanır. Diskteki dosya adları asla değiştirilmez. Varsayılan olarak kapalı."
     },
     "sources": {
       "title": "Kaynaklar ve İzleme",

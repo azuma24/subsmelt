@@ -61,6 +61,7 @@ costs nothing against a local endpoint.
 - **Crash safety** — work in progress goes to a `.part` file and is only renamed on completion, so an interrupted job is retried rather than left truncated
 - **Real-time progress** — live job progress over Server-Sent Events with time remaining and throughput, and failures mapped to a cause and a next step
 - **Subtitle preview** — side-by-side original vs translated with full-text search
+- **Translated title sidecar** (optional) — stores each media title translated into every target language in a `.subsmelt_titles.json` next to the output, shown in the scan results; filenames on disk are never renamed
 - **Optional speech-to-text** — attach a faster-whisper backend to generate source subtitles when none exist
 - **Formats** — `.srt`, `.vtt`, `.ass`, `.ssa` · **UI** — 32 locales
 

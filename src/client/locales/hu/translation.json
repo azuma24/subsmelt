@@ -432,7 +432,9 @@
       "requestTimeoutHint": "Az egy LLM-válaszra való várakozás maximális ideje másodpercben. Növeld lassú/nagy, gondolkodó modellekhez (pl. 600).",
       "disableToolCalls": "Eszközhívások letiltása (egyszerű szöveges mód)",
       "refinePass": "Finomító menet (2. menet)",
-      "refinePassHint": "Lefuttat egy második LLM-szerkesztési menetet, hogy a fordítás természetesebben olvasson — jobb minőség, de nagyjából kétszeres tokenköltség és lassabb. Ha a szerkesztés meghiúsul, az első menet fordítása marad. Alapértelmezetten kikapcsolva."
+      "refinePassHint": "Lefuttat egy második LLM-szerkesztési menetet, hogy a fordítás természetesebben olvasson — jobb minőség, de nagyjából kétszeres tokenköltség és lassabb. Ha a szerkesztés meghiúsul, az első menet fordítása marad. Alapértelmezetten kikapcsolva.",
+      "titleSidecar": "Lefordított cím kísérőfájlja",
+      "titleSidecarHint": "Minden fordítás után elmenti a médiacímet a célnyelvre lefordítva egy .subsmelt_titles.json fájlba a kimenet mellett. A már rögzített címeket kihagyja. A lemezen lévő fájlnevek soha nem változnak. Alapértelmezetten kikapcsolva."
     },
     "sources": {
       "title": "Források és figyelés",
