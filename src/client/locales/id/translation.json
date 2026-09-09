@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" ambigu — pilih salah satu:",
     "recentLabel": "Terbaru:",
     "sameLangWarning": "Sumber dan target keduanya {{lang}} — lewati terjemahan untuk file ini?",
-    "targetResolved": "Target: {{name}} ({{code}})"
+    "targetResolved": "Target: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "Transkripsi — Ucapan ke teks",

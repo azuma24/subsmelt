@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" مبهم است — یکی را انتخاب کنید:",
     "recentLabel": "اخیر:",
     "sameLangWarning": "منبع و مقصد هر دو {{lang}} هستند — آیا ترجمه این فایل را رد کنید؟",
-    "targetResolved": "هدف: {{name}} ({{code}})"
+    "targetResolved": "هدف: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "رونوشت — گفتار به نوشتار",

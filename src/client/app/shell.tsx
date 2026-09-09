@@ -59,7 +59,7 @@ export function DesktopSidebar({
   const { t } = useTranslation();
   return (
     // Phase 5: auto-compact at small desktop widths (w-20 compact, lg:w-52 full)
-    <nav className="flex w-20 lg:w-52 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface)]">
+    <nav className="flex h-full min-h-0 w-20 lg:w-52 shrink-0 flex-col overflow-hidden border-r border-[var(--border)] bg-[var(--surface)]">
       {/* Logo row — version shown as tooltip on logo per Phase 5 */}
       <div className="flex h-[50px] items-center gap-2.5 border-b border-[var(--border)] px-3.5">
         <div
@@ -114,7 +114,7 @@ export function DesktopSidebar({
         })}
       </div>
 
-      <div className="border-t border-[var(--border)] px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2.5">
+      <div className="shrink-0 border-t border-[var(--border)] px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2.5">
         {/* Queue status dot — always shown. The label is sr-only below lg (where
             the sidebar is compact) so the status never reduces to color alone;
             `title` surfaces it on hover at compact width. */}

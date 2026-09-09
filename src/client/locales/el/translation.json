@@ -951,7 +951,10 @@
     "ambiguousPick": "Το \"{{input}}\" είναι διφορούμενο — επιλέξτε ένα:",
     "recentLabel": "Πρόσφατο:",
     "sameLangWarning": "Η γλώσσα προέλευσης και προορισμού είναι και οι δύο {{lang}} — παράλειψη μετάφρασης για αυτό το αρχείο;",
-    "targetResolved": "Προορισμός: {{name}} ({{code}})"
+    "targetResolved": "Προορισμός: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "Μεταγραφή — Ομιλία σε κείμενο",

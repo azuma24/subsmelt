@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" belirsiz — birini seçin:",
     "recentLabel": "Son kullanılan:",
     "sameLangWarning": "Kaynak ve hedef her ikisi de {{lang}} — bu dosya için çeviriyi atla?",
-    "targetResolved": "Hedef: {{name}} ({{code}})"
+    "targetResolved": "Hedef: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "Transkripsiyon — Konuşmadan metne",

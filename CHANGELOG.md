@@ -7,6 +7,18 @@ version number and are released together (`v0.5.6` and `whisper-v0.5.6`).
 
 Nothing yet.
 
+## [0.5.11] — 2026-09-09
+
+App-only release (Whisper backend remains `whisper-v0.5.9`).
+
+### Added
+
+- **Convert / Translate** can translate one subtitle file: pick From and To, drop the file, download. Format-only conversion is a separate tab.
+
+### Fixed
+
+- **Desktop sidebar footer was clipped** (queue/watcher/model/theme). The rail now fills the viewport and the status block stays pinned; nav links scroll if needed.
+
 ## [0.5.10] — 2026-09-09
 
 App-only release (Whisper backend remains `whisper-v0.5.9`).

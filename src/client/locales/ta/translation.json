@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" தெளிவற்றது — ஒன்றைத் தேர்ந்தெடுக்கவும்:",
     "recentLabel": "சமீபத்தியவை:",
     "sameLangWarning": "மூலம் மற்றும் இலக்கு இரண்டும் {{lang}} — இந்த கோப்பின் மொழிபெயர்ப்பைத் தவிர்க்கவும்?",
-    "targetResolved": "இலக்கு: {{name}} ({{code}})"
+    "targetResolved": "இலக்கு: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "படியெழுத்து — பேச்சை உரையாக",

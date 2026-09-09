@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" דו-משמעי — בחר אחד:",
     "recentLabel": "אחרון:",
     "sameLangWarning": "המקור והיעד הם שניהם {{lang}} — לדלג על תרגום לקובץ זה?",
-    "targetResolved": "יעד: {{name}} ({{code}})"
+    "targetResolved": "יעד: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "תמלול — דיבור לטקסט",

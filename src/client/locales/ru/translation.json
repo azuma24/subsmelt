@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" неоднозначно — выберите один:",
     "recentLabel": "Недавние:",
     "sameLangWarning": "Источник и целевой язык — оба {{lang}} — пропустить перевод для этого файла?",
-    "targetResolved": "Целевой язык: {{name}} ({{code}})"
+    "targetResolved": "Целевой язык: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "Транскрипция — Речь в текст",

@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" 不明确 — 请选择一个:",
     "recentLabel": "最近:",
     "sameLangWarning": "源和目标都是 {{lang}} — 跳过此文件的翻译?",
-    "targetResolved": "目标: {{name}} ({{code}})"
+    "targetResolved": "目标: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "转录 — 语音转文字",

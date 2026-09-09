@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" är tvetydigt — välj ett:",
     "recentLabel": "Senaste:",
     "sameLangWarning": "Källa och mål är båda {{lang}} — hoppa över översättning för den här filen?",
-    "targetResolved": "Mål: {{name}} ({{code}})"
+    "targetResolved": "Mål: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "Transkription — Tal till text",

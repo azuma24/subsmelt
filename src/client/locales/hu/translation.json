@@ -951,7 +951,10 @@
     "ambiguousPick": "A \"{{input}}\" kétértelmű — válasszon egyet:",
     "recentLabel": "Legutóbbi:",
     "sameLangWarning": "A forrás és a cél is {{lang}} — átugorja a fordítást ehhez a fájlhoz?",
-    "targetResolved": "Cél: {{name}} ({{code}})"
+    "targetResolved": "Cél: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "Átírás — Beszédből szöveg",

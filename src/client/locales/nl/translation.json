@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" is dubbelzinnig — kies er een:",
     "recentLabel": "Recent:",
     "sameLangWarning": "Bron en doel zijn beide {{lang}} — vertaling voor dit bestand overslaan?",
-    "targetResolved": "Doel: {{name}} ({{code}})"
+    "targetResolved": "Doel: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "Transcriptie — Spraak naar tekst",

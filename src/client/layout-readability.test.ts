@@ -31,6 +31,7 @@ test("desktop sidebar auto-compacts at small desktop widths", () => {
   assert.match(shell, /w-20 lg:w-52/);
   assert.match(shell, /hidden min-w-0 lg:block/);
   assert.match(shell, /hidden flex-1 lg:inline/);
+  assert.match(shell, /h-full min-h-0[^"]*overflow-hidden/);
 });
 
 test("shared controls avoid tiny helper text and preserve touch-friendly targets", () => {

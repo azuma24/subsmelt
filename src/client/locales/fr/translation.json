@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" est ambigu — choisissez-en un :",
     "recentLabel": "Récents :",
     "sameLangWarning": "La source et la cible sont toutes les deux {{lang}} — ignorer la traduction pour ce fichier ?",
-    "targetResolved": "Cible : {{name}} ({{code}})"
+    "targetResolved": "Cible : {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "Transcription — Parole en texte",

@@ -951,7 +951,10 @@
     "ambiguousPick": "Ang \"{{input}}\" ay malabo — pumili ng isa:",
     "recentLabel": "Nakaraang:",
     "sameLangWarning": "Ang pinagmula at target ay parehong {{lang}} — laktawan ang pagsasalin para sa file na ito?",
-    "targetResolved": "Target: {{name}} ({{code}})"
+    "targetResolved": "Target: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "Transkripsiyon — Speech to text",

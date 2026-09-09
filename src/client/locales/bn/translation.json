@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" অস্পষ্ট — একটি বেছে নিন:",
     "recentLabel": "সম্প্রতি:",
     "sameLangWarning": "উৎস এবং লক্ষ্য উভয়ই {{lang}} — এই ফাইলের জন্য অনুবাদ এড়িয়ে যাব?",
-    "targetResolved": "লক্ষ্য: {{name}} ({{code}})"
+    "targetResolved": "লক্ষ্য: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "প্রতিলিপি — বক্তব্য থেকে লেখা",

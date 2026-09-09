@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\"은(는) 모호합니다 — 하나를 선택하세요:",
     "recentLabel": "최근:",
     "sameLangWarning": "원본과 대상이 모두 {{lang}}입니다 — 이 파일의 번역을 건너뛰시겠습니까?",
-    "targetResolved": "대상: {{name}} ({{code}})"
+    "targetResolved": "대상: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "전사 — 음성 텍스트 변환",

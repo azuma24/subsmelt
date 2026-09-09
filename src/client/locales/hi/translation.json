@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" अस्पष्ट है — एक चुनें:",
     "recentLabel": "हाल ही में:",
     "sameLangWarning": "स्रोत और लक्ष्य दोनों {{lang}} हैं — इस फाइल के लिए अनुवाद छोड़ें?",
-    "targetResolved": "लक्ष्य: {{name}} ({{code}})"
+    "targetResolved": "लक्ष्य: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "प्रतिलेखन — आवाज़ से पाठ",

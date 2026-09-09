@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" este ambiguu — alegeți-l pe unu:",
     "recentLabel": "Recent:",
     "sameLangWarning": "Sursa și ținta sunt ambele {{lang}} — săriți traducerea pentru acest fișier?",
-    "targetResolved": "Țintă: {{name}} ({{code}})"
+    "targetResolved": "Țintă: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "Transcriere — Vorbire în text",

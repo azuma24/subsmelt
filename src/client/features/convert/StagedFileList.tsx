@@ -15,9 +15,11 @@ export interface StagedFile {
 
 export type FileRunStatus = "working" | "done" | "error";
 
-/** Effective source code for a file: manual override wins over detection. */
-export function effectiveSource(s: StagedFile): string | null {
-  return s.override ?? s.detected ?? null;
+/** Effective source code: per-file override, then page-level From, then detection. */
+export function effectiveSource(s: StagedFile, globalFrom?: string): string | null {
+  if (s.override) return s.override;
+  if (globalFrom) return globalFrom;
+  return s.detected ?? null;
 }
 
 interface StagedFileListProps {
@@ -26,6 +28,7 @@ interface StagedFileListProps {
   resolvedTarget: LanguageEntry | null;
   fileStatus: Record<string, FileRunStatus>;
   converting: boolean;
+  globalFrom?: string;
   setOverride: (id: string, code: string | null) => void;
   setSkip: (id: string, skip: boolean) => void;
   removeFile: (id: string) => void;
@@ -39,6 +42,7 @@ export function StagedFileList({
   resolvedTarget,
   fileStatus,
   converting,
+  globalFrom,
   setOverride,
   setSkip,
   removeFile,
@@ -65,7 +69,7 @@ export function StagedFileList({
       <ul className="flex flex-col gap-1.5">
         {staged.map((item) => {
           const { id, file } = item;
-          const source = effectiveSource(item);
+          const source = effectiveSource(item, globalFrom);
           const sourceEntry = source ? findLanguage(source) : undefined;
           const sameAsTarget = Boolean(translate && resolvedTarget && source && source === resolvedTarget.code);
           const status = fileStatus[id];

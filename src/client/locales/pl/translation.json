@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" jest niejednoznaczne — wybierz jedno:",
     "recentLabel": "Ostatnie:",
     "sameLangWarning": "Zarówno źródło jak i cel są {{lang}} — pominąć tłumaczenie dla tego pliku?",
-    "targetResolved": "Cel: {{name}} ({{code}})"
+    "targetResolved": "Cel: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "Transkrypcja — Mowa na tekst",

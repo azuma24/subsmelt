@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" غامض — اختر أحدهما:",
     "recentLabel": "الأخيرة:",
     "sameLangWarning": "المصدر والهدف كلاهما {{lang}} — هل تتخطى الترجمة لهذا الملف؟",
-    "targetResolved": "الهدف: {{name}} ({{code}})"
+    "targetResolved": "الهدف: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "نسخ صوتي — تحويل الكلام إلى نص",

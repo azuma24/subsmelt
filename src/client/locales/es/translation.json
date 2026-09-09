@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" es ambiguo — elige uno:",
     "recentLabel": "Recientes:",
     "sameLangWarning": "El origen y el destino son ambos {{lang}} — ¿omitir traducción para este archivo?",
-    "targetResolved": "Destino: {{name}} ({{code}})"
+    "targetResolved": "Destino: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "Transcripción — Voz a texto",

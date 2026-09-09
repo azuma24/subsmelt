@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import * as api from "../../api";
 import type { ConvertTargetFormat } from "../../api";
 import { ApiError } from "../../api";
 import { useToast } from "../../components/Toast";
+import { useLlmHealthQuery } from "../../hooks";
 import { ActionButton } from "../../ui/primitives";
 import { InlineError } from "../../ui/QueryState";
 import { AUTO_SOURCE_LANG } from "../tasks/translation-defaults";
 import type { KeyValueStorage } from "../../components/file-tree/expansion-store";
-import { findLanguage } from "./language-table";
+import { LANGUAGES, findLanguage } from "./language-table";
 import { resolveTargetLanguage } from "./resolve-language";
 import { sampleCueText } from "./cue-sample";
 import { detectSampleLanguage } from "./detect-language";
@@ -32,7 +34,8 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
   const { t } = useTranslation();
   const { addToast } = useToast();
   const [staged, setStaged] = useState<StagedFile[]>([]);
-  const [translate, setTranslate] = useState(false);
+  const [translate, setTranslate] = useState(true);
+  const [fromCode, setFromCode] = useState("");
   const [targetInput, setTargetInput] = useState("");
   const [targetFormat, setTargetFormat] = useState<ConvertTargetFormat>("srt");
   const [converting, setConverting] = useState(false);
@@ -44,6 +47,8 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
   const [recents, setRecents] = useState<string[]>(() => (storage ? loadRecentTargets(storage) : []));
   const resolution = useMemo(() => resolveTargetLanguage(targetInput), [targetInput]);
   const resolvedTarget = resolution.status === "resolved" ? resolution.language : null;
+  const llmHealth = useLlmHealthQuery(translate);
+  const llmReady = Boolean(llmHealth.data?.ok);
 
   // Detect each staged file's source language once translation is enabled.
   // Sequential and cancellable; results land per file as they arrive.
@@ -143,7 +148,7 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
       let ok = false;
       try {
         const content = await item.file.text();
-        const source = effectiveSource(item);
+        const source = effectiveSource(item, fromCode);
         const res = await api.convertSubtitles({
           files: [{
             name: item.file.name,
@@ -204,6 +209,7 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
             resolvedTarget={resolvedTarget}
             fileStatus={fileStatus}
             converting={converting}
+            globalFrom={fromCode}
             setOverride={setOverride}
             setSkip={setSkip}
             removeFile={removeFile}
@@ -220,11 +226,63 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
             </div>
           )}
 
-          {/* Output settings — format and optional translation, grouped as one concern */}
           <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
             <h2 className="text-[13px] font-semibold text-[var(--text)]">{t("convert.outputSettings")}</h2>
 
-            <div className="mt-3 flex flex-col gap-4">
+            <div className="mt-3 inline-flex rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-[2px]" role="tablist" aria-label={t("convert.outputSettings")}>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={!translate}
+                onClick={() => setTranslate(false)}
+                className={`rounded-md px-3 py-1.5 text-[12px] font-medium ${!translate ? "bg-[var(--surface)] text-[var(--text)] shadow-sm" : "text-[var(--text-2)]"}`}
+              >
+                {t("convert.modeFormat")}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={translate}
+                onClick={() => setTranslate(true)}
+                className={`rounded-md px-3 py-1.5 text-[12px] font-medium ${translate ? "bg-[var(--surface)] text-[var(--text)] shadow-sm" : "text-[var(--text-2)]"}`}
+              >
+                {t("convert.modeTranslate")}
+              </button>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-4">
+              {translate && (
+                <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-[12px] font-medium text-[var(--text-2)]">{t("convert.sourceLanguage")}</span>
+                    <select
+                      value={fromCode}
+                      onChange={(e) => setFromCode(e.target.value)}
+                      className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[13px] text-[var(--text)] outline-none focus:border-[var(--accent)]"
+                    >
+                      <option value="">{t("convert.sourceAuto")}</option>
+                      {LANGUAGES.map((l) => (
+                        <option key={l.code} value={l.code}>{l.englishName}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <TargetLanguageField
+                    value={targetInput}
+                    onChange={setTargetInput}
+                    resolution={resolution}
+                    recents={recents}
+                    onPick={pickTarget}
+                  />
+                </div>
+              )}
+
+              {translate && llmHealth.isSuccess && !llmReady && (
+                <p className="text-[12px] text-[var(--yellow)]">
+                  {t("convert.needLlm")}{" "}
+                  <Link to="/settings" className="underline">{t("whisper.openSettings")}</Link>
+                </p>
+              )}
+
               <label className="flex flex-col gap-1.5 sm:max-w-[220px]">
                 <span className="text-[12px] font-medium text-[var(--text-2)]">{t("convert.targetFormat")}</span>
                 <select
@@ -239,35 +297,6 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
                   ))}
                 </select>
               </label>
-
-              <div className="border-t border-[var(--border)] pt-4">
-                <label className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={translate}
-                    onChange={(e) => setTranslate(e.target.checked)}
-                    className="mt-1 h-4 w-4 accent-[var(--accent)]"
-                  />
-                  <span>
-                    <span className="block text-[13px] font-semibold text-[var(--text)]">{t("convert.translateToggle")}</span>
-                    <span className="mt-0.5 block text-[11.5px] leading-6 text-[var(--text-3)]">{t("convert.translateToggleHelp")}</span>
-                  </span>
-                </label>
-
-                {translate && (
-                  <div className={`mt-4 ${isMobile ? "" : "max-w-[420px]"}`}>
-                    {/* Source language is auto-detected per file (badges on the
-                        rows above); only the target needs input. */}
-                    <TargetLanguageField
-                      value={targetInput}
-                      onChange={setTargetInput}
-                      resolution={resolution}
-                      recents={recents}
-                      onPick={pickTarget}
-                    />
-                  </div>
-                )}
-              </div>
             </div>
           </div>
 
@@ -279,11 +308,11 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
             <ActionButton
               variant="primary"
               onClick={handleConvert}
-              disabled={staged.length === 0 || (translate && !resolvedTarget)}
+              disabled={staged.length === 0 || (translate && !resolvedTarget) || (translate && llmHealth.isSuccess && !llmReady)}
               busy={converting}
               className={isMobile ? "w-full" : ""}
             >
-              {converting ? t(translate ? "convert.translating" : "convert.converting") : t(translate ? "convert.translateAndConvert" : "convert.convert")}
+              {converting ? t(translate ? "convert.translating" : "convert.converting") : t(translate ? "convert.modeTranslate" : "convert.convert")}
             </ActionButton>
           </div>
 

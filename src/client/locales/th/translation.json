@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" คลุมเครือ — เลือกอันหนึ่ง:",
     "recentLabel": "ล่าสุด:",
     "sameLangWarning": "แหล่งที่มาและเป้าหมายเป็น {{lang}} — ข้ามการแปลไฟล์นี้ไปก่อนหรือไม่",
-    "targetResolved": "เป้าหมาย: {{name}} ({{code}})"
+    "targetResolved": "เป้าหมาย: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "การถอดเสียง — เสียงเป็นข้อความ",

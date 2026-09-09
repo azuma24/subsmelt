@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" adalah samar — pilih satu:",
     "recentLabel": "Terbaru:",
     "sameLangWarning": "Sumber dan sasaran adalah {{lang}} — langkau terjemahan untuk fail ini?",
-    "targetResolved": "Sasaran: {{name}} ({{code}})"
+    "targetResolved": "Sasaran: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "Transkripsi — Pertuturan ke teks",

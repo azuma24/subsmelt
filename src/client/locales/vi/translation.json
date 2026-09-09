@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" không rõ ràng — chọn một:",
     "recentLabel": "Gần đây:",
     "sameLangWarning": "Nguồn và đích đều là {{lang}} — bỏ qua dịch cho tệp này?",
-    "targetResolved": "Đích: {{name}} ({{code}})"
+    "targetResolved": "Đích: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "Chuyển âm — Giọng nói thành văn bản",

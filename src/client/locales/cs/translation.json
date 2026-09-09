@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" je nejednoznačné — vyberte si:",
     "recentLabel": "Nedávné:",
     "sameLangWarning": "Zdrojový a cílový jazyk jsou oba {{lang}} — přeskočit překlad pro tento soubor?",
-    "targetResolved": "Cíl: {{name}} ({{code}})"
+    "targetResolved": "Cíl: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "Přepis — Řeč na text",

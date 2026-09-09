@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" ist mehrdeutig — wählen Sie einen aus:",
     "recentLabel": "Kürzlich:",
     "sameLangWarning": "Quell- und Zielsprache sind beide {{lang}} — Übersetzung für diese Datei überspringen?",
-    "targetResolved": "Ziel: {{name}} ({{code}})"
+    "targetResolved": "Ziel: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "Transkription — Sprache zu Text",

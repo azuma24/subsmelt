@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\" è ambiguo — scegline uno:",
     "recentLabel": "Recenti:",
     "sameLangWarning": "Sia l'origine che il destinatario sono {{lang}} — saltare la traduzione per questo file?",
-    "targetResolved": "Destinazione: {{name}} ({{code}})"
+    "targetResolved": "Destinazione: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "Trascrizione — Da voce a testo",

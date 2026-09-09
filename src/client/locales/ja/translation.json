@@ -951,7 +951,10 @@
     "ambiguousPick": "\"{{input}}\"は曖昧です — いずれかを選択してください:",
     "recentLabel": "最近:",
     "sameLangWarning": "ソースとターゲットの両方が{{lang}}です — このファイルの翻訳をスキップしますか?",
-    "targetResolved": "ターゲット: {{name}} ({{code}})"
+    "targetResolved": "ターゲット: {{name}} ({{code}})",
+    "modeFormat": "Format only",
+    "modeTranslate": "Translate",
+    "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
     "title": "文字起こし — 音声をテキストに",
