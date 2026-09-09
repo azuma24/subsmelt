@@ -568,7 +568,7 @@
       "modelMedium": "Medium — повільніше/краще",
       "modelLargeV1": "Large v1 — legacy large",
       "modelLargeV2": "Large v2 — high accuracy",
-      "modelDistilLargeV3": "Distil Large v3 — near-large, much faster",
+      "modelDistilLargeV3": "Distil Large v3 — English only, much faster",
       "language": "Мова",
       "languageAuto": "Автовизначення",
       "output": "Результат",
@@ -676,7 +676,8 @@
       "languageEnglish": "Англійська",
       "languageJapanese": "Японська",
       "languageChinese": "Китайська",
-      "languageKorean": "Корейська"
+      "languageKorean": "Корейська",
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
     },
     "connections": {
       "mode": "Режим з'єднання",
@@ -1017,7 +1018,8 @@
     "toggleFolder": "Розгорнути/згорнути теку {{name}}",
     "selectFolder": "Вибрати всі файли в {{name}}",
     "transcribingNow": "триває транскрибування",
-    "selectedSummary": "Вибрано файлів: {{count}}"
+    "selectedSummary": "Вибрано файлів: {{count}}",
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

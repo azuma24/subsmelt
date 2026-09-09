@@ -568,7 +568,7 @@
       "modelMedium": "Medium — மெதுவான/சிறந்த",
       "modelLargeV1": "Large v1 — legacy large",
       "modelLargeV2": "Large v2 — high accuracy",
-      "modelDistilLargeV3": "Distil Large v3 — near-large, much faster",
+      "modelDistilLargeV3": "Distil Large v3 — English only, much faster",
       "language": "மொழி",
       "languageAuto": "தானியங்கி-கண்டறிதல்",
       "output": "வெளியீடு",
@@ -676,7 +676,8 @@
       "languageEnglish": "ஆங்கிலம்",
       "languageJapanese": "ஜப்பானியம்",
       "languageChinese": "சீனம்",
-      "languageKorean": "கொரியம்"
+      "languageKorean": "கொரியம்",
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
     },
     "connections": {
       "mode": "இணைப்பு முறை",
@@ -1017,7 +1018,8 @@
     "toggleFolder": "{{name}} கோப்புறையை மாற்று",
     "selectFolder": "{{name}} இல் உள்ள அனைத்து கோப்புகளையும் தேர்ந்தெடு",
     "transcribingNow": "இப்போது படியெடுக்கப்படுகிறது",
-    "selectedSummary": "{{count}} கோப்புகள் தேர்ந்தெடுக்கப்பட்டன"
+    "selectedSummary": "{{count}} கோப்புகள் தேர்ந்தெடுக்கப்பட்டன",
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

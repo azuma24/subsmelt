@@ -568,7 +568,7 @@
       "modelMedium": "Medium — 較慢/品質較好",
       "modelLargeV1": "Large v1 — legacy large",
       "modelLargeV2": "Large v2 — high accuracy",
-      "modelDistilLargeV3": "Distil Large v3 — near-large, much faster",
+      "modelDistilLargeV3": "Distil Large v3 — English only, much faster",
       "language": "語言",
       "languageAuto": "自動偵測",
       "output": "輸出",
@@ -676,7 +676,8 @@
       "languageEnglish": "英文",
       "languageJapanese": "日文",
       "languageChinese": "中文",
-      "languageKorean": "韓文"
+      "languageKorean": "韓文",
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
     },
     "connections": {
       "mode": "連線模式",
@@ -1017,7 +1018,8 @@
     "toggleFolder": "切換資料夾 {{name}}",
     "selectFolder": "選取 {{name}} 中的所有檔案",
     "transcribingNow": "正在轉錄",
-    "selectedSummary": "已選取 {{count}} 個檔案"
+    "selectedSummary": "已選取 {{count}} 個檔案",
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

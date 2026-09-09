@@ -568,7 +568,7 @@
       "modelMedium": "Medium — långsammare/bättre",
       "modelLargeV1": "Large v1 — legacy large",
       "modelLargeV2": "Large v2 — high accuracy",
-      "modelDistilLargeV3": "Distil Large v3 — near-large, much faster",
+      "modelDistilLargeV3": "Distil Large v3 — English only, much faster",
       "language": "Språk",
       "languageAuto": "Identifiera automatiskt",
       "output": "Utdata",
@@ -676,7 +676,8 @@
       "languageEnglish": "Engelska",
       "languageJapanese": "Japanska",
       "languageChinese": "Kinesiska",
-      "languageKorean": "Koreanska"
+      "languageKorean": "Koreanska",
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
     },
     "connections": {
       "mode": "Anslutningsläge",
@@ -1017,7 +1018,8 @@
     "toggleFolder": "Växla mappen {{name}}",
     "selectFolder": "Markera alla filer i {{name}}",
     "transcribingNow": "transkriberas nu",
-    "selectedSummary": "{{count}} fil(er) markerade"
+    "selectedSummary": "{{count}} fil(er) markerade",
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

@@ -568,7 +568,7 @@
       "modelMedium": "Medium — slower/better",
       "modelLargeV1": "Large v1 — legacy large",
       "modelLargeV2": "Large v2 — high accuracy",
-      "modelDistilLargeV3": "Distil Large v3 — near-large, much faster",
+      "modelDistilLargeV3": "Distil Large v3 — English only, much faster",
       "language": "Language",
       "languageAuto": "Auto-detect",
       "output": "Output",
@@ -676,7 +676,8 @@
       "languageEnglish": "Englisch",
       "languageJapanese": "Japanisch",
       "languageChinese": "Chinesisch",
-      "languageKorean": "Koreanisch"
+      "languageKorean": "Koreanisch",
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
     },
     "connections": {
       "mode": "Verbindungsmodus",
@@ -1017,7 +1018,8 @@
     "toggleFolder": "Ordner {{name}} auf-/zuklappen",
     "selectFolder": "Alle Dateien in {{name}} auswählen",
     "transcribingNow": "wird gerade transkribiert",
-    "selectedSummary": "{{count}} Datei(en) ausgewählt"
+    "selectedSummary": "{{count}} Datei(en) ausgewählt",
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",

@@ -568,7 +568,7 @@
       "modelMedium": "Medium — lebih perlahan/lebih baik",
       "modelLargeV1": "Large v1 — legacy large",
       "modelLargeV2": "Large v2 — high accuracy",
-      "modelDistilLargeV3": "Distil Large v3 — near-large, much faster",
+      "modelDistilLargeV3": "Distil Large v3 — English only, much faster",
       "language": "Bahasa",
       "languageAuto": "Kesan automatik",
       "output": "Output",
@@ -676,7 +676,8 @@
       "languageEnglish": "Inggeris",
       "languageJapanese": "Jepun",
       "languageChinese": "Cina",
-      "languageKorean": "Korea"
+      "languageKorean": "Korea",
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
     },
     "connections": {
       "mode": "Mod sambungan",
@@ -1017,7 +1018,8 @@
     "toggleFolder": "Togol folder {{name}}",
     "selectFolder": "Pilih semua fail dalam {{name}}",
     "transcribingNow": "sedang ditranskripsi",
-    "selectedSummary": "{{count}} fail dipilih"
+    "selectedSummary": "{{count}} fail dipilih",
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
