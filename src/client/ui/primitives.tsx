@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import type { JobRow } from "../types";
 import { STATUS_ICON, STATUS_LABEL_KEY } from "../app/constants";
@@ -299,20 +300,47 @@ interface RowActionsMenuProps {
 export function RowActionsMenu({ items }: RowActionsMenuProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  useLayoutEffect(() => {
+    if (!open || !btnRef.current) return;
+    const place = () => {
+      const r = btnRef.current!.getBoundingClientRect();
+      const w = 160;
+      const h = items.length * 40 + 8;
+      const flip = window.innerHeight - r.bottom < h && r.top > h;
+      setPos({
+        top: flip ? r.top - h - 4 : r.bottom + 4,
+        left: Math.min(Math.max(8, r.right - w), window.innerWidth - w - 8),
+      });
+    };
+    place();
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open, items.length]);
+
+  const close = () => {
+    setOpen(false);
+    btnRef.current?.focus();
+  };
+
   return (
     <div
       className="relative inline-block"
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           event.preventDefault();
-          setOpen(false);
+          close();
         }
-      }}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
       }}
     >
       <button
+        ref={btnRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label={t("common.rowActions")}
@@ -322,24 +350,35 @@ export function RowActionsMenu({ items }: RowActionsMenuProps) {
       >
         ⋯
       </button>
-      {open && (
+      {open && createPortal(
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden="true" />
-          <div role="menu" className="absolute right-0 z-20 mt-1 min-w-[160px] rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-xl">
+          <div className="fixed inset-0 z-40" onClick={close} aria-hidden="true" />
+          <div
+            role="menu"
+            style={{ top: pos.top, left: pos.left }}
+            className="fixed z-50 min-w-[160px] rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-xl"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                close();
+              }
+            }}
+          >
             {items.map((item) => (
               <button
                 key={item.label}
                 type="button"
                 role="menuitem"
                 disabled={item.disabled}
-                onClick={() => { item.onClick(); setOpen(false); }}
+                onClick={() => { item.onClick(); close(); }}
                 className={`w-full px-3 py-2 text-left text-[13px] leading-6 hover:bg-[var(--surface-2)] disabled:opacity-40 ${item.danger ? "text-[var(--red)]" : "text-[var(--text)]"}`}
               >
                 {item.label}
               </button>
             ))}
           </div>
-        </>
+        </>,
+        document.body,
       )}
     </div>
   );

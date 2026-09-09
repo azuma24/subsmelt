@@ -7,6 +7,14 @@ version number and are released together (`v0.5.6` and `whisper-v0.5.6`).
 
 Nothing yet.
 
+## [0.5.10] — 2026-09-09
+
+App-only release (Whisper backend remains `whisper-v0.5.9`).
+
+### Fixed
+
+- **Dashboard ⋯ Actions menu was clipped** by the queue table's overflow. The menu now portals to the document and opens above the row when there isn't room below.
+
 ## [0.5.9] — 2026-09-09
 
 App + Whisper backend (`v0.5.9` and `whisper-v0.5.9`).
