@@ -9,7 +9,11 @@ Nothing yet.
 
 ## [0.5.9] — 2026-09-09
 
-Whisper-backend release (the app tag stays `v0.5.8`; `whisper-v0.5.9` is current).
+App + Whisper backend (`v0.5.9` and `whisper-v0.5.9`).
+
+### Added
+
+- Distil model labelled English-only in Settings and Transcribe, with a hint to use large-v3 / large-v3-turbo for Japanese/Chinese/Korean.
 
 ### Fixed
 
