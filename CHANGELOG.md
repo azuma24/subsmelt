@@ -7,26 +7,6 @@ version number and are released together (`v0.5.6` and `whisper-v0.5.6`).
 
 Nothing yet.
 
-## [0.5.11] — 2026-09-09
-
-App-only release (Whisper backend remains `whisper-v0.5.9`).
-
-### Added
-
-- **Convert / Translate** can translate one subtitle file: pick From and To, drop the file, download. Format-only conversion is a separate tab.
-
-### Fixed
-
-- **Desktop sidebar footer was clipped** (queue/watcher/model/theme). The rail now fills the viewport and the status block stays pinned; nav links scroll if needed.
-
-## [0.5.10] — 2026-09-09
-
-App-only release (Whisper backend remains `whisper-v0.5.9`).
-
-### Fixed
-
-- **Dashboard ⋯ Actions menu was clipped** by the queue table's overflow. The menu now portals to the document and opens above the row when there isn't room below.
-
 ## [0.5.9] — 2026-09-09
 
 App + Whisper backend (`v0.5.9` and `whisper-v0.5.9`).
@@ -34,11 +14,14 @@ App + Whisper backend (`v0.5.9` and `whisper-v0.5.9`).
 ### Added
 
 - Distil model labelled English-only in Settings and Transcribe, with a hint to use large-v3 / large-v3-turbo for Japanese/Chinese/Korean.
+- **Convert / Translate** can translate one subtitle file: pick From and To, drop the file, download. Format-only conversion is a separate tab.
 
 ### Fixed
 
 - **distil-large-v3 is English-only.** Asking it for Japanese (or any non-English language) used to silently emit English subtitles. The backend now rejects that combo before the run.
 - **large-v3-turbo 80 vs 128 mel mismatch.** A weights-only cache (no `preprocessor_config.json`) made faster-whisper default to 80 mel bins while the turbo encoder wants 128, crashing with `Invalid input features shape`. The loader now aligns the feature extractor to the encoder's `n_mels`.
+- **Dashboard ⋯ Actions menu was clipped** by the queue table's overflow. The menu now portals to the document and opens above the row when there isn't room below.
+- **Desktop sidebar footer was clipped** (queue/watcher/model/theme). The rail now fills the viewport and the status block stays pinned; nav links scroll if needed.
 
 ## [0.5.8] — 2026-08-22
 
