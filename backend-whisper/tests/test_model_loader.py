@@ -89,6 +89,54 @@ class GetWhisperModelTests(unittest.TestCase):
         )
         self.assertTrue(self._captured["kwargs"].get("local_files_only"))
 
+    def test_aligns_80_mel_extractor_to_encoder_n_mels(self):
+        class _Filters:
+            shape = (80, 201)
+
+        class _FE:
+            mel_filters = _Filters()
+            sampling_rate = 16000
+            hop_length = 160
+            chunk_length = 30
+            n_fft = 400
+
+        class _CT2:
+            n_mels = 128
+
+        class _Whisper:
+            model = _CT2()
+            feature_extractor = _FE()
+
+        created: dict = {}
+
+        class _Extractor:
+            def __init__(self, **kwargs):
+                created.update(kwargs)
+
+        fake_fe = types.ModuleType("faster_whisper.feature_extractor")
+        fake_fe.FeatureExtractor = _Extractor
+        whisper = _Whisper()
+        with mock.patch.dict(sys.modules, {"faster_whisper.feature_extractor": fake_fe}):
+            model_loader._align_feature_extractor(whisper)
+        self.assertEqual(created.get("feature_size"), 128)
+        self.assertIsInstance(whisper.feature_extractor, _Extractor)
+
+    def test_align_is_noop_when_mel_bins_already_match(self):
+        class _Filters:
+            shape = (128, 201)
+
+        class _FE:
+            mel_filters = _Filters()
+
+        class _Whisper:
+            model = types.SimpleNamespace(n_mels=128)
+            feature_extractor = _FE()
+
+        w = _Whisper()
+        fe = w.feature_extractor
+        model_loader._align_feature_extractor(w)
+        self.assertIs(w.feature_extractor, fe)
+
     def test_cache_key_normalizes_model_id_case(self):
         self._seed("tiny", layout="hub")
         first = model_loader.get_whisper_model("tiny", "cpu", "int8")

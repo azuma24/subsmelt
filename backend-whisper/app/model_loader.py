@@ -200,8 +200,36 @@ def get_whisper_model(model: str, device: str, compute_type: str) -> Any:
             if _is_missing_local_files(exc):
                 raise ModelWeightsMissingError(model) from exc
             raise
+        _align_feature_extractor(model_instance)
         _MODEL_CACHE[key] = model_instance
         return model_instance
+
+
+def _align_feature_extractor(whisper_model: Any) -> None:
+    """Force FeatureExtractor n_mels to match the CTranslate2 encoder.
+
+    large-v3 / large-v3-turbo expect 128 mel bins. faster-whisper defaults to 80
+    when preprocessor_config.json is missing from the snapshot (common with a
+    weights-only HF cache). That mismatch surfaces as:
+    ``Invalid input features shape: expected (1, 128, 3000), got (1, 80, 3000)``.
+    """
+    n_mels = getattr(getattr(whisper_model, "model", None), "n_mels", None)
+    fe = getattr(whisper_model, "feature_extractor", None)
+    if not n_mels or fe is None:
+        return
+    filters = getattr(fe, "mel_filters", None)
+    current = int(filters.shape[0]) if filters is not None else 0
+    if current == int(n_mels):
+        return
+    from faster_whisper.feature_extractor import FeatureExtractor  # type: ignore
+
+    whisper_model.feature_extractor = FeatureExtractor(
+        feature_size=int(n_mels),
+        sampling_rate=getattr(fe, "sampling_rate", 16000),
+        hop_length=getattr(fe, "hop_length", 160),
+        chunk_length=getattr(fe, "chunk_length", 30),
+        n_fft=getattr(fe, "n_fft", 400),
+    )
 
 
 def clear_model_cache() -> None:

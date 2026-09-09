@@ -24,6 +24,32 @@ class TranscriptionCancelled(RuntimeError):
     """
 
 
+class EnglishOnlyModelError(RuntimeError):
+    """A distilled English-only Whisper model was asked for another language.
+
+    distil-large-v3 (and the rest of the distil-whisper family) was trained on
+    English only. Passing language=ja still yields English text — fail fast
+    instead of writing unusable subtitles.
+    """
+
+
+_ENGLISH_LANGS = frozenset({"", "auto", "en", "english"})
+
+
+def is_english_only_model(model: str) -> bool:
+    return (model or "").strip().lower().startswith("distil")
+
+
+def assert_language_supported(request: TranscribeRequest) -> None:
+    lang = (request.language or "auto").strip().lower()
+    if lang in _ENGLISH_LANGS or not is_english_only_model(request.model):
+        return
+    raise EnglishOnlyModelError(
+        f"Model {request.model!r} is English-only and cannot transcribe "
+        f"language={request.language!r}. Use large-v3 or large-v3-turbo."
+    )
+
+
 def unsupported_advanced_features(request: TranscribeRequest) -> list[str]:
     options = request.advanced_options
     if not options:
@@ -81,6 +107,9 @@ def faster_whisper_transcribe_kwargs(request: TranscribeRequest) -> dict:
 
 
 def assert_supported_advanced_features(request: TranscribeRequest) -> None:
+    # Language check lives here so every transcribe path (real + fake) rejects
+    # distil+Japanese before ffmpeg/model load.
+    assert_language_supported(request)
     unsupported = unsupported_advanced_features(request)
     if unsupported:
         joined = ", ".join(unsupported)

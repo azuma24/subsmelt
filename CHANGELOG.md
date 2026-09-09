@@ -7,6 +7,15 @@ version number and are released together (`v0.5.6` and `whisper-v0.5.6`).
 
 Nothing yet.
 
+## [0.5.9] — 2026-09-09
+
+Whisper-backend release (the app tag stays `v0.5.8`; `whisper-v0.5.9` is current).
+
+### Fixed
+
+- **distil-large-v3 is English-only.** Asking it for Japanese (or any non-English language) used to silently emit English subtitles. The backend now rejects that combo before the run.
+- **large-v3-turbo 80 vs 128 mel mismatch.** A weights-only cache (no `preprocessor_config.json`) made faster-whisper default to 80 mel bins while the turbo encoder wants 128, crashing with `Invalid input features shape`. The loader now aligns the feature extractor to the encoder's `n_mels`.
+
 ## [0.5.8] — 2026-08-22
 
 App-only release (the Whisper backend is unchanged; `whisper-v0.5.6` remains

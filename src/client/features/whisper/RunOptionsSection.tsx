@@ -76,6 +76,9 @@ export function RunOptionsSection({
           </select>
         </label>
       </div>
+      {effModel.toLowerCase().includes("distil") && (
+        <p className="text-[11px] text-[var(--yellow)]">{t("whisper.englishOnlyHint")}</p>
+      )}
 
       <Accordion title={t("whisper.advancedOptions")}>
         <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>

@@ -65,6 +65,7 @@ from .fetch_url import (
     url_fetch_available,
 )
 from .transcribe import (
+    EnglishOnlyModelError,
     TranscriptionCancelled,
     fake_transcribe_for_tests,
     fake_transcribe_streaming_for_tests,
@@ -523,6 +524,8 @@ def transcribe(request: TranscribeRequest, _auth: None = Depends(require_token))
         ) from exc
     except (CudaUnavailableError, InvalidComputeTypeError) as exc:
         raise HTTPException(status_code=400, detail={"code": "invalid_device", "message": str(exc)}) from exc
+    except EnglishOnlyModelError as exc:
+        raise HTTPException(status_code=400, detail={"code": "english_only_model", "message": str(exc)}) from exc
     except DiarizationTokenMissingError as exc:
         raise HTTPException(status_code=422, detail={"code": "diarization_token_missing", "message": str(exc)}) from exc
     except DiarizationUnavailableError as exc:
@@ -709,6 +712,8 @@ def _map_upload_transcription_error(exc: Exception) -> HTTPException:
         return HTTPException(status_code=409, detail={"code": "model_not_downloaded", "model": exc.model})
     if isinstance(exc, (CudaUnavailableError, InvalidComputeTypeError)):
         return HTTPException(status_code=400, detail={"code": "invalid_device", "message": str(exc)})
+    if isinstance(exc, EnglishOnlyModelError):
+        return HTTPException(status_code=400, detail={"code": "english_only_model", "message": str(exc)})
     if isinstance(exc, DiarizationTokenMissingError):
         return HTTPException(status_code=422, detail={"code": "diarization_token_missing", "message": str(exc)})
     if isinstance(exc, DiarizationUnavailableError):

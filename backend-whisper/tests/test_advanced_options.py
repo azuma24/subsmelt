@@ -2,10 +2,19 @@ import unittest
 
 try:
     from app.schemas import AdvancedSttOptions, TranscribeRequest
-    from app.transcribe import faster_whisper_transcribe_kwargs, unsupported_advanced_features
+    from app.transcribe import (
+        EnglishOnlyModelError,
+        assert_language_supported,
+        assert_supported_advanced_features,
+        faster_whisper_transcribe_kwargs,
+        unsupported_advanced_features,
+    )
 except ModuleNotFoundError as exc:  # pragma: no cover - local host may not have backend deps installed
     AdvancedSttOptions = None
     TranscribeRequest = None
+    EnglishOnlyModelError = None
+    assert_language_supported = None
+    assert_supported_advanced_features = None
     faster_whisper_transcribe_kwargs = None
     unsupported_advanced_features = None
     IMPORT_ERROR = exc
@@ -53,6 +62,35 @@ class AdvancedOptionsTests(unittest.TestCase):
         )
 
         self.assertEqual(unsupported_advanced_features(request), ["bgm_separation"])
+
+    def test_distil_rejects_non_english_language(self):
+        request = TranscribeRequest(
+            input_path="/media/anime.mkv",
+            model="distil-large-v3",
+            language="ja",
+        )
+        with self.assertRaises(EnglishOnlyModelError) as ctx:
+            assert_language_supported(request)
+        self.assertIn("English-only", str(ctx.exception))
+        with self.assertRaises(EnglishOnlyModelError):
+            assert_supported_advanced_features(request)
+
+    def test_distil_allows_english_and_auto(self):
+        for lang in ("en", "auto"):
+            request = TranscribeRequest(
+                input_path="/media/talk.mkv",
+                model="distil-large-v3",
+                language=lang,
+            )
+            assert_language_supported(request)
+
+    def test_multilingual_model_allows_japanese(self):
+        request = TranscribeRequest(
+            input_path="/media/anime.mkv",
+            model="large-v3-turbo",
+            language="ja",
+        )
+        assert_language_supported(request)
 
 
 if __name__ == "__main__":

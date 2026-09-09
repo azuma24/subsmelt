@@ -134,6 +134,9 @@ export function SttSection({
               <option key={opt.value} value={opt.value}>{t(opt.labelKey)}</option>
             ))}
           </select>
+          {selectedSttModel.toLowerCase().includes("distil") && (
+            <p className="mt-1 text-[11px] text-[var(--yellow)]">{t("settings.transcription.englishOnlyHint")}</p>
+          )}
         </div>
         <div>
           <label className={labelCls}>{t("settings.transcription.output")}</label>
