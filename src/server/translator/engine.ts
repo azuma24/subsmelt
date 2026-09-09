@@ -115,6 +115,17 @@ export function partialOutputPath(outputPath: string): string {
   return `${outputPath}${PARTIAL_SUFFIX}`;
 }
 
+/** Prefer the in-flight `.part` file so Preview can show cues before the job finishes. */
+export function resolveTranslatedOutputPath(outputPath: string): string {
+  const partial = partialOutputPath(outputPath);
+  try {
+    if (fs.existsSync(partial)) return partial;
+  } catch {
+    // Fall through to the finished path.
+  }
+  return outputPath;
+}
+
 export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   const sourceExt = path.extname(opts.srtPath).slice(1).toLowerCase();
   const outputExt = path.extname(opts.outputPath).slice(1).toLowerCase() || sourceExt;

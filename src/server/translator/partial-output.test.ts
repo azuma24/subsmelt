@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { PARTIAL_SUFFIX, partialOutputPath } from "./engine.js";
+import { PARTIAL_SUFFIX, partialOutputPath, resolveTranslatedOutputPath } from "./engine.js";
 import { retryTranslate } from "./ai-client.js";
 
 test("partial translations are written beside the output, not onto it", () => {
@@ -16,6 +16,17 @@ test("partial translations are written beside the output, not onto it", () => {
   // translation must never occupy that path — that is what made interrupted
   // jobs come back as "output already exists" with a truncated file.
   assert.ok(partial.startsWith(output));
+});
+
+test("preview prefers the in-flight partial over a missing finished file", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-preview-"));
+  const output = path.join(dir, "Episode 01.chi.srt");
+  const partial = partialOutputPath(output);
+  fs.writeFileSync(partial, "1\n00:00:00,000 --> 00:00:01,000\n你好\n", "utf8");
+  assert.equal(resolveTranslatedOutputPath(output), partial);
+  fs.writeFileSync(output, "finished", "utf8");
+  fs.rmSync(partial);
+  assert.equal(resolveTranslatedOutputPath(output), output);
 });
 
 test("renaming a partial onto the output is atomic and leaves no partial behind", () => {

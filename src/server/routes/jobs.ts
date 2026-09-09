@@ -24,7 +24,7 @@ import {
   getCurrentJobId,
   requestStop,
 } from "../queue.js";
-import { parseSubtitle, readSubtitleFileText, applyCueEdits, writeSubtitleFile, type CueEdit } from "../translator.js";
+import { parseSubtitle, readSubtitleFileText, applyCueEdits, writeSubtitleFile, resolveTranslatedOutputPath, type CueEdit } from "../translator.js";
 import { resolveConnectionPool } from "../connections.js";
 import { estimateCost } from "../pricing.js";
 import { assertMediaPathAllowed } from "../transcription-client.js";
@@ -185,9 +185,10 @@ export function registerJobsRoutes(app: Express): void {
       }
 
       let trgCues: any[] = [];
-      if (fs.existsSync(job.output_path)) {
+      const previewTarget = resolveTranslatedOutputPath(job.output_path);
+      if (fs.existsSync(previewTarget)) {
         const trgExt = path.extname(job.output_path).slice(1).toLowerCase();
-        const trgContent = readSubtitleFileText(job.output_path);
+        const trgContent = readSubtitleFileText(previewTarget);
         const trgParsed = parseSubtitle(trgContent, trgExt);
         if (Array.isArray(trgParsed)) {
           trgCues = trgParsed.filter((l: any) => l.type === "cue");

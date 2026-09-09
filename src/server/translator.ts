@@ -26,6 +26,8 @@ export {
   type TranslateFileOptions,
   translateFile,
   testConnection,
+  partialOutputPath,
+  resolveTranslatedOutputPath,
 } from "./translator/engine.js";
 
 export {

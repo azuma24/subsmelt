@@ -22,6 +22,7 @@ App + Whisper backend (`v0.5.9` and `whisper-v0.5.9`).
 - **large-v3-turbo 80 vs 128 mel mismatch.** A weights-only cache (no `preprocessor_config.json`) made faster-whisper default to 80 mel bins while the turbo encoder wants 128, crashing with `Invalid input features shape`. The loader now aligns the feature extractor to the encoder's `n_mels`.
 - **Dashboard ⋯ Actions menu was clipped** by the queue table's overflow. The menu now portals to the document and opens above the row when there isn't room below.
 - **Desktop sidebar footer was clipped** (queue/watcher/model/theme). The rail now fills the viewport and the status block stays pinned; nav links scroll if needed.
+- **Preview showed empty translations while a job was still running.** It now reads the in-progress `.part` file and refreshes every few seconds.
 
 ## [0.5.8] — 2026-08-22
 

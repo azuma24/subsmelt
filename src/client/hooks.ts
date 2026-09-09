@@ -126,6 +126,8 @@ export function useJobPreview(jobId: number | null) {
     queryKey: ["job-preview", jobId],
     queryFn: ({ signal }) => api.getJobPreview(jobId as number, { signal }),
     enabled: jobId !== null,
+    // In-flight jobs write cues to a .part file; keep Preview live while open.
+    refetchInterval: jobId !== null ? 4_000 : false,
   });
 }
 
