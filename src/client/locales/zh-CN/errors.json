@@ -1,0 +1,27 @@
+{
+  "loading": "加载中…",
+  "loadFailed": "加载数据时出错。",
+  "retry": "重试",
+  "reload": "重新加载",
+  "boundaryTitle": "出错了。",
+  "boundaryMessage": "渲染此页面时发生意外错误。",
+  "backend-unreachable": "无法连接后端 — 请检查 Whisper 服务是否运行以及设置中的 URL。",
+  "connection-dropped": "后端在请求中途关闭了连接 — 可能已崩溃或重启，请查看其日志。",
+  "timeout": "后端响应超时 — 请在设置中调高超时时间，或改用更小的模型。",
+  "auth": "后端拒绝了令牌 — 请检查设置中的后端令牌。",
+  "rate-limit": "服务商限流 — 将会重试；若持续出现请降低并行块数。",
+  "model-missing": "该模型尚未下载 — 请在设置 → 模型中下载。",
+  "insufficient-ram": "内存不足以运行该模型 — 请选择更小的模型。",
+  "insufficient-disk": "磁盘剩余空间不足以写入输出。",
+  "ffmpeg-missing": "后端未找到 ffmpeg — 请安装它或设置 SUBSMELT_FFMPEG。",
+  "server-missing": "无法启动后端程序 — 请重新安装或检查安装路径。",
+  "schema": "模型返回了无法使用的响应 — 将会重试；换一个模型可能有帮助。",
+  "cancelled": "已取消。",
+  "interrupted": "因服务器重启而中断 — 后端恢复后请重试。",
+  "translation": {
+    "backend-unreachable": "无法连接 LLM 端点 — 请检查设置 → 连接中的 URL，以及服务器是否运行。",
+    "auth": "LLM 服务商拒绝了 API 密钥 — 请在设置 → 连接中检查。",
+    "timeout": "LLM 响应超时 — 请在设置中调高超时时间，或减小分块大小。",
+    "model-missing": "配置的模型在该端点不可用 — 请在设置 → 连接中检查模型名称。"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "loading": "Đang tải…",
+  "loadFailed": "Đã xảy ra lỗi khi tải dữ liệu này.",
+  "retry": "Thử lại",
+  "reload": "Tải lại",
+  "boundaryTitle": "Đã xảy ra lỗi.",
+  "boundaryMessage": "Đã xảy ra lỗi không mong muốn khi kết xuất trang này.",
+  "backend-unreachable": "Không kết nối được backend — kiểm tra dịch vụ Whisper đang chạy và URL trong Cài đặt.",
+  "connection-dropped": "Backend đóng kết nối giữa chừng — có thể đã lỗi hoặc khởi động lại; kiểm tra nhật ký.",
+  "timeout": "Backend phản hồi quá lâu — tăng thời gian chờ trong Cài đặt hoặc dùng mô hình nhỏ hơn.",
+  "auth": "Backend từ chối token — kiểm tra token backend trong Cài đặt.",
+  "rate-limit": "Nhà cung cấp giới hạn yêu cầu — sẽ thử lại; giảm số chunk song song nếu vẫn xảy ra.",
+  "model-missing": "Mô hình đó chưa được tải — tải trong Cài đặt → Mô hình.",
+  "insufficient-ram": "Không đủ bộ nhớ cho mô hình này — chọn mô hình nhỏ hơn.",
+  "insufficient-disk": "Không đủ dung lượng đĩa trống cho đầu ra.",
+  "ffmpeg-missing": "Không tìm thấy ffmpeg trên backend — cài đặt hoặc đặt SUBSMELT_FFMPEG.",
+  "server-missing": "Không thể khởi động chương trình backend — cài lại hoặc kiểm tra đường dẫn cài đặt.",
+  "schema": "Mô hình trả về phản hồi không dùng được — sẽ thử lại; mô hình khác có thể giúp.",
+  "cancelled": "Đã hủy.",
+  "interrupted": "Bị gián đoạn do máy chủ khởi động lại — thử lại khi backend trở lại.",
+  "translation": {
+    "backend-unreachable": "Không kết nối được endpoint LLM — kiểm tra URL trong Cài đặt → Kết nối và máy chủ đang chạy.",
+    "auth": "Nhà cung cấp LLM từ chối khóa API — kiểm tra trong Cài đặt → Kết nối.",
+    "timeout": "LLM phản hồi quá lâu — tăng thời gian chờ trong Cài đặt hoặc giảm kích thước chunk.",
+    "model-missing": "Mô hình đã cấu hình không có trên endpoint đó — kiểm tra tên mô hình trong Cài đặt → Kết nối."
+  }
+}
