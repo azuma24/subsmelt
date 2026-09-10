@@ -1,0 +1,27 @@
+{
+  "loading": "Načítání…",
+  "loadFailed": "Při načítání těchto dat se něco pokazilo.",
+  "retry": "Zkusit znovu",
+  "reload": "Znovu načíst",
+  "boundaryTitle": "Něco se pokazilo.",
+  "boundaryMessage": "Při vykreslování této stránky došlo k neočekávané chybě.",
+  "backend-unreachable": "Backend je nedostupný — zkontrolujte, zda běží služba Whisper, a URL v Nastavení.",
+  "connection-dropped": "Backend ukončil spojení uprostřed požadavku — mohl spadnout nebo se restartovat; zkontrolujte protokoly.",
+  "timeout": "Backend odpovídal příliš dlouho — zvyšte časový limit v Nastavení nebo použijte menší model.",
+  "auth": "Backend odmítl token — zkontrolujte token backendu v Nastavení.",
+  "rate-limit": "Poskytovatel omezil požadavek — bude se opakovat; snižte paralelní chunky, pokud to pokračuje.",
+  "model-missing": "Tento model není stažený — stáhněte jej v Nastavení → Modely.",
+  "insufficient-ram": "Nedostatek paměti pro tento model — zvolte menší.",
+  "insufficient-disk": "Nedostatek volného místa na disku pro výstup.",
+  "ffmpeg-missing": "ffmpeg nebyl na backendu nalezen — nainstalujte jej nebo nastavte SUBSMELT_FFMPEG.",
+  "server-missing": "Program backendu se nepodařilo spustit — přeinstalujte jej nebo zkontrolujte cestu instalace.",
+  "schema": "Model vrátil nepoužitelnou odpověď — bude se opakovat; jiný model může pomoci.",
+  "cancelled": "Zrušeno.",
+  "interrupted": "Přerušeno restartem serveru — zkuste to znovu, až bude backend zpět.",
+  "translation": {
+    "backend-unreachable": "Endpoint LLM je nedostupný — zkontrolujte URL v Nastavení → Připojení a zda server běží.",
+    "auth": "Poskytovatel LLM odmítl API klíč — zkontrolujte jej v Nastavení → Připojení.",
+    "timeout": "LLM odpovídal příliš dlouho — zvyšte časový limit v Nastavení nebo zmenšete velikost chunku.",
+    "model-missing": "Nakonfigurovaný model není na tom endpointu dostupný — zkontrolujte název modelu v Nastavení → Připojení."
+  }
+}
