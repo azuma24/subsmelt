@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useJobPreview, useJobsQuery } from "../../hooks";
-import { formatDur } from "../../lib";
+import { formatCost, formatDur, formatTokens } from "../../lib";
 import type { JobRow } from "../../types";
 import { DetailCard, EmptyHint, ProgressSmall, StatusBadge } from "../../ui/primitives";
 
@@ -38,6 +38,18 @@ export function JobDetailPage() {
           <DetailCard label={t("app.sourcePath")} value={job.srt_path} mono />
           <DetailCard label={t("app.outputPath")} value={job.output_path} mono />
           <DetailCard label={t("app.duration")} value={job.duration_seconds ? formatDur(job.duration_seconds) : "—"} />
+          <DetailCard
+            label={t("dashboard.details.tokens")}
+            value={(job.input_tokens || job.output_tokens)
+              ? `${formatTokens(job.input_tokens)} / ${formatTokens(job.output_tokens)}`
+              : "—"}
+          />
+          <DetailCard
+            label={t("dashboard.details.cost")}
+            value={job.est_cost === null || job.est_cost === undefined
+              ? t("dashboard.details.costLocal")
+              : `≈ ${formatCost(job.est_cost)}`}
+          />
           <DetailCard label={t("app.priorityForce")} value={`${job.priority > 0 ? t("app.pinned") : t("app.normal")} • ${job.force ? t("app.forceEnabled") : t("app.normalMode")}`} />
         </div>
         {job.status === "translating" && <div className="mt-5"><ProgressSmall pct={pct} large /><div className="mt-2 text-xs text-[var(--text-3)]">{t("dashboard.cues", { completed: job.completed_cues, total: job.total_cues })}</div></div>}

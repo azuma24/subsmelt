@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { JobRow } from "../../types";
+import { formatCost, formatTokens } from "../../lib";
 import { elapsedSince, estimateJobEta, estimateQueueEta, formatEta } from "./eta";
 
 interface ActiveJobCardProps {
@@ -30,11 +31,25 @@ export function ActiveJobCard({ job, pendingCount, recentDurationsSeconds = [] }
     : estimateJobEta({ completed: job.completed_cues, total: job.total_cues, elapsedMs });
   const queueEtaMs = estimateQueueEta(pendingCount, recentDurationsSeconds);
 
+  const tokenLine = (job.input_tokens || job.output_tokens)
+    ? `${formatTokens(job.input_tokens)} / ${formatTokens(job.output_tokens)}`
+    : null;
+  const costLine = job.est_cost === null || job.est_cost === undefined
+    ? null
+    : `≈ ${formatCost(job.est_cost)}`;
+
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-[var(--accent-border)] bg-[var(--surface)] px-4 py-[13px] sm:flex-row sm:items-center sm:gap-4">
       <div className="min-w-0 flex-1">
         <p className="text-[10px] font-semibold uppercase tracking-[0.7px] text-[var(--accent)]">{t("app.currentlyTranslating")}</p>
         <h2 className="mt-0.5 truncate text-[13.5px] font-semibold text-[var(--text)]">{job.srt_path.split("/").pop()} → {job.lang_code}</h2>
+        {(tokenLine || costLine) && (
+          <div className="mt-0.5 font-mono text-[11px] text-[var(--text-3)]" title={t("dashboard.details.costApprox")}>
+            {tokenLine && <span>{t("dashboard.details.tokens")}: {tokenLine}</span>}
+            {tokenLine && costLine && <span> · </span>}
+            {costLine && <span>{t("dashboard.details.cost")}: {costLine}</span>}
+          </div>
+        )}
         {pendingCount > 0 && (
           <div className="mt-0.5 text-[11.5px] text-[var(--text-2)]">
             {t("dashboard.moreInQueue", { count: pendingCount })}

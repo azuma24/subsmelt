@@ -1,0 +1,27 @@
+{
+  "loading": "Caricamento…",
+  "loadFailed": "Qualcosa è andato storto durante il caricamento di questi dati.",
+  "retry": "Riprova",
+  "reload": "Ricarica",
+  "boundaryTitle": "Qualcosa è andato storto.",
+  "boundaryMessage": "Si è verificato un errore imprevisto durante il rendering di questa pagina.",
+  "backend-unreachable": "Backend non raggiungibile — verifica che il servizio Whisper sia in esecuzione e l’URL nelle Impostazioni.",
+  "connection-dropped": "Il backend ha chiuso la connessione a metà richiesta — potrebbe essere andato in crash o riavviato; controlla i log.",
+  "timeout": "Il backend ha impiegato troppo a rispondere — aumenta il timeout nelle Impostazioni o usa un modello più piccolo.",
+  "auth": "Il backend ha rifiutato il token — controlla il token del backend nelle Impostazioni.",
+  "rate-limit": "Il provider ha limitato la richiesta — verrà ritentata; riduci i chunk paralleli se continua.",
+  "model-missing": "Quel modello non è scaricato — scaricalo da Impostazioni → Modelli.",
+  "insufficient-ram": "Memoria insufficiente per questo modello — scegline uno più piccolo.",
+  "insufficient-disk": "Spazio su disco insufficiente per l’output.",
+  "ffmpeg-missing": "ffmpeg non trovato sul backend — installalo o imposta SUBSMELT_FFMPEG.",
+  "server-missing": "Impossibile avviare il programma backend — reinstallalo o controlla il percorso di installazione.",
+  "schema": "Il modello ha restituito una risposta inutilizzabile — verrà ritentato; un modello diverso può aiutare.",
+  "cancelled": "Annullato.",
+  "interrupted": "Interrotto da un riavvio del server — riprova quando il backend è di nuovo disponibile.",
+  "translation": {
+    "backend-unreachable": "Endpoint LLM non raggiungibile — controlla l’URL in Impostazioni → Connessioni e che il server sia in esecuzione.",
+    "auth": "Il provider LLM ha rifiutato la chiave API — controllala in Impostazioni → Connessioni.",
+    "timeout": "L’LLM ha impiegato troppo a rispondere — aumenta il timeout nelle Impostazioni o riduci la dimensione dei chunk.",
+    "model-missing": "Il modello configurato non è disponibile su quell’endpoint — controlla il nome del modello in Impostazioni → Connessioni."
+  }
+}

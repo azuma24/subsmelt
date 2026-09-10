@@ -1,0 +1,27 @@
+{
+  "loading": "Memuatkan…",
+  "loadFailed": "Sesuatu tidak kena semasa memuatkan data ini.",
+  "retry": "Cuba lagi",
+  "reload": "Muat semula",
+  "boundaryTitle": "Sesuatu tidak kena.",
+  "boundaryMessage": "Ralat tidak dijangka berlaku semasa merender halaman ini.",
+  "backend-unreachable": "Backend tidak dapat dicapai — pastikan perkhidmatan Whisper berjalan dan URL dalam Tetapan.",
+  "connection-dropped": "Backend menutup sambungan semasa permintaan — mungkin ranap atau dimulakan semula; semak log.",
+  "timeout": "Backend terlalu lama menjawab — naikkan had masa dalam Tetapan atau guna model lebih kecil.",
+  "auth": "Backend menolak token — semak token backend dalam Tetapan.",
+  "rate-limit": "Pembekal mengehadkan permintaan — akan dicuba semula; kurangkan chunk selari jika berterusan.",
+  "model-missing": "Model itu belum dimuat turun — muat turun dari Tetapan → Model.",
+  "insufficient-ram": "Memori tidak mencukupi untuk model ini — pilih yang lebih kecil.",
+  "insufficient-disk": "Ruang cakera bebas tidak cukup untuk output.",
+  "ffmpeg-missing": "ffmpeg tidak dijumpai pada backend — pasang atau tetapkan SUBSMELT_FFMPEG.",
+  "server-missing": "Program backend tidak dapat dimulakan — pasang semula atau semak laluan pemasangan.",
+  "schema": "Model mengembalikan respons yang tidak boleh digunakan — akan dicuba semula; model lain mungkin membantu.",
+  "cancelled": "Dibatalkan.",
+  "interrupted": "Terganggu oleh mulakan semula pelayan — cuba lagi apabila backend kembali.",
+  "translation": {
+    "backend-unreachable": "Endpoint LLM tidak dapat dicapai — semak URL dalam Tetapan → Sambungan dan bahawa pelayan berjalan.",
+    "auth": "Pembekal LLM menolak kunci API — semak dalam Tetapan → Sambungan.",
+    "timeout": "LLM terlalu lama menjawab — naikkan had masa dalam Tetapan atau kurangkan saiz chunk.",
+    "model-missing": "Model yang dikonfigurasi tidak tersedia pada endpoint itu — semak nama model dalam Tetapan → Sambungan."
+  }
+}
