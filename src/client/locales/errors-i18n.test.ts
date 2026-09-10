@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { LANGUAGES } from "../app/constants";
 
@@ -24,17 +24,33 @@ function loadErrors(code: string): JsonObject {
   return JSON.parse(readFileSync(file, "utf8")).errors as JsonObject;
 }
 
-test("non-English locales translate every errors.* string (no English leftovers)", () => {
+test("non-English locales with errors.json overlays are fully translated", () => {
   const english = flatten(loadErrors("en"));
   assert.ok(Object.keys(english).length >= 6, "English errors.* baseline is unexpectedly empty");
 
-  for (const lang of LANGUAGES) {
-    if (lang.code === "en") continue;
-    const localeErrors = flatten(loadErrors(lang.code));
-    assert.deepEqual(Object.keys(localeErrors).sort(), Object.keys(english).sort(), `${lang.code} errors.* keys differ from en`);
+  const localesRoot = join(process.cwd(), "src", "client", "locales");
+  const overlayCodes = readdirSync(localesRoot, { withFileTypes: true })
+    .filter((d) => d.isDirectory() && existsSync(join(localesRoot, d.name, "errors.json")))
+    .map((d) => d.name)
+    .sort();
+
+  assert.ok(overlayCodes.length >= 10, `expected many errors.json overlays, found ${overlayCodes.length}`);
+
+  for (const code of overlayCodes) {
+    if (code === "en") continue;
+    const localeErrors = flatten(loadErrors(code));
+    assert.deepEqual(Object.keys(localeErrors).sort(), Object.keys(english).sort(), `${code} errors.* keys differ from en`);
     const leftovers = Object.entries(english)
       .filter(([key, value]) => localeErrors[key] === value)
       .map(([key]) => key);
-    assert.deepEqual(leftovers, [], `${lang.code} still has English errors.*: ${leftovers.join(", ")}`);
+    assert.deepEqual(leftovers, [], `${code} still has English errors.*: ${leftovers.join(", ")}`);
   }
+
+  // Track progress toward full coverage of LANGUAGES.
+  const expected = LANGUAGES.map((l) => l.code).filter((c) => c !== "en").sort();
+  const missing = expected.filter((c) => !overlayCodes.includes(c));
+  assert.ok(
+    missing.length === 0,
+    `missing errors.json overlays for: ${missing.join(", ")}`,
+  );
 });
