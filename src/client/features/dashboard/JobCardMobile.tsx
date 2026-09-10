@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { formatCost, formatTokens } from "../../lib";
 import { useJobActions } from "../../hooks/useJobActions";
 import type { JobRow } from "../../types";
 import { ActionButton, ProgressSmall, RowActionsMenu, StatusBadge } from "../../ui/primitives";
@@ -46,6 +47,14 @@ export function JobCardMobile({
           <div className="min-w-0">
             <div className="truncate text-[13px] font-medium text-[var(--text)]">{job.srt_path.split("/").pop()}</div>
             <div className="mt-0.5 text-[11px] text-[var(--text-2)]">{job.target_lang} · {job.lang_code}</div>
+            {(job.input_tokens || job.output_tokens || typeof job.est_cost === "number") && (
+              <div className="mt-0.5 font-mono text-[10px] text-[var(--text-3)]">
+                {(job.input_tokens || job.output_tokens)
+                  ? `${formatTokens(job.input_tokens)} / ${formatTokens(job.output_tokens)}`
+                  : ""}
+                {typeof job.est_cost === "number" ? ` · ≈ ${formatCost(job.est_cost)}` : ""}
+              </div>
+            )}
             {reason && <div className="mt-1 inline-flex rounded-full bg-[var(--red-dim)] px-2 py-0.5 text-[10px] text-[var(--red)]">{t(`dashboard.errorReason.${reason}`)}</div>}
           </div>
         </div>
