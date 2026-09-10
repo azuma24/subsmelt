@@ -1,0 +1,27 @@
+{
+  "loading": "Laden…",
+  "loadFailed": "Er ging iets mis bij het laden van deze gegevens.",
+  "retry": "Opnieuw proberen",
+  "reload": "Herladen",
+  "boundaryTitle": "Er ging iets mis.",
+  "boundaryMessage": "Er is een onverwachte fout opgetreden bij het renderen van deze pagina.",
+  "backend-unreachable": "Backend onbereikbaar — controleer of de Whisper-service draait en de URL in Instellingen.",
+  "connection-dropped": "De backend sloot de verbinding tijdens het verzoek — mogelijk gecrasht of herstart; controleer de logs.",
+  "timeout": "De backend deed er te lang over om te antwoorden — verhoog de time-out in Instellingen of gebruik een kleiner model.",
+  "auth": "De backend wees het token af — controleer het backend-token in Instellingen.",
+  "rate-limit": "De provider beperkte het verzoek — er wordt opnieuw geprobeerd; verlaag parallelle chunks als het aanhoudt.",
+  "model-missing": "Dat model is niet gedownload — download het via Instellingen → Modellen.",
+  "insufficient-ram": "Onvoldoende geheugen voor dit model — kies een kleiner model.",
+  "insufficient-disk": "Onvoldoende vrije schijfruimte voor de uitvoer.",
+  "ffmpeg-missing": "ffmpeg niet gevonden op de backend — installeer het of stel SUBSMELT_FFMPEG in.",
+  "server-missing": "Het backendprogramma kon niet worden gestart — herinstalleer het of controleer het installatiepad.",
+  "schema": "Het model gaf een onbruikbaar antwoord — er wordt opnieuw geprobeerd; een ander model kan helpen.",
+  "cancelled": "Geannuleerd.",
+  "interrupted": "Onderbroken door een serverherstart — probeer opnieuw wanneer de backend weer online is.",
+  "translation": {
+    "backend-unreachable": "LLM-eindpunt onbereikbaar — controleer de URL in Instellingen → Verbindingen en of de server draait.",
+    "auth": "De LLM-provider wees de API-sleutel af — controleer deze in Instellingen → Verbindingen.",
+    "timeout": "De LLM deed er te lang over om te antwoorden — verhoog de time-out in Instellingen of verklein de chunkgrootte.",
+    "model-missing": "Het geconfigureerde model is niet beschikbaar op dat eindpunt — controleer de modelnaam in Instellingen → Verbindingen."
+  }
+}

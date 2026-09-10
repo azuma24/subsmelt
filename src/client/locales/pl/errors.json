@@ -1,0 +1,27 @@
+{
+  "loading": "Ładowanie…",
+  "loadFailed": "Coś poszło nie tak podczas ładowania tych danych.",
+  "retry": "Spróbuj ponownie",
+  "reload": "Odśwież",
+  "boundaryTitle": "Coś poszło nie tak.",
+  "boundaryMessage": "Wystąpił nieoczekiwany błąd podczas renderowania tej strony.",
+  "backend-unreachable": "Backend niedostępny — sprawdź, czy usługa Whisper działa, oraz URL w Ustawieniach.",
+  "connection-dropped": "Backend zamknął połączenie w trakcie żądania — mógł się zawiesić lub zrestartować; sprawdź logi.",
+  "timeout": "Backend zbyt długo nie odpowiadał — zwiększ limit czasu w Ustawieniach lub użyj mniejszego modelu.",
+  "auth": "Backend odrzucił token — sprawdź token backendu w Ustawieniach.",
+  "rate-limit": "Dostawca ograniczył żądanie — nastąpi ponowienie; zmniejsz liczbę równoległych fragmentów, jeśli się powtarza.",
+  "model-missing": "Ten model nie jest pobrany — pobierz go w Ustawienia → Modele.",
+  "insufficient-ram": "Za mało pamięci na ten model — wybierz mniejszy.",
+  "insufficient-disk": "Za mało wolnego miejsca na dysku na wynik.",
+  "ffmpeg-missing": "Nie znaleziono ffmpeg na backendzie — zainstaluj go lub ustaw SUBSMELT_FFMPEG.",
+  "server-missing": "Nie udało się uruchomić programu backendu — zainstaluj ponownie lub sprawdź ścieżkę instalacji.",
+  "schema": "Model zwrócił nieprzydatną odpowiedź — nastąpi ponowienie; inny model może pomóc.",
+  "cancelled": "Anulowano.",
+  "interrupted": "Przerwane przez restart serwera — spróbuj ponownie, gdy backend wróci.",
+  "translation": {
+    "backend-unreachable": "Endpoint LLM niedostępny — sprawdź URL w Ustawienia → Połączenia i czy serwer działa.",
+    "auth": "Dostawca LLM odrzucił klucz API — sprawdź go w Ustawienia → Połączenia.",
+    "timeout": "LLM zbyt długo nie odpowiadał — zwiększ limit czasu w Ustawieniach lub zmniejsz rozmiar fragmentu.",
+    "model-missing": "Skonfigurowany model jest niedostępny na tym endpoincie — sprawdź nazwę modelu w Ustawienia → Połączenia."
+  }
+}

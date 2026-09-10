@@ -1,0 +1,27 @@
+{
+  "loading": "Carregando…",
+  "loadFailed": "Algo deu errado ao carregar estes dados.",
+  "retry": "Tentar de novo",
+  "reload": "Recarregar",
+  "boundaryTitle": "Algo deu errado.",
+  "boundaryMessage": "Ocorreu um erro inesperado ao renderizar esta página.",
+  "backend-unreachable": "Backend inacessível — verifique se o serviço Whisper está em execução e a URL em Configurações.",
+  "connection-dropped": "O backend fechou a conexão no meio da solicitação — pode ter travado ou reiniciado; confira os logs.",
+  "timeout": "O backend demorou demais para responder — aumente o tempo limite em Configurações ou use um modelo menor.",
+  "auth": "O backend rejeitou o token — verifique o token do backend em Configurações.",
+  "rate-limit": "O provedor limitou a solicitação — haverá nova tentativa; reduza os chunks paralelos se continuar.",
+  "model-missing": "Esse modelo não está baixado — baixe em Configurações → Modelos.",
+  "insufficient-ram": "Memória insuficiente para este modelo — escolha um menor.",
+  "insufficient-disk": "Espaço em disco insuficiente para a saída.",
+  "ffmpeg-missing": "ffmpeg não encontrado no backend — instale-o ou defina SUBSMELT_FFMPEG.",
+  "server-missing": "Não foi possível iniciar o programa do backend — reinstale ou verifique o caminho de instalação.",
+  "schema": "O modelo retornou uma resposta inutilizável — haverá nova tentativa; outro modelo pode ajudar.",
+  "cancelled": "Cancelado.",
+  "interrupted": "Interrompido por uma reinicialização do servidor — tente de novo quando o backend voltar.",
+  "translation": {
+    "backend-unreachable": "Endpoint LLM inacessível — verifique a URL em Configurações → Conexões e se o servidor está em execução.",
+    "auth": "O provedor LLM rejeitou a chave de API — verifique em Configurações → Conexões.",
+    "timeout": "O LLM demorou demais para responder — aumente o tempo limite em Configurações ou reduza o tamanho do chunk.",
+    "model-missing": "O modelo configurado não está disponível nesse endpoint — verifique o nome do modelo em Configurações → Conexões."
+  }
+}
