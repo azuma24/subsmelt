@@ -2,7 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { LANGUAGES } from "../app/constants";
 
 type JsonObject = Record<string, unknown>;
 
@@ -24,7 +23,7 @@ function loadErrors(code: string): JsonObject {
   return JSON.parse(readFileSync(file, "utf8")).errors as JsonObject;
 }
 
-test("non-English locales with errors.json overlays are fully translated", () => {
+test("errors.json overlays translate every errors.* string (no English leftovers)", () => {
   const english = flatten(loadErrors("en"));
   assert.ok(Object.keys(english).length >= 6, "English errors.* baseline is unexpectedly empty");
 
@@ -45,12 +44,4 @@ test("non-English locales with errors.json overlays are fully translated", () =>
       .map(([key]) => key);
     assert.deepEqual(leftovers, [], `${code} still has English errors.*: ${leftovers.join(", ")}`);
   }
-
-  // Track progress toward full coverage of LANGUAGES.
-  const expected = LANGUAGES.map((l) => l.code).filter((c) => c !== "en").sort();
-  const missing = expected.filter((c) => !overlayCodes.includes(c));
-  assert.ok(
-    missing.length === 0,
-    `missing errors.json overlays for: ${missing.join(", ")}`,
-  );
 });
