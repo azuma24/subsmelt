@@ -8,7 +8,7 @@ from typing import Callable, Iterator
 from .audio import extract_audio
 from .diarize import assign_speakers, fake_assign_speakers
 from .formatters import write_transcript
-from .model_loader import CudaOutOfMemoryError, _is_cuda_oom, get_whisper_model
+from .model_loader import CudaOutOfMemoryError, _is_cuda_oom, lease
 from .paths import output_path_for
 from .schemas import TranscribeRequest, TranscribeResponse
 from .segments import postprocess_segments
@@ -258,16 +258,16 @@ def run_faster_whisper(request: TranscribeRequest, input_path: Path) -> Transcri
     output_path = output_path_for(input_path, request.language, request.output_format)
     with tempfile.TemporaryDirectory(prefix="subsmelt-whisper-") as tmp:
         audio_path = extract_audio(input_path, Path(tmp) / "audio.wav")
-        model = get_whisper_model(request.model, request.device, request.compute_type)
-        try:
-            segments_iter, info = model.transcribe(str(audio_path), **faster_whisper_transcribe_kwargs(request))
-            # Segments are produced lazily, so CUDA OOM can surface during iteration.
-            collected = list(segments_iter)
-        except Exception as exc:  # noqa: BLE001 - surface CUDA OOM as a typed error
-            _raise_if_cuda_oom(exc, request.model)
-            raise
-        collected = _maybe_diarize(collected, audio_path, request)
-        return _finalize_transcript(collected, info, request, input_path, output_path)
+        with lease(request.model, request.device, request.compute_type) as model:
+            try:
+                segments_iter, info = model.transcribe(str(audio_path), **faster_whisper_transcribe_kwargs(request))
+                # Segments are produced lazily, so CUDA OOM can surface during iteration.
+                collected = list(segments_iter)
+            except Exception as exc:  # noqa: BLE001 - surface CUDA OOM as a typed error
+                _raise_if_cuda_oom(exc, request.model)
+                raise
+            collected = _maybe_diarize(collected, audio_path, request)
+            return _finalize_transcript(collected, info, request, input_path, output_path)
 
 
 def run_faster_whisper_streaming(
@@ -291,27 +291,27 @@ def run_faster_whisper_streaming(
     output_path = output_path_for(input_path, request.language, request.output_format)
     with tempfile.TemporaryDirectory(prefix="subsmelt-whisper-") as tmp:
         audio_path = extract_audio(input_path, Path(tmp) / "audio.wav")
-        model = get_whisper_model(request.model, request.device, request.compute_type)
-        try:
-            segments_iter, info = model.transcribe(str(audio_path), **faster_whisper_transcribe_kwargs(request))
-        except Exception as exc:  # noqa: BLE001 - surface CUDA OOM as a typed error
-            _raise_if_cuda_oom(exc, request.model)
-            raise
-        total_seconds = float(getattr(info, "duration", 0.0) or 0.0)
+        with lease(request.model, request.device, request.compute_type) as model:
+            try:
+                segments_iter, info = model.transcribe(str(audio_path), **faster_whisper_transcribe_kwargs(request))
+            except Exception as exc:  # noqa: BLE001 - surface CUDA OOM as a typed error
+                _raise_if_cuda_oom(exc, request.model)
+                raise
+            total_seconds = float(getattr(info, "duration", 0.0) or 0.0)
 
-        collected: list = []
-        yield from _iter_segments_with_progress(
-            segments_iter, total_seconds, collected, request, is_cancelled, min_progress_interval
-        )
+            collected: list = []
+            yield from _iter_segments_with_progress(
+                segments_iter, total_seconds, collected, request, is_cancelled, min_progress_interval
+            )
 
-        if _diarization_requested(request):
-            yield {"type": "phase", "phase": "diarizing"}
-            collected = _maybe_diarize(collected, audio_path, request)
+            if _diarization_requested(request):
+                yield {"type": "phase", "phase": "diarizing"}
+                collected = _maybe_diarize(collected, audio_path, request)
 
-        response = _finalize_transcript(collected, info, request, input_path, output_path)
-        result = response.model_dump()
-        result["type"] = "result"
-        yield result
+            response = _finalize_transcript(collected, info, request, input_path, output_path)
+            result = response.model_dump()
+            result["type"] = "result"
+            yield result
 
 
 def run_faster_whisper_upload(request: TranscribeRequest, input_path: Path) -> dict:
@@ -326,15 +326,15 @@ def run_faster_whisper_upload(request: TranscribeRequest, input_path: Path) -> d
 
     with tempfile.TemporaryDirectory(prefix="subsmelt-whisper-") as tmp:
         audio_path = extract_audio(input_path, Path(tmp) / "audio.wav")
-        model = get_whisper_model(request.model, request.device, request.compute_type)
-        try:
-            segments_iter, info = model.transcribe(str(audio_path), **faster_whisper_transcribe_kwargs(request))
-            collected = list(segments_iter)
-        except Exception as exc:  # noqa: BLE001 - surface CUDA OOM as a typed error
-            _raise_if_cuda_oom(exc, request.model)
-            raise
-        collected = _maybe_diarize(collected, audio_path, request)
-        return _finalize_content(collected, info, request)
+        with lease(request.model, request.device, request.compute_type) as model:
+            try:
+                segments_iter, info = model.transcribe(str(audio_path), **faster_whisper_transcribe_kwargs(request))
+                collected = list(segments_iter)
+            except Exception as exc:  # noqa: BLE001 - surface CUDA OOM as a typed error
+                _raise_if_cuda_oom(exc, request.model)
+                raise
+            collected = _maybe_diarize(collected, audio_path, request)
+            return _finalize_content(collected, info, request)
 
 
 def run_faster_whisper_upload_streaming(
@@ -354,26 +354,26 @@ def run_faster_whisper_upload_streaming(
 
     with tempfile.TemporaryDirectory(prefix="subsmelt-whisper-") as tmp:
         audio_path = extract_audio(input_path, Path(tmp) / "audio.wav")
-        model = get_whisper_model(request.model, request.device, request.compute_type)
-        try:
-            segments_iter, info = model.transcribe(str(audio_path), **faster_whisper_transcribe_kwargs(request))
-        except Exception as exc:  # noqa: BLE001 - surface CUDA OOM as a typed error
-            _raise_if_cuda_oom(exc, request.model)
-            raise
-        total_seconds = float(getattr(info, "duration", 0.0) or 0.0)
+        with lease(request.model, request.device, request.compute_type) as model:
+            try:
+                segments_iter, info = model.transcribe(str(audio_path), **faster_whisper_transcribe_kwargs(request))
+            except Exception as exc:  # noqa: BLE001 - surface CUDA OOM as a typed error
+                _raise_if_cuda_oom(exc, request.model)
+                raise
+            total_seconds = float(getattr(info, "duration", 0.0) or 0.0)
 
-        collected: list = []
-        yield from _iter_segments_with_progress(
-            segments_iter, total_seconds, collected, request, is_cancelled, min_progress_interval
-        )
+            collected: list = []
+            yield from _iter_segments_with_progress(
+                segments_iter, total_seconds, collected, request, is_cancelled, min_progress_interval
+            )
 
-        if _diarization_requested(request):
-            yield {"type": "phase", "phase": "diarizing"}
-            collected = _maybe_diarize(collected, audio_path, request)
+            if _diarization_requested(request):
+                yield {"type": "phase", "phase": "diarizing"}
+                collected = _maybe_diarize(collected, audio_path, request)
 
-        result = _finalize_content(collected, info, request)
-        result["type"] = "result"
-        yield result
+            result = _finalize_content(collected, info, request)
+            result["type"] = "result"
+            yield result
 
 
 def fake_transcribe_for_tests(input_path: Path, request: TranscribeRequest) -> TranscribeResponse:

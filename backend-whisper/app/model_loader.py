@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import gc
+import sys
 import threading
-from typing import Any
+from contextlib import contextmanager
+from typing import Any, Iterator
 
 from .gpu import cuda_device_count
 from .model_cache import cache_root_from_env, describe_model_cache
@@ -11,7 +14,14 @@ from .preflight import available_ram_mb
 # that affect model identity. FastAPI runs sync handlers in a threadpool, so the
 # cache must be guarded by a lock to avoid loading the same model twice (or
 # corrupting the dict) under concurrent requests.
+#
+# At most ONE model is resident: loading a different key evicts the current one
+# so its VRAM comes back instead of every variant pinning GPU memory forever.
+# A transcription holds a ``lease`` while it runs; an evicted model that is
+# still leased is parked in _RETIRED and released when the last lease ends.
 _MODEL_CACHE: dict[tuple[str, str, str], Any] = {}
+_LEASES: dict[tuple[str, str, str], int] = {}
+_RETIRED: dict[tuple[str, str, str], Any] = {}
 _CACHE_LOCK = threading.Lock()
 
 # Compute types CTranslate2 supports per device. float16 / int8_float16 are
@@ -170,6 +180,9 @@ def get_whisper_model(model: str, device: str, compute_type: str) -> Any:
 
         from faster_whisper import WhisperModel  # type: ignore
 
+        # Free the resident model before loading so the new one has its VRAM.
+        _evict_locked(lambda other: True)
+
         # Load from the exact snapshot dir the cache detector resolved, so the
         # loader can never disagree with /models, /health and
         # assert_model_downloaded about whether a model is present — regardless
@@ -232,7 +245,72 @@ def _align_feature_extractor(whisper_model: Any) -> None:
     )
 
 
+@contextmanager
+def lease(model: str, device: str, compute_type: str) -> Iterator[Any]:
+    """Hold the model for the duration of a transcription.
+
+    Eviction (a different model loading, or DELETE /models/{id}) never unloads
+    a leased instance under a running decode; it is released when the last
+    lease ends.
+    """
+    key = _cache_key(model, device, compute_type)
+    instance = get_whisper_model(model, device, compute_type)
+    with _CACHE_LOCK:
+        _LEASES[key] = _LEASES.get(key, 0) + 1
+    try:
+        yield instance
+    finally:
+        with _CACHE_LOCK:
+            _LEASES[key] -= 1
+            retired = _RETIRED.pop(key, None) if _LEASES[key] == 0 else None
+        if retired is not None:
+            release_device_memory(retired)
+
+
+def unload_model(model: str) -> bool:
+    """Evict every resident variant of ``model`` (any device/compute type).
+
+    Returns True when something was evicted. Used by DELETE /models/{id} so the
+    weights are unloaded (and, on Windows, unlocked) before the cache dir goes.
+    """
+    wanted = _cache_key(model, "", "")[0]
+    with _CACHE_LOCK:
+        return _evict_locked(lambda key: key[0] == wanted) > 0
+
+
+def _evict_locked(matches: Any) -> int:
+    """Drop cached entries whose key satisfies ``matches``; caller holds the lock."""
+    evicted = [key for key in _MODEL_CACHE if matches(key)]
+    for key in evicted:
+        instance = _MODEL_CACHE.pop(key)
+        if _LEASES.get(key):
+            _RETIRED[key] = instance
+        else:
+            release_device_memory(instance)
+    return len(evicted)
+
+
+def release_device_memory(instance: Any) -> None:
+    """Return a model's device memory now rather than whenever the GC runs.
+
+    CTranslate2 models expose ``unload_model``; anything else is just dropped.
+    ``torch.cuda.empty_cache`` is called only when torch is already imported
+    (pyannote), never imported just for this.
+    """
+    unload = getattr(getattr(instance, "model", None), "unload_model", None)
+    if callable(unload):
+        unload()
+    del instance
+    gc.collect()
+    torch = sys.modules.get("torch")
+    cuda = getattr(torch, "cuda", None)
+    if cuda is not None and cuda.is_available():
+        cuda.empty_cache()
+
+
 def clear_model_cache() -> None:
     """Drop all cached models. Primarily for tests."""
     with _CACHE_LOCK:
         _MODEL_CACHE.clear()
+        _LEASES.clear()
+        _RETIRED.clear()

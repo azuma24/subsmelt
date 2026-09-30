@@ -6,11 +6,13 @@ from types import SimpleNamespace
 from typing import Any
 
 from .gpu import cuda_device_count
+from .model_loader import release_device_memory
 
 # Gated pyannote pipeline (requires HF token + accepted license).
 DIARIZATION_MODEL = "pyannote/speaker-diarization-3.1"
 
-# One pipeline per torch device, loaded once (mirrors model_loader's cache).
+# At most one pipeline resident, keyed by torch device (mirrors model_loader:
+# loading for the other device releases the current one and its VRAM).
 _PIPELINE_CACHE: dict[str, Any] = {}
 _CACHE_LOCK = threading.Lock()
 
@@ -79,6 +81,8 @@ def _get_pipeline(device: str) -> Any:
                 "— accept the pyannote/speaker-diarization-3.1 license and retry"
             )
         pipeline.to(torch.device(torch_device))
+        for other in list(_PIPELINE_CACHE):
+            release_device_memory(_PIPELINE_CACHE.pop(other))
         _PIPELINE_CACHE[torch_device] = pipeline
         return pipeline
 

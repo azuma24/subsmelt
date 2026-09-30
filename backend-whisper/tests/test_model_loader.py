@@ -29,10 +29,18 @@ class GetWhisperModelTests(unittest.TestCase):
         self._captured = {}
         captured = self._captured
 
+        class _FakeCt2Model:
+            def __init__(self):
+                self.unload_calls = 0
+
+            def unload_model(self, to_cpu=False):
+                self.unload_calls += 1
+
         class _FakeWhisperModel:  # noqa: D401 - test double
             def __init__(self, model, **kwargs):
                 captured["model"] = model
                 captured["kwargs"] = kwargs
+                self.model = _FakeCt2Model()
 
         fake_mod = types.ModuleType("faster_whisper")
         fake_mod.WhisperModel = _FakeWhisperModel
@@ -136,6 +144,33 @@ class GetWhisperModelTests(unittest.TestCase):
         fe = w.feature_extractor
         model_loader._align_feature_extractor(w)
         self.assertIs(w.feature_extractor, fe)
+
+    def test_loading_a_different_model_evicts_the_resident_one(self):
+        self._seed("tiny", layout="hub")
+        self._seed("base", layout="hub")
+        tiny = model_loader.get_whisper_model("tiny", "cpu", "int8")
+        base = model_loader.get_whisper_model("base", "cpu", "int8")
+        self.assertEqual(list(model_loader._MODEL_CACHE.values()), [base])
+        self.assertEqual(tiny.model.unload_calls, 1)
+        self.assertEqual(base.model.unload_calls, 0)
+
+    def test_eviction_defers_unload_until_the_lease_ends(self):
+        self._seed("tiny", layout="hub")
+        self._seed("base", layout="hub")
+        with model_loader.lease("tiny", "cpu", "int8") as tiny:
+            base = model_loader.get_whisper_model("base", "cpu", "int8")
+            # Evicted from the cache, but a transcription still holds it.
+            self.assertEqual(list(model_loader._MODEL_CACHE.values()), [base])
+            self.assertEqual(tiny.model.unload_calls, 0)
+        self.assertEqual(tiny.model.unload_calls, 1)
+
+    def test_unload_model_releases_the_resident_instance_by_id(self):
+        self._seed("tiny", layout="hub")
+        tiny = model_loader.get_whisper_model("tiny", "cpu", "int8")
+        self.assertTrue(model_loader.unload_model("Tiny"))
+        self.assertEqual(model_loader._MODEL_CACHE, {})
+        self.assertEqual(tiny.model.unload_calls, 1)
+        self.assertFalse(model_loader.unload_model("tiny"))
 
     def test_cache_key_normalizes_model_id_case(self):
         self._seed("tiny", layout="hub")

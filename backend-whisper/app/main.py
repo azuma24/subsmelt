@@ -52,6 +52,7 @@ from .model_loader import (
     CudaUnavailableError,
     InvalidComputeTypeError,
     ModelWeightsMissingError,
+    unload_model,
 )
 from .diarize import (
     DiarizationTokenMissingError,
@@ -414,8 +415,12 @@ async def models_download(
 
 @app.delete("/models/{model}")
 def models_delete(model: str, _auth: None = Depends(require_token)) -> dict:
-    """Delete a cached model snapshot. 400 unknown id, 404 if not present."""
+    """Delete a cached model snapshot. 400 unknown id, 404 if not present.
+
+    A resident instance is unloaded first so its VRAM is freed and, on Windows,
+    the weight files are no longer locked by the loaded model."""
     try:
+        unload_model(model)
         return delete_model(model)
     except UnknownModelError as exc:
         raise HTTPException(
