@@ -156,8 +156,9 @@ class PreflightGpuRoutingTests(unittest.TestCase):
              mock.patch.object(main, "gpu_info", return_value=[]), \
              mock.patch.object(main, "total_free_vram_mb", return_value=None):
             result = main.preflight_result(request)
+        # Fail open, but keep the unknown code so the UI can warn about it.
         self.assertTrue(result.safe)
-        self.assertEqual(result.code, "ok")
+        self.assertEqual(result.code, "vram_unknown")
         self.assertEqual(result.device, "cuda")
 
 

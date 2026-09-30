@@ -389,6 +389,23 @@ def models_delete(model: str, _auth: None = Depends(require_token)) -> dict:
         ) from exc
 
 
+def _preflight_code(model_safe: bool, model_code: str, ffmpeg_ok: bool, disk_safety: dict) -> str:
+    """The first blocker, else the first fail-open warning (``*_unknown``), else ``ok``.
+
+    The unknown codes ride along with ``safe=True`` so the UI can warn that a
+    reading was unavailable instead of reporting a clean bill of health.
+    """
+    if not model_safe:
+        return model_code
+    if not ffmpeg_ok:
+        return "ffmpeg_missing"
+    if not disk_safety["safe"]:
+        return disk_safety["code"]
+    if model_code != "ok":
+        return model_code
+    return disk_safety["code"]
+
+
 def preflight_result(request: TranscribeRequest) -> PreflightResponse:
     input_path = assert_path_under_media(request.input_path, MEDIA_ROOT)
     free_ram = available_ram_mb()
@@ -427,20 +444,16 @@ def preflight_result(request: TranscribeRequest) -> PreflightResponse:
         rec_mb = safety["recommended_ram_mb"]
 
     # Diarization loads a second (pyannote) model — add its headroom to the
-    # requirement so a run that would OOM mid-pass is flagged up front.
+    # requirement so a run that would OOM mid-pass is flagged up front. An
+    # unmeasured reading (avail_mb <= 0) stays fail-open, as it is for the model.
     if request.advanced_options and request.advanced_options.speaker_diarization:
         req_mb += DIARIZATION_VRAM_MB if on_gpu else DIARIZATION_RAM_MB
-        if model_safe and avail_mb < req_mb:
+        if model_safe and 0 < avail_mb < req_mb:
             model_safe = False
             model_code = "insufficient_vram" if on_gpu else "insufficient_ram"
 
     safe = bool(model_safe and ffmpeg_ok and disk_safety["safe"])
-    code = (
-        model_code if not model_safe
-        else "ffmpeg_missing" if not ffmpeg_ok
-        else disk_safety["code"] if not disk_safety["safe"]
-        else "ok"
-    )
+    code = _preflight_code(model_safe, model_code, ffmpeg_ok, disk_safety)
     return PreflightResponse(
         ok=safe,
         safe=safe,
@@ -674,12 +687,7 @@ def validate_upload_request(request: TranscribeRequest, upload_size_mb: int, scr
 
     disk_safety = evaluate_disk_safety(upload_size_mb, disk_free_mb(scratch_dir))
     safe = bool(model_safe and ffmpeg_ok and disk_safety["safe"])
-    code = (
-        model_code if not model_safe
-        else "ffmpeg_missing" if not ffmpeg_ok
-        else disk_safety["code"] if not disk_safety["safe"]
-        else "ok"
-    )
+    code = _preflight_code(model_safe, model_code, ffmpeg_ok, disk_safety)
 
     if not safe and not (ALLOW_UNSAFE or request.allow_unsafe):
         raise HTTPException(status_code=422, detail={
