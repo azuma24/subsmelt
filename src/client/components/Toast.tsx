@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { toastsAwaitingTimer, visibleToasts } from "./toast-queue";
 
 type ToastType = "success" | "error" | "info";
 
@@ -26,10 +27,6 @@ interface ToastContextType {
   addToast: (message: string, type?: ToastType, opts?: ToastOptions) => void;
   removeToast: (id: number) => void;
 }
-
-// Older toasts stay queued behind these and surface as newer ones go away, so
-// a burst of failures never pushes the stack off the screen.
-const MAX_VISIBLE_TOASTS = 4;
 
 const AUTO_DISMISS_MS: Record<ToastType, number> = { error: 5000, success: 2500, info: 3500 };
 
@@ -72,13 +69,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       const id = existing?.id ?? ++idRef.current;
       const next: Toast = { ...opts, id, message, type };
       setToasts((prev) => (existing ? prev.map((toast) => (toast.id === id ? next : toast)) : [...prev, next]));
+      // An update restarts the toast's timer once the effect below sees it.
       clearTimer(id);
-      if (!opts.persistent) {
-        timersRef.current.set(id, setTimeout(() => removeToast(id), AUTO_DISMISS_MS[type]));
-      }
     },
-    [removeToast]
+    []
   );
+
+  useEffect(() => {
+    for (const id of toastsAwaitingTimer(toasts, new Set(timersRef.current.keys()))) {
+      const type = toasts.find((toast) => toast.id === id)?.type ?? "info";
+      timersRef.current.set(id, setTimeout(() => removeToast(id), AUTO_DISMISS_MS[type]));
+    }
+  }, [toasts, removeToast]);
 
   // Clear any pending auto-dismiss timers on unmount.
   useEffect(() => {
@@ -86,7 +88,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     return () => { timers.forEach((timer) => clearTimeout(timer)); timers.clear(); };
   }, []);
 
-  const visible = toasts.slice(-MAX_VISIBLE_TOASTS);
+  const visible = visibleToasts(toasts);
 
   return (
     <ToastContext.Provider value={{ addToast, removeToast }}>
