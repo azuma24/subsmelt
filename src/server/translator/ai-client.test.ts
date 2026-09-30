@@ -1,11 +1,84 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import http from "node:http";
+import type { AddressInfo } from "node:net";
 import {
   parseRetryAfter,
   rateLimitRetryDelayMs,
   extractUsage,
+  translateSingle,
   type TokenUsage,
 } from "./ai-client.js";
+
+(globalThis as { AI_SDK_LOG_WARNINGS?: boolean }).AI_SDK_LOG_WARNINGS = false;
+
+type ChatMessage = { content: string; reasoning_content?: string };
+
+/** Runs `fn` against a local OpenAI-compatible endpoint and returns how many requests it received. */
+async function withChatServer(message: ChatMessage, fn: (apiHost: string) => Promise<void>): Promise<number> {
+  let requests = 0;
+  const server = http.createServer((req, res) => {
+    requests++;
+    req.resume();
+    req.on("end", () => {
+      res.setHeader("content-type", "application/json");
+      res.end(
+        JSON.stringify({
+          id: "chatcmpl-test",
+          object: "chat.completion",
+          created: 0,
+          model: "test-model",
+          choices: [{ index: 0, message: { role: "assistant", ...message }, finish_reason: "stop" }],
+        })
+      );
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address() as AddressInfo;
+  try {
+    await fn(`http://127.0.0.1:${port}/v1`);
+  } finally {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  }
+  return requests;
+}
+
+function modelOpts(apiHost: string) {
+  return { apiKey: "", apiHost, model: "test-model", systemPrompt: "Translate.", temperature: 0 };
+}
+
+async function translateSingleReply(message: ChatMessage): Promise<string> {
+  let out = "";
+  await withChatServer(message, async (apiHost) => {
+    out = await translateSingle("source line", { ...modelOpts(apiHost), disableToolCalls: true });
+  });
+  return out;
+}
+
+// ── translateSingle: plain-text replies ─────────────────────────────────────
+
+test("translateSingle: keeps a reply with 「」 quotes whole", async () => {
+  assert.equal(await translateSingleReply({ content: "他說「我要走了」然後離開" }), "他說「我要走了」然後離開");
+});
+
+test('translateSingle: keeps a reply with "" quotes whole', async () => {
+  assert.equal(await translateSingleReply({ content: 'He said "no" to her' }), 'He said "no" to her');
+});
+
+test("translateSingle: keeps both lines of a two-line reply", async () => {
+  assert.equal(await translateSingleReply({ content: "Je suis\nfatigué" }), "Je suis\nfatigué");
+});
+
+test("translateSingle: extracts the final answer from a reasoning-only reply", async () => {
+  const reasoning = [
+    "*   Source: I'm leaving.",
+    "*   Target language: Traditional Chinese.",
+    "Let's keep it short and natural.",
+    "Final: 「我要走了」",
+  ].join("\n");
+  assert.equal(await translateSingleReply({ content: "", reasoning_content: reasoning }), "我要走了");
+});
 
 // ── parseRetryAfter ─────────────────────────────────────────────────────────
 

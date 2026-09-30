@@ -121,10 +121,15 @@ export function coerceSingleTranslation(parsed: unknown, rawText: string): strin
  * Reasoning models write long chain-of-thought before settling on a final answer.
  * We look for the last clean quoted string (「...」 or "...") or the last
  * non-meta line (not starting with *, -, Let, Wait, Note, Option, #).
- * Returns null if no clean answer is found (caller falls through to text fallback).
+ * Returns null if no clean answer is found, or if the text has no meta lines at
+ * all: that is a plain reply, and its quotes and line breaks belong to the
+ * translation (caller falls through to text fallback).
  */
 export function extractFinalAnswerFromReasoning(reasoning: string): string | null {
   if (!reasoning || reasoning.length < 2) return null;
+
+  const lines = reasoning.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (!lines.some(isReasoningMetaLine)) return null;
 
   // Try last 「...」 or "..." quoted block
   const quotedMatches = [...reasoning.matchAll(/[「"]([^「」""]{1,300})[」"]/g)];
@@ -134,18 +139,22 @@ export function extractFinalAnswerFromReasoning(reasoning: string): string | nul
   }
 
   // Try last non-meta line that looks like a translation (contains CJK or is short)
-  const lines = reasoning.split("\n").map((l) => l.trim()).filter(Boolean);
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i];
-    // Skip meta lines
-    if (/^[\*\-#>]/.test(line)) continue;
-    if (/^(let'?s|wait|note:|option \d|actually|final|refin|translat|source|input|context|glossary|target)/i.test(line)) continue;
+    if (isReasoningMetaLine(line)) continue;
     // Must be reasonably short (subtitle line)
     if (line.length > 300 || line.length < 1) continue;
     return line;
   }
 
   return null;
+}
+
+function isReasoningMetaLine(line: string): boolean {
+  return (
+    /^[\*\-#>]/.test(line) ||
+    /^(let'?s|wait|note:|option \d|actually|final|refin|translat|source|input|context|glossary|target)/i.test(line)
+  );
 }
 
 /**
