@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Response } from "express";
 import path from "node:path";
 import fs from "node:fs";
 import { getTasks, getTask } from "../config.js";
@@ -68,6 +68,14 @@ function enrichJobs(jobs: any[]): any[] {
   });
 }
 
+// A single-job reset/force/delete that changed no row was refused either because
+// a worker is translating the job (409) or because there is no such job (404).
+function rejectUnchanged(res: Response, id: number) {
+  if (getJob(id)?.status === "translating")
+    return res.status(409).json({ error: "Job is translating" });
+  return res.status(404).json({ error: "Job not found" });
+}
+
 export function registerJobsRoutes(app: Express): void {
   // ======== Jobs ========
   app.get("/api/jobs", (_req, res) => {
@@ -80,7 +88,7 @@ export function registerJobsRoutes(app: Express): void {
 
   app.post("/api/jobs/:id/retry", (req, res) => {
     const id = parseInt(req.params.id, 10);
-    resetJob(id);
+    if (resetJob(id) === 0) return rejectUnchanged(res, id);
     logger.info("queue", `Job #${id} reset to pending (retry)`, id);
     setTimeout(() => processQueue(), 100);
     res.json({ ok: true });
@@ -102,7 +110,7 @@ export function registerJobsRoutes(app: Express): void {
 
   app.post("/api/jobs/:id/force", (req, res) => {
     const id = parseInt(req.params.id, 10);
-    forceJob(id);
+    if (forceJob(id) === 0) return rejectUnchanged(res, id);
     logger.info("queue", `Job #${id} marked for force re-translate`, id);
     setTimeout(() => processQueue(), 100);
     res.json({ ok: true });
@@ -158,7 +166,8 @@ export function registerJobsRoutes(app: Express): void {
   });
 
   app.delete("/api/jobs/:id", (req, res) => {
-    deleteJob(parseInt(req.params.id, 10));
+    const id = parseInt(req.params.id, 10);
+    if (deleteJob(id) === 0) return rejectUnchanged(res, id);
     res.json({ ok: true });
   });
 

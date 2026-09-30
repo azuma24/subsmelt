@@ -258,10 +258,15 @@ export function getJobBySrtAndTask(
     .get(srtPath, taskId) as JobRow | undefined;
 }
 
-export function resetJob(id: number) {
-  db.prepare(
-    "UPDATE jobs SET status = 'pending', completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE id = ?",
-  ).run(id);
+// The single-job variants return the affected row count (0 or 1) like the batch
+// ones. A translating job is refused: handing it back to the queue lets a second
+// worker claim it while the first still runs, and both then write the same .part.
+export function resetJob(id: number): number {
+  return db
+    .prepare(
+      "UPDATE jobs SET status = 'pending', completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE id = ? AND status != 'translating'",
+    )
+    .run(id).changes;
 }
 
 export function resetJobs(ids: number[]) {
@@ -281,10 +286,12 @@ export function resetJobs(ids: number[]) {
   return updated;
 }
 
-export function forceJob(id: number) {
-  db.prepare(
-    "UPDATE jobs SET status = 'pending', force = 1, completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE id = ?",
-  ).run(id);
+export function forceJob(id: number): number {
+  return db
+    .prepare(
+      "UPDATE jobs SET status = 'pending', force = 1, completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE id = ? AND status != 'translating'",
+    )
+    .run(id).changes;
 }
 
 export function forceJobs(ids: number[]) {
@@ -336,8 +343,10 @@ export function reorderJobs(jobIds: number[]) {
   tx();
 }
 
-export function deleteJob(id: number) {
-  db.prepare("DELETE FROM jobs WHERE id = ?").run(id);
+export function deleteJob(id: number): number {
+  return db
+    .prepare("DELETE FROM jobs WHERE id = ? AND status != 'translating'")
+    .run(id).changes;
 }
 
 export function deleteJobs(ids: number[]) {
