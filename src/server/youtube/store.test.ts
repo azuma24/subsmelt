@@ -107,3 +107,73 @@ test("sync state merges patches and starts empty", () => {
   store.deleteSyncState(PL);
   assert.equal(store.getSyncState(PL).count, null);
 });
+
+test("nextQueued takes the user's picks first, then later finds newest check first, then playlist order", () => {
+  const store = freshStore();
+  store.applyListing(PL, [listed("aaaaaaaaaa1", 1), listed("aaaaaaaaaa2", 2), listed("aaaaaaaaaa3", 3)], { complete: true, now: T0 });
+  store.applyListing(PL, [listed("bbbbbbbbbb1", 1), listed("aaaaaaaaaa1", 2), listed("aaaaaaaaaa2", 3), listed("aaaaaaaaaa3", 4)], { complete: true, now: T1 });
+  const order = () => {
+    const ids: string[] = [];
+    for (let v = store.nextQueued([PL], T1); v; v = store.nextQueued([PL], T1)) {
+      ids.push(v.video_id);
+      store.setStatus(v.video_id, "downloading", { now: T1 });
+    }
+    return ids;
+  };
+  store.applyUserAction("aaaaaaaaaa3", "download", T1);
+  assert.deepEqual(order(), ["aaaaaaaaaa3", "bbbbbbbbbb1", "aaaaaaaaaa1", "aaaaaaaaaa2"]);
+});
+
+test("nextQueued skips videos of other playlists, videos backing off, and removed videos nobody asked for", () => {
+  const store = freshStore();
+  store.applyListing(PL, [listed("aaaaaaaaaa1", 1), listed("aaaaaaaaaa2", 2), listed("aaaaaaaaaa3", 3)], { complete: true, now: T0 });
+  store.applyListing("PLother00000", [listed("cccccccccc1", 1)], { complete: true, now: T0 });
+  store.setStatus("aaaaaaaaaa1", "downloading", { now: T0 });
+  store.setStatus("aaaaaaaaaa1", "queued", { retryAfter: T1, attempts: 1, now: T0 });
+  store.applyListing(PL, [listed("aaaaaaaaaa1", 1), listed("aaaaaaaaaa3", 2)], { complete: true, now: T0 });
+
+  assert.equal(store.nextQueued([PL], T0)?.video_id, "aaaaaaaaaa3");
+  store.setStatus("aaaaaaaaaa3", "downloading", { now: T0 });
+  assert.equal(store.nextQueued([PL], T0), undefined);
+  assert.equal(store.nextQueued([PL], T1)?.video_id, "aaaaaaaaaa1");
+  store.applyUserAction("aaaaaaaaaa2", "download", T0);
+  assert.equal(store.nextQueued([PL], T0)?.video_id, "aaaaaaaaaa2");
+});
+
+test("applyUserAction moves by the action table and refuses the rest", () => {
+  const store = freshStore();
+  store.applyListing(PL, [listed("aaaaaaaaaa1", 1, { initial: { status: "new" } }), listed("aaaaaaaaaa2", 2)], { complete: true, now: T0 });
+
+  const skipped = store.applyUserAction("aaaaaaaaaa1", "skip", T1);
+  assert.deepEqual([skipped.status, skipped.skip_kind, skipped.user_queued_at], ["skipped", "user", null]);
+  const queued = store.applyUserAction("aaaaaaaaaa1", "download", T1);
+  assert.deepEqual([queued.status, queued.skip_kind, queued.user_queued_at], ["queued", null, T1]);
+
+  store.setStatus("aaaaaaaaaa2", "downloading", { now: T0 });
+  store.setStatus("aaaaaaaaaa2", "failed", { reason: "ERROR: boom", attempts: 4, now: T0 });
+  const retried = store.applyUserAction("aaaaaaaaaa2", "retry", T1);
+  assert.deepEqual([retried.status, retried.attempts, retried.reason], ["queued", 0, null]);
+  assert.throws(() => store.applyUserAction("aaaaaaaaaa2", "retry", T1), IllegalTransitionError);
+});
+
+test("cooldown starts at an hour, doubles per strike, caps at a day, and clears", () => {
+  const store = freshStore();
+  const now = new Date(T0);
+  assert.equal(store.activeCooldown(now), null);
+  assert.deepEqual(store.startCooldown("rate_limited", now), { until: "2026-09-30T11:00:00.000Z", cause: "rate_limited", strikes: 1 });
+  assert.deepEqual(store.startCooldown("bot_check", now), { until: "2026-09-30T12:00:00.000Z", cause: "bot_check", strikes: 2 });
+  for (let i = 0; i < 4; i++) store.startCooldown("rate_limited", now);
+  assert.deepEqual(store.startCooldown("rate_limited", now), { until: "2026-10-01T10:00:00.000Z", cause: "rate_limited", strikes: 7 });
+  assert.equal(store.activeCooldown(new Date("2026-10-01T09:59:00.000Z"))?.strikes, 7);
+  assert.equal(store.activeCooldown(new Date("2026-10-01T10:00:00.000Z")), null);
+  store.clearCooldown();
+  assert.equal(store.startCooldown("rate_limited", now).until, "2026-09-30T11:00:00.000Z");
+});
+
+test("a database from before user_queued_at gains the column", () => {
+  const db = new Database(":memory:");
+  db.exec("CREATE TABLE youtube_videos (video_id TEXT PRIMARY KEY, playlist_id TEXT NOT NULL, title TEXT NOT NULL, channel TEXT, duration_s INTEGER, published_at TEXT, added_at TEXT, status TEXT NOT NULL, skip_kind TEXT, reason TEXT, attempts INTEGER NOT NULL DEFAULT 0, retry_after TEXT, media_path TEXT, subtitle_path TEXT, note_path TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)");
+  const store = new YoutubeStore(db);
+  store.applyListing(PL, [listed("aaaaaaaaaa1", 1, { initial: { status: "new" } })], { complete: true, now: T0 });
+  assert.equal(store.applyUserAction("aaaaaaaaaa1", "download", T1).user_queued_at, T1);
+});

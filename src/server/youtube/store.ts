@@ -1,5 +1,5 @@
 import type Database from "better-sqlite3";
-import { canTransition, type SkipKind, type VideoStatus } from "./video-status.js";
+import { canTransition, USER_ACTIONS, type SkipKind, type UserAction, type VideoStatus } from "./video-status.js";
 
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS youtube_videos (
@@ -18,6 +18,7 @@ const SCHEMA = `
     media_path    TEXT,
     subtitle_path TEXT,
     note_path     TEXT,
+    user_queued_at TEXT,
     created_at    TEXT NOT NULL,
     updated_at    TEXT NOT NULL
   );
@@ -75,6 +76,8 @@ export interface VideoRow {
   media_path: string | null;
   subtitle_path: string | null;
   note_path: string | null;
+  /** Set when the user asked for this video: it goes first and a filter change leaves it alone. */
+  user_queued_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -108,6 +111,37 @@ export interface PlaylistCounts {
   byStatus: Partial<Record<VideoStatus, number>>;
 }
 
+export type CooldownCause = "rate_limited" | "bot_check";
+
+export interface Cooldown {
+  until: string;
+  cause: CooldownCause;
+  /** Cooldowns since the last successful download; each one doubles the pause. */
+  strikes: number;
+}
+
+const COOLDOWN_BASE_MS = 60 * 60_000;
+const COOLDOWN_MAX_MS = 24 * 60 * 60_000;
+const COOLDOWN_KEY = "cooldown";
+
+/** Columns a status move may also set. Unset reason and retryAfter clear; the rest keep their value. */
+export interface StatusFields {
+  now: string;
+  skipKind?: SkipKind | null;
+  reason?: string | null;
+  retryAfter?: string | null;
+  attempts?: number;
+  mediaPath?: string | null;
+  userQueuedAt?: string | null;
+}
+
+export interface VideoMetadata {
+  title?: string | null;
+  channel?: string | null;
+  durationS?: number | null;
+  publishedAt?: string | null;
+}
+
 export class IllegalTransitionError extends Error {
   constructor(videoId: string, from: VideoStatus, to: VideoStatus) {
     super(`Video ${videoId} cannot move from ${from} to ${to}`);
@@ -122,6 +156,8 @@ const syncKey = (playlistId: string) => `playlist:${playlistId}`;
 export class YoutubeStore {
   constructor(private readonly db: Database.Database) {
     db.exec(SCHEMA);
+    const columns = db.prepare("PRAGMA table_info(youtube_videos)").all() as { name: string }[];
+    if (!columns.some((c) => c.name === "user_queued_at")) db.exec("ALTER TABLE youtube_videos ADD COLUMN user_queued_at TEXT");
   }
 
   /**
@@ -143,9 +179,11 @@ export class YoutubeStore {
         published_at = COALESCE(youtube_videos.published_at, excluded.published_at),
         added_at = COALESCE(excluded.added_at, youtube_videos.added_at),
         status = CASE WHEN @resetUntouched = 1 AND youtube_videos.playlist_id = excluded.playlist_id
+            AND youtube_videos.user_queued_at IS NULL
             AND (youtube_videos.status IN ('new', 'queued') OR (youtube_videos.status = 'skipped' AND youtube_videos.skip_kind = 'before_start'))
           THEN excluded.status ELSE youtube_videos.status END,
         skip_kind = CASE WHEN @resetUntouched = 1 AND youtube_videos.playlist_id = excluded.playlist_id
+            AND youtube_videos.user_queued_at IS NULL
             AND (youtube_videos.status IN ('new', 'queued') OR (youtube_videos.status = 'skipped' AND youtube_videos.skip_kind = 'before_start'))
           THEN excluded.skip_kind ELSE youtube_videos.skip_kind END,
         updated_at = @now
@@ -209,14 +247,115 @@ export class YoutubeStore {
   }
 
   /** Moves a video to `to`, refusing any move the status table does not allow. */
-  setStatus(videoId: string, to: VideoStatus, fields: { skipKind?: SkipKind | null; reason?: string | null; now: string }): VideoRow {
+  setStatus(videoId: string, to: VideoStatus, fields: StatusFields): VideoRow {
     const current = this.getVideo(videoId);
     if (!current) throw new Error(`Unknown video ${videoId}`);
     if (!canTransition(current.status, to)) throw new IllegalTransitionError(videoId, current.status, to);
     this.db
-      .prepare("UPDATE youtube_videos SET status = ?, skip_kind = ?, reason = ?, updated_at = ? WHERE video_id = ?")
-      .run(to, to === "skipped" ? fields.skipKind ?? "user" : null, fields.reason ?? null, fields.now, videoId);
+      .prepare(`
+        UPDATE youtube_videos SET status = @to, skip_kind = @skipKind, reason = @reason, retry_after = @retryAfter,
+          attempts = @attempts, media_path = @mediaPath, user_queued_at = @userQueuedAt, updated_at = @now
+        WHERE video_id = @videoId
+      `)
+      .run({
+        videoId,
+        to,
+        skipKind: to === "skipped" ? fields.skipKind ?? "user" : null,
+        reason: fields.reason ?? null,
+        retryAfter: fields.retryAfter ?? null,
+        attempts: fields.attempts ?? current.attempts,
+        mediaPath: fields.mediaPath === undefined ? current.media_path : fields.mediaPath,
+        userQueuedAt: fields.userQueuedAt === undefined ? current.user_queued_at : fields.userQueuedAt,
+        now: fields.now,
+      });
     return this.getVideo(videoId)!;
+  }
+
+  /** A row action from the user. Download and Retry put the video at the front of the lane with fresh attempts. */
+  applyUserAction(videoId: string, action: UserAction, now: string): VideoRow {
+    const current = this.getVideo(videoId);
+    if (!current) throw new Error(`Unknown video ${videoId}`);
+    const { from, to } = USER_ACTIONS[action];
+    if (!from.includes(current.status)) throw new IllegalTransitionError(videoId, current.status, to);
+    if (to === "skipped") return this.setStatus(videoId, "skipped", { skipKind: "user", now });
+    if (current.status === "queued") {
+      this.db
+        .prepare("UPDATE youtube_videos SET user_queued_at = ?, retry_after = NULL, attempts = 0, updated_at = ? WHERE video_id = ?")
+        .run(now, now, videoId);
+      return this.getVideo(videoId)!;
+    }
+    return this.setStatus(videoId, "queued", { attempts: 0, userQueuedAt: now, now });
+  }
+
+  /** Refreshes what the downloaded info JSON knows better than the flat listing. */
+  updateMetadata(videoId: string, meta: VideoMetadata, now: string): void {
+    this.db
+      .prepare(`
+        UPDATE youtube_videos SET
+          title = COALESCE(NULLIF(@title, ''), title), channel = COALESCE(@channel, channel),
+          duration_s = COALESCE(@durationS, duration_s), published_at = COALESCE(@publishedAt, published_at), updated_at = @now
+        WHERE video_id = @videoId
+      `)
+      .run({ videoId, title: meta.title ?? null, channel: meta.channel ?? null, durationS: meta.durationS ?? null, publishedAt: meta.publishedAt ?? null, now });
+  }
+
+  videosInStatus(status: VideoStatus): VideoRow[] {
+    return this.db.prepare("SELECT * FROM youtube_videos WHERE status = ? ORDER BY video_id").all(status) as VideoRow[];
+  }
+
+  /**
+   * The next video the download lane should take from the given playlists.
+   * The user's picks go first, then videos found by later checks (newest
+   * check first), then the rest in playlist order. Videos removed from the
+   * playlist wait unless the user asked for them.
+   */
+  nextQueued(playlistIds: string[], now: string): VideoRow | undefined {
+    return this.db
+      .prepare(`
+        SELECT v.* FROM youtube_videos v
+        JOIN youtube_playlist_items i ON i.playlist_id = v.playlist_id AND i.video_id = v.video_id
+        WHERE v.status = 'queued'
+          AND v.playlist_id IN (SELECT value FROM json_each(@playlistIds))
+          AND (v.retry_after IS NULL OR v.retry_after <= @now)
+          AND (i.removed_at IS NULL OR v.user_queued_at IS NOT NULL)
+        ORDER BY v.user_queued_at IS NULL, v.user_queued_at, i.first_seen_at DESC, i.position
+        LIMIT 1
+      `)
+      .get({ playlistIds: JSON.stringify(playlistIds), now }) as VideoRow | undefined;
+  }
+
+  /** Waiting videos whose retry time has come. */
+  dueWaiting(now: string): VideoRow[] {
+    return this.db
+      .prepare("SELECT * FROM youtube_videos WHERE status = 'waiting' AND (retry_after IS NULL OR retry_after <= ?) ORDER BY video_id")
+      .all(now) as VideoRow[];
+  }
+
+  getCooldown(): Cooldown | null {
+    const row = this.db.prepare("SELECT value FROM youtube_sync_state WHERE key = ?").get(COOLDOWN_KEY) as { value: string } | undefined;
+    return row ? (JSON.parse(row.value) as Cooldown) : null;
+  }
+
+  /** The cooldown still in force at `now`, if any. */
+  activeCooldown(now: Date): Cooldown | null {
+    const cooldown = this.getCooldown();
+    return cooldown && Date.parse(cooldown.until) > now.getTime() ? cooldown : null;
+  }
+
+  /** Pauses the lane for an hour, doubling with each strike since the last success, up to a day. */
+  startCooldown(cause: CooldownCause, now: Date): Cooldown {
+    const strikes = (this.getCooldown()?.strikes ?? 0) + 1;
+    const ms = Math.min(COOLDOWN_MAX_MS, COOLDOWN_BASE_MS * 2 ** (strikes - 1));
+    const cooldown: Cooldown = { until: new Date(now.getTime() + ms).toISOString(), cause, strikes };
+    this.db
+      .prepare("INSERT INTO youtube_sync_state (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+      .run(COOLDOWN_KEY, JSON.stringify(cooldown));
+    return cooldown;
+  }
+
+  /** A successful download ends the strike count. */
+  clearCooldown(): void {
+    this.db.prepare("DELETE FROM youtube_sync_state WHERE key = ?").run(COOLDOWN_KEY);
   }
 
   /** Videos in playlist order, removed members included. */
