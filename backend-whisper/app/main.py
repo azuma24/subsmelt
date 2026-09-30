@@ -13,6 +13,7 @@ import tempfile
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ValidationError
+from starlette.concurrency import run_in_threadpool
 
 from .gpu import cuda_device_count, gpu_info, total_free_vram_mb
 from .model_cache import describe_model_cache
@@ -625,7 +626,8 @@ async def transcribe_stream(
     raises ``TranscriptionCancelled`` — the temp ffmpeg dir is cleaned up by the
     generator's context manager either way.
     """
-    input_path = validate_transcribe_request(request)
+    # Preflight probes disk, RAM and (on CUDA) nvidia-smi; keep it off the loop.
+    input_path = await run_in_threadpool(validate_transcribe_request, request)
 
     cancel_event = asyncio.Event()
 
@@ -843,10 +845,12 @@ async def transcribe_upload_stream(
     tmp_ctx = tempfile.TemporaryDirectory(prefix="subsmelt-upload-")
     tmp_dir = Path(tmp_ctx.name)
     try:
-        saved = _save_upload(file, tmp_dir)
+        # Copying a multi-GB upload and the preflight probes are blocking work;
+        # run them on the threadpool so the loop keeps serving other clients.
+        saved = await run_in_threadpool(_save_upload, file, tmp_dir)
         upload_size_mb = int(saved.stat().st_size / 1024 / 1024)
         parsed = parse_upload_request(request, str(saved))
-        validate_upload_request(parsed, upload_size_mb, tmp_dir)
+        await run_in_threadpool(validate_upload_request, parsed, upload_size_mb, tmp_dir)
     except BaseException:
         tmp_ctx.cleanup()
         raise
@@ -921,12 +925,11 @@ async def transcribe_url_stream(
 
     tmp_ctx = tempfile.TemporaryDirectory(prefix="subsmelt-url-")
     tmp_dir = Path(tmp_ctx.name)
-    loop = asyncio.get_running_loop()
     try:
         try:
             # yt-dlp is blocking — run it off the event loop so this async worker
             # keeps serving health/cancel/progress while a large URL downloads.
-            saved = await loop.run_in_executor(None, download_url, url, tmp_dir)
+            saved = await run_in_threadpool(download_url, url, tmp_dir)
         except UrlFetchUnavailableError as exc:
             raise HTTPException(status_code=400, detail={"code": "url_fetch_unavailable", "message": str(exc)}) from exc
         except UrlFetchError as exc:
@@ -934,7 +937,7 @@ async def transcribe_url_stream(
         size_mb = int(saved.stat().st_size / 1024 / 1024)
         request_json = json.dumps({k: v for k, v in payload.items() if k != "url"})
         parsed = parse_upload_request(request_json, str(saved))
-        validate_upload_request(parsed, size_mb, tmp_dir)
+        await run_in_threadpool(validate_upload_request, parsed, size_mb, tmp_dir)
     except BaseException:
         tmp_ctx.cleanup()
         raise
