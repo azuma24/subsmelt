@@ -3,7 +3,7 @@ import type { DashboardTab, DashboardTabItem } from "./tabs";
 import { Accordion, ActionButton, Tabs } from "../../ui/primitives";
 
 
-const chipClass = "shrink-0 whitespace-nowrap";
+const chipClass = "w-full md:w-auto";
 
 interface QueueToolbarProps {
   dashboardTabs: DashboardTabItem[];
@@ -84,9 +84,9 @@ export function QueueToolbar({
               the list were pure noise when nothing was actionable. */}
           {(visiblePendingIds.length > 0 || visibleErrorIds.length > 0 || visibleRetranslatableIds.length > 0 || finishedJobCount > 0) && (
             <div
-              // Phones get one row that scrolls sideways instead of three
-              // stacked rows of half-empty wrapping; desktop wraps as before.
-              className="-mx-3.5 flex items-center gap-2 overflow-x-auto px-3.5 md:mx-0 md:flex-wrap md:overflow-visible md:px-0"
+              // Phones get an even two-column grid so every action stays
+              // visible without ragged wrapping; desktop wraps as before.
+              className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:items-center"
               role="group"
               aria-label={t("dashboard.bulkActionsLabel")}
             >
