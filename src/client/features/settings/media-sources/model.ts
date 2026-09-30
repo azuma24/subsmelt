@@ -58,11 +58,22 @@ export const parseDirectoryRules = (raw: string): DirectoryRule[] => {
 
 export const serializeDirectoryRules = (rules: DirectoryRule[]): string => JSON.stringify(rules);
 
-export const parseFolders = (raw: string): string[] =>
-  raw.split(",").map((f) => f.trim()).filter(Boolean);
+// Stored as a JSON array so a folder name may contain a comma. Settings
+// written before 0.6.0 hold a comma-separated list, which still reads.
+export const parseFolders = (raw: string): string[] => {
+  if (raw.trim().startsWith("[")) {
+    try {
+      const value = JSON.parse(raw);
+      if (Array.isArray(value)) return value.filter((f): f is string => typeof f === "string" && f.trim().length > 0);
+    } catch {
+      /* not JSON after all; read it as the legacy list */
+    }
+  }
+  return raw.split(",").map((f) => f.trim()).filter(Boolean);
+};
 
 export const serializeFolders = (folders: string[]): string =>
-  Array.from(new Set(folders)).filter(Boolean).join(",");
+  JSON.stringify(Array.from(new Set(folders)).filter(Boolean));
 
 export const parseProfiles = (raw: string): ScanProfile[] => {
   try {
