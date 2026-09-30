@@ -681,8 +681,7 @@
       "languageEnglish": "İngilizce",
       "languageJapanese": "Japonca",
       "languageChinese": "Çince",
-      "languageKorean": "Korece",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Korece"
     },
     "connections": {
       "mode": "Bağlantı modu",
@@ -1027,7 +1026,6 @@
     "selectFolder": "{{name}} içindeki tüm dosyaları seç",
     "transcribingNow": "şu anda yazıya dökülüyor",
     "selectedSummary": "{{count}} dosya seçildi",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "Model listesi yüklenemedi, bu yüzden transkripsiyon başlatılamıyor."
   },
   "transcriptionHistory": {

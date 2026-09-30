@@ -681,8 +681,7 @@
       "languageEnglish": "Αγγλικά",
       "languageJapanese": "Ιαπωνικά",
       "languageChinese": "Κινεζικά",
-      "languageKorean": "Κορεατικά",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Κορεατικά"
     },
     "connections": {
       "mode": "Λειτουργία σύνδεσης",
@@ -1027,7 +1026,6 @@
     "selectFolder": "Επιλογή όλων των αρχείων στο {{name}}",
     "transcribingNow": "γίνεται μεταγραφή τώρα",
     "selectedSummary": "Επιλέχθηκαν {{count}} αρχεία",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "Δεν ήταν δυνατή η φόρτωση της λίστας μοντέλων, οπότε η μεταγραφή δεν μπορεί να ξεκινήσει."
   },
   "transcriptionHistory": {

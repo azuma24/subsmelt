@@ -681,8 +681,7 @@
       "languageEnglish": "انگلیسی",
       "languageJapanese": "ژاپنی",
       "languageChinese": "چینی",
-      "languageKorean": "کره‌ای",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "کره‌ای"
     },
     "connections": {
       "mode": "حالت اتصال",
@@ -1027,7 +1026,6 @@
     "selectFolder": "انتخاب همه فایل‌های {{name}}",
     "transcribingNow": "در حال رونویسی",
     "selectedSummary": "{{count}} فایل انتخاب شد",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "بارگیری فهرست مدل‌ها ممکن نشد، بنابراین رونویسی را نمی‌توان شروع کرد."
   },
   "transcriptionHistory": {

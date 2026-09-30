@@ -681,8 +681,7 @@
       "languageEnglish": "Английский",
       "languageJapanese": "Японский",
       "languageChinese": "Китайский",
-      "languageKorean": "Корейский",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Корейский"
     },
     "connections": {
       "mode": "Режим подключения",
@@ -1027,7 +1026,6 @@
     "selectFolder": "Выбрать все файлы в {{name}}",
     "transcribingNow": "идёт расшифровка",
     "selectedSummary": "Выбрано файлов: {{count}}",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "Не удалось загрузить список моделей, поэтому транскрипцию нельзя запустить."
   },
   "transcriptionHistory": {

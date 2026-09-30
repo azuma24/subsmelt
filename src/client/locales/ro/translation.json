@@ -681,8 +681,7 @@
       "languageEnglish": "Engleză",
       "languageJapanese": "Japoneză",
       "languageChinese": "Chineză",
-      "languageKorean": "Coreeană",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Coreeană"
     },
     "connections": {
       "mode": "Mod conexiune",
@@ -1027,7 +1026,6 @@
     "selectFolder": "Selectează toate fișierele din {{name}}",
     "transcribingNow": "se transcrie acum",
     "selectedSummary": "{{count}} fișier(e) selectate",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "Lista de modele nu a putut fi încărcată, așa că transcrierea nu poate porni."
   },
   "transcriptionHistory": {

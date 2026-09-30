@@ -681,8 +681,7 @@
       "languageEnglish": "영어",
       "languageJapanese": "일본어",
       "languageChinese": "중국어",
-      "languageKorean": "한국어",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "한국어"
     },
     "connections": {
       "mode": "연결 모드",
@@ -1027,7 +1026,6 @@
     "selectFolder": "{{name}}의 모든 파일 선택",
     "transcribingNow": "전사 중",
     "selectedSummary": "{{count}}개 파일 선택됨",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "모델 목록을 불러오지 못해 전사를 시작할 수 없습니다."
   },
   "transcriptionHistory": {

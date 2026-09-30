@@ -681,8 +681,7 @@
       "languageEnglish": "ஆங்கிலம்",
       "languageJapanese": "ஜப்பானியம்",
       "languageChinese": "சீனம்",
-      "languageKorean": "கொரியம்",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "கொரியம்"
     },
     "connections": {
       "mode": "இணைப்பு முறை",
@@ -1027,7 +1026,6 @@
     "selectFolder": "{{name}} இல் உள்ள அனைத்து கோப்புகளையும் தேர்ந்தெடு",
     "transcribingNow": "இப்போது படியெடுக்கப்படுகிறது",
     "selectedSummary": "{{count}} கோப்புகள் தேர்ந்தெடுக்கப்பட்டன",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "மாதிரிப் பட்டியலை ஏற்ற முடியவில்லை, எனவே படியெடுத்தலைத் தொடங்க முடியாது."
   },
   "transcriptionHistory": {

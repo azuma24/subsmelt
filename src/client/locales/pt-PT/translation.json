@@ -681,8 +681,7 @@
       "languageEnglish": "Inglês",
       "languageJapanese": "Japonês",
       "languageChinese": "Chinês",
-      "languageKorean": "Coreano",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Coreano"
     },
     "connections": {
       "mode": "Modo de ligação",
@@ -1027,7 +1026,6 @@
     "selectFolder": "Selecionar todos os ficheiros em {{name}}",
     "transcribingNow": "a transcrever agora",
     "selectedSummary": "{{count}} ficheiro(s) selecionado(s)",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "Não foi possível carregar a lista de modelos, pelo que não é possível iniciar a transcrição."
   },
   "transcriptionHistory": {

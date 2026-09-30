@@ -681,8 +681,7 @@
       "languageEnglish": "अंग्रेज़ी",
       "languageJapanese": "जापानी",
       "languageChinese": "चीनी",
-      "languageKorean": "कोरियाई",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "कोरियाई"
     },
     "connections": {
       "mode": "कनेक्शन मोड",
@@ -1027,7 +1026,6 @@
     "selectFolder": "{{name}} की सभी फ़ाइलें चुनें",
     "transcribingNow": "अभी ट्रांसक्राइब हो रहा है",
     "selectedSummary": "{{count}} फ़ाइलें चुनी गईं",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "मॉडल सूची लोड नहीं हो सकी, इसलिए ट्रांसक्रिप्शन शुरू नहीं हो सकता।"
   },
   "transcriptionHistory": {

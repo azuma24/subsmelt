@@ -681,8 +681,7 @@
       "languageEnglish": "Engelska",
       "languageJapanese": "Japanska",
       "languageChinese": "Kinesiska",
-      "languageKorean": "Koreanska",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Koreanska"
     },
     "connections": {
       "mode": "Anslutningsläge",
@@ -1027,7 +1026,6 @@
     "selectFolder": "Markera alla filer i {{name}}",
     "transcribingNow": "transkriberas nu",
     "selectedSummary": "{{count}} fil(er) markerade",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "Modellistan kunde inte läsas in, så transkriberingen kan inte starta."
   },
   "transcriptionHistory": {

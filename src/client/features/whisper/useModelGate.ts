@@ -29,8 +29,8 @@ export interface UseModelGateResult {
   /**
    * Prompts the user to confirm a model download, then runs it.
    * Returns true when the model is ready (either was already downloaded, or
-   * download confirmed+completed). Returns false when the user declines or
-   * the models list hasn't loaded yet.
+   * download confirmed+completed). Returns false when the user declines, the
+   * models list hasn't loaded yet, or the model's runtime is missing.
    */
   ensureModelDownloaded: (modelId: string) => Promise<boolean>;
   /**
@@ -83,6 +83,12 @@ export function useModelGate({
   }, [whisperModels, t, confirm, addToast, downloadModel]);
 
   const ensureModelDownloaded = useCallback(async (modelId: string): Promise<boolean> => {
+    const entry = whisperModels.find((m) => m.id === modelId);
+    if (entry?.available === false) {
+      const reason = entry.unavailableReason ?? t("settings.models.runtimeMissing");
+      addToast(t("stt.modelUnavailable", { model: entry.label ?? modelId, reason }), "error");
+      return false;
+    }
     const downloaded = isModelDownloaded(modelId);
 
     // Models list not loaded — don't let an unknown state slip through, and
@@ -101,7 +107,7 @@ export function useModelGate({
     }
 
     return confirmAndDownload(modelId);
-  }, [isModelDownloaded, modelsQuery.isLoading, modelsQuery.isError, modelDownloads, addToast, t, confirmAndDownload]);
+  }, [whisperModels, isModelDownloaded, modelsQuery.isLoading, modelsQuery.isError, modelDownloads, addToast, t, confirmAndDownload]);
 
   // Handle model picker selection: if the chosen model is not downloaded,
   // prompt the user before committing the selection.

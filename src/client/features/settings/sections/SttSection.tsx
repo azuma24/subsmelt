@@ -8,25 +8,9 @@ import { TranscriptionReadinessPanel } from "../TranscriptionReadinessPanel";
 import { PathMappingFields } from "./PathMappingFields";
 import { RawConfigDrawer } from "./RawConfigDrawer";
 import { SttAdvancedFields } from "./SttAdvancedFields";
+import { descriptorsFrom, findDescriptor } from "../../whisper/whisper-shared";
+import { LanguageSupportWarning, ModelPicker } from "../../whisper/ModelPicker";
 import { ToggleRow, labelCls, selectCls } from "./shared";
-
-// Model options are driven by the backend's advertised capabilities.models so
-// the dropdown always matches what the server (and the model manager) support.
-// Falls back to the full known set before health loads, and always includes the
-// currently-selected model so a saved value (e.g. large-v3) can't be dropped.
-const STT_MODEL_FALLBACK = ["tiny", "base", "small", "medium", "large-v1", "large-v2", "large-v3", "distil-large-v3", "large-v3-turbo"];
-
-const STT_MODEL_LABEL_KEYS: Record<string, string> = {
-  tiny: "settings.transcription.modelTiny",
-  base: "settings.transcription.modelBase",
-  small: "settings.transcription.modelSmall",
-  medium: "settings.transcription.modelMedium",
-  "large-v1": "settings.transcription.modelLargeV1",
-  "large-v2": "settings.transcription.modelLargeV2",
-  "large-v3": "settings.transcription.modelLargeV3",
-  "distil-large-v3": "settings.transcription.modelDistilLargeV3",
-  "large-v3-turbo": "settings.transcription.modelLargeV3Turbo",
-};
 
 /** Whisper's source-language shortlist. `auto` plus the four bundled hints. */
 const STT_LANGUAGE_OPTIONS: { value: string; labelKey: string }[] = [
@@ -77,13 +61,15 @@ export function SttSection({
 }: SttSectionProps) {
   const { t } = useTranslation();
 
-  const advertisedModels = healthQuery.data?.health?.capabilities?.models;
+  // Before health loads this falls back to the known Whisper sizes; the picker
+  // always lists the saved model so a value like large-v3 is never dropped.
+  const modelDescriptors = descriptorsFrom(healthQuery.data?.health?.capabilities);
   const selectedSttModel = str(settings.transcription_model, "small");
-  const sttModelOptions = (() => {
-    const base = advertisedModels && advertisedModels.length ? [...advertisedModels] : [...STT_MODEL_FALLBACK];
-    if (!base.includes(selectedSttModel)) base.unshift(selectedSttModel);
-    return base;
-  })();
+  const selectedDescriptor = findDescriptor(modelDescriptors, selectedSttModel);
+  const selectedLanguage = str(settings.transcription_language, "auto");
+  const languageOptions = STT_LANGUAGE_OPTIONS.some((opt) => opt.value === selectedLanguage)
+    ? STT_LANGUAGE_OPTIONS
+    : [...STT_LANGUAGE_OPTIONS, { value: selectedLanguage, labelKey: "" }];
 
   return (
     <>
@@ -121,22 +107,22 @@ export function SttSection({
       <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
         <div>
           <label className={labelCls}>{t("settings.transcription.model")}</label>
-          <select aria-label={t("settings.transcription.model")} value={selectedSttModel} onChange={(e) => update("transcription_model", e.target.value)} className={selectCls}>
-            {sttModelOptions.map((m) => (
-              <option key={m} value={m}>{STT_MODEL_LABEL_KEYS[m] ? t(STT_MODEL_LABEL_KEYS[m]) : m}</option>
-            ))}
-          </select>
+          <ModelPicker
+            ariaLabel={t("settings.transcription.model")}
+            descriptors={modelDescriptors}
+            value={selectedSttModel}
+            onChange={(modelId) => update("transcription_model", modelId)}
+            className={selectCls}
+          />
         </div>
         <div>
           <label className={labelCls}>{t("settings.transcription.language")}</label>
-          <select aria-label={t("settings.transcription.language")} value={str(settings.transcription_language, "auto")} onChange={(e) => update("transcription_language", e.target.value)} className={selectCls}>
-            {STT_LANGUAGE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{t(opt.labelKey)}</option>
+          <select aria-label={t("settings.transcription.language")} value={selectedLanguage} onChange={(e) => update("transcription_language", e.target.value)} className={selectCls}>
+            {languageOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.labelKey ? t(opt.labelKey) : opt.value}</option>
             ))}
           </select>
-          {selectedSttModel.toLowerCase().includes("distil") && (
-            <p className="mt-1 text-[11px] text-[var(--yellow)]">{t("settings.transcription.englishOnlyHint")}</p>
-          )}
+          <LanguageSupportWarning model={selectedDescriptor} language={selectedLanguage} />
         </div>
         <div>
           <label className={labelCls}>{t("settings.transcription.output")}</label>
@@ -149,13 +135,13 @@ export function SttSection({
       </div>
       <TranscriptionReadinessPanel settings={settings} healthQuery={healthQuery} dirty={dirty} />
 
-      {/* Whisper model manager — proxied to the configured backend. Requires a
+      {/* Speech-to-text model manager — proxied to the configured backend. Requires a
           backend URL to be set; download progress streams over SSE. */}
       <ModelManagerPanel enabled={Boolean(str(settings.transcription_backend_url))} />
 
       <PathMappingFields settings={settings} isMobile={isMobile} update={update} />
 
-      <SttAdvancedFields settings={settings} isMobile={isMobile} update={update} />
+      <SttAdvancedFields settings={settings} isMobile={isMobile} update={update} model={selectedDescriptor} />
 
       {/* Raw config (L4) — the two STT JSON blobs, behind an explicit Save. */}
       <RawConfigDrawer settings={settings} update={update} onSave={onSave} dirty={dirty} saving={saving} />

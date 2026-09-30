@@ -681,8 +681,7 @@
       "languageEnglish": "英文",
       "languageJapanese": "日文",
       "languageChinese": "中文",
-      "languageKorean": "韓文",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "韓文"
     },
     "connections": {
       "mode": "連線模式",
@@ -1027,7 +1026,6 @@
     "selectFolder": "選取 {{name}} 中的所有檔案",
     "transcribingNow": "正在轉錄",
     "selectedSummary": "已選取 {{count}} 個檔案",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "無法載入模型清單，因此無法開始轉錄。"
   },
   "transcriptionHistory": {

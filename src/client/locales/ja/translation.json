@@ -681,8 +681,7 @@
       "languageEnglish": "英語",
       "languageJapanese": "日本語",
       "languageChinese": "中国語",
-      "languageKorean": "韓国語",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "韓国語"
     },
     "connections": {
       "mode": "接続モード",
@@ -1027,7 +1026,6 @@
     "selectFolder": "{{name}} 内のすべてのファイルを選択",
     "transcribingNow": "文字起こし中",
     "selectedSummary": "{{count}} 件のファイルを選択中",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "モデル一覧を読み込めなかったため、文字起こしを開始できません。"
   },
   "transcriptionHistory": {

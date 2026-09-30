@@ -681,8 +681,7 @@
       "languageEnglish": "อังกฤษ",
       "languageJapanese": "ญี่ปุ่น",
       "languageChinese": "จีน",
-      "languageKorean": "เกาหลี",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "เกาหลี"
     },
     "connections": {
       "mode": "โหมดการเชื่อมต่อ",
@@ -1027,7 +1026,6 @@
     "selectFolder": "เลือกไฟล์ทั้งหมดใน {{name}}",
     "transcribingNow": "กำลังถอดเสียง",
     "selectedSummary": "เลือกแล้ว {{count}} ไฟล์",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "โหลดรายการโมเดลไม่สำเร็จ จึงเริ่มการถอดเสียงไม่ได้"
   },
   "transcriptionHistory": {

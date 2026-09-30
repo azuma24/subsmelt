@@ -681,8 +681,7 @@
       "languageEnglish": "Angol",
       "languageJapanese": "Japán",
       "languageChinese": "Kínai",
-      "languageKorean": "Koreai",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Koreai"
     },
     "connections": {
       "mode": "Kapcsolati mód",
@@ -1027,7 +1026,6 @@
     "selectFolder": "Az összes fájl kijelölése itt: {{name}}",
     "transcribingNow": "éppen átírás alatt",
     "selectedSummary": "{{count}} fájl kijelölve",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "A modellek listája nem tölthető be, ezért az átírás nem indítható el."
   },
   "transcriptionHistory": {

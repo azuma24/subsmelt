@@ -681,8 +681,7 @@
       "languageEnglish": "Tiếng Anh",
       "languageJapanese": "Tiếng Nhật",
       "languageChinese": "Tiếng Trung",
-      "languageKorean": "Tiếng Hàn",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Tiếng Hàn"
     },
     "connections": {
       "mode": "Chế độ kết nối",
@@ -1027,7 +1026,6 @@
     "selectFolder": "Chọn tất cả tệp trong {{name}}",
     "transcribingNow": "đang phiên âm",
     "selectedSummary": "Đã chọn {{count}} tệp",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "Không thể tải danh sách mô hình nên chưa thể bắt đầu phiên âm."
   },
   "transcriptionHistory": {

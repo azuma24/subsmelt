@@ -681,8 +681,7 @@
       "languageEnglish": "Inggris",
       "languageJapanese": "Jepang",
       "languageChinese": "Mandarin",
-      "languageKorean": "Korea",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Korea"
     },
     "connections": {
       "mode": "Mode koneksi",
@@ -1027,7 +1026,6 @@
     "selectFolder": "Pilih semua berkas di {{name}}",
     "transcribingNow": "sedang ditranskripsi",
     "selectedSummary": "{{count}} berkas dipilih",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "Daftar model tidak dapat dimuat, sehingga transkripsi tidak dapat dimulai."
   },
   "transcriptionHistory": {

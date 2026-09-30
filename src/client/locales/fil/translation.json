@@ -681,8 +681,7 @@
       "languageEnglish": "Ingles",
       "languageJapanese": "Hapon",
       "languageChinese": "Tsino",
-      "languageKorean": "Koreano",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Koreano"
     },
     "connections": {
       "mode": "Connection mode",
@@ -1027,7 +1026,6 @@
     "selectFolder": "Piliin ang lahat ng file sa {{name}}",
     "transcribingNow": "kasalukuyang tina-transcribe",
     "selectedSummary": "{{count}} (na) file ang napili",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "Hindi ma-load ang listahan ng modelo, kaya hindi masisimulan ang transcription."
   },
   "transcriptionHistory": {

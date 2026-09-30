@@ -681,8 +681,7 @@
       "languageEnglish": "الإنجليزية",
       "languageJapanese": "اليابانية",
       "languageChinese": "الصينية",
-      "languageKorean": "الكورية",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "الكورية"
     },
     "connections": {
       "mode": "وضع الاتصال",
@@ -1027,7 +1026,6 @@
     "selectFolder": "تحديد كل الملفات في {{name}}",
     "transcribingNow": "جارٍ النسخ الآن",
     "selectedSummary": "تم تحديد {{count}} ملف",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "تعذّر تحميل قائمة النماذج، لذا لا يمكن بدء النسخ."
   },
   "transcriptionHistory": {

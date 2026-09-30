@@ -681,8 +681,7 @@
       "languageEnglish": "אנגלית",
       "languageJapanese": "יפנית",
       "languageChinese": "סינית",
-      "languageKorean": "קוריאנית",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "קוריאנית"
     },
     "connections": {
       "mode": "מצב חיבור",
@@ -1027,7 +1026,6 @@
     "selectFolder": "בחירת כל הקבצים ב-{{name}}",
     "transcribingNow": "מתמלל כעת",
     "selectedSummary": "{{count}} קבצים נבחרו",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "לא ניתן לטעון את רשימת המודלים, ולכן אי אפשר להתחיל בתמלול."
   },
   "transcriptionHistory": {

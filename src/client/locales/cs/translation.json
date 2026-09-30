@@ -681,8 +681,7 @@
       "languageEnglish": "Angličtina",
       "languageJapanese": "Japonština",
       "languageChinese": "Čínština",
-      "languageKorean": "Korejština",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Korejština"
     },
     "connections": {
       "mode": "Režim připojení",
@@ -1027,7 +1026,6 @@
     "selectFolder": "Vybrat všechny soubory v {{name}}",
     "transcribingNow": "právě se přepisuje",
     "selectedSummary": "Vybráno souborů: {{count}}",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "Seznam modelů se nepodařilo načíst, takže přepis nelze spustit."
   },
   "transcriptionHistory": {

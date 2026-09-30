@@ -1,13 +1,13 @@
 import { useTranslation } from "react-i18next";
 import { Accordion, ProgressSmall, SettingsSection } from "../../ui/primitives";
-import type { WhisperModel } from "../../types";
+import type { WhisperModelDescriptor } from "../../types";
 import type { ModelDownloadProgress } from "../../hooks";
-import { COMMON_LANGS, FORMATS, selectCls, type OutputFormat } from "./whisper-shared";
+import { COMMON_LANGS, findDescriptor, FORMATS, hidesOptions, selectCls, type OutputFormat } from "./whisper-shared";
+import { LanguageSupportWarning, ModelPicker, OptionsDecidedNote } from "./ModelPicker";
 
 export interface RunOptionsSectionProps {
   isMobile: boolean;
-  modelOptions: string[];
-  whisperModels: WhisperModel[];
+  modelDescriptors: WhisperModelDescriptor[];
   effModel: string;
   onModelChange: (modelId: string) => Promise<void>;
   isModelDownloaded: (modelId: string) => boolean | undefined;
@@ -37,29 +37,25 @@ const optionLabelCls = "flex flex-col gap-1 text-[11px] text-[var(--text-2)]";
  * Advanced disclosure. Also renders model-download progress rows.
  */
 export function RunOptionsSection({
-  isMobile, modelOptions, whisperModels, effModel, onModelChange, isModelDownloaded, modelDownloads,
+  isMobile, modelDescriptors, effModel, onModelChange, isModelDownloaded, modelDownloads,
   effLang, onLanguageChange, effFormat, onFormatChange, effDevice, onDeviceChange, deviceOptions,
   effCompute, onComputeChange, computeOptions, canDiarize, effDiarize, onDiarizeChange, hasCaps,
 }: RunOptionsSectionProps) {
   const { t } = useTranslation();
+  const selectedModel = findDescriptor(modelDescriptors, effModel);
+  const languages = COMMON_LANGS.includes(effLang) ? COMMON_LANGS : [...COMMON_LANGS, effLang];
 
   return (
     <SettingsSection title={t("whisper.runOptions")} description={t("whisper.runOptionsHint")}>
       <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
         <label className={optionLabelCls}>{t("whisper.model")}
-          <select
+          <ModelPicker
+            descriptors={modelDescriptors}
             value={effModel}
-            onChange={(e) => { void onModelChange(e.target.value); }}
+            onChange={(modelId) => { void onModelChange(modelId); }}
             className={selectCls}
-          >
-            {modelOptions.map((m) => {
-              const info = whisperModels.find((wm) => wm.id === m);
-              const notDl = info && !info.downloaded;
-              // Spell out "not downloaded" — a bare glyph plus option
-              // colouring is unreliable across browsers and cryptic.
-              return <option key={m} value={m}>{m}{notDl ? ` — ${t("settings.models.notDownloaded")}` : ""}</option>;
-            })}
-          </select>
+            isDownloaded={isModelDownloaded}
+          />
           {/* Not-downloaded badge for the currently-selected model */}
           {isModelDownloaded(effModel) === false && modelDownloads[effModel]?.active !== true && (
             <span className="text-[10px] text-[var(--yellow)]"><span aria-hidden="true">⚠ </span>{t("settings.models.notDownloaded")}</span>
@@ -67,8 +63,9 @@ export function RunOptionsSection({
         </label>
         <label className={optionLabelCls}>{t("whisper.language")}
           <select value={effLang} onChange={(e) => onLanguageChange(e.target.value)} className={selectCls}>
-            {COMMON_LANGS.map((l) => <option key={l} value={l}>{l}</option>)}
+            {languages.map((l) => <option key={l} value={l}>{l}</option>)}
           </select>
+          <LanguageSupportWarning model={selectedModel} language={effLang} />
         </label>
         <label className={optionLabelCls}>{t("whisper.format")}
           <select value={effFormat} onChange={(e) => onFormatChange(e.target.value)} className={selectCls}>
@@ -76,22 +73,22 @@ export function RunOptionsSection({
           </select>
         </label>
       </div>
-      {effModel.toLowerCase().includes("distil") && (
-        <p className="text-[11px] text-[var(--yellow)]">{t("whisper.englishOnlyHint")}</p>
-      )}
 
       <Accordion title={t("whisper.advancedOptions")}>
+        {hidesOptions(selectedModel) && <div className="mb-3"><OptionsDecidedNote model={selectedModel} /></div>}
         <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
           <label className={optionLabelCls}>{t("whisper.device")}
             <select value={effDevice} onChange={(e) => onDeviceChange(e.target.value)} className={selectCls}>
               {deviceOptions.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
           </label>
-          <label className={optionLabelCls}>{t("whisper.compute")}
-            <select value={effCompute} onChange={(e) => onComputeChange(e.target.value)} className={selectCls}>
-              {computeOptions.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </label>
+          {selectedModel.supports.computeType && (
+            <label className={optionLabelCls}>{t("whisper.compute")}
+              <select value={effCompute} onChange={(e) => onComputeChange(e.target.value)} className={selectCls}>
+                {computeOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+          )}
           {canDiarize ? (
             <label className="flex items-center gap-2 self-end pb-2 text-[11px] text-[var(--text-2)]">
               <input type="checkbox" checked={effDiarize} onChange={(e) => onDiarizeChange(e.target.checked)} className="h-4 w-4 accent-[var(--accent)]" />

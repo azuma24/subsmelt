@@ -681,8 +681,7 @@
       "languageEnglish": "Engels",
       "languageJapanese": "Japans",
       "languageChinese": "Chinees",
-      "languageKorean": "Koreaans",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Koreaans"
     },
     "connections": {
       "mode": "Verbindingsmodus",
@@ -1027,7 +1026,6 @@
     "selectFolder": "Alle bestanden in {{name}} selecteren",
     "transcribingNow": "wordt nu getranscribeerd",
     "selectedSummary": "{{count}} bestand(en) geselecteerd",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "De modellijst kon niet worden geladen, dus de transcriptie kan niet starten."
   },
   "transcriptionHistory": {
