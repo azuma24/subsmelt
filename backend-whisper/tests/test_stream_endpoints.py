@@ -5,6 +5,8 @@ import asyncio
 import io
 import os
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -95,6 +97,57 @@ class PreStreamWorkOffLoopTests(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn('"type": "result"', resp.text)
         self.assertEqual(self.seen, {"validate": False})
+
+
+@unittest.skipIf(IMPORT_ERROR is not None, f"backend optional dependencies unavailable: {IMPORT_ERROR}")
+class DisconnectMidStreamTests(unittest.TestCase):
+    def test_disconnect_mid_step_stops_the_worker_and_runs_cleanup(self):
+        from app.transcribe import TranscriptionCancelled
+
+        cleaned = threading.Event()
+        seen: dict = {}
+
+        def slow_generator(is_cancelled):
+            try:
+                for step in range(40):
+                    time.sleep(0.05)  # one blocking decode step
+                    if is_cancelled():
+                        seen["cancelled_at"] = step
+                        raise TranscriptionCancelled("cancelled")
+                    yield {"type": "progress", "step": step}
+            finally:
+                seen["generator_closed"] = True
+
+        async def client_that_leaves_after_first_line():
+            cancel_event = asyncio.Event()
+            stream = main_module._ndjson_stream(
+                slow_generator(cancel_event.is_set), cancel_event, cleanup=cleaned.set
+            )
+            first = await stream.__anext__()
+            await stream.aclose()  # the client is gone while a step is executing
+            return first
+
+        first = asyncio.run(client_that_leaves_after_first_line())
+        self.assertEqual(first, b'{"type": "progress", "step": 0}\n')
+        self.assertTrue(cleaned.wait(2.0), "cleanup never ran after the disconnect")
+        self.assertTrue(seen["generator_closed"])
+        self.assertLess(seen["cancelled_at"], 5)
+
+    def test_worker_error_is_sent_as_a_terminal_error_line_then_cleanup(self):
+        cleaned = threading.Event()
+
+        def failing_generator():
+            yield {"type": "progress"}
+            raise RuntimeError("decoder exploded")
+
+        async def read_all():
+            cancel_event = asyncio.Event()
+            stream = main_module._ndjson_stream(failing_generator(), cancel_event, cleanup=cleaned.set)
+            return [line async for line in stream]
+
+        lines = asyncio.run(read_all())
+        self.assertEqual(lines, [b'{"type": "progress"}\n', b'{"type": "error", "error": "decoder exploded"}\n'])
+        self.assertTrue(cleaned.wait(2.0))
 
 
 if __name__ == "__main__":

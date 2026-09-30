@@ -5,7 +5,7 @@ import json
 import os
 import secrets
 from pathlib import Path
-from typing import AsyncIterator
+from typing import AsyncIterator, Callable, Iterator
 
 import shutil
 import tempfile
@@ -368,6 +368,57 @@ class ModelDownloadRequest(BaseModel):
     model: str
 
 
+async def _ndjson_stream(
+    gen: Iterator[dict],
+    cancel_event: asyncio.Event,
+    cleanup: Callable[[], None] | None = None,
+) -> AsyncIterator[bytes]:
+    """Drive a blocking event generator on a worker thread, yielding NDJSON lines.
+
+    The worker thread owns the generator's whole lifetime: it iterates, closes it
+    and runs ``cleanup`` on every exit path. The loop side only forwards items;
+    when the client disconnects it sets ``cancel_event`` and leaves, and the
+    generator's own ``is_cancelled`` check ends the work at its next step.
+    Closing the generator from the loop while a step was executing on the thread
+    raised ``ValueError: generator already executing`` and skipped cleanup.
+    """
+    loop = asyncio.get_running_loop()
+    queue: asyncio.Queue = asyncio.Queue()
+    done = object()
+
+    def post(item: object) -> None:
+        try:
+            loop.call_soon_threadsafe(queue.put_nowait, item)
+        except RuntimeError:  # loop closed (server shutdown): nobody is listening
+            pass
+
+    def drive() -> None:
+        try:
+            for item in gen:
+                post(item)
+        except TranscriptionCancelled:
+            pass  # client went away; nothing left to send
+        except Exception as exc:  # noqa: BLE001 - surface as a terminal error line
+            post({"type": "error", "error": str(exc)})
+        finally:
+            try:
+                gen.close()
+                if cleanup is not None:
+                    cleanup()
+            finally:
+                post(done)
+
+    loop.run_in_executor(None, drive)
+    try:
+        while True:
+            item = await queue.get()
+            if item is done:
+                break
+            yield (json.dumps(item) + "\n").encode("utf-8")
+    finally:
+        cancel_event.set()
+
+
 @app.post("/models/download")
 async def models_download(
     request: ModelDownloadRequest,
@@ -379,7 +430,8 @@ async def models_download(
     ``progress`` lines and a terminal ``result``/``error`` line. Idempotent: an
     already-present model yields an immediate ``result``. The blocking
     ``snapshot_download`` runs on a worker thread feeding a queue, so the event
-    loop stays free (mirrors ``/transcribe/stream``).
+    loop stays free (mirrors ``/transcribe/stream``). A client disconnect does
+    not abort the download; it finishes on the worker thread.
     """
     try:
         normalize_model(request.model)
@@ -389,29 +441,8 @@ async def models_download(
             detail={"code": "unknown_model", "model": request.model, "message": str(exc)},
         ) from exc
 
-    async def ndjson_stream() -> AsyncIterator[bytes]:
-        loop = asyncio.get_running_loop()
-        gen = download_model_events(request.model)
-        sentinel = object()
-
-        def next_item():
-            try:
-                return next(gen)
-            except StopIteration:
-                return sentinel
-
-        try:
-            while True:
-                item = await loop.run_in_executor(None, next_item)
-                if item is sentinel:
-                    break
-                yield (json.dumps(item) + "\n").encode("utf-8")
-        except Exception as exc:  # noqa: BLE001 - surface as a terminal error line
-            yield (json.dumps({"type": "error", "error": str(exc)}) + "\n").encode("utf-8")
-        finally:
-            gen.close()
-
-    return StreamingResponse(ndjson_stream(), media_type="application/x-ndjson")
+    stream = _ndjson_stream(download_model_events(request.model), asyncio.Event())
+    return StreamingResponse(stream, media_type="application/x-ndjson")
 
 
 @app.delete("/models/{model}")
@@ -610,7 +641,6 @@ def transcribe(request: TranscribeRequest, _auth: None = Depends(require_token))
 @app.post("/transcribe/stream")
 async def transcribe_stream(
     request: TranscribeRequest,
-    http_request: Request,
     _auth: None = Depends(require_token),
 ) -> StreamingResponse:
     """Streaming transcription that emits NDJSON progress lines.
@@ -620,67 +650,20 @@ async def transcribe_stream(
     each line is a JSON object: ``progress`` lines while segments are processed,
     then a terminal ``result`` or ``error`` line.
 
-    Cancellation: the blocking faster-whisper generator runs on a worker thread.
-    A cooperative ``cancel_event`` is set when the client disconnects (detected
-    via ``http_request.is_disconnected()``), which stops segment iteration and
-    raises ``TranscriptionCancelled`` — the temp ffmpeg dir is cleaned up by the
-    generator's context manager either way.
+    Cancellation: the blocking faster-whisper generator runs on a worker thread
+    (see ``_ndjson_stream``). A client disconnect sets ``cancel_event``, which
+    stops segment iteration and raises ``TranscriptionCancelled``; the temp
+    ffmpeg dir is cleaned up by the generator's context manager either way.
     """
     # Preflight probes disk, RAM and (on CUDA) nvidia-smi; keep it off the loop.
     input_path = await run_in_threadpool(validate_transcribe_request, request)
 
     cancel_event = asyncio.Event()
-
-    def is_cancelled() -> bool:
-        return cancel_event.is_set()
-
-    def build_generator():
-        if USE_FAKE_TRANSCRIBE:
-            return fake_transcribe_streaming_for_tests(input_path, request, is_cancelled)
-        return run_faster_whisper_streaming(request, input_path, is_cancelled)
-
-    async def ndjson_stream() -> AsyncIterator[bytes]:
-        loop = asyncio.get_running_loop()
-        gen = build_generator()
-
-        async def watch_disconnect() -> None:
-            try:
-                while not cancel_event.is_set():
-                    if await http_request.is_disconnected():
-                        cancel_event.set()
-                        return
-                    await asyncio.sleep(0.5)
-            except asyncio.CancelledError:  # pragma: no cover - shutdown path
-                pass
-
-        watcher = asyncio.create_task(watch_disconnect())
-        sentinel = object()
-
-        def next_item():
-            try:
-                return next(gen)
-            except StopIteration:
-                return sentinel
-
-        try:
-            while True:
-                # Run each blocking generator step on a worker thread so the
-                # event loop stays free to detect client disconnects.
-                item = await loop.run_in_executor(None, next_item)
-                if item is sentinel:
-                    break
-                yield (json.dumps(item) + "\n").encode("utf-8")
-        except TranscriptionCancelled:
-            # Client went away; generator already cleaned up. Nothing left to send.
-            return
-        except Exception as exc:  # noqa: BLE001 - surface as a terminal error line
-            yield (json.dumps({"type": "error", "error": str(exc)}) + "\n").encode("utf-8")
-        finally:
-            cancel_event.set()
-            watcher.cancel()
-            gen.close()
-
-    return StreamingResponse(ndjson_stream(), media_type="application/x-ndjson")
+    if USE_FAKE_TRANSCRIBE:
+        gen = fake_transcribe_streaming_for_tests(input_path, request, cancel_event.is_set)
+    else:
+        gen = run_faster_whisper_streaming(request, input_path, cancel_event.is_set)
+    return StreamingResponse(_ndjson_stream(gen, cancel_event), media_type="application/x-ndjson")
 
 
 # ===========================================================================
@@ -829,9 +812,20 @@ def transcribe_upload(
         return UploadTranscribeResponse(**result)
 
 
+def _upload_stream_response(saved: Path, parsed: TranscribeRequest, tmp_ctx: tempfile.TemporaryDirectory) -> StreamingResponse:
+    """Stream an upload-mode transcription; ``tmp_ctx`` is removed when it ends,
+    including on a client disconnect."""
+    cancel_event = asyncio.Event()
+    if USE_FAKE_TRANSCRIBE:
+        gen = fake_transcribe_upload_streaming_for_tests(saved, parsed, cancel_event.is_set)
+    else:
+        gen = run_faster_whisper_upload_streaming(parsed, saved, cancel_event.is_set)
+    stream = _ndjson_stream(gen, cancel_event, cleanup=tmp_ctx.cleanup)
+    return StreamingResponse(stream, media_type="application/x-ndjson")
+
+
 @app.post("/transcribe/upload/stream")
 async def transcribe_upload_stream(
-    http_request: Request,
     file: UploadFile = File(...),
     request: str = Form(...),
     _auth: None = Depends(require_token),
@@ -854,62 +848,11 @@ async def transcribe_upload_stream(
     except BaseException:
         tmp_ctx.cleanup()
         raise
-
-    cancel_event = asyncio.Event()
-
-    def is_cancelled() -> bool:
-        return cancel_event.is_set()
-
-    def build_generator():
-        if USE_FAKE_TRANSCRIBE:
-            return fake_transcribe_upload_streaming_for_tests(saved, parsed, is_cancelled)
-        return run_faster_whisper_upload_streaming(parsed, saved, is_cancelled)
-
-    async def ndjson_stream() -> AsyncIterator[bytes]:
-        loop = asyncio.get_running_loop()
-        gen = build_generator()
-
-        async def watch_disconnect() -> None:
-            try:
-                while not cancel_event.is_set():
-                    if await http_request.is_disconnected():
-                        cancel_event.set()
-                        return
-                    await asyncio.sleep(0.5)
-            except asyncio.CancelledError:  # pragma: no cover - shutdown path
-                pass
-
-        watcher = asyncio.create_task(watch_disconnect())
-        sentinel = object()
-
-        def next_item():
-            try:
-                return next(gen)
-            except StopIteration:
-                return sentinel
-
-        try:
-            while True:
-                item = await loop.run_in_executor(None, next_item)
-                if item is sentinel:
-                    break
-                yield (json.dumps(item) + "\n").encode("utf-8")
-        except TranscriptionCancelled:
-            return
-        except Exception as exc:  # noqa: BLE001 - surface as a terminal error line
-            yield (json.dumps({"type": "error", "error": str(exc)}) + "\n").encode("utf-8")
-        finally:
-            cancel_event.set()
-            watcher.cancel()
-            gen.close()
-            tmp_ctx.cleanup()
-
-    return StreamingResponse(ndjson_stream(), media_type="application/x-ndjson")
+    return _upload_stream_response(saved, parsed, tmp_ctx)
 
 
 @app.post("/transcribe/url/stream")
 async def transcribe_url_stream(
-    http_request: Request,
     payload: dict,
     _auth: None = Depends(require_token),
 ) -> StreamingResponse:
@@ -941,54 +884,4 @@ async def transcribe_url_stream(
     except BaseException:
         tmp_ctx.cleanup()
         raise
-
-    cancel_event = asyncio.Event()
-
-    def is_cancelled() -> bool:
-        return cancel_event.is_set()
-
-    def build_generator():
-        if USE_FAKE_TRANSCRIBE:
-            return fake_transcribe_upload_streaming_for_tests(saved, parsed, is_cancelled)
-        return run_faster_whisper_upload_streaming(parsed, saved, is_cancelled)
-
-    async def ndjson_stream() -> AsyncIterator[bytes]:
-        loop = asyncio.get_running_loop()
-        gen = build_generator()
-
-        async def watch_disconnect() -> None:
-            try:
-                while not cancel_event.is_set():
-                    if await http_request.is_disconnected():
-                        cancel_event.set()
-                        return
-                    await asyncio.sleep(0.5)
-            except asyncio.CancelledError:  # pragma: no cover - shutdown path
-                pass
-
-        watcher = asyncio.create_task(watch_disconnect())
-        sentinel = object()
-
-        def next_item():
-            try:
-                return next(gen)
-            except StopIteration:
-                return sentinel
-
-        try:
-            while True:
-                item = await loop.run_in_executor(None, next_item)
-                if item is sentinel:
-                    break
-                yield (json.dumps(item) + "\n").encode("utf-8")
-        except TranscriptionCancelled:
-            return
-        except Exception as exc:  # noqa: BLE001 - surface as a terminal error line
-            yield (json.dumps({"type": "error", "error": str(exc)}) + "\n").encode("utf-8")
-        finally:
-            cancel_event.set()
-            watcher.cancel()
-            gen.close()
-            tmp_ctx.cleanup()
-
-    return StreamingResponse(ndjson_stream(), media_type="application/x-ndjson")
+    return _upload_stream_response(saved, parsed, tmp_ctx)
