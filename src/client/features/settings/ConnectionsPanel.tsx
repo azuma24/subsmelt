@@ -108,6 +108,9 @@ export function ConnectionsPanel({ settings, update, addToast, isMobile }: Conne
     setModelsByConn((m) => ({ ...m, [id]: [] }));
   };
 
+  // A saved connection's key comes back redacted, so the client cannot resend
+  // it. `connectionId` lets the server use the stored key when the provider and
+  // endpoint still match; a freshly typed key is still sent and wins.
   const fetchModels = async (c: LlmConnection) => {
     setLoadingByConn((s) => ({ ...s, [c.id]: true }));
     try {
@@ -119,6 +122,7 @@ export function ConnectionsPanel({ settings, update, addToast, isMobile }: Conne
         method: "POST",
         body: JSON.stringify({
           provider: c.provider,
+          connectionId: c.id,
           ...(c.apiKey && c.apiKey !== REDACTED_SECRET ? { key: c.apiKey } : {}),
           ...(c.provider === "local" && c.endpoint ? { endpoint: c.endpoint } : {}),
         }),
@@ -137,6 +141,7 @@ export function ConnectionsPanel({ settings, update, addToast, isMobile }: Conne
     try {
       const result = await api.testConnection({
         provider: c.provider,
+        connectionId: c.id,
         ...(c.apiKey !== REDACTED_SECRET ? { apiKey: c.apiKey } : {}),
         model: c.model,
         endpoint: c.endpoint,
