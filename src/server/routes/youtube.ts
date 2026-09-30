@@ -23,7 +23,8 @@ import { isPlaylistId, parsePlaylistInput } from "../youtube/urls.js";
 import { ffmpegVersion, resolveYtdlpBin, updateYtdlp, ytdlpVersion } from "../youtube/ytdlp.js";
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
-const today = () => new Date().toISOString().slice(0, 10);
+// A day ahead of UTC, so a user east of Greenwich can pick the month that has already started for them.
+const today = () => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
 const NO_KEY_ERROR = "Added since needs a YouTube Data API key in Settings";
 
 function notesFolderStatus() {
@@ -191,7 +192,8 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore): void {
     if (backfill.value.kind === "added_since" && !getSetting("youtube_api_key")) return res.status(400).json({ error: NO_KEY_ERROR });
     try {
       const change = await onYoutubeLane(() => changeBackfill(store, playlist, backfill.value, liveSyncDeps()));
-      savePlaylist({ ...(findPlaylist(playlist.id) ?? playlist), backfill: backfill.value });
+      const current = findPlaylist(playlist.id);
+      if (current) savePlaylist({ ...current, backfill: backfill.value });
       logger.info("youtube", `Changed backfill of ${playlist.title}: ${change.released} released, ${change.skipped} skipped`);
       broadcast("youtube:playlist", { playlistId: playlist.id });
       res.json({ ok: true, ...change });

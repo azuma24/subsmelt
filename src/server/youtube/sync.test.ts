@@ -211,3 +211,18 @@ test("changing the backfill releases filtered videos and never touches user skip
   assert.deepEqual(back, { kept: 0, released: 0, skipped: 1 });
   assert.equal(store.getVideo("BHPDsGVciDk")?.status, "skipped");
 });
+
+test("following again re-applies the new backfill to videos still waiting or filtered out", async () => {
+  const store = new YoutubeStore(new Database(":memory:"));
+  const listing = parseFlatListing(listingJson([DOTS, PRIME]));
+  await syncPlaylist(store, playlist(), deps([listing]));
+  store.setStatus("BHPDsGVciDk", "queued", { now: LATER.toISOString() });
+  store.setStatus("BHPDsGVciDk", "skipped", { skipKind: "user", now: LATER.toISOString() });
+
+  store.deleteSyncState(PL);
+  await syncPlaylist(store, playlist({ backfill: { kind: "all" } }), deps([listing], { now: () => LATER }));
+  assert.deepEqual(statuses(store), [
+    ["uXspbC2srEQ", "queued", null, "listed"],
+    ["BHPDsGVciDk", "skipped", "user", "listed"],
+  ]);
+});

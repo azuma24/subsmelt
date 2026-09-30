@@ -127,10 +127,12 @@ export class YoutubeStore {
   /**
    * Upserts every listed video and its membership in one transaction. A first
    * sighting stores `initial`; a known video only refreshes metadata, so a
-   * skipped tombstone stays skipped. Missing members are marked removed only
+   * skipped tombstone stays skipped. `resetUntouched` (a first sync after a
+   * re-follow) also re-applies `initial` to this playlist's videos that are
+   * still waiting or were left out by a filter. Missing members are marked removed only
    * when `complete` says the listing covers the whole playlist.
    */
-  applyListing(playlistId: string, videos: ListedVideo[], opts: { complete: boolean; now: string }): ApplyListingResult {
+  applyListing(playlistId: string, videos: ListedVideo[], opts: { complete: boolean; now: string; resetUntouched?: boolean }): ApplyListingResult {
     const insertVideo = this.db.prepare(`
       INSERT INTO youtube_videos (video_id, playlist_id, title, channel, duration_s, published_at, added_at, status, skip_kind, reason, created_at, updated_at)
       VALUES (@videoId, @playlistId, @title, @channel, @durationS, @publishedAt, @addedAt, @status, @skipKind, @reason, @now, @now)
@@ -140,6 +142,12 @@ export class YoutubeStore {
         duration_s = COALESCE(excluded.duration_s, youtube_videos.duration_s),
         published_at = COALESCE(youtube_videos.published_at, excluded.published_at),
         added_at = COALESCE(excluded.added_at, youtube_videos.added_at),
+        status = CASE WHEN @resetUntouched = 1 AND youtube_videos.playlist_id = excluded.playlist_id
+            AND (youtube_videos.status IN ('new', 'queued') OR (youtube_videos.status = 'skipped' AND youtube_videos.skip_kind = 'before_start'))
+          THEN excluded.status ELSE youtube_videos.status END,
+        skip_kind = CASE WHEN @resetUntouched = 1 AND youtube_videos.playlist_id = excluded.playlist_id
+            AND (youtube_videos.status IN ('new', 'queued') OR (youtube_videos.status = 'skipped' AND youtube_videos.skip_kind = 'before_start'))
+          THEN excluded.skip_kind ELSE youtube_videos.skip_kind END,
         updated_at = @now
     `);
     const existingItem = this.db.prepare(
@@ -175,6 +183,7 @@ export class YoutubeStore {
           skipKind: video.initial.skipKind ?? null,
           reason: video.initial.reason ?? null,
           now: opts.now,
+          resetUntouched: opts.resetUntouched ? 1 : 0,
         });
         upsertItem.run({ playlistId, videoId: video.videoId, position: video.position, now: opts.now });
       }

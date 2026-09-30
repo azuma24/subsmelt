@@ -38,17 +38,31 @@ export function isSyncing(playlistId: string): boolean {
   return inFlight.has(playlistId);
 }
 
+export class PlaylistGoneError extends Error {
+  constructor(id: string) {
+    super(`Playlist ${id} is no longer followed`);
+    this.name = "PlaylistGoneError";
+  }
+}
+
 async function syncAndAnnounce(store: YoutubeStore, playlist: YoutubePlaylist): Promise<SyncResult> {
   broadcast("youtube:playlist", { playlistId: playlist.id, checking: true });
   try {
-    const result = await onYoutubeLane(() => syncPlaylist(store, playlist, liveSyncDeps()));
+    // Re-read when the lane reaches us: the playlist may have been edited or unfollowed while queued.
+    const result = await onYoutubeLane(() => {
+      const fresh = findPlaylist(playlist.id);
+      if (!fresh) throw new PlaylistGoneError(playlist.id);
+      return syncPlaylist(store, fresh, liveSyncDeps());
+    });
     const current = findPlaylist(playlist.id);
-    if (current && result.title && current.title !== result.title) savePlaylist({ ...current, title: result.title });
+    if (!current) store.deleteSyncState(playlist.id);
+    else if (result.title && current.title !== result.title) savePlaylist({ ...current, title: result.title });
     const { lastCheckedAt } = store.getSyncState(playlist.id);
     logger.info("youtube", `Checked playlist ${result.title}: ${result.total} listed, ${result.added} new, ${result.removed} removed`);
     broadcast("youtube:playlist", { playlistId: playlist.id, lastCheckedAt });
     return result;
   } catch (error) {
+    if (error instanceof PlaylistGoneError) throw error;
     const message = error instanceof Error ? error.message : String(error);
     logger.error("youtube", `Checking playlist ${playlist.title} failed: ${message}`);
     broadcast("youtube:playlist", { playlistId: playlist.id, lastCheckedAt: store.getSyncState(playlist.id).lastCheckedAt, error: message });

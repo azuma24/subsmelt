@@ -29,10 +29,6 @@ const TRANSITIONS: Record<VideoStatus, readonly VideoStatus[]> = {
   failed: ["queued"],
 };
 
-export function isVideoStatus(value: string): value is VideoStatus {
-  return (VIDEO_STATUSES as readonly string[]).includes(value);
-}
-
 export function canTransition(from: VideoStatus, to: VideoStatus): boolean {
   return TRANSITIONS[from].includes(to);
 }

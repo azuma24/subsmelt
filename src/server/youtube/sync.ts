@@ -146,7 +146,7 @@ export async function syncPlaylist(store: YoutubeStore, playlist: YoutubePlaylis
         addedAt: addedDates?.get(entry.videoId) ?? null,
         initial: initialFor(entry),
       })),
-      { complete: listing.entries.length > 0 && listing.entries.length === listing.playlistCount, now },
+      { complete: listing.entries.length > 0 && listing.entries.length === listing.playlistCount, now, resetUntouched: firstSync },
     );
     store.updateSyncState(playlist.id, {
       lastCheckedAt: now,

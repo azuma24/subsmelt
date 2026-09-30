@@ -27,7 +27,7 @@ export function normalizeMediaSubfolder(folder: string): string | null {
     return null;
 
   const normalized = path.posix.normalize(trimmed);
-  if (!normalized || normalized === "." || normalized.startsWith("../"))
+  if (!normalized || normalized === "." || normalized === ".." || normalized.startsWith("../"))
     return null;
   return normalized;
 }

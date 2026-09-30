@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { VIDEO_STATUSES, canTransition, isVideoStatus } from "./video-status.js";
+import { VIDEO_STATUSES, canTransition } from "./video-status.js";
 
 const ALLOWED = new Set([
   "new>queued", "new>skipped",
@@ -29,10 +29,4 @@ test("refuses skipping the pipeline, such as new straight to done", () => {
   assert.equal(canTransition("new", "done"), false);
   assert.equal(canTransition("skipped", "new"), false);
   assert.equal(canTransition("translating", "queued"), false);
-});
-
-test("isVideoStatus accepts stored values and rejects anything else", () => {
-  assert.equal(isVideoStatus("queued"), true);
-  assert.equal(isVideoStatus("removed"), false);
-  assert.equal(isVideoStatus(""), false);
 });

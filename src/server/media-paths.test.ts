@@ -26,6 +26,8 @@ test("normalize: folds backslashes to forward slashes", () => {
 
 test("normalize: rejects traversal (../) and absolute paths", () => {
   for (const bad of [
+    "..",
+    "a/../..",
     "../etc",
     "../../etc/passwd",
     "a/../../b",
