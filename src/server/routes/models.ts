@@ -60,7 +60,7 @@ type ModelsResult =
 // Shared logic for GET/POST /api/models. `keyOverride`/`endpointOverride` let a
 // not-yet-saved connection card fetch its models. The key is used only as an
 // outbound auth header — it is never logged or echoed back.
-async function listModels(
+export async function listModels(
   provider: string,
   keyOverride: string,
   endpointOverride: string
@@ -120,15 +120,16 @@ async function listModels(
     }
 
     // ── Local / OpenAI-compatible endpoint ────────────────────────────────
-    let endpoint: string;
+    const savedEndpoint = (settings.llm_endpoint || "http://localhost:8000/v1").replace(/\/+$/, "");
+    let endpoint = savedEndpoint;
     if (endpointOverride) {
       const sanitized = sanitizeLlmEndpoint(endpointOverride);
       if (!sanitized) return { status: 400, body: { error: "Invalid endpoint: must be an http(s) URL" } };
       endpoint = sanitized;
-    } else {
-      endpoint = (settings.llm_endpoint || "http://localhost:8000/v1").replace(/\/+$/, "");
     }
-    const apiKey = keyOverride || settings.api_key || "";
+    // The saved api_key was saved for the saved endpoint; any other host gets
+    // only the key the caller sent.
+    const apiKey = keyOverride || (endpoint === savedEndpoint ? settings.api_key || "" : "");
     const url = endpoint + "/models";
     const resp = await fetchWithTimeout(url, {
       headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
