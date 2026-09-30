@@ -137,9 +137,18 @@ function boolSetting(raw: string | boolean | undefined, fallback: boolean): bool
   return raw === "1" || raw.toLowerCase() === "true" || raw.toLowerCase() === "yes";
 }
 
-function outputFormat(raw: string | undefined, fallback: TranscriptionOutputFormat): TranscriptionOutputFormat {
-  return raw === "vtt" || raw === "txt" || raw === "srt" || raw === "ass" ? raw : fallback;
+function isOutputFormat(raw: unknown): raw is TranscriptionOutputFormat {
+  return raw === "vtt" || raw === "txt" || raw === "srt" || raw === "ass";
 }
+
+function outputFormat(raw: string | undefined, fallback: TranscriptionOutputFormat): TranscriptionOutputFormat {
+  return isOutputFormat(raw) ? raw : fallback;
+}
+
+// Whisper language codes are two or three lowercase letters. The language is
+// part of the subtitle filename (Episode.en.srt), so a separator or dot in it
+// could move the written file out of the video's folder.
+const LANGUAGE_PATTERN = /^(auto|[a-z]{2,3})$/;
 
 function intSetting(raw: string | number | undefined): number | undefined {
   const value = typeof raw === "number" ? raw : Number.parseInt((raw || "").trim(), 10);
@@ -242,11 +251,17 @@ export function buildTranscriptionRequest(options: BuildTranscriptionRequestOpti
         ? { ...(advancedOptions ?? {}), speaker_diarization: false }
         : advancedOptions;
 
+  if (options.outputFormat !== undefined && !isOutputFormat(options.outputFormat)) {
+    throw new Error(`Unsupported transcription output format: ${options.outputFormat}`);
+  }
+  const language = setting(ov.language ?? folderDefaults?.language ?? options.settings.transcription_language, "auto");
+  if (!LANGUAGE_PATTERN.test(language)) throw new Error(`Unsupported transcription language: ${language}`);
+
   return {
     input_path: backendInputPath,
     output_format: options.outputFormat ?? outputFormat(folderDefaults?.output_format ?? options.settings.transcription_output_format, "srt"),
     model: setting(ov.model ?? folderDefaults?.model ?? options.settings.transcription_model, "small"),
-    language: setting(ov.language ?? folderDefaults?.language ?? options.settings.transcription_language, "auto"),
+    language,
     device: setting(ov.device ?? folderDefaults?.device ?? options.settings.transcription_device, "cpu"),
     compute_type: setting(ov.compute_type ?? folderDefaults?.compute_type ?? options.settings.transcription_compute_type, "int8"),
     use_vad: boolSetting(folderDefaults?.use_vad ?? options.settings.transcription_use_vad, true),
