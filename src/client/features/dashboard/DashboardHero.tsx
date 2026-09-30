@@ -58,6 +58,10 @@ export function DashboardHero({
   const bandClass = statusSegments.length > 5
     ? "grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--border)] sm:grid-cols-3 lg:grid-cols-7"
     : "grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--border)] sm:grid-cols-3 lg:grid-cols-6";
+  // With an odd number of cells the trailing readout would leave a blank cell
+  // in the 2-column phone grid (and one in the 3-column band), so it takes the
+  // rest of its row there; on lg every cell is one column of the single row.
+  const tokensSpanClass = (statusSegments.length + 1) % 2 === 1 ? "col-span-2 sm:col-span-3 lg:col-span-1" : "";
 
   return (
     <div className="flex flex-col gap-3">
@@ -85,7 +89,7 @@ export function DashboardHero({
             cell to its left is a button; this one is a div with the same padding
             and type, so it read as clickable. A recessed fill plus a heavier
             leading rule marks it as a readout instead. */}
-        <div className="border-l-2 border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-2.5">
+        <div className={`border-l-2 border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-2.5 ${tokensSpanClass}`}>
           <div className={`${cellLabel} truncate ${overBudget ? "text-[var(--red)]" : "text-[var(--text-3)]"}`}>{overBudget && <span aria-hidden="true">⚠ </span>}{t("dashboard.stat.tokens")} · {budgetStr}</div>
           <div className={`${cellValue} ${overBudget ? "text-[var(--red)]" : "text-[var(--text)]"}`}>{formatTokens(totalTokens)}</div>
         </div>

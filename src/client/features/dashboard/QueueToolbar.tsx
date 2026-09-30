@@ -3,6 +3,8 @@ import type { DashboardTab, DashboardTabItem } from "./tabs";
 import { Accordion, ActionButton, Tabs } from "../../ui/primitives";
 
 
+const chipClass = "shrink-0 whitespace-nowrap";
+
 interface QueueToolbarProps {
   dashboardTabs: DashboardTabItem[];
   activeTab: DashboardTab;
@@ -81,24 +83,30 @@ export function QueueToolbar({
               is hidden rather than rendered disabled — four gray buttons above
               the list were pure noise when nothing was actionable. */}
           {(visiblePendingIds.length > 0 || visibleErrorIds.length > 0 || visibleRetranslatableIds.length > 0 || finishedJobCount > 0) && (
-            <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t("dashboard.bulkActionsLabel")}>
+            <div
+              // Phones get one row that scrolls sideways instead of three
+              // stacked rows of half-empty wrapping; desktop wraps as before.
+              className="-mx-3.5 flex items-center gap-2 overflow-x-auto px-3.5 md:mx-0 md:flex-wrap md:overflow-visible md:px-0"
+              role="group"
+              aria-label={t("dashboard.bulkActionsLabel")}
+            >
               {visiblePendingIds.length > 0 && (
-                <ActionButton size="sm" variant="ghost" onClick={onSelectVisiblePending}>
+                <ActionButton className={chipClass} size="sm" variant="ghost" onClick={onSelectVisiblePending}>
                   {t("dashboard.selectVisiblePending", { count: visiblePendingIds.length })}
                 </ActionButton>
               )}
               {visibleErrorIds.length > 0 && (
-                <ActionButton size="sm" variant="warning" onClick={onRetryVisibleErrors} busy={isRetryPending}>
+                <ActionButton className={chipClass} size="sm" variant="warning" onClick={onRetryVisibleErrors} busy={isRetryPending}>
                   {t("dashboard.retryVisibleErrors", { count: visibleErrorIds.length })}
                 </ActionButton>
               )}
               {visibleRetranslatableIds.length > 0 && (
-                <ActionButton size="sm" variant="ghost" onClick={onRetranslateVisible} busy={isForcePending}>
+                <ActionButton className={chipClass} size="sm" variant="ghost" onClick={onRetranslateVisible} busy={isForcePending}>
                   {t("dashboard.retranslateVisible", { count: visibleRetranslatableIds.length })}
                 </ActionButton>
               )}
               {finishedJobCount > 0 && (
-                <ActionButton size="sm" variant="danger" onClick={onClearFinished}>
+                <ActionButton className={chipClass} size="sm" variant="danger" onClick={onClearFinished}>
                   {t("dashboard.clearAll")}
                 </ActionButton>
               )}
