@@ -88,6 +88,9 @@ class CjkWrapTests(unittest.TestCase):
     def test_line_never_starts_with_closing_punctuation(self):
         self.assertEqual(_wrap_text("ああああああああああ。いい", 10), "あああああああああ\nあ。いい")
 
+    def test_long_latin_token_is_not_broken_mid_word(self):
+        self.assertEqual(_wrap_text("see https://example.com/a/very/long/path now", 12), "see\nhttps://example.com/a/very/long/path\nnow")
+
     def test_spaced_text_still_wraps_at_words(self):
         self.assertEqual(_wrap_text("one two three four", 9), "one two\nthree\nfour")
 

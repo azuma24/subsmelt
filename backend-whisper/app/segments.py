@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass
 from typing import Iterable, Sequence
 
@@ -25,6 +26,12 @@ class Segment:
 # (and a candidate for merging) when it is both very brief in time and in length.
 DEFAULT_MERGE_MAX_DURATION = 1.5
 DEFAULT_MERGE_MAX_CHARS = 12
+
+
+def has_wide_chars(text: str) -> bool:
+    """True when ``text`` holds East Asian wide/fullwidth characters (CJK), the
+    scripts that carry no spaces and so must be measured per character."""
+    return any(unicodedata.east_asian_width(ch) in ("W", "F") for ch in text)
 
 
 def _to_segment(item: object) -> Segment:
@@ -130,8 +137,12 @@ def _split_one(segment: Segment, max_duration: float) -> list[Segment]:
 
     stripped = segment.text.strip()
     words = stripped.split()
-    # Unspaced text (Japanese, Chinese) has one "word"; split it by character.
-    units, joiner = (words, " ") if len(words) > 1 else (list(stripped), "")
+    # Unspaced CJK text is one "word"; split it by character. A lone Latin word
+    # (or a URL) stays whole, as before.
+    if len(words) == 1 and has_wide_chars(stripped):
+        units, joiner = list(stripped), ""
+    else:
+        units, joiner = words, " "
     # Number of chunks needed so each is <= max_duration.
     chunks = max(1, math.ceil(segment.duration / max_duration))
     chunks = min(chunks, len(units)) if units else 1

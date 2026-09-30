@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable, Protocol
 
+from .segments import has_wide_chars
+
 
 class SegmentLike(Protocol):
     start: float
@@ -31,9 +33,10 @@ def _with_speaker(segment: object) -> str:
 
 
 # CJK text carries no spaces, so a "word" can be a whole sentence. These drive
-# the character-level fallback: break after sentence punctuation when one sits
-# in the second half of a line, never open a line with closing punctuation and
-# never close one with opening punctuation.
+# the character-level fallback for such words (an overlong Latin token such as a
+# URL is left whole on its own line): break after sentence punctuation when one
+# sits in the second half of a line, never open a line with closing punctuation
+# and never close one with opening punctuation.
 _BREAK_AFTER = "。、，．！？,.!?;"
 _NO_LINE_START = "。、，．！？）」』】〕〉》’”…,.!?;:"
 _NO_LINE_END = "（「『【〔〈《‘“"
@@ -63,7 +66,7 @@ def _wrap_text(text: str, max_line_length: int | None = None) -> str:
     lines: list[str] = []
     current = ""
     for word in stripped.split():
-        if len(word) > max_line_length:
+        if len(word) > max_line_length and has_wide_chars(word):
             if current:
                 lines.append(current)
             *full, current = _chunk_unspaced(word, max_line_length)

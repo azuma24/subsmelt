@@ -123,6 +123,12 @@ class SplitUnspacedTextTests(unittest.TestCase):
         )
 
 
+    def test_single_latin_word_is_left_whole(self):
+        for text in ("Applause", "https://example.com/a/very/long/path"):
+            segments = [seg(0.0, 30.0, text)]
+            self.assertEqual(split_long_segments(segments, 5.0), segments)
+
+
 class PostprocessPipelineTests(unittest.TestCase):
     def test_neither_option_returns_normalized_unchanged(self):
         raw = [SimpleNamespace(start=0.0, end=2.0, text="hello world")]
