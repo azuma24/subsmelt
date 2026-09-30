@@ -26,6 +26,7 @@ import type { TranscribePostAction } from "./transcription-client.js";
 import { registerSettingsTasksRoutes } from "./routes/settings-tasks.js";
 import { registerJobsRoutes } from "./routes/jobs.js";
 import { registerModelsRoutes } from "./routes/models.js";
+import { registerYoutubeRoutes } from "./routes/youtube.js";
 import {
   registerTranscriptionRoutes,
   getTranscriptionBackendUrl,
@@ -194,6 +195,8 @@ app.delete("/api/logs", (_req, res) => {
 registerModelsRoutes(app);
 
 registerTranscriptionRoutes(app);
+
+registerYoutubeRoutes(app);
 
 // ======== Notification test ========
 // Sends a sample webhook using the current settings (format + URL), bypassing
