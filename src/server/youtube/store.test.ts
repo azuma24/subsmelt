@@ -100,10 +100,10 @@ test("knownMembers reports which ids the playlist has already listed", () => {
 
 test("sync state merges patches and starts empty", () => {
   const store = freshStore();
-  assert.deepEqual(store.getSyncState(PL), { lastCheckedAt: null, lastError: null, count: null, firstSyncAt: null });
+  assert.deepEqual(store.getSyncState(PL), { lastCheckedAt: null, lastError: null, count: null, availability: null, firstSyncAt: null });
   store.updateSyncState(PL, { lastCheckedAt: T0, count: 889, firstSyncAt: T0 });
   store.updateSyncState(PL, { lastError: "HTTP Error 429" });
-  assert.deepEqual(store.getSyncState(PL), { lastCheckedAt: T0, lastError: "HTTP Error 429", count: 889, firstSyncAt: T0 });
+  assert.deepEqual(store.getSyncState(PL), { lastCheckedAt: T0, lastError: "HTTP Error 429", count: 889, availability: null, firstSyncAt: T0 });
   store.deleteSyncState(PL);
   assert.equal(store.getSyncState(PL).count, null);
 });

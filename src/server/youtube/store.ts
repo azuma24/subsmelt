@@ -90,6 +90,8 @@ export interface PlaylistSyncState {
   lastError: string | null;
   /** YouTube's reported playlist_count at the last successful listing. */
   count: number | null;
+  /** "public", "unlisted" or "private" as yt-dlp reports it. */
+  availability: string | null;
   /** When the first listing was stored. Entries first seen then are the backfill set. */
   firstSyncAt: string | null;
 }
@@ -113,7 +115,7 @@ export class IllegalTransitionError extends Error {
   }
 }
 
-const EMPTY_SYNC_STATE: PlaylistSyncState = { lastCheckedAt: null, lastError: null, count: null, firstSyncAt: null };
+const EMPTY_SYNC_STATE: PlaylistSyncState = { lastCheckedAt: null, lastError: null, count: null, availability: null, firstSyncAt: null };
 
 const syncKey = (playlistId: string) => `playlist:${playlistId}`;
 

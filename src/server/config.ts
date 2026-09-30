@@ -128,6 +128,13 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   // mode when a token is set with no mapping (true remote). "shared" forces
   // path mode (Model A); "upload" forces multipart upload (Model B).
   transcription_transport: "auto",
+  // YouTube. youtube_playlists is a JSON array owned by the playlist routes
+  // (youtube/playlists.ts); the generic settings endpoints never read or write it.
+  youtube_playlists: "[]",
+  youtube_download_dir: "YouTube",
+  youtube_notes_dir: "/notes",
+  // Optional YouTube Data API key; only used to read when videos were added to a playlist.
+  youtube_api_key: "",
   additional_context: "",
   prompt: `You are a professional subtitle translator.
 You will receive subtitle text in an automatically detected source language.
