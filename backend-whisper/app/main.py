@@ -112,25 +112,28 @@ def require_token(
     ``secrets.compare_digest`` so it is constant-time and not vulnerable to
     timing attacks.
     """
-    expected = _configured_token()
-    if not expected:
+    if not auth_required():
         return  # Auth disabled.
-
-    presented = ""
-    if authorization:
-        scheme, _, value = authorization.partition(" ")
-        if scheme.lower() == "bearer" and value:
-            presented = value.strip()
-    if not presented and x_subsmelt_token:
-        presented = x_subsmelt_token.strip()
-
-    # Compare bytes: compare_digest raises TypeError on a non-ASCII str, which
-    # would turn a bad token into a 500 instead of a 401.
-    if not presented or not secrets.compare_digest(presented.encode("utf-8"), expected.encode("utf-8")):
+    if not _token_matches(_presented_token(authorization, x_subsmelt_token)):
         raise HTTPException(
             status_code=401,
             detail={"code": "unauthorized", "message": "Invalid or missing whisper backend token"},
         )
+
+
+def _presented_token(authorization: str | None, x_subsmelt_token: str | None) -> str:
+    if authorization:
+        scheme, _, value = authorization.partition(" ")
+        if scheme.lower() == "bearer" and value:
+            return value.strip()
+    return (x_subsmelt_token or "").strip()
+
+
+def _token_matches(presented: str) -> bool:
+    # Compare bytes: compare_digest raises TypeError on a non-ASCII str, which
+    # would turn a bad token into a 500 instead of a 401.
+    expected = _configured_token()
+    return bool(presented) and secrets.compare_digest(presented.encode("utf-8"), expected.encode("utf-8"))
 
 
 def capabilities() -> dict:
@@ -184,15 +187,49 @@ def capabilities() -> dict:
     }
 
 
+def _health_model_cache(model: str, free_ram: int, disclose_paths: bool) -> dict:
+    """The /health model-cache block, safe for an open endpoint.
+
+    Only advertised ids touch the filesystem (an arbitrary path would make the
+    open endpoint an existence oracle), and cache paths are returned only to a
+    caller that could read them anyway (see ``_is_trusted_caller``).
+    """
+    selected = (model or "small").strip() or "small"
+    if selected.lower() not in ADVERTISED_MODELS:
+        safety = evaluate_model_safety("small", free_ram)
+        return {
+            "model": selected,
+            "cached": None,
+            "cache_root": None,
+            "cache_path": None,
+            "first_run_download_expected": False,
+            "required_ram_mb": safety["required_ram_mb"],
+            "recommended_ram_mb": safety["recommended_ram_mb"],
+            "suggested_model": None,
+            "warning": "Selected model is not one this backend manages; cache status is unknown.",
+        }
+    info = dict(describe_model_cache(selected, free_ram))
+    if not disclose_paths:
+        info["cache_root"] = None
+        info["cache_path"] = None
+    return info
+
+
 @app.get("/health", response_model=HealthResponse, response_model_by_alias=True)
-def health(model: str = Query(default="small")) -> HealthResponse:
+def health(
+    request: Request,
+    model: str = Query(default="small"),
+    authorization: str | None = Header(default=None),
+    x_subsmelt_token: str | None = Header(default=None, alias="X-Subsmelt-Token"),
+) -> HealthResponse:
     free_ram = available_ram_mb()
+    trusted = _is_trusted_caller(request, _presented_token(authorization, x_subsmelt_token))
     return HealthResponse(
         ffmpeg=ffmpeg_available(),
         total_ram_mb=total_ram_mb(),
         available_ram_mb=free_ram,
         capabilities=capabilities(),
-        model_cache=describe_model_cache(model, free_ram),
+        model_cache=_health_model_cache(model, free_ram, disclose_paths=trusted),
         log_state=get_log_state(),
     )
 
@@ -222,6 +259,16 @@ _LOG_TAIL_MAX_LINES = 2000
 
 #: Client addresses that count as local, including the IPv4-mapped IPv6 form.
 _LOOPBACK_CLIENTS = {"127.0.0.1", "::1", "localhost", "::ffff:127.0.0.1"}
+
+
+def _is_trusted_caller(request: Request, presented: str) -> bool:
+    """The disclosure rule as a predicate: a valid token, or a local caller on a
+    tokenless install. Same rule ``require_token_or_loopback`` enforces for
+    ``/logs``, for endpoints that stay open but carry some data worth gating."""
+    if auth_required():
+        return _token_matches(presented)
+    host = (request.client.host if request.client else "") or ""
+    return host in _LOOPBACK_CLIENTS
 
 
 def require_token_or_loopback(
