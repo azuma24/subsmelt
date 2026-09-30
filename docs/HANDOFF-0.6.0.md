@@ -71,11 +71,11 @@ For every PR: open it on GitHub and Forgejo with base `release/0.6.0` (or the pr
 
 ### 4.1 YouTube PR 1: runtime (branch `feat/youtube-runtime`)
 
-State: the Dockerfile stages and `scripts/youtube-smoke.sh` are committed on this branch. The pinned checksums match the official files (yt-dlp 2026.08.19 `SHA2-256SUMS`; ffmpeg 7.1.2 tarball). Verified at handoff on arm64: `docker build` succeeds, `yt-dlp --version` prints 2026.08.19, `ffmpeg -version` prints 7.1.2, the smoke script lists `playlist_count 2384` with 3 entries, and the whole image is 391 MB on disk. Not yet checked: an amd64 build and a real download inside the container. Everything below step 1 is still to do.
+State: the Dockerfile stages, `scripts/youtube-smoke.sh` and `urls.ts` are committed on this branch. The pinned checksums match the official files (yt-dlp 2026.08.19 `SHA2-256SUMS`; ffmpeg 7.1.2 tarball). Verified at handoff on arm64: `docker build` succeeds, `yt-dlp --version` prints 2026.08.19, `ffmpeg -version` prints 7.1.2, the smoke script lists `playlist_count 2384` with 3 entries, and the whole image is 391 MB on disk. Not yet checked: an amd64 build and a real download inside the container. Everything below step 1 is still to do.
 
 To do:
 1. Verify the image again after your changes, and once on amd64 if you can: `docker run --rm --entrypoint sh subsmelt:yt-test -c 'yt-dlp --version && ffmpeg -version | head -1 && scripts/youtube-smoke.sh "https://www.youtube.com/playlist?list=UUsooa4yRKGN_zEE8iknghZA" --playlist-end 3'`. Expect `playlist_count 2384` or more and three entries. Measure the size added (`du -sxm /` inside the new image against an image built from `release/0.6.0`); the prototype measured about 45 MB.
-2. `src/server/youtube/urls.ts`: parse pasted URLs into a playlist list ID (accept `youtube.com/playlist?list=`, `watch?v=...&list=`, `youtu.be`, `music.youtube.com`, extra params such as `si=`); build canonical URLs; validate IDs (list `^[A-Za-z0-9_-]{10,64}$`, video `^[A-Za-z0-9_-]{11}$`). Tests with literal inputs and outputs.
+2. **Done** (commit `8c19e10` on `feat/youtube-runtime`, 474 tests pass): `src/server/youtube/urls.ts`: parse pasted URLs into a playlist list ID (accept `youtube.com/playlist?list=`, `watch?v=...&list=`, `youtu.be`, `music.youtube.com`, extra params such as `si=`); build canonical URLs; validate IDs (list `^[A-Za-z0-9_-]{10,64}$`, video `^[A-Za-z0-9_-]{11}$`). Tests with literal inputs and outputs.
 3. `src/server/youtube/ytdlp.ts`:
    - Resolve the binary: `SUBSMELT_YTDLP_BIN`, then `${DATA_DIR}/bin/yt-dlp`, then `/usr/local/bin/yt-dlp`, then PATH.
    - Spawn with an argument array only, never a shell, under a timeout.
@@ -83,6 +83,7 @@ To do:
    - `downloadArgs(profile)`. Always include `--js-runtimes node`.
    - `ytdlpVersion()`.
    - `updateYtdlp()`: copy the image binary to `${DATA_DIR}/bin/yt-dlp` if missing, then run `-U`.
+   Two findings from a partial attempt: yt-dlp prints both `Video unavailable` and `This video is unavailable`, so `classifyYtdlpError` must match both. And when `SUBSMELT_YTDLP_BIN` is set, `updateYtdlp()` should run `-U` on that binary in place instead of copying, otherwise a test run could pick up a system yt-dlp and update it over the network.
 4. `src/server/youtube/fake-yt-dlp.mjs`: a fake binary for tests that replays canned JSON, progress lines and stderr chosen by environment variables.
 5. Routes in `src/server/routes/youtube.ts`, registered from `index.ts`: `GET /api/youtube/status` returning `{ytdlp:{available,version,path}, ffmpeg:{available,version}}`, and `POST /api/youtube/ytdlp/update`.
 
