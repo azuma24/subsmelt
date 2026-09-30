@@ -17,11 +17,55 @@ Written 2026-09-30 for the next agent. Read this file top to bottom before you t
 
 `release/0.6.0` is the base for all remaining work. On it: `npm test` 473 pass, `npm run typecheck` clean, backend `pytest tests` 291 pass. All eight Codex review findings on PRs #2 and #4 to #6 are answered and resolved on GitHub; four were fixed (1fb89eb, f093611, 5528dda) and merged here. The shared contracts between the server and client fixes were checked live (saved-connection key reuse only for the saved endpoint; comma folder names scan).
 
-### Not done
+### Not done — task checklist
 
-1. **YouTube feature** (5 stacked PRs). Only the Dockerfile part of PR 1 exists, on `feat/youtube-runtime` (see section 4.1). Everything else is unwritten.
-2. **Nemotron 3.5 ASR engine.** Designed, not started.
-3. **Release 0.6.0** (version bump, CHANGELOG finalised, tags). Needs the user's explicit go before tagging.
+The goal is a full 0.6.0 where the app and the Whisper backend ship at the same version. This list is every task that is not complete as of 2026-09-30. Implementation detail for each item is in section 4. Groups A and B touch different areas and can be worked in either order; C and D close the release.
+
+**A. YouTube (5 stacked PRs)**
+
+- [ ] **A1** `feat/youtube-runtime` (PR 1). `urls.ts` and the Dockerfile stages exist. Still to write `ytdlp.ts` (binary resolution, arg-array spawn, `classifyYtdlpError`, `downloadArgs` with `--js-runtimes node`, `ytdlpVersion`, `updateYtdlp`), `fake-yt-dlp.mjs`, and routes `GET /api/youtube/status` plus `POST /api/youtube/ytdlp/update`. Re-verify the image on arm64 and amd64 with the smoke script and a real in-container download (§4.1).
+- [ ] **A2** `feat/youtube-follow` (PR 2). `store.ts` (`YoutubeStore`), `video-status.ts`, the `playlists.ts` setting, the sync step, `backfill.ts`, `data-api.ts`, the playlist routes and `POST /api/youtube/api-key/test`, the `/youtube` client page with follow dialog and Settings section, and `nav.youtube` in 32 locales. Live check, follow the user's Unlisted playlist with backfill None (§4.2).
+- [ ] **A3** `feat/youtube-download` (PR 3). Serial download lane, per-video temp dir, progress over SSE, auto and manual modes, Skip and Retry, cooldown, boot reconciliation, cookies upload. Tests from a fake yt-dlp; live check of at most 3 short videos (§4.3).
+- [ ] **A4** `feat/youtube-subtitles` (PR 4). `subtitle-routes.ts` with `planSubtitles`, creator captions through `runTranscriptionAttempt`, job creation for translation, the scanner skip, and `gpu-gate.ts` with the `gpu_shared` setting and the hold at 20 waiting subtitles (§4.4).
+- [ ] **A5** `feat/youtube-notes` (PR 5). `note.ts` with a golden-file test, the `youtube_notes_dir` setting, temp-file rename export, and the `youtube:note` webhook (§4.5).
+
+**B. Nemotron 3.5 ASR (`feat/nemotron-asr`)**
+
+- [ ] Follow `docs/handoff-0.6.0/nemotron-engine-brief.md`. Engine registry and descriptors under model id `nemotron-3.5-asr`, GGUF download via `allow_patterns`, binary resolution, word-to-segment building, the locale table, reuse of the backend `lease`, Windows and Docker packaging, the server and client changes, and 32 locales (§4.6).
+- [ ] End to end on the Mac against the real binary, and record the timing.
+
+**C. Compatible backend release (same version as the app)**
+
+- [ ] Bump all three version files together to `0.6.0`. They are all still `0.5.9`: `package.json`, `backend-whisper/app/version.py` (`_DEFAULT_VERSION`) and `backend-whisper/packaging/windows/installer.iss` (`#define MyAppVersion`).
+- [ ] Rebuild the Windows installer by tagging `whisper-v0.6.0`, and confirm the workflow publishes `SubSmeltWhisperBackend-Setup-0.6.0.exe`. The newest installer is `whisper-v0.5.9` at 1.08 GB and is unsigned.
+- [ ] Publish the Docker image via `v0.6.0`, including `latest`, and confirm the backend image too.
+- [ ] Confirm the backend `/health` version equals the app version.
+
+**D. Release 0.6.0**
+
+- [ ] Merge every finished branch into `release/0.6.0` with `--no-ff`, then re-run all checks on the merge tip.
+- [ ] Finish `CHANGELOG.md`. Turn `[Unreleased]` into `## [0.6.0] - <date>`, add YouTube and Nemotron under Added, and drop anything that did not land.
+- [ ] **Stop and ask the user** before merging to `main` and pushing tags.
+- [ ] After the go, fast-forward `main`, push `main` and push it to Forgejo, tag `v0.6.0` and `whisper-v0.6.0` on the same commit, push both tags, and verify with `git ls-remote --tags origin`.
+- [ ] Write the GitHub release notes by hand.
+
+**E. Verification and hygiene**
+
+- [ ] Get CI green on the branches. No 0.6.0 commit has run through GitHub Actions yet. The last run is 2026-09-09 on `main`, and all six open PRs have empty checks. Local gates on `release/0.6.0` (`53325e0`) were green on 2026-09-30, with 473 node tests, 291 pytest, typecheck, build and Docker build.
+- [ ] Refresh `docs/HANDOFF.md`, which still says "Current as of 0.5.6".
+- [ ] Fix `docs/TODO.md` drift. The `WhisperPage.tsx` 840-line item is done (now 496 on `release/0.6.0`), while `backend-whisper/app/main.py` has grown to 892, up from the 816 the TODO claims.
+- [ ] Translate the 31 non-English locales' `errors.*` values. 536 of 620 are still byte-identical to English.
+- [ ] Add render tests for at least the Dashboard, Settings, Whisper and Convert screens. There are zero `*.test.tsx` files today.
+
+**F. Checks only the user can run**
+
+- [ ] Windows CUDA backend. Transcribe with `large-v3` then `small` and watch `nvidia-smi`; delete a model while idle and confirm its folder is removed; set `SUBSMELT_FFMPEG` with no ffmpeg on PATH and confirm `/health` reports `ffmpeg: true`; cancel a streaming transcription and confirm `%TEMP%\subsmelt-upload-*` disappears.
+- [ ] Docker host `192.168.1.110`. After YouTube lands, follow the AI playlist with backfill None, add one video, press Check now, and confirm download, subtitles, translation and a note in `/notes`.
+
+**G. Open questions for the user**
+
+- [ ] Resuming stopped jobs from `.part` files. Treat "translation equals source" as untranslated, or add a sidecar list of translated cue indices.
+- [ ] Installs that stored the redaction marker as their API key must re-enter the key once, or a migration must be written.
 
 Remotes: `origin` is GitHub `azuma24/subsmelt`; `forgejo` is `ssh://git@192.168.1.110:2222/claude-agent/subsmelt.git` (web UI and API at `http://192.168.1.110:4000`, HTTP only). The user wants every PR opened on both. `gh` works for GitHub. For Forgejo, the `fj` CLI fails because it forces HTTPS; use the REST API with the token stored in `~/Library/Application Support/forgejo-cli.forgejo-cli/keys.json` (`hosts."192.168.1.110:4000".token`). Never print the token. Example body: `POST http://192.168.1.110:4000/api/v1/repos/claude-agent/subsmelt/pulls` with `{"head","base","title","body"}` and header `Authorization: token <token>`.
 
