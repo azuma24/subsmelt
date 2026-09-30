@@ -228,7 +228,7 @@ export async function exportNoteForVideo(deps: NoteExportDeps, videoId: string):
     durationS: typeof info.duration === "number" ? Math.round(info.duration) : video.duration_s,
     playlist: playlist?.title ?? null,
     language,
-    transcriptSource: transcriptSource(info, playlist, language),
+    transcriptSource: video.transcript_source ?? transcriptSource(info, playlist, language),
     description: str(info.description),
     chapters: chaptersOf(info),
   };

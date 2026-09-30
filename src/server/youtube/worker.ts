@@ -14,6 +14,7 @@ import { downloadVideo, findDownloadedMedia, tidyPlaylistFolder, upcomingRetryAt
 import { findPlaylist, readPlaylists, savePlaylist, type YoutubePlaylist } from "./playlists.js";
 import type { Cooldown, CooldownCause, VideoRow, YoutubeStore } from "./store.js";
 import { fetchCaptionWithYtdlp, produceSubtitles, type TranscribeRequest, type TranscribeResult } from "./subtitles.js";
+import { exportNoteForVideo } from "./note-export.js";
 import { exactUploadDateWithYtdlp, listPlaylistWithYtdlp, syncPlaylist, type SyncDeps, type SyncResult } from "./sync.js";
 import type { VideoStatus } from "./video-status.js";
 import { classifyYtdlpError, type YtdlpErrorClass } from "./ytdlp.js";
@@ -190,7 +191,7 @@ export class YoutubeWorker {
     this.checkDuePlaylists();
     this.kick();
     this.kickSubtitles();
-    this.finishTranslated();
+    void this.finishTranslated();
     this.queue.startHeld();
   }
 
@@ -302,13 +303,15 @@ export class YoutubeWorker {
    * Hands every translating video whose translation jobs have all settled to
    * onSubtitlesComplete. A failed translation settles too; the Jobs page shows it.
    */
-  finishTranslated(): void {
+  finishTranslated(): Promise<void> {
+    const runs: Promise<void>[] = [];
     for (const video of this.store.videosInStatus("translating")) {
       if (!video.subtitle_path || this.completing.has(video.video_id)) continue;
       if (countOpenJobsForSubtitle(path.join(MEDIA_DIR, video.subtitle_path)) > 0) continue;
       this.completing.add(video.video_id);
-      void this.onSubtitlesComplete(video.video_id).finally(() => this.completing.delete(video.video_id));
+      runs.push(this.onSubtitlesComplete(video.video_id).finally(() => this.completing.delete(video.video_id)));
     }
+    return Promise.all(runs).then(() => undefined);
   }
 
   /**
@@ -321,6 +324,7 @@ export class YoutubeWorker {
     const video = this.store.getVideo(videoId);
     if (video?.status !== "translating") return;
     try {
+      await exportNoteForVideo({ store: this.store, announce: this.announce }, videoId);
       this.move(video, "done", { now: this.now().toISOString() });
       logger.info("youtube", `Subtitles and translations of ${video.title} are finished`);
     } catch (error) {
@@ -385,7 +389,7 @@ export class YoutubeWorker {
       });
       logger.info("youtube", `Subtitles of ${video.title}: transcript from ${result.transcriptSource ?? "an earlier run"}, ${result.routes.map((r) => r.kind).join(", ") || "no other languages"}`);
       if (result.jobsCreated > 0) this.queue.start();
-      this.finishTranslated();
+      await this.finishTranslated();
       this.queue.startHeld();
       return true;
     } catch (error) {

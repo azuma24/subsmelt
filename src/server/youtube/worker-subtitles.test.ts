@@ -13,6 +13,9 @@ process.env.MEDIA_DIR = path.join(root, "media");
 process.env.SUBSMELT_YTDLP_BIN = path.join(path.dirname(fileURLToPath(import.meta.url)), "fake-yt-dlp.mjs");
 
 const config = await import("../config.js");
+const NOTES = path.join(root, "notes");
+fs.mkdirSync(NOTES, { recursive: true });
+config.setSettings({ youtube_notes_dir: NOTES });
 const db = await import("../db.js");
 const { savePlaylist, writePlaylists } = await import("./playlists.js");
 const { YoutubeStore } = await import("./store.js");
@@ -133,16 +136,18 @@ test("creator captions give the transcript and one language, the same language i
   assert.deepEqual(plan(store), { spoken: "en", routes: [{ taskId: ENG, kind: "same" }, { taskId: CHT, kind: "captions" }, { taskId: JPN, kind: "translate" }] });
   assert.equal(store.getVideo(VID)!.transcript_source, "youtube_captions");
 
-  worker.finishTranslated();
+  await worker.finishTranslated();
   assert.equal(store.getVideo(VID)!.status, "translating", "a pending translation keeps the video translating");
 
   db.updateJob(db.getJobs()[0].id, { status: "done" });
-  worker.finishTranslated();
+  await worker.finishTranslated();
   assert.equal(store.getVideo(VID)!.status, "done");
-  assert.deepEqual(events, [
-    ["youtube:video", { videoId: VID, playlistId: PL, status: "translating" }],
-    ["youtube:video", { videoId: VID, playlistId: PL, status: "done" }],
+  assert.deepEqual(events.map(([name, data]) => [name, data.status ?? data.notePath]), [
+    ["youtube:video", "translating"],
+    ["youtube:note", "AI/Short talk (iSn77jvjojA).md"],
+    ["youtube:video", "done"],
   ]);
+  assert.ok(fs.existsSync(path.join(NOTES, "AI", "Short talk (iSn77jvjojA).md")), "the note is written before the video is done");
 });
 
 test("without captions Whisper transcribes, its detected language names the transcript, and a video needing no translation finishes at once", async (t) => {
@@ -157,10 +162,11 @@ test("without captions Whisper transcribes, its detected language names the tran
   });
   assert.deepEqual([jobs(), queueStarts], [[], []]);
   assert.equal(store.getVideo(VID)!.status, "done");
-  assert.deepEqual(events, [
-    ["youtube:video", { videoId: VID, playlistId: PL, status: "transcribing", pct: 50 }],
-    ["youtube:video", { videoId: VID, playlistId: PL, status: "translating" }],
-    ["youtube:video", { videoId: VID, playlistId: PL, status: "done" }],
+  assert.deepEqual(events.map(([name, data]) => [name, data.status ?? data.notePath]), [
+    ["youtube:video", "transcribing"],
+    ["youtube:video", "translating"],
+    ["youtube:note", "AI/Short talk (iSn77jvjojA).md"],
+    ["youtube:video", "done"],
   ]);
 });
 
@@ -246,4 +252,18 @@ test("the live Whisper path waits for a backend without touching the video", asy
 
   assert.deepEqual(row(store), { status: "transcribing", attempts: 0, reason: null, retry_after: null, subtitle_path: null });
   assert.equal(worker.whisperBacklog(), 0, "without a backend a transcribing video does not hold translation");
+});
+
+test("an unmounted notes folder keeps the video translating with the reason, and the next pass finishes it", async (t) => {
+  const { store, worker } = rig(t, { taskIds: [JPN], info: {}, detected: "ja" });
+  const missing = path.join(root, "not-mounted");
+  config.setSettings({ youtube_notes_dir: missing });
+  t.after(() => config.setSettings({ youtube_notes_dir: NOTES }));
+
+  await worker.drainSubtitles();
+  assert.deepEqual([store.getVideo(VID)!.status, store.getVideo(VID)!.reason], ["translating", `Notes folder ${missing} is not mounted`]);
+
+  fs.mkdirSync(missing);
+  await worker.finishTranslated();
+  assert.equal(store.getVideo(VID)!.status, "done");
 });
