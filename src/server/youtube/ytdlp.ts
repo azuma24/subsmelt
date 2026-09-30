@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import type { MediaProfile } from "./playlists.js";
 import { videoUrl } from "./urls.js";
 
 export const IMAGE_YTDLP_PATH = "/usr/local/bin/yt-dlp";
@@ -18,13 +19,11 @@ export type YtdlpErrorClass =
   | "format"
   | "other";
 
-export type DownloadProfile =
-  | { kind: "video"; maxHeight: number; codec: "h264" | "vp9" | "av01"; container: "mp4" | "mkv" }
-  | { kind: "audio"; format: "m4a" | "opus" };
-
 export interface DownloadRequest {
   videoId: string;
-  profile: DownloadProfile;
+  profile: MediaProfile;
+  /** False drops the codec preference from the sort, the one retry after a `format` error. */
+  codecPreference?: boolean;
   tmpDir: string;
   homeDir: string;
   cookiesPath?: string;
@@ -147,14 +146,17 @@ export function classifyYtdlpError(stderr: string): YtdlpErrorClass {
   return "other";
 }
 
-function formatArgs(profile: DownloadProfile): string[] {
-  if (profile.kind === "audio") {
-    return ["-f", "ba/b", "-S", `lang,acodec:${profile.format}`, "-x", "--audio-format", profile.format];
+// yt-dlp matches sort values as regexes, so "av1" ranks AV1 formats and "m4a" ranks AAC ones.
+function formatArgs(profile: MediaProfile, codecPreference: boolean): string[] {
+  if (profile.type === "audio") {
+    const sort = codecPreference ? `lang,acodec:${profile.format}` : "lang";
+    return ["-f", "ba/b", "-S", sort, "-x", "--audio-format", profile.format];
   }
   const acodec = profile.container === "mp4" ? "aac" : "opus";
+  const codecs = codecPreference ? [...(profile.codec === "any" ? [] : [`vcodec:${profile.codec}`]), `acodec:${acodec}`] : [];
   return [
     "-f", "bv*+ba/b",
-    "-S", `lang,res:${profile.maxHeight},vcodec:${profile.codec},acodec:${acodec}`,
+    "-S", ["lang", `res:${profile.maxHeight}`, ...codecs].join(","),
     "--merge-output-format", profile.container,
   ];
 }
@@ -174,7 +176,7 @@ export function downloadArgs(req: DownloadRequest): string[] {
     "--sleep-interval", "2",
     "--max-sleep-interval", "8",
     ...(req.cookiesPath ? ["--cookies", req.cookiesPath] : []),
-    ...formatArgs(req.profile),
+    ...formatArgs(req.profile, req.codecPreference ?? true),
     "--",
     videoUrl(req.videoId),
   ];

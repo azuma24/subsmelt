@@ -48,7 +48,7 @@ test("classifyYtdlpError maps real yt-dlp error lines to their class", () => {
 test("downloadArgs builds a video profile: node JS runtime, lang-first sort, cookies, validated URL last", () => {
   const args = downloadArgs({
     videoId: "qD0_yWgifDM",
-    profile: { kind: "video", maxHeight: 1080, codec: "h264", container: "mp4" },
+    profile: { type: "video", maxHeight: 1080, codec: "h264", container: "mp4" },
     tmpDir: "/data/youtube/tmp/qD0_yWgifDM",
     homeDir: "/media/youtube/AI",
     cookiesPath: "/data/youtube/tmp/qD0_yWgifDM/cookies.txt",
@@ -66,12 +66,21 @@ test("downloadArgs builds a video profile: node JS runtime, lang-first sort, coo
 });
 
 test("downloadArgs builds an audio profile without cookies and uses opus for mkv video", () => {
-  const audio = downloadArgs({ videoId: "qD0_yWgifDM", profile: { kind: "audio", format: "opus" }, tmpDir: "/t", homeDir: "/h" });
+  const audio = downloadArgs({ videoId: "qD0_yWgifDM", profile: { type: "audio", format: "opus" }, tmpDir: "/t", homeDir: "/h" });
   assert.equal(audio.includes("--cookies"), false);
   assert.deepEqual(audio.slice(-9), ["-f", "ba/b", "-S", "lang,acodec:opus", "-x", "--audio-format", "opus", "--", "https://www.youtube.com/watch?v=qD0_yWgifDM"]);
-  const mkv = downloadArgs({ videoId: "qD0_yWgifDM", profile: { kind: "video", maxHeight: 720, codec: "vp9", container: "mkv" }, tmpDir: "/t", homeDir: "/h" });
+  const mkv = downloadArgs({ videoId: "qD0_yWgifDM", profile: { type: "video", maxHeight: 720, codec: "vp9", container: "mkv" }, tmpDir: "/t", homeDir: "/h" });
   assert.ok(mkv.includes("lang,res:720,vcodec:vp9,acodec:opus"));
-  assert.throws(() => downloadArgs({ videoId: "--exec=rm", profile: { kind: "audio", format: "m4a" }, tmpDir: "/t", homeDir: "/h" }));
+  assert.throws(() => downloadArgs({ videoId: "--exec=rm", profile: { type: "audio", format: "m4a" }, tmpDir: "/t", homeDir: "/h" }));
+});
+
+test("downloadArgs sorts by the stored codec names, leaves out any, and drops codecs on the format retry", () => {
+  const sortOf = (args: string[]) => args[args.indexOf("-S") + 1];
+  const video = (codec: "av1" | "any") => ({ type: "video" as const, maxHeight: 1080 as const, codec, container: "mp4" as const });
+  assert.equal(sortOf(downloadArgs({ videoId: "qD0_yWgifDM", profile: video("av1"), tmpDir: "/t", homeDir: "/h" })), "lang,res:1080,vcodec:av1,acodec:aac");
+  assert.equal(sortOf(downloadArgs({ videoId: "qD0_yWgifDM", profile: video("any"), tmpDir: "/t", homeDir: "/h" })), "lang,res:1080,acodec:aac");
+  assert.equal(sortOf(downloadArgs({ videoId: "qD0_yWgifDM", profile: video("av1"), codecPreference: false, tmpDir: "/t", homeDir: "/h" })), "lang,res:1080");
+  assert.equal(sortOf(downloadArgs({ videoId: "qD0_yWgifDM", profile: { type: "audio", format: "m4a" }, codecPreference: false, tmpDir: "/t", homeDir: "/h" })), "lang");
 });
 
 test("SUBSMELT_YTDLP_BIN wins over the DATA_DIR copy; the DATA_DIR copy wins over PATH", (t) => {
