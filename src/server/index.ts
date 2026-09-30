@@ -26,6 +26,10 @@ import {
   getTranscriptionBackendUrl,
   runTranscriptionAttempt,
 } from "./routes/transcription.js";
+import {
+  claimAutoTranscriptions,
+  releaseAutoTranscription,
+} from "./auto-transcription.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -67,9 +71,13 @@ app.post("/api/scan", async (_req, res) => {
         behavior === "auto_transcribe_and_translate"
           ? "transcribe_and_translate"
           : "transcribe_only";
-      const missingVideos = result.files
-        .filter((file) => file.videoPath && file.subtitles.length === 0)
-        .map((file) => file.videoPath as string);
+      // Claimed in the same tick as the scan, so an overlapping scan either
+      // finds a video claimed here or already sees its new subtitle.
+      const missingVideos = claimAutoTranscriptions(
+        result.files
+          .filter((file) => file.videoPath && file.subtitles.length === 0)
+          .map((file) => file.videoPath as string),
+      );
       // Per-file isolation: a single failure must NOT abort the whole scan
       // batch. Each file is transcribed through runTranscriptionAttempt (which
       // records a history entry and acquires the shared concurrency slot), and
@@ -114,6 +122,8 @@ app.post("/api/scan", async (_req, res) => {
               "system",
               `Auto-transcription failed for ${path.basename(videoPath)}: ${message}`,
             );
+          } finally {
+            releaseAutoTranscription(videoPath);
           }
         },
       )) {
