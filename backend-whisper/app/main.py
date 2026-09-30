@@ -124,7 +124,9 @@ def require_token(
     if not presented and x_subsmelt_token:
         presented = x_subsmelt_token.strip()
 
-    if not presented or not secrets.compare_digest(presented, expected):
+    # Compare bytes: compare_digest raises TypeError on a non-ASCII str, which
+    # would turn a bad token into a 500 instead of a 401.
+    if not presented or not secrets.compare_digest(presented.encode("utf-8"), expected.encode("utf-8")):
         raise HTTPException(
             status_code=401,
             detail={"code": "unauthorized", "message": "Invalid or missing whisper backend token"},
