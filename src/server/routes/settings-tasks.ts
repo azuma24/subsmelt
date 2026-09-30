@@ -20,6 +20,7 @@ import { convertSubtitle, probeModelContext, summarizeTranslationError, translat
 import { REDACTED_SECRET, parseConnections, resolveConnectionPool, restoreRedactedApiKeys } from "../connections.js";
 import { logger } from "../logger.js";
 import { isWatcherRunning, restartWatcher } from "../watcher.js";
+import { parseTaskUpdate } from "./validation.js";
 
 // Pure client-driven format conversion (no translation, no DB). The browser
 // uploads file contents; we re-stringify each into the target format and return
@@ -148,7 +149,9 @@ export function registerSettingsTasksRoutes(app: Express): void {
   });
 
   app.put("/api/tasks/:id", (req, res) => {
-    updateTask(parseInt(req.params.id, 10), req.body);
+    const update = parseTaskUpdate(req.body);
+    if (!update.ok) return res.status(400).json({ error: update.error });
+    updateTask(parseInt(req.params.id, 10), update.value);
     res.json({ ok: true });
   });
 
