@@ -73,13 +73,16 @@ def _cut_point(target: float, silences: Sequence[Silence]) -> float:
 
 
 def plan_chunks(duration: float, silences: Callable[[], Sequence[Silence]]) -> list[Chunk]:
-    """One chunk up to ``CHUNK_MAX_S``; beyond that, a cut near every multiple
-    of ``CHUNK_TARGET_S``. ``silences`` is only consulted when cutting."""
+    """One chunk up to ``CHUNK_MAX_S``; beyond that, each cut lands near
+    ``CHUNK_TARGET_S`` after the previous one, so no chunk exceeds
+    ``CHUNK_TARGET_S + CHUNK_SEARCH_S``. ``silences`` is only consulted when cutting."""
     if duration <= CHUNK_MAX_S:
         return [(0.0, duration)]
     found = silences()
-    targets = [CHUNK_TARGET_S * index for index in range(1, int(duration // CHUNK_TARGET_S) + 1) if CHUNK_TARGET_S * index < duration]
-    bounds = [0.0, *(_cut_point(target, found) for target in targets), duration]
+    bounds = [0.0]
+    while duration - bounds[-1] > CHUNK_MAX_S:
+        bounds.append(_cut_point(bounds[-1] + CHUNK_TARGET_S, found))
+    bounds.append(duration)
     return list(zip(bounds, bounds[1:]))
 
 
@@ -183,7 +186,8 @@ def run(
 ) -> Generator[dict, None, tuple[list, object]]:
     """Engine runner for ``nemotron-3.5-asr``."""
     locale = map_language(request.language)
-    with lease(request.model, request.device, request.compute_type) as handle:
+    # Nemotron has no compute type; a Whisper one left in settings must not fail validation.
+    with lease(request.model, request.device, "") as handle:
         duration = wav_duration(audio_path)
         chunks = plan_chunks(duration, lambda: detect_silences(audio_path))
         words, locales = yield from run_chunks(

@@ -31,7 +31,11 @@ class ChunkPlanningTests(unittest.TestCase):
         )
 
     def test_falls_back_to_the_mark_itself_without_a_nearby_silence(self):
-        self.assertEqual(nemotron.plan_chunks(1300.0, lambda: [(100.0, 100.5)]), [(0.0, 600.0), (600.0, 1200.0), (1200.0, 1300.0)])
+        self.assertEqual(nemotron.plan_chunks(1300.0, lambda: [(100.0, 100.5)]), [(0.0, 600.0), (600.0, 1300.0)])
+
+    def test_no_chunk_exceeds_the_maximum_when_neighbouring_cuts_drift_apart(self):
+        chunks = nemotron.plan_chunks(1500.0, lambda: [(480.0, 481.0), (1318.0, 1319.0)])
+        self.assertEqual(chunks, [(0.0, 480.5), (480.5, 1080.5), (1080.5, 1500.0)])
 
     def test_a_700s_file_is_one_chunk_and_never_scans_for_silence(self):
         def never():

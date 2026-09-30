@@ -72,7 +72,10 @@ def binary_version() -> str | None:
 
 
 def availability() -> tuple[bool, str | None]:
-    if resolve_binary() is not None:
+    binary = resolve_binary()
+    if binary is not None:
+        if _version_of(str(binary)) is None:
+            return False, f"nemo-speech runtime at {binary} does not run"
         return True, None
     configured = os.environ.get(BINARY_ENV_VAR)
     if configured:

@@ -126,6 +126,24 @@ class NemotronApiTests(unittest.TestCase):
         self.assertEqual(models["small"]["languages"], "all")
         self.assertEqual(models["small"]["engine"], "whisper")
 
+    def test_a_whisper_compute_type_does_not_block_nemotron(self):
+        resp = self._upload("/transcribe/upload", {"model": MODEL, "language": "en", "device": "cpu", "compute_type": "float16"})
+        self.assertEqual(resp.status_code, 200)
+
+    def test_a_binary_that_cannot_run_marks_the_model_unavailable(self):
+        broken = self.root / "broken" / "nemo-speech"
+        broken.parent.mkdir()
+        broken.write_bytes(b"\x7fELF not really a program")
+        broken.chmod(0o755)
+        with mock.patch.dict(os.environ, {"SUBSMELT_NEMO_SPEECH": str(broken)}):
+            caps = self.client.get("/health").json()["capabilities"]
+        entry = {m["id"]: m for m in caps["modelInfo"]}[MODEL]
+        self.assertEqual(caps["nemoSpeech"], {"available": False, "version": None})
+        self.assertEqual(
+            (entry["available"], entry["unavailableReason"]),
+            (False, f"nemo-speech runtime at {broken} does not run"),
+        )
+
     def test_missing_binary_marks_the_model_unavailable_and_refuses_transcription(self):
         missing = str(self.root / "nowhere" / "nemo-speech")
         with mock.patch.dict(os.environ, {"SUBSMELT_NEMO_SPEECH": missing}):
