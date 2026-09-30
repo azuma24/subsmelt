@@ -154,6 +154,14 @@ const DEFAULT_TASK: TranslationTask = {
 
 // --- Load / Save ---
 
+function defaultConfig(): ConfigData {
+  return {
+    settings: { ...DEFAULT_SETTINGS },
+    tasks: [{ ...DEFAULT_TASK }],
+    _next_task_id: 2,
+  };
+}
+
 function loadConfig(): ConfigData {
   try {
     if (fs.existsSync(CONFIG_FILE)) {
@@ -170,15 +178,16 @@ function loadConfig(): ConfigData {
       return data;
     }
   } catch (e) {
-    console.error("[Config] Failed to load config.json, using defaults:", e);
+    // Keep the operator's tasks, connections and keys recoverable: back the file
+    // up and leave it in place. Only the next save replaces it.
+    const backup = `${CONFIG_FILE}.broken-${new Date().toISOString().replace(/[:.]/g, "-")}`;
+    fs.copyFileSync(CONFIG_FILE, backup);
+    console.error(`[Config] Failed to load ${CONFIG_FILE}; copied it to ${backup} and running on defaults until settings are saved:`, e);
+    return defaultConfig();
   }
 
   // First run — create with defaults
-  const config: ConfigData = {
-    settings: { ...DEFAULT_SETTINGS },
-    tasks: [{ ...DEFAULT_TASK }],
-    _next_task_id: 2,
-  };
+  const config = defaultConfig();
   saveConfig(config);
   return config;
 }
