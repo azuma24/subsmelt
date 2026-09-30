@@ -289,3 +289,43 @@ test("a playlist check that YouTube refuses with 429 starts the cooldown", async
   await assert.rejects(worker.checkPlaylist(playlist()), { message: "ERROR: [youtube:tab] HTTP Error 429: Too Many Requests" });
   assert.deepEqual(worker.activeCooldown(), { until: "2026-09-30T11:00:00.000Z", cause: "rate_limited", strikes: 1 });
 });
+
+const undatedListing = JSON.stringify({
+  id: PL, title: "AI", playlist_count: 2,
+  entries: [{ id: "uXspbC2srEQ", title: "Introducing dots", duration: 148 }, { id: "BHPDsGVciDk", title: "Best AI Release of 2026", duration: 727 }],
+});
+
+test("a bot check on a posted-since date lookup stops the sync and starts the cooldown", async (t) => {
+  const { worker } = rig(t, {
+    FAKE_YTDLP_STDOUT: undatedListing,
+    FAKE_YTDLP_STDERR: "ERROR: [youtube] uXspbC2srEQ: Sign in to confirm you're not a bot\n",
+    FAKE_YTDLP_EXIT: "1",
+    FAKE_YTDLP_FAIL_WHEN_ARG: "%(upload_date)s",
+  });
+  const posted = playlist({ backfill: { kind: "posted_since", date: "2026-09-01" } });
+  savePlaylist(posted);
+
+  await assert.rejects(worker.checkPlaylist(posted, { asNewFollow: true }), { message: "ERROR: [youtube] uXspbC2srEQ: Sign in to confirm you're not a bot" });
+  assert.deepEqual(worker.activeCooldown(), { until: "2026-09-30T11:00:00.000Z", cause: "bot_check", strikes: 1 });
+  assert.equal(ytdlpRuns().length, 2);
+});
+
+test("a posted-since date lookup that fails for another reason keeps the sync going", async (t) => {
+  const { store, worker } = rig(t, {
+    FAKE_YTDLP_STDOUT: undatedListing,
+    FAKE_YTDLP_STDERR: "ERROR: [youtube] uXspbC2srEQ: Video unavailable\n",
+    FAKE_YTDLP_EXIT: "1",
+    FAKE_YTDLP_FAIL_WHEN_ARG: "%(upload_date)s",
+  });
+  const posted = playlist({ backfill: { kind: "posted_since", date: "2026-09-01" } });
+  savePlaylist(posted);
+
+  const result = await worker.checkPlaylist(posted, { asNewFollow: true });
+  assert.equal(result.total, 2);
+  assert.equal(worker.activeCooldown(), null);
+  assert.equal(ytdlpRuns().length, 3);
+  assert.deepEqual(["uXspbC2srEQ", "BHPDsGVciDk"].map((id) => [store.getVideo(id)!.status, store.getVideo(id)!.skip_kind]), [
+    ["skipped", "before_start"],
+    ["skipped", "before_start"],
+  ]);
+});

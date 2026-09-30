@@ -2,7 +2,7 @@ import { selectBackfill } from "./backfill.js";
 import type { Backfill, YoutubePlaylist } from "./playlists.js";
 import type { InitialState, ListingEntry, YoutubeStore } from "./store.js";
 import { isVideoId, playlistUrl, videoUrl } from "./urls.js";
-import { errorSummary, runYtdlp } from "./ytdlp.js";
+import { classifyYtdlpError, errorSummary, runYtdlp } from "./ytdlp.js";
 
 const LISTING_TIMEOUT_MS = 10 * 60_000;
 // A flat listing of an 889-video playlist is 1.2 MB of JSON; 5,000 videos (YouTube's cap) stays well under this.
@@ -100,7 +100,11 @@ export async function exactUploadDateWithYtdlp(videoId: string): Promise<string 
     ["--skip-download", "--no-playlist", "--js-runtimes", "node", "--print", "%(upload_date)s", "--", videoUrl(videoId)],
     { timeoutMs: METADATA_TIMEOUT_MS },
   );
-  return result.code === 0 ? upload(result.stdout.trim()) : null;
+  if (result.code === 0) return upload(result.stdout.trim());
+  // YouTube pushing back must reach the lane's cooldown; any other failure just leaves the date unknown.
+  const cls = classifyYtdlpError(result.stderr);
+  if (cls === "rate_limited" || cls === "bot_check") throw new Error(errorSummary(result.stderr, result.code));
+  return null;
 }
 
 /**
