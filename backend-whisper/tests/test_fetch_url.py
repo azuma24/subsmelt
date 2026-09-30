@@ -163,3 +163,49 @@ class DownloadUrlTests(unittest.TestCase):
         fetch_url.download_url("https://example.com/v1", self.dest)
         self.assertEqual(_FakeYoutubeDL.last_opts["extract_flat"], "in_playlist")
         self.assertTrue(_FakeYoutubeDL.last_opts["noplaylist"])
+
+    def test_media_hosts_are_rechecked_after_extractor_redirects(self):
+        cases = {
+            "webpage redirected to loopback": {"webpage_url": "http://127.0.0.1/admin"},
+            "direct media url on metadata endpoint": {"url": "http://169.254.169.254/latest/meta-data"},
+            "one requested format on a private host": {
+                "requested_formats": [{"url": "https://8.8.8.8/a.m4a"}, {"url": "http://10.0.0.7/v.mp4"}]
+            },
+        }
+        for label, extra in cases.items():
+            _FakeYoutubeDL.calls = []
+            _FakeYoutubeDL.info = {"id": "v1", "ext": "m4a", "webpage_url": "https://example.com/v1", **extra}
+            with self.assertRaises(fetch_url.UrlFetchError, msg=label):
+                fetch_url.download_url("https://example.com/v1", self.dest)
+            self.assertFalse(self._downloaded(), label)
+
+    def test_public_media_hosts_download_to_the_dest_dir(self):
+        _FakeYoutubeDL.info = {
+            "id": "v1", "ext": "m4a",
+            "webpage_url": "https://example.com/v1",
+            "requested_formats": [{"url": "https://8.8.8.8/a.m4a", "filesize": 1024}],
+        }
+        produced = fetch_url.download_url("https://example.com/v1", self.dest)
+        self.assertEqual(produced, self.dest / "v1.m4a")
+        self.assertEqual(
+            _FakeYoutubeDL.calls,
+            [("extract_info", "https://example.com/v1", False), ("process_ie_result", True)],
+        )
+
+    def test_size_cap_is_enforced_before_and_during_download(self):
+        self.assertEqual(fetch_url.MAX_FETCH_BYTES, 5 * 1024 * 1024 * 1024)
+        _FakeYoutubeDL.info = {
+            "id": "v1", "ext": "m4a", "webpage_url": "https://example.com/v1",
+            "requested_formats": [{"url": "https://8.8.8.8/a.m4a", "filesize_approx": fetch_url.MAX_FETCH_BYTES + 1}],
+        }
+        with self.assertRaises(fetch_url.UrlFetchError) as ctx:
+            fetch_url.download_url("https://example.com/v1", self.dest)
+        self.assertIn("5120 MB", str(ctx.exception))
+        self.assertFalse(self._downloaded())
+        self.assertEqual(_FakeYoutubeDL.last_opts["max_filesize"], fetch_url.MAX_FETCH_BYTES)
+
+    def test_allow_unsafe_still_bypasses_the_media_host_check(self):
+        _FakeYoutubeDL.info = {"id": "v1", "ext": "m4a", "webpage_url": "http://127.0.0.1/v1"}
+        with mock.patch.dict(os.environ, {fetch_url.ALLOW_UNSAFE_ENV: "1"}):
+            produced = fetch_url.download_url("http://127.0.0.1/v1", self.dest)
+        self.assertEqual(produced, self.dest / "v1.m4a")
