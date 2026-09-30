@@ -149,6 +149,22 @@ class DisconnectMidStreamTests(unittest.TestCase):
         self.assertEqual(lines, [b'{"type": "progress"}\n', b'{"type": "error", "error": "decoder exploded"}\n'])
         self.assertTrue(cleaned.wait(2.0))
 
+    def test_cleanup_failure_is_logged_and_the_stream_still_ends(self):
+        def one_line():
+            yield {"type": "progress"}
+
+        def locked_cleanup():
+            raise PermissionError("upload.wav is in use")
+
+        async def read_all():
+            stream = main_module._ndjson_stream(one_line(), asyncio.Event(), cleanup=locked_cleanup)
+            return [line async for line in stream]
+
+        with self.assertLogs("app.main", level="ERROR") as logs:
+            lines = asyncio.run(read_all())
+        self.assertEqual(lines, [b'{"type": "progress"}\n'])
+        self.assertIn("upload.wav is in use", "\n".join(logs.output))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import secrets
 from pathlib import Path
@@ -84,6 +85,7 @@ ALLOW_UNSAFE = os.environ.get("SUBSMELT_WHISPER_ALLOW_UNSAFE", "0") == "1"
 USE_FAKE_TRANSCRIBE = os.environ.get("SUBSMELT_WHISPER_FAKE", "0") == "1"
 
 app = FastAPI(title="Subsmelt Whisper Backend", version=backend_version())
+log = logging.getLogger(__name__)
 
 
 def _configured_token() -> str:
@@ -405,6 +407,8 @@ async def _ndjson_stream(
                 gen.close()
                 if cleanup is not None:
                     cleanup()
+            except Exception:  # noqa: BLE001 - e.g. a Windows file lock on the temp media
+                log.exception("stream cleanup failed")
             finally:
                 post(done)
 
