@@ -255,3 +255,35 @@ test("POST /api/youtube/videos/:id/note re-exports the note and maps failures to
     server.close();
   }
 });
+
+const JAPANESE_ASS = `[Script Info]
+ScriptType: v4.00+
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:04.00,Default,,0,0,0,,{\\i1}こんにちは、{\\i0}ようこそ。
+Dialogue: 0,0:00:04.00,0:00:50.00,Default,,0,0,0,,この講演は\\Nノートの話です。
+Dialogue: 0,0:00:50.00,0:00:55.00,Default,,0,0,0,,ご視聴ありがとう。
+`;
+
+test("an ASS translation is read by its format and gets its own section", async (t) => {
+  const { lastInsertRowid: japaneseTask } = createTask({ source_lang: "Automatic", target_lang: "日本語", output_pattern: "{{name}}.ja.ass", lang_code: "ja" });
+  savePlaylist({ id: PL, title: "AI | Talks", ...defaultPlaylistFields(FOLDER), subtitleTaskIds: [chineseTask, japaneseTask] });
+  t.after(() => savePlaylist({ id: PL, title: "AI | Talks", ...defaultPlaylistFields(FOLDER), subtitleTaskIds: [chineseTask] }));
+  fs.writeFileSync(path.join(MEDIA_FOLDER, `${BASE}.ja.ass`), JAPANESE_ASS);
+
+  const result = await exportNoteForVideo(deps, VIDEO);
+
+  assert.deepEqual(result.translations, ["zh-TW", "ja"]);
+  const note = fs.readFileSync(NOTE_FILE, "utf8");
+  assert.equal(note.slice(note.indexOf("## Transcript (日本語)")), `## Transcript (日本語)
+
+[00:00](https://youtu.be/${VIDEO}?t=0) こんにちは、ようこそ。この講演はノートの話です。
+
+[00:50](https://youtu.be/${VIDEO}?t=50) ご視聴ありがとう。
+`);
+});

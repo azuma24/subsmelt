@@ -1,11 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
-import { parseSync } from "subtitle";
 import { getSetting, getTask } from "../config.js";
 import { logger } from "../logger.js";
 import { notify } from "../notify.js";
 import { MEDIA_DIR } from "../scanner.js";
 import { broadcast } from "../sse.js";
+import { normalizeTimeToMs, parseSubtitle, type SubtitleCue } from "../translator/convert.js";
 import { readSubtitleFileText } from "../translator/encoding.js";
 import { noteFileName, renderNote, safeNoteName, type Chapter, type Cue, type NoteInfo, type NoteTranslation } from "./note.js";
 import { findPlaylist, type YoutubePlaylist } from "./playlists.js";
@@ -71,12 +71,24 @@ function readInfo(file: string): Info {
   }
 }
 
+const ASS_TAG = /\{[^}]*\}/g;
+const ASS_BREAK = /\\[Nn]/g;
+
+/** Cues of an SRT, WebVTT, ASS or SSA file, parsed by its extension, with ASS override tags removed. */
 function readCues(file: string): Cue[] {
-  return parseSync(readSubtitleFileText(file))
+  const ext = path.extname(file).slice(1).toLowerCase();
+  const parsed = parseSubtitle(readSubtitleFileText(file), ext);
+  const nodes: SubtitleCue[] = Array.isArray(parsed) ? parsed : parsed.events;
+  const isAss = !Array.isArray(parsed);
+  return nodes
     .filter((node) => node.type === "cue")
-    .map((node) => {
-      const data = node.data as { start: number; end: number; text: string };
-      return { start: data.start / 1000, end: data.end / 1000, text: data.text };
+    .map(({ data }) => {
+      const raw = String(data?.text ?? "");
+      return {
+        start: normalizeTimeToMs(data?.start) / 1000,
+        end: normalizeTimeToMs(data?.end) / 1000,
+        text: isAss ? raw.replace(ASS_TAG, "").replace(ASS_BREAK, "\n") : raw,
+      };
     });
 }
 
