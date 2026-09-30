@@ -75,6 +75,10 @@ test("translateSingle: keeps both lines of a two-line reply", async () => {
   assert.equal(await translateSingleReply({ content: "Je suis\nfatigué" }), "Je suis\nfatigué");
 });
 
+test("translateSingle: keeps a dialogue-dash reply that contains quotes whole", async () => {
+  assert.equal(await translateSingleReply({ content: "- 他說「好」\n- 走吧" }), "- 他說「好」\n- 走吧");
+});
+
 test("translateSingle: extracts the final answer from a reasoning-only reply", async () => {
   const reasoning = [
     "*   Source: I'm leaving.",
