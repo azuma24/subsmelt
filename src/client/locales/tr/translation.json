@@ -681,8 +681,7 @@
       "languageEnglish": "İngilizce",
       "languageJapanese": "Japonca",
       "languageChinese": "Çince",
-      "languageKorean": "Korece",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Korece"
     },
     "connections": {
       "mode": "Bağlantı modu",
@@ -724,8 +723,8 @@
     "rawConfigOpen": "Ham yapılandırmayı aç",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "Konuşmadan metne modelleri",
+      "description": "Transkripsiyon arka ucunda konuşmadan metne modellerini indirin veya kaldırın. İndirmeler ilerlemeyi canlı gösterir.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +747,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "Çalışma zamanı eksik"
     },
     "setup": {
       "progress": "{{total}} adımdan {{done}} tamamlandı",
@@ -898,7 +898,7 @@
     "timeout": "Backend çok geç yanıt verdi — Ayarlar'da istek zaman aşımını artırın veya daha küçük bir model kullanın.",
     "auth": "Backend token'ı reddetti — Ayarlar'daki backend token'ını kontrol edin.",
     "rate-limit": "Sağlayıcı istek hızını sınırladı — yeniden denenecek; sürerse paralel parça sayısını azaltın.",
-    "model-missing": "Bu model indirilmemiş — Ayarlar → Modeller bölümünden indirin.",
+    "model-missing": "Bu model indirilmemiş — Ayarlar → Konuşmadan metne modelleri bölümünden indirin.",
     "insufficient-ram": "Bu model için yeterli bellek yok — daha küçük bir model seçin.",
     "insufficient-disk": "Çıktı için yeterli boş disk alanı yok.",
     "ffmpeg-missing": "Backend'de ffmpeg bulunamadı — kurun veya SUBSMELT_FFMPEG değerini ayarlayın.",
@@ -1026,7 +1026,6 @@
     "selectFolder": "{{name}} içindeki tüm dosyaları seç",
     "transcribingNow": "şu anda yazıya dökülüyor",
     "selectedSummary": "{{count}} dosya seçildi",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "Model listesi yüklenemedi, bu yüzden transkripsiyon başlatılamıyor."
   },
   "transcriptionHistory": {
@@ -1050,5 +1049,18 @@
     "retriedAll": "{{total}} dosyadan {{ok}} tanesi yeniden denendi.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "Yeniden deneme başarısız: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 dil. Çince ve nadir diller için en iyisi.",
+      "nemotron": "Hızlı, noktalamalı. İngilizce, Japonca, Korece ve çoğu Avrupa dili."
+    },
+    "languageUnsupported": "{{model}}, {{language}} dilini desteklemiyor. Bir Whisper modeli seçin.",
+    "optionsDecidedByModel": "{{model}}, beam boyutunu, istemi ve hesaplama türünü kendisi belirler.",
+    "modelUnavailable": "{{model}} burada çalışamıyor: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

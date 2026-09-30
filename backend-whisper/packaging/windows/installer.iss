@@ -52,6 +52,7 @@ DiskSpanning=no
 [Files]
 ; -- The PyInstaller onedir bundle. Build it first; path is relative to this .iss.
 ;    "dist\whisper-server\*" contains run_server.exe + DLLs + app\ + ffmpeg.exe.
+;    It also carries nemo-speech\ (the NeMo-Speech CUDA runtime for Nemotron ASR).
 Source: "..\..\dist\whisper-server\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
 
 ; -- Service install/uninstall scripts (copied next to the exe so they find it).

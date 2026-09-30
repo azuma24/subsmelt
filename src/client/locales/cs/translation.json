@@ -681,8 +681,7 @@
       "languageEnglish": "Angličtina",
       "languageJapanese": "Japonština",
       "languageChinese": "Čínština",
-      "languageKorean": "Korejština",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Korejština"
     },
     "connections": {
       "mode": "Režim připojení",
@@ -724,8 +723,8 @@
     "rawConfigOpen": "Otevřít surovou konfiguraci",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "Modely převodu řeči na text",
+      "description": "Stahujte nebo odstraňujte modely převodu řeči na text na backendu přepisu. Průběh stahování se zobrazuje živě.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +747,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "Chybí runtime"
     },
     "setup": {
       "progress": "Hotovo {{done}} z {{total}}",
@@ -898,7 +898,7 @@
     "timeout": "Backend odpovídal příliš dlouho — zvyšte časový limit požadavku v Nastavení, nebo použijte menší model.",
     "auth": "Backend odmítl token — zkontrolujte backend token v Nastavení.",
     "rate-limit": "Poskytovatel omezil četnost požadavků — pokus se zopakuje; pokud se to opakuje, snižte počet paralelních částí.",
-    "model-missing": "Tento model není stažený — stáhněte ho v Nastavení → Modely.",
+    "model-missing": "Tento model není stažen — stáhněte jej v Nastavení → Modely převodu řeči na text.",
     "insufficient-ram": "Pro tento model není dost paměti — zvolte menší.",
     "insufficient-disk": "Na disku není dost volného místa pro výstup.",
     "ffmpeg-missing": "Na backendu nebyl nalezen ffmpeg — nainstalujte ho, nebo nastavte SUBSMELT_FFMPEG.",
@@ -1026,7 +1026,6 @@
     "selectFolder": "Vybrat všechny soubory v {{name}}",
     "transcribingNow": "právě se přepisuje",
     "selectedSummary": "Vybráno souborů: {{count}}",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "Seznam modelů se nepodařilo načíst, takže přepis nelze spustit."
   },
   "transcriptionHistory": {
@@ -1050,5 +1049,18 @@
     "retriedAll": "Zopakováno {{ok}} z {{total}} souborů.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "Opakování se nezdařilo: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 jazyků. Nejlepší pro čínštinu a vzácné jazyky.",
+      "nemotron": "Rychlý, s interpunkcí. Angličtina, japonština, korejština a většina evropských jazyků."
+    },
+    "languageUnsupported": "{{model}} nepodporuje jazyk {{language}}. Vyberte model Whisper.",
+    "optionsDecidedByModel": "{{model}} si sám určuje velikost beam, prompt a typ výpočtu.",
+    "modelUnavailable": "{{model}} zde nelze spustit: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

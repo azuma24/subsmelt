@@ -3,7 +3,7 @@
   Fetch the third-party binaries the Windows build needs into packaging\windows\vendor\.
 
 .DESCRIPTION
-  The build (PyInstaller spec + Inno Setup installer) expects two vendored
+  The build (PyInstaller spec + Inno Setup installer) expects three vendored
   binaries that are deliberately NOT committed to the repo (large, redistributable,
   and licensed separately):
 
@@ -11,6 +11,10 @@
                               app/audio.py uses it via SUBSMELT_FFMPEG.
     vendor\vc_redist.x64.exe  Microsoft VC++ runtime, silently installed by the
                               installer ([Files]/[Run] in installer.iss).
+    vendor\nemo-speech\bin\   NeMo-Speech.cpp CUDA runtime (nemo-speech.exe and
+                              its DLLs) for the Nemotron ASR engine, bundled as
+                              nemo-speech\bin\ beside run_server.exe. The
+                              download is pinned and SHA-256 verified.
 
   CI runs this on a windows-latest runner before building; local Windows builders
   can run it once to populate vendor\. It is idempotent — existing files are kept
@@ -27,6 +31,9 @@ param(
     [switch]$Force
 )
 
+$NemoSpeechVersion = "0.1.0"
+$NemoSpeechSha256 = "ba024204e76ca2fa4eefa8787506c3c49e418147f627f60cf9206a582b60089c"
+
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"  # huge speedup for Invoke-WebRequest on CI
 
@@ -38,6 +45,31 @@ New-Item -ItemType Directory -Force -Path $VendorDir | Out-Null
 $FfmpegUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
 # VC++ redistributable: Microsoft's permalink to the latest x64 runtime.
 $VcRedistUrl = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+$NemoSpeechZip = "nemo-speech-$NemoSpeechVersion-windows-x86_64-cuda.zip"
+$NemoSpeechUrl = "https://github.com/NVIDIA/NeMo-Speech.cpp/releases/download/v$NemoSpeechVersion/$NemoSpeechZip"
+
+function Assert-Sha256 {
+    param([string]$Path, [string]$Expected)
+
+    $actual = (Get-FileHash -Algorithm SHA256 -Path $Path).Hash
+    if ($actual -ne $Expected) {
+        throw "[fetch-vendor] SHA-256 mismatch for ${Path}: expected $Expected, got $actual"
+    }
+}
+
+# The release zip is flat (bin\, include\, lib\); only bin\ is needed at runtime.
+function Expand-NemoSpeechBin {
+    param([string]$Zip, [string]$BinDir, [string]$ScratchDir)
+
+    if (Test-Path $ScratchDir) { Remove-Item -Recurse -Force $ScratchDir }
+    Expand-Archive -Path $Zip -DestinationPath $ScratchDir -Force
+    $exe = Join-Path $ScratchDir "bin\nemo-speech.exe"
+    if (-not (Test-Path $exe)) { throw "bin\nemo-speech.exe not found inside $Zip" }
+    if (Test-Path $BinDir) { Remove-Item -Recurse -Force $BinDir }
+    New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
+    Copy-Item -Path (Join-Path $ScratchDir "bin\*") -Destination $BinDir -Recurse -Force
+    Remove-Item -Recurse -Force $ScratchDir
+}
 
 function Get-Vendor {
     param([string]$Name, [string]$Url, [scriptblock]$PostProcess)
@@ -74,6 +106,16 @@ Get-Vendor -Name "ffmpeg.exe" -Url $FfmpegUrl -PostProcess {
     Copy-Item -Path $exe.FullName -Destination $target -Force
     Remove-Item -Force $tmpZip
     Remove-Item -Recurse -Force $tmpExtract
+}
+
+Get-Vendor -Name "nemo-speech\bin\nemo-speech.exe" -Url $NemoSpeechUrl -PostProcess {
+    param($url, $target)
+    $tmpZip = Join-Path $env:TEMP $NemoSpeechZip
+    Invoke-WebRequest -Uri $url -OutFile $tmpZip
+    Assert-Sha256 -Path $tmpZip -Expected $NemoSpeechSha256
+    Expand-NemoSpeechBin -Zip $tmpZip -BinDir (Split-Path $target -Parent) `
+        -ScratchDir (Join-Path $env:TEMP "nemo-speech-extract")
+    Remove-Item -Force $tmpZip
 }
 
 Write-Host "[fetch-vendor] vendor dir contents:"

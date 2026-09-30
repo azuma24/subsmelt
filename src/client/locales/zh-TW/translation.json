@@ -681,8 +681,7 @@
       "languageEnglish": "英文",
       "languageJapanese": "日文",
       "languageChinese": "中文",
-      "languageKorean": "韓文",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "韓文"
     },
     "connections": {
       "mode": "連線模式",
@@ -724,8 +723,8 @@
     "rawConfigOpen": "Open raw config",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "語音轉字幕模型",
+      "description": "在轉寫後端下載或移除語音轉字幕模型，下載時會即時顯示進度。",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +747,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "缺少執行環境"
     },
     "setup": {
       "progress": "已完成 {{done}}/{{total}}",
@@ -898,7 +898,7 @@
     "timeout": "後端回應逾時 — 請在設定中調高逾時時間，或改用較小的模型。",
     "auth": "後端拒絕了權杖 — 請檢查設定中的後端權杖。",
     "rate-limit": "服務供應商限流 — 將會重試；若持續發生請降低平行區塊數。",
-    "model-missing": "該模型尚未下載 — 請在設定 → 模型中下載。",
+    "model-missing": "該模型尚未下載 — 請在設定 → 語音轉字幕模型中下載。",
     "insufficient-ram": "記憶體不足以執行此模型 — 請選擇較小的模型。",
     "insufficient-disk": "磁碟剩餘空間不足以寫入輸出。",
     "ffmpeg-missing": "後端找不到 ffmpeg — 請安裝或設定 SUBSMELT_FFMPEG。",
@@ -1026,7 +1026,6 @@
     "selectFolder": "選取 {{name}} 中的所有檔案",
     "transcribingNow": "正在轉錄",
     "selectedSummary": "已選取 {{count}} 個檔案",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "無法載入模型清單，因此無法開始轉錄。"
   },
   "transcriptionHistory": {
@@ -1050,5 +1049,18 @@
     "retriedAll": "已重試 {{total}} 個檔案中的 {{ok}} 個。",
     "failedFallback": "轉錄失敗。",
     "retryFailed": "重試失敗：{{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "支援 99 種語言，最適合中文與少見語言。",
+      "nemotron": "速度快，自帶標點。支援英文、日文、韓文與多數歐洲語言。"
+    },
+    "languageUnsupported": "{{model}} 不支援{{language}}，請改選 Whisper 模型。",
+    "optionsDecidedByModel": "{{model}} 會自行決定 beam 大小、提示詞與運算類型。",
+    "modelUnavailable": "{{model}} 無法在此執行：{{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

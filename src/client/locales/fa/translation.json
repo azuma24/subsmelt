@@ -681,8 +681,7 @@
       "languageEnglish": "انگلیسی",
       "languageJapanese": "ژاپنی",
       "languageChinese": "چینی",
-      "languageKorean": "کره‌ای",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "کره‌ای"
     },
     "connections": {
       "mode": "حالت اتصال",
@@ -724,8 +723,8 @@
     "rawConfigOpen": "باز کردن پیکربندی خام",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "مدل‌های گفتار به متن",
+      "description": "مدل‌های گفتار به متن را در بک‌اند رونویسی دانلود یا حذف کنید. پیشرفت دانلودها زنده نمایش داده می‌شود.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +747,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "محیط اجرا موجود نیست"
     },
     "setup": {
       "progress": "{{done}} از {{total}} انجام شد",
@@ -898,7 +898,7 @@
     "timeout": "پاسخ بک‌اند بیش از حد طول کشید — زمان‌اتمام درخواست را در تنظیمات افزایش دهید یا از مدل کوچک‌تری استفاده کنید.",
     "auth": "بک‌اند توکن را رد کرد — توکن بک‌اند را در تنظیمات بررسی کنید.",
     "rate-limit": "ارائه‌دهنده سرعت درخواست را محدود کرد — دوباره تلاش خواهد شد؛ اگر تکرار شد، بخش‌های موازی را کم کنید.",
-    "model-missing": "این مدل دانلود نشده است — آن را از تنظیمات → مدل‌ها دانلود کنید.",
+    "model-missing": "این مدل دانلود نشده است — آن را از تنظیمات ← مدل‌های گفتار به متن دانلود کنید.",
     "insufficient-ram": "حافظه برای این مدل کافی نیست — مدل کوچک‌تری انتخاب کنید.",
     "insufficient-disk": "فضای خالی دیسک برای خروجی کافی نیست.",
     "ffmpeg-missing": "ffmpeg روی بک‌اند پیدا نشد — آن را نصب کنید یا SUBSMELT_FFMPEG را تنظیم کنید.",
@@ -1026,7 +1026,6 @@
     "selectFolder": "انتخاب همه فایل‌های {{name}}",
     "transcribingNow": "در حال رونویسی",
     "selectedSummary": "{{count}} فایل انتخاب شد",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "بارگیری فهرست مدل‌ها ممکن نشد، بنابراین رونویسی را نمی‌توان شروع کرد."
   },
   "transcriptionHistory": {
@@ -1050,5 +1049,18 @@
     "retriedAll": "{{ok}} از {{total}} فایل دوباره تلاش شد.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "تلاش مجدد ناموفق بود: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "۹۹ زبان. بهترین گزینه برای چینی و زبان‌های کمیاب.",
+      "nemotron": "سریع و با علائم نگارشی. انگلیسی، ژاپنی، کره‌ای و بیشتر زبان‌های اروپایی."
+    },
+    "languageUnsupported": "{{model}} از {{language}} پشتیبانی نمی‌کند. یک مدل Whisper انتخاب کنید.",
+    "optionsDecidedByModel": "{{model}} اندازهٔ beam، پرامپت و نوع محاسبه را خودش تعیین می‌کند.",
+    "modelUnavailable": "{{model}} اینجا قابل اجرا نیست: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

@@ -681,8 +681,7 @@
       "languageEnglish": "อังกฤษ",
       "languageJapanese": "ญี่ปุ่น",
       "languageChinese": "จีน",
-      "languageKorean": "เกาหลี",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "เกาหลี"
     },
     "connections": {
       "mode": "โหมดการเชื่อมต่อ",
@@ -724,8 +723,8 @@
     "rawConfigOpen": "Open raw config",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "โมเดลแปลงเสียงพูดเป็นข้อความ",
+      "description": "ดาวน์โหลดหรือลบโมเดลแปลงเสียงพูดเป็นข้อความบนแบ็กเอนด์ถอดเสียง การดาวน์โหลดแสดงความคืบหน้าแบบสด",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +747,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "ไม่มีรันไทม์"
     },
     "setup": {
       "progress": "เสร็จแล้ว {{done}} จาก {{total}}",
@@ -898,7 +898,7 @@
     "timeout": "แบ็กเอนด์ตอบกลับช้าเกินไป — เพิ่มเวลารอคำขอในการตั้งค่า หรือใช้โมเดลที่เล็กลง",
     "auth": "แบ็กเอนด์ปฏิเสธโทเค็น — ตรวจสอบโทเค็นแบ็กเอนด์ในการตั้งค่า",
     "rate-limit": "ผู้ให้บริการจำกัดอัตราคำขอ — ระบบจะลองใหม่ หากยังเกิดขึ้นอยู่ ให้ลดจำนวน chunk แบบขนาน",
-    "model-missing": "ยังไม่ได้ดาวน์โหลดโมเดลนั้น — ดาวน์โหลดได้ที่ การตั้งค่า → โมเดล",
+    "model-missing": "โมเดลนั้นยังไม่ได้ดาวน์โหลด — ดาวน์โหลดได้ที่ การตั้งค่า → โมเดลแปลงเสียงพูดเป็นข้อความ",
     "insufficient-ram": "หน่วยความจำไม่พอสำหรับโมเดลนี้ — เลือกโมเดลที่เล็กลง",
     "insufficient-disk": "พื้นที่ดิสก์ว่างไม่พอสำหรับเอาต์พุต",
     "ffmpeg-missing": "ไม่พบ ffmpeg บนแบ็กเอนด์ — ติดตั้ง ffmpeg หรือตั้งค่า SUBSMELT_FFMPEG",
@@ -1026,7 +1026,6 @@
     "selectFolder": "เลือกไฟล์ทั้งหมดใน {{name}}",
     "transcribingNow": "กำลังถอดเสียง",
     "selectedSummary": "เลือกแล้ว {{count}} ไฟล์",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "โหลดรายการโมเดลไม่สำเร็จ จึงเริ่มการถอดเสียงไม่ได้"
   },
   "transcriptionHistory": {
@@ -1050,5 +1049,18 @@
     "retriedAll": "ลองใหม่ {{ok}} จาก {{total}} ไฟล์",
     "failedFallback": "Transcription failed.",
     "retryFailed": "ลองใหม่ไม่สำเร็จ: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 ภาษา เหมาะที่สุดสำหรับภาษาจีนและภาษาที่พบน้อย",
+      "nemotron": "รวดเร็ว ใส่เครื่องหมายวรรคตอนให้ รองรับอังกฤษ ญี่ปุ่น เกาหลี และภาษายุโรปส่วนใหญ่"
+    },
+    "languageUnsupported": "{{model}} ไม่รองรับ{{language}} โปรดเลือกโมเดล Whisper",
+    "optionsDecidedByModel": "{{model}} กำหนดขนาด beam, พรอมต์ และประเภทการประมวลผลเอง",
+    "modelUnavailable": "{{model}} ไม่สามารถทำงานที่นี่ได้: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

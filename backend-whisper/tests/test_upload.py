@@ -9,13 +9,13 @@ try:
     from app.schemas import TranscribeRequest
     from app.transcribe import (
         TranscriptionCancelled,
-        fake_transcribe_upload_for_tests,
-        fake_transcribe_upload_streaming_for_tests,
+        fake_transcribe_for_tests,
+        fake_transcribe_streaming_for_tests,
     )
 except ModuleNotFoundError as exc:  # pragma: no cover - optional deps
     TranscribeRequest = None
-    fake_transcribe_upload_for_tests = None
-    fake_transcribe_upload_streaming_for_tests = None
+    fake_transcribe_for_tests = None
+    fake_transcribe_streaming_for_tests = None
     TranscriptionCancelled = None
     FUNC_IMPORT_ERROR = exc
 else:
@@ -31,7 +31,7 @@ class UploadFinalizeTests(unittest.TestCase):
         return TranscribeRequest(input_path="/uploads/clip.mkv", output_format="srt", language="en")
 
     def test_upload_returns_content_not_path(self):
-        result = fake_transcribe_upload_for_tests(Path("/uploads/clip.mkv"), self._request())
+        result = fake_transcribe_for_tests(Path("/uploads/clip.mkv"), self._request(), deliver="content")
         self.assertTrue(result["ok"])
         self.assertNotIn("subtitle_path", result)
         self.assertIn("content", result)
@@ -41,7 +41,7 @@ class UploadFinalizeTests(unittest.TestCase):
         self.assertIn("-->", result["content"])
 
     def test_upload_streaming_emits_progress_then_content_result(self):
-        events = list(fake_transcribe_upload_streaming_for_tests(Path("/uploads/clip.mkv"), self._request()))
+        events = list(fake_transcribe_streaming_for_tests(Path("/uploads/clip.mkv"), self._request(), deliver="content"))
         progress = [e for e in events if e["type"] == "progress"]
         results = [e for e in events if e["type"] == "result"]
         self.assertGreaterEqual(len(progress), 1)
@@ -54,8 +54,8 @@ class UploadFinalizeTests(unittest.TestCase):
         self.assertNotIn("subtitle_path", terminal)
 
     def test_upload_streaming_cancellation_raises(self):
-        gen = fake_transcribe_upload_streaming_for_tests(
-            Path("/uploads/clip.mkv"), self._request(), is_cancelled=lambda: True
+        gen = fake_transcribe_streaming_for_tests(
+            Path("/uploads/clip.mkv"), self._request(), is_cancelled=lambda: True, deliver="content"
         )
         with self.assertRaises(TranscriptionCancelled):
             list(gen)

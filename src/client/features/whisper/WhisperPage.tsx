@@ -30,7 +30,7 @@ import { UrlTranscribeSection } from "./UrlTranscribeSection";
 import { LibraryPicker } from "./LibraryPicker";
 import { InlineError } from "../../ui/QueryState";
 import { applyTranscriptionProgress, cancelBatch, runBatch, useBatchState } from "./batch-store";
-import { baseName, COMPUTE_BY_DEVICE, FALLBACK_MODELS, FORMATS, type OutputFormat } from "./whisper-shared";
+import { baseName, COMPUTE_BY_DEVICE, descriptorsFrom, FORMATS, type OutputFormat } from "./whisper-shared";
 
 const validSortBy = (value: unknown): SortBy => (value === "name" || value === "date" ? value : "date");
 const validSortDir = (value: unknown): SortDir => (value === "asc" || value === "desc" ? value : "desc");
@@ -188,7 +188,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const effDiarize = diarize ?? sttDiarizationDefault;
   // URL/YouTube input offered only when the backend has yt-dlp installed.
   const canUrl = Boolean((caps as { urlInput?: boolean } | undefined)?.urlInput);
-  const modelOptions = caps?.models?.length ? caps.models : FALLBACK_MODELS;
+  const modelDescriptors = useMemo(() => descriptorsFrom(caps), [caps]);
   const deviceOptions = caps?.devices?.length ? caps.devices : ["cpu"];
   const eff = (v: string, fallbackKey: string, fb: string) => v || str(settings[fallbackKey], fb);
   const effModel = eff(model, "transcription_model", "small");
@@ -398,8 +398,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
               settings and live behind the Advanced disclosure. */}
           <RunOptionsSection
             isMobile={isMobile}
-            modelOptions={modelOptions}
-            whisperModels={whisperModels}
+            modelDescriptors={modelDescriptors}
             effModel={effModel}
             onModelChange={handleModelChange}
             isModelDownloaded={isModelDownloaded}

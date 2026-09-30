@@ -681,8 +681,7 @@
       "languageEnglish": "영어",
       "languageJapanese": "일본어",
       "languageChinese": "중국어",
-      "languageKorean": "한국어",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "한국어"
     },
     "connections": {
       "mode": "연결 모드",
@@ -724,8 +723,8 @@
     "rawConfigOpen": "Open raw config",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "음성-텍스트 변환 모델",
+      "description": "전사 백엔드에서 음성-텍스트 변환 모델을 다운로드하거나 삭제합니다. 다운로드 진행 상황이 실시간으로 표시됩니다.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +747,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "런타임 없음"
     },
     "setup": {
       "progress": "{{total}}개 중 {{done}}개 완료",
@@ -898,7 +898,7 @@
     "timeout": "백엔드 응답이 너무 오래 걸립니다 — 설정에서 요청 제한 시간을 늘리거나 더 작은 모델을 사용하세요.",
     "auth": "백엔드가 토큰을 거부했습니다 — 설정에서 백엔드 토큰을 확인하세요.",
     "rate-limit": "공급자가 요청 속도를 제한했습니다 — 자동으로 재시도합니다. 계속 발생하면 병렬 청크 수를 줄이세요.",
-    "model-missing": "해당 모델이 다운로드되지 않았습니다 — 설정 → 모델에서 다운로드하세요.",
+    "model-missing": "해당 모델이 다운로드되지 않았습니다 — 설정 → 음성-텍스트 변환 모델에서 다운로드하세요.",
     "insufficient-ram": "이 모델에 필요한 메모리가 부족합니다 — 더 작은 모델을 선택하세요.",
     "insufficient-disk": "출력을 저장할 디스크 여유 공간이 부족합니다.",
     "ffmpeg-missing": "백엔드에서 ffmpeg를 찾을 수 없습니다 — 설치하거나 SUBSMELT_FFMPEG를 설정하세요.",
@@ -1026,7 +1026,6 @@
     "selectFolder": "{{name}}의 모든 파일 선택",
     "transcribingNow": "전사 중",
     "selectedSummary": "{{count}}개 파일 선택됨",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "모델 목록을 불러오지 못해 전사를 시작할 수 없습니다."
   },
   "transcriptionHistory": {
@@ -1050,5 +1049,18 @@
     "retriedAll": "{{total}}개 중 {{ok}}개 파일을 재시도했습니다.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "재시도 실패: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99개 언어 지원. 중국어와 희귀 언어에 가장 적합합니다.",
+      "nemotron": "빠르고 문장 부호를 자동으로 넣습니다. 영어, 일본어, 한국어, 대부분의 유럽 언어 지원."
+    },
+    "languageUnsupported": "{{model}}은(는) {{language}}을(를) 지원하지 않습니다. Whisper 모델을 선택하세요.",
+    "optionsDecidedByModel": "{{model}}이(가) 빔 크기, 프롬프트, 연산 유형을 직접 결정합니다.",
+    "modelUnavailable": "{{model}}을(를) 여기서 실행할 수 없습니다: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

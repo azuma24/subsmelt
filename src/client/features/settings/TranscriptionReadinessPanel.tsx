@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { TranscriptionHealth } from "../../types";
 import { ActionButton } from "../../ui/primitives";
 import { str } from "../../lib/settings-value";
+import { descriptorsFrom, findDescriptor, groupByEngine } from "../whisper/whisper-shared";
 
 const MODEL_RAM_MB: Record<string, { required: number; recommended: number }> = {
   tiny: { required: 2048, recommended: 4096 },
@@ -86,7 +87,11 @@ export function TranscriptionReadinessPanel({
   const ramKnown = typeof availableRamMb === "number" && availableRamMb > 0;
   const ramMeetsRequired = ramKnown ? availableRamMb >= requirements.required : undefined;
   const ramMeetsRecommended = ramKnown ? availableRamMb >= requirements.recommended : undefined;
-  const suggestedModel = cacheInfo?.suggestedModel ?? (ramMeetsRequired === false ? suggestCpuModel(availableRamMb) : null);
+  const modelDescriptors = capabilities ? descriptorsFrom(capabilities) : [];
+  const selectedDescriptor = findDescriptor(modelDescriptors, selectedModel);
+  // The local fallback only knows Whisper sizes, which are no substitute for another engine.
+  const localSuggestion = ramMeetsRequired === false && selectedDescriptor.engine === "whisper" ? suggestCpuModel(availableRamMb) : null;
+  const suggestedModel = cacheInfo?.suggestedModel ?? localSuggestion;
   const transportSetting = str(settings.transcription_transport, "auto");
   const transportLabel = t(`settings.transcription.readiness.transport_${transportSetting}`, transportSetting);
   const gpus = capabilities?.gpus;
@@ -158,12 +163,22 @@ export function TranscriptionReadinessPanel({
             <div>{t("settings.transcription.readiness.serverVersion")}: <span className="text-[var(--text)]">{capabilities?.version || unknownLabel}</span></div>
             <div>{t("settings.transcription.readiness.transportMode")}: <span className="text-[var(--text)]">{transportLabel}</span></div>
             <div>{t("settings.transcription.readiness.gpus")}: <span className="text-[var(--text)]">{gpuSummary}</span></div>
-            <div>{t("settings.transcription.readiness.models")}: <span className="text-[var(--text)]">{list(models, unknownLabel)}</span></div>
+            {modelDescriptors.length === 0 ? (
+              <div>{t("settings.transcription.readiness.models")}: <span className="text-[var(--text)]">{unknownLabel}</span></div>
+            ) : groupByEngine(modelDescriptors).map((group) => (
+              <div key={group.engine}>{t(`stt.engine.${group.engine}`)}: <span className="text-[var(--text)]">{group.items.map((d) => d.label).join(", ")}</span></div>
+            ))}
             <div>{t("settings.transcription.readiness.outputFormats")}: <span className="text-[var(--text)]">{list(outputFormats, unknownLabel)}</span></div>
             <div>{t("settings.transcription.readiness.devices")}: <span className="text-[var(--text)]">{list(capabilities?.devices, unknownLabel)}</span></div>
             <div>{t("settings.transcription.readiness.computeTypes")}: <span className="text-[var(--text)]">{list(capabilities?.computeTypes, unknownLabel)}</span></div>
             <div>{t("settings.transcription.readiness.vad")}: <span className="text-[var(--text)]">{capabilities?.vad === undefined ? unknownLabel : capabilities.vad ? t("settings.transcription.readiness.supported") : t("settings.transcription.readiness.notAdvertised")}</span></div>
             {selectedModelAdvertised === false && <div className="text-[var(--yellow)]">{t("settings.transcription.readiness.modelNotAdvertised")}</div>}
+            {!selectedDescriptor.available && (
+              <div className="text-[var(--red)]">
+                <span aria-hidden="true">✗ </span>
+                {t("stt.modelUnavailable", { model: selectedDescriptor.label, reason: selectedDescriptor.unavailableReason ?? t("settings.models.runtimeMissing") })}
+              </div>
+            )}
             {selectedOutputAdvertised === false && <div className="text-[var(--yellow)]">{t("settings.transcription.readiness.outputNotAdvertised")}</div>}
           </div>
         </div>

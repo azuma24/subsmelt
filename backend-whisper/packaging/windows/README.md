@@ -56,16 +56,17 @@ installer, a Windows Service, and a system-tray controller.
 
 3. A recent **NVIDIA display driver** on any box used for GPU smoke-testing. The
    full CUDA Toolkit is **not** required — the cuDNN/cuBLAS wheels above supply
-   the runtime (plan §Phase 3a).
+   the runtime (plan §Phase 3a). The Nemotron 3.5 ASR engine needs driver
+   **R580 or newer** for GPU use (see below).
 
 ---
 
 ## Vendor files (required before building)
 
 **Automatic (recommended):** run the fetch script — it downloads `ffmpeg.exe`
-(BtbN static win64) and `vc_redist.x64.exe` (Microsoft permalink) into
-`packaging\windows\vendor\`. Idempotent; `-Force` re-downloads. CI runs this same
-script.
+(BtbN static win64), `vc_redist.x64.exe` (Microsoft permalink) and the
+NeMo-Speech.cpp runtime into `packaging\windows\vendor\`. Idempotent; `-Force`
+re-downloads. CI runs this same script.
 
 ```powershell
 pwsh packaging\windows\fetch-vendor.ps1
@@ -77,13 +78,35 @@ pwsh packaging\windows\fetch-vendor.ps1
 |---|---|---|
 | `ffmpeg.exe` | a static Windows build (e.g. gyan.dev / BtbN) | bundled into the onedir; launcher sets `SUBSMELT_FFMPEG` |
 | `vc_redist.x64.exe` | Microsoft Visual C++ Redistributable (x64) | `installer.iss` installs it silently |
+| `nemo-speech\bin\` | the `bin\` folder of `nemo-speech-0.1.0-windows-x86_64-cuda.zip` from the [NeMo-Speech.cpp v0.1.0 release](https://github.com/NVIDIA/NeMo-Speech.cpp/releases/tag/v0.1.0) | bundled as `nemo-speech\bin\` in the onedir; the service gets `SUBSMELT_NEMO_SPEECH` |
 | `whisper.ico` *(optional)* | your icon | exe icon (enable the `icon=` line in the spec) |
 | `provision.exe` *(Phase 3a, optional)* | built from the provision module | installer driver pre-check + tray diagnostics |
 
 The `vendor\` dir is gitignored — these binaries are never committed.
 
 > If `vc_redist.x64.exe` is missing at compile time, `ISCC` errors — that is the
-> intended "you forgot to drop it in" guard. `ffmpeg.exe` absence only logs a note.
+> intended "you forgot to drop it in" guard. `ffmpeg.exe` or `nemo-speech\bin\`
+> absence only logs a note, but CI fails the build when `nemo-speech.exe` is
+> missing from the bundle.
+
+### NeMo-Speech runtime (Nemotron 3.5 ASR)
+
+The Nemotron 3.5 ASR engine runs through `nemo-speech.exe` from
+[NeMo-Speech.cpp](https://github.com/NVIDIA/NeMo-Speech.cpp) v0.1.0, not through
+faster-whisper. `fetch-vendor.ps1` pins the release zip by version and SHA-256
+(both at the top of the script) and throws when the hash does not match. It
+copies only the zip's `bin\` folder (`nemo-speech.exe` and its DLLs, including
+`cublas64_13.dll`); `include\` and `lib\` are build-time files and are dropped.
+
+- The installed layout is
+  `C:\Program Files\SubSmelt\WhisperBackend\nemo-speech\bin\nemo-speech.exe`.
+- `install-service.ps1` sets the machine variable `SUBSMELT_NEMO_SPEECH` to that
+  path; `uninstall-service.ps1` clears it. Without the variable, the backend
+  looks in `<exe dir>\nemo-speech\bin\` and then on `PATH`.
+- It is a **CUDA 13** build, so GPU use needs an NVIDIA driver **R580 or newer**.
+  Whisper models keep working on older drivers.
+- No model is bundled. Download Nemotron 3.5 ASR (a 742 MB GGUF) from SubSmelt ->
+  Settings after install.
 
 ---
 
@@ -211,6 +234,7 @@ optional JSON config (`SUBSMELT_WHISPER_CONFIG`):
 | `SUBSMELT_WHISPER_TOKEN` | shared-secret bearer token (Phase 1); generate one with `run_server --generate-token` | — |
 | `SUBSMELT_WHISPER_MEDIA_ROOT` | allowed media root → `MEDIA_ROOT` | — |
 | `SUBSMELT_FFMPEG` | path to bundled `ffmpeg.exe` | `ffmpeg` on PATH |
+| `SUBSMELT_NEMO_SPEECH` | path to bundled `nemo-speech.exe` (Nemotron ASR); config key `nemo_speech` | `<exe dir>\nemo-speech\bin\nemo-speech.exe`, then `nemo-speech` on PATH |
 | `SUBSMELT_DATA_DIR` | data dir holding `config.json` + `logs\` | `C:\ProgramData\SubSmelt` |
 | `SUBSMELT_WHISPER_CONFIG` | JSON config file | `<data dir>\config.json` |
 | `SUBSMELT_WHISPER_LOG_FILE` | rotating log file (5 MB x 5) | `<data dir>\logs\whisper-server.log` |
@@ -230,8 +254,11 @@ Docker `v*` tags because the CUDA onedir is ~1–2 GB) and via manual
 
 1. resolve version (from the `whisper-v<ver>` tag or the dispatch input),
 2. install `requirements.txt` + `nvidia-cudnn-cu12` / `nvidia-cublas-cu12` + PyInstaller,
-3. `fetch-vendor.ps1` → `vendor\ffmpeg.exe` + `vendor\vc_redist.x64.exe`,
-4. `pyinstaller … whisper-server.spec`, then smoke-test `run_server.exe --help`,
+3. `fetch-vendor.ps1` → `vendor\ffmpeg.exe` + `vendor\vc_redist.x64.exe` +
+   `vendor\nemo-speech\bin\`,
+4. `pyinstaller … whisper-server.spec`, then smoke-test `run_server.exe --print-config`
+   and fail if `nemo-speech\bin\nemo-speech.exe` is missing from the bundle (the
+   CUDA exe is not run; the runner has no GPU),
 5. `choco install innosetup`, then `ISCC /DMyAppVersion=<ver> installer.iss`,
 6. upload the `Output\*.exe` installer as a build artifact, and — on a tag —
    attach it to a GitHub release.
@@ -253,5 +280,9 @@ without a release:** run the workflow manually from the Actions tab.
   `add_dll_directory` puts them on the search path. `run_server.exe --check`
   prints a clear CUDA probe message.
 - **GPU not detected** — update the NVIDIA driver; the server falls back to CPU.
+- **Nemotron shows "Runtime missing"** — check that
+  `nemo-speech\bin\nemo-speech.exe` exists next to `run_server.exe` and that
+  `SUBSMELT_NEMO_SPEECH` points at it (`run_server.exe --print-config` lists it
+  as `nemo_speech`). For GPU speed, update the driver to R580 or newer.
 - **Service won't start** — check `C:\ProgramData\SubSmelt\logs`; run
   `run_server.exe --check` manually to see the startup diagnostics.

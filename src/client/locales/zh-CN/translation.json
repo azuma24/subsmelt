@@ -681,8 +681,7 @@
       "languageEnglish": "英语",
       "languageJapanese": "日语",
       "languageChinese": "中文",
-      "languageKorean": "韩语",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "韩语"
     },
     "connections": {
       "mode": "连接模式",
@@ -724,8 +723,8 @@
     "rawConfigOpen": "Open raw config",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "语音转字幕模型",
+      "description": "在转写后端下载或删除语音转字幕模型，下载时实时显示进度。",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +747,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "缺少运行时"
     },
     "setup": {
       "progress": "已完成 {{done}}/{{total}}",
@@ -898,7 +898,7 @@
     "timeout": "后端响应超时 — 请在设置中调高超时时间，或改用更小的模型。",
     "auth": "后端拒绝了令牌 — 请检查设置中的后端令牌。",
     "rate-limit": "服务商限流 — 将会重试；若持续出现请降低并行块数。",
-    "model-missing": "该模型尚未下载 — 请在设置 → 模型中下载。",
+    "model-missing": "该模型尚未下载 — 请在设置 → 语音转字幕模型中下载。",
     "insufficient-ram": "内存不足以运行该模型 — 请选择更小的模型。",
     "insufficient-disk": "磁盘剩余空间不足以写入输出。",
     "ffmpeg-missing": "后端未找到 ffmpeg — 请安装它或设置 SUBSMELT_FFMPEG。",
@@ -1026,7 +1026,6 @@
     "selectFolder": "选择 {{name}} 中的所有文件",
     "transcribingNow": "正在转录",
     "selectedSummary": "已选择 {{count}} 个文件",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "无法加载模型列表，因此无法开始转录。"
   },
   "transcriptionHistory": {
@@ -1050,5 +1049,18 @@
     "retriedAll": "已重试 {{total}} 个文件中的 {{ok}} 个。",
     "failedFallback": "转录失败。",
     "retryFailed": "重试失败：{{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "支持 99 种语言，最适合中文和小语种。",
+      "nemotron": "速度快，自带标点。支持英语、日语、韩语和大多数欧洲语言。"
+    },
+    "languageUnsupported": "{{model}} 不支持{{language}}，请改选 Whisper 模型。",
+    "optionsDecidedByModel": "{{model}} 会自行决定 beam 大小、提示词和计算类型。",
+    "modelUnavailable": "{{model}} 无法在此运行：{{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

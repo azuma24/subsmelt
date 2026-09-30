@@ -17,17 +17,21 @@ from pydantic import BaseModel, ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from .gpu import cuda_device_count, gpu_info, total_free_vram_mb
+from .catalog import ADVERTISED_MODELS
+from .engine import EngineUnavailableError, LanguageNotSupportedError, TranscriptionCancelled
 from .model_cache import describe_model_cache
 from .model_manager import (
-    ADVERTISED_MODELS,
     ModelNotDownloadedError,
     UnknownModelError,
+    assert_engine_available,
     assert_model_downloaded,
     delete_model,
+    describe_model_info,
     describe_models,
     download_model_events,
     normalize_model,
 )
+from .nemotron_runtime import availability as nemo_speech_availability, binary_version as nemo_speech_version
 from .preflight import (
     DIARIZATION_RAM_MB,
     DIARIZATION_VRAM_MB,
@@ -68,16 +72,11 @@ from .fetch_url import (
     url_fetch_available,
 )
 from .transcribe import (
-    EnglishOnlyModelError,
-    TranscriptionCancelled,
+    assert_language_supported,
     fake_transcribe_for_tests,
     fake_transcribe_streaming_for_tests,
-    fake_transcribe_upload_for_tests,
-    fake_transcribe_upload_streaming_for_tests,
-    run_faster_whisper,
-    run_faster_whisper_streaming,
-    run_faster_whisper_upload,
-    run_faster_whisper_upload_streaming,
+    run_transcription,
+    run_transcription_streaming,
 )
 
 MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/media")
@@ -165,10 +164,11 @@ def capabilities() -> dict:
         # surfaced via /health (which stays open) so an unauthenticated
         # reachability check can still learn a token is needed.
         "authRequired": auth_required(),
-        # Single source of truth: the model-manager's advertised set. Keeping this
-        # derived (not a duplicated literal) means the dropdown the frontend builds
-        # from capabilities.models can never drift from what the backend manages.
+        # ``models`` stays a plain id list for older clients; ``modelInfo`` is
+        # the descriptor per model, both derived from the catalog.
         "models": list(ADVERTISED_MODELS),
+        "modelInfo": describe_model_info(),
+        "nemoSpeech": {"available": nemo_speech_availability()[0], "version": nemo_speech_version()},
         "devices": devices,
         "computeTypes": compute_types,
         "gpus": gpu_info(),
@@ -571,6 +571,21 @@ def preflight(request: TranscribeRequest, _auth: None = Depends(require_token)) 
         raise HTTPException(status_code=400, detail={"code": "path_not_allowed", "message": str(exc)}) from exc
 
 
+def _assert_model_usable(request: TranscribeRequest) -> None:
+    """The model must accept the language, be downloaded and have a working
+    engine, checked before any stream opens so the client gets a real HTTP
+    status. Never silently auto-download: a known model that is not present in
+    the cache is refused with 409 here (first defence); loading later also
+    forces local_files_only=True (second defence) so faster-whisper cannot
+    reach the network either."""
+    try:
+        assert_language_supported(request)
+        assert_model_downloaded(request.model)
+        assert_engine_available(request.model)
+    except (LanguageNotSupportedError, ModelNotDownloadedError, EngineUnavailableError) as exc:
+        raise _map_transcription_error(exc) from exc
+
+
 def validate_transcribe_request(request: TranscribeRequest) -> Path:
     """Shared validation for both the JSON and streaming transcribe endpoints.
 
@@ -599,18 +614,7 @@ def validate_transcribe_request(request: TranscribeRequest) -> Path:
     if not input_path.exists():
         raise HTTPException(status_code=404, detail={"code": "input_missing", "message": "Input media file does not exist"})
 
-    # CRITICAL: never silently auto-download. A known model that is not present
-    # in the cache is refused with 409 here (first defence); loading later also
-    # forces local_files_only=True (second defence) so faster-whisper cannot
-    # reach the network either.
-    try:
-        assert_model_downloaded(request.model)
-    except ModelNotDownloadedError as exc:
-        raise HTTPException(
-            status_code=409,
-            detail={"code": "model_not_downloaded", "model": exc.model},
-        ) from exc
-
+    _assert_model_usable(request)
     return input_path
 
 
@@ -619,28 +623,12 @@ def transcribe(request: TranscribeRequest, _auth: None = Depends(require_token))
     input_path = validate_transcribe_request(request)
     try:
         if USE_FAKE_TRANSCRIBE:
-            return fake_transcribe_for_tests(input_path, request)
-        return run_faster_whisper(request, input_path)
-    except ModelWeightsMissingError as exc:
-        raise HTTPException(
-            status_code=409,
-            detail={"code": "model_not_downloaded", "model": exc.model},
-        ) from exc
-    except (CudaUnavailableError, InvalidComputeTypeError) as exc:
-        raise HTTPException(status_code=400, detail={"code": "invalid_device", "message": str(exc)}) from exc
-    except EnglishOnlyModelError as exc:
-        raise HTTPException(status_code=400, detail={"code": "english_only_model", "message": str(exc)}) from exc
-    except DiarizationTokenMissingError as exc:
-        raise HTTPException(status_code=422, detail={"code": "diarization_token_missing", "message": str(exc)}) from exc
-    except DiarizationUnavailableError as exc:
-        raise HTTPException(status_code=400, detail={"code": "diarization_unavailable", "message": str(exc)}) from exc
-    except CudaOutOfMemoryError as exc:
-        raise HTTPException(
-            status_code=507,
-            detail={"code": "cuda_out_of_memory", "message": str(exc), "suggestedModel": "small"},
-        ) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail={"code": "transcription_failed", "message": str(exc)}) from exc
+            result = fake_transcribe_for_tests(input_path, request, deliver="path")
+        else:
+            result = run_transcription(request, input_path, deliver="path")
+    except Exception as exc:  # noqa: BLE001 - mapped to typed HTTP errors
+        raise _map_transcription_error(exc) from exc
+    return TranscribeResponse(**result)
 
 
 @app.post("/transcribe/stream")
@@ -665,9 +653,9 @@ async def transcribe_stream(
 
     cancel_event = asyncio.Event()
     if USE_FAKE_TRANSCRIBE:
-        gen = fake_transcribe_streaming_for_tests(input_path, request, cancel_event.is_set)
+        gen = fake_transcribe_streaming_for_tests(input_path, request, cancel_event.is_set, deliver="path")
     else:
-        gen = run_faster_whisper_streaming(request, input_path, cancel_event.is_set)
+        gen = run_transcription_streaming(request, input_path, cancel_event.is_set, deliver="path")
     return StreamingResponse(_ndjson_stream(gen, cancel_event), media_type="application/x-ndjson")
 
 
@@ -740,13 +728,7 @@ def validate_upload_request(request: TranscribeRequest, upload_size_mb: int, scr
             "suggestedModel": suggested,
         })
 
-    try:
-        assert_model_downloaded(request.model)
-    except ModelNotDownloadedError as exc:
-        raise HTTPException(
-            status_code=409,
-            detail={"code": "model_not_downloaded", "model": exc.model},
-        ) from exc
+    _assert_model_usable(request)
 
 
 def _upload_basename(filename: str | None) -> str:
@@ -774,14 +756,23 @@ def _save_upload(file: UploadFile, dest_dir: Path) -> Path:
     return dest
 
 
-def _map_upload_transcription_error(exc: Exception) -> HTTPException:
-    """Translate a transcription exception to the upload endpoint's HTTP error."""
-    if isinstance(exc, ModelWeightsMissingError):
+def _map_transcription_error(exc: Exception) -> HTTPException:
+    """Translate a transcription exception to the HTTP error every transcribe
+    endpoint (path, upload, url) surfaces."""
+    if isinstance(exc, (ModelWeightsMissingError, ModelNotDownloadedError)):
         return HTTPException(status_code=409, detail={"code": "model_not_downloaded", "model": exc.model})
     if isinstance(exc, (CudaUnavailableError, InvalidComputeTypeError)):
         return HTTPException(status_code=400, detail={"code": "invalid_device", "message": str(exc)})
-    if isinstance(exc, EnglishOnlyModelError):
-        return HTTPException(status_code=400, detail={"code": "english_only_model", "message": str(exc)})
+    if isinstance(exc, LanguageNotSupportedError):
+        return HTTPException(
+            status_code=400,
+            detail={"code": "language_not_supported", "message": str(exc), "model": exc.model, "language": exc.language},
+        )
+    if isinstance(exc, EngineUnavailableError):
+        return HTTPException(
+            status_code=400,
+            detail={"code": "engine_unavailable", "message": str(exc), "model": exc.model},
+        )
     if isinstance(exc, DiarizationTokenMissingError):
         return HTTPException(status_code=422, detail={"code": "diarization_token_missing", "message": str(exc)})
     if isinstance(exc, DiarizationUnavailableError):
@@ -809,11 +800,11 @@ def transcribe_upload(
         validate_upload_request(parsed, upload_size_mb, tmp_dir)
         try:
             if USE_FAKE_TRANSCRIBE:
-                result = fake_transcribe_upload_for_tests(saved, parsed)
+                result = fake_transcribe_for_tests(saved, parsed, deliver="content")
             else:
-                result = run_faster_whisper_upload(parsed, saved)
+                result = run_transcription(parsed, saved, deliver="content")
         except Exception as exc:  # noqa: BLE001 - mapped to typed HTTP errors
-            raise _map_upload_transcription_error(exc) from exc
+            raise _map_transcription_error(exc) from exc
         return UploadTranscribeResponse(**result)
 
 
@@ -822,9 +813,9 @@ def _upload_stream_response(saved: Path, parsed: TranscribeRequest, tmp_ctx: tem
     including on a client disconnect."""
     cancel_event = asyncio.Event()
     if USE_FAKE_TRANSCRIBE:
-        gen = fake_transcribe_upload_streaming_for_tests(saved, parsed, cancel_event.is_set)
+        gen = fake_transcribe_streaming_for_tests(saved, parsed, cancel_event.is_set, deliver="content")
     else:
-        gen = run_faster_whisper_upload_streaming(parsed, saved, cancel_event.is_set)
+        gen = run_transcription_streaming(parsed, saved, cancel_event.is_set, deliver="content")
     stream = _ndjson_stream(gen, cancel_event, cleanup=tmp_ctx.cleanup)
     return StreamingResponse(stream, media_type="application/x-ndjson")
 

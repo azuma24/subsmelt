@@ -91,7 +91,7 @@ class ModelManagerEndpointTests(unittest.TestCase):
         tiny = models["tiny"]
         self.assertFalse(tiny["downloaded"])
         self.assertIsNone(tiny["cachePath"])
-        self.assertEqual(tiny["sizeMb"], model_manager.APPROX_MODEL_SIZE_MB["tiny"])
+        self.assertEqual(tiny["sizeMb"], 75)
 
     # --- POST /models/download --------------------------------------------
 

@@ -116,6 +116,11 @@ $ffmpeg = Join-Path (Split-Path $ExePath -Parent) "ffmpeg.exe"
 if (Test-Path $ffmpeg) {
     [Environment]::SetEnvironmentVariable("SUBSMELT_FFMPEG", $ffmpeg, "Machine")
 }
+# Point the Nemotron engine at the bundled NeMo-Speech runtime.
+$nemoSpeech = Join-Path (Split-Path $ExePath -Parent) "nemo-speech\bin\nemo-speech.exe"
+if (Test-Path $nemoSpeech) {
+    [Environment]::SetEnvironmentVariable("SUBSMELT_NEMO_SPEECH", $nemoSpeech, "Machine")
+}
 
 # Ensure model + media dirs exist.
 New-Item -ItemType Directory -Force -Path $ModelDir  | Out-Null

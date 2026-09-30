@@ -681,8 +681,7 @@
       "languageEnglish": "अंग्रेज़ी",
       "languageJapanese": "जापानी",
       "languageChinese": "चीनी",
-      "languageKorean": "कोरियाई",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "कोरियाई"
     },
     "connections": {
       "mode": "कनेक्शन मोड",
@@ -724,8 +723,8 @@
     "rawConfigOpen": "Open raw config",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "स्पीच-टू-टेक्स्ट मॉडल",
+      "description": "ट्रांसक्रिप्शन बैकएंड पर स्पीच-टू-टेक्स्ट मॉडल डाउनलोड करें या हटाएँ। डाउनलोड की प्रगति लाइव दिखती है।",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +747,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "रनटाइम मौजूद नहीं"
     },
     "setup": {
       "progress": "{{total}} में से {{done}} पूर्ण",
@@ -898,7 +898,7 @@
     "timeout": "बैकएंड ने जवाब देने में बहुत समय लिया — सेटिंग्स में अनुरोध समय-सीमा बढ़ाएँ, या छोटा मॉडल इस्तेमाल करें।",
     "auth": "बैकएंड ने टोकन अस्वीकार कर दिया — सेटिंग्स में बैकएंड टोकन जाँचें।",
     "rate-limit": "प्रदाता ने अनुरोध की दर सीमित कर दी — फिर से प्रयास किया जाएगा; बार-बार हो तो समानांतर चंक कम करें।",
-    "model-missing": "यह मॉडल डाउनलोड नहीं है — इसे सेटिंग्स → मॉडल से डाउनलोड करें।",
+    "model-missing": "वह मॉडल डाउनलोड नहीं है — इसे सेटिंग्स → स्पीच-टू-टेक्स्ट मॉडल से डाउनलोड करें।",
     "insufficient-ram": "इस मॉडल के लिए पर्याप्त मेमोरी नहीं है — कोई छोटा मॉडल चुनें।",
     "insufficient-disk": "आउटपुट के लिए डिस्क पर पर्याप्त खाली जगह नहीं है।",
     "ffmpeg-missing": "बैकएंड पर ffmpeg नहीं मिला — इसे इंस्टॉल करें या SUBSMELT_FFMPEG सेट करें।",
@@ -1026,7 +1026,6 @@
     "selectFolder": "{{name}} की सभी फ़ाइलें चुनें",
     "transcribingNow": "अभी ट्रांसक्राइब हो रहा है",
     "selectedSummary": "{{count}} फ़ाइलें चुनी गईं",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "मॉडल सूची लोड नहीं हो सकी, इसलिए ट्रांसक्रिप्शन शुरू नहीं हो सकता।"
   },
   "transcriptionHistory": {
@@ -1050,5 +1049,18 @@
     "retriedAll": "{{total}} में से {{ok}} फ़ाइलें पुनः प्रयास की गईं।",
     "failedFallback": "Transcription failed.",
     "retryFailed": "पुनः प्रयास विफल: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 भाषाएँ। चीनी और दुर्लभ भाषाओं के लिए सबसे अच्छा।",
+      "nemotron": "तेज़, विराम चिह्नों के साथ। अंग्रेज़ी, जापानी, कोरियाई और अधिकांश यूरोपीय भाषाएँ।"
+    },
+    "languageUnsupported": "{{model}} {{language}} का समर्थन नहीं करता। कोई Whisper मॉडल चुनें।",
+    "optionsDecidedByModel": "{{model}} बीम साइज़, प्रॉम्प्ट और कंप्यूट टाइप खुद तय करता है।",
+    "modelUnavailable": "{{model}} यहाँ नहीं चल सकता: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

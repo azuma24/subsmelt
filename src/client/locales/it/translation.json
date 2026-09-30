@@ -681,8 +681,7 @@
       "languageEnglish": "Inglese",
       "languageJapanese": "Giapponese",
       "languageChinese": "Cinese",
-      "languageKorean": "Coreano",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Coreano"
     },
     "connections": {
       "mode": "Modalità di connessione",
@@ -724,8 +723,8 @@
     "rawConfigOpen": "Open raw config",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "Modelli di riconoscimento vocale",
+      "description": "Scarica o rimuovi i modelli di riconoscimento vocale sul backend di trascrizione. I download mostrano l'avanzamento in tempo reale.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +747,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "Runtime mancante"
     },
     "setup": {
       "progress": "{{done}} di {{total}} completato",
@@ -898,7 +898,7 @@
     "timeout": "Il backend ha impiegato troppo a rispondere — aumenta il timeout della richiesta in Impostazioni, o usa un modello più piccolo.",
     "auth": "Il backend ha rifiutato il token — controlla il token del backend in Impostazioni.",
     "rate-limit": "Il provider ha limitato la richiesta — verrà ritentata; riduci i blocchi paralleli se continua a succedere.",
-    "model-missing": "Quel modello non è stato scaricato — scaricalo da Impostazioni → Modelli.",
+    "model-missing": "Quel modello non è scaricato — scaricalo da Impostazioni → Modelli di riconoscimento vocale.",
     "insufficient-ram": "Memoria insufficiente per questo modello — scegline uno più piccolo.",
     "insufficient-disk": "Spazio libero su disco insufficiente per l'output.",
     "ffmpeg-missing": "ffmpeg non è stato trovato sul backend — installalo o imposta SUBSMELT_FFMPEG.",
@@ -1026,7 +1026,6 @@
     "selectFolder": "Seleziona tutti i file in {{name}}",
     "transcribingNow": "trascrizione in corso",
     "selectedSummary": "{{count}} file selezionati",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "Impossibile caricare l'elenco dei modelli, quindi la trascrizione non può iniziare."
   },
   "transcriptionHistory": {
@@ -1050,5 +1049,18 @@
     "retriedAll": "Riprovati {{ok}} di {{total}} file.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "Nuovo tentativo non riuscito: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 lingue. Ideale per il cinese e le lingue rare.",
+      "nemotron": "Veloce, con punteggiatura. Inglese, giapponese, coreano e la maggior parte delle lingue europee."
+    },
+    "languageUnsupported": "{{model}} non supporta {{language}}. Scegli un modello Whisper.",
+    "optionsDecidedByModel": "{{model}} decide da solo dimensione del beam, prompt e tipo di calcolo.",
+    "modelUnavailable": "{{model}} non può essere eseguito qui: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

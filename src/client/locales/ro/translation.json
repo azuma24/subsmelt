@@ -681,8 +681,7 @@
       "languageEnglish": "Engleză",
       "languageJapanese": "Japoneză",
       "languageChinese": "Chineză",
-      "languageKorean": "Coreeană",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Coreeană"
     },
     "connections": {
       "mode": "Mod conexiune",
@@ -724,8 +723,8 @@
     "rawConfigOpen": "Deschide configurația brută",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "Modele de vorbire în text",
+      "description": "Descarcă sau elimină modele de vorbire în text pe backendul de transcriere. Descărcările afișează progresul în timp real.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +747,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "Runtime lipsă"
     },
     "setup": {
       "progress": "{{done}} din {{total}} finalizate",
@@ -898,7 +898,7 @@
     "timeout": "Backend-ul a răspuns prea greu — mărește timpul de expirare a cererii în Setări sau folosește un model mai mic.",
     "auth": "Backend-ul a respins tokenul — verifică backend token în Setări.",
     "rate-limit": "Furnizorul a limitat rata cererilor — se va reîncerca; dacă se repetă, redu numărul de fragmente paralele.",
-    "model-missing": "Modelul nu este descărcat — descarcă-l din Setări → Modele.",
+    "model-missing": "Acel model nu este descărcat — descarcă-l din Setări → Modele de vorbire în text.",
     "insufficient-ram": "Memorie insuficientă pentru acest model — alege unul mai mic.",
     "insufficient-disk": "Spațiu liber pe disc insuficient pentru rezultat.",
     "ffmpeg-missing": "ffmpeg nu a fost găsit pe backend — instalează-l sau setează SUBSMELT_FFMPEG.",
@@ -1026,7 +1026,6 @@
     "selectFolder": "Selectează toate fișierele din {{name}}",
     "transcribingNow": "se transcrie acum",
     "selectedSummary": "{{count}} fișier(e) selectate",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "Lista de modele nu a putut fi încărcată, așa că transcrierea nu poate porni."
   },
   "transcriptionHistory": {
@@ -1050,5 +1049,18 @@
     "retriedAll": "S-au reîncercat {{ok}} din {{total}} fișiere.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "Reîncercarea a eșuat: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 de limbi. Cel mai bun pentru chineză și limbi rare.",
+      "nemotron": "Rapid, cu punctuație. Engleză, japoneză, coreeană și majoritatea limbilor europene."
+    },
+    "languageUnsupported": "{{model}} nu acceptă {{language}}. Alege un model Whisper.",
+    "optionsDecidedByModel": "{{model}} stabilește singur dimensiunea beam, promptul și tipul de calcul.",
+    "modelUnavailable": "{{model}} nu poate rula aici: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

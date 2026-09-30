@@ -681,8 +681,7 @@
       "languageEnglish": "Angol",
       "languageJapanese": "Japán",
       "languageChinese": "Kínai",
-      "languageKorean": "Koreai",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Koreai"
     },
     "connections": {
       "mode": "Kapcsolati mód",
@@ -724,8 +723,8 @@
     "rawConfigOpen": "Nyers konfiguráció megnyitása",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "Beszéd szöveggé alakító modellek",
+      "description": "Beszéd szöveggé alakító modellek letöltése vagy eltávolítása az átírási háttérrendszeren. A letöltések élőben mutatják az előrehaladást.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +747,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "Hiányzó futtatókörnyezet"
     },
     "setup": {
       "progress": "{{total}} lépésből {{done}} kész",
@@ -898,7 +898,7 @@
     "timeout": "A háttérrendszer túl lassan válaszolt — növeld a kérés időtúllépését a Beállításokban, vagy használj kisebb modellt.",
     "auth": "A háttérrendszer elutasította a tokent — ellenőrizd a backend tokent a Beállításokban.",
     "rate-limit": "A szolgáltató korlátozta a kérések számát — újrapróbálkozik; ha ez gyakran előfordul, csökkentsd a párhuzamos részletek számát.",
-    "model-missing": "Ez a modell nincs letöltve — töltsd le itt: Beállítások → Modellek.",
+    "model-missing": "Ez a modell nincs letöltve — töltse le a Beállítások → Beszéd szöveggé alakító modellek menüpontban.",
     "insufficient-ram": "Nincs elég memória ehhez a modellhez — válassz kisebbet.",
     "insufficient-disk": "Nincs elég szabad lemezterület a kimenethez.",
     "ffmpeg-missing": "Az ffmpeg nem található a háttérrendszeren — telepítsd, vagy állítsd be a SUBSMELT_FFMPEG változót.",
@@ -1026,7 +1026,6 @@
     "selectFolder": "Az összes fájl kijelölése itt: {{name}}",
     "transcribingNow": "éppen átírás alatt",
     "selectedSummary": "{{count}} fájl kijelölve",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "A modellek listája nem tölthető be, ezért az átírás nem indítható el."
   },
   "transcriptionHistory": {
@@ -1050,5 +1049,18 @@
     "retriedAll": "{{total}} fájlból {{ok}} újrapróbálva.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "Az újrapróbálkozás sikertelen: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 nyelv. Kínaihoz és ritka nyelvekhez a legjobb.",
+      "nemotron": "Gyors, írásjelekkel. Angol, japán, koreai és a legtöbb európai nyelv."
+    },
+    "languageUnsupported": "A(z) {{model}} nem támogatja ezt a nyelvet: {{language}}. Válasszon Whisper-modellt.",
+    "optionsDecidedByModel": "A(z) {{model}} maga határozza meg a beam méretét, a promptot és a számítási típust.",
+    "modelUnavailable": "A(z) {{model}} itt nem futtatható: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

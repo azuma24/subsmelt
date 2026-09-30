@@ -681,8 +681,7 @@
       "languageEnglish": "Inggeris",
       "languageJapanese": "Jepun",
       "languageChinese": "Cina",
-      "languageKorean": "Korea",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Korea"
     },
     "connections": {
       "mode": "Mod sambungan",
@@ -724,8 +723,8 @@
     "rawConfigOpen": "Buka konfigurasi mentah",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "Model pertuturan-ke-teks",
+      "description": "Muat turun atau alih keluar model pertuturan-ke-teks pada bahagian belakang transkripsi. Muat turun memaparkan kemajuan secara langsung.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +747,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "Masa jalan tiada"
     },
     "setup": {
       "progress": "{{done}} daripada {{total}} selesai",
@@ -898,7 +898,7 @@
     "timeout": "Bahagian belakang mengambil masa terlalu lama untuk menjawab — naikkan tamat masa permintaan dalam Tetapan, atau gunakan model yang lebih kecil.",
     "auth": "Bahagian belakang menolak token — semak token bahagian belakang dalam Tetapan.",
     "rate-limit": "Penyedia mengehadkan kadar permintaan — ia akan dicuba semula; kurangkan cebisan selari jika ia berterusan.",
-    "model-missing": "Model itu belum dimuat turun — muat turunnya dari Tetapan → Model.",
+    "model-missing": "Model itu belum dimuat turun — muat turunnya dari Tetapan → Model pertuturan-ke-teks.",
     "insufficient-ram": "Memori tidak mencukupi untuk model ini — pilih model yang lebih kecil.",
     "insufficient-disk": "Ruang cakera kosong tidak mencukupi untuk output.",
     "ffmpeg-missing": "ffmpeg tidak ditemui pada bahagian belakang — pasangnya atau tetapkan SUBSMELT_FFMPEG.",
@@ -1026,7 +1026,6 @@
     "selectFolder": "Pilih semua fail dalam {{name}}",
     "transcribingNow": "sedang ditranskripsi",
     "selectedSummary": "{{count}} fail dipilih",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "Senarai model tidak dapat dimuatkan, jadi transkripsi tidak boleh dimulakan."
   },
   "transcriptionHistory": {
@@ -1050,5 +1049,18 @@
     "retriedAll": "Mencuba semula {{ok}} daripada {{total}} fail.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "Cubaan semula gagal: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 bahasa. Terbaik untuk bahasa Cina dan bahasa yang jarang digunakan.",
+      "nemotron": "Pantas, dengan tanda baca. Bahasa Inggeris, Jepun, Korea dan kebanyakan bahasa Eropah."
+    },
+    "languageUnsupported": "{{model}} tidak menyokong {{language}}. Pilih model Whisper.",
+    "optionsDecidedByModel": "{{model}} menentukan sendiri saiz beam, gesaan dan jenis pengiraan.",
+    "modelUnavailable": "{{model}} tidak boleh dijalankan di sini: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

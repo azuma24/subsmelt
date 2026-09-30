@@ -34,11 +34,14 @@ def _install_stubs():
     return {"tqdm": tq, "tqdm.auto": tqa}
 
 
-def _hub_writing_weights():
+def _hub_writing_weights(calls=None):
     def fake_dl(repo_id, cache_dir, tqdm_class, **kw):
+        if calls is not None:
+            calls.append({"repo_id": repo_id, **kw})
         snap = Path(cache_dir) / ("models--" + repo_id.replace("/", "--")) / "snapshots" / "abc"
         snap.mkdir(parents=True)
-        (snap / "model.bin").write_bytes(b"\0" * 2048)
+        weights = "nemotron-3.5-asr-streaming-0.6b.q8_0.gguf" if "nemotron" in repo_id else "model.bin"
+        (snap / weights).write_bytes(b"\0" * 2048)
         return str(snap)
 
     mod = types.ModuleType("huggingface_hub")
@@ -93,6 +96,27 @@ class DownloadDeleteTests(unittest.TestCase):
         self.assertIn("model.bin", events[-1]["error"])
         # A weightless snapshot must NOT be reported as downloaded.
         self.assertFalse(self.mm.is_model_downloaded("base"))
+
+    def test_nemotron_downloads_only_the_gguf_and_flips_downloaded(self):
+        calls = []
+        self.assertFalse(self.mm.is_model_downloaded("nemotron-3.5-asr"))
+        with mock.patch.dict(sys.modules, {"huggingface_hub": _hub_writing_weights(calls)}):
+            events = list(self.mm.download_model_events("nemotron-3.5-asr"))
+        self.assertEqual(calls, [{
+            "repo_id": "nvidia/nemotron-3.5-asr-streaming-0.6b",
+            "allow_patterns": ["nemotron-3.5-asr-streaming-0.6b.q8_0.gguf"],
+        }])
+        expected_path = str(Path(self._tmp.name) / "models--nvidia--nemotron-3.5-asr-streaming-0.6b" / "snapshots" / "abc")
+        self.assertEqual(events[-1], {"type": "result", "ok": True, "model": "nemotron-3.5-asr", "cachePath": expected_path})
+        self.assertTrue(self.mm.is_model_downloaded("nemotron-3.5-asr"))
+        self.assertTrue(self.mm.delete_model("nemotron-3.5-asr")["ok"])
+        self.assertFalse(self.mm.is_model_downloaded("nemotron-3.5-asr"))
+
+    def test_whisper_downloads_pass_no_allow_patterns(self):
+        calls = []
+        with mock.patch.dict(sys.modules, {"huggingface_hub": _hub_writing_weights(calls)}):
+            list(self.mm.download_model_events("tiny"))
+        self.assertEqual(calls, [{"repo_id": "Systran/faster-whisper-tiny"}])
 
     def test_delete_removes_and_then_absent(self):
         with mock.patch.dict(sys.modules, {"huggingface_hub": _hub_writing_weights()}):

@@ -4,10 +4,13 @@ import gc
 import sys
 import threading
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any, Iterator
 
+from .catalog import descriptor_for
 from .gpu import cuda_device_count
 from .model_cache import cache_root_from_env, describe_model_cache
+from .nemotron_runtime import find_gguf, load_handle
 from .preflight import available_ram_mb
 
 # Module-level cache of loaded WhisperModel instances keyed by the parameters
@@ -89,25 +92,28 @@ def _is_cuda_oom(exc: Exception) -> bool:
     )
 
 
-def _resolve_model_source(model: str) -> str:
-    """Resolve a model id to the exact on-disk snapshot dir, if present.
+def _resolve_snapshot_dir(model: str) -> str | None:
+    """The on-disk snapshot dir the cache detector found for ``model``, if any.
 
     Loading from the path the cache detector found makes load == detection: the
     same describe_model_cache that powers /models, /health and
     assert_model_downloaded picks the directory, so a model can never be
-    reported "downloaded" yet fail to load because faster-whisper looked in a
-    different HF cache layout (``<root>`` vs ``<root>/hub``). Falls back to the
-    raw id (local-path ids, or genuinely-uncached models) when no snapshot is
-    found — those resolve through faster-whisper with local_files_only=True.
+    reported "downloaded" yet fail to load because the loader looked in a
+    different HF cache layout (``<root>`` vs ``<root>/hub``).
     """
     try:
         info = describe_model_cache(model, available_ram_mb())
     except Exception:  # noqa: BLE001 - never let detection break loading
-        return model
+        return None
     path = info.get("cache_path")
-    if info.get("cached") and path:
-        return path
-    return model
+    return path if info.get("cached") and path else None
+
+
+def _resolve_model_source(model: str) -> str:
+    """The snapshot dir when present, else the raw id (local-path ids, or
+    genuinely-uncached models), which faster-whisper resolves itself with
+    local_files_only=True."""
+    return _resolve_snapshot_dir(model) or model
 
 
 def _cache_key(model: str, device: str, compute_type: str) -> tuple[str, str, str]:
@@ -185,10 +191,23 @@ def _resident_locked(model: str, device: str, compute_type: str) -> Any:
         _MODEL_CACHE[key] = retired
         return retired
 
-    from faster_whisper import WhisperModel  # type: ignore
+    descriptor = descriptor_for(model)
+    if descriptor is not None and descriptor.engine == "nemotron":
+        # Whatever is resident, Whisper or Nemotron, goes first.
+        _evict_locked(lambda other: True)
+        handle = _load_nemotron_handle(model)
+        _MODEL_CACHE[key] = handle
+        return handle
 
     # Free the resident model before loading so the new one has its VRAM.
     _evict_locked(lambda other: True)
+    model_instance = _load_whisper_model(model, device, compute_type)
+    _MODEL_CACHE[key] = model_instance
+    return model_instance
+
+
+def _load_whisper_model(model: str, device: str, compute_type: str) -> Any:
+    from faster_whisper import WhisperModel  # type: ignore
 
     # Load from the exact snapshot dir the cache detector resolved, so the
     # loader can never disagree with /models, /health and
@@ -221,8 +240,17 @@ def _resident_locked(model: str, device: str, compute_type: str) -> Any:
             raise ModelWeightsMissingError(model) from exc
         raise
     _align_feature_extractor(model_instance)
-    _MODEL_CACHE[key] = model_instance
     return model_instance
+
+
+def _load_nemotron_handle(model: str) -> Any:
+    """A NemotronHandle for the cached GGUF; missing weights map to 409 like a
+    missing Whisper snapshot, a missing binary to 400 engine_unavailable."""
+    snapshot_dir = _resolve_snapshot_dir(model)
+    gguf = find_gguf(Path(snapshot_dir)) if snapshot_dir else None
+    if gguf is None:
+        raise ModelWeightsMissingError(model)
+    return load_handle(gguf)
 
 
 def _align_feature_extractor(whisper_model: Any) -> None:

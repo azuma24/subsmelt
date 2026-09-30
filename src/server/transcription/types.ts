@@ -151,13 +151,50 @@ export interface TranscribeStreamingOptions extends TranscribeBackendOptions {
   onPhase?: (phase: string) => void;
 }
 
-export interface WhisperModelInfo {
+export type ModelEngine = "whisper" | "nemotron";
+
+export interface ModelSupports {
+  prompt: boolean;
+  beamSize: boolean;
+  conditionOnPreviousText: boolean;
+  vad: boolean;
+  computeType: boolean;
+  wordTimestamps: boolean;
+  translateTask: boolean;
+}
+
+// What a speech-to-text model can do, as the backend describes it in
+// capabilities.modelInfo and on GET /models entries.
+export interface WhisperModelDescriptor {
   id: string;
-  downloaded: boolean;
+  engine: ModelEngine;
+  label: string;
   sizeMb?: number;
   requiredRamMb?: number;
   requiredVramMb?: number;
+  languages: "all" | string[];
+  supports: ModelSupports;
+  available: boolean;
+  unavailableReason: string | null;
+}
+
+// Backends before 0.6.0 send only the first six fields.
+export interface WhisperModelInfo extends Partial<Omit<WhisperModelDescriptor, "id">> {
+  id: string;
+  downloaded: boolean;
   cachePath?: string | null;
+}
+
+export interface BackendCapabilities {
+  models?: string[];
+  modelInfo?: WhisperModelDescriptor[];
+  nemoSpeech?: { available: boolean; version: string | null };
+  [key: string]: unknown;
+}
+
+export interface BackendHealthResponse {
+  capabilities?: BackendCapabilities;
+  [key: string]: unknown;
 }
 
 export interface WhisperModelDownloadProgress {

@@ -9,7 +9,7 @@
 
     1. find Python, create/reuse a build virtualenv (.venv-build under backend-whisper\)
     2. pip install requirements.txt + cuDNN/cuBLAS wheels + PyInstaller
-    3. fetch-vendor.ps1  -> vendor\ffmpeg.exe + vendor\vc_redist.x64.exe
+    3. fetch-vendor.ps1  -> vendor\ffmpeg.exe + vendor\vc_redist.x64.exe + vendor\nemo-speech\bin\
     4. pyinstaller whisper-server.spec  -> dist\whisper-server\run_server.exe
     5. smoke test: run_server.exe --print-config
     6. (if Inno Setup is installed) ISCC installer.iss -> Output\*.exe
@@ -21,7 +21,7 @@
 .PARAMETER SkipInstaller Build only the onedir bundle; skip the Inno Setup step.
 .PARAMETER Run           After building, launch the built server (127.0.0.1:8001).
 .PARAMETER Clean         Delete the build venv and dist\ before building.
-.PARAMETER ForceVendor   Re-download ffmpeg.exe / vc_redist even if present.
+.PARAMETER ForceVendor   Re-download ffmpeg.exe / vc_redist / nemo-speech even if present.
 
 .EXAMPLE
   pwsh packaging\windows\build-local.ps1
@@ -90,7 +90,7 @@ try {
     if ($LASTEXITCODE -ne 0) { Die "pip install GPU/pyinstaller deps failed" }
 
     # --- 3. vendored binaries ---
-    Info "fetching vendored binaries (ffmpeg.exe, vc_redist.x64.exe)"
+    Info "fetching vendored binaries (ffmpeg.exe, vc_redist.x64.exe, nemo-speech)"
     $vendorArgs = @{}
     if ($ForceVendor) { $vendorArgs["Force"] = $true }
     & (Join-Path $WinDir "fetch-vendor.ps1") @vendorArgs

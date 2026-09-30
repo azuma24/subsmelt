@@ -681,8 +681,7 @@
       "languageEnglish": "Ingles",
       "languageJapanese": "Hapon",
       "languageChinese": "Tsino",
-      "languageKorean": "Koreano",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Koreano"
     },
     "connections": {
       "mode": "Connection mode",
@@ -724,8 +723,8 @@
     "rawConfigOpen": "Buksan ang raw config",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "Mga modelo ng speech-to-text",
+      "description": "Mag-download o mag-alis ng mga modelo ng speech-to-text sa transcription backend. Makikita nang live ang progreso ng mga download.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +747,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "Walang runtime"
     },
     "setup": {
       "progress": "{{done}} sa {{total}} ang tapos",
@@ -898,7 +898,7 @@
     "timeout": "Masyadong natagalan ang backend sa pagsagot — taasan ang timeout ng kahilingan sa Mga Setting, o gumamit ng mas maliit na model.",
     "auth": "Tinanggihan ng backend ang token — suriin ang backend token sa Mga Setting.",
     "rate-limit": "Nilimitahan ng provider ang bilis ng kahilingan — uulitin ito; bawasan ang parallel na chunk kung patuloy itong nangyayari.",
-    "model-missing": "Hindi pa na-download ang model na iyon — i-download ito mula sa Mga Setting → Mga Model.",
+    "model-missing": "Hindi pa na-download ang modelong iyon — i-download ito sa Mga Setting → Mga modelo ng speech-to-text.",
     "insufficient-ram": "Kulang ang memory para sa model na ito — pumili ng mas maliit.",
     "insufficient-disk": "Kulang ang libreng disk space para sa output.",
     "ffmpeg-missing": "Hindi nakita ang ffmpeg sa backend — i-install ito o itakda ang SUBSMELT_FFMPEG.",
@@ -1026,7 +1026,6 @@
     "selectFolder": "Piliin ang lahat ng file sa {{name}}",
     "transcribingNow": "kasalukuyang tina-transcribe",
     "selectedSummary": "{{count}} (na) file ang napili",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "Hindi ma-load ang listahan ng modelo, kaya hindi masisimulan ang transcription."
   },
   "transcriptionHistory": {
@@ -1050,5 +1049,18 @@
     "retriedAll": "Inulit ang {{ok}} sa {{total}} file.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "Nabigo ang muling pagsubok: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 wika. Pinakamainam para sa Chinese at mga bihirang wika.",
+      "nemotron": "Mabilis, may bantas. English, Japanese, Korean, at karamihan ng mga wikang European."
+    },
+    "languageUnsupported": "Hindi sinusuportahan ng {{model}} ang {{language}}. Pumili ng Whisper model.",
+    "optionsDecidedByModel": "Ang {{model}} mismo ang nagpapasya ng beam size, prompt at compute type.",
+    "modelUnavailable": "Hindi mapapatakbo rito ang {{model}}: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

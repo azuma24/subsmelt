@@ -681,8 +681,7 @@
       "languageEnglish": "Engels",
       "languageJapanese": "Japans",
       "languageChinese": "Chinees",
-      "languageKorean": "Koreaans",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Koreaans"
     },
     "connections": {
       "mode": "Verbindingsmodus",
@@ -724,8 +723,8 @@
     "rawConfigOpen": "Ruwe configuratie openen",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "Spraak-naar-tekstmodellen",
+      "description": "Download of verwijder spraak-naar-tekstmodellen op de transcriptiebackend. Downloads tonen live de voortgang.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +747,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "Runtime ontbreekt"
     },
     "setup": {
       "progress": "{{done}} van {{total}} voltooid",
@@ -898,7 +898,7 @@
     "timeout": "De backend reageerde te traag — verhoog de time-out voor aanvragen in Instellingen, of gebruik een kleiner model.",
     "auth": "De backend weigerde het token — controleer het backend token in Instellingen.",
     "rate-limit": "De provider heeft de aanvraag beperkt — er wordt opnieuw geprobeerd; verlaag het aantal parallelle blokken als dit blijft gebeuren.",
-    "model-missing": "Dat model is niet gedownload — download het via Instellingen → Modellen.",
+    "model-missing": "Dat model is niet gedownload — download het via Instellingen → Spraak-naar-tekstmodellen.",
     "insufficient-ram": "Onvoldoende geheugen voor dit model — kies een kleiner model.",
     "insufficient-disk": "Onvoldoende vrije schijfruimte voor de uitvoer.",
     "ffmpeg-missing": "ffmpeg is niet gevonden op de backend — installeer het of stel SUBSMELT_FFMPEG in.",
@@ -1026,7 +1026,6 @@
     "selectFolder": "Alle bestanden in {{name}} selecteren",
     "transcribingNow": "wordt nu getranscribeerd",
     "selectedSummary": "{{count}} bestand(en) geselecteerd",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "De modellijst kon niet worden geladen, dus de transcriptie kan niet starten."
   },
   "transcriptionHistory": {
@@ -1050,5 +1049,18 @@
     "retriedAll": "{{ok}} van {{total}} bestanden opnieuw geprobeerd.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "Opnieuw proberen mislukt: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 talen. Het best voor Chinees en zeldzame talen.",
+      "nemotron": "Snel, met interpunctie. Engels, Japans, Koreaans en de meeste Europese talen."
+    },
+    "languageUnsupported": "{{model}} ondersteunt {{language}} niet. Kies een Whisper-model.",
+    "optionsDecidedByModel": "{{model}} bepaalt zelf de beamgrootte, prompt en rekentype.",
+    "modelUnavailable": "{{model}} kan hier niet draaien: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

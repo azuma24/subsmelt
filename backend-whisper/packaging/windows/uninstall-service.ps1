@@ -55,7 +55,8 @@ if (-not $KeepConfig) {
         "SUBSMELT_WHISPER_MODEL_DIR",
         "SUBSMELT_WHISPER_MEDIA_ROOT",
         "SUBSMELT_WHISPER_TOKEN",
-        "SUBSMELT_FFMPEG"
+        "SUBSMELT_FFMPEG",
+        "SUBSMELT_NEMO_SPEECH"
     )) {
         [Environment]::SetEnvironmentVariable($name, $null, "Machine")
     }

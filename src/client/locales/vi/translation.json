@@ -681,8 +681,7 @@
       "languageEnglish": "Tiếng Anh",
       "languageJapanese": "Tiếng Nhật",
       "languageChinese": "Tiếng Trung",
-      "languageKorean": "Tiếng Hàn",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Tiếng Hàn"
     },
     "connections": {
       "mode": "Chế độ kết nối",
@@ -724,8 +723,8 @@
     "rawConfigOpen": "Open raw config",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "Mô hình chuyển giọng nói thành văn bản",
+      "description": "Tải xuống hoặc xóa mô hình chuyển giọng nói thành văn bản trên backend phiên âm. Tiến trình tải xuống hiển thị trực tiếp.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +747,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "Thiếu runtime"
     },
     "setup": {
       "progress": "Hoàn tất {{done}}/{{total}}",
@@ -898,7 +898,7 @@
     "timeout": "Backend phản hồi quá lâu — hãy tăng thời gian chờ yêu cầu trong Cài đặt, hoặc dùng mô hình nhỏ hơn.",
     "auth": "Backend đã từ chối token — hãy kiểm tra token backend trong Cài đặt.",
     "rate-limit": "Nhà cung cấp đã giới hạn tần suất yêu cầu — hệ thống sẽ thử lại; hãy giảm số chunk song song nếu lỗi tiếp diễn.",
-    "model-missing": "Mô hình đó chưa được tải xuống — hãy tải xuống trong Cài đặt → Mô hình.",
+    "model-missing": "Mô hình đó chưa được tải xuống — hãy tải trong Cài đặt → Mô hình chuyển giọng nói thành văn bản.",
     "insufficient-ram": "Không đủ bộ nhớ cho mô hình này — hãy chọn mô hình nhỏ hơn.",
     "insufficient-disk": "Không đủ dung lượng đĩa trống cho đầu ra.",
     "ffmpeg-missing": "Không tìm thấy ffmpeg trên backend — hãy cài đặt hoặc đặt SUBSMELT_FFMPEG.",
@@ -1026,7 +1026,6 @@
     "selectFolder": "Chọn tất cả tệp trong {{name}}",
     "transcribingNow": "đang phiên âm",
     "selectedSummary": "Đã chọn {{count}} tệp",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "Không thể tải danh sách mô hình nên chưa thể bắt đầu phiên âm."
   },
   "transcriptionHistory": {
@@ -1050,5 +1049,18 @@
     "retriedAll": "Đã thử lại {{ok}} trong {{total}} tệp.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "Thử lại thất bại: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 ngôn ngữ. Tốt nhất cho tiếng Trung và các ngôn ngữ hiếm.",
+      "nemotron": "Nhanh, có dấu câu. Tiếng Anh, Nhật, Hàn và hầu hết ngôn ngữ châu Âu."
+    },
+    "languageUnsupported": "{{model}} không hỗ trợ {{language}}. Hãy chọn một mô hình Whisper.",
+    "optionsDecidedByModel": "{{model}} tự quyết định kích thước beam, prompt và kiểu tính toán.",
+    "modelUnavailable": "{{model}} không thể chạy ở đây: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

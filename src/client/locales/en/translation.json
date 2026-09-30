@@ -50,7 +50,6 @@
     "modelNotDownloadedTitle": "Model not downloaded",
     "modelNotDownloadedMessage": "Model \"{{model}}\" ({{size}}) is not downloaded yet. Download it now?",
     "modelNotDownloadedMessageNoSize": "Model \"{{model}}\" is not downloaded yet. Download it now?",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelDownloading": "Downloading {{model}}…",
     "modelDownloadDone": "Model {{model}} downloaded.",
     "modelDownloadFailed": "Failed to download model {{model}}: {{message}}",
@@ -162,7 +161,7 @@
     "timeout": "The backend took too long to answer — raise the request timeout in Settings, or use a smaller model.",
     "auth": "The backend rejected the token — check the backend token in Settings.",
     "rate-limit": "The provider rate-limited the request — it will retry; lower parallel chunks if it keeps happening.",
-    "model-missing": "That model is not downloaded — download it from Settings → Models.",
+    "model-missing": "That model is not downloaded — download it from Settings → Speech-to-text models.",
     "insufficient-ram": "Not enough memory for this model — choose a smaller one.",
     "insufficient-disk": "Not enough free disk space for the output.",
     "ffmpeg-missing": "ffmpeg was not found on the backend — install it or set SUBSMELT_FFMPEG.",
@@ -725,7 +724,6 @@
       "modelLargeV2": "Large v2 — high accuracy",
       "modelLargeV3": "Large v3 — best accuracy",
       "modelDistilLargeV3": "Distil Large v3 — English only, much faster",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
       "modelLargeV3Turbo": "Large v3 turbo — fast + accurate",
       "language": "Language",
       "languageAuto": "Auto-detect",
@@ -867,8 +865,8 @@
     "rawConfigHint": "JSON blobs for per-folder STT defaults and advanced options.",
     "rawConfigOpen": "Open raw config",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "Speech-to-text models",
+      "description": "Download or remove speech-to-text models on the transcription backend. Downloads stream live progress.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -891,7 +889,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "Runtime missing"
     },
     "setup": {
       "progress": "{{done}} of {{total}} done",
@@ -1050,5 +1049,18 @@
       "cancelling": "Cancelling…",
       "cancelled": "Transcription cancelled."
     }
+  },
+  "stt": {
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    },
+    "engineStrength": {
+      "whisper": "99 languages. Best for Chinese and rare languages.",
+      "nemotron": "Fast, punctuated. English, Japanese, Korean, most European languages."
+    },
+    "languageUnsupported": "{{model}} does not support {{language}}. Pick a Whisper model.",
+    "optionsDecidedByModel": "{{model}} decides beam size, prompt and compute type itself.",
+    "modelUnavailable": "{{model}} cannot run here: {{reason}}"
   }
 }

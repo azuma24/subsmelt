@@ -681,8 +681,7 @@
       "languageEnglish": "الإنجليزية",
       "languageJapanese": "اليابانية",
       "languageChinese": "الصينية",
-      "languageKorean": "الكورية",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "الكورية"
     },
     "connections": {
       "mode": "وضع الاتصال",
@@ -724,8 +723,8 @@
     "rawConfigOpen": "Open raw config",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "نماذج تحويل الكلام إلى نص",
+      "description": "نزّل نماذج تحويل الكلام إلى نص أو أزلها على الخادم الخلفي للنسخ. تعرض التنزيلات التقدم مباشرةً.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +747,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "بيئة التشغيل مفقودة"
     },
     "setup": {
       "progress": "اكتمل {{done}} من {{total}}",
@@ -898,7 +898,7 @@
     "timeout": "استغرق الخادم وقتًا طويلًا للرد — ارفع مهلة الطلب في الإعدادات، أو استخدم نموذجًا أصغر.",
     "auth": "رفض الخادم الرمز المميز — تحقق من رمز الخادم في الإعدادات.",
     "rate-limit": "قيّد المزوّد معدل الطلبات — ستُعاد المحاولة تلقائيًا؛ قلّل الأجزاء المتوازية إذا تكرر ذلك.",
-    "model-missing": "هذا النموذج غير مُنزّل — نزّله من الإعدادات → النماذج.",
+    "model-missing": "هذا النموذج غير منزّل — نزّله من الإعدادات ← نماذج تحويل الكلام إلى نص.",
     "insufficient-ram": "الذاكرة غير كافية لهذا النموذج — اختر نموذجًا أصغر.",
     "insufficient-disk": "لا توجد مساحة كافية على القرص للمخرجات.",
     "ffmpeg-missing": "لم يُعثر على ffmpeg على الخادم — ثبّته أو عيّن SUBSMELT_FFMPEG.",
@@ -1026,7 +1026,6 @@
     "selectFolder": "تحديد كل الملفات في {{name}}",
     "transcribingNow": "جارٍ النسخ الآن",
     "selectedSummary": "تم تحديد {{count}} ملف",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "تعذّر تحميل قائمة النماذج، لذا لا يمكن بدء النسخ."
   },
   "transcriptionHistory": {
@@ -1050,5 +1049,18 @@
     "retriedAll": "أُعيدت محاولة {{ok}} من {{total}} ملفات.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "فشلت إعادة المحاولة: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 لغة. الأفضل للصينية واللغات النادرة.",
+      "nemotron": "سريع ومع علامات الترقيم. الإنجليزية واليابانية والكورية ومعظم اللغات الأوروبية."
+    },
+    "languageUnsupported": "{{model}} لا يدعم {{language}}. اختر نموذج Whisper.",
+    "optionsDecidedByModel": "يحدد {{model}} حجم beam والموجّه ونوع الحوسبة بنفسه.",
+    "modelUnavailable": "لا يمكن تشغيل {{model}} هنا: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

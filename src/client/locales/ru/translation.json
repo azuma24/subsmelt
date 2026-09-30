@@ -681,8 +681,7 @@
       "languageEnglish": "Английский",
       "languageJapanese": "Японский",
       "languageChinese": "Китайский",
-      "languageKorean": "Корейский",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Корейский"
     },
     "connections": {
       "mode": "Режим подключения",
@@ -724,8 +723,8 @@
     "rawConfigOpen": "Open raw config",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "Модели распознавания речи",
+      "description": "Загружайте или удаляйте модели распознавания речи на бэкенде транскрипции. Прогресс загрузки отображается в реальном времени.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +747,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "Нет среды выполнения"
     },
     "setup": {
       "progress": "Готово {{done}} из {{total}}",
@@ -898,7 +898,7 @@
     "timeout": "Бэкенд слишком долго не отвечал — увеличьте тайм-аут запроса в Настройках или используйте модель поменьше.",
     "auth": "Бэкенд отклонил токен — проверьте токен бэкенда в Настройках.",
     "rate-limit": "Провайдер ограничил частоту запросов — запрос будет повторён; если это повторяется, уменьшите число параллельных фрагментов.",
-    "model-missing": "Эта модель не загружена — загрузите её в Настройки → Модели.",
+    "model-missing": "Эта модель не загружена — загрузите её в разделе Настройки → Модели распознавания речи.",
     "insufficient-ram": "Недостаточно памяти для этой модели — выберите модель поменьше.",
     "insufficient-disk": "Недостаточно свободного места на диске для результата.",
     "ffmpeg-missing": "ffmpeg не найден на бэкенде — установите его или задайте SUBSMELT_FFMPEG.",
@@ -1026,7 +1026,6 @@
     "selectFolder": "Выбрать все файлы в {{name}}",
     "transcribingNow": "идёт расшифровка",
     "selectedSummary": "Выбрано файлов: {{count}}",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "Не удалось загрузить список моделей, поэтому транскрипцию нельзя запустить."
   },
   "transcriptionHistory": {
@@ -1050,5 +1049,18 @@
     "retriedAll": "Повторено файлов: {{ok}} из {{total}}.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "Не удалось повторить: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 языков. Лучший выбор для китайского и редких языков.",
+      "nemotron": "Быстро, с пунктуацией. Английский, японский, корейский и большинство европейских языков."
+    },
+    "languageUnsupported": "{{model}} не поддерживает {{language}}. Выберите модель Whisper.",
+    "optionsDecidedByModel": "{{model}} сам выбирает размер beam, подсказку и тип вычислений.",
+    "modelUnavailable": "{{model}} не может работать здесь: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

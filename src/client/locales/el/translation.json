@@ -681,8 +681,7 @@
       "languageEnglish": "Αγγλικά",
       "languageJapanese": "Ιαπωνικά",
       "languageChinese": "Κινεζικά",
-      "languageKorean": "Κορεατικά",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "Κορεατικά"
     },
     "connections": {
       "mode": "Λειτουργία σύνδεσης",
@@ -724,8 +723,8 @@
     "rawConfigOpen": "Άνοιγμα ακατέργαστης ρύθμισης",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "Μοντέλα μετατροπής ομιλίας σε κείμενο",
+      "description": "Κατεβάστε ή αφαιρέστε μοντέλα μετατροπής ομιλίας σε κείμενο στο backend μεταγραφής. Οι λήψεις δείχνουν την πρόοδο ζωντανά.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +747,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "Λείπει το runtime"
     },
     "setup": {
       "progress": "{{done}} από {{total}} ολοκληρώθηκαν",
@@ -898,7 +898,7 @@
     "timeout": "Το backend άργησε πολύ να απαντήσει — αυξήστε τη λήξη χρόνου αιτήματος στις Ρυθμίσεις ή χρησιμοποιήστε μικρότερο μοντέλο.",
     "auth": "Το backend απέρριψε το token — ελέγξτε το backend token στις Ρυθμίσεις.",
     "rate-limit": "Ο πάροχος περιόρισε τον ρυθμό αιτημάτων — θα γίνει νέα προσπάθεια· αν συνεχίζεται, μειώστε τα παράλληλα τμήματα.",
-    "model-missing": "Αυτό το μοντέλο δεν έχει ληφθεί — κατεβάστε το από Ρυθμίσεις → Μοντέλα.",
+    "model-missing": "Αυτό το μοντέλο δεν έχει ληφθεί — κατεβάστε το από Ρυθμίσεις → Μοντέλα μετατροπής ομιλίας σε κείμενο.",
     "insufficient-ram": "Δεν υπάρχει αρκετή μνήμη για αυτό το μοντέλο — επιλέξτε μικρότερο.",
     "insufficient-disk": "Δεν υπάρχει αρκετός ελεύθερος χώρος στον δίσκο για την έξοδο.",
     "ffmpeg-missing": "Το ffmpeg δεν βρέθηκε στο backend — εγκαταστήστε το ή ορίστε το SUBSMELT_FFMPEG.",
@@ -1026,7 +1026,6 @@
     "selectFolder": "Επιλογή όλων των αρχείων στο {{name}}",
     "transcribingNow": "γίνεται μεταγραφή τώρα",
     "selectedSummary": "Επιλέχθηκαν {{count}} αρχεία",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "Δεν ήταν δυνατή η φόρτωση της λίστας μοντέλων, οπότε η μεταγραφή δεν μπορεί να ξεκινήσει."
   },
   "transcriptionHistory": {
@@ -1050,5 +1049,18 @@
     "retriedAll": "Επαναλήφθηκαν {{ok}} από {{total}} αρχεία.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "Η επανάληψη απέτυχε: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 γλώσσες. Ιδανικό για κινεζικά και σπάνιες γλώσσες.",
+      "nemotron": "Γρήγορο, με στίξη. Αγγλικά, ιαπωνικά, κορεατικά και οι περισσότερες ευρωπαϊκές γλώσσες."
+    },
+    "languageUnsupported": "Το {{model}} δεν υποστηρίζει {{language}}. Επιλέξτε ένα μοντέλο Whisper.",
+    "optionsDecidedByModel": "Το {{model}} ορίζει μόνο του το μέγεθος beam, την προτροπή και τον τύπο υπολογισμού.",
+    "modelUnavailable": "Το {{model}} δεν μπορεί να εκτελεστεί εδώ: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

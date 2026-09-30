@@ -681,8 +681,7 @@
       "languageEnglish": "ஆங்கிலம்",
       "languageJapanese": "ஜப்பானியம்",
       "languageChinese": "சீனம்",
-      "languageKorean": "கொரியம்",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "languageKorean": "கொரியம்"
     },
     "connections": {
       "mode": "இணைப்பு முறை",
@@ -724,8 +723,8 @@
     "rawConfigOpen": "மூல உள்ளமைவைத் திற",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "பேச்சு-முதல்-உரை மாதிரிகள்",
+      "description": "படியெடுத்தல் பின்தளத்தில் பேச்சு-முதல்-உரை மாதிரிகளைப் பதிவிறக்கவும் அல்லது அகற்றவும். பதிவிறக்க முன்னேற்றம் நேரலையாகக் காட்டப்படும்.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +747,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "இயக்கச்சூழல் இல்லை"
     },
     "setup": {
       "progress": "{{total}} இல் {{done}} முடிந்தது",
@@ -898,7 +898,7 @@
     "timeout": "பின்தளம் பதிலளிக்க அதிக நேரம் எடுத்தது — அமைப்புகளில் கோரிக்கை காலாவதியை உயர்த்தவும், அல்லது சிறிய மாதிரியைப் பயன்படுத்தவும்.",
     "auth": "பின்தளம் டோக்கனை நிராகரித்தது — அமைப்புகளில் பின்தள டோக்கனைச் சரிபார்க்கவும்.",
     "rate-limit": "வழங்குநர் கோரிக்கை வீதத்தைக் கட்டுப்படுத்தியது — மீண்டும் முயற்சிக்கும்; தொடர்ந்தால் இணை பகுதிகளைக் குறைக்கவும்.",
-    "model-missing": "அந்த மாதிரி பதிவிறக்கப்படவில்லை — அமைப்புகள் → மாதிரிகள் இல் இருந்து பதிவிறக்கவும்.",
+    "model-missing": "அந்த மாதிரி பதிவிறக்கப்படவில்லை — அமைப்புகள் → பேச்சு-முதல்-உரை மாதிரிகள் பகுதியில் பதிவிறக்கவும்.",
     "insufficient-ram": "இந்த மாதிரிக்குப் போதுமான நினைவகம் இல்லை — சிறிய ஒன்றைத் தேர்ந்தெடுக்கவும்.",
     "insufficient-disk": "வெளியீட்டிற்குப் போதுமான வட்டு இடம் இல்லை.",
     "ffmpeg-missing": "பின்தளத்தில் ffmpeg கிடைக்கவில்லை — அதை நிறுவவும் அல்லது SUBSMELT_FFMPEG ஐ அமைக்கவும்.",
@@ -1026,7 +1026,6 @@
     "selectFolder": "{{name}} இல் உள்ள அனைத்து கோப்புகளையும் தேர்ந்தெடு",
     "transcribingNow": "இப்போது படியெடுக்கப்படுகிறது",
     "selectedSummary": "{{count}} கோப்புகள் தேர்ந்தெடுக்கப்பட்டன",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
     "modelsLoadFailed": "மாதிரிப் பட்டியலை ஏற்ற முடியவில்லை, எனவே படியெடுத்தலைத் தொடங்க முடியாது."
   },
   "transcriptionHistory": {
@@ -1050,5 +1049,18 @@
     "retriedAll": "{{total}} இல் {{ok}} கோப்புகள் மீண்டும் முயற்சிக்கப்பட்டன.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "மீண்டும் முயற்சி தோல்வியடைந்தது: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 மொழிகள். சீனம் மற்றும் அரிய மொழிகளுக்குச் சிறந்தது.",
+      "nemotron": "வேகமானது, நிறுத்தற்குறிகளுடன். ஆங்கிலம், ஜப்பானியம், கொரியம் மற்றும் பெரும்பாலான ஐரோப்பிய மொழிகள்."
+    },
+    "languageUnsupported": "{{model}} {{language}} மொழியை ஆதரிக்காது. ஒரு Whisper மாதிரியைத் தேர்ந்தெடுக்கவும்.",
+    "optionsDecidedByModel": "{{model}} பீம் அளவு, ப்ராம்ப்ட் மற்றும் கணக்கீட்டு வகையைத் தானே தீர்மானிக்கிறது.",
+    "modelUnavailable": "{{model}} இங்கே இயங்க முடியாது: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }
