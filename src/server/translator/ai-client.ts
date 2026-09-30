@@ -187,6 +187,12 @@ export function normalizeResult<T extends { text?: string; reasoning?: unknown }
   return result;
 }
 
+class RequestTimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(`Request timeout after ${timeoutMs}ms`);
+  }
+}
+
 export async function withAbortTimeout<T>(
   run: (signal: AbortSignal) => Promise<T>,
   timeoutMs = REQUEST_TIMEOUT_MS,
@@ -207,10 +213,12 @@ export async function withAbortTimeout<T>(
   } catch (error: any) {
     // Distinguish stop vs timeout
     if (externalSignal?.aborted) throw new Error("STOP_REQUESTED");
-    if (error?.name === "AbortError" || error?.message === "STOP_REQUESTED") {
+    // fetch rejects with the abort reason ("timeout"), not an AbortError, so
+    // our own signal is what marks a timeout.
+    if (controller.signal.aborted || error?.name === "AbortError" || error?.message === "STOP_REQUESTED") {
       throw error?.message === "STOP_REQUESTED"
         ? error
-        : new Error(`Request timeout after ${timeoutMs}ms`);
+        : new RequestTimeoutError(timeoutMs);
     }
     // Wrap non-object throws (plain strings, numbers) so they always have .message
     if (error !== null && typeof error !== "object") {
@@ -338,7 +346,7 @@ export async function translateChunk(
       const fromNumbered = extractNumberedTranslations(result.text || "", subtitles.length);
       if (fromNumbered) return fromNumbered;
     } catch (e: any) {
-      if (e?.message === "STOP_REQUESTED") throw e;
+      if (e?.message === "STOP_REQUESTED" || e instanceof RequestTimeoutError) throw e;
       // fall through to plain-text path
     }
   }
@@ -437,7 +445,7 @@ export async function translateSingle(
         if (single) return single;
       }
     } catch (e: any) {
-      if (e?.message === "STOP_REQUESTED") throw e;
+      if (e?.message === "STOP_REQUESTED" || e instanceof RequestTimeoutError) throw e;
       // fall through to plain-text path
     }
   }

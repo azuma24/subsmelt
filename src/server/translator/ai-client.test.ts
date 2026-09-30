@@ -6,6 +6,7 @@ import {
   parseRetryAfter,
   rateLimitRetryDelayMs,
   extractUsage,
+  translateChunk,
   translateSingle,
   type TokenUsage,
 } from "./ai-client.js";
@@ -14,11 +15,15 @@ import {
 
 type ChatMessage = { content: string; reasoning_content?: string };
 
-/** Runs `fn` against a local OpenAI-compatible endpoint and returns how many requests it received. */
-async function withChatServer(message: ChatMessage, fn: (apiHost: string) => Promise<void>): Promise<number> {
+/**
+ * Runs `fn` against a local OpenAI-compatible endpoint and returns how many
+ * requests it received. "hang" accepts requests and never answers them.
+ */
+async function withChatServer(message: ChatMessage | "hang", fn: (apiHost: string) => Promise<void>): Promise<number> {
   let requests = 0;
   const server = http.createServer((req, res) => {
     requests++;
+    if (message === "hang") return;
     req.resume();
     req.on("end", () => {
       res.setHeader("content-type", "application/json");
@@ -78,6 +83,33 @@ test("translateSingle: extracts the final answer from a reasoning-only reply", a
     "Final: 「我要走了」",
   ].join("\n");
   assert.equal(await translateSingleReply({ content: "", reasoning_content: reasoning }), "我要走了");
+});
+
+// ── tool-call path timeouts ─────────────────────────────────────────────────
+
+async function timedOutToolCall(run: (apiHost: string) => Promise<unknown>) {
+  let message: string | undefined;
+  const requests = await withChatServer("hang", async (apiHost) => {
+    message = await run(apiHost).then(
+      () => "resolved",
+      (error: Error) => error.message
+    );
+  });
+  return { requests, message };
+}
+
+test("translateChunk: a tool-call timeout surfaces without a plain-text retry", async () => {
+  const outcome = await timedOutToolCall((apiHost) =>
+    translateChunk(["source line"], { ...modelOpts(apiHost), requestTimeoutMs: 50 })
+  );
+  assert.deepEqual(outcome, { requests: 1, message: "Request timeout after 50ms" });
+});
+
+test("translateSingle: a tool-call timeout surfaces without a plain-text retry", async () => {
+  const outcome = await timedOutToolCall((apiHost) =>
+    translateSingle("source line", { ...modelOpts(apiHost), requestTimeoutMs: 50 })
+  );
+  assert.deepEqual(outcome, { requests: 1, message: "Request timeout after 50ms" });
 });
 
 // ── parseRetryAfter ─────────────────────────────────────────────────────────
