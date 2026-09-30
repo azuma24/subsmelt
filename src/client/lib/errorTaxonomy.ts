@@ -28,8 +28,13 @@ export type ErrorCode =
 
 interface Rule {
   code: ErrorCode;
-  patterns: string[];
+  patterns: (string | RegExp)[];
 }
+
+// Bare status codes and "oom" also occur inside file paths ("401 - Pilot",
+// "Living Room"), which error messages quote. They only count as a standalone
+// token, and a code followed by " - " is a title separator, not a status.
+const statusCode = (code: number): RegExp => new RegExp(String.raw`(?:^|[\s(:])${code}(?=$|[\s).,;])(?!\s*-\s)`);
 
 // Order matters: the first match wins, so specific causes are listed before the
 // generic transport ones they would otherwise be swallowed by. "model not
@@ -39,12 +44,12 @@ const RULES: Rule[] = [
   { code: "cancelled", patterns: ["cancelled", "canceled", "aborted", "stop_requested"] },
   { code: "interrupted", patterns: ["interrupted by server restart", "server restart"] },
   { code: "model-missing", patterns: ["model_not_downloaded", "not downloaded", "model is not downloaded"] },
-  { code: "insufficient-ram", patterns: ["insufficient_ram", "not enough memory", "out of memory", "oom"] },
+  { code: "insufficient-ram", patterns: ["insufficient_ram", "not enough memory", "out of memory", /\boom\b/] },
   { code: "insufficient-disk", patterns: ["insufficient_disk", "no space left", "disk full"] },
   { code: "ffmpeg-missing", patterns: ["ffmpeg_missing", "ffmpeg not found", "ffmpeg is not"] },
   { code: "server-missing", patterns: ["winerror 2", "cannot find the file specified", "run_server executable not found", "enoent"] },
-  { code: "auth", patterns: ["unauthorized", "forbidden", "invalid token", "invalid api key", "401", "403"] },
-  { code: "rate-limit", patterns: ["rate limit", "rate_limit", "429", "too many requests"] },
+  { code: "auth", patterns: ["unauthorized", "forbidden", "invalid token", "invalid api key", statusCode(401), statusCode(403)] },
+  { code: "rate-limit", patterns: ["rate limit", "rate_limit", statusCode(429), "too many requests"] },
   { code: "schema", patterns: ["did not match schema", "no object generated", "validation", "unusable response"] },
   { code: "timeout", patterns: ["timed out", "timeout", "etimedout"] },
   { code: "connection-dropped", patterns: ["terminated", "socket hang up", "econnreset", "premature close"] },
@@ -55,7 +60,7 @@ export function classifyError(raw: string | null | undefined): ErrorCode {
   if (!raw || !raw.trim()) return "unknown";
   const text = raw.toLowerCase();
   for (const rule of RULES) {
-    if (rule.patterns.some((pattern) => text.includes(pattern))) return rule.code;
+    if (rule.patterns.some((pattern) => (typeof pattern === "string" ? text.includes(pattern) : pattern.test(text)))) return rule.code;
   }
   return "unknown";
 }
