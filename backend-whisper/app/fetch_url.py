@@ -174,12 +174,25 @@ def _assert_hostname_public(
         raise UrlFetchError(_internal_host_message(host))
 
 
+def _assert_single_media(info: Any) -> None:
+    """This endpoint fetches one file; a playlist or channel would fetch every entry."""
+    if not info:
+        raise UrlFetchError("No media found at URL")
+    if info.get("_type") == "playlist":
+        raise UrlFetchError(
+            "URL points at a playlist or channel; paste the URL of a single video"
+        )
+
+
 def download_url(url: str, dest_dir: Path) -> Path:
     """Download the best audio (fallback best) for ``url`` into ``dest_dir``.
 
+    Probes the URL first (no download) so a playlist can be refused before any
+    entry is fetched, then downloads from the probed result.
+
     Returns the path to the downloaded file. Raises UrlFetchUnavailableError if
-    yt-dlp is absent, UrlFetchError on a bad URL, a guarded (SSRF) target or a
-    fetch failure.
+    yt-dlp is absent, UrlFetchError on a bad URL, a guarded (SSRF) target, a
+    playlist or a fetch failure.
     """
     allow_unsafe = _allow_unsafe()
     u = _validate_url(url, allow_unsafe)
@@ -195,6 +208,9 @@ def download_url(url: str, dest_dir: Path) -> Path:
     opts: Any = {
         "outtmpl": str(dest_dir / "%(id)s.%(ext)s"),
         "noplaylist": True,
+        # Leave playlist entries unresolved during the probe: a channel URL would
+        # otherwise fetch metadata for every video before being refused.
+        "extract_flat": "in_playlist",
         "quiet": True,
         "no_warnings": True,
         "format": "bestaudio/best",
@@ -202,8 +218,12 @@ def download_url(url: str, dest_dir: Path) -> Path:
     }
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(u, download=True)
+            info = ydl.extract_info(u, download=False)
+            _assert_single_media(info)
+            ydl.process_ie_result(info, download=True)
             produced = Path(ydl.prepare_filename(info))
+    except UrlFetchError:
+        raise
     except Exception as exc:  # noqa: BLE001 - surface a clean message
         raise UrlFetchError(f"Failed to fetch media from URL: {exc}") from exc
 

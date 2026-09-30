@@ -1,8 +1,13 @@
 """URL-fetch unit tests (no network, no yt-dlp required)."""
 
+import os
 import socket
+import sys
+import tempfile
 import time
+import types
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from app import fetch_url
@@ -90,3 +95,71 @@ class FetchUrlTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class _FakeYoutubeDL:
+    """Stands in for yt_dlp.YoutubeDL: returns a canned info dict and records calls."""
+
+    info: dict = {}
+    calls: list = []
+    last_opts: dict = {}
+
+    def __init__(self, opts):
+        self.opts = opts
+        type(self).last_opts = opts
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def extract_info(self, url, download=True):
+        type(self).calls.append(("extract_info", url, download))
+        return type(self).info
+
+    def process_ie_result(self, info, download=True):
+        type(self).calls.append(("process_ie_result", download))
+        Path(self.prepare_filename(info)).write_bytes(b"audio")
+        return info
+
+    def prepare_filename(self, info):
+        return self.opts["outtmpl"].replace("%(id)s", info["id"]).replace("%(ext)s", info["ext"])
+
+
+class DownloadUrlTests(unittest.TestCase):
+    def setUp(self):
+        fake = types.ModuleType("yt_dlp")
+        fake.YoutubeDL = _FakeYoutubeDL
+        _FakeYoutubeDL.calls = []
+        self._patchers = [
+            mock.patch.dict(sys.modules, {"yt_dlp": fake}),
+            mock.patch.dict(os.environ, {fetch_url.ALLOW_UNSAFE_ENV: "0"}),
+            # Keep CI offline: every hostname "resolves" to a public address.
+            mock.patch.object(fetch_url, "_resolve_host", lambda host, timeout=3.0: ["93.184.216.34"]),
+        ]
+        for patcher in self._patchers:
+            patcher.start()
+        self._tmp = tempfile.TemporaryDirectory()
+        self.dest = Path(self._tmp.name)
+
+    def tearDown(self):
+        self._tmp.cleanup()
+        for patcher in reversed(self._patchers):
+            patcher.stop()
+
+    def _downloaded(self) -> bool:
+        return any(call[0] == "process_ie_result" for call in _FakeYoutubeDL.calls)
+
+    def test_playlist_and_channel_urls_are_refused_without_downloading(self):
+        _FakeYoutubeDL.info = {"_type": "playlist", "id": "PL1", "entries": [{"id": "a"}, {"id": "b"}]}
+        with self.assertRaises(fetch_url.UrlFetchError) as ctx:
+            fetch_url.download_url("https://example.com/playlist?list=PL1", self.dest)
+        self.assertIn("playlist", str(ctx.exception))
+        self.assertFalse(self._downloaded())
+
+    def test_probe_does_not_resolve_playlist_entries(self):
+        _FakeYoutubeDL.info = {"id": "v1", "ext": "m4a", "webpage_url": "https://example.com/v1"}
+        fetch_url.download_url("https://example.com/v1", self.dest)
+        self.assertEqual(_FakeYoutubeDL.last_opts["extract_flat"], "in_playlist")
+        self.assertTrue(_FakeYoutubeDL.last_opts["noplaylist"])
