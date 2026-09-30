@@ -73,6 +73,14 @@ class AuthTokenTests(unittest.TestCase):
         )
         self.assertEqual(resp.status_code, 401)
 
+    def test_token_set_non_ascii_token_rejected_not_500(self):
+        # secrets.compare_digest raises TypeError on non-ASCII str; a client
+        # sending Latin-1 bytes in the header must get 401, not a 500.
+        os.environ["SUBSMELT_WHISPER_TOKEN"] = "s3cr3t"
+        for headers in ({b"Authorization": b"Bearer \xfc"}, {b"X-Subsmelt-Token": b"\xe9"}):
+            resp = self.client.post("/preflight", json=self._body(), headers=headers)
+            self.assertEqual(resp.status_code, 401)
+
     def test_token_set_missing_header_rejected(self):
         os.environ["SUBSMELT_WHISPER_TOKEN"] = "s3cr3t"
         resp = self.client.post("/preflight", json=self._body())

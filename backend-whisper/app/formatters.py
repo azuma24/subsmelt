@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable, Protocol
 
+from .segments import has_wide_chars
+
 
 class SegmentLike(Protocol):
     start: float
@@ -30,19 +32,47 @@ def _with_speaker(segment: object) -> str:
     return f"[{spk}] {text}" if spk else text
 
 
+# CJK text carries no spaces, so a "word" can be a whole sentence. These drive
+# the character-level fallback for such words (an overlong Latin token such as a
+# URL is left whole on its own line): break after sentence punctuation when one
+# sits in the second half of a line, never open a line with closing punctuation
+# and never close one with opening punctuation.
+_BREAK_AFTER = "。、，．！？,.!?;"
+_NO_LINE_START = "。、，．！？）」』】〕〉》’”…,.!?;:"
+_NO_LINE_END = "（「『【〔〈《‘“"
+
+
+def _chunk_unspaced(run: str, max_len: int) -> list[str]:
+    pieces: list[str] = []
+    while len(run) > max_len:
+        cut = max_len
+        for i in range(max_len, max_len // 2, -1):
+            if run[i - 1] in _BREAK_AFTER:
+                cut = i
+                break
+        while cut > 1 and (run[cut] in _NO_LINE_START or run[cut - 1] in _NO_LINE_END):
+            cut -= 1
+        pieces.append(run[:cut])
+        run = run[cut:]
+    pieces.append(run)
+    return pieces
+
+
 def _wrap_text(text: str, max_line_length: int | None = None) -> str:
     stripped = text.strip()
     if not stripped or not max_line_length or max_line_length < 1:
         return stripped
 
-    words = stripped.split()
-    if not words:
-        return stripped
-
     lines: list[str] = []
-    current = words[0]
-    for word in words[1:]:
-        candidate = f"{current} {word}"
+    current = ""
+    for word in stripped.split():
+        if len(word) > max_line_length and has_wide_chars(word):
+            if current:
+                lines.append(current)
+            *full, current = _chunk_unspaced(word, max_line_length)
+            lines.extend(full)
+            continue
+        candidate = f"{current} {word}" if current else word
         if len(candidate) <= max_line_length:
             current = candidate
         else:
@@ -52,10 +82,15 @@ def _wrap_text(text: str, max_line_length: int | None = None) -> str:
     return "\n".join(lines)
 
 
+def _spoken(segments: Iterable[SegmentLike]) -> Iterable[SegmentLike]:
+    """Drop whitespace-only segments so no format emits an empty cue."""
+    return (segment for segment in segments if (getattr(segment, "text", "") or "").strip())
+
+
 def write_srt(segments: Iterable[SegmentLike], output_path: Path, max_line_length: int | None = None) -> int:
     lines: list[str] = []
     count = 0
-    for count, segment in enumerate(segments, start=1):
+    for count, segment in enumerate(_spoken(segments), start=1):
         lines.append(str(count))
         lines.append(f"{_timestamp(segment.start)} --> {_timestamp(segment.end)}")
         lines.append(_wrap_text(_with_speaker(segment), max_line_length))
@@ -67,7 +102,7 @@ def write_srt(segments: Iterable[SegmentLike], output_path: Path, max_line_lengt
 def write_vtt(segments: Iterable[SegmentLike], output_path: Path, max_line_length: int | None = None) -> int:
     lines = ["WEBVTT", ""]
     count = 0
-    for count, segment in enumerate(segments, start=1):
+    for count, segment in enumerate(_spoken(segments), start=1):
         lines.append(f"{_timestamp(segment.start, '.')} --> {_timestamp(segment.end, '.')}")
         lines.append(_wrap_text(_with_speaker(segment), max_line_length))
         lines.append("")
@@ -78,10 +113,8 @@ def write_vtt(segments: Iterable[SegmentLike], output_path: Path, max_line_lengt
 def write_txt(segments: Iterable[SegmentLike], output_path: Path) -> int:
     texts: list[str] = []
     count = 0
-    for count, segment in enumerate(segments, start=1):
-        text = _with_speaker(segment).strip()
-        if text:
-            texts.append(text)
+    for count, segment in enumerate(_spoken(segments), start=1):
+        texts.append(_with_speaker(segment).strip())
     output_path.write_text("\n".join(texts) + ("\n" if texts else ""), encoding="utf-8")
     return count
 
@@ -115,7 +148,7 @@ def write_ass(segments: Iterable[SegmentLike], output_path: Path, max_line_lengt
     """Write Advanced SubStation Alpha (.ass). Line breaks use ASS's ``\\N``."""
     lines = [_ASS_HEADER]
     count = 0
-    for count, segment in enumerate(segments, start=1):
+    for count, segment in enumerate(_spoken(segments), start=1):
         text = _wrap_text(segment.text, max_line_length).replace("\n", "\\N")
         # Speaker goes in the ASS Name/actor field (not the rendered text).
         name = _speaker(segment)

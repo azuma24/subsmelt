@@ -50,6 +50,50 @@ class AvailabilityTests(unittest.TestCase):
                 diarize._get_pipeline("cpu")
 
 
+class PipelineResidencyTests(unittest.TestCase):
+    """Only one pyannote pipeline stays resident; loading for another device
+    releases the previous one so its GPU memory comes back."""
+
+    def setUp(self):
+        import sys
+        import types
+
+        class _FakePipeline:
+            def __init__(self):
+                self.device = None
+
+            def to(self, device):
+                self.device = device
+
+        fake_audio = types.ModuleType("pyannote.audio")
+        fake_audio.Pipeline = types.SimpleNamespace(from_pretrained=lambda *a, **k: _FakePipeline())
+        fake_pyannote = types.ModuleType("pyannote")
+        fake_pyannote.audio = fake_audio
+        fake_torch = types.ModuleType("torch")
+        fake_torch.device = lambda name: name
+        self._modules = mock.patch.dict(
+            sys.modules, {"pyannote": fake_pyannote, "pyannote.audio": fake_audio, "torch": fake_torch}
+        )
+        self._modules.start()
+        self._env = mock.patch.dict(os.environ, {"SUBSMELT_HF_TOKEN": "hf_x"})
+        self._env.start()
+        self._cuda = mock.patch.object(diarize, "cuda_device_count", return_value=1)
+        self._cuda.start()
+        diarize._PIPELINE_CACHE.clear()
+
+    def tearDown(self):
+        diarize._PIPELINE_CACHE.clear()
+        self._cuda.stop()
+        self._env.stop()
+        self._modules.stop()
+
+    def test_loading_for_another_device_evicts_the_resident_pipeline(self):
+        cpu = diarize._get_pipeline("cpu")
+        self.assertIs(diarize._get_pipeline("cpu"), cpu)
+        cuda = diarize._get_pipeline("cuda")
+        self.assertEqual(diarize._PIPELINE_CACHE, {"cuda": cuda})
+
+
 class FormatterSpeakerTests(unittest.TestCase):
     def _segs(self):
         return [SimpleNamespace(start=0.0, end=1.0, text="hello", speaker="SPEAKER_00"),

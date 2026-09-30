@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import gc
+import sys
 import threading
-from typing import Any
+from contextlib import contextmanager
+from typing import Any, Iterator
 
 from .gpu import cuda_device_count
 from .model_cache import cache_root_from_env, describe_model_cache
@@ -11,7 +14,14 @@ from .preflight import available_ram_mb
 # that affect model identity. FastAPI runs sync handlers in a threadpool, so the
 # cache must be guarded by a lock to avoid loading the same model twice (or
 # corrupting the dict) under concurrent requests.
+#
+# At most ONE model is resident: loading a different key evicts the current one
+# so its VRAM comes back instead of every variant pinning GPU memory forever.
+# A transcription holds a ``lease`` while it runs; an evicted model that is
+# still leased is parked in _RETIRED and released when the last lease ends.
 _MODEL_CACHE: dict[tuple[str, str, str], Any] = {}
+_LEASES: dict[tuple[str, str, str], int] = {}
+_RETIRED: dict[tuple[str, str, str], Any] = {}
 _CACHE_LOCK = threading.Lock()
 
 # Compute types CTranslate2 supports per device. float16 / int8_float16 are
@@ -143,12 +153,11 @@ def validate_device_and_compute_type(device: str, compute_type: str) -> None:
 
 
 def get_whisper_model(model: str, device: str, compute_type: str) -> Any:
-    """Return a cached WhisperModel for the given parameters, loading once.
+    """Return the resident WhisperModel for the given parameters, loading it once.
 
-    The model is loaded lazily on first request for a given
-    (model, device, compute_type) key and reused thereafter. Loading happens
-    inside the lock so concurrent first-time requests do not each pay the cost
-    of constructing the same model.
+    Lookup and load both happen under ``_CACHE_LOCK`` so concurrent first-time
+    requests do not each construct the model, and so a ``lease`` can never be
+    handed an instance that a competing load evicted in between.
 
     The device/compute_type pairing is validated first so requesting CUDA on a
     CPU-only box (or an incompatible compute_type) fails with a clear error
@@ -156,53 +165,64 @@ def get_whisper_model(model: str, device: str, compute_type: str) -> Any:
     surfaced as :class:`CudaOutOfMemoryError` suggesting a smaller model.
     """
     validate_device_and_compute_type(device, compute_type)
+    with _CACHE_LOCK:
+        return _resident_locked(model, device, compute_type)
 
+
+def _resident_locked(model: str, device: str, compute_type: str) -> Any:
+    """The cached instance for the key, loading (and evicting the previous
+    resident) when absent. Caller holds ``_CACHE_LOCK``."""
     key = _cache_key(model, device, compute_type)
     cached = _MODEL_CACHE.get(key)
     if cached is not None:
         return cached
 
-    with _CACHE_LOCK:
-        # Re-check inside the lock: another thread may have loaded it while we waited.
-        cached = _MODEL_CACHE.get(key)
-        if cached is not None:
-            return cached
+    # Evicted while another transcription still leases it: reinstate that
+    # instance instead of loading a second copy of the same weights.
+    retired = _RETIRED.pop(key, None)
+    if retired is not None:
+        _evict_locked(lambda other: other != key)
+        _MODEL_CACHE[key] = retired
+        return retired
 
-        from faster_whisper import WhisperModel  # type: ignore
+    from faster_whisper import WhisperModel  # type: ignore
 
-        # Load from the exact snapshot dir the cache detector resolved, so the
-        # loader can never disagree with /models, /health and
-        # assert_model_downloaded about whether a model is present — regardless
-        # of HF cache layout (``<root>`` vs ``<root>/hub``) or where it was
-        # downloaded from.
-        source = _resolve_model_source(model)
+    # Free the resident model before loading so the new one has its VRAM.
+    _evict_locked(lambda other: True)
 
-        try:
-            # local_files_only=True is the CRITICAL second defence against silent
-            # auto-download: faster-whisper / huggingface_hub must NOT reach the
-            # network here. A model that has not been explicitly downloaded fails
-            # locally and is mapped to a clean 409 (model_not_downloaded).
-            # download_root still points at the managed cache root so the fallback
-            # (raw id, no resolved snapshot) looks where the downloader wrote.
-            model_instance = WhisperModel(
-                source,
-                device=device,
-                compute_type=compute_type,
-                download_root=str(cache_root_from_env()),
-                local_files_only=True,
-            )
-        except Exception as exc:  # noqa: BLE001 - re-raise as typed/clear errors
-            if _is_cuda_oom(exc):
-                raise CudaOutOfMemoryError(
-                    f"CUDA ran out of memory loading model {model!r}; try a smaller "
-                    f"model (e.g. small or base) or free GPU memory"
-                ) from exc
-            if _is_missing_local_files(exc):
-                raise ModelWeightsMissingError(model) from exc
-            raise
-        _align_feature_extractor(model_instance)
-        _MODEL_CACHE[key] = model_instance
-        return model_instance
+    # Load from the exact snapshot dir the cache detector resolved, so the
+    # loader can never disagree with /models, /health and
+    # assert_model_downloaded about whether a model is present — regardless
+    # of HF cache layout (``<root>`` vs ``<root>/hub``) or where it was
+    # downloaded from.
+    source = _resolve_model_source(model)
+
+    try:
+        # local_files_only=True is the CRITICAL second defence against silent
+        # auto-download: faster-whisper / huggingface_hub must NOT reach the
+        # network here. A model that has not been explicitly downloaded fails
+        # locally and is mapped to a clean 409 (model_not_downloaded).
+        # download_root still points at the managed cache root so the fallback
+        # (raw id, no resolved snapshot) looks where the downloader wrote.
+        model_instance = WhisperModel(
+            source,
+            device=device,
+            compute_type=compute_type,
+            download_root=str(cache_root_from_env()),
+            local_files_only=True,
+        )
+    except Exception as exc:  # noqa: BLE001 - re-raise as typed/clear errors
+        if _is_cuda_oom(exc):
+            raise CudaOutOfMemoryError(
+                f"CUDA ran out of memory loading model {model!r}; try a smaller "
+                f"model (e.g. small or base) or free GPU memory"
+            ) from exc
+        if _is_missing_local_files(exc):
+            raise ModelWeightsMissingError(model) from exc
+        raise
+    _align_feature_extractor(model_instance)
+    _MODEL_CACHE[key] = model_instance
+    return model_instance
 
 
 def _align_feature_extractor(whisper_model: Any) -> None:
@@ -232,7 +252,79 @@ def _align_feature_extractor(whisper_model: Any) -> None:
     )
 
 
+@contextmanager
+def lease(model: str, device: str, compute_type: str) -> Iterator[Any]:
+    """Hold the model for the duration of a transcription.
+
+    Eviction (a different model loading, or DELETE /models/{id}) never unloads
+    a leased instance under a running decode; it is released when the last
+    lease ends.
+    """
+    validate_device_and_compute_type(device, compute_type)
+    key = _cache_key(model, device, compute_type)
+    with _CACHE_LOCK:
+        instance = _resident_locked(model, device, compute_type)
+        _LEASES[key] = _LEASES.get(key, 0) + 1
+    try:
+        yield instance
+    finally:
+        with _CACHE_LOCK:
+            _LEASES[key] -= 1
+            retired = _RETIRED.pop(key, None) if _LEASES[key] == 0 else None
+        if retired is not None:
+            release_device_memory(retired)
+
+
+def unload_model(model: str) -> bool:
+    """Evict every resident variant of ``model`` (any device/compute type).
+
+    Returns True when something was evicted. Used by DELETE /models/{id} so the
+    weights are unloaded (and, on Windows, unlocked) before the cache dir goes.
+    """
+    wanted = _cache_key(model, "", "")[0]
+    with _CACHE_LOCK:
+        return _evict_locked(lambda key: key[0] == wanted) > 0
+
+
+def _evict_locked(matches: Any) -> int:
+    """Drop cached entries whose key satisfies ``matches``; caller holds the lock."""
+    evicted = [key for key in _MODEL_CACHE if matches(key)]
+    for key in evicted:
+        instance = _MODEL_CACHE.pop(key)
+        if _LEASES.get(key):
+            _RETIRED[key] = instance
+        else:
+            release_device_memory(instance)
+    return len(evicted)
+
+
+def release_device_memory(instance: Any) -> None:
+    """Return a CTranslate2 model's device memory now rather than whenever the
+    GC runs. Models without ``unload_model`` are just dropped."""
+    unload = getattr(getattr(instance, "model", None), "unload_model", None)
+    if callable(unload):
+        unload()
+    del instance
+    free_device_cache()
+
+
+def free_device_cache() -> None:
+    """Collect garbage and hand cached CUDA blocks back to the driver.
+
+    ``torch.cuda.empty_cache`` is called only when torch is already imported
+    (pyannote), never imported just for this. Call it after the last reference
+    to the freed object is gone, or the blocks are still in use.
+    """
+    gc.collect()
+    torch = sys.modules.get("torch")
+    cuda = getattr(torch, "cuda", None)
+    if cuda is not None and cuda.is_available():
+        cuda.empty_cache()
+
+
 def clear_model_cache() -> None:
     """Drop all cached models. Primarily for tests."""
     with _CACHE_LOCK:
         _MODEL_CACHE.clear()
+        _LEASES.clear()
+        _RETIRED.clear()

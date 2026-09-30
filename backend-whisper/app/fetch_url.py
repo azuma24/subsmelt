@@ -130,8 +130,13 @@ def _resolve_host(host: str, timeout: float = 3.0) -> list[str]:
                 seen.append(ip)
         return seen
 
-    with ThreadPoolExecutor(max_workers=1) as ex:
+    # Not a ``with`` block: the executor's exit waits for the lookup thread,
+    # which would silently stretch ``timeout`` to the full DNS wait.
+    ex = ThreadPoolExecutor(max_workers=1)
+    try:
         return ex.submit(_lookup).result(timeout=timeout)
+    finally:
+        ex.shutdown(wait=False)
 
 
 def _assert_hostname_public(
@@ -169,12 +174,71 @@ def _assert_hostname_public(
         raise UrlFetchError(_internal_host_message(host))
 
 
+#: Cap on a fetched media file. Matches the frontend's upload cap
+#: (src/server/transcription/http-upload.ts MAX_UPLOAD_BYTES) so a URL fetch
+#: cannot pull more onto the scratch disk than an upload could.
+MAX_FETCH_BYTES = 5 * 1024 * 1024 * 1024
+
+
+def _media_urls(info: dict) -> list[str]:
+    """Every URL yt-dlp will actually fetch from, after redirects and extractor hops."""
+    urls = [info.get("webpage_url"), info.get("url")]
+    for fmt in info.get("requested_formats") or []:
+        urls.extend(fmt.get(field) for field in ("url", "manifest_url", "fragment_base_url"))
+    return [u for u in urls if isinstance(u, str) and u]
+
+
+def _assert_media_hosts_public(info: dict, allow_unsafe: bool) -> None:
+    """Re-run the SSRF guard on the probed result: the typed URL may have
+    redirected, or the extractor may hand back media on another host."""
+    if allow_unsafe:
+        return
+    for media_url in _media_urls(info):
+        try:
+            _validate_url(media_url)
+            _assert_hostname_public(media_url)
+        except UrlFetchError as exc:
+            raise UrlFetchError(f"Media URL {media_url!r} refused: {exc}") from exc
+
+
+def _assert_within_size_cap(info: dict) -> None:
+    """Refuse up front when the probe already reports a size over the cap; the
+    yt-dlp ``max_filesize`` option covers sizes only known once the download starts."""
+    formats = info.get("requested_formats") or [info]
+    total = sum(int(fmt.get("filesize") or fmt.get("filesize_approx") or 0) for fmt in formats)
+    if total > MAX_FETCH_BYTES:
+        raise UrlFetchError(
+            f"Media is about {total >> 20} MB, over the {MAX_FETCH_BYTES >> 20} MB fetch limit"
+        )
+
+
+def _abort_over_cap(progress: dict) -> None:
+    """Progress hook: yt-dlp's ``max_filesize`` only guards plain HTTP downloads
+    (it compares Content-Length); fragmented HLS/DASH streams never see it, so
+    also stop on the bytes actually received."""
+    if int(progress.get("downloaded_bytes") or 0) > MAX_FETCH_BYTES:
+        raise UrlFetchError(f"Download exceeded the {MAX_FETCH_BYTES >> 20} MB fetch limit")
+
+
+def _assert_single_media(info: Any) -> None:
+    """This endpoint fetches one file; a playlist or channel would fetch every entry."""
+    if not info:
+        raise UrlFetchError("No media found at URL")
+    if info.get("_type") in ("playlist", "multi_video"):
+        raise UrlFetchError(
+            "URL points at a playlist or channel; paste the URL of a single video"
+        )
+
+
 def download_url(url: str, dest_dir: Path) -> Path:
     """Download the best audio (fallback best) for ``url`` into ``dest_dir``.
 
+    Probes the URL first (no download) so a playlist can be refused before any
+    entry is fetched, then downloads from the probed result.
+
     Returns the path to the downloaded file. Raises UrlFetchUnavailableError if
-    yt-dlp is absent, UrlFetchError on a bad URL, a guarded (SSRF) target or a
-    fetch failure.
+    yt-dlp is absent, UrlFetchError on a bad URL, a guarded (SSRF) target, a
+    playlist, an oversized file or a fetch failure.
     """
     allow_unsafe = _allow_unsafe()
     u = _validate_url(url, allow_unsafe)
@@ -190,15 +254,26 @@ def download_url(url: str, dest_dir: Path) -> Path:
     opts: Any = {
         "outtmpl": str(dest_dir / "%(id)s.%(ext)s"),
         "noplaylist": True,
+        # Leave playlist entries unresolved during the probe: a channel URL would
+        # otherwise fetch metadata for every video before being refused.
+        "extract_flat": "in_playlist",
         "quiet": True,
         "no_warnings": True,
         "format": "bestaudio/best",
         "restrictfilenames": True,
+        "max_filesize": MAX_FETCH_BYTES,
+        "progress_hooks": [_abort_over_cap],
     }
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(u, download=True)
+            info = ydl.extract_info(u, download=False)
+            _assert_single_media(info)
+            _assert_media_hosts_public(info, allow_unsafe)
+            _assert_within_size_cap(info)
+            ydl.process_ie_result(info, download=True)
             produced = Path(ydl.prepare_filename(info))
+    except UrlFetchError:
+        raise
     except Exception as exc:  # noqa: BLE001 - surface a clean message
         raise UrlFetchError(f"Failed to fetch media from URL: {exc}") from exc
 
@@ -207,5 +282,8 @@ def download_url(url: str, dest_dir: Path) -> Path:
     # Post-processing can change the extension; fall back to the newest file.
     files = sorted((p for p in dest_dir.glob("*") if p.is_file()), key=lambda p: p.stat().st_mtime)
     if not files:
-        raise UrlFetchError("Download produced no file")
+        # yt-dlp skips (rather than fails) a file over max_filesize.
+        raise UrlFetchError(
+            f"Download produced no file (media over {MAX_FETCH_BYTES >> 20} MB is refused)"
+        )
     return files[-1]

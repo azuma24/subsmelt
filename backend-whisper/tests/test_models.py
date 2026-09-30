@@ -174,6 +174,19 @@ class ModelManagerEndpointTests(unittest.TestCase):
         self.assertGreaterEqual(body["freedMb"], 2)
         self.assertFalse(repo_dir.exists())
 
+    def test_delete_unloads_a_resident_model_first(self):
+        import app.model_loader as model_loader
+
+        self._seed_cached_model("small")
+        resident = types.SimpleNamespace(model=mock.Mock())
+        model_loader._MODEL_CACHE[("small", "cuda", "float16")] = resident
+        try:
+            resp = self.client.delete("/models/small")
+        finally:
+            model_loader._MODEL_CACHE.clear()
+        self.assertEqual(resp.status_code, 200)
+        resident.model.unload_model.assert_called_once()
+
     def test_delete_404_when_not_present(self):
         resp = self.client.delete("/models/medium")
         self.assertEqual(resp.status_code, 404)

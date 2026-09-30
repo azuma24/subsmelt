@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import secrets
 from pathlib import Path
-from typing import AsyncIterator
+from typing import AsyncIterator, Callable, Iterator
 
 import shutil
 import tempfile
@@ -13,6 +14,7 @@ import tempfile
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ValidationError
+from starlette.concurrency import run_in_threadpool
 
 from .gpu import cuda_device_count, gpu_info, total_free_vram_mb
 from .model_cache import describe_model_cache
@@ -52,6 +54,7 @@ from .model_loader import (
     CudaUnavailableError,
     InvalidComputeTypeError,
     ModelWeightsMissingError,
+    unload_model,
 )
 from .diarize import (
     DiarizationTokenMissingError,
@@ -82,6 +85,7 @@ ALLOW_UNSAFE = os.environ.get("SUBSMELT_WHISPER_ALLOW_UNSAFE", "0") == "1"
 USE_FAKE_TRANSCRIBE = os.environ.get("SUBSMELT_WHISPER_FAKE", "0") == "1"
 
 app = FastAPI(title="Subsmelt Whisper Backend", version=backend_version())
+log = logging.getLogger(__name__)
 
 
 def _configured_token() -> str:
@@ -112,23 +116,28 @@ def require_token(
     ``secrets.compare_digest`` so it is constant-time and not vulnerable to
     timing attacks.
     """
-    expected = _configured_token()
-    if not expected:
+    if not auth_required():
         return  # Auth disabled.
-
-    presented = ""
-    if authorization:
-        scheme, _, value = authorization.partition(" ")
-        if scheme.lower() == "bearer" and value:
-            presented = value.strip()
-    if not presented and x_subsmelt_token:
-        presented = x_subsmelt_token.strip()
-
-    if not presented or not secrets.compare_digest(presented, expected):
+    if not _token_matches(_presented_token(authorization, x_subsmelt_token)):
         raise HTTPException(
             status_code=401,
             detail={"code": "unauthorized", "message": "Invalid or missing whisper backend token"},
         )
+
+
+def _presented_token(authorization: str | None, x_subsmelt_token: str | None) -> str:
+    if authorization:
+        scheme, _, value = authorization.partition(" ")
+        if scheme.lower() == "bearer" and value:
+            return value.strip()
+    return (x_subsmelt_token or "").strip()
+
+
+def _token_matches(presented: str) -> bool:
+    # Compare bytes: compare_digest raises TypeError on a non-ASCII str, which
+    # would turn a bad token into a 500 instead of a 401.
+    expected = _configured_token()
+    return bool(presented) and secrets.compare_digest(presented.encode("utf-8"), expected.encode("utf-8"))
 
 
 def capabilities() -> dict:
@@ -182,15 +191,49 @@ def capabilities() -> dict:
     }
 
 
+def _health_model_cache(model: str, free_ram: int, disclose_paths: bool) -> dict:
+    """The /health model-cache block, safe for an open endpoint.
+
+    Only advertised ids touch the filesystem (an arbitrary path would make the
+    open endpoint an existence oracle), and cache paths are returned only to a
+    caller that could read them anyway (see ``_is_trusted_caller``).
+    """
+    selected = (model or "small").strip() or "small"
+    if selected.lower() not in ADVERTISED_MODELS:
+        safety = evaluate_model_safety("small", free_ram)
+        return {
+            "model": selected,
+            "cached": None,
+            "cache_root": None,
+            "cache_path": None,
+            "first_run_download_expected": False,
+            "required_ram_mb": safety["required_ram_mb"],
+            "recommended_ram_mb": safety["recommended_ram_mb"],
+            "suggested_model": None,
+            "warning": "Selected model is not one this backend manages; cache status is unknown.",
+        }
+    info = dict(describe_model_cache(selected, free_ram))
+    if not disclose_paths:
+        info["cache_root"] = None
+        info["cache_path"] = None
+    return info
+
+
 @app.get("/health", response_model=HealthResponse, response_model_by_alias=True)
-def health(model: str = Query(default="small")) -> HealthResponse:
+def health(
+    request: Request,
+    model: str = Query(default="small"),
+    authorization: str | None = Header(default=None),
+    x_subsmelt_token: str | None = Header(default=None, alias="X-Subsmelt-Token"),
+) -> HealthResponse:
     free_ram = available_ram_mb()
+    trusted = _is_trusted_caller(request, _presented_token(authorization, x_subsmelt_token))
     return HealthResponse(
         ffmpeg=ffmpeg_available(),
         total_ram_mb=total_ram_mb(),
         available_ram_mb=free_ram,
         capabilities=capabilities(),
-        model_cache=describe_model_cache(model, free_ram),
+        model_cache=_health_model_cache(model, free_ram, disclose_paths=trusted),
         log_state=get_log_state(),
     )
 
@@ -220,6 +263,16 @@ _LOG_TAIL_MAX_LINES = 2000
 
 #: Client addresses that count as local, including the IPv4-mapped IPv6 form.
 _LOOPBACK_CLIENTS = {"127.0.0.1", "::1", "localhost", "::ffff:127.0.0.1"}
+
+
+def _is_trusted_caller(request: Request, presented: str) -> bool:
+    """The disclosure rule as a predicate: a valid token, or a local caller on a
+    tokenless install. Same rule ``require_token_or_loopback`` enforces for
+    ``/logs``, for endpoints that stay open but carry some data worth gating."""
+    if auth_required():
+        return _token_matches(presented)
+    host = (request.client.host if request.client else "") or ""
+    return host in _LOOPBACK_CLIENTS
 
 
 def require_token_or_loopback(
@@ -317,6 +370,59 @@ class ModelDownloadRequest(BaseModel):
     model: str
 
 
+async def _ndjson_stream(
+    gen: Iterator[dict],
+    cancel_event: asyncio.Event,
+    cleanup: Callable[[], None] | None = None,
+) -> AsyncIterator[bytes]:
+    """Drive a blocking event generator on a worker thread, yielding NDJSON lines.
+
+    The worker thread owns the generator's whole lifetime: it iterates, closes it
+    and runs ``cleanup`` on every exit path. The loop side only forwards items;
+    when the client disconnects it sets ``cancel_event`` and leaves, and the
+    generator's own ``is_cancelled`` check ends the work at its next step.
+    Closing the generator from the loop while a step was executing on the thread
+    raised ``ValueError: generator already executing`` and skipped cleanup.
+    """
+    loop = asyncio.get_running_loop()
+    queue: asyncio.Queue = asyncio.Queue()
+    done = object()
+
+    def post(item: object) -> None:
+        try:
+            loop.call_soon_threadsafe(queue.put_nowait, item)
+        except RuntimeError:  # loop closed (server shutdown): nobody is listening
+            pass
+
+    def drive() -> None:
+        try:
+            for item in gen:
+                post(item)
+        except TranscriptionCancelled:
+            pass  # client went away; nothing left to send
+        except Exception as exc:  # noqa: BLE001 - surface as a terminal error line
+            post({"type": "error", "error": str(exc)})
+        finally:
+            try:
+                gen.close()
+                if cleanup is not None:
+                    cleanup()
+            except Exception:  # noqa: BLE001 - e.g. a Windows file lock on the temp media
+                log.exception("stream cleanup failed")
+            finally:
+                post(done)
+
+    loop.run_in_executor(None, drive)
+    try:
+        while True:
+            item = await queue.get()
+            if item is done:
+                break
+            yield (json.dumps(item) + "\n").encode("utf-8")
+    finally:
+        cancel_event.set()
+
+
 @app.post("/models/download")
 async def models_download(
     request: ModelDownloadRequest,
@@ -328,7 +434,8 @@ async def models_download(
     ``progress`` lines and a terminal ``result``/``error`` line. Idempotent: an
     already-present model yields an immediate ``result``. The blocking
     ``snapshot_download`` runs on a worker thread feeding a queue, so the event
-    loop stays free (mirrors ``/transcribe/stream``).
+    loop stays free (mirrors ``/transcribe/stream``). A client disconnect does
+    not abort the download; it finishes on the worker thread.
     """
     try:
         normalize_model(request.model)
@@ -338,35 +445,18 @@ async def models_download(
             detail={"code": "unknown_model", "model": request.model, "message": str(exc)},
         ) from exc
 
-    async def ndjson_stream() -> AsyncIterator[bytes]:
-        loop = asyncio.get_running_loop()
-        gen = download_model_events(request.model)
-        sentinel = object()
-
-        def next_item():
-            try:
-                return next(gen)
-            except StopIteration:
-                return sentinel
-
-        try:
-            while True:
-                item = await loop.run_in_executor(None, next_item)
-                if item is sentinel:
-                    break
-                yield (json.dumps(item) + "\n").encode("utf-8")
-        except Exception as exc:  # noqa: BLE001 - surface as a terminal error line
-            yield (json.dumps({"type": "error", "error": str(exc)}) + "\n").encode("utf-8")
-        finally:
-            gen.close()
-
-    return StreamingResponse(ndjson_stream(), media_type="application/x-ndjson")
+    stream = _ndjson_stream(download_model_events(request.model), asyncio.Event())
+    return StreamingResponse(stream, media_type="application/x-ndjson")
 
 
 @app.delete("/models/{model}")
 def models_delete(model: str, _auth: None = Depends(require_token)) -> dict:
-    """Delete a cached model snapshot. 400 unknown id, 404 if not present."""
+    """Delete a cached model snapshot. 400 unknown id, 404 if not present.
+
+    A resident instance is unloaded first so its VRAM is freed and, on Windows,
+    the weight files are no longer locked by the loaded model."""
     try:
+        unload_model(model)
         return delete_model(model)
     except UnknownModelError as exc:
         raise HTTPException(
@@ -385,6 +475,23 @@ def models_delete(model: str, _auth: None = Depends(require_token)) -> dict:
             status_code=500,
             detail={"code": "delete_failed", "model": model, "message": str(exc)},
         ) from exc
+
+
+def _preflight_code(model_safe: bool, model_code: str, ffmpeg_ok: bool, disk_safety: dict) -> str:
+    """The first blocker, else the first fail-open warning (``*_unknown``), else ``ok``.
+
+    The unknown codes ride along with ``safe=True`` so the UI can warn that a
+    reading was unavailable instead of reporting a clean bill of health.
+    """
+    if not model_safe:
+        return model_code
+    if not ffmpeg_ok:
+        return "ffmpeg_missing"
+    if not disk_safety["safe"]:
+        return disk_safety["code"]
+    if model_code != "ok":
+        return model_code
+    return disk_safety["code"]
 
 
 def preflight_result(request: TranscribeRequest) -> PreflightResponse:
@@ -425,20 +532,16 @@ def preflight_result(request: TranscribeRequest) -> PreflightResponse:
         rec_mb = safety["recommended_ram_mb"]
 
     # Diarization loads a second (pyannote) model — add its headroom to the
-    # requirement so a run that would OOM mid-pass is flagged up front.
+    # requirement so a run that would OOM mid-pass is flagged up front. An
+    # unmeasured reading (avail_mb <= 0) stays fail-open, as it is for the model.
     if request.advanced_options and request.advanced_options.speaker_diarization:
         req_mb += DIARIZATION_VRAM_MB if on_gpu else DIARIZATION_RAM_MB
-        if model_safe and avail_mb < req_mb:
+        if model_safe and 0 < avail_mb < req_mb:
             model_safe = False
             model_code = "insufficient_vram" if on_gpu else "insufficient_ram"
 
     safe = bool(model_safe and ffmpeg_ok and disk_safety["safe"])
-    code = (
-        model_code if not model_safe
-        else "ffmpeg_missing" if not ffmpeg_ok
-        else disk_safety["code"] if not disk_safety["safe"]
-        else "ok"
-    )
+    code = _preflight_code(model_safe, model_code, ffmpeg_ok, disk_safety)
     return PreflightResponse(
         ok=safe,
         safe=safe,
@@ -542,7 +645,6 @@ def transcribe(request: TranscribeRequest, _auth: None = Depends(require_token))
 @app.post("/transcribe/stream")
 async def transcribe_stream(
     request: TranscribeRequest,
-    http_request: Request,
     _auth: None = Depends(require_token),
 ) -> StreamingResponse:
     """Streaming transcription that emits NDJSON progress lines.
@@ -552,66 +654,20 @@ async def transcribe_stream(
     each line is a JSON object: ``progress`` lines while segments are processed,
     then a terminal ``result`` or ``error`` line.
 
-    Cancellation: the blocking faster-whisper generator runs on a worker thread.
-    A cooperative ``cancel_event`` is set when the client disconnects (detected
-    via ``http_request.is_disconnected()``), which stops segment iteration and
-    raises ``TranscriptionCancelled`` — the temp ffmpeg dir is cleaned up by the
-    generator's context manager either way.
+    Cancellation: the blocking faster-whisper generator runs on a worker thread
+    (see ``_ndjson_stream``). A client disconnect sets ``cancel_event``, which
+    stops segment iteration and raises ``TranscriptionCancelled``; the temp
+    ffmpeg dir is cleaned up by the generator's context manager either way.
     """
-    input_path = validate_transcribe_request(request)
+    # Preflight probes disk, RAM and (on CUDA) nvidia-smi; keep it off the loop.
+    input_path = await run_in_threadpool(validate_transcribe_request, request)
 
     cancel_event = asyncio.Event()
-
-    def is_cancelled() -> bool:
-        return cancel_event.is_set()
-
-    def build_generator():
-        if USE_FAKE_TRANSCRIBE:
-            return fake_transcribe_streaming_for_tests(input_path, request, is_cancelled)
-        return run_faster_whisper_streaming(request, input_path, is_cancelled)
-
-    async def ndjson_stream() -> AsyncIterator[bytes]:
-        loop = asyncio.get_running_loop()
-        gen = build_generator()
-
-        async def watch_disconnect() -> None:
-            try:
-                while not cancel_event.is_set():
-                    if await http_request.is_disconnected():
-                        cancel_event.set()
-                        return
-                    await asyncio.sleep(0.5)
-            except asyncio.CancelledError:  # pragma: no cover - shutdown path
-                pass
-
-        watcher = asyncio.create_task(watch_disconnect())
-        sentinel = object()
-
-        def next_item():
-            try:
-                return next(gen)
-            except StopIteration:
-                return sentinel
-
-        try:
-            while True:
-                # Run each blocking generator step on a worker thread so the
-                # event loop stays free to detect client disconnects.
-                item = await loop.run_in_executor(None, next_item)
-                if item is sentinel:
-                    break
-                yield (json.dumps(item) + "\n").encode("utf-8")
-        except TranscriptionCancelled:
-            # Client went away; generator already cleaned up. Nothing left to send.
-            return
-        except Exception as exc:  # noqa: BLE001 - surface as a terminal error line
-            yield (json.dumps({"type": "error", "error": str(exc)}) + "\n").encode("utf-8")
-        finally:
-            cancel_event.set()
-            watcher.cancel()
-            gen.close()
-
-    return StreamingResponse(ndjson_stream(), media_type="application/x-ndjson")
+    if USE_FAKE_TRANSCRIBE:
+        gen = fake_transcribe_streaming_for_tests(input_path, request, cancel_event.is_set)
+    else:
+        gen = run_faster_whisper_streaming(request, input_path, cancel_event.is_set)
+    return StreamingResponse(_ndjson_stream(gen, cancel_event), media_type="application/x-ndjson")
 
 
 # ===========================================================================
@@ -672,12 +728,7 @@ def validate_upload_request(request: TranscribeRequest, upload_size_mb: int, scr
 
     disk_safety = evaluate_disk_safety(upload_size_mb, disk_free_mb(scratch_dir))
     safe = bool(model_safe and ffmpeg_ok and disk_safety["safe"])
-    code = (
-        model_code if not model_safe
-        else "ffmpeg_missing" if not ffmpeg_ok
-        else disk_safety["code"] if not disk_safety["safe"]
-        else "ok"
-    )
+    code = _preflight_code(model_safe, model_code, ffmpeg_ok, disk_safety)
 
     if not safe and not (ALLOW_UNSAFE or request.allow_unsafe):
         raise HTTPException(status_code=422, detail={
@@ -697,10 +748,26 @@ def validate_upload_request(request: TranscribeRequest, upload_size_mb: int, scr
         ) from exc
 
 
+def _upload_basename(filename: str | None) -> str:
+    """Basename of a client-supplied filename, safe to create under the temp dir.
+
+    Clients send whatever their OS calls the file, so strip both separator
+    styles here rather than trusting ``Path.name`` on the server's platform.
+    """
+    name = (filename or "").replace("\\", "/").rsplit("/", 1)[-1].replace("\0", "").strip()
+    if not name:
+        return "upload.bin"
+    if name in (".", ".."):
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "bad_request", "message": f"Unusable upload filename: {filename!r}"},
+        )
+    return name
+
+
 def _save_upload(file: UploadFile, dest_dir: Path) -> Path:
     """Persist the uploaded stream to a real temp file ffmpeg can read."""
-    filename = Path(file.filename or "upload.bin").name or "upload.bin"
-    dest = dest_dir / filename
+    dest = dest_dir / _upload_basename(file.filename)
     with dest.open("wb") as out:
         shutil.copyfileobj(file.file, out)
     return dest
@@ -749,9 +816,20 @@ def transcribe_upload(
         return UploadTranscribeResponse(**result)
 
 
+def _upload_stream_response(saved: Path, parsed: TranscribeRequest, tmp_ctx: tempfile.TemporaryDirectory) -> StreamingResponse:
+    """Stream an upload-mode transcription; ``tmp_ctx`` is removed when it ends,
+    including on a client disconnect."""
+    cancel_event = asyncio.Event()
+    if USE_FAKE_TRANSCRIBE:
+        gen = fake_transcribe_upload_streaming_for_tests(saved, parsed, cancel_event.is_set)
+    else:
+        gen = run_faster_whisper_upload_streaming(parsed, saved, cancel_event.is_set)
+    stream = _ndjson_stream(gen, cancel_event, cleanup=tmp_ctx.cleanup)
+    return StreamingResponse(stream, media_type="application/x-ndjson")
+
+
 @app.post("/transcribe/upload/stream")
 async def transcribe_upload_stream(
-    http_request: Request,
     file: UploadFile = File(...),
     request: str = Form(...),
     _auth: None = Depends(require_token),
@@ -765,69 +843,20 @@ async def transcribe_upload_stream(
     tmp_ctx = tempfile.TemporaryDirectory(prefix="subsmelt-upload-")
     tmp_dir = Path(tmp_ctx.name)
     try:
-        saved = _save_upload(file, tmp_dir)
+        # Copying a multi-GB upload and the preflight probes are blocking work;
+        # run them on the threadpool so the loop keeps serving other clients.
+        saved = await run_in_threadpool(_save_upload, file, tmp_dir)
         upload_size_mb = int(saved.stat().st_size / 1024 / 1024)
         parsed = parse_upload_request(request, str(saved))
-        validate_upload_request(parsed, upload_size_mb, tmp_dir)
+        await run_in_threadpool(validate_upload_request, parsed, upload_size_mb, tmp_dir)
     except BaseException:
         tmp_ctx.cleanup()
         raise
-
-    cancel_event = asyncio.Event()
-
-    def is_cancelled() -> bool:
-        return cancel_event.is_set()
-
-    def build_generator():
-        if USE_FAKE_TRANSCRIBE:
-            return fake_transcribe_upload_streaming_for_tests(saved, parsed, is_cancelled)
-        return run_faster_whisper_upload_streaming(parsed, saved, is_cancelled)
-
-    async def ndjson_stream() -> AsyncIterator[bytes]:
-        loop = asyncio.get_running_loop()
-        gen = build_generator()
-
-        async def watch_disconnect() -> None:
-            try:
-                while not cancel_event.is_set():
-                    if await http_request.is_disconnected():
-                        cancel_event.set()
-                        return
-                    await asyncio.sleep(0.5)
-            except asyncio.CancelledError:  # pragma: no cover - shutdown path
-                pass
-
-        watcher = asyncio.create_task(watch_disconnect())
-        sentinel = object()
-
-        def next_item():
-            try:
-                return next(gen)
-            except StopIteration:
-                return sentinel
-
-        try:
-            while True:
-                item = await loop.run_in_executor(None, next_item)
-                if item is sentinel:
-                    break
-                yield (json.dumps(item) + "\n").encode("utf-8")
-        except TranscriptionCancelled:
-            return
-        except Exception as exc:  # noqa: BLE001 - surface as a terminal error line
-            yield (json.dumps({"type": "error", "error": str(exc)}) + "\n").encode("utf-8")
-        finally:
-            cancel_event.set()
-            watcher.cancel()
-            gen.close()
-            tmp_ctx.cleanup()
-
-    return StreamingResponse(ndjson_stream(), media_type="application/x-ndjson")
+    return _upload_stream_response(saved, parsed, tmp_ctx)
 
 
 @app.post("/transcribe/url/stream")
 async def transcribe_url_stream(
-    http_request: Request,
     payload: dict,
     _auth: None = Depends(require_token),
 ) -> StreamingResponse:
@@ -843,12 +872,11 @@ async def transcribe_url_stream(
 
     tmp_ctx = tempfile.TemporaryDirectory(prefix="subsmelt-url-")
     tmp_dir = Path(tmp_ctx.name)
-    loop = asyncio.get_running_loop()
     try:
         try:
             # yt-dlp is blocking — run it off the event loop so this async worker
             # keeps serving health/cancel/progress while a large URL downloads.
-            saved = await loop.run_in_executor(None, download_url, url, tmp_dir)
+            saved = await run_in_threadpool(download_url, url, tmp_dir)
         except UrlFetchUnavailableError as exc:
             raise HTTPException(status_code=400, detail={"code": "url_fetch_unavailable", "message": str(exc)}) from exc
         except UrlFetchError as exc:
@@ -856,58 +884,8 @@ async def transcribe_url_stream(
         size_mb = int(saved.stat().st_size / 1024 / 1024)
         request_json = json.dumps({k: v for k, v in payload.items() if k != "url"})
         parsed = parse_upload_request(request_json, str(saved))
-        validate_upload_request(parsed, size_mb, tmp_dir)
+        await run_in_threadpool(validate_upload_request, parsed, size_mb, tmp_dir)
     except BaseException:
         tmp_ctx.cleanup()
         raise
-
-    cancel_event = asyncio.Event()
-
-    def is_cancelled() -> bool:
-        return cancel_event.is_set()
-
-    def build_generator():
-        if USE_FAKE_TRANSCRIBE:
-            return fake_transcribe_upload_streaming_for_tests(saved, parsed, is_cancelled)
-        return run_faster_whisper_upload_streaming(parsed, saved, is_cancelled)
-
-    async def ndjson_stream() -> AsyncIterator[bytes]:
-        loop = asyncio.get_running_loop()
-        gen = build_generator()
-
-        async def watch_disconnect() -> None:
-            try:
-                while not cancel_event.is_set():
-                    if await http_request.is_disconnected():
-                        cancel_event.set()
-                        return
-                    await asyncio.sleep(0.5)
-            except asyncio.CancelledError:  # pragma: no cover - shutdown path
-                pass
-
-        watcher = asyncio.create_task(watch_disconnect())
-        sentinel = object()
-
-        def next_item():
-            try:
-                return next(gen)
-            except StopIteration:
-                return sentinel
-
-        try:
-            while True:
-                item = await loop.run_in_executor(None, next_item)
-                if item is sentinel:
-                    break
-                yield (json.dumps(item) + "\n").encode("utf-8")
-        except TranscriptionCancelled:
-            return
-        except Exception as exc:  # noqa: BLE001 - surface as a terminal error line
-            yield (json.dumps({"type": "error", "error": str(exc)}) + "\n").encode("utf-8")
-        finally:
-            cancel_event.set()
-            watcher.cancel()
-            gen.close()
-            tmp_ctx.cleanup()
-
-    return StreamingResponse(ndjson_stream(), media_type="application/x-ndjson")
+    return _upload_stream_response(saved, parsed, tmp_ctx)

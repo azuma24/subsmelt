@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass
 from typing import Iterable, Sequence
 
@@ -25,6 +26,12 @@ class Segment:
 # (and a candidate for merging) when it is both very brief in time and in length.
 DEFAULT_MERGE_MAX_DURATION = 1.5
 DEFAULT_MERGE_MAX_CHARS = 12
+
+
+def has_wide_chars(text: str) -> bool:
+    """True when ``text`` holds East Asian wide/fullwidth characters (CJK), the
+    scripts that carry no spaces and so must be measured per character."""
+    return any(unicodedata.east_asian_width(ch) in ("W", "F") for ch in text)
 
 
 def _to_segment(item: object) -> Segment:
@@ -67,7 +74,10 @@ def merge_short_segments(
 
     for segment in segments:
         if carry is not None:
-            segment = _join(carry, segment)
+            if _same_speaker(carry, segment):
+                segment = _join(carry, segment)
+            else:
+                result.append(carry)
             carry = None
 
         if _is_short(segment, max_duration, max_chars):
@@ -78,13 +88,19 @@ def merge_short_segments(
         result.append(segment)
 
     if carry is not None:
-        if result:
+        if result and _same_speaker(result[-1], carry):
             result[-1] = _join(result[-1], carry)
         else:
-            # Every segment was short; emit the accumulated carry as-is.
+            # Every segment was short (or the neighbour is another speaker);
+            # emit the accumulated carry as-is.
             result.append(carry)
 
     return result
+
+
+def _same_speaker(first: Segment, second: Segment) -> bool:
+    """Merging across two different diarized speakers would misattribute text."""
+    return first.speaker is None or second.speaker is None or first.speaker == second.speaker
 
 
 def _join(first: Segment, second: Segment) -> Segment:
@@ -119,10 +135,17 @@ def split_long_segments(segments: Sequence[Segment], max_duration: float | None)
 def _split_one(segment: Segment, max_duration: float) -> list[Segment]:
     import math
 
-    words = segment.text.strip().split()
+    stripped = segment.text.strip()
+    words = stripped.split()
+    # Unspaced CJK text is one "word"; split it by character. A lone Latin word
+    # (or a URL) stays whole, as before.
+    if len(words) == 1 and has_wide_chars(stripped):
+        units, joiner = list(stripped), ""
+    else:
+        units, joiner = words, " "
     # Number of chunks needed so each is <= max_duration.
     chunks = max(1, math.ceil(segment.duration / max_duration))
-    chunks = min(chunks, len(words)) if words else 1
+    chunks = min(chunks, len(units)) if units else 1
     if chunks <= 1:
         return [segment]
 
@@ -132,13 +155,12 @@ def _split_one(segment: Segment, max_duration: float) -> list[Segment]:
     for index in range(chunks):
         start = segment.start + slice_dur * index
         end = segment.end if index == chunks - 1 else segment.start + slice_dur * (index + 1)
-        # Distribute words proportionally across chunks.
-        word_start = round(len(words) * index / chunks)
-        word_end = round(len(words) * (index + 1) / chunks)
+        # Distribute units proportionally across chunks.
+        unit_start = round(len(units) * index / chunks)
+        unit_end = round(len(units) * (index + 1) / chunks)
         if index == chunks - 1:
-            word_end = len(words)
-        chunk_words = words[word_start:word_end]
-        pieces.append(Segment(start=start, end=end, text=" ".join(chunk_words), speaker=segment.speaker))
+            unit_end = len(units)
+        pieces.append(Segment(start=start, end=end, text=joiner.join(units[unit_start:unit_end]), speaker=segment.speaker))
     return pieces
 
 

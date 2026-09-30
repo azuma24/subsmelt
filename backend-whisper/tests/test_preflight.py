@@ -1,3 +1,5 @@
+import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -8,6 +10,7 @@ from app.preflight import (
     disk_free_mb,
     evaluate_disk_safety,
     evaluate_model_safety,
+    ffmpeg_available,
     model_ram_requirements_mb,
 )
 from app.paths import output_path_for
@@ -51,6 +54,16 @@ class PreflightTests(unittest.TestCase):
     def test_disk_free_mb_reports_unknown_when_nothing_resolves(self):
         with mock.patch("app.preflight.shutil.disk_usage", side_effect=OSError("gone")):
             self.assertEqual(disk_free_mb(Path("/definitely/not/here")), DISK_FREE_UNKNOWN)
+
+    def test_ffmpeg_available_honours_subsmelt_ffmpeg_off_path(self):
+        # The Windows service sets SUBSMELT_FFMPEG to a bundled ffmpeg.exe that is
+        # not on PATH; preflight must resolve it the same way audio.extract_audio does.
+        with mock.patch.dict(os.environ, {"PATH": "/nonexistent", "SUBSMELT_FFMPEG": sys.executable}):
+            self.assertTrue(ffmpeg_available())
+
+    def test_ffmpeg_available_false_when_configured_binary_is_missing(self):
+        with mock.patch.dict(os.environ, {"PATH": "/nonexistent", "SUBSMELT_FFMPEG": "/nonexistent/ffmpeg"}):
+            self.assertFalse(ffmpeg_available())
 
     def test_auto_language_output_attaches_to_video_stem(self):
         output = output_path_for(Path("/media/anime/Episode 01.mkv"), "auto", "srt")

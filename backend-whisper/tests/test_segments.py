@@ -45,6 +45,32 @@ class MergeShortSegmentsTests(unittest.TestCase):
         self.assertEqual(merge_short_segments(segments), segments)
 
 
+class MergeAcrossSpeakersTests(unittest.TestCase):
+    def test_short_segment_is_not_folded_into_another_speaker(self):
+        segments = [
+            Segment(0.0, 0.8, "Yes.", speaker="SPEAKER_00"),
+            Segment(0.8, 6.0, "and then we went to the market together", speaker="SPEAKER_01"),
+        ]
+        self.assertEqual(merge_short_segments(segments), segments)
+
+    def test_trailing_short_segment_of_another_speaker_stays_separate(self):
+        segments = [
+            Segment(0.0, 3.0, "Goodbye for now", speaker="SPEAKER_00"),
+            Segment(3.0, 3.3, "bye", speaker="SPEAKER_01"),
+        ]
+        self.assertEqual(merge_short_segments(segments), segments)
+
+    def test_same_speaker_short_segments_still_merge(self):
+        segments = [
+            Segment(0.0, 0.4, "Oh", speaker="SPEAKER_00"),
+            Segment(0.4, 3.0, "that is wonderful news", speaker="SPEAKER_00"),
+        ]
+        self.assertEqual(
+            merge_short_segments(segments),
+            [Segment(0.0, 3.0, "Oh that is wonderful news", speaker="SPEAKER_00")],
+        )
+
+
 class SplitLongSegmentsTests(unittest.TestCase):
     def test_disabled_when_max_duration_falsy(self):
         segments = [seg(0.0, 10.0, "one two three four")]
@@ -78,6 +104,29 @@ class SplitLongSegmentsTests(unittest.TestCase):
         result = split_long_segments(segments, 3.0)
         joined = " ".join(s.text for s in result)
         self.assertEqual(joined.split(), "one two three four five six seven".split())
+
+
+class SplitUnspacedTextTests(unittest.TestCase):
+    def test_unspaced_long_segment_splits_by_characters(self):
+        text = "これは日本語の長い字幕テキストで空白がありません"
+        result = split_long_segments([seg(0.0, 30.0, text)], 5.0)
+        self.assertEqual(
+            result,
+            [
+                seg(0.0, 5.0, "これは日"),
+                seg(5.0, 10.0, "本語の長"),
+                seg(10.0, 15.0, "い字幕テ"),
+                seg(15.0, 20.0, "キストで"),
+                seg(20.0, 25.0, "空白があ"),
+                seg(25.0, 30.0, "りません"),
+            ],
+        )
+
+
+    def test_single_latin_word_is_left_whole(self):
+        for text in ("Applause", "https://example.com/a/very/long/path"):
+            segments = [seg(0.0, 30.0, text)]
+            self.assertEqual(split_long_segments(segments, 5.0), segments)
 
 
 class PostprocessPipelineTests(unittest.TestCase):
