@@ -113,6 +113,10 @@ def _validate_url(url: str, allow_unsafe: bool = False) -> str:
     return u
 
 
+DNS_LOOKUP_THREADS = 4
+_DNS_POOL = ThreadPoolExecutor(max_workers=DNS_LOOKUP_THREADS, thread_name_prefix="dns-lookup")
+
+
 def _resolve_host(host: str, timeout: float = 3.0) -> list[str]:
     """Resolve a hostname to its list of IP strings, bounded by ``timeout``.
 
@@ -130,13 +134,10 @@ def _resolve_host(host: str, timeout: float = 3.0) -> list[str]:
                 seen.append(ip)
         return seen
 
-    # Not a ``with`` block: the executor's exit waits for the lookup thread,
-    # which would silently stretch ``timeout`` to the full DNS wait.
-    ex = ThreadPoolExecutor(max_workers=1)
-    try:
-        return ex.submit(_lookup).result(timeout=timeout)
-    finally:
-        ex.shutdown(wait=False)
+    # One shared, bounded pool: a lookup that outlives its timeout keeps its
+    # thread until the resolver returns, so a stalled resolver can tie up at
+    # most DNS_LOOKUP_THREADS threads instead of one per request.
+    return _DNS_POOL.submit(_lookup).result(timeout=timeout)
 
 
 def _assert_hostname_public(
