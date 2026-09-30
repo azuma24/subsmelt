@@ -45,6 +45,7 @@ export function registerTranscriptionHistoryRoutes(app: Express): void {
         videoPath: attempt.inputPath,
         postAction: attempt.postAction,
         outputFormat: attempt.outputFormat,
+        overrides: { model: attempt.model, language: attempt.language },
       });
       logger.info("system", `Retried transcription ${path.basename(attempt.inputPath)} → ${result.subtitle_path || "subtitle output"}`);
 
