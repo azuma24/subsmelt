@@ -13,14 +13,12 @@ Known gaps with no work in progress. Context and rationale live in
 
 ## Refactoring
 
-Sizes re-measured after the 2026-08-11 UX work; the guideline is 200–400 lines
-typical, 800 max.
+Sizes re-measured on 2026-09-30 on `release/0.6.0`; the guideline is 200–400
+lines typical, 800 max. These two are the only source files over 800.
 
-- [ ] `src/client/features/whisper/WhisperPage.tsx` — **840 lines**, still over
-      the limit. It *grew* from 808 during the Phase B restructure: the layering
-      into Run options / URL / Library added wrappers without extracting
-      anything. `FileRow` and `FolderNodeView` are the obvious split.
-- [ ] `backend-whisper/app/main.py` — 816 lines (untouched)
+- [ ] `backend-whisper/app/main.py` — **892 lines**, up from 816. The 0.6.0
+      backend fixes added to it without extracting anything.
+- [ ] `backend-whisper/packaging/windows/tray/whisper_gui.py` — 858 lines.
 
 ## Whisper control app (Windows)
 
@@ -32,23 +30,21 @@ typical, 800 max.
       monthly budget on the dashboard, not per job
 - [ ] **First-run flow is signposting, not a guided path.** Settings now shows
       which steps are outstanding and the Dashboard has a checklist, but there
-      is still no wizard walking a new operator through the ~60 settings.
-- [ ] `MediaSourcesPanel` is 337 lines but its main component is still the
+      is still no wizard walking a new operator through the ~65 settings.
+- [ ] `MediaSourcesPanel` is 349 lines but its main component is still the
       largest single thing in Settings → Sources
 
 ## Testing / infrastructure
 
 - [ ] The CI runner has no `ffmpeg`, so the backend's ffmpeg paths are only
       exercised against mocks
-- [ ] **All 31 non-English locales carry English text for the error
-      explanations** — ~19 `errors.*` values each. (The previous "25 of 32"
-      figure was wrong; re-measured 2026-08-12. `settings.translationEngine.*`
-      had the same problem and was translated on 2026-08-12; `errors.*` was not.)
-- [ ] **No render tests for any screen.** The suite covers server logic, pure
-      helpers and locale parity; nothing mounts `DashboardPage`, `SettingsPage`,
-      `WhisperPage`, `ConvertPage` or `shell`. The 2026-08 UX work rewrote a lot
-      of that JSX — including single-mode connection collapse and the mobile
-      overflow drawer — with no automated protection.
+- [ ] **Render tests cover four screens, first frame only.** `DashboardPage`,
+      `SettingsPage`, `WhisperPage` and `ConvertPage` have `*.test.tsx` files
+      that server-render them with seeded query data (`src/client/test-render.tsx`).
+      Server rendering runs no effects and no clicks, so anything that appears
+      after an effect (Settings loads its form in one) or an interaction is
+      untested. `shell`, `LogsPage`, `TasksPage` and `JobDetailPage` have no
+      render test.
 
 ---
 
@@ -68,6 +64,17 @@ typical, 800 max.
       natural flow/tone, toggleable in Settings → Translation Engine, default
       off, accepted only on an exact line-count match.
       Implemented in `src/server/translator/prompt.ts` (`refineChunk`).
+
+### 0.5.7 to 0.6.0
+
+- [x] **`WhisperPage.tsx` split** — 840 → 496 lines. 0.5.7 extracted
+      `LibraryPicker`, `RunOptionsSection`, `UrlTranscribeSection`,
+      `useModelGate` and `whisper-shared`; 0.6.0 moved the batch runner into
+      `batch-store`.
+- [x] **`errors.*` translated in all 31 non-English locales** — 611 of 713
+      values were still English. `locale-coverage.test.ts` now fails if any
+      `errors.*` value matches English.
+- [x] **First render tests** — see the open item under Testing for their limits.
 
 ### 2026-08 UX/UI pass
 Spec and remaining roadmap: [2026-08-11-uxui-audit.md](2026-08-11-uxui-audit.md).
