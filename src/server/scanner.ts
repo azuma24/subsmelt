@@ -420,6 +420,23 @@ export function scanFolder(createJobs = true): ScanResult {
     ),
   );
 
+  // Show.srt and Show.eng.srt both translate to Show.zh.srt, and two jobs on one
+  // output would share its .part file. The shortest source name owns each
+  // output, so a source without a language suffix wins.
+  const outputOwners = new Map<string, string>();
+  const sourcesShortestFirst = srtFiles
+    .filter((srtPath) => !taskOutputs.has(srtPath))
+    .sort((a, b) => path.basename(a).length - path.basename(b).length);
+  for (const srtPath of sourcesShortestFirst) {
+    for (const task of outputDetectTasks) {
+      const outputPath = path.join(
+        path.dirname(srtPath),
+        taskOutputName(srtPath, task),
+      );
+      if (!outputOwners.has(outputPath)) outputOwners.set(outputPath, srtPath);
+    }
+  }
+
   // Group by video file
   // Key: videoPath or "orphan:{srtPath}"
   const grouped = new Map<string, ScannedFile>();
@@ -533,6 +550,7 @@ export function scanFolder(createJobs = true): ScanResult {
       const outputName = taskOutputName(srtPath, task);
       const outputPath = path.join(dir, outputName);
       const outputExists = fs.existsSync(outputPath);
+      const outputOwner = outputOwners.get(outputPath) ?? srtPath;
 
       // Check existing job
       const existingJob = getJobBySrtAndTask(srtPath, task.id);
@@ -556,6 +574,14 @@ export function scanFolder(createJobs = true): ScanResult {
         jobId = existingJob.id;
       } else if (outputExists) {
         status = "skipped";
+      } else if (outputOwner !== srtPath) {
+        status = "skipped";
+        if (createJobs) {
+          logger.info(
+            "scan",
+            `Skipped ${path.basename(srtPath)}: ${path.basename(outputOwner)} already translates to ${outputName}`,
+          );
+        }
       } else {
         status = "new";
       }

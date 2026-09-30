@@ -78,3 +78,18 @@ test("a subtitle counts as a task output only when a sibling subtitle would prod
   assert.deepEqual(scan(dir), { "Film.mkv": ["Film.eng.srt"] });
   assert.deepEqual(jobsIn(dir), [["Film.eng.srt", "Film.zh.srt"]]);
 });
+
+test("two sources that translate to one output queue one job, from the source without a language suffix", () => {
+  useTasks("zh");
+  const dir = library("shared-output", ["Show.mkv", "Show.eng.srt", "Show.srt"]);
+
+  scan(dir);
+  scan(dir);
+
+  assert.deepEqual(jobsIn(dir), [["Show.srt", "Show.zh.srt"]]);
+  const scanLogs = db.getLogs({ category: "scan" }).map((log) => log.message);
+  assert.ok(
+    scanLogs.some((message) => message.includes("Skipped Show.eng.srt")),
+    `no skip logged in ${JSON.stringify(scanLogs)}`,
+  );
+});
