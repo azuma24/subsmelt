@@ -128,6 +128,9 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   // mode when a token is set with no mapping (true remote). "shared" forces
   // path mode (Model A); "upload" forces multipart upload (Model B).
   transcription_transport: "auto",
+  // "1" when Whisper and the translation model share one GPU: translation then
+  // runs in batches after pending transcriptions (gpu-gate.ts).
+  gpu_shared: "0",
   // YouTube. youtube_playlists is a JSON array owned by the playlist routes
   // (youtube/playlists.ts); the generic settings endpoints never read or write it.
   youtube_playlists: "[]",
