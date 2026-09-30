@@ -2,7 +2,8 @@ import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { classifyError, errorHintKeys } from "../../lib/errorTaxonomy";
 import type { JobRow } from "../../types";
-import { Drawer, StatusBadge } from "../../ui/primitives";
+import { Drawer } from "../../ui/primitives";
+import { JobStatusBadge } from "../jobs/JobStatusBadge";
 import { formatDur, formatTokens, formatCost } from "../../lib";
 
 interface JobDetailsDrawerProps {
@@ -72,7 +73,7 @@ export function JobDetailsDrawer({ job, open, onClose, onOpenLogs }: JobDetailsD
             <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[var(--text-3)]">
               {t("dashboard.details.status")}
             </div>
-            <StatusBadge job={job} />
+            <JobStatusBadge job={job} />
           </section>
           <section>
             <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[var(--text-3)]">

@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { useJobPreview, useJobsQuery } from "../../hooks";
 import { formatDur } from "../../lib";
 import type { JobRow } from "../../types";
-import { DetailCard, EmptyHint, ProgressSmall, StatusBadge } from "../../ui/primitives";
+import { DetailCard, EmptyHint, ProgressSmall } from "../../ui/primitives";
+import { JobStatusBadge } from "./JobStatusBadge";
 
 export function JobDetailPage() {
   const { t } = useTranslation();
@@ -32,7 +33,7 @@ export function JobDetailPage() {
             <h1 className="mt-1 break-all text-2xl font-semibold">{job.srt_path.split("/").pop()}</h1>
             <p className="mt-2 text-sm text-[var(--text-2)]">{job.target_lang} • {job.lang_code}</p>
           </div>
-          <StatusBadge job={job} />
+          <JobStatusBadge job={job} />
         </div>
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <DetailCard label={t("app.sourcePath")} value={job.srt_path} mono />

@@ -1,7 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { useJobActions } from "../../hooks/useJobActions";
 import type { JobRow } from "../../types";
-import { ActionButton, ProgressSmall, RowActionsMenu, StatusBadge } from "../../ui/primitives";
+import { ActionButton, ProgressSmall, RowActionsMenu } from "../../ui/primitives";
+import { JobStatusBadge } from "../jobs/JobStatusBadge";
 
 interface JobCardMobileProps {
   job: JobRow;
@@ -50,7 +51,7 @@ export function JobCardMobile({
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          <StatusBadge job={job} compact />
+          <JobStatusBadge job={job} compact />
           {/* Secondary actions (pin, logs, delete) collapse into one menu — the
               old stacked full-width buttons made every card ~3 rows taller. */}
           <RowActionsMenu

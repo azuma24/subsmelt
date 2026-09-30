@@ -4,7 +4,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { formatDur } from "../../lib";
 import { useJobActions } from "../../hooks/useJobActions";
 import type { JobRow } from "../../types";
-import { MiniBtn, ProgressSmall, RowActionsMenu, StatusBadge } from "../../ui/primitives";
+import { MiniBtn, ProgressSmall, RowActionsMenu } from "../../ui/primitives";
+import { JobStatusBadge } from "../jobs/JobStatusBadge";
 
 interface JobsTableDesktopProps {
   jobs: JobRow[];
@@ -120,7 +121,7 @@ export function JobsTableDesktop({
         <div className={`${TD} text-[11.5px] text-[var(--text-3)]`} role="cell">{job.target_lang} · {job.lang_code}</div>
         <div className={TD} role="cell">
           <div className="flex flex-wrap items-center gap-1.5">
-            <StatusBadge job={job} />
+            <JobStatusBadge job={job} />
             {reason && (
               <span className="rounded-full bg-[var(--red-dim)] px-2 py-0.5 text-[10px] text-[var(--red)]">{t(`dashboard.errorReason.${reason}`)}</span>
             )}

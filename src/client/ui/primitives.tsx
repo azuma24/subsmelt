@@ -1,8 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import type { JobRow } from "../types";
-import { STATUS_ICON, STATUS_LABEL_KEY } from "../app/constants";
 
 export function StatusPill({ label, tone, truncate = false }: { label: string; tone: "green" | "emerald" | "blue" | "gray"; truncate?: boolean }) {
   const cls = {
@@ -36,21 +34,29 @@ export function ActionButton({ children, onClick, className = "", variant = "pri
   return <button onClick={onClick} disabled={disabled || busy} className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg text-center font-medium leading-6 transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${sizeCls} ${cls} ${className}`}>{children}</button>;
 }
 
-export function StatusBadge({ job, compact = false }: { job: JobRow; compact?: boolean }) {
-  const { t } = useTranslation();
-  // `skipped` gets its own tone. It used to fall through to the neutral branch
-  // alongside `pending`, which made a job that still needs a decision look inert
-  // and identical to one that is merely queued.
-  const tone = job.status === "done"
-    ? "bg-[var(--green-dim)] text-[var(--green)] border border-[var(--green-border)]"
-    : job.status === "translating"
-      ? "bg-[var(--accent-dim)] text-[var(--accent)] border border-[var(--accent-border)]"
-      : job.status === "error"
-        ? "bg-[var(--red-dim)] text-[var(--red)] border border-[var(--red-border)]"
-        : job.status === "skipped"
-          ? "bg-[var(--yellow-dim)] text-[var(--yellow)] border border-dashed border-[var(--yellow-border)]"
-          : "bg-[var(--surface-2)] text-[var(--text-2)] border border-[var(--border)]";
-  return <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 ${compact ? "text-[10.5px]" : "text-[11.5px]"} font-medium leading-6 ${tone}`}>{STATUS_ICON[job.status]} {STATUS_LABEL_KEY[job.status] ? t(STATUS_LABEL_KEY[job.status]) : job.status}{job.force ? " ⚡" : ""}{job.priority > 0 ? " 📌" : ""}</span>;
+export type StatusTone = "ok" | "run" | "bad" | "warn" | "neutral";
+
+/** What a status badge shows: every status carries a glyph and text, never color alone. */
+export interface StatusDescriptor {
+  glyph: string;
+  label: string;
+  tone: StatusTone;
+}
+
+const STATUS_TONE_CLS: Record<StatusTone, string> = {
+  ok: "bg-[var(--green-dim)] text-[var(--green)] border border-[var(--green-border)]",
+  run: "bg-[var(--accent-dim)] text-[var(--accent)] border border-[var(--accent-border)]",
+  bad: "bg-[var(--red-dim)] text-[var(--red)] border border-[var(--red-border)]",
+  warn: "bg-[var(--yellow-dim)] text-[var(--yellow)] border border-dashed border-[var(--yellow-border)]",
+  neutral: "bg-[var(--surface-2)] text-[var(--text-2)] border border-[var(--border)]",
+};
+
+export function StatusBadge({ status, compact = false }: { status: StatusDescriptor; compact?: boolean }) {
+  return (
+    <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 ${compact ? "text-[10.5px]" : "text-[11.5px]"} font-medium leading-6 ${STATUS_TONE_CLS[status.tone]}`}>
+      <span aria-hidden="true">{status.glyph}</span> {status.label}
+    </span>
+  );
 }
 
 export function ProgressSmall({ pct, large = false }: { pct: number; large?: boolean }) {
