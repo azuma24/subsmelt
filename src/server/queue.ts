@@ -93,6 +93,25 @@ export function requestStop() {
   }
 }
 
+/**
+ * Whether a fresh process should pick up the jobs it finds pending. Startup
+ * resets jobs left translating by the previous process to pending, and without
+ * this nothing restarted them until the next scan or manual start.
+ */
+export function shouldResumeQueueOnBoot(
+  autoTranslate: string,
+  pendingCount: number,
+): boolean {
+  return autoTranslate === "1" && pendingCount > 0;
+}
+
+export function resumeQueueOnBoot() {
+  const pending = countPendingJobs();
+  if (!shouldResumeQueueOnBoot(getSetting("auto_translate"), pending)) return;
+  logger.info("queue", `Resuming ${pending} pending job(s) found at startup`);
+  processQueue();
+}
+
 export async function processQueue(onlyIds?: number[]) {
   if (isRunning) return;
   isRunning = true;

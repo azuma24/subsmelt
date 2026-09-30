@@ -9,7 +9,12 @@ import {
   getSetting,
 } from "./config.js";
 import { scanFolder, listFolderTree, MEDIA_DIR } from "./scanner.js";
-import { processQueue, isQueueRunning, startAutoScan } from "./queue.js";
+import {
+  processQueue,
+  isQueueRunning,
+  startAutoScan,
+  resumeQueueOnBoot,
+} from "./queue.js";
 import { transcriptionHistory } from "./transcription-history.js";
 import { logger } from "./logger.js";
 import { getLogs, clearLogs } from "./db.js";
@@ -234,4 +239,5 @@ app.listen(PORT, "0.0.0.0", () => {
   const interval = parseInt(getSetting("auto_scan_interval") || "0", 10);
   if (interval > 0) startAutoScan(interval, scanFolder);
   if (getSetting("watch_enabled") === "1") startWatcher();
+  resumeQueueOnBoot();
 });
