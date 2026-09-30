@@ -1,9 +1,9 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
-import { useSSE } from "../../hooks";
+import { useModelDownload } from "../../hooks";
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmModal";
 import { ActionButton, ProgressSmall } from "../../ui/primitives";
@@ -14,13 +14,6 @@ function formatMb(value?: number, unknownLabel = "—"): string {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return unknownLabel;
   if (value >= 1024) return `${(value / 1024).toFixed(value >= 10 * 1024 ? 0 : 1)} GB`;
   return `${Math.round(value)} MB`;
-}
-
-// Per-model live download state, keyed by model id. `pct` drives the inline
-// progress bar; `active` disables the row's Download button until it settles.
-interface DownloadState {
-  active: boolean;
-  pct: number;
 }
 
 export function ModelManagerPanel({ enabled }: { enabled: boolean }) {
@@ -34,47 +27,17 @@ export function ModelManagerPanel({ enabled }: { enabled: boolean }) {
     staleTime: 15_000,
   });
 
-  const [downloads, setDownloads] = useState<Record<string, DownloadState>>({});
+  // `pct` drives the inline progress bar; `active` disables the row's Download
+  // button until the HTTP call settles (an SSE "done" alone must not clear it).
+  const { downloads, downloadModel } = useModelDownload();
   const [busyDelete, setBusyDelete] = useState<Record<string, boolean>>({});
 
-  // Live download progress arrives over SSE as { model, pct, ... } and terminal
-  // { model, done } / { model, error }. We match by model id and patch state.
-  // The HTTP POST below resolves with the terminal result for the toast; the
-  // SSE feed is purely for the progress bar.
-  useSSE(
-    useCallback((type, data) => {
-      if (type !== "model:download") return;
-      const model = typeof data.model === "string" ? data.model : "";
-      if (!model) return;
-      if (data.error === true || data.done === true) {
-        setDownloads((prev) => {
-          const next = { ...prev };
-          delete next[model];
-          return next;
-        });
-        return;
-      }
-      if (typeof data.pct === "number") {
-        const pct = Math.max(0, Math.min(100, data.pct));
-        setDownloads((prev) => ({ ...prev, [model]: { active: true, pct } }));
-      }
-    }, []),
-  );
-
   const handleDownload = async (model: string) => {
-    setDownloads((prev) => ({ ...prev, [model]: { active: true, pct: prev[model]?.pct ?? 0 } }));
     try {
-      await api.downloadWhisperModel(model);
+      await downloadModel(model);
       addToast(t("settings.models.downloadDone", { model }), "success");
-      void modelsQuery.refetch();
     } catch (e: unknown) {
       addToast(t("settings.models.downloadFailed", { model, message: getErrorMessage(e) }), "error");
-    } finally {
-      setDownloads((prev) => {
-        const next = { ...prev };
-        delete next[model];
-        return next;
-      });
     }
   };
 

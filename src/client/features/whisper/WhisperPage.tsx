@@ -110,7 +110,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const whisperModels: WhisperModel[] = modelsQuery.data?.models ?? [];
 
   // Live download progress state + the downloadModel action.
-  const { downloads: modelDownloads, downloadModel } = useModelDownload(() => { /* no external callback needed */ });
+  const { downloads: modelDownloads, downloadModel } = useModelDownload();
 
   // Library file list (non-mutating preview scan of MEDIA_DIR).
   const scanQuery = useQuery({
