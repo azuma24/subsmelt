@@ -48,6 +48,7 @@ export interface SubtitleResult {
   source: TranscriptSource;
   /** The spoken language's key, when known. */
   spoken: string | null;
+  /** The route each picked language took; a caption YouTube did not have became a translation. */
   routes: SubtitleRoute[];
   jobsCreated: number;
 }
@@ -122,19 +123,28 @@ export async function produceSubtitles(input: SubtitleInput, deps: SubtitleDeps)
   }
 
   const tasks = (input.playlist?.subtitleTaskIds ?? []).map((id) => getTask(id)).filter((task) => task !== undefined);
-  const routes = planSubtitles(spoken, tasks.map((task) => ({ taskId: task.id, lang: taskLanguageKey(task) })), captionLangs);
+  const planned = planSubtitles(spoken, tasks.map((task) => ({ taskId: task.id, lang: taskLanguageKey(task) })), captionLangs);
+  const routes: SubtitleRoute[] = [];
   let jobsCreated = 0;
-  for (const route of routes) {
+  for (const route of planned) {
     const task = tasks.find((t) => t.id === route.taskId)!;
     const outputPath = path.join(path.dirname(stem), outputNameFor(path.basename(stem), task, "srt"));
-    if (outputPath === transcriptPath || exists(outputPath)) continue;
-    if (route.kind === "same") {
-      fs.copyFileSync(transcriptPath, outputPath);
+    if (outputPath === transcriptPath || exists(outputPath)) {
+      routes.push(route);
       continue;
     }
-    if (route.kind === "captions" && (await fetchOrReport(deps, input.videoId, route.captionLang, outputPath))) continue;
+    if (route.kind === "same") {
+      fs.copyFileSync(transcriptPath, outputPath);
+      routes.push(route);
+      continue;
+    }
+    if (route.kind === "captions" && (await fetchOrReport(deps, input.videoId, route.captionLang, outputPath))) {
+      routes.push(route);
+      continue;
+    }
     const created = createJob({ task_id: task.id, srt_path: transcriptPath, output_path: outputPath, video_path: input.mediaPath });
     jobsCreated += created.changes;
+    routes.push({ taskId: task.id, kind: "translate" });
   }
   return { transcriptPath, source, spoken, routes, jobsCreated };
 }

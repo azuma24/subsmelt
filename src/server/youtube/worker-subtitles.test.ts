@@ -105,6 +105,7 @@ const captionRuns = () =>
     .map((args) => args[args.indexOf("--sub-langs") + 1]);
 const filesOnDisk = () => Object.fromEntries(fs.readdirSync(DEST).filter((n) => n.endsWith(".srt")).sort().map((n) => [n, fs.readFileSync(path.join(DEST, n), "utf8")]));
 const jobs = () => db.getJobs().map((j) => [j.task_id, path.basename(j.srt_path), path.basename(j.output_path), j.status]);
+const plan = (store: Store) => JSON.parse(store.getVideo(VID)!.subtitle_plan ?? "null");
 const row = (store: Store) => {
   const v = store.getVideo(VID)!;
   return { status: v.status, attempts: v.attempts, reason: v.reason, retry_after: v.retry_after, subtitle_path: v.subtitle_path };
@@ -129,6 +130,7 @@ test("creator captions give the transcript and one language, the same language i
   assert.deepEqual(queueStarts, ["start"]);
   assert.deepEqual(row(store), { status: "translating", attempts: 0, reason: null, retry_after: null, subtitle_path: "YouTube/AI/Short talk [iSn77jvjojA].en.srt" });
   assert.deepEqual(fs.existsSync(youtubeTmpRoot()) ? fs.readdirSync(youtubeTmpRoot()) : [], []);
+  assert.deepEqual(plan(store), { spoken: "en", source: "captions", routes: [{ taskId: ENG, kind: "same" }, { taskId: CHT, kind: "captions" }, { taskId: JPN, kind: "translate" }] });
 
   worker.finishTranslated();
   assert.equal(store.getVideo(VID)!.status, "translating", "a pending translation keeps the video translating");
@@ -176,7 +178,7 @@ test("Always transcribe ignores creator captions and tells Whisper the spoken la
 });
 
 test("a caption YouTube turns out not to have falls back to Whisper for the transcript and to a job for the language", async (t) => {
-  const { worker, whisper } = rig(t, {
+  const { store, worker, whisper } = rig(t, {
     taskIds: [CHT],
     info: { language: "en", subtitles: { en: [{}], "zh-Hant": [{}] } },
     fake: { FAKE_YTDLP_NO_SUBS: "en,zh-Hant" },
@@ -188,6 +190,7 @@ test("a caption YouTube turns out not to have falls back to Whisper for the tran
   assert.deepEqual(captionRuns(), ["^en$", "^zh-Hant$"]);
   assert.deepEqual(whisper.map((r) => r.language), ["en"]);
   assert.deepEqual(jobs(), [[CHT, "Short talk [iSn77jvjojA].en.srt", "Short talk [iSn77jvjojA].cht.srt", "pending"]]);
+  assert.deepEqual(plan(store), { spoken: "en", source: "whisper", routes: [{ taskId: CHT, kind: "translate" }] });
 });
 
 test("a 429 on a caption waits out the cooldown instead of falling back, and nothing is spent", async (t) => {

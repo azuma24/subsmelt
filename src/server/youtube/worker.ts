@@ -118,7 +118,7 @@ export interface WorkerOptions {
 
 const liveQueue: QueueControl = { start: () => void processQueue(), startHeld: startHeldQueue, running: isQueueRunning };
 
-function transcriptionReady(settings = getAllSettings()): boolean {
+export function transcriptionReady(settings = getAllSettings()): boolean {
   return settings.transcription_enabled === "1" && Boolean(getTranscriptionBackendUrl(settings));
 }
 
@@ -365,7 +365,8 @@ export class YoutubeWorker {
       });
       this.progress.delete(video.video_id);
       const subtitlePath = path.relative(MEDIA_DIR, result.transcriptPath).split(path.sep).join("/");
-      this.move(video, "translating", { now: this.now().toISOString(), attempts: 0, subtitlePath });
+      const subtitlePlan = { spoken: result.spoken, source: result.source, routes: result.routes.map(({ taskId, kind }) => ({ taskId, kind })) };
+      this.move(video, "translating", { now: this.now().toISOString(), attempts: 0, subtitlePath, subtitlePlan });
       logger.info("youtube", `Subtitles of ${video.title}: transcript from ${result.source}, ${result.routes.map((r) => r.kind).join(", ") || "no other languages"}`);
       if (result.jobsCreated > 0) this.queue.start();
       this.finishTranslated();

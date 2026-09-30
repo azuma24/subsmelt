@@ -78,6 +78,8 @@ export interface VideoRow {
   note_path: string | null;
   /** Set when the user asked for this video: it goes first and a filter change leaves it alone. */
   user_queued_at: string | null;
+  /** JSON SubtitlePlan: where the transcript and each picked language came from. */
+  subtitle_plan: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -134,7 +136,16 @@ export interface StatusFields {
   mediaPath?: string | null;
   /** The transcript in the spoken language, relative to MEDIA_DIR. */
   subtitlePath?: string | null;
+  subtitlePlan?: SubtitlePlan | null;
   userQueuedAt?: string | null;
+}
+
+/** How a video's subtitles were made, kept for the row's summary. */
+export interface SubtitlePlan {
+  /** The spoken language's key, when known. */
+  spoken: string | null;
+  source: "existing" | "captions" | "whisper";
+  routes: { taskId: number; kind: "same" | "captions" | "translate" }[];
 }
 
 export interface VideoMetadata {
@@ -202,6 +213,7 @@ export class YoutubeStore {
     db.exec(SCHEMA);
     const columns = db.prepare("PRAGMA table_info(youtube_videos)").all() as { name: string }[];
     if (!columns.some((c) => c.name === "user_queued_at")) db.exec("ALTER TABLE youtube_videos ADD COLUMN user_queued_at TEXT");
+    if (!columns.some((c) => c.name === "subtitle_plan")) db.exec("ALTER TABLE youtube_videos ADD COLUMN subtitle_plan TEXT");
   }
 
   /**
@@ -304,7 +316,7 @@ export class YoutubeStore {
     this.db
       .prepare(`
         UPDATE youtube_videos SET status = @to, skip_kind = @skipKind, reason = @reason, retry_after = @retryAfter,
-          attempts = @attempts, media_path = @mediaPath, subtitle_path = @subtitlePath, user_queued_at = @userQueuedAt, updated_at = @now
+          attempts = @attempts, media_path = @mediaPath, subtitle_path = @subtitlePath, subtitle_plan = @subtitlePlan, user_queued_at = @userQueuedAt, updated_at = @now
         WHERE video_id = @videoId
       `)
       .run({
@@ -316,6 +328,7 @@ export class YoutubeStore {
         attempts: fields.attempts ?? current.attempts,
         mediaPath: fields.mediaPath === undefined ? current.media_path : fields.mediaPath,
         subtitlePath: fields.subtitlePath === undefined ? current.subtitle_path : fields.subtitlePath,
+        subtitlePlan: fields.subtitlePlan === undefined ? current.subtitle_plan : fields.subtitlePlan && JSON.stringify(fields.subtitlePlan),
         userQueuedAt: fields.userQueuedAt === undefined ? current.user_queued_at : fields.userQueuedAt,
         now: fields.now,
       });

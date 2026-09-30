@@ -240,3 +240,21 @@ test("following again while the old check still runs syncs with the new settings
     ["qN6OM1IzjIE", "queued", null],
   ]);
 });
+
+test("the pipeline status says when a shared GPU holds translation and when transcription has no backend", async (t) => {
+  const { createJob } = await import("../db.js");
+  const { setYoutubeBacklogSource } = await import("../gpu-gate.js");
+  t.after(() => {
+    setSetting("gpu_shared", "0");
+    setYoutubeBacklogSource(() => 0);
+  });
+  assert.deepEqual(await call("GET", "/api/youtube/pipeline"), {
+    status: 200,
+    body: { gpu: { shared: false, held: false, waitingFor: 0, translationRunning: false }, transcription: { ready: false, waiting: 0 } },
+  });
+
+  setSetting("gpu_shared", "1");
+  setYoutubeBacklogSource(() => 3);
+  createJob({ task_id: 1, srt_path: path.join(root, "media", "a.en.srt"), output_path: path.join(root, "media", "a.eng.srt"), video_path: null });
+  assert.deepEqual((await call("GET", "/api/youtube/pipeline")).body.gpu, { shared: true, held: true, waitingFor: 3, translationRunning: false });
+});
