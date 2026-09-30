@@ -153,6 +153,40 @@ const EMPTY_SYNC_STATE: PlaylistSyncState = { lastCheckedAt: null, lastError: nu
 
 const syncKey = (playlistId: string) => `playlist:${playlistId}`;
 
+interface ExistingVideo {
+  playlist_id: string;
+  status: VideoStatus;
+  skip_kind: SkipKind | null;
+  user_queued_at: string | null;
+}
+
+interface ListedState {
+  playlistId: string;
+  status: VideoStatus;
+  skipKind: SkipKind | null;
+}
+
+// How far a listing's selection goes, from left out by a filter to downloading on its own.
+const SELECTION_RANK: Partial<Record<VideoStatus, number>> = { skipped: 0, new: 1, queued: 2 };
+
+/**
+ * Where a listing leaves a video already on record. Only a video no one has
+ * acted on can move: waiting (new, queued) or left out by a filter. The
+ * owning playlist re-applies its selection on a first sync after a
+ * re-follow. Another playlist takes the video over only with a more eager
+ * selection, and its folder and profile then apply.
+ */
+function listedState(existing: ExistingVideo, playlistId: string, initial: InitialState, resetUntouched: boolean): ListedState {
+  const keep = { playlistId: existing.playlist_id, status: existing.status, skipKind: existing.skip_kind };
+  const untouched = existing.user_queued_at === null
+    && (existing.status === "new" || existing.status === "queued" || (existing.status === "skipped" && existing.skip_kind === "before_start"));
+  const listed = { playlistId, status: initial.status, skipKind: initial.skipKind ?? null };
+  if (!untouched) return keep;
+  if (existing.playlist_id === playlistId) return resetUntouched ? listed : keep;
+  const rank = SELECTION_RANK[initial.status];
+  return rank !== undefined && rank > SELECTION_RANK[existing.status]! ? listed : keep;
+}
+
 export class YoutubeStore {
   constructor(private readonly db: Database.Database) {
     db.exec(SCHEMA);
@@ -162,30 +196,25 @@ export class YoutubeStore {
 
   /**
    * Upserts every listed video and its membership in one transaction. A first
-   * sighting stores `initial`; a known video only refreshes metadata, so a
-   * skipped tombstone stays skipped. `resetUntouched` (a first sync after a
-   * re-follow) also re-applies `initial` to this playlist's videos that are
-   * still waiting or were left out by a filter. Missing members are marked removed only
-   * when `complete` says the listing covers the whole playlist.
+   * sighting stores `initial`; a known video refreshes metadata and moves only
+   * as `listedState` allows, so a skipped tombstone stays skipped. Missing
+   * members are marked removed only when `complete` says the listing covers
+   * the whole playlist.
    */
   applyListing(playlistId: string, videos: ListedVideo[], opts: { complete: boolean; now: string; resetUntouched?: boolean }): ApplyListingResult {
+    const existingVideo = this.db.prepare("SELECT playlist_id, status, skip_kind, user_queued_at FROM youtube_videos WHERE video_id = ?");
     const insertVideo = this.db.prepare(`
       INSERT INTO youtube_videos (video_id, playlist_id, title, channel, duration_s, published_at, added_at, status, skip_kind, reason, created_at, updated_at)
       VALUES (@videoId, @playlistId, @title, @channel, @durationS, @publishedAt, @addedAt, @status, @skipKind, @reason, @now, @now)
       ON CONFLICT(video_id) DO UPDATE SET
+        playlist_id = excluded.playlist_id,
         title = CASE WHEN excluded.title <> '' THEN excluded.title ELSE youtube_videos.title END,
         channel = COALESCE(excluded.channel, youtube_videos.channel),
         duration_s = COALESCE(excluded.duration_s, youtube_videos.duration_s),
         published_at = COALESCE(youtube_videos.published_at, excluded.published_at),
         added_at = COALESCE(excluded.added_at, youtube_videos.added_at),
-        status = CASE WHEN @resetUntouched = 1 AND youtube_videos.playlist_id = excluded.playlist_id
-            AND youtube_videos.user_queued_at IS NULL
-            AND (youtube_videos.status IN ('new', 'queued') OR (youtube_videos.status = 'skipped' AND youtube_videos.skip_kind = 'before_start'))
-          THEN excluded.status ELSE youtube_videos.status END,
-        skip_kind = CASE WHEN @resetUntouched = 1 AND youtube_videos.playlist_id = excluded.playlist_id
-            AND youtube_videos.user_queued_at IS NULL
-            AND (youtube_videos.status IN ('new', 'queued') OR (youtube_videos.status = 'skipped' AND youtube_videos.skip_kind = 'before_start'))
-          THEN excluded.skip_kind ELSE youtube_videos.skip_kind END,
+        status = excluded.status,
+        skip_kind = excluded.skip_kind,
         updated_at = @now
     `);
     const existingItem = this.db.prepare(
@@ -209,19 +238,22 @@ export class YoutubeStore {
         const item = existingItem.get(playlistId, video.videoId) as { removed_at: string | null } | undefined;
         if (!item) added += 1;
         else if (item.removed_at) restored += 1;
+        const existing = existingVideo.get(video.videoId) as ExistingVideo | undefined;
+        const state = existing
+          ? listedState(existing, playlistId, video.initial, opts.resetUntouched ?? false)
+          : { playlistId, status: video.initial.status, skipKind: video.initial.skipKind ?? null };
         insertVideo.run({
           videoId: video.videoId,
-          playlistId,
+          playlistId: state.playlistId,
+          status: state.status,
+          skipKind: state.skipKind,
           title: video.title ?? "",
           channel: video.channel,
           durationS: video.durationS,
           publishedAt: video.publishedAt,
           addedAt: video.addedAt ?? null,
-          status: video.initial.status,
-          skipKind: video.initial.skipKind ?? null,
           reason: video.initial.reason ?? null,
           now: opts.now,
-          resetUntouched: opts.resetUntouched ? 1 : 0,
         });
         upsertItem.run({ playlistId, videoId: video.videoId, position: video.position, now: opts.now });
       }

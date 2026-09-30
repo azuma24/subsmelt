@@ -177,3 +177,39 @@ test("a database from before user_queued_at gains the column", () => {
   store.applyListing(PL, [listed("aaaaaaaaaa1", 1, { initial: { status: "new" } })], { complete: true, now: T0 });
   assert.equal(store.applyUserAction("aaaaaaaaaa1", "download", T1).user_queued_at, T1);
 });
+
+const OTHER = "PLotherPlaylist01";
+const owner = (store: YoutubeStore, id: string) => {
+  const v = store.getVideo(id)!;
+  return [v.playlist_id, v.status, v.skip_kind];
+};
+
+test("a video one playlist left out is taken over by a playlist that selects it", () => {
+  const store = freshStore();
+  store.applyListing(OTHER, [listed("aaaaaaaaaa1", 1, { initial: { status: "skipped", skipKind: "before_start" } }), listed("aaaaaaaaaa2", 2, { initial: { status: "new" } })], { complete: true, now: T0, resetUntouched: true });
+  store.applyListing(PL, [listed("aaaaaaaaaa1", 1), listed("aaaaaaaaaa2", 2)], { complete: true, now: T1, resetUntouched: true });
+  assert.deepEqual(owner(store, "aaaaaaaaaa1"), [PL, "queued", null]);
+  assert.deepEqual(owner(store, "aaaaaaaaaa2"), [PL, "queued", null]);
+});
+
+test("another playlist never downgrades a video or overrides the user's skip or pick", () => {
+  const store = freshStore();
+  store.applyListing(OTHER, [
+    listed("aaaaaaaaaa1", 1),
+    listed("aaaaaaaaaa2", 2, { initial: { status: "new" } }),
+    listed("aaaaaaaaaa3", 3, { initial: { status: "skipped", skipKind: "before_start" } }),
+    listed("aaaaaaaaaa4", 4, { initial: { status: "new" } }),
+  ], { complete: true, now: T0, resetUntouched: true });
+  store.applyUserAction("aaaaaaaaaa2", "skip", T0);
+  store.applyUserAction("aaaaaaaaaa4", "download", T0);
+  store.applyListing(PL, [
+    listed("aaaaaaaaaa1", 1, { initial: { status: "new" } }),
+    listed("aaaaaaaaaa2", 2),
+    listed("aaaaaaaaaa3", 3, { initial: { status: "skipped", skipKind: "before_start" } }),
+    listed("aaaaaaaaaa4", 4, { initial: { status: "skipped", skipKind: "before_start" } }),
+  ], { complete: true, now: T1, resetUntouched: true });
+  assert.deepEqual(owner(store, "aaaaaaaaaa1"), [OTHER, "queued", null]);
+  assert.deepEqual(owner(store, "aaaaaaaaaa2"), [OTHER, "skipped", "user"]);
+  assert.deepEqual(owner(store, "aaaaaaaaaa3"), [OTHER, "skipped", "before_start"]);
+  assert.deepEqual(owner(store, "aaaaaaaaaa4"), [OTHER, "queued", null]);
+});
