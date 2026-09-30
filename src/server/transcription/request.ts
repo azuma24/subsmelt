@@ -145,10 +145,11 @@ function outputFormat(raw: string | undefined, fallback: TranscriptionOutputForm
   return isOutputFormat(raw) ? raw : fallback;
 }
 
-// Whisper language codes are two or three lowercase letters. The language is
-// part of the subtitle filename (Episode.en.srt), so a separator or dot in it
-// could move the written file out of the video's folder.
-const LANGUAGE_PATTERN = /^(auto|[a-z]{2,3})$/;
+// Language codes are two or three lowercase letters with an optional region
+// subtag (en, yue, zh-TW). The language is part of the subtitle filename
+// (Episode.en.srt), so a separator or dot in it could move the written file
+// out of the video's folder.
+const LANGUAGE_PATTERN = /^(auto|[a-z]{2,3}(-[A-Za-z0-9]{2,8})?)$/;
 
 function intSetting(raw: string | number | undefined): number | undefined {
   const value = typeof raw === "number" ? raw : Number.parseInt((raw || "").trim(), 10);

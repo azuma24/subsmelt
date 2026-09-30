@@ -280,6 +280,18 @@ test("a valid language and output format still name the subtitle next to the vid
   assert.equal(localTranscriptionOutputPath("/media/anime/Episode 09.mkv", request.language, request.output_format), "/media/anime/Episode 09.en.srt");
 });
 
+test("a language with a region subtag names the subtitle with that tag", () => {
+  const request = buildTranscriptionRequest({
+    videoPath: "/media/drama/Episode 01.mkv",
+    mediaDir: "/media",
+    settings: {},
+    outputFormat: "srt",
+    overrides: { language: "zh-TW" },
+  });
+
+  assert.equal(localTranscriptionOutputPath("/media/drama/Episode 01.mkv", request.language, request.output_format), "/media/drama/Episode 01.zh-TW.srt");
+});
+
 test("transcribe post action values remain restricted", () => {
   assert.deepEqual(transcribePostActionValues, ["transcribe_only", "transcribe_and_translate"]);
 });
