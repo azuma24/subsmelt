@@ -6,7 +6,6 @@ import asyncPool from "tiny-async-pool";
 import {
   getAllSettings,
   setSetting,
-  envSettingOverrides,
   getSetting,
 } from "./config.js";
 import { scanFolder, listFolderTree, MEDIA_DIR } from "./scanner.js";
@@ -206,9 +205,6 @@ app.get("*", (_req, res) => {
 
 // ======== Start ========
 app.listen(PORT, "0.0.0.0", () => {
-  for (const [key, value] of Object.entries(envSettingOverrides())) {
-    setSetting(key, value);
-  }
   // Reconcile any transcription attempts left "running" by a previous process
   // (e.g. crash/restart mid-transcription) so they no longer hang in history.
   const reconciled = transcriptionHistory.reconcileRunning();

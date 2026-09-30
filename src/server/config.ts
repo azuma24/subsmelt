@@ -205,7 +205,7 @@ let _config: ConfigData = loadConfig();
 // --- Settings ---
 
 export function getSetting(key: string): string {
-  return _config.settings[key] ?? DEFAULT_SETTINGS[key] ?? "";
+  return envPinnedSettings[key] ?? _config.settings[key] ?? DEFAULT_SETTINGS[key] ?? "";
 }
 
 export function setSetting(key: string, value: string): void {
@@ -232,7 +232,7 @@ export function isWritableSettingKey(key: string): boolean {
 }
 
 export function getAllSettings(): Record<string, string> {
-  const merged = { ...DEFAULT_SETTINGS, ..._config.settings };
+  const merged = { ...DEFAULT_SETTINGS, ..._config.settings, ...envPinnedSettings };
   // Backfill the connections array from legacy flat keys so the client and the
   // queue always see a populated list, even before the first multi-connection save.
   if (!merged.llm_connections || !merged.llm_connections.trim()) {
@@ -250,7 +250,7 @@ export function isLlmConfigured(): boolean {
   // Pass the connections the defaults would synthesize, so a seeded connection
   // written back by an unrelated settings save isn't mistaken for real setup.
   return computeLlmConfigured(
-    _config.settings,
+    { ..._config.settings, ...envPinnedSettings },
     DEFAULT_SETTINGS,
     migrateConnectionsFromFlat(DEFAULT_SETTINGS),
   );
@@ -350,5 +350,15 @@ export function envSettingOverrides(
     if (value !== undefined && value !== "") overrides[settingKey] = value;
   }
   return overrides;
+}
+
+// Layered over config.json for this process and never saved, so a UI save
+// cannot bake an env value into the file and removing the variable brings the
+// saved value back on the next start.
+const envPinnedSettings = envSettingOverrides();
+
+/** Setting keys whose value comes from the environment; the UI cannot edit them. */
+export function envPinnedSettingKeys(): string[] {
+  return Object.keys(envPinnedSettings);
 }
 

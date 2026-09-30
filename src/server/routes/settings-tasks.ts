@@ -7,6 +7,7 @@ import {
   getAllSettings,
   setSettings,
   getSetting,
+  envPinnedSettingKeys,
   isLlmConfigured,
   isWritableSettingKey,
   getTasks,
@@ -73,6 +74,7 @@ export function registerSettingsTasksRoutes(app: Express): void {
       // Whether an LLM has actually been set up, as opposed to running on the
       // shipped defaults — the merged settings can't distinguish the two.
       _llm_configured: isLlmConfigured(),
+      _env_pinned: envPinnedSettingKeys(),
     });
   });
 
@@ -112,6 +114,11 @@ export function registerSettingsTasksRoutes(app: Express): void {
       // most keys in any given request are unchanged. Writing and logging all of
       // them buried real edits under ~60 keys of noise on every save.
       if (resolved === getSetting(key)) continue;
+      // An env-pinned key would save fine and then stay hidden behind the env value.
+      if (envPinnedSettingKeys().includes(key)) {
+        rejected.push(key);
+        continue;
+      }
       patch[key] = resolved;
       changedKeys.push(key);
     }
