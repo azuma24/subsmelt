@@ -225,3 +225,18 @@ test("unfollowing removes the playlist and later calls report it is not followed
   assert.deepEqual(await call("GET", `/api/youtube/playlists/${PL}/videos`), { status: 404, body: { error: "This playlist is not followed" } });
   assert.deepEqual((await call("GET", "/api/youtube/playlists")).body, { playlists: [] });
 });
+
+test("following again while the old check still runs syncs with the new settings", async (t) => {
+  process.env.FAKE_YTDLP_SLEEP_MS = "300";
+  t.after(() => { delete process.env.FAKE_YTDLP_SLEEP_MS; });
+  assert.equal((await call("POST", "/api/youtube/playlists", { url: PL, title: "AI", backfill: { kind: "none" } })).status, 201);
+  assert.equal((await call("DELETE", `/api/youtube/playlists/${PL}`)).status, 200);
+  assert.equal((await call("POST", "/api/youtube/playlists", { url: PL, title: "AI", backfill: { kind: "all" } })).status, 201);
+
+  assert.equal((await call("POST", `/api/youtube/playlists/${PL}/sync`)).status, 200);
+  assert.deepEqual(await videoStatuses(), [
+    ["uXspbC2srEQ", "queued", null],
+    ["LKsEieYbUz4", "unavailable", null],
+    ["qN6OM1IzjIE", "queued", null],
+  ]);
+});

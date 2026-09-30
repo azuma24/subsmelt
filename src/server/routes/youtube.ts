@@ -185,7 +185,7 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore, worker:
     store.deleteSyncState(id);
     savePlaylist(playlist);
     logger.info("youtube", `Followed playlist ${title} (${id})`);
-    worker.checkPlaylist(playlist).catch(() => undefined);
+    worker.checkPlaylist(playlist, { asNewFollow: true }).catch(() => undefined);
     res.status(201).json(playlistSummary(store, worker, playlist));
   });
 

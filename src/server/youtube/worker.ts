@@ -185,11 +185,18 @@ export class YoutubeWorker {
     return this.checks.has(playlistId);
   }
 
-  /** Starts a check of one playlist, or joins the one already running. */
-  checkPlaylist(playlist: YoutubePlaylist): Promise<SyncResult> {
+  /**
+   * Starts a check of one playlist, or joins the one already running. After
+   * a (re-)follow, `asNewFollow` queues a first sync behind any check still
+   * running for the old follow, whose settings may be stale.
+   */
+  checkPlaylist(playlist: YoutubePlaylist, { asNewFollow = false } = {}): Promise<SyncResult> {
     const running = this.checks.get(playlist.id);
-    if (running) return running;
-    const run = this.syncAndAnnounce(playlist).finally(() => this.checks.delete(playlist.id));
+    if (running && !asNewFollow) return running;
+    const start = () => this.syncAndAnnounce(playlist, asNewFollow);
+    const run: Promise<SyncResult> = (running ? running.then(start, start) : start()).finally(() => {
+      if (this.checks.get(playlist.id) === run) this.checks.delete(playlist.id);
+    });
     this.checks.set(playlist.id, run);
     return run;
   }
@@ -213,13 +220,14 @@ export class YoutubeWorker {
     while (await onYoutubeLane(() => this.downloadNext()));
   }
 
-  private async syncAndAnnounce(playlist: YoutubePlaylist): Promise<SyncResult> {
+  private async syncAndAnnounce(playlist: YoutubePlaylist, firstSync: boolean): Promise<SyncResult> {
     this.announce("youtube:playlist", { playlistId: playlist.id, checking: true });
     try {
       // Re-read when the lane reaches us: the playlist may have been edited or unfollowed while queued.
       const result = await this.youtubeCall(() => {
         const fresh = findPlaylist(playlist.id);
         if (!fresh) throw new PlaylistGoneError(playlist.id);
+        if (firstSync) this.store.deleteSyncState(playlist.id);
         return syncPlaylist(this.store, fresh, liveSyncDeps());
       });
       const current = findPlaylist(playlist.id);
