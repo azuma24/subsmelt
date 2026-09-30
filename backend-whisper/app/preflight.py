@@ -5,6 +5,8 @@ import shutil
 from pathlib import Path
 from typing import TypedDict
 
+from .audio import ffmpeg_binary
+
 try:
     import psutil  # type: ignore
 except Exception:  # pragma: no cover - psutil may be absent in minimal envs
@@ -136,7 +138,9 @@ def disk_free_mb(path: str | os.PathLike[str]) -> int:
 
 
 def ffmpeg_available() -> bool:
-    return shutil.which("ffmpeg") is not None
+    # Same resolver extract_audio uses, so a bundled SUBSMELT_FFMPEG that is not
+    # on PATH (the Windows service) passes preflight instead of "ffmpeg_missing".
+    return shutil.which(ffmpeg_binary()) is not None
 
 
 def evaluate_model_safety(model: str, available_ram_mb: int) -> SafetyResult:
