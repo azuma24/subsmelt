@@ -5,6 +5,8 @@ import { isVideoId, playlistUrl, videoUrl } from "./urls.js";
 import { runYtdlp } from "./ytdlp.js";
 
 const LISTING_TIMEOUT_MS = 10 * 60_000;
+// A flat listing of an 889-video playlist is 1.2 MB of JSON; 5,000 videos (YouTube's cap) stays well under this.
+const LISTING_MAX_BYTES = 64 * 1024 * 1024;
 const METADATA_TIMEOUT_MS = 2 * 60_000;
 const PLACEHOLDER_TITLE_RE = /^\[(private|deleted) video\]$/i;
 
@@ -88,7 +90,7 @@ function lastErrorLine(stderr: string, code: number | null): string {
 export async function listPlaylistWithYtdlp(id: string): Promise<FlatListing> {
   const result = await runYtdlp(
     ["-J", "--flat-playlist", "--js-runtimes", "node", "--extractor-args", "youtubetab:approximate_date", "--", playlistUrl(id)],
-    { timeoutMs: LISTING_TIMEOUT_MS },
+    { timeoutMs: LISTING_TIMEOUT_MS, maxCaptureBytes: LISTING_MAX_BYTES },
   );
   if (result.timedOut) throw new Error("Listing the playlist timed out");
   if (result.code !== 0) throw new Error(lastErrorLine(result.stderr, result.code));

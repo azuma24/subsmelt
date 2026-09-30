@@ -95,6 +95,29 @@ test("listPlaylistWithYtdlp runs the flat listing on the canonical URL and surfa
   await assert.rejects(listPlaylistWithYtdlp(PL), { message: "ERROR: [youtube:tab] PL-Smx9IA029hG4XKsjwo6psQhtDfsosa8: The playlist does not exist" });
 });
 
+test("listPlaylistWithYtdlp parses a listing larger than a megabyte", async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-sync-big-"));
+  const file = path.join(dir, "listing.json");
+  const entries = Array.from({ length: 3000 }, (_, i) => ({
+    id: `v${String(i).padStart(10, "0")}`,
+    title: `Video ${i}`,
+    duration: 60,
+    thumbnails: [{ url: `https://i.ytimg.com/vi/${i}/hqdefault.jpg?sqp=${"x".repeat(300)}` }],
+  }));
+  fs.writeFileSync(file, listingJson(entries));
+  assert.ok(fs.statSync(file).size > 1_000_000);
+  process.env.SUBSMELT_YTDLP_BIN = FAKE_BIN;
+  process.env.FAKE_YTDLP_STDOUT_FILE = file;
+  t.after(() => {
+    delete process.env.SUBSMELT_YTDLP_BIN;
+    delete process.env.FAKE_YTDLP_STDOUT_FILE;
+  });
+
+  const listing = await listPlaylistWithYtdlp(PL);
+  assert.equal(listing.entries.length, 3000);
+  assert.equal(listing.entries[2999].videoId, "v0000002999");
+});
+
 test("first sync with backfill None skips what is already there; private entries become unavailable", async () => {
   const store = new YoutubeStore(new Database(":memory:"));
   const result = await syncPlaylist(store, playlist(), deps([parseFlatListing(listingJson([DOTS, PRIVATE, PRIME]))]));

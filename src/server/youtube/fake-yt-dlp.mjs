@@ -3,6 +3,7 @@
 // FAKE_YTDLP_ARGV_FILE   append this run's argv as one JSON line
 // FAKE_YTDLP_VERSION     printed for --version (default 2026.08.19)
 // FAKE_YTDLP_STDOUT      written to stdout, one line per \n
+// FAKE_YTDLP_STDOUT_FILE this file's contents written to stdout (for output too big for the environment)
 // FAKE_YTDLP_STDERR      written to stderr
 // FAKE_YTDLP_EXIT        exit code (default 0)
 // FAKE_YTDLP_SLEEP_MS    wait before exiting
@@ -17,6 +18,7 @@ if (args.includes("--version")) {
   process.exit(0);
 }
 if (env.FAKE_YTDLP_STDOUT) process.stdout.write(env.FAKE_YTDLP_STDOUT);
+if (env.FAKE_YTDLP_STDOUT_FILE) process.stdout.write(fs.readFileSync(env.FAKE_YTDLP_STDOUT_FILE));
 if (env.FAKE_YTDLP_STDERR) process.stderr.write(env.FAKE_YTDLP_STDERR);
 const exit = Number(env.FAKE_YTDLP_EXIT ?? 0);
 const sleep = Number(env.FAKE_YTDLP_SLEEP_MS ?? 0);

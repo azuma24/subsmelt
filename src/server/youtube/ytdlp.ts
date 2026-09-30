@@ -41,6 +41,8 @@ export interface RunOptions {
   timeoutMs?: number;
   signal?: AbortSignal;
   onStdoutLine?: (line: string) => void;
+  /** Output kept per stream; older output is dropped past it. */
+  maxCaptureBytes?: number;
 }
 
 function dataDir(): string {
@@ -77,14 +79,14 @@ export function resolveYtdlpBin(): string | null {
   return findOnPath("yt-dlp");
 }
 
-function appendCapped(buffer: string, chunk: string): string {
+function appendCapped(buffer: string, chunk: string, max: number): string {
   const next = buffer + chunk;
-  return next.length > MAX_CAPTURE_BYTES ? next.slice(-MAX_CAPTURE_BYTES) : next;
+  return next.length > max ? next.slice(-max) : next;
 }
 
 /** Spawns without a shell. Resolves on exit, timeout or abort; rejects only if the binary cannot start. */
 export function runBinary(bin: string, args: string[], options: RunOptions = {}): Promise<RunResult> {
-  const { timeoutMs = DEFAULT_TIMEOUT_MS, signal, onStdoutLine } = options;
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, signal, onStdoutLine, maxCaptureBytes = MAX_CAPTURE_BYTES } = options;
   return new Promise((resolve, reject) => {
     const child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"], signal });
     let stdout = "";
@@ -97,14 +99,14 @@ export function runBinary(bin: string, args: string[], options: RunOptions = {})
     }, timeoutMs);
 
     child.stdout.setEncoding("utf8").on("data", (chunk: string) => {
-      stdout = appendCapped(stdout, chunk);
+      stdout = appendCapped(stdout, chunk, maxCaptureBytes);
       if (!onStdoutLine) return;
       const lines = (pendingLine + chunk).split("\n");
       pendingLine = lines.pop() ?? "";
       for (const line of lines) onStdoutLine(line);
     });
     child.stderr.setEncoding("utf8").on("data", (chunk: string) => {
-      stderr = appendCapped(stderr, chunk);
+      stderr = appendCapped(stderr, chunk, maxCaptureBytes);
     });
     child.on("error", (err) => {
       clearTimeout(timer);
