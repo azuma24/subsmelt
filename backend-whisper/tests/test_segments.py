@@ -45,6 +45,32 @@ class MergeShortSegmentsTests(unittest.TestCase):
         self.assertEqual(merge_short_segments(segments), segments)
 
 
+class MergeAcrossSpeakersTests(unittest.TestCase):
+    def test_short_segment_is_not_folded_into_another_speaker(self):
+        segments = [
+            Segment(0.0, 0.8, "Yes.", speaker="SPEAKER_00"),
+            Segment(0.8, 6.0, "and then we went to the market together", speaker="SPEAKER_01"),
+        ]
+        self.assertEqual(merge_short_segments(segments), segments)
+
+    def test_trailing_short_segment_of_another_speaker_stays_separate(self):
+        segments = [
+            Segment(0.0, 3.0, "Goodbye for now", speaker="SPEAKER_00"),
+            Segment(3.0, 3.3, "bye", speaker="SPEAKER_01"),
+        ]
+        self.assertEqual(merge_short_segments(segments), segments)
+
+    def test_same_speaker_short_segments_still_merge(self):
+        segments = [
+            Segment(0.0, 0.4, "Oh", speaker="SPEAKER_00"),
+            Segment(0.4, 3.0, "that is wonderful news", speaker="SPEAKER_00"),
+        ]
+        self.assertEqual(
+            merge_short_segments(segments),
+            [Segment(0.0, 3.0, "Oh that is wonderful news", speaker="SPEAKER_00")],
+        )
+
+
 class SplitLongSegmentsTests(unittest.TestCase):
     def test_disabled_when_max_duration_falsy(self):
         segments = [seg(0.0, 10.0, "one two three four")]

@@ -67,7 +67,10 @@ def merge_short_segments(
 
     for segment in segments:
         if carry is not None:
-            segment = _join(carry, segment)
+            if _same_speaker(carry, segment):
+                segment = _join(carry, segment)
+            else:
+                result.append(carry)
             carry = None
 
         if _is_short(segment, max_duration, max_chars):
@@ -78,13 +81,19 @@ def merge_short_segments(
         result.append(segment)
 
     if carry is not None:
-        if result:
+        if result and _same_speaker(result[-1], carry):
             result[-1] = _join(result[-1], carry)
         else:
-            # Every segment was short; emit the accumulated carry as-is.
+            # Every segment was short (or the neighbour is another speaker);
+            # emit the accumulated carry as-is.
             result.append(carry)
 
     return result
+
+
+def _same_speaker(first: Segment, second: Segment) -> bool:
+    """Merging across two different diarized speakers would misattribute text."""
+    return first.speaker is None or second.speaker is None or first.speaker == second.speaker
 
 
 def _join(first: Segment, second: Segment) -> Segment:
