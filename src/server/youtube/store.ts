@@ -132,6 +132,8 @@ export interface StatusFields {
   retryAfter?: string | null;
   attempts?: number;
   mediaPath?: string | null;
+  /** The transcript in the spoken language, relative to MEDIA_DIR. */
+  subtitlePath?: string | null;
   userQueuedAt?: string | null;
 }
 
@@ -302,7 +304,7 @@ export class YoutubeStore {
     this.db
       .prepare(`
         UPDATE youtube_videos SET status = @to, skip_kind = @skipKind, reason = @reason, retry_after = @retryAfter,
-          attempts = @attempts, media_path = @mediaPath, user_queued_at = @userQueuedAt, updated_at = @now
+          attempts = @attempts, media_path = @mediaPath, subtitle_path = @subtitlePath, user_queued_at = @userQueuedAt, updated_at = @now
         WHERE video_id = @videoId
       `)
       .run({
@@ -313,6 +315,7 @@ export class YoutubeStore {
         retryAfter: fields.retryAfter ?? null,
         attempts: fields.attempts ?? current.attempts,
         mediaPath: fields.mediaPath === undefined ? current.media_path : fields.mediaPath,
+        subtitlePath: fields.subtitlePath === undefined ? current.subtitle_path : fields.subtitlePath,
         userQueuedAt: fields.userQueuedAt === undefined ? current.user_queued_at : fields.userQueuedAt,
         now: fields.now,
       });
@@ -345,6 +348,12 @@ export class YoutubeStore {
         WHERE video_id = @videoId
       `)
       .run({ videoId, title: meta.title ?? null, channel: meta.channel ?? null, durationS: meta.durationS ?? null, publishedAt: meta.publishedAt ?? null, now });
+  }
+
+  /** How many videos, across every playlist, sit in each status. */
+  statusTotals(): Partial<Record<VideoStatus, number>> {
+    const rows = this.db.prepare("SELECT status, COUNT(*) AS n FROM youtube_videos GROUP BY status").all() as { status: VideoStatus; n: number }[];
+    return Object.fromEntries(rows.map((r) => [r.status, r.n]));
   }
 
   videosInStatus(status: VideoStatus): VideoRow[] {

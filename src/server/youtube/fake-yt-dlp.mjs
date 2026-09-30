@@ -14,6 +14,9 @@
 // the home path, the way yt-dlp moves finished files there.
 // FAKE_YTDLP_TITLE       title in the file name (default "Fake video")
 // FAKE_YTDLP_INFO        JSON merged into the written info JSON
+// A run with --skip-download fetches captions: it writes "<id>.<lang>.srt" in
+// the home path for the --sub-langs pattern, whose text names the language,
+// unless the language is listed in FAKE_YTDLP_NO_SUBS (comma-separated).
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -55,7 +58,13 @@ if (env.FAKE_YTDLP_STDOUT_FILE) process.stdout.write(fs.readFileSync(env.FAKE_YT
 if (failing && env.FAKE_YTDLP_STDERR) process.stderr.write(env.FAKE_YTDLP_STDERR);
 
 setTimeout(() => {
-  if (home && exit === 0) {
+  if (home && exit === 0 && args.includes("--skip-download")) {
+    const lang = valueAfter("--sub-langs").replace(/^\^|\$$/g, "").replace(/\\(.)/g, "$1");
+    if (!(env.FAKE_YTDLP_NO_SUBS ?? "").split(",").includes(lang)) {
+      fs.mkdirSync(home, { recursive: true });
+      fs.writeFileSync(path.join(home, `${videoId}.${lang}.srt`), `1\n00:00:01,000 --> 00:00:02,000\ncaption ${lang}\n`);
+    }
+  } else if (home && exit === 0) {
     const title = env.FAKE_YTDLP_TITLE ?? "Fake video";
     const ext = valueAfter("--merge-output-format") ?? valueAfter("--audio-format") ?? "webm";
     const stem = path.join(home, `${title} [${videoId}]`);

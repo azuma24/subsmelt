@@ -1,14 +1,19 @@
 import fs from "node:fs";
 import path from "node:path";
-import { getSetting } from "../config.js";
+import { getAllSettings, getSetting } from "../config.js";
+import { countOpenJobsForSubtitle } from "../db.js";
+import { gpuShared, setYoutubeBacklogSource, transcriptionMayStart } from "../gpu-gate.js";
 import { logger } from "../logger.js";
 import { normalizeMediaSubfolder, resolveMediaSubfolder } from "../media-paths.js";
+import { isQueueRunning, processQueue, startHeldQueue } from "../queue.js";
+import { getTranscriptionBackendUrl, runTranscriptionAttempt } from "../routes/transcription-runtime.js";
 import { MEDIA_DIR } from "../scanner.js";
 import { broadcast } from "../sse.js";
 import { fetchAddedDates } from "./data-api.js";
 import { downloadVideo, findDownloadedMedia, tidyPlaylistFolder, upcomingRetryAt, type DownloadResult } from "./download.js";
 import { findPlaylist, readPlaylists, savePlaylist, type YoutubePlaylist } from "./playlists.js";
 import type { Cooldown, CooldownCause, VideoRow, YoutubeStore } from "./store.js";
+import { fetchCaptionWithYtdlp, produceSubtitles, type TranscribeRequest, type TranscribeResult } from "./subtitles.js";
 import { exactUploadDateWithYtdlp, listPlaylistWithYtdlp, syncPlaylist, type SyncDeps, type SyncResult } from "./sync.js";
 import type { VideoStatus } from "./video-status.js";
 import { classifyYtdlpError, type YtdlpErrorClass } from "./ytdlp.js";
@@ -39,6 +44,14 @@ export class CooldownError extends Error {
   constructor(readonly cooldown: Cooldown) {
     super(`YouTube asked SubSmelt to slow down. Requests to YouTube pause until ${cooldown.until}`);
     this.name = "CooldownError";
+  }
+}
+
+/** The subtitle step cannot run yet; the video keeps its place and attempts. */
+class NotYetError extends Error {
+  constructor(reason: string) {
+    super(reason);
+    this.name = "NotYetError";
   }
 }
 
@@ -87,9 +100,42 @@ export function playlistFolder(playlist: YoutubePlaylist): PlaylistFolder | null
   return rel && abs ? { abs, rel } : null;
 }
 
+/** The translation queue as the worker sees it. */
+export interface QueueControl {
+  /** Starts a run through the GPU gate. */
+  start: () => void;
+  /** Starts a run the gate held back, if it has opened. */
+  startHeld: () => void;
+  running: () => boolean;
+}
+
 export interface WorkerOptions {
   now?: () => Date;
   announce?: (event: string, data: Record<string, unknown>) => void;
+  transcribe?: (req: TranscribeRequest, onProgress: (pct: number) => void) => Promise<TranscribeResult>;
+  queue?: QueueControl;
+}
+
+const liveQueue: QueueControl = { start: () => void processQueue(), startHeld: startHeldQueue, running: isQueueRunning };
+
+function transcriptionReady(settings = getAllSettings()): boolean {
+  return settings.transcription_enabled === "1" && Boolean(getTranscriptionBackendUrl(settings));
+}
+
+/** Whisper through the app's own transcription path, with at least the video's length as its timeout. */
+export async function transcribeWithWhisper(req: TranscribeRequest, onProgress: (pct: number) => void): Promise<TranscribeResult> {
+  const settings = getAllSettings();
+  if (!transcriptionReady(settings)) throw new NotYetError("Transcription waits for a backend");
+  const timeoutS = Math.max(Number.parseInt(settings.transcription_request_timeout_s, 10) || 1800, req.durationS ?? 0);
+  const { result, outputPath } = await runTranscriptionAttempt({
+    videoPath: req.mediaPath,
+    postAction: "transcribe_only",
+    outputFormat: "srt",
+    overrides: { language: req.language },
+    settings: { ...settings, transcription_request_timeout_s: String(timeoutS) },
+    onProgress,
+  });
+  return { outputPath, language: typeof result.language === "string" && result.language ? result.language : null };
 }
 
 export interface ReconcileResult {
@@ -108,18 +154,25 @@ export class YoutubeWorker {
   private readonly checks = new Map<string, Promise<SyncResult>>();
   private readonly progress = new Map<string, number>();
   private readonly abort = new AbortController();
+  private readonly transcribe: NonNullable<WorkerOptions["transcribe"]>;
+  private readonly queue: QueueControl;
   private passScheduled = false;
+  private subtitlePassScheduled = false;
+  private subtitleLane: Promise<unknown> = Promise.resolve();
   private stopped = false;
   private timer: ReturnType<typeof setInterval> | null = null;
 
   constructor(private readonly store: YoutubeStore, options: WorkerOptions = {}) {
     this.now = options.now ?? (() => new Date());
     this.announce = options.announce ?? broadcast;
+    this.transcribe = options.transcribe ?? transcribeWithWhisper;
+    this.queue = options.queue ?? liveQueue;
   }
 
   start(): void {
     const { requeued, adopted } = this.reconcile();
     if (requeued || adopted) logger.info("youtube", `Boot: ${requeued} interrupted download(s) queued again, ${adopted} already on disk`);
+    setYoutubeBacklogSource(() => this.whisperBacklog());
     this.tick();
     this.timer = setInterval(() => this.tick(), TICK_MS);
   }
@@ -134,6 +187,9 @@ export class YoutubeWorker {
   tick(): void {
     this.checkDuePlaylists();
     this.kick();
+    this.kickSubtitles();
+    this.finishTranslated();
+    this.queue.startHeld();
   }
 
   /**
@@ -221,6 +277,109 @@ export class YoutubeWorker {
     while (await onYoutubeLane(() => this.downloadNext()));
   }
 
+  /** Schedules a pass of the subtitle step unless one is already waiting. */
+  kickSubtitles(): void {
+    if (this.subtitlePassScheduled || this.stopped) return;
+    this.subtitlePassScheduled = true;
+    this.onSubtitleLane(() => {
+      this.subtitlePassScheduled = false;
+      return this.subtitleNext();
+    })
+      .then((worked) => {
+        if (worked) this.kickSubtitles();
+      })
+      .catch((error) => logger.error("youtube", `Subtitle step failed: ${message(error)}`));
+  }
+
+  /** Runs subtitle passes until no video is ready for one. */
+  async drainSubtitles(): Promise<void> {
+    while (await this.onSubtitleLane(() => this.subtitleNext()));
+  }
+
+  /**
+   * Moves every translating video whose translation jobs have all settled
+   * on to its note. A failed translation settles too; the Jobs page shows it.
+   */
+  finishTranslated(): void {
+    for (const video of this.store.videosInStatus("translating")) {
+      if (!video.subtitle_path) continue;
+      if (countOpenJobsForSubtitle(path.join(MEDIA_DIR, video.subtitle_path)) > 0) continue;
+      this.onSubtitlesComplete(video.video_id);
+    }
+  }
+
+  /**
+   * The hook point for the note export: subtitles and every translation of
+   * the video are finished. Until notes exist the video is done here.
+   */
+  onSubtitlesComplete(videoId: string): void {
+    const video = this.store.getVideo(videoId);
+    if (video?.status !== "translating") return;
+    this.move(video, "done", { now: this.now().toISOString() });
+    logger.info("youtube", `Subtitles and translations of ${video.title} are finished`);
+  }
+
+  /** Videos that will still need Whisper. Queued ones wait out a cooldown and do not count during it. */
+  whisperBacklog(): number {
+    const totals = this.store.statusTotals();
+    const queued = this.activeCooldown() ? 0 : totals.queued ?? 0;
+    const transcribing = transcriptionReady() ? totals.transcribing ?? 0 : 0;
+    return queued + (totals.downloading ?? 0) + transcribing;
+  }
+
+  private onSubtitleLane<T>(task: () => Promise<T>): Promise<T> {
+    const run = this.subtitleLane.then(task, task);
+    this.subtitleLane = run.catch(() => undefined);
+    return run;
+  }
+
+  /** Makes the subtitles of the next downloaded video. False when no video could be taken. */
+  private async subtitleNext(): Promise<boolean> {
+    if (this.stopped) return false;
+    const nowIso = this.now().toISOString();
+    const video = this.store.videosInStatus("transcribing").find((v) => v.media_path && (!v.retry_after || v.retry_after <= nowIso));
+    if (!video) return false;
+    const playlist = findPlaylist(video.playlist_id);
+    const mediaPath = path.join(MEDIA_DIR, video.media_path!);
+    const report = this.progressReporter(video, "transcribing");
+    try {
+      const result = await produceSubtitles({
+        videoId: video.video_id,
+        mediaPath,
+        durationS: video.duration_s,
+        knownTranscript: video.subtitle_path ? path.join(MEDIA_DIR, video.subtitle_path) : null,
+        playlist,
+      }, {
+        fetchCaption: (videoId, lang, dest) =>
+          this.youtubeCall(() => fetchCaptionWithYtdlp(videoId, lang, dest, path.join(youtubeTmpRoot(), `${videoId}-captions`))),
+        onCaptionError: (lang, error) => {
+          // YouTube pushed back, now or on an earlier call: the captions are still worth waiting for.
+          const cooldown = this.activeCooldown();
+          if (cooldown) throw new NotYetError(new CooldownError(cooldown).message);
+          logger.warn("youtube", `Captions ${lang} of ${video.video_id} could not be fetched: ${message(error)}`);
+        },
+        transcribe: (req) => {
+          if (!transcriptionMayStart(gpuShared(), this.queue.running())) throw new NotYetError("Transcription waits for the translation batch to finish");
+          return this.transcribe(req, report);
+        },
+      });
+      this.progress.delete(video.video_id);
+      const subtitlePath = path.relative(MEDIA_DIR, result.transcriptPath).split(path.sep).join("/");
+      this.move(video, "translating", { now: this.now().toISOString(), attempts: 0, subtitlePath });
+      logger.info("youtube", `Subtitles of ${video.title}: transcript from ${result.source}, ${result.routes.map((r) => r.kind).join(", ") || "no other languages"}`);
+      if (result.jobsCreated > 0) this.queue.start();
+      this.finishTranslated();
+      this.queue.startHeld();
+      return true;
+    } catch (error) {
+      this.progress.delete(video.video_id);
+      // Nothing is wrong with the video: the backend, the GPU or YouTube is not free yet.
+      if (error instanceof NotYetError) return false;
+      this.retryOrFail(video, "transcribing", message(error));
+      return true;
+    }
+  }
+
   private async syncAndAnnounce(playlist: YoutubePlaylist, firstSync: boolean): Promise<SyncResult> {
     this.announce("youtube:playlist", { playlistId: playlist.id, checking: true });
     try {
@@ -266,6 +425,20 @@ export class YoutubeWorker {
     const cooldown = this.store.startCooldown(cause, this.now());
     logger.warn("youtube", `YouTube pushed back (${cause}); YouTube requests pause until ${cooldown.until}`);
     this.announce("youtube:cooldown", { until: cooldown.until, cause: cooldown.cause });
+    // Queued videos stop holding translation while YouTube is paused.
+    this.queue.startHeld();
+  }
+
+  /** An ordinary failure: back off 10 minutes, an hour, then 6 hours; the fourth failure sets failed. */
+  private retryOrFail(video: VideoRow, retryStatus: "queued" | "transcribing", reason: string): void {
+    const nowIso = this.now().toISOString();
+    const attempts = video.attempts + 1;
+    if (attempts > BACKOFF_MS.length) {
+      this.move(video, "failed", { now: nowIso, reason, attempts });
+      return;
+    }
+    const retryAfter = new Date(this.now().getTime() + BACKOFF_MS[attempts - 1]).toISOString();
+    this.move(video, retryStatus, { now: nowIso, reason, attempts, retryAfter });
   }
 
   /** A queued video whose file is already in the playlist folder skips the download. */
@@ -277,6 +450,7 @@ export class YoutubeWorker {
     this.store.updateMetadata(video.video_id, meta, nowIso);
     this.store.setStatus(video.video_id, "downloading", { now: nowIso });
     this.move(video, "transcribing", { now: nowIso, attempts: 0, mediaPath: `${folder.rel}/${file}` });
+    this.kickSubtitles();
     return true;
   }
 
@@ -306,7 +480,7 @@ export class YoutubeWorker {
       profile: playlist.media,
       tmpDir: path.join(youtubeTmpRoot(), video.video_id),
       destDir: folder.abs,
-      onProgress: this.progressReporter(video),
+      onProgress: this.progressReporter(video, "downloading"),
       signal: this.abort.signal,
     }).catch((error): DownloadResult => ({ ok: false, errorClass: "other", message: message(error) }));
     this.progress.delete(video.video_id);
@@ -317,7 +491,7 @@ export class YoutubeWorker {
   }
 
   /** Records every percentage; announces one when it moved 5 points or half a second passed. */
-  private progressReporter(video: VideoRow): (pct: number) => void {
+  private progressReporter(video: VideoRow, status: "downloading" | "transcribing"): (pct: number) => void {
     let lastAt = 0;
     let lastSent = -PROGRESS_STEP;
     return (pct) => {
@@ -327,7 +501,7 @@ export class YoutubeWorker {
       if (pct - lastSent < PROGRESS_STEP && at - lastAt < PROGRESS_EVERY_MS) return;
       lastAt = at;
       lastSent = pct;
-      this.announce("youtube:video", { videoId: video.video_id, playlistId: video.playlist_id, status: "downloading", pct });
+      this.announce("youtube:video", { videoId: video.video_id, playlistId: video.playlist_id, status, pct });
     };
   }
 
@@ -338,6 +512,7 @@ export class YoutubeWorker {
       this.store.clearCooldown();
       this.move(video, "transcribing", { now: nowIso, attempts: 0, mediaPath: `${folder.rel}/${result.mediaFile}` });
       logger.info("youtube", `Downloaded ${result.mediaFile} into ${folder.rel}`);
+      this.kickSubtitles();
       return;
     }
     logger.warn("youtube", `Download of ${video.video_id} failed (${result.errorClass}): ${result.message}`);
@@ -360,15 +535,8 @@ export class YoutubeWorker {
       case "format":
         this.move(video, "failed", { now: nowIso, reason });
         return;
-      case "other": {
-        const attempts = video.attempts + 1;
-        if (attempts > BACKOFF_MS.length) {
-          this.move(video, "failed", { now: nowIso, reason, attempts });
-          return;
-        }
-        const retryAfter = new Date(this.now().getTime() + BACKOFF_MS[attempts - 1]).toISOString();
-        this.move(video, "queued", { now: nowIso, reason, attempts, retryAfter });
-      }
+      case "other":
+        this.retryOrFail(video, "queued", reason);
     }
   }
 }

@@ -12,7 +12,7 @@ process.env.DATA_DIR = path.join(scratch, "data");
 process.env.CONFIG_DIR = path.join(scratch, "config");
 const FAKE = path.join(path.dirname(fileURLToPath(import.meta.url)), "fake-yt-dlp.mjs");
 
-const { classifyYtdlpError, downloadArgs, resolveYtdlpBin, runYtdlp, updateYtdlp, ytdlpVersion, dataYtdlpPath } =
+const { captionArgs, classifyYtdlpError, downloadArgs, resolveYtdlpBin, runYtdlp, updateYtdlp, ytdlpVersion, dataYtdlpPath } =
   await import("./ytdlp.js");
 const { youtubeStatus } = await import("../routes/youtube.js");
 
@@ -217,4 +217,14 @@ test("updateYtdlp copies a PATH binary into DATA_DIR/bin before updating it", as
 test("updateYtdlp surfaces a failed update as an error", async (t) => {
   withEnv({ SUBSMELT_YTDLP_BIN: FAKE, FAKE_YTDLP_STDERR: "ERROR: Unable to write to /usr/local/bin/yt-dlp\n", FAKE_YTDLP_EXIT: "1" }, t);
   await assert.rejects(updateYtdlp(), /Unable to write/);
+});
+
+test("caption args fetch one creator caption as SRT, anchored so en never also means en-GB", () => {
+  assert.deepEqual(captionArgs({ videoId: "iSn77jvjojA", lang: "pt.BR", tmpDir: "/t/part", homeDir: "/t/out", cookiesPath: "/t/cookies.txt" }), [
+    "--js-runtimes", "node", "--no-playlist", "--skip-download", "--write-subs",
+    "--sub-langs", "^pt\\.BR$", "--convert-subs", "srt",
+    "--paths", "temp:/t/part", "--paths", "home:/t/out",
+    "-o", "%(id)s.%(ext)s", "--sleep-requests", "1", "--cookies", "/t/cookies.txt",
+    "--", "https://www.youtube.com/watch?v=iSn77jvjojA",
+  ]);
 });

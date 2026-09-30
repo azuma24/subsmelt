@@ -235,6 +235,40 @@ export function downloadArgs(req: DownloadRequest): string[] {
   ];
 }
 
+export interface CaptionRequest {
+  videoId: string;
+  /** The caption's key in the info JSON's `subtitles`, such as "en" or "zh-Hant". */
+  lang: string;
+  tmpDir: string;
+  homeDir: string;
+  cookiesPath?: string;
+}
+
+/**
+ * Downloads one creator caption as SRT and nothing else. yt-dlp reads
+ * --sub-langs as regular expressions, so the key is anchored and escaped:
+ * "en" must not also fetch "en-GB". --write-subs never includes YouTube's
+ * automatic captions.
+ */
+export function captionArgs(req: CaptionRequest): string[] {
+  const pattern = `^${req.lang.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`;
+  return [
+    "--js-runtimes", "node",
+    "--no-playlist",
+    "--skip-download",
+    "--write-subs",
+    "--sub-langs", pattern,
+    "--convert-subs", "srt",
+    "--paths", `temp:${req.tmpDir}`,
+    "--paths", `home:${req.homeDir}`,
+    "-o", "%(id)s.%(ext)s",
+    "--sleep-requests", "1",
+    ...(req.cookiesPath ? ["--cookies", req.cookiesPath] : []),
+    "--",
+    videoUrl(req.videoId),
+  ];
+}
+
 export async function ytdlpVersion(): Promise<string | null> {
   const bin = resolveYtdlpBin();
   if (!bin) return null;
