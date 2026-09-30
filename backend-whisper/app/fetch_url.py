@@ -183,7 +183,8 @@ MAX_FETCH_BYTES = 5 * 1024 * 1024 * 1024
 def _media_urls(info: dict) -> list[str]:
     """Every URL yt-dlp will actually fetch from, after redirects and extractor hops."""
     urls = [info.get("webpage_url"), info.get("url")]
-    urls.extend(fmt.get("url") for fmt in info.get("requested_formats") or [])
+    for fmt in info.get("requested_formats") or []:
+        urls.extend(fmt.get(field) for field in ("url", "manifest_url", "fragment_base_url"))
     return [u for u in urls if isinstance(u, str) and u]
 
 
@@ -211,11 +212,19 @@ def _assert_within_size_cap(info: dict) -> None:
         )
 
 
+def _abort_over_cap(progress: dict) -> None:
+    """Progress hook: yt-dlp's ``max_filesize`` only guards plain HTTP downloads
+    (it compares Content-Length); fragmented HLS/DASH streams never see it, so
+    also stop on the bytes actually received."""
+    if int(progress.get("downloaded_bytes") or 0) > MAX_FETCH_BYTES:
+        raise UrlFetchError(f"Download exceeded the {MAX_FETCH_BYTES >> 20} MB fetch limit")
+
+
 def _assert_single_media(info: Any) -> None:
     """This endpoint fetches one file; a playlist or channel would fetch every entry."""
     if not info:
         raise UrlFetchError("No media found at URL")
-    if info.get("_type") == "playlist":
+    if info.get("_type") in ("playlist", "multi_video"):
         raise UrlFetchError(
             "URL points at a playlist or channel; paste the URL of a single video"
         )
@@ -253,6 +262,7 @@ def download_url(url: str, dest_dir: Path) -> Path:
         "format": "bestaudio/best",
         "restrictfilenames": True,
         "max_filesize": MAX_FETCH_BYTES,
+        "progress_hooks": [_abort_over_cap],
     }
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
