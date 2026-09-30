@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from app.formatters import write_srt, write_transcript
+from app.formatters import write_srt, write_transcript, write_txt, write_vtt
 
 
 def _two_segments():
@@ -36,6 +36,45 @@ class AssFormatterTests(unittest.TestCase):
     def test_unknown_format_falls_back_to_srt(self):
         txt = self._write("xyz")
         self.assertIn("-->", txt)
+
+
+class EmptyCueTests(unittest.TestCase):
+    def _segments(self):
+        return [
+            SimpleNamespace(start=0.0, end=1.0, text="a"),
+            SimpleNamespace(start=1.0, end=2.0, text="  "),
+            SimpleNamespace(start=2.0, end=3.0, text="b"),
+        ]
+
+    def test_srt_skips_blank_cues_and_renumbers(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "o.srt"
+            count = write_srt(self._segments(), out)
+            self.assertEqual(count, 2)
+            self.assertEqual(
+                out.read_text(encoding="utf-8"),
+                "1\n00:00:00,000 --> 00:00:01,000\na\n\n2\n00:00:02,000 --> 00:00:03,000\nb\n",
+            )
+
+    def test_vtt_skips_blank_cues(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "o.vtt"
+            count = write_vtt(self._segments(), out)
+            self.assertEqual(count, 2)
+            self.assertEqual(
+                out.read_text(encoding="utf-8"),
+                "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\na\n\n00:00:02.000 --> 00:00:03.000\nb\n",
+            )
+
+    def test_ass_and_txt_skip_blank_cues(self):
+        with tempfile.TemporaryDirectory() as d:
+            ass = Path(d) / "o.ass"
+            self.assertEqual(write_transcript(self._segments(), ass, "ass"), 2)
+            dialogue = [ln for ln in ass.read_text(encoding="utf-8").splitlines() if ln.startswith("Dialogue:")]
+            self.assertEqual(len(dialogue), 2)
+            txt = Path(d) / "o.txt"
+            self.assertEqual(write_txt(self._segments(), txt), 2)
+            self.assertEqual(txt.read_text(encoding="utf-8"), "a\nb\n")
 
 
 class FormatterTests(unittest.TestCase):
