@@ -10,7 +10,7 @@
 ## 0. Context & what already exists
 
 The server is **not** new. `backend-whisper/` is a working FastAPI service
-(`/health`, `/preflight`, `/transcribe`, `/transcribe/stream`, `/capabilities`)
+(`/health`, `/preflight`, `/transcribe`, `/transcribe/stream`, `/version`)
 that SubSmelt already drives via `src/server/transcription-client.ts`. This plan
 **packages and remote-hardens that service** — it does not rewrite it.
 
