@@ -25,6 +25,8 @@ export interface SyncDeps {
   exactUploadDate: (videoId: string) => Promise<string | null>;
   /** Added dates from the Data API, or null without a key. May throw. */
   addedDates: (playlistId: string) => Promise<Map<string, string> | null>;
+  /** Whether a playlist is still followed; videos of an unfollowed owner pass to the playlist listing them. */
+  isFollowed?: (playlistId: string) => boolean;
   now: () => Date;
 }
 
@@ -142,7 +144,7 @@ export async function syncPlaylist(store: YoutubeStore, playlist: YoutubePlaylis
         addedAt: addedDates?.get(entry.videoId) ?? null,
         initial: initialFor(entry),
       })),
-      { complete: listing.entries.length > 0 && listing.entries.length === listing.playlistCount, now, resetUntouched: firstSync },
+      { complete: listing.entries.length > 0 && listing.entries.length === listing.playlistCount, now, resetUntouched: firstSync, isFollowed: deps.isFollowed },
     );
     store.updateSyncState(playlist.id, {
       lastCheckedAt: now,

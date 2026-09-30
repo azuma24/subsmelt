@@ -173,15 +173,23 @@ const SELECTION_RANK: Partial<Record<VideoStatus, number>> = { skipped: 0, new: 
  * Where a listing leaves a video already on record. Only a video no one has
  * acted on can move: waiting (new, queued) or left out by a filter. The
  * owning playlist re-applies its selection on a first sync after a
- * re-follow. Another playlist takes the video over only with a more eager
- * selection, and its folder and profile then apply.
+ * re-follow. Another playlist takes the video over with a more eager
+ * selection, or always when the owner is no longer followed, and its folder
+ * and profile then apply.
  */
-function listedState(existing: ExistingVideo, playlistId: string, initial: InitialState, resetUntouched: boolean): ListedState {
-  const keep = { playlistId: existing.playlist_id, status: existing.status, skipKind: existing.skip_kind };
+function listedState(
+  existing: ExistingVideo,
+  playlistId: string,
+  initial: InitialState,
+  { resetUntouched, ownerFollowed }: { resetUntouched: boolean; ownerFollowed: boolean },
+): ListedState {
+  const orphaned = !ownerFollowed && existing.playlist_id !== playlistId;
+  const keep = { playlistId: orphaned ? playlistId : existing.playlist_id, status: existing.status, skipKind: existing.skip_kind };
   const untouched = existing.user_queued_at === null
     && (existing.status === "new" || existing.status === "queued" || (existing.status === "skipped" && existing.skip_kind === "before_start"));
   const listed = { playlistId, status: initial.status, skipKind: initial.skipKind ?? null };
   if (!untouched) return keep;
+  if (orphaned) return listed;
   if (existing.playlist_id === playlistId) return resetUntouched ? listed : keep;
   const rank = SELECTION_RANK[initial.status];
   return rank !== undefined && rank > SELECTION_RANK[existing.status]! ? listed : keep;
@@ -201,7 +209,12 @@ export class YoutubeStore {
    * members are marked removed only when `complete` says the listing covers
    * the whole playlist.
    */
-  applyListing(playlistId: string, videos: ListedVideo[], opts: { complete: boolean; now: string; resetUntouched?: boolean }): ApplyListingResult {
+  applyListing(
+    playlistId: string,
+    videos: ListedVideo[],
+    opts: { complete: boolean; now: string; resetUntouched?: boolean; isFollowed?: (playlistId: string) => boolean },
+  ): ApplyListingResult {
+    const isFollowed = opts.isFollowed ?? (() => true);
     const existingVideo = this.db.prepare("SELECT playlist_id, status, skip_kind, user_queued_at FROM youtube_videos WHERE video_id = ?");
     const insertVideo = this.db.prepare(`
       INSERT INTO youtube_videos (video_id, playlist_id, title, channel, duration_s, published_at, added_at, status, skip_kind, reason, created_at, updated_at)
@@ -213,6 +226,9 @@ export class YoutubeStore {
         duration_s = COALESCE(excluded.duration_s, youtube_videos.duration_s),
         published_at = COALESCE(youtube_videos.published_at, excluded.published_at),
         added_at = COALESCE(excluded.added_at, youtube_videos.added_at),
+        attempts = CASE WHEN excluded.status <> youtube_videos.status OR (excluded.playlist_id <> youtube_videos.playlist_id AND excluded.status IN ('new', 'queued')) THEN 0 ELSE youtube_videos.attempts END,
+        retry_after = CASE WHEN excluded.status <> youtube_videos.status OR (excluded.playlist_id <> youtube_videos.playlist_id AND excluded.status IN ('new', 'queued')) THEN NULL ELSE youtube_videos.retry_after END,
+        reason = CASE WHEN excluded.status <> youtube_videos.status OR (excluded.playlist_id <> youtube_videos.playlist_id AND excluded.status IN ('new', 'queued')) THEN excluded.reason ELSE youtube_videos.reason END,
         status = excluded.status,
         skip_kind = excluded.skip_kind,
         updated_at = @now
@@ -240,7 +256,7 @@ export class YoutubeStore {
         else if (item.removed_at) restored += 1;
         const existing = existingVideo.get(video.videoId) as ExistingVideo | undefined;
         const state = existing
-          ? listedState(existing, playlistId, video.initial, opts.resetUntouched ?? false)
+          ? listedState(existing, playlistId, video.initial, { resetUntouched: opts.resetUntouched ?? false, ownerFollowed: isFollowed(existing.playlist_id) })
           : { playlistId, status: video.initial.status, skipKind: video.initial.skipKind ?? null };
         insertVideo.run({
           videoId: video.videoId,

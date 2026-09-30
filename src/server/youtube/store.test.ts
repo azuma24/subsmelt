@@ -213,3 +213,20 @@ test("another playlist never downgrades a video or overrides the user's skip or 
   assert.deepEqual(owner(store, "aaaaaaaaaa3"), [OTHER, "skipped", "before_start"]);
   assert.deepEqual(owner(store, "aaaaaaaaaa4"), [OTHER, "queued", null]);
 });
+
+test("a playlist takes over every video whose owner is no longer followed, with fresh retry state", () => {
+  const store = freshStore();
+  store.applyListing(OTHER, [listed("aaaaaaaaaa1", 1), listed("aaaaaaaaaa2", 2), listed("aaaaaaaaaa3", 3)], { complete: true, now: T0, resetUntouched: true });
+  store.setStatus("aaaaaaaaaa1", "downloading", { now: T0 });
+  store.setStatus("aaaaaaaaaa1", "queued", { now: T0, attempts: 2, retryAfter: T1, reason: "ERROR: boom" });
+  store.applyUserAction("aaaaaaaaaa2", "download", T0);
+  store.setStatus("aaaaaaaaaa3", "downloading", { now: T0 });
+
+  const followed = (id: string) => id === PL;
+  store.applyListing(PL, [listed("aaaaaaaaaa1", 1), listed("aaaaaaaaaa2", 2), listed("aaaaaaaaaa3", 3)], { complete: true, now: T1, resetUntouched: true, isFollowed: followed });
+  const v1 = store.getVideo("aaaaaaaaaa1")!;
+  assert.deepEqual([v1.playlist_id, v1.status, v1.attempts, v1.retry_after, v1.reason], [PL, "queued", 0, null, null]);
+  assert.deepEqual(owner(store, "aaaaaaaaaa2"), [PL, "queued", null]);
+  assert.deepEqual(owner(store, "aaaaaaaaaa3"), [PL, "downloading", null]);
+  assert.equal(store.nextQueued([PL], T1)?.video_id, "aaaaaaaaaa2");
+});

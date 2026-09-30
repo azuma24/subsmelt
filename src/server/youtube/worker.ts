@@ -57,6 +57,7 @@ export function liveSyncDeps(): SyncDeps {
       const key = getSetting("youtube_api_key");
       return key ? fetchAddedDates(playlistId, key) : null;
     },
+    isFollowed: (playlistId) => Boolean(findPlaylist(playlistId)),
     now: () => new Date(),
   };
 }
