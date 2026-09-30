@@ -92,7 +92,7 @@ function backendErrorMessage(body: unknown, status: number): string {
       // 409 model_not_downloaded shape {code, model}). Render an actionable line
       // instead of falling through to the useless "HTTP <status>" generic.
       if (d.code === "model_not_downloaded" && typeof d.model === "string") {
-        return `Model "${d.model}" is not downloaded — download it in Settings → Speech to Text → Whisper Models first`;
+        return `Model "${d.model}" is not downloaded — download it in Settings → Speech-to-text → Speech-to-text models first`;
       }
       if (typeof d.code === "string") return `Transcription failed (${d.code})`;
     }

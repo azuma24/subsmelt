@@ -12,6 +12,13 @@ test("summarizeTranscriptionError redacts filesystem paths", () => {
   assert.match(summary, /\[path\]/);
 });
 
+test("summarizeTranscriptionError keeps model ids intact", () => {
+  assert.equal(
+    summarizeTranscriptionError("Model 'nemotron-3.5-asr' is not downloaded"),
+    "Model 'nemotron-3.5-asr' is not downloaded",
+  );
+});
+
 test("history store records attempts and keeps newest entries first", () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-history-test-"));
   const store = new TranscriptionHistoryStore(path.join(tmpDir, "transcription-history.json"));
