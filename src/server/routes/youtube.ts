@@ -16,9 +16,11 @@ import {
   savePlaylist,
   type YoutubePlaylist,
 } from "../youtube/playlists.js";
-import type { YoutubeStore } from "../youtube/store.js";
+import { cookiesStatus, parseCookies, removeCookies, saveCookies } from "../youtube/cookies.js";
+import { IllegalTransitionError, type YoutubeStore } from "../youtube/store.js";
 import { changeBackfill, isUnavailableEntry, listPlaylistWithYtdlp } from "../youtube/sync.js";
-import { isPlaylistId, parsePlaylistInput } from "../youtube/urls.js";
+import { isPlaylistId, isVideoId, parsePlaylistInput } from "../youtube/urls.js";
+import type { UserAction } from "../youtube/video-status.js";
 import { CooldownError, liveSyncDeps, nextCheckAt, type YoutubeWorker } from "../youtube/worker.js";
 import { ffmpegVersion, resolveYtdlpBin, updateYtdlp, ytdlpVersion } from "../youtube/ytdlp.js";
 
@@ -45,6 +47,7 @@ export async function youtubeStatus(worker?: YoutubeWorker) {
     ffmpeg: { available: ffmpeg !== null, version: ffmpeg },
     apiKey: Boolean(getSetting("youtube_api_key")),
     notes: notesFolderStatus(),
+    cookies: cookiesStatus(),
     cooldown: cooldown && { until: cooldown.until, cause: cooldown.cause },
   };
 }
@@ -61,6 +64,8 @@ function playlistSummary(store: YoutubeStore, worker: YoutubeWorker, playlist: Y
 // A cooldown refusal is the server asking the client to wait, not a YouTube failure.
 const laneErrorStatus = (error: unknown, fallback: number) => (error instanceof CooldownError ? 503 : fallback);
 
+const USER_ACTION_NAMES: readonly UserAction[] = ["download", "retry", "skip"];
+
 function withPlaylist(res: Response, id: string): YoutubePlaylist | null {
   const playlist = isPlaylistId(id) ? findPlaylist(id) : undefined;
   if (!playlist) {
@@ -73,6 +78,35 @@ function withPlaylist(res: Response, id: string): YoutubePlaylist | null {
 export function registerYoutubeRoutes(app: Express, store: YoutubeStore, worker: YoutubeWorker): void {
   app.get("/api/youtube/status", async (_req, res) => {
     res.json(await youtubeStatus(worker));
+  });
+
+  app.put("/api/youtube/cookies", (req, res) => {
+    const cookies = parseCookies(req.body?.content);
+    if (!cookies.ok) return res.status(400).json({ error: cookies.error });
+    const status = saveCookies(cookies.value);
+    logger.info("youtube", "Cookies uploaded");
+    res.json(status);
+  });
+
+  app.delete("/api/youtube/cookies", (_req, res) => {
+    removeCookies();
+    logger.info("youtube", "Cookies removed");
+    res.json(cookiesStatus());
+  });
+
+  app.post("/api/youtube/videos/:videoId/:action", (req, res) => {
+    const { videoId, action } = req.params;
+    if (!USER_ACTION_NAMES.includes(action as UserAction)) return res.status(404).json({ error: "Unknown action" });
+    if (!isVideoId(videoId) || !store.getVideo(videoId)) return res.status(404).json({ error: "Unknown video" });
+    try {
+      const row = store.applyUserAction(videoId, action as UserAction, new Date().toISOString());
+      broadcast("youtube:video", { videoId, playlistId: row.playlist_id, status: row.status });
+      worker.kick();
+      res.json(row);
+    } catch (error) {
+      if (error instanceof IllegalTransitionError) return res.status(409).json({ error: message(error) });
+      throw error;
+    }
   });
 
   app.post("/api/youtube/ytdlp/update", async (_req, res) => {

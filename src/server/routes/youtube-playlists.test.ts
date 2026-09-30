@@ -140,6 +140,48 @@ test("changing the backfill releases the videos it now keeps", async () => {
   assert.deepEqual(summary.backfill, { kind: "posted_since", date: "2026-01-01" });
 });
 
+test("row actions move a video by the action table and refuse the rest", async () => {
+  const skip = await call("POST", "/api/youtube/videos/uXspbC2srEQ/skip");
+  assert.deepEqual([skip.status, skip.body.status, skip.body.skip_kind], [200, "skipped", "user"]);
+  const download = await call("POST", "/api/youtube/videos/uXspbC2srEQ/download");
+  assert.deepEqual([download.status, download.body.status, typeof download.body.user_queued_at], [200, "queued", "string"]);
+  assert.deepEqual(await call("POST", "/api/youtube/videos/uXspbC2srEQ/retry"), {
+    status: 409,
+    body: { error: "Video uXspbC2srEQ cannot move from queued to queued" },
+  });
+  assert.deepEqual(await call("POST", "/api/youtube/videos/uXspbC2srEQ/delete"), { status: 404, body: { error: "Unknown action" } });
+  assert.deepEqual(await call("POST", "/api/youtube/videos/not-a-video/skip"), { status: 404, body: { error: "Unknown video" } });
+});
+
+test("cookies are stored with mode 0600 and only their presence is ever reported", async () => {
+  const bad = await call("PUT", "/api/youtube/cookies", { content: "hello" });
+  assert.deepEqual(bad, { status: 400, body: { error: "This is not a cookies.txt file in Netscape format" } });
+
+  const jar = "# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t1893456000\tSID\tsecret-session\n";
+  const put = await call("PUT", "/api/youtube/cookies", { content: jar });
+  assert.equal(put.status, 200);
+  assert.equal(put.body.present, true);
+  const file = path.join(root, "data", "youtube", "cookies.txt");
+  assert.equal(fs.readFileSync(file, "utf8"), jar);
+  assert.equal(fs.statSync(file).mode & 0o777, 0o600);
+
+  const status = (await call("GET", "/api/youtube/status")).body;
+  assert.deepEqual(Object.keys(status.cookies), ["present", "updatedAt"]);
+  assert.equal(JSON.stringify(status).includes("secret-session"), false);
+  assert.equal(status.cooldown, null);
+
+  assert.deepEqual(await call("DELETE", "/api/youtube/cookies"), { status: 200, body: { present: false, updatedAt: null } });
+  assert.equal(fs.existsSync(file), false);
+});
+
+test("the download folder setting must stay inside the media folder", async () => {
+  const escape = await call("POST", "/api/settings", { youtube_download_dir: "../outside" });
+  assert.deepEqual(escape, { status: 400, body: { error: "The YouTube download folder must be a folder inside the media folder" } });
+  const tidy = await call("POST", "/api/settings", { youtube_download_dir: " Videos//YouTube/ " });
+  assert.deepEqual(tidy.body, { ok: true, rejected: [] });
+  assert.equal((await call("GET", "/api/settings")).body.youtube_download_dir, "Videos/YouTube");
+});
+
 test("editing changes settings but never the backfill", async () => {
   const edit = await call("PUT", `/api/youtube/playlists/${PL}`, { mode: "manual", checkEveryMinutes: 360, backfill: { kind: "all" } });
   assert.equal(edit.status, 200);
