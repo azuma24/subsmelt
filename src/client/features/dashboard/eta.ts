@@ -1,3 +1,5 @@
+import type { JobRow } from "../../types";
+
 /**
  * Time-remaining estimates for translation work.
  *
@@ -44,6 +46,20 @@ export function estimateJobEta({ completed, total, elapsedMs }: JobEtaInput): Jo
     cuesPerMinute: cuesPerMs * 60_000,
     remainingMs: (total - completed) / cuesPerMs,
   };
+}
+
+/**
+ * Durations of the most recently started finished jobs, newest first. The jobs
+ * list arrives newest-first, so callers must not take its tail. Enough for a
+ * stable median without letting ancient runs (different model, different
+ * settings) skew the projection.
+ */
+export function recentDurationsSeconds(finishedJobs: readonly JobRow[], limit: number): number[] {
+  return [...finishedJobs]
+    .sort((a, b) => (b.started_at ?? "").localeCompare(a.started_at ?? ""))
+    .map((job) => job.duration_seconds)
+    .filter((seconds): seconds is number => typeof seconds === "number" && seconds > 0)
+    .slice(0, limit);
 }
 
 /**

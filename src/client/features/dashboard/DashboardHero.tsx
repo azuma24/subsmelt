@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import type { JobRow } from "../../types";
 import { ActiveJobCard } from "./ActiveJobCard";
 import { formatTokens, formatCost } from "../../lib";
+import { recentDurationsSeconds } from "./eta";
 
 interface StatusSegment {
   key: string;
@@ -46,12 +47,7 @@ export function DashboardHero({
     ? t("dashboard.stat.tokenBudget", { used: formatTokens(totalTokens), budget: formatTokens(tokenBudget) })
     : costStr;
   const overBudget = tokenBudget > 0 && totalTokens > tokenBudget;
-  // Last 20 finished jobs are enough for a stable median without letting ancient
-  // runs (different model, different settings) skew the projection.
-  const recentDurationsSeconds = completedJobs
-    .map((job) => job.duration_seconds)
-    .filter((seconds): seconds is number => typeof seconds === "number" && seconds > 0)
-    .slice(-20);
+  const recentDurations = recentDurationsSeconds(completedJobs, 20);
 
   const cellLabel = "text-[10px] font-medium uppercase tracking-[0.7px] leading-none";
   const cellValue = "mt-2 font-mono text-[20px] font-semibold tabular-nums leading-none";
@@ -102,7 +98,7 @@ export function DashboardHero({
               key={j.id}
               job={j}
               pendingCount={i === 0 ? pendingJobs.length : 0}
-              recentDurationsSeconds={recentDurationsSeconds}
+              recentDurationsSeconds={recentDurations}
             />
           ))}
         </div>
