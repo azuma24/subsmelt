@@ -7,64 +7,18 @@ import threading
 from pathlib import Path
 from typing import Iterator, Mapping
 
+from .catalog import ADVERTISED_MODELS, descriptor_for
 from .model_cache import (
+    dir_has_weights,
     cache_dir_name_for_model,
     cache_root_from_env,
     describe_model_cache,
     repo_id_for_model,
 )
 from .preflight import (
-    MODEL_RAM_MB,
-    MODEL_VRAM_MB,
     available_ram_mb,
     model_ram_requirements_mb,
     model_vram_requirements_mb,
-)
-
-# The set of models this backend advertises and is willing to manage. Mirrors
-# the list surfaced by ``capabilities()`` in main.py. Any model id outside this
-# set is rejected with a 400 by the management endpoints.
-ADVERTISED_MODELS: tuple[str, ...] = (
-    "tiny",
-    "base",
-    "small",
-    "medium",
-    "large-v1",
-    "large-v2",
-    "large-v3",
-    "distil-large-v3",
-    "large-v3-turbo",
-)
-
-# Approximate on-disk download sizes (MB) for the faster-whisper (CTranslate2)
-# int8/float16 weights from the Systran repos. These are APPROXIMATE — surfaced
-# only so the UI can show a "~X MB" download estimate BEFORE a model is present.
-# Once a model is downloaded the real on-disk size is reported instead. Sourced
-# from the published Systran/faster-whisper-<model> repo artifact sizes; treat
-# as guidance, not an exact contract.
-APPROX_MODEL_SIZE_MB: dict[str, int] = {
-    "tiny": 75,
-    "base": 145,
-    "small": 484,
-    "medium": 1530,
-    "large-v1": 3090,
-    "large-v2": 3090,
-    "large-v3": 3090,
-    "distil-large-v3": 1510,
-    "large-v3-turbo": 1620,
-}
-
-# Fail fast at import if an advertised model lacks a resource entry. Without this,
-# preflight's MODEL_RAM_MB/MODEL_VRAM_MB .get(..., small) fallback would silently
-# gate a newly-added large model with small's 4 GB requirement and approve an
-# unsafe transcription. Keep these tables in lockstep with ADVERTISED_MODELS.
-_missing_resource = [
-    m
-    for m in ADVERTISED_MODELS
-    if m not in MODEL_RAM_MB or m not in MODEL_VRAM_MB or m not in APPROX_MODEL_SIZE_MB
-]
-assert not _missing_resource, (
-    f"Advertised models missing RAM/VRAM/size table entries: {_missing_resource}"
 )
 
 
@@ -131,9 +85,8 @@ def describe_models(env: Mapping[str, str] | None = None) -> list[dict]:
     """Describe every advertised model for ``GET /models``.
 
     For each model: downloaded flag + cachePath come from
-    :func:`describe_model_cache`; requiredRamMb / requiredVramMb come from the
-    preflight tables; sizeMb is the real on-disk size when downloaded, else the
-    APPROXIMATE download size from :data:`APPROX_MODEL_SIZE_MB`.
+    :func:`describe_model_cache`; sizeMb is the real on-disk size when
+    downloaded, else the descriptor's approximate download size.
     """
     free_ram = available_ram_mb()
     models: list[dict] = []
@@ -142,9 +95,9 @@ def describe_models(env: Mapping[str, str] | None = None) -> list[dict]:
         downloaded = bool(cache["cached"])
         cache_path = cache["cache_path"]
         if downloaded and cache_path:
-            size_mb: int | None = _dir_size_mb(Path(cache_path))
+            size_mb = _dir_size_mb(Path(cache_path))
         else:
-            size_mb = APPROX_MODEL_SIZE_MB.get(model)
+            size_mb = descriptor_for(model).size_mb
         models.append(
             {
                 "id": model,
@@ -207,16 +160,15 @@ def _download_lock(model: str) -> threading.Lock:
 
 
 def _snapshot_has_weights(snapshot_dir: str | None) -> bool:
-    """True when a downloaded snapshot dir actually holds CTranslate2 weights.
+    """Guard against a partial download leaving the dir present but weightless
+    (which would otherwise read as "downloaded" and then fail every transcription)."""
+    return bool(snapshot_dir) and dir_has_weights(Path(snapshot_dir))
 
-    faster-whisper models carry a ``model.bin``; guard against a partial download
-    leaving the dir present but weightless (which would otherwise read as
-    "downloaded" and then fail every transcription).
-    """
-    if not snapshot_dir:
-        return False
-    p = Path(snapshot_dir)
-    return (p / "model.bin").exists() or any(p.glob("*.safetensors"))
+
+def _download_scope(model: str) -> dict:
+    """``snapshot_download`` kwargs limiting a single-file model to that file."""
+    weights_file = descriptor_for(model).weights_file
+    return {"allow_patterns": [weights_file]} if weights_file else {}
 
 
 def _make_progress_tqdm(progress_queue: "queue.Queue[dict]"):
@@ -325,6 +277,7 @@ def download_model_events(
                     repo_id=repo_id_for(normalized),
                     cache_dir=str(_download_cache_dir(env)),
                     tqdm_class=tqdm_class,
+                    **_download_scope(normalized),
                 )
                 result_holder["path"] = path
             except Exception as exc:  # noqa: BLE001 - surface as a terminal error line
@@ -366,8 +319,8 @@ def download_model_events(
             yield {
                 "type": "error",
                 "error": (
-                    "Download finished but model weights (model.bin) are missing; the "
-                    "snapshot is incomplete — delete it and download again"
+                    "Download finished but the model weights (model.bin or .gguf) are "
+                    "missing; the snapshot is incomplete — delete it and download again"
                 ),
                 "model": normalized,
             }

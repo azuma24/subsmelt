@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from typing import Mapping, TypedDict
 
+from .catalog import descriptor_for
 from .preflight import evaluate_model_safety
 
 
@@ -76,6 +77,9 @@ def repo_id_for_model(model: str) -> str:
     the Systran naming convention, when that registry is unavailable.
     """
     normalized = (model or "").strip().lower()
+    descriptor = descriptor_for(normalized)
+    if descriptor is not None and descriptor.repo_id:
+        return descriptor.repo_id
     fw = _faster_whisper_repos()
     if normalized in fw:
         return fw[normalized]
@@ -98,16 +102,17 @@ def _candidate_cache_paths(model: str, cache_root: Path) -> list[Path]:
     ]
 
 
-def _dir_has_weights(d: Path) -> bool:
-    """True when a model dir holds CTranslate2 weights (``model.bin``).
+def dir_has_weights(d: Path) -> bool:
+    """True when a model dir holds weights: CTranslate2 ``model.bin`` (or
+    ``*.safetensors``) for Whisper, a ``*.gguf`` for Nemotron.
 
     Detection must require the actual weights, not just a snapshot directory:
     a partial/interrupted download can leave the dir present but weightless, and
     reporting that as "downloaded" makes the model show ✓ yet fail every
-    transcription. Accept ``*.safetensors`` too for forward-compat.
+    transcription.
     """
     try:
-        return (d / "model.bin").exists() or any(d.glob("*.safetensors"))
+        return (d / "model.bin").exists() or any(d.glob("*.safetensors")) or any(d.glob("*.gguf"))
     except OSError:  # pragma: no cover - race with deletion
         return False
 
@@ -119,10 +124,10 @@ def _first_existing_path(candidates: list[Path]) -> Path | None:
                 snapshots = sorted((path for path in candidate.iterdir() if path.is_dir()), key=lambda path: path.name)
                 # Newest snapshot that actually contains weights (skip incomplete ones).
                 for snapshot in reversed(snapshots):
-                    if _dir_has_weights(snapshot):
+                    if dir_has_weights(snapshot):
                         return snapshot
                 continue
-            if _dir_has_weights(candidate):
+            if dir_has_weights(candidate):
                 return candidate
     return None
 
