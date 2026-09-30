@@ -1028,7 +1028,8 @@
     "selectFolder": "Selecionar todos os ficheiros em {{name}}",
     "transcribingNow": "a transcrever agora",
     "selectedSummary": "{{count}} ficheiro(s) selecionado(s)",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "Não foi possível carregar a lista de modelos, pelo que não é possível iniciar a transcrição."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
@@ -1049,6 +1050,7 @@
     "attempts": "{{count}} tentativas",
     "retryAllFailed": "Repetir {{count}} falhados",
     "retriedAll": "{{ok}} de {{total}} ficheiros repetidos.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "Falha ao tentar novamente: {{message}}"
   }
 }

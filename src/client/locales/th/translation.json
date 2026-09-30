@@ -1028,7 +1028,8 @@
     "selectFolder": "เลือกไฟล์ทั้งหมดใน {{name}}",
     "transcribingNow": "กำลังถอดเสียง",
     "selectedSummary": "เลือกแล้ว {{count}} ไฟล์",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "โหลดรายการโมเดลไม่สำเร็จ จึงเริ่มการถอดเสียงไม่ได้"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
@@ -1049,6 +1050,7 @@
     "attempts": "{{count}} ครั้ง",
     "retryAllFailed": "ลองใหม่ {{count}} รายการที่ล้มเหลว",
     "retriedAll": "ลองใหม่ {{ok}} จาก {{total}} ไฟล์",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "ลองใหม่ไม่สำเร็จ: {{message}}"
   }
 }

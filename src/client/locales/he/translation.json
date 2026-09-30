@@ -1028,7 +1028,8 @@
     "selectFolder": "בחירת כל הקבצים ב-{{name}}",
     "transcribingNow": "מתמלל כעת",
     "selectedSummary": "{{count}} קבצים נבחרו",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "לא ניתן לטעון את רשימת המודלים, ולכן אי אפשר להתחיל בתמלול."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
@@ -1049,6 +1050,7 @@
     "attempts": "{{count}} ניסיונות",
     "retryAllFailed": "נסה שוב {{count}} כשלונות",
     "retriedAll": "בוצע ניסיון חוזר ל-{{ok}} מתוך {{total}} קבצים.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "הניסיון החוזר נכשל: {{message}}"
   }
 }

@@ -1028,7 +1028,8 @@
     "selectFolder": "{{name}}의 모든 파일 선택",
     "transcribingNow": "전사 중",
     "selectedSummary": "{{count}}개 파일 선택됨",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "모델 목록을 불러오지 못해 전사를 시작할 수 없습니다."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
@@ -1049,6 +1050,7 @@
     "attempts": "{{count}}회 시도",
     "retryAllFailed": "실패한 {{count}}개 재시도",
     "retriedAll": "{{total}}개 중 {{ok}}개 파일을 재시도했습니다.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "재시도 실패: {{message}}"
   }
 }

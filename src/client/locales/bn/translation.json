@@ -1028,7 +1028,8 @@
     "selectFolder": "{{name}}-এর সব ফাইল নির্বাচন করুন",
     "transcribingNow": "এখন প্রতিলিপি হচ্ছে",
     "selectedSummary": "{{count}}টি ফাইল নির্বাচিত",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "মডেলের তালিকা লোড করা যায়নি, তাই প্রতিলিপি শুরু করা যাবে না।"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
@@ -1049,6 +1050,7 @@
     "attempts": "{{count}}টি প্রচেষ্টা",
     "retryAllFailed": "{{count}}টি ব্যর্থ পুনরায় চেষ্টা",
     "retriedAll": "{{total}}টির মধ্যে {{ok}}টি ফাইল পুনরায় চেষ্টা করা হয়েছে।",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "পুনরায় চেষ্টা ব্যর্থ হয়েছে: {{message}}"
   }
 }

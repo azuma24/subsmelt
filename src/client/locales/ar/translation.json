@@ -1028,7 +1028,8 @@
     "selectFolder": "تحديد كل الملفات في {{name}}",
     "transcribingNow": "جارٍ النسخ الآن",
     "selectedSummary": "تم تحديد {{count}} ملف",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "تعذّر تحميل قائمة النماذج، لذا لا يمكن بدء النسخ."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
@@ -1049,6 +1050,7 @@
     "attempts": "{{count}} محاولات",
     "retryAllFailed": "إعادة محاولة {{count}} فاشلة",
     "retriedAll": "أُعيدت محاولة {{ok}} من {{total}} ملفات.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "فشلت إعادة المحاولة: {{message}}"
   }
 }

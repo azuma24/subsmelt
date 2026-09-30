@@ -78,7 +78,8 @@
     "toggleFolder": "Toggle folder {{name}}",
     "selectFolder": "Select all files in {{name}}",
     "transcribingNow": "transcribing now",
-    "selectedSummary": "{{count}} file(s) selected"
+    "selectedSummary": "{{count}} file(s) selected",
+    "modelsLoadFailed": "The model list could not be loaded, so transcription cannot start."
   },
   "convert": {
     "title": "Subtitle Converter",
@@ -924,7 +925,8 @@
     "attempts": "{{count}} attempts",
     "retryAllFailed": "Retry {{count}} failed",
     "retriedAll": "Retried {{ok}} of {{total}} files.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "Retry failed: {{message}}"
   },
   "logs": {
     "title": "Logs",

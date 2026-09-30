@@ -1028,7 +1028,8 @@
     "selectFolder": "{{name}} की सभी फ़ाइलें चुनें",
     "transcribingNow": "अभी ट्रांसक्राइब हो रहा है",
     "selectedSummary": "{{count}} फ़ाइलें चुनी गईं",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "मॉडल सूची लोड नहीं हो सकी, इसलिए ट्रांसक्रिप्शन शुरू नहीं हो सकता।"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
@@ -1049,6 +1050,7 @@
     "attempts": "{{count}} प्रयास",
     "retryAllFailed": "{{count}} विफल पुनः प्रयास करें",
     "retriedAll": "{{total}} में से {{ok}} फ़ाइलें पुनः प्रयास की गईं।",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "पुनः प्रयास विफल: {{message}}"
   }
 }

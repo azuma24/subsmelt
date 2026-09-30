@@ -1028,7 +1028,8 @@
     "selectFolder": "選取 {{name}} 中的所有檔案",
     "transcribingNow": "正在轉錄",
     "selectedSummary": "已選取 {{count}} 個檔案",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "無法載入模型清單，因此無法開始轉錄。"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
@@ -1049,6 +1050,7 @@
     "attempts": "{{count}} 次嘗試",
     "retryAllFailed": "重試 {{count}} 個失敗項",
     "retriedAll": "已重試 {{total}} 個檔案中的 {{ok}} 個。",
-    "failedFallback": "轉錄失敗。"
+    "failedFallback": "轉錄失敗。",
+    "retryFailed": "重試失敗：{{message}}"
   }
 }

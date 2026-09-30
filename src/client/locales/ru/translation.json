@@ -1028,7 +1028,8 @@
     "selectFolder": "Выбрать все файлы в {{name}}",
     "transcribingNow": "идёт расшифровка",
     "selectedSummary": "Выбрано файлов: {{count}}",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "Не удалось загрузить список моделей, поэтому транскрипцию нельзя запустить."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
@@ -1049,6 +1050,7 @@
     "attempts": "попыток: {{count}}",
     "retryAllFailed": "Повторить {{count}} неудачных",
     "retriedAll": "Повторено файлов: {{ok}} из {{total}}.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "Не удалось повторить: {{message}}"
   }
 }

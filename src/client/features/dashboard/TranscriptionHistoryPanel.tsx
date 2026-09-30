@@ -148,7 +148,9 @@ export function TranscriptionHistoryPanel({
                     <button
                       type="button"
                       onClick={() => onRetry(latest)}
-                      disabled={activeRetry || isTranscribePending}
+                      // One run per file: no retry while any retry or batch is in
+                      // flight, or while the backend still reports this file running.
+                      disabled={isRetryPending || isTranscribePending || latest.status === "running"}
                       className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs font-medium text-[var(--text)] disabled:opacity-40"
                     >
                       {activeRetry ? t("transcriptionHistory.retrying") : t("transcriptionHistory.retry")}
