@@ -30,19 +30,46 @@ def _with_speaker(segment: object) -> str:
     return f"[{spk}] {text}" if spk else text
 
 
+# CJK text carries no spaces, so a "word" can be a whole sentence. These drive
+# the character-level fallback: break after sentence punctuation when one sits
+# in the second half of a line, never open a line with closing punctuation and
+# never close one with opening punctuation.
+_BREAK_AFTER = "。、，．！？,.!?;"
+_NO_LINE_START = "。、，．！？）」』】〕〉》’”…,.!?;:"
+_NO_LINE_END = "（「『【〔〈《‘“"
+
+
+def _chunk_unspaced(run: str, max_len: int) -> list[str]:
+    pieces: list[str] = []
+    while len(run) > max_len:
+        cut = max_len
+        for i in range(max_len, max_len // 2, -1):
+            if run[i - 1] in _BREAK_AFTER:
+                cut = i
+                break
+        while cut > 1 and (run[cut] in _NO_LINE_START or run[cut - 1] in _NO_LINE_END):
+            cut -= 1
+        pieces.append(run[:cut])
+        run = run[cut:]
+    pieces.append(run)
+    return pieces
+
+
 def _wrap_text(text: str, max_line_length: int | None = None) -> str:
     stripped = text.strip()
     if not stripped or not max_line_length or max_line_length < 1:
         return stripped
 
-    words = stripped.split()
-    if not words:
-        return stripped
-
     lines: list[str] = []
-    current = words[0]
-    for word in words[1:]:
-        candidate = f"{current} {word}"
+    current = ""
+    for word in stripped.split():
+        if len(word) > max_line_length:
+            if current:
+                lines.append(current)
+            *full, current = _chunk_unspaced(word, max_line_length)
+            lines.extend(full)
+            continue
+        candidate = f"{current} {word}" if current else word
         if len(candidate) <= max_line_length:
             current = candidate
         else:

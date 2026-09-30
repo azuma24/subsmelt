@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from app.formatters import write_srt, write_transcript, write_txt, write_vtt
+from app.formatters import _wrap_text, write_srt, write_transcript, write_txt, write_vtt
 
 
 def _two_segments():
@@ -75,6 +75,21 @@ class EmptyCueTests(unittest.TestCase):
             txt = Path(d) / "o.txt"
             self.assertEqual(write_txt(self._segments(), txt), 2)
             self.assertEqual(txt.read_text(encoding="utf-8"), "a\nb\n")
+
+
+class CjkWrapTests(unittest.TestCase):
+    def test_unspaced_text_wraps_by_character_count(self):
+        text = "これは日本語の長い字幕テキストで空白がありません"
+        self.assertEqual(_wrap_text(text, 10), "これは日本語の長い字\n幕テキストで空白があ\nりません")
+
+    def test_unspaced_text_prefers_breaking_after_sentence_punctuation(self):
+        self.assertEqual(_wrap_text("今日は晴れです。明日は雨でしょう。", 10), "今日は晴れです。\n明日は雨でしょう。")
+
+    def test_line_never_starts_with_closing_punctuation(self):
+        self.assertEqual(_wrap_text("ああああああああああ。いい", 10), "あああああああああ\nあ。いい")
+
+    def test_spaced_text_still_wraps_at_words(self):
+        self.assertEqual(_wrap_text("one two three four", 9), "one two\nthree\nfour")
 
 
 class FormatterTests(unittest.TestCase):

@@ -106,6 +106,23 @@ class SplitLongSegmentsTests(unittest.TestCase):
         self.assertEqual(joined.split(), "one two three four five six seven".split())
 
 
+class SplitUnspacedTextTests(unittest.TestCase):
+    def test_unspaced_long_segment_splits_by_characters(self):
+        text = "これは日本語の長い字幕テキストで空白がありません"
+        result = split_long_segments([seg(0.0, 30.0, text)], 5.0)
+        self.assertEqual(
+            result,
+            [
+                seg(0.0, 5.0, "これは日"),
+                seg(5.0, 10.0, "本語の長"),
+                seg(10.0, 15.0, "い字幕テ"),
+                seg(15.0, 20.0, "キストで"),
+                seg(20.0, 25.0, "空白があ"),
+                seg(25.0, 30.0, "りません"),
+            ],
+        )
+
+
 class PostprocessPipelineTests(unittest.TestCase):
     def test_neither_option_returns_normalized_unchanged(self):
         raw = [SimpleNamespace(start=0.0, end=2.0, text="hello world")]

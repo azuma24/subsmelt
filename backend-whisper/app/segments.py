@@ -128,10 +128,13 @@ def split_long_segments(segments: Sequence[Segment], max_duration: float | None)
 def _split_one(segment: Segment, max_duration: float) -> list[Segment]:
     import math
 
-    words = segment.text.strip().split()
+    stripped = segment.text.strip()
+    words = stripped.split()
+    # Unspaced text (Japanese, Chinese) has one "word"; split it by character.
+    units, joiner = (words, " ") if len(words) > 1 else (list(stripped), "")
     # Number of chunks needed so each is <= max_duration.
     chunks = max(1, math.ceil(segment.duration / max_duration))
-    chunks = min(chunks, len(words)) if words else 1
+    chunks = min(chunks, len(units)) if units else 1
     if chunks <= 1:
         return [segment]
 
@@ -141,13 +144,12 @@ def _split_one(segment: Segment, max_duration: float) -> list[Segment]:
     for index in range(chunks):
         start = segment.start + slice_dur * index
         end = segment.end if index == chunks - 1 else segment.start + slice_dur * (index + 1)
-        # Distribute words proportionally across chunks.
-        word_start = round(len(words) * index / chunks)
-        word_end = round(len(words) * (index + 1) / chunks)
+        # Distribute units proportionally across chunks.
+        unit_start = round(len(units) * index / chunks)
+        unit_end = round(len(units) * (index + 1) / chunks)
         if index == chunks - 1:
-            word_end = len(words)
-        chunk_words = words[word_start:word_end]
-        pieces.append(Segment(start=start, end=end, text=" ".join(chunk_words), speaker=segment.speaker))
+            unit_end = len(units)
+        pieces.append(Segment(start=start, end=end, text=joiner.join(units[unit_start:unit_end]), speaker=segment.speaker))
     return pieces
 
 
