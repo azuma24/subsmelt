@@ -23,6 +23,8 @@ Config (all optional; sensible localhost defaults):
     SUBSMELT_WHISPER_TOKEN   shared-secret bearer token (Phase 1 auth)
     SUBSMELT_WHISPER_MEDIA_ROOT  allowed media root -> exported as MEDIA_ROOT
     SUBSMELT_FFMPEG          path to bundled ffmpeg.exe (consumed by app/audio.py)
+    SUBSMELT_NEMO_SPEECH     path to the bundled nemo-speech binary that runs the
+                             Nemotron ASR engine (config key "nemo_speech")
     SUBSMELT_WHISPER_CONFIG  path to a JSON config file (env vars win over it)
                              Windows default: %SUBSMELT_DATA_DIR%\config.json
                              (C:\ProgramData\SubSmelt\config.json)
@@ -111,6 +113,7 @@ class ServerConfig:
     ffmpeg: str | None
     log_level: str
     log_file: str | None
+    nemo_speech: str | None = None
 
     def redacted(self) -> dict:
         """Config safe to print/log — never leak the token."""
@@ -120,6 +123,7 @@ class ServerConfig:
             "model_dir": self.model_dir,
             "media_root": self.media_root,
             "ffmpeg": self.ffmpeg,
+            "nemo_speech": self.nemo_speech,
             "log_level": self.log_level,
             "log_file": self.log_file,
             "token": "<set>" if self.token else None,
@@ -223,6 +227,7 @@ def load_config() -> ServerConfig:
         log_level=pick("SUBSMELT_WHISPER_LOG_LEVEL", "log_level", DEFAULT_LOG_LEVEL)
         or DEFAULT_LOG_LEVEL,
         log_file=pick("SUBSMELT_WHISPER_LOG_FILE", "log_file", default_log_file()),
+        nemo_speech=pick("SUBSMELT_NEMO_SPEECH", "nemo_speech", None),
     )
 
 
@@ -233,8 +238,8 @@ def load_config() -> ServerConfig:
 def apply_environment(config: ServerConfig) -> None:
     """Export resolved config into the process environment.
 
-    The app reads MEDIA_ROOT / HF_HOME / SUBSMELT_FFMPEG / SUBSMELT_WHISPER_TOKEN
-    directly from ``os.environ`` (see app/main.py, app/audio.py). We set them here
+    The app reads MEDIA_ROOT / HF_HOME / SUBSMELT_FFMPEG / SUBSMELT_NEMO_SPEECH /
+    SUBSMELT_WHISPER_TOKEN directly from ``os.environ`` (see app/main.py, app/audio.py). We set them here
     so a single launcher config drives the whole server — important for the frozen
     Windows service where there is no shell to ``export`` them.
     """
@@ -250,6 +255,8 @@ def apply_environment(config: ServerConfig) -> None:
         os.environ["SUBSMELT_WHISPER_TOKEN"] = config.token
     if config.ffmpeg:
         os.environ["SUBSMELT_FFMPEG"] = config.ffmpeg
+    if config.nemo_speech:
+        os.environ["SUBSMELT_NEMO_SPEECH"] = config.nemo_speech
 
 
 def add_bundled_dll_dir() -> None:
