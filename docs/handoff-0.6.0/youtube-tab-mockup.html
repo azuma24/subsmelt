@@ -1,0 +1,698 @@
+<title>SubSmelt YouTube Tab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: SubSmelt shell (sidebar + sticky 50px topbar + padded body), YouTube tab inside it. Tokens copied from src/client/index.css. */
+:root {
+  color-scheme: dark;
+  --bg: #0b1020; --surface: #111827; --surface-2: #172033; --surface-3: #1e293b;
+  --border: #334155; --border-sub: #243044;
+  --text: #f1f5f9; --text-2: #cbd5e1; --text-3: #94a3b8;
+  --accent: #60a5fa; --accent-dim: rgba(96,165,250,.14); --accent-border: rgba(96,165,250,.34); --on-accent: #0b1020;
+  --green: #4ade80; --green-dim: rgba(74,222,128,.13); --green-border: rgba(74,222,128,.32);
+  --yellow: #facc15; --yellow-dim: rgba(250,204,21,.13); --yellow-border: rgba(250,204,21,.32);
+  --red: #fb7185; --red-dim: rgba(251,113,133,.13); --red-border: rgba(251,113,133,.32);
+  --scrim: rgba(3,6,15,.66);
+  --shadow: 0 18px 48px rgba(0,0,0,.45);
+  --font-ui: ui-sans-serif, "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --r-sm: 6px; --r-md: 10px; --r-full: 999px;
+  --ease: cubic-bezier(.2,.7,.2,1);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --bg: #f6f8fa; --surface: #ffffff; --surface-2: #f6f8fa; --surface-3: #eaeef2;
+    --border: #d0d7de; --border-sub: #e4e8ec;
+    --text: #1f2328; --text-2: #59636e; --text-3: #6b7480;
+    --accent: #0e7490; --accent-dim: rgba(14,116,144,.08); --accent-border: rgba(14,116,144,.32); --on-accent: #ffffff;
+    --green: #1a7f37; --green-dim: rgba(26,127,55,.10); --green-border: rgba(26,127,55,.30);
+    --yellow: #9a6700; --yellow-dim: rgba(154,103,0,.10); --yellow-border: rgba(154,103,0,.30);
+    --red: #cf222e; --red-dim: rgba(207,34,46,.10); --red-border: rgba(207,34,46,.30);
+    --scrim: rgba(31,35,40,.45); --shadow: 0 18px 48px rgba(31,35,40,.18);
+  }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f6f8fa; --surface: #ffffff; --surface-2: #f6f8fa; --surface-3: #eaeef2;
+  --border: #d0d7de; --border-sub: #e4e8ec;
+  --text: #1f2328; --text-2: #59636e; --text-3: #6b7480;
+  --accent: #0e7490; --accent-dim: rgba(14,116,144,.08); --accent-border: rgba(14,116,144,.32); --on-accent: #ffffff;
+  --green: #1a7f37; --green-dim: rgba(26,127,55,.10); --green-border: rgba(26,127,55,.30);
+  --yellow: #9a6700; --yellow-dim: rgba(154,103,0,.10); --yellow-border: rgba(154,103,0,.30);
+  --red: #cf222e; --red-dim: rgba(207,34,46,.10); --red-border: rgba(207,34,46,.30);
+  --scrim: rgba(31,35,40,.45); --shadow: 0 18px 48px rgba(31,35,40,.18);
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--text); font: 14px/1.5 var(--font-ui); }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* Mockup chrome (not part of the app) */
+.proto { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface-3); border-bottom: 1px dashed var(--border); font-size: 12px; color: var(--text-2); }
+.proto strong { color: var(--text); font-weight: 600; margin-right: 4px; }
+.proto button { min-height: 32px; padding: 4px 10px; border-radius: var(--r-full); border: 1px solid var(--border); background: var(--surface); font-size: 12px; }
+.proto button[aria-pressed="true"] { background: var(--accent-dim); border-color: var(--accent-border); color: var(--accent); }
+.proto .sep { width: 1px; height: 20px; background: var(--border); margin-inline: 4px; }
+
+/* App shell */
+.app { display: grid; grid-template-columns: 208px minmax(0,1fr); min-height: calc(100vh - 53px); }
+.side { background: var(--surface); border-right: 1px solid var(--border-sub); padding: 14px 10px; display: flex; flex-direction: column; gap: 14px; }
+.brand { display: flex; align-items: center; gap: 8px; padding: 4px 8px 8px; font-weight: 600; letter-spacing: .01em; }
+.brand-mark { width: 22px; height: 22px; border-radius: var(--r-sm); background: var(--accent); color: var(--on-accent); display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+.nav-group { display: flex; flex-direction: column; gap: 2px; }
+.nav-label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); padding: 0 10px 4px; }
+.nav a { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 10px; border-radius: var(--r-sm); color: var(--text-2); text-decoration: none; font-size: 13px; }
+.nav a:hover { background: var(--surface-2); color: var(--text); }
+.nav a[aria-current="page"] { background: var(--accent-dim); color: var(--accent); font-weight: 500; }
+.nav .new { margin-left: auto; font-size: 10px; padding: 1px 6px; border-radius: var(--r-full); border: 1px solid var(--accent-border); color: var(--accent); }
+
+.main { min-width: 0; display: flex; flex-direction: column; }
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; height: 50px; display: flex; align-items: center; gap: 12px; padding: 0 18px; background: var(--surface); border-bottom: 1px solid var(--border-sub); }
+.topbar h1 { font-size: 16px; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.crumb { color: var(--text-3); font-weight: 400; text-decoration: none; }
+.crumb:hover { color: var(--text); }
+.topbar .spacer { flex: 1; }
+.body { padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid transparent; font-size: 13px; font-weight: 500; transition: background .15s var(--ease), filter .15s var(--ease); }
+.btn-sm { min-height: 36px; padding: 0 12px; font-size: 12px; }
+.btn-primary { background: var(--accent); color: var(--on-accent); }
+.btn-primary:hover { filter: brightness(1.1); }
+.btn-ghost { background: var(--surface-2); border-color: var(--border); }
+.btn-ghost:hover { background: var(--surface-3); }
+.btn-text { background: transparent; color: var(--text-2); }
+.btn-text:hover { color: var(--text); background: var(--surface-2); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Banners */
+.banner { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: var(--r-md); border: 1px solid; font-size: 13px; }
+.banner .ic { font-family: var(--font-mono); font-weight: 500; line-height: 1.5; }
+.banner p { margin: 0; color: var(--text-2); }
+.banner strong { color: var(--text); font-weight: 600; }
+.banner .act { margin-left: auto; white-space: nowrap; }
+.banner.info { background: var(--accent-dim); border-color: var(--accent-border); }
+.banner.info .ic { color: var(--accent); }
+.banner.warn { background: var(--yellow-dim); border-color: var(--yellow-border); }
+.banner.warn .ic { color: var(--yellow); }
+
+/* Playlist list */
+.pl-list { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border-sub); border-radius: var(--r-md); }
+.pl { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 12px 20px; align-items: center; padding: 16px 18px; border-bottom: 1px solid var(--border-sub); }
+.pl:last-child { border-bottom: 0; }
+.pl-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 15px; font-weight: 600; }
+.pl-title a { color: var(--text); text-decoration: none; }
+.pl-title a:hover { color: var(--accent); }
+.pl-meta { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+.pl-counts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.pl-actions { display: flex; gap: 6px; }
+.tag { font-size: 11px; font-weight: 500; padding: 1px 8px; border-radius: var(--r-full); border: 1px solid var(--border); color: var(--text-2); }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 2px 10px; border-radius: var(--r-full); background: var(--surface-2); border: 1px solid var(--border-sub); color: var(--text-2); }
+.chip b { font-family: var(--font-mono); font-weight: 500; color: var(--text); }
+.chip.ok b { color: var(--green); } .chip.run b { color: var(--accent); } .chip.bad b { color: var(--red); }
+
+/* Playlist summary */
+.summary { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 14px 24px; align-items: start; padding: 16px 18px; background: var(--surface); border: 1px solid var(--border-sub); border-radius: var(--r-md); }
+.summary h2 { margin: 0; font-size: 20px; font-weight: 600; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.summary .sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+.bar { display: flex; height: 8px; border-radius: var(--r-full); overflow: hidden; background: var(--surface-3); margin-top: 14px; }
+.bar span { display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-size: 12px; color: var(--text-2); }
+.legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+.stats { display: grid; grid-template-columns: repeat(3, auto); gap: 4px 20px; text-align: right; }
+.stat .v { font-family: var(--font-mono); font-size: 16px; font-weight: 500; }
+.stat .l { font-size: 11px; color: var(--text-3); letter-spacing: .04em; text-transform: uppercase; }
+
+/* Toolbar */
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 3px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--border-sub); }
+.tabs button { min-height: 36px; padding: 0 12px; border-radius: 7px; border: 0; background: transparent; color: var(--text-2); font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+.tabs button[aria-selected="true"] { background: var(--surface-3); color: var(--text); font-weight: 500; }
+.tabs .n { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); }
+.tabs button.attn .n { color: var(--red); }
+.search { flex: 1 1 220px; min-width: 0; min-height: 40px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); }
+
+/* Video rows */
+.videos { background: var(--surface); border: 1px solid var(--border-sub); border-radius: var(--r-md); }
+.group-h { padding: 10px 16px 6px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); border-bottom: 1px solid var(--border-sub); display: flex; justify-content: space-between; }
+.v { display: grid; grid-template-columns: 96px minmax(0,1fr) 210px 44px; gap: 14px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border-sub); min-height: 72px; }
+.v:last-child { border-bottom: 0; }
+.thumb { position: relative; width: 96px; aspect-ratio: 16/9; max-width: 100%; border-radius: var(--r-sm); background: linear-gradient(135deg, var(--surface-3), var(--surface-2)); border: 1px solid var(--border-sub); overflow: hidden; }
+.thumb::before { content: attr(data-initial); position: absolute; inset: 0; display: grid; place-items: center; font-weight: 600; color: var(--text-3); font-size: 18px; }
+.thumb .dur { position: absolute; right: 4px; bottom: 4px; font-family: var(--font-mono); font-size: 10px; padding: 0 4px; border-radius: 3px; background: rgba(0,0,0,.72); color: #fff; }
+.v-title { font-size: 14px; font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.v-meta { font-size: 12px; color: var(--text-3); margin-top: 2px; display: flex; flex-wrap: wrap; gap: 0 8px; }
+.v-meta .src { color: var(--text-2); }
+.v.dim .v-title { color: var(--text-3); }
+.state { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.pipe { display: flex; align-items: center; gap: 4px; }
+.pipe .s { width: 34px; height: 4px; border-radius: var(--r-full); background: var(--surface-3); }
+.pipe .s.done { background: var(--green); }
+.pipe .s.now { background: var(--accent); }
+.pipe .s.wait { background: repeating-linear-gradient(90deg, var(--yellow) 0 4px, transparent 4px 7px); }
+.pipe .s.fail { background: var(--red); }
+.status { font-size: 12px; display: flex; align-items: center; gap: 6px; color: var(--text-2); }
+.status .g { font-family: var(--font-mono); font-size: 12px; }
+.status.ok .g { color: var(--green); } .status.run .g { color: var(--accent); } .status.hold .g { color: var(--yellow); } .status.bad .g { color: var(--red); } .status.off .g { color: var(--text-3); }
+.pct { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); }
+.more { width: 44px; height: 44px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--text-2); font-size: 18px; line-height: 1; position: relative; }
+.more:hover { background: var(--surface-2); border-color: var(--border-sub); }
+.menu { position: absolute; right: 0; top: 46px; z-index: 20; min-width: 190px; padding: 6px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); text-align: left; }
+.menu button { display: flex; width: 100%; min-height: 40px; align-items: center; padding: 0 10px; border: 0; border-radius: var(--r-sm); background: transparent; font-size: 13px; color: var(--text); }
+.menu button:hover { background: var(--surface-2); }
+.menu hr { border: 0; border-top: 1px solid var(--border-sub); margin: 4px 2px; }
+.foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 10px 16px; font-size: 12px; color: var(--text-3); border-top: 1px solid var(--border-sub); }
+
+/* Empty state */
+.empty { display: grid; place-items: center; text-align: center; padding: 56px 16px; background: var(--surface); border: 1px dashed var(--border); border-radius: var(--r-md); }
+.empty .icon { width: 56px; height: 40px; border-radius: 12px; background: var(--accent-dim); border: 1px solid var(--accent-border); display: grid; place-items: center; color: var(--accent); font-size: 18px; }
+.empty h2 { font-size: 20px; margin: 16px 0 6px; font-weight: 600; text-wrap: balance; }
+.empty p { margin: 0 auto; max-width: 52ch; color: var(--text-2); }
+.empty .flow { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 18px 0 22px; font-size: 12px; color: var(--text-2); }
+.empty .flow span { padding: 3px 10px; border-radius: var(--r-full); background: var(--surface-2); border: 1px solid var(--border-sub); }
+.empty .tip { margin-top: 18px; font-size: 12px; color: var(--text-3); max-width: 60ch; }
+
+/* Dialog */
+.scrim { position: fixed; inset: 0; background: var(--scrim); display: grid; place-items: center; padding: 16px; z-index: 50; }
+.dialog { width: min(640px, 100%); max-height: calc(100vh - 32px); overflow: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); }
+.d-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border-sub); }
+.d-head h3 { margin: 0; font-size: 16px; font-weight: 600; }
+.d-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 18px; }
+.d-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--border-sub); position: sticky; bottom: 0; background: var(--surface); }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field > label, .field > .lbl { font-size: 12px; font-weight: 500; color: var(--text-2); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.input { flex: 1 1 260px; min-width: 0; min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); }
+.hint { font-size: 12px; color: var(--text-3); }
+.preview { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 12px; align-items: center; padding: 12px 14px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--border-sub); }
+.preview .ok { width: 28px; height: 28px; border-radius: var(--r-full); display: grid; place-items: center; background: var(--green-dim); color: var(--green); font-family: var(--font-mono); }
+.preview b { font-weight: 600; }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; padding: 3px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--border-sub); }
+.seg button { flex: 1 1 auto; min-height: 40px; padding: 0 12px; border: 0; border-radius: 7px; background: transparent; color: var(--text-2); font-size: 13px; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); font-weight: 500; box-shadow: 0 0 0 1px var(--border); }
+.seg button:disabled { opacity: .5; cursor: not-allowed; }
+.seg small { display: block; font-size: 11px; color: var(--text-3); font-weight: 400; }
+.estimate { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; padding: 10px 12px; border-radius: 8px; background: var(--accent-dim); border: 1px solid var(--accent-border); font-size: 13px; }
+.estimate b { font-family: var(--font-mono); font-weight: 500; color: var(--text); }
+.estimate .muted { color: var(--text-3); font-size: 12px; }
+.sel { min-height: 40px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); }
+.checks { display: flex; flex-wrap: wrap; gap: 6px; }
+.checks label { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: var(--r-full); border: 1px solid var(--border); font-size: 13px; cursor: pointer; }
+.checks input:checked + span { color: var(--accent); font-weight: 500; }
+details { border: 1px solid var(--border-sub); border-radius: var(--r-md); }
+summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; padding: 0 14px; font-size: 13px; color: var(--text-2); }
+details[open] summary { border-bottom: 1px solid var(--border-sub); }
+.adv { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 14px; }
+.inline { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* Labeled field grid */
+.fields { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+.fields .field .sel, .fields .field .input { width: 100%; }
+/* Month picker */
+.mp { position: relative; display: inline-block; }
+.mp-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); font-size: 14px; }
+.mp-btn .cal { font-family: var(--font-mono); color: var(--text-3); }
+.mp-pop { position: absolute; z-index: 60; top: 50px; left: 0; width: 280px; max-width: calc(100vw - 64px); padding: 12px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.mp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.mp-head b { font-family: var(--font-mono); font-weight: 500; font-size: 15px; }
+.mp-head button { width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--border-sub); background: var(--surface-2); font-size: 16px; }
+.mp-head button:disabled { opacity: .35; cursor: not-allowed; }
+.mp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.mp-grid button { min-height: 44px; border-radius: 8px; border: 1px solid var(--border-sub); background: var(--surface-2); font-size: 13px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.2; }
+.mp-grid button small { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-3); }
+.mp-grid button[aria-pressed="true"] { background: var(--accent-dim); border-color: var(--accent-border); color: var(--accent); font-weight: 500; }
+.mp-grid button:disabled { opacity: .35; cursor: not-allowed; }
+.mp-foot { margin-top: 8px; font-size: 11px; color: var(--text-3); }
+/* Subtitle routes legend */
+.routes { display: grid; gap: 6px; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--border-sub); font-size: 12.5px; color: var(--text-2); }
+.routes div { display: grid; grid-template-columns: 22px minmax(0,1fr); gap: 6px; align-items: baseline; }
+.routes .k { font-family: var(--font-mono); color: var(--accent); text-align: center; }
+.linkish { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; font-size: inherit; cursor: pointer; }
+/* Settings */
+.set-wrap { display: grid; grid-template-columns: 200px minmax(0, 760px); gap: 18px; align-items: start; }
+.set-nav { display: flex; flex-direction: column; gap: 2px; }
+.set-nav a { min-height: 40px; display: flex; align-items: center; padding: 0 10px; border-radius: var(--r-sm); color: var(--text-2); text-decoration: none; font-size: 13px; }
+.set-nav a[aria-current="page"] { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-border); }
+.card { background: var(--surface); border: 1px solid var(--border-sub); border-radius: var(--r-md); padding: 18px; display: flex; flex-direction: column; gap: 18px; }
+.card h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.card > p { margin: -12px 0 0; font-size: 12.5px; color: var(--text-3); }
+.set-row { display: grid; gap: 6px; padding-top: 16px; border-top: 1px solid var(--border-sub); }
+.set-row:first-of-type { border-top: 0; padding-top: 0; }
+.status-line { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.status-line.ok { color: var(--green); } .status-line.off { color: var(--text-3); } .status-line.warn { color: var(--yellow); }
+.steps { margin: 6px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--text-2); display: grid; gap: 4px; }
+.steps code { font-family: var(--font-mono); font-size: 12px; }
+
+@media (max-width: 860px) {
+  .fields { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+  .fields .field.wide { grid-column: 1 / -1; }
+  .set-wrap { grid-template-columns: minmax(0,1fr); }
+  .set-nav { flex-direction: row; overflow-x: auto; }
+  .set-nav a { white-space: nowrap; }
+  .app { grid-template-columns: minmax(0,1fr); }
+  .side { display: none; }
+  .body { padding: 14px 16px; }
+  .topbar { padding: 0 16px; }
+  .summary { grid-template-columns: minmax(0,1fr); }
+  .stats { text-align: left; }
+  .v { grid-template-columns: 72px minmax(0,1fr) 44px; }
+  .v .thumb { width: 72px; }
+  .v .state { grid-column: 2 / 3; grid-row: 2; }
+  .v .more { grid-column: 3; grid-row: 1; }
+  .pl { grid-template-columns: minmax(0,1fr); }
+  .adv { grid-template-columns: minmax(0,1fr); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pipe .s.now { animation: pulse 1.6s var(--ease) infinite; }
+  @keyframes pulse { 50% { opacity: .45; } }
+  .dialog { animation: rise .25s var(--ease); }
+  @keyframes rise { from { transform: translateY(8px); opacity: .6; } }
+}
+</style>
+
+<div class="proto" role="toolbar" aria-label="Mockup controls">
+  <strong>Mockup</strong>
+  <button type="button" data-screen="list" aria-pressed="true">Playlists</button>
+  <button type="button" data-screen="detail" aria-pressed="false">Playlist: AI</button>
+  <button type="button" data-screen="empty" aria-pressed="false">Empty</button>
+  <button type="button" data-screen="settings" aria-pressed="false">Settings: YouTube</button>
+  <button type="button" id="open-follow">Follow dialog</button>
+  <span class="sep"></span>
+  <button type="button" id="toggle-cooldown" aria-pressed="false">YouTube cooldown</button>
+  <span>Rows are real videos from the AI playlist; their statuses are examples.</span>
+</div>
+
+<div class="app">
+  <aside class="side" aria-label="Main navigation">
+    <div class="brand"><span class="brand-mark">S</span>SubSmelt</div>
+    <nav class="nav">
+      <div class="nav-group"><div class="nav-label">Operate</div><a href="#">📊 Dashboard</a></div>
+      <div class="nav-group" style="margin-top:12px"><div class="nav-label">Create</div>
+        <a href="#">🌐 Translations</a><a href="#">🎙️ Whisper</a>
+        <a href="#" aria-current="page">📺 YouTube <span class="new">new</span></a>
+        <a href="#">🔄 Convert</a></div>
+      <div class="nav-group" style="margin-top:12px"><div class="nav-label">System</div><a href="#">⚙️ Settings</a><a href="#">📋 Logs</a></div>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <!-- Playlists screen -->
+    <section id="screen-list">
+      <div class="topbar"><h1>YouTube</h1><span class="spacer"></span><button class="btn btn-primary btn-sm" type="button" data-follow>＋ Follow playlist</button></div>
+      <div class="body">
+        <div class="banner warn" data-cooldown hidden><span class="ic">!!</span><p><strong>YouTube asked SubSmelt to slow down.</strong> Downloads pause until 14:20. Transcription and translation keep running.</p><button class="btn btn-text btn-sm act" type="button">Add cookies</button></div>
+        <div class="pl-list">
+          <div class="pl">
+            <div>
+              <div class="pl-title"><a href="#" data-goto="detail">AI</a><span class="tag">Unlisted</span><span class="tag">Audio · m4a</span><span class="tag">Auto</span></div>
+              <div class="pl-meta">/media/YouTube/AI · checked 6 min ago · next check in 54 min</div>
+              <div class="pl-counts">
+                <span class="chip ok"><b>38</b> done</span><span class="chip run"><b>4</b> in progress</span><span class="chip"><b>61</b> waiting</span><span class="chip bad"><b>2</b> need attention</span><span class="chip"><b>784</b> skipped</span>
+              </div>
+            </div>
+            <div class="pl-actions"><button class="btn btn-ghost btn-sm" type="button">Check now</button><button class="btn btn-text btn-sm" type="button" aria-label="Playlist options">⋯</button></div>
+          </div>
+          <div class="pl">
+            <div>
+              <div class="pl-title"><a href="#" data-goto="detail">Watched talks</a><span class="tag">Unlisted</span><span class="tag">Video · 720p H.264</span><span class="tag">Manual</span></div>
+              <div class="pl-meta">/media/YouTube/Watched talks · checked 31 min ago</div>
+              <div class="pl-counts"><span class="chip ok"><b>12</b> done</span><span class="chip"><b>3</b> new, waiting for you</span></div>
+            </div>
+            <div class="pl-actions"><button class="btn btn-ghost btn-sm" type="button">Check now</button><button class="btn btn-text btn-sm" type="button" aria-label="Playlist options">⋯</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Playlist detail -->
+    <section id="screen-detail" hidden>
+      <div class="topbar"><h1><a class="crumb" href="#" data-goto="list">YouTube</a><span class="crumb">/</span>AI</h1><span class="spacer"></span><button class="btn btn-ghost btn-sm" type="button">Check now</button><button class="btn btn-text btn-sm" type="button">Edit</button></div>
+      <div class="body">
+        <div class="banner warn" data-cooldown hidden><span class="ic">!!</span><p><strong>YouTube asked SubSmelt to slow down.</strong> Downloads pause until 14:20. Transcription and translation keep running.</p><button class="btn btn-text btn-sm act" type="button">Add cookies</button></div>
+        <div class="banner info"><span class="ic">GPU</span><p><strong>Translation waits for 2 transcriptions to finish.</strong> Whisper and the translation model share one GPU, so SubSmelt translates in batches.</p></div>
+
+        <div class="summary">
+          <div>
+            <h2>AI <span class="tag">Unlisted</span><span class="tag">Audio · m4a</span><span class="tag">Auto</span></h2>
+            <div class="sub">889 videos in the playlist · keeping videos posted since Aug 2026 and everything added later · /media/YouTube/AI</div>
+            <div class="bar" aria-hidden="true"><span style="width:36%;background:var(--green)"></span><span style="width:4%;background:var(--accent)"></span><span style="width:58%;background:var(--border)"></span><span style="width:2%;background:var(--red)"></span></div>
+            <div class="legend"><span><i style="background:var(--green)"></i>38 done</span><span><i style="background:var(--accent)"></i>4 in progress</span><span><i style="background:var(--border)"></i>61 waiting</span><span><i style="background:var(--red)"></i>2 need attention</span></div>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="v">105</div><div class="l">Kept</div></div>
+            <div class="stat"><div class="v">2.3 GB</div><div class="l">On disk</div></div>
+            <div class="stat"><div class="v">54 min</div><div class="l">Next check</div></div>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="tabs" role="tablist" aria-label="Filter videos">
+            <button role="tab" aria-selected="true" data-filter="all">All <span class="n">105</span></button>
+            <button role="tab" aria-selected="false" data-filter="run">In progress <span class="n">4</span></button>
+            <button role="tab" aria-selected="false" data-filter="wait">Waiting <span class="n">61</span></button>
+            <button role="tab" aria-selected="false" data-filter="done">Done <span class="n">38</span></button>
+            <button role="tab" aria-selected="false" data-filter="bad" class="attn">Needs attention <span class="n">2</span></button>
+            <button role="tab" aria-selected="false" data-filter="off">Skipped <span class="n">784</span></button>
+          </div>
+          <input class="search" id="video-search" type="search" placeholder="Search titles and channels" aria-label="Search videos">
+        </div>
+
+        <div class="videos" id="videos"></div>
+      </div>
+    </section>
+
+    <!-- Settings: YouTube -->
+    <section id="screen-settings" hidden>
+      <div class="topbar"><h1>Settings</h1><span class="spacer"></span><button class="btn btn-primary btn-sm" type="button">Save</button></div>
+      <div class="body">
+        <div class="set-wrap">
+          <nav class="set-nav" aria-label="Settings sections"><a href="#">LLM Connection</a><a href="#">Translation Engine</a><a href="#">Sources &amp; Monitoring</a><a href="#">Speech-to-text</a><a href="#" aria-current="page">YouTube</a><a href="#">Interface</a></nav>
+          <div class="card">
+            <h2>YouTube</h2>
+            <p>Where downloads and notes go, and optional keys for extra features.</p>
+            <div class="set-row">
+              <label for="yt-key" class="lbl" style="font-size:13px;font-weight:500;color:var(--text)">YouTube Data API key <span class="hint">(optional)</span></label>
+              <div class="row"><input class="input" id="yt-key" type="password" placeholder="AIza…" autocomplete="off"><button class="btn btn-ghost" type="button" id="yt-key-show">Show</button><button class="btn btn-ghost" type="button" id="yt-key-test">Test key</button></div>
+              <span class="status-line off" id="yt-key-status">○ Not set. "Added since" is unavailable in the follow dialog.</span>
+              <div class="hint">Not a sign-in. SubSmelt only reads when you added each video to a playlist (about 18 requests for 900 videos, free quota is 10,000 a day).</div>
+              <details><summary>How to get a key</summary>
+                <ol class="steps">
+                  <li>Open Google Cloud Console and create a project.</li>
+                  <li>Enable <code>YouTube Data API v3</code> for it.</li>
+                  <li>Go to Credentials, create an API key, and restrict it to YouTube Data API v3.</li>
+                  <li>Paste the key here and press Test key.</li>
+                </ol>
+              </details>
+            </div>
+            <div class="set-row">
+              <label for="yt-dl" class="lbl" style="font-size:13px;font-weight:500;color:var(--text)">Download folder</label>
+              <div class="row"><span class="hint num" style="align-self:center">/media/</span><input class="input" id="yt-dl" value="YouTube"></div>
+              <div class="hint">Each playlist gets its own subfolder here.</div>
+            </div>
+            <div class="set-row">
+              <label for="yt-notes" class="lbl" style="font-size:13px;font-weight:500;color:var(--text)">Notes folder</label>
+              <input class="input" id="yt-notes" value="/notes">
+              <span class="status-line ok">✓ Mounted and writable</span>
+            </div>
+            <div class="set-row">
+              <span class="lbl" style="font-size:13px;font-weight:500;color:var(--text)">Cookies for Private playlists <span class="hint">(optional)</span></span>
+              <div class="row"><button class="btn btn-ghost" type="button">Upload cookies.txt</button></div>
+              <div class="hint">Unlisted playlists need no cookies. Cookies act as your signed-in Google session, so SubSmelt never shows them again after upload.</div>
+            </div>
+            <div class="set-row">
+              <span class="lbl" style="font-size:13px;font-weight:500;color:var(--text)">Downloader</span>
+              <div class="row" style="align-items:center"><span class="num">yt-dlp 2026.08.19</span><span class="status-line ok">✓ Up to date · checked today</span><button class="btn btn-text btn-sm" type="button">Update now</button></div>
+              <label class="inline hint"><input type="checkbox" checked> Check for updates daily</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Empty state -->
+    <section id="screen-empty" hidden>
+      <div class="topbar"><h1>YouTube</h1></div>
+      <div class="body">
+        <div class="empty">
+          <div class="icon">▶</div>
+          <h2>Turn a YouTube playlist into notes you can search</h2>
+          <p>Follow a playlist and SubSmelt downloads each video you add, writes subtitles, translates them, and saves a Markdown note to your vault.</p>
+          <div class="flow" aria-label="What happens to each video"><span>Download</span><span>Subtitles</span><span>Translate</span><span>Note</span></div>
+          <button class="btn btn-primary" type="button" data-follow>＋ Follow a playlist</button>
+          <p class="tip">Set the playlist to Unlisted in YouTube first. SubSmelt reads it through the link and needs no sign-in.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Follow dialog -->
+<div class="scrim" id="follow" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="follow-title">
+    <div class="d-head"><h3 id="follow-title">Follow a playlist</h3><button class="btn btn-text btn-sm" type="button" data-close aria-label="Close">✕</button></div>
+    <form class="d-body" id="follow-form">
+      <div class="field">
+        <label for="pl-url">Playlist link</label>
+        <div class="row"><input class="input" id="pl-url" type="url" value="https://youtube.com/playlist?list=PL-Smx9IA029hG4XKsjwo6psQhtDfsosa8" aria-describedby="pl-url-hint"><button class="btn btn-ghost" type="button">Look up</button></div>
+        <div class="hint" id="pl-url-hint">Public or Unlisted playlists work without signing in.</div>
+      </div>
+      <div class="preview"><span class="ok">✓</span><div><b>AI</b> · Unlisted · by Richard<div class="hint"><span class="num">889</span> videos, <span class="num">7</span> of them private or deleted · newest added first</div></div></div>
+
+      <div class="field">
+        <span class="lbl" id="keep-lbl">Keep</span>
+        <div class="seg" role="group" aria-labelledby="keep-lbl" data-seg="media">
+          <button type="button" aria-pressed="true" data-value="audio">Audio<small>Best for notes · small</small></button>
+          <button type="button" aria-pressed="false" data-value="video">Video<small>For watching later</small></button>
+        </div>
+        <div class="fields" id="media-audio">
+          <div class="field"><label for="audio-fmt">Format</label><select class="sel" id="audio-fmt"><option>m4a (AAC)</option><option>opus</option></select></div>
+        </div>
+        <div class="fields" id="media-video" hidden>
+          <div class="field"><label for="v-h">Quality up to</label><select class="sel" id="v-h"><option value="480">480p</option><option value="720">720p</option><option value="1080" selected>1080p</option><option value="1440">1440p</option><option value="2160">2160p</option></select></div>
+          <div class="field wide"><label for="v-c">Codec</label><select class="sel" id="v-c"><option>H.264 (plays everywhere)</option><option>VP9</option><option>AV1</option><option>Any</option></select></div>
+          <div class="field"><label for="v-f">File</label><select class="sel" id="v-f"><option>mp4</option><option>mkv</option></select></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="lbl" id="exist-lbl">Videos already in the playlist</span>
+        <div class="seg" role="group" aria-labelledby="exist-lbl" data-seg="backfill">
+          <button type="button" aria-pressed="false" data-value="all">All</button>
+          <button type="button" aria-pressed="false" data-value="none">None</button>
+          <button type="button" aria-pressed="true" data-value="posted">Posted since…</button>
+          <button type="button" aria-pressed="false" data-value="added" disabled title="Needs a YouTube API key in Settings">Added since…<small>Needs API key</small></button>
+        </div>
+        <div class="inline" id="since-row">
+          <span class="hint">From</span>
+          <div class="mp">
+            <button type="button" class="mp-btn" id="mp-btn" aria-haspopup="dialog" aria-expanded="false"><span id="mp-label">August 2026</span><span class="cal">▾</span></button>
+            <div class="mp-pop" id="mp-pop" role="dialog" aria-label="Choose a month" hidden>
+              <div class="mp-head"><button type="button" id="mp-prev" aria-label="Previous year">‹</button><b id="mp-year">2026</b><button type="button" id="mp-next" aria-label="Next year">›</button></div>
+              <div class="mp-grid" id="mp-grid"></div>
+              <div class="mp-foot">Small numbers: videos posted that month.</div>
+            </div>
+          </div>
+        </div>
+        <div class="hint" id="added-hint">To filter by the date you added each video, <button type="button" class="linkish" data-goto-settings>add a YouTube API key in Settings</button>.</div>
+        <div class="estimate" aria-live="polite"><span id="est-main"></span><span class="muted" id="est-note"></span></div>
+        <div class="hint">Videos you add to the playlist later are always kept.</div>
+      </div>
+
+      <div class="field">
+        <span class="lbl" id="lang-lbl">Subtitles in</span>
+        <div class="checks" role="group" aria-labelledby="lang-lbl">
+          <label><input type="checkbox" checked><span>English</span></label>
+          <label><input type="checkbox" checked><span>Traditional Chinese</span></label>
+          <label><input type="checkbox"><span>Japanese</span></label>
+          <label><input type="checkbox"><span>Korean</span></label>
+          <label><input type="checkbox"><span>Spanish</span></label>
+        </div>
+        <div class="routes" aria-label="How SubSmelt gets each language">
+          <div><span class="k">=</span><span>Video already in that language: the transcript is the subtitle.</span></div>
+          <div><span class="k">cc</span><span>Creator uploaded captions in that language: SubSmelt downloads them.</span></div>
+          <div><span class="k">→</span><span>Otherwise: transcribe, then translate.</span></div>
+        </div>
+        <div class="hint">Languages come from your Translations list. The transcript in the spoken language is always kept for your notes.</div>
+      </div>
+
+      <details>
+        <summary>More options: download timing, subtitles, folder</summary>
+        <div class="adv">
+          <div class="field"><label for="mode">Download new videos</label><select class="sel" id="mode"><option>Automatically</option><option>When I click Download</option></select></div>
+          <div class="field"><label for="subs">Subtitles</label><select class="sel" id="subs"><option>Use YouTube captions when they exist</option><option>Always transcribe</option></select></div>
+          <div class="field"><label for="every">Check for new videos</label><select class="sel" id="every"><option>Every 15 minutes</option><option selected>Every hour</option><option>Every 6 hours</option><option>Once a day</option></select></div>
+          <div class="field"><label for="folder">Folder</label><input class="input" id="folder" value="YouTube/AI"></div>
+        </div>
+      </details>
+    </form>
+    <div class="d-foot"><button class="btn btn-text" type="button" data-close>Cancel</button><button class="btn btn-primary" type="submit" form="follow-form">Follow playlist</button></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+  // Real entries from the AI playlist listing (2026-09-30). Status values are illustrative.
+  const videos = [
+    { id: "uXspbC2srEQ", t: "Introducing dots, always-on agents built to handle everything.", ch: "OpenAI", d: 148, p: "Sep 30", st: "queued" },
+    { id: "BHPDsGVciDk", t: "This Might Be the Best AI Release of 2026", ch: "The PrimeTime", d: 727, p: "Sep 26", st: "downloading", pct: 62 },
+    { id: "0VdLfs1t7dk", t: "Can't Find an App That Fits Your Needs? Just Build One Yourself! No Coding Experience Required", ch: "PAPAYA 電腦教室", d: 1074, p: "Sep 28", st: "transcribing", pct: 41, src: "Spoken zh-TW · EN → translating after transcript" },
+    { id: "-F-fklPPiec", t: "Cloudflare Config Is TypeScript Now (And the CLI Does Everything)", ch: "Cloudflare Developers", d: 219, p: "Sep 29", st: "held", src: "EN = captions · 繁中 → waiting to translate" },
+    { id: "hSHFHOC8Jkk", t: "Tiny AI Database Client Punches Way Up", ch: "Joe Maddalone", d: 163, p: "Sep 28", st: "transcribing-wait", src: "" },
+    { id: "HiT2MyR-ZYk", t: "Paperclip - Managing Teams of AI Agents", ch: "Full Stack", d: 799, p: "Sep 26", st: "done", src: "EN = transcript (Whisper) · 繁中 → translated" },
+    { id: "WrJAkrfWuS8", t: "Jev in Action: I Built a Drift-Alert Plugin for Pi Agent", ch: "01Coder", d: 859, p: "Sep 27", st: "done", src: "EN = captions · 繁中 → translated" },
+    { id: "72Im-Mm5JKs", t: "The AI That Replaces Hours of Model Tuning - Frank Hutter", ch: "Machine Learning Street Talk", d: 6793, p: "Sep 24", st: "failed", why: "Transcription timed out after 1 h 53 min. Retry uses a longer limit." },
+    { id: "mQZB0l-rhxE", t: "Building verification loops in Claude Code", ch: "Claude", d: 188, p: "Sep 26", st: "done", src: "EN = captions · 繁中 cc from creator" },
+    { id: "RXGzy0H0GS0", t: "【2026亞運】黃韋盛猛打賞+劉基鴻雙安台灣9：1贏中國", ch: "愛爾達體育家族 ELTA Sports", d: 130, p: "Sep 26", st: "skipped", why: "You skipped this" },
+    { id: "qN6OM1IzjIE", t: "Teaching in the Age of AI: Learning Goals and the Goals of Learning", ch: "Jane Street", d: 5798, p: "Sep 24", st: "queued" },
+    { id: "GDUBXR-ql78", t: "Gemini 3.8 Flash TTS with Voice Cloning", ch: "Sam Witteveen", d: 1031, p: "Sep 25", st: "done", src: "EN = transcript (Nemotron) · 繁中 → translated" },
+    { id: "hy8UstR2NEg", t: "Full Course: Spec-Driven Development with Coding Agents", ch: "DeepLearningAI", d: 3694, p: "Sep 23", st: "queued" },
+    { id: "LKsEieYbUz4", t: "Private video", ch: "", d: 0, p: "", st: "unavailable", why: "Private or deleted on YouTube" },
+  ];
+
+  const STATES = {
+    queued:            { f: "wait", label: "Waiting to download", cls: "hold", g: "··", pipe: ["", "", "", ""] },
+    downloading:       { f: "run",  label: "Downloading",        cls: "run",  g: "↓",  pipe: ["now", "", "", ""] },
+    "transcribing-wait": { f: "wait", label: "Waiting for the GPU", cls: "hold", g: "··", pipe: ["done", "wait", "", ""] },
+    transcribing:      { f: "run",  label: "Transcribing",       cls: "run",  g: "≋",  pipe: ["done", "now", "", ""] },
+    held:              { f: "wait", label: "Translation waits for batch", cls: "hold", g: "··", pipe: ["done", "done", "wait", ""] },
+    done:              { f: "done", label: "Note saved",         cls: "ok",   g: "✓",  pipe: ["done", "done", "done", "done"] },
+    failed:            { f: "bad",  label: "Failed",             cls: "bad",  g: "✕",  pipe: ["done", "fail", "", ""] },
+    unavailable:       { f: "bad",  label: "Unavailable",        cls: "bad",  g: "∅",  pipe: ["fail", "", "", ""] },
+    skipped:           { f: "off",  label: "Skipped",            cls: "off",  g: "–",  pipe: ["", "", "", ""] },
+  };
+  const ACTIONS = {
+    queued: ["Download now", "Skip"], downloading: ["Cancel download"], "transcribing-wait": ["Skip"],
+    transcribing: ["Cancel"], held: ["Translate now"], done: ["Open note", "Preview transcript", "Open on YouTube", "Redo"],
+    failed: ["Retry", "Show error", "Skip"], unavailable: ["Open on YouTube", "Remove from list"], skipped: ["Download"],
+  };
+  const PIPE_NAMES = ["Download", "Subtitles", "Translate", "Note"];
+
+  const dur = (s) => { if (!s) return ""; const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(x).padStart(2, "0"); };
+  const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+  let filter = "all", query = "";
+  function renderVideos() {
+    const list = videos.filter((v) => (filter === "all" ? v.st !== "skipped" : STATES[v.st].f === filter))
+      .filter((v) => !query || (v.t + " " + v.ch).toLowerCase().includes(query));
+    const groups = filter === "all" ? [["In progress", ["run"]], ["Needs attention", ["bad"]], ["Waiting", ["wait"]], ["Done", ["done"]]] : [[null, [filter]]];
+    let html = "";
+    for (const [name, fs] of groups) {
+      const rows = list.filter((v) => fs.includes(STATES[v.st].f));
+      if (!rows.length) continue;
+      if (name) html += `<div class="group-h"><span>${name}</span><span class="num">${rows.length}</span></div>`;
+      for (const v of rows) {
+        const s = STATES[v.st];
+        const pipe = s.pipe.map((c, i) => `<span class="s ${c}" title="${PIPE_NAMES[i]}"></span>`).join("");
+        const meta = [v.ch, v.p && "posted " + v.p, v.src && `<span class="src">${esc(v.src)}</span>`].filter(Boolean).join(" · ");
+        const extra = v.pct != null ? `<span class="pct">${v.pct}%</span>` : "";
+        html += `<div class="v ${v.st === "skipped" || v.st === "unavailable" ? "dim" : ""}">
+          <div class="thumb" data-initial="${esc((v.ch || "?").slice(0, 1))}"><span class="dur">${dur(v.d)}</span></div>
+          <div style="min-width:0"><div class="v-title">${esc(v.t)}</div><div class="v-meta">${meta}${v.why ? ` · <span style="color:var(--${s.cls === "bad" ? "red" : "text-3"})">${esc(v.why)}</span>` : ""}</div></div>
+          <div class="state"><div class="pipe" aria-label="Pipeline: ${PIPE_NAMES.join(", ")}">${pipe}</div><div class="status ${s.cls}"><span class="g">${s.g}</span>${s.label}${extra}</div></div>
+          <button class="more" type="button" aria-label="Actions for ${esc(v.t)}" aria-haspopup="menu" data-menu="${v.id}">⋯</button>
+        </div>`;
+      }
+    }
+    if (!html) html = `<div style="padding:32px 16px;text-align:center;color:var(--text-3)">No videos match. <button class="btn btn-text btn-sm" type="button" data-clear>Clear filters</button></div>`;
+    else html += `<div class="foot"><span>Showing ${list.length} of 105 kept videos. Long lists load as you scroll.</span><span>Newest added first</span></div>`;
+    $("#videos").innerHTML = html;
+  }
+
+  function closeMenus() { $$(".menu").forEach((m) => m.remove()); }
+  document.addEventListener("click", (e) => {
+    const m = e.target.closest("[data-menu]");
+    if (m) {
+      e.stopPropagation(); const open = m.querySelector(".menu"); closeMenus(); if (open) return;
+      const v = videos.find((x) => x.id === m.dataset.menu);
+      const items = ACTIONS[v.st].map((a) => `<button type="button" role="menuitem">${a}</button>`).join("");
+      m.insertAdjacentHTML("beforeend", `<div class="menu" role="menu">${items}</div>`);
+      return;
+    }
+    closeMenus();
+    const clear = e.target.closest("[data-clear]");
+    if (clear) { filter = "all"; query = ""; $("#video-search").value = ""; setTab("all"); renderVideos(); }
+  });
+
+  function setTab(f) { $$(".tabs [data-filter]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.filter === f))); }
+  $$(".tabs [data-filter]").forEach((b) => b.addEventListener("click", () => { filter = b.dataset.filter; setTab(filter); renderVideos(); }));
+  $("#video-search").addEventListener("input", (e) => { query = e.target.value.trim().toLowerCase(); renderVideos(); });
+
+  function show(screen) {
+    ["list", "detail", "empty", "settings"].forEach((s) => { $("#screen-" + s).hidden = s !== screen; });
+    $$(".proto [data-screen]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.screen === screen)));
+  }
+  $$(".proto [data-screen]").forEach((b) => b.addEventListener("click", () => show(b.dataset.screen)));
+  $$("[data-goto]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); show(a.dataset.goto); }));
+
+  $("#toggle-cooldown").addEventListener("click", (e) => {
+    const on = e.currentTarget.getAttribute("aria-pressed") !== "true";
+    e.currentTarget.setAttribute("aria-pressed", String(on));
+    $$("[data-cooldown]").forEach((b) => { b.hidden = !on; });
+  });
+
+  const follow = $("#follow");
+  const openFollow = () => { follow.hidden = false; $("#pl-url").focus(); };
+  $("#open-follow").addEventListener("click", openFollow);
+  $$("[data-follow]").forEach((b) => b.addEventListener("click", openFollow));
+  $$("[data-close]").forEach((b) => b.addEventListener("click", () => { follow.hidden = true; }));
+  follow.addEventListener("click", (e) => { if (e.target === follow) follow.hidden = true; });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { follow.hidden = true; closeMenus(); } });
+  $("#follow-form").addEventListener("submit", (e) => { e.preventDefault(); follow.hidden = true; show("detail"); });
+
+  // Real listing of the AI playlist (2026-09-30): [approximate publish day since epoch, duration in seconds].
+  const ENTRIES = [[20725,148],[20723,727],[20725,1074],[20726,219],[20725,163],[20723,799],[20724,859],[20721,6793],[20723,188],[20723,130],[20721,5798],[20722,1031],[20720,3694],[20722,1254],[20722,1727],[20721,3787],[20721,60],[20721,903],[20721,126],[20721,790],[20721,1313],[20720,1120],[20719,739],[20719,316],[20719,327],[20718,869],[20716,1878],[20718,303],[20713,810],[20716,432],[20718,1830],[20716,2141],[20717,551],[20718,1292],[20717,868],[20714,5797],[20717,2575],[20696,4590],[20696,1085],[20716,2090],[20699,321],[20696,1428],[20713,592],[20713,901],[20696,2400],[20706,777],[20713,556],[20713,1075],[20713,692],[20713,1046],[20706,494],[20635,397],[20706,951],[20696,3581],[20706,217],[20706,1812],[20696,254],[20706,366],[20706,5101],[20706,459],[20699,1050],[20696,840],[20696,1212],[20696,772],[20696,2654],[20696,1657],[20696,1075],[20665,1780],[20696,1904],[20696,130],[20696,386],[20696,850],[20696,1012],[20696,2508],[20696,524],[20696,1080],[20696,1025],[20696,1553],[20696,1365],[20696,226],[20696,29],[20696,1427],[20696,1296],[20696,1437],[20696,353],[20696,3088],[20696,1187],[20696,438],[20696,509],[20696,562],[20696,82],[20696,151],[20362,2437],[20574,5135],[20696,1214],[20696,3427],[20696,396],[0,0],[20696,2016],[20696,518],[20696,1931],[20604,304],[20604,1442],[20696,605],[20696,3903],[20665,909],[20665,1225],[20665,3316],[20665,636],[20665,2073],[20665,1250],[20665,2687],[20665,1775],[20665,640],[20665,422],[20665,265],[20665,1380],[20665,8421],[20665,1564],[20665,315],[20665,638],[20665,319],[20665,1306],[20665,1173],[20665,426],[20665,1037],[0,0],[20665,2031],[20665,2182],[20665,26635],[20453,745],[20635,836],[20665,1063],[20665,1370],[20665,1204],[20665,552],[20665,901],[20665,2192],[20665,1086],[20635,2429],[20665,4089],[20665,2362],[20665,307],[20665,1522],[20665,745],[20665,377],[20665,1765],[20635,2159],[20635,2394],[20635,3424],[20635,2416],[20635,5246],[20635,1571],[20635,75],[20635,986],[20635,1193],[20635,995],[20635,1452],[20635,323],[20635,1754],[20362,2782],[20635,5717],[20635,972],[20635,1860],[20635,958],[20635,530],[20635,72],[20635,1018],[20635,2718],[20635,3745],[20635,1650],[20635,1022],[20635,124],[20604,1014],[20635,417],[20635,1651],[20635,1028],[20635,444],[20635,2335],[20604,924],[20635,1726],[20635,1001],[20635,414],[20635,725],[20635,2268],[20635,3534],[20635,1683],[20635,664],[20543,481],[20362,1687],[20635,103],[20635,209],[20635,3561],[20513,604],[20635,1749],[20635,482],[20635,2001],[20604,172],[20635,2072],[20574,1038],[20635,804],[20635,5370],[20635,609],[20635,995],[20635,1164],[20635,1136],[20635,711],[20635,1799],[20635,2753],[20635,303],[20635,129],[20635,3022],[20635,1389],[20635,2535],[20574,628],[20604,1349],[20604,82],[20604,111],[20604,1522],[20604,719],[20604,869],[20604,2011],[20604,367],[20604,478],[20604,799],[20604,443],[20604,1959],[20604,1188],[20604,1055],[20604,799],[20604,192],[20513,5386],[20604,1014],[20604,385],[20604,1915],[20574,8317],[20604,342],[20604,667],[20604,2184],[20604,4428],[20604,3827],[20604,648],[20604,1765],[20604,594],[20604,1496],[20362,1047],[20604,643],[20604,707],[20362,851],[20604,1634],[20574,8021],[20604,736],[20574,1162],[20604,855],[20604,2273],[20604,685],[20574,1789],[20574,5480],[20574,568],[20574,1563],[20574,1932],[20574,976],[20574,209],[20574,827],[20574,1143],[20574,550],[20574,804],[20574,2617],[20574,1310],[20574,749],[20574,2519],[20574,678],[20574,1208],[20574,2110],[20574,338],[20574,550],[20574,598],[20574,707],[20574,606],[20574,404],[20574,1406],[20574,444],[20574,826],[20574,1561],[20574,762],[20574,851],[20574,1105],[20574,1081],[20574,3336],[20574,2320],[20543,1386],[20574,2994],[20574,317],[20574,542],[20574,1968],[20574,787],[20574,1523],[20574,399],[20574,643],[20574,1271],[20574,3822],[20574,1128],[20574,1201],[20543,1413],[20574,3154],[20543,653],[20543,4423],[20543,2849],[20543,1432],[20543,531],[20423,495],[20543,755],[20543,1052],[20543,945],[20543,1289],[20543,1264],[20543,122],[20543,499],[20543,3402],[20513,591],[20543,943],[20543,691],[20543,764],[20543,2957],[20543,829],[20543,1373],[20543,316],[20484,442],[20543,294],[20513,860],[20513,3537],[20362,1232],[20543,513],[20513,825],[20513,662],[20513,1612],[20362,1612],[20513,608],[20513,8540],[20513,1092],[20513,793],[20513,905],[20423,172],[20513,353],[20513,396],[20513,1897],[20513,902],[20513,698],[20513,3854],[20513,2760],[20484,2218],[20513,511],[20513,837],[20513,416],[20513,667],[20513,944],[20513,655],[20513,1200],[20513,782],[20513,624],[20513,2138],[20453,524],[20513,662],[20484,970],[20484,1218],[20484,757],[0,0],[20484,2256],[20484,575],[20484,1395],[20484,969],[20484,552],[20484,764],[20484,499],[20484,609],[20484,738],[20484,1704],[20484,563],[20484,499],[20484,1649],[20484,2041],[20484,2337],[20484,749],[20484,1968],[20484,1011],[20484,2679],[20484,355],[20484,566],[20484,2423],[20453,2918],[20453,2396],[20453,2569],[20453,808],[20362,9517],[20453,2977],[20423,567],[20453,1641],[20453,534],[20362,730],[20453,1209],[20453,2370],[20453,1045],[20453,546],[20453,535],[20392,2163],[20362,4563],[20453,728],[20362,2402],[20453,2461],[20423,354],[20423,2966],[20423,941],[20423,51],[20423,2440],[20423,2079],[20423,505],[20423,822],[20423,363],[20423,503],[20362,537],[20423,1613],[20423,341],[20423,1984],[20423,407],[20423,518],[20423,436],[20423,771],[20362,1457],[20423,660],[20362,972],[19997,2172],[19997,743],[20362,1322],[20362,1852],[20392,1760],[20392,1140],[20362,1124],[20392,1838],[20392,676],[20392,923],[20392,2024],[20362,1484],[20392,1835],[20392,122],[20392,668],[20392,655],[20392,1281],[20362,1600],[20392,635],[20362,1448],[20362,1682],[20392,717],[20392,2851],[20392,155],[20392,1032],[20392,637],[20392,399],[20362,743],[20362,214],[20362,560],[20362,77],[20362,375],[20362,379],[20362,1580],[20362,608],[20362,1870],[20362,2229],[20362,818],[20362,2950],[20362,731],[20362,878],[20362,403],[20362,884],[20362,58],[20362,175],[20362,1604],[0,0],[20362,3053],[20362,1493],[20362,1067],[20362,566],[20362,1952],[20362,562],[20362,950],[20362,626],[20362,905],[20362,1420],[20362,1956],[20362,1438],[20362,1530],[20362,3742],[20362,249],[20362,1250],[20362,895],[20362,832],[20362,844],[20362,1326],[20362,45],[20362,1403],[20362,2372],[20362,636],[20362,1259],[20362,780],[20362,1404],[20362,1477],[20362,2182],[20362,488],[20362,242],[20362,710],[20362,1754],[20362,4699],[20362,2666],[20362,1808],[20362,469],[20362,1199],[20362,694],[20362,259],[20362,103],[20362,980],[20362,1716],[20362,425],[20362,800],[20362,7200],[20362,551],[20362,5356],[20362,1000],[20362,287],[20362,1386],[20362,1059],[20362,1326],[20362,2010],[19997,4603],[20362,951],[20362,3592],[20362,2012],[20362,488],[20362,4532],[20362,1046],[20362,1064],[20362,13840],[20362,10554],[20362,697],[20362,932],[20362,963],[20362,930],[20362,548],[20362,366],[20362,539],[20362,2169],[20362,303],[20362,292],[20362,740],[20362,1507],[20362,655],[20362,1929],[20362,1287],[20362,1149],[20362,2334],[20362,5088],[20362,828],[20362,1091],[20362,209],[20362,926],[20362,60],[20362,552],[20362,510],[20362,1009],[20362,1036],[20362,835],[20362,1656],[20362,771],[20362,918],[20362,565],[20362,1691],[20362,503],[20362,144],[20362,3543],[20362,1187],[20362,1512],[20362,1765],[19997,2910],[20362,260],[20362,578],[20362,477],[20362,989],[20362,1558],[20362,487],[20362,1084],[20362,586],[20362,1334],[20362,166],[20362,560],[20362,347],[20362,7872],[20362,514],[20362,745],[20362,649],[20362,654],[20362,816],[20362,2295],[20362,2485],[20362,4615],[20362,323],[20362,30],[20362,431],[20362,800],[20362,643],[20362,573],[20362,25],[20362,1492],[19997,1011],[19997,934],[20362,243],[19631,597],[20362,301],[20362,1763],[20362,1113],[20362,453],[20362,18379],[20362,105],[20362,55],[20362,75],[20362,928],[20362,1480],[20362,1898],[20362,1082],[20362,509],[20362,861],[20362,635],[20362,1270],[20362,584],[20362,1798],[20362,963],[20362,710],[20362,1369],[20362,145],[20362,619],[20362,1169],[20362,595],[20362,671],[20362,2109],[20362,347],[20362,1675],[20362,1231],[20362,146],[20362,653],[20362,4795],[20362,895],[20362,485],[20362,737],[20362,742],[20362,623],[19997,1172],[0,0],[20362,2434],[20362,4264],[20362,1155],[20362,1350],[20362,1168],[20362,1342],[20362,1007],[20362,756],[20362,84],[19266,459],[0,0],[20362,47],[20362,1115],[20362,2805],[19997,761],[20362,307],[20362,464],[20362,6577],[20362,1897],[20362,617],[20362,1428],[20362,1261],[20362,960],[20362,147],[20362,2316],[20362,494],[20362,1483],[20362,316],[19631,575],[20362,1364],[20362,4861],[20362,855],[20362,896],[20362,181],[20362,148],[20362,425],[20362,490],[19997,1570],[19997,1864],[19997,2693],[20362,989],[19997,1179],[19997,882],[19997,921],[20362,817],[19997,1441],[20362,713],[19997,841],[20362,84],[20362,230],[20362,1168],[20362,629],[20362,778],[20362,493],[20362,1260],[20362,783],[20362,159],[19631,780],[20362,1401],[20362,262],[19997,1615],[20362,1133],[20362,348],[19997,1634],[20362,1995],[19997,1363],[19997,1103],[19997,1219],[19997,682],[19997,315],[19997,592],[19997,757],[19997,3102],[19997,991],[19997,253],[19997,257],[19997,1712],[19997,1147],[19997,459],[19997,715],[19997,962],[19997,285],[19997,727],[0,0],[19997,1587],[19997,2529],[19997,212],[19997,652],[19997,3185],[19997,3239],[19997,1293],[19997,720],[19997,9191],[19997,385],[19997,1996],[19997,172],[19997,2221],[19997,15618],[19997,792],[19997,1387],[19997,3628],[19997,1849],[19997,1058],[19997,479],[19997,4226],[19997,739],[19997,799],[19997,696],[19997,525],[19997,492],[19997,1460],[19997,619],[19997,823],[19997,2448],[19997,2897],[19997,1858],[19997,393],[19997,573],[19997,1008],[19997,923],[19997,1201],[19997,1218],[19997,16116],[19997,140],[19997,434],[19997,265],[19997,10839],[19997,85],[19631,243],[19997,2219],[19997,123],[19997,18],[19997,1268],[19997,16885],[19266,914],[19631,2496],[19997,2190],[19631,1070],[19997,193],[19997,56],[19997,8015],[19631,44],[19997,1306],[19997,343],[19997,343],[19997,1947],[19997,1640],[19997,1640],[19997,1077],[19997,519],[19997,425],[19997,2721],[19997,4885],[19631,342],[18901,1225],[19997,829],[19997,791],[19997,838],[19997,2465],[19997,1615],[19997,5513],[19997,6650],[19997,636],[19997,677],[19631,4301],[19997,1091],[19997,772],[19997,1205],[19997,3588],[17440,266],[19997,1103],[19997,231],[19631,1984],[19631,1182],[19997,2519],[19631,1833],[19997,1947],[19266,8752],[19997,1329],[19997,87],[19631,638],[19997,3332],[19631,712],[19631,712],[19997,676],[19997,676],[19631,3642],[19631,821],[19631,5473],[19631,8851],[19631,788],[19631,20621],[19631,3345],[19631,509],[19631,588],[19631,737],[19631,856],[19631,593],[19631,593],[19631,218],[19631,639],[19631,778],[19631,779],[19631,967],[18901,1891],[19631,510],[19631,1083],[19631,731],[19631,1909],[19631,6269],[19631,2560],[19631,988],[19631,1266],[19631,1463],[19631,946],[19631,2614],[19631,527],[19631,2951],[19631,571],[19631,1328],[19631,498],[19631,3232],[19631,652],[19631,672],[19631,511],[19631,527],[19631,425],[19631,2586],[19631,243],[19631,3655],[19631,919],[16709,3017],[19631,1139],[19631,202],[19631,2199],[19631,956]];
+  const TODAY = { y: 2026, m: 8 }; // September 2026, zero-based month
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const GB_PER_HOUR = { audio: 0.058, 480: 0.25, 720: 0.5, 1080: 0.9, 1440: 1.8, 2160: 4.0 };
+  const dayOf = (y, m) => Date.UTC(y, m, 1) / 86400000;
+  const available = ENTRIES.filter(([d, s]) => d > 0 || s > 0);
+  const postedIn = (y, m) => available.filter(([d]) => d >= dayOf(y, m) && d < dayOf(y, m + 1)).length;
+  let media = "audio", backfill = "posted", pick = { y: 2026, m: 7 }, viewYear = 2026;
+
+  function selection() {
+    if (backfill === "all") return { rows: available, approx: false };
+    if (backfill === "none") return { rows: [], approx: false };
+    return { rows: available.filter(([d]) => d >= dayOf(pick.y, pick.m)), approx: true, atLeast: backfill === "added" };
+  }
+  function renderEstimate() {
+    const { rows, approx, atLeast } = selection();
+    const hours = rows.reduce((a, [, s]) => a + s, 0) / 3600;
+    const rate = media === "audio" ? GB_PER_HOUR.audio : GB_PER_HOUR[$("#v-h").value];
+    const size = hours * rate;
+    $("#since-row").hidden = backfill !== "posted" && backfill !== "added";
+    $("#mp-label").textContent = MONTHS_LONG[pick.m] + " " + pick.y;
+    $("#est-main").innerHTML = rows.length === 0
+      ? "Nothing now. Only videos you add from today."
+      : `${atLeast ? "At least " : approx ? "About " : ""}<b>${rows.length}</b> videos · <b>${hours.toFixed(1)}</b> h · <b>${size >= 10 ? size.toFixed(0) : size.toFixed(1)} GB</b>`;
+    $("#est-note").textContent = !rows.length ? "" : atLeast ? "Older videos you added in or after that month also count. SubSmelt reads the exact dates with your API key when you follow." : approx ? "YouTube rounds older post dates, so SubSmelt checks exact dates near the cutoff." : "";
+  }
+  function renderPicker() {
+    $("#mp-year").textContent = viewYear;
+    $("#mp-next").disabled = viewYear >= TODAY.y;
+    $("#mp-grid").innerHTML = MONTHS.map((name, m) => {
+      const future = viewYear > TODAY.y || (viewYear === TODAY.y && m > TODAY.m);
+      const selected = viewYear === pick.y && m === pick.m;
+      const n = future ? "" : postedIn(viewYear, m);
+      return `<button type="button" data-m="${m}" aria-pressed="${selected}" ${future ? "disabled" : ""} aria-label="${MONTHS_LONG[m]} ${viewYear}${n !== "" ? ", " + n + " videos" : ""}">${name}<small>${n}</small></button>`;
+    }).join("");
+  }
+  const pop = $("#mp-pop"), popBtn = $("#mp-btn");
+  function setPop(open) { pop.hidden = !open; popBtn.setAttribute("aria-expanded", String(open)); if (open) { viewYear = pick.y; renderPicker(); $("#mp-grid [aria-pressed='true']")?.focus(); } }
+  popBtn.addEventListener("click", (e) => { e.stopPropagation(); setPop(pop.hidden); });
+  pop.addEventListener("click", (e) => e.stopPropagation());
+  $("#mp-prev").addEventListener("click", () => { viewYear -= 1; renderPicker(); });
+  $("#mp-next").addEventListener("click", () => { viewYear += 1; renderPicker(); });
+  $("#mp-grid").addEventListener("click", (e) => { const b = e.target.closest("button[data-m]"); if (!b) return; pick = { y: viewYear, m: +b.dataset.m }; setPop(false); popBtn.focus(); renderEstimate(); });
+  document.addEventListener("click", () => { if (!pop.hidden) setPop(false); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !pop.hidden) { setPop(false); popBtn.focus(); } });
+
+  $$(".seg").forEach((seg) => seg.addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b || b.disabled) return;
+    $$("button", seg).forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    if (seg.dataset.seg === "media") { media = b.dataset.value; $("#media-audio").hidden = media !== "audio"; $("#media-video").hidden = media !== "video"; }
+    if (seg.dataset.seg === "backfill") backfill = b.dataset.value;
+    renderEstimate();
+  }));
+  $("#v-h").addEventListener("change", renderEstimate);
+
+  $$("[data-goto-settings]").forEach((a) => a.addEventListener("click", () => { follow.hidden = true; show("settings"); }));
+  $("#yt-key-show").addEventListener("click", (e) => { const i = $("#yt-key"); const hidden = i.type === "password"; i.type = hidden ? "text" : "password"; e.currentTarget.textContent = hidden ? "Hide" : "Show"; });
+  $("#yt-key-test").addEventListener("click", () => {
+    const v = $("#yt-key").value.trim(), st = $("#yt-key-status");
+    if (!v) { st.className = "status-line warn"; st.textContent = "! Paste a key first."; return; }
+    st.className = "status-line ok"; st.textContent = "✓ Key works (example). \"Added since\" is now available.";
+    const added = $("[data-value='added']"); added.disabled = false; added.innerHTML = "Added since…"; $("#added-hint").hidden = true;
+  });
+
+  renderVideos(); renderEstimate();
+})();
+</script>

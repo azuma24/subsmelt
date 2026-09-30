@@ -5,7 +5,53 @@ version number and are released together (`v0.5.6` and `whisper-v0.5.6`).
 
 ## [Unreleased]
 
-Nothing yet.
+Planned as 0.6.0 (app `v0.6.0` and Whisper backend `whisper-v0.6.0`).
+
+### Added
+
+- Nothing yet. YouTube playlists and Nemotron 3.5 ASR are planned for this release; see docs/HANDOFF-0.6.0.md.
+
+### Changed
+
+- **Clear finished replaces Clear All.** The dashboard button now removes only done, skipped and failed jobs. Pending and running jobs stay in the list.
+- **Phone dashboard header** shows Preview Scan, Scan Folders and Run All inline; the page name comes from the bottom tab bar.
+- **Settings keep unsaved edits** when the page refetches in the background, and a late autosave no longer hides a pending change.
+- **Job failures collapse into one toast** with a count, Open Dashboard and Dismiss all.
+- **Page titles match the navigation** (Transcribe, Convert / Translate), and every topbar is the same height.
+- **Environment-pinned settings** are applied in memory and no longer written into `config.json`. `GET /api/settings` lists them in `_env_pinned`.
+- **Retry, force and delete** on a job that is translating return 409 instead of resetting it under the running worker.
+- **Flagged subtitle names** such as `Movie.en.sdh.srt` and `Movie.zh-TW.srt` now pair with their video and name their output like `Movie.en.srt` does.
+
+### Fixed
+
+- **Saved API key wiped on Settings save** for installs still using the single `api_key` setting. The redaction marker was stored as the key and every translation failed to authenticate. If this already happened, enter the key once more.
+- **Stored API key sent to any endpoint.** `/api/models?endpoint=...` attached the saved local key to whatever address the caller supplied.
+- **Test and Fetch models failed on saved cloud connections** after a reload.
+- **Translations cut down to a quoted phrase.** A line such as `他說「我要走了」然後離開` came back as `我要走了`, and two-line answers kept only the last line.
+- **Subtitles skipped or translated twice.** `Movie.v2.srt` next to `Movie.srt` was mistaken for an output, and two sources that map to one output ran on the same file.
+- **Queue did not resume after a restart**; jobs interrupted by a restart now continue automatically when auto-translate is on.
+- **A failed chunk left sibling workers** calling the LLM and rewriting the partial file.
+- **Deleting a language** left its pending jobs, which then translated into English.
+- **A broken `config.json` was overwritten with defaults.** It is now backed up to `config.json.broken-<time>` and left alone until you save.
+- **WebVTT files with STYLE blocks or text cue identifiers** failed to parse.
+- **Folder names containing commas** could not be selected for scanning.
+- **Convert produced mojibake** for Big5, Shift_JIS, GBK and CP1252 subtitles.
+- **Language switch** left most of the UI in English until another re-render.
+- **Whisper batches** kept running invisibly after leaving the page; they now show progress and Cancel on return. History Retry can no longer start overlapping runs.
+- **Symlinked media folders** broke path mappings and per-folder transcription defaults.
+- **Parallel mode waited 30 seconds per chunk** when cascading to a busy connection.
+- **Keyboard support** in row action menus (focus, arrow keys, Escape).
+
+### Fixed (Whisper backend)
+
+- **Windows service reported ffmpeg missing** when ffmpeg came from `SUBSMELT_FFMPEG` rather than PATH.
+- **Switching models stacked them in GPU memory.** One model stays resident; deleting a model unloads it first, which also releases its Windows file lock.
+- **Cancelled or dropped streams leaked temp media** and logged a traceback.
+- **Japanese and Chinese subtitles ignored line length and cue duration.**
+- **Diarized cues merged two speakers** into one line.
+- **URL fetches** re-check redirected hosts and cap downloads at 5 GiB; playlist and channel URLs are refused on the single-file endpoint.
+- **`/health?model=`** no longer reveals whether arbitrary paths exist.
+- Upload names like `..` return 400; non-ASCII tokens return 401; whitespace-only cues are dropped.
 
 ## [0.5.9] — 2026-09-09
 
