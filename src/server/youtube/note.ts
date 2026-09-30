@@ -84,10 +84,6 @@ export function clock(seconds: number): string {
 const timestampLink = (videoId: string, seconds: number) =>
   `[${clock(seconds)}](https://youtu.be/${videoId}?t=${Math.max(0, Math.floor(seconds))})`;
 
-function cleanCueText(text: string): string {
-  return text.replace(/<[^>]*>/g, "").replace(/\{\\[^}]*\}/g, "").replace(/\s*\n\s*/g, " ").replace(/\s+/g, " ").trim();
-}
-
 /** Joins cue texts with a space, except between two CJK characters. */
 function joinTexts(texts: string[]): string {
   let out = "";
@@ -97,6 +93,11 @@ function joinTexts(texts: string[]): string {
     out += glue + text;
   }
   return out;
+}
+
+function cleanCueText(text: string): string {
+  const lines = text.replace(/<[^>]*>/g, "").replace(/\{\\[^}]*\}/g, "").split(/\r?\n/);
+  return joinTexts(lines.map((line) => line.replace(/\s+/g, " ").trim()));
 }
 
 /**

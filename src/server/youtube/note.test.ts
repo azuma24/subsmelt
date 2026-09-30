@@ -114,3 +114,9 @@ test("clock shows hours only when there are some", () => {
 test("a hash at the start of a word is escaped so Obsidian does not read a tag", () => {
   assert.deepEqual(groupParagraphs([cue(0, 1, "learn #python today, issue#3")], [0]), [{ start: 0, text: "learn \\#python today, issue#3" }]);
 });
+
+test("the lines of one cue join like cues do", () => {
+  assert.deepEqual(groupParagraphs([cue(0, 1, "瀏覽你做過的作品，\n也能找到新作品。"), cue(1, 2, "Two\nlines")], [0]), [
+    { start: 0, text: "瀏覽你做過的作品，也能找到新作品。 Two lines" },
+  ]);
+});
