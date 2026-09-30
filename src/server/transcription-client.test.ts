@@ -328,6 +328,37 @@ test("applyPreflightPolicy downgrades low-RAM requests when configured", async (
   }
 });
 
+test("applyPreflightPolicy never downgrades a Nemotron request to a Whisper model", async () => {
+  const calls: unknown[] = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+    calls.push(JSON.parse(String(init?.body)));
+    return Response.json({ ok: false, safe: false, code: "insufficient_ram", availableRamMb: 1024, requiredRamMb: 2048, suggestedModel: "small" });
+  }) as typeof fetch;
+  try {
+    await assert.rejects(
+      applyPreflightPolicy(
+        "http://whisper-backend:8001",
+        {
+          input_path: "/media/Episode.mkv",
+          output_format: "srt",
+          model: "nemotron-3.5-asr",
+          language: "ja",
+          device: "cuda",
+          compute_type: "int8",
+          use_vad: true,
+          post_action: "transcribe_only",
+        },
+        { transcription_low_ram_behavior: "downgrade" },
+      ),
+      { message: "Not enough RAM for nemotron-3.5-asr; available 1024 MB, required 2048 MB" },
+    );
+    assert.equal(calls.length, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("applyPreflightPolicy sends explicit unsafe override only for run_anyway", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (async () => Response.json({ ok: false, safe: false, code: "insufficient_ram", availableRamMb: 1024, requiredRamMb: 4096 })) as typeof fetch;

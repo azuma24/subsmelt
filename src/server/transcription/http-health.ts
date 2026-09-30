@@ -3,6 +3,7 @@
 // committing to a (possibly long) transcription call.
 
 import type {
+  BackendHealthResponse,
   BackendPreflightResponse,
   BackendTranscriptionRequest,
   LowRamBehavior,
@@ -15,12 +16,13 @@ import {
   throwBackendError,
   transcriptionAuthHeaders,
 } from "./http-shared.js";
+import { modelEngine } from "./model-engine.js";
 
 function lowRamBehavior(raw: string | undefined): LowRamBehavior {
   return raw === "downgrade" || raw === "skip" || raw === "run_anyway" ? raw : "ask";
 }
 
-export async function fetchTranscriptionHealth(backendUrl: string, model?: string, token?: string): Promise<unknown> {
+export async function fetchTranscriptionHealth(backendUrl: string, model?: string, token?: string): Promise<BackendHealthResponse> {
   const url = normalizeTranscriptionBackendUrl(backendUrl);
   if (!url) throw new Error("Transcription backend URL is not configured");
   const qs = model ? `?${new URLSearchParams({ model }).toString()}` : "";
@@ -29,7 +31,7 @@ export async function fetchTranscriptionHealth(backendUrl: string, model?: strin
   }, SHORT_REQUEST_TIMEOUT_MS, "Transcription backend health check");
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throwBackendError(body, response.status);
-  return body;
+  return body as BackendHealthResponse;
 }
 
 /** Tail the Whisper backend's own log file.
@@ -78,8 +80,12 @@ export async function applyPreflightPolicy(
 
   if (preflight.code === "insufficient_ram") {
     const behavior = lowRamBehavior(settings.transcription_low_ram_behavior);
-    if (behavior === "downgrade" && preflight.suggestedModel && preflight.suggestedModel !== request.model) {
-      const downgraded = { ...request, model: preflight.suggestedModel };
+    const suggested = preflight.suggestedModel;
+    // A smaller model from another engine is a different product (languages,
+    // punctuation), so it is never a silent substitute.
+    const sameEngine = (model: string) => modelEngine(model) === modelEngine(request.model);
+    if (behavior === "downgrade" && suggested && suggested !== request.model && sameEngine(suggested)) {
+      const downgraded = { ...request, model: suggested };
       const downgradedPreflight = await preflightTranscription(backendUrl, downgraded, token);
       if (downgradedPreflight.safe !== false && downgradedPreflight.ok !== false) return downgraded;
     }
