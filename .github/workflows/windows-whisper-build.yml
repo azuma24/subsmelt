@@ -64,7 +64,8 @@ jobs:
           pip install nvidia-cudnn-cu12==9.* nvidia-cublas-cu12 pyinstaller
           pip list
 
-      # Fetch ffmpeg.exe + vc_redist.x64.exe into packaging\windows\vendor\.
+      # Fetch ffmpeg.exe + vc_redist.x64.exe + the pinned, SHA-256 verified
+      # NeMo-Speech runtime into packaging\windows\vendor\.
       - name: Fetch vendored binaries
         run: pwsh packaging/windows/fetch-vendor.ps1
 
@@ -72,6 +73,16 @@ jobs:
       # backend-whisper/ so the spec's relative paths resolve.
       - name: Build PyInstaller bundle
         run: pyinstaller packaging/windows/whisper-server.spec --clean --noconfirm
+
+      # The spec only prints a NOTE when vendor/nemo-speech/bin is absent, so
+      # gate the bundle here. The CUDA exe is not run: the runner has no GPU.
+      - name: Check bundled nemo-speech runtime
+        run: |
+          $exe = "dist/whisper-server/nemo-speech/bin/nemo-speech.exe"
+          if (-not (Test-Path $exe)) { throw "build did not bundle $exe" }
+          $sizeMb = [math]::Round((Get-Item $exe).Length / 1MB, 1)
+          Write-Host "$exe (${sizeMb} MB)"
+          Get-ChildItem dist/whisper-server/nemo-speech/bin | Select-Object Name, Length
 
       # Smoke: --print-config resolves config and exits before uvicorn/CUDA are
       # imported, so it exercises the real launcher path on the GPU-less runner.
@@ -131,4 +142,6 @@ jobs:
           body: |
             SubSmelt Windows Whisper backend installer (CUDA + CPU fallback).
             Models are downloaded post-install via the in-app model manager —
-            none are bundled. See backend-whisper/packaging/windows/README.md.
+            none are bundled. Nemotron 3.5 ASR ships its NeMo-Speech runtime in
+            the installer; GPU use needs an NVIDIA driver R580 or newer (CUDA 13).
+            See backend-whisper/packaging/windows/README.md.

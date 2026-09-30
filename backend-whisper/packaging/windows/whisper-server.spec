@@ -18,6 +18,7 @@
 # Run this spec from the backend-whisper/ directory so the relative paths below
 # (run_server.py, app/) resolve. SPECPATH is set by PyInstaller to this file's dir.
 import os
+import shutil
 import sys
 
 from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs, collect_submodules
@@ -170,3 +171,17 @@ coll = COLLECT(
     upx_exclude=[],
     name="whisper-server",         # -> dist\whisper-server\
 )
+
+# nemo-speech: the NeMo-Speech.cpp CUDA runtime (nemo-speech.exe + its DLLs) for
+# the Nemotron ASR engine, fetched by fetch-vendor.ps1. It must sit at
+# nemo-speech\bin\ beside run_server.exe, where app/ looks when
+# SUBSMELT_NEMO_SPEECH is unset. A datas entry would land under _internal\ on
+# PyInstaller 6, so copy it into the finished bundle (COLLECT has already run).
+_nemo_speech_bin = os.path.join(SPEC_DIR, "vendor", "nemo-speech", "bin")
+if os.path.isdir(_nemo_speech_bin):
+    shutil.copytree(_nemo_speech_bin,
+                    os.path.join(DISTPATH, "whisper-server", "nemo-speech", "bin"),
+                    dirs_exist_ok=True)
+else:
+    print("[whisper-server.spec] NOTE: vendor/nemo-speech/bin not found — run "
+          "fetch-vendor.ps1 before building so the Nemotron engine ships (see README).")
