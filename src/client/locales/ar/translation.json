@@ -724,8 +724,8 @@
     "rawConfigOpen": "Open raw config",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "نماذج تحويل الكلام إلى نص",
+      "description": "نزّل نماذج تحويل الكلام إلى نص أو أزلها على الخادم الخلفي للنسخ. تعرض التنزيلات التقدم مباشرةً.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +748,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "بيئة التشغيل مفقودة"
     },
     "setup": {
       "progress": "اكتمل {{done}} من {{total}}",
@@ -898,7 +899,7 @@
     "timeout": "The backend took too long to answer — raise the request timeout in Settings, or use a smaller model.",
     "auth": "The backend rejected the token — check the backend token in Settings.",
     "rate-limit": "The provider rate-limited the request — it will retry; lower parallel chunks if it keeps happening.",
-    "model-missing": "That model is not downloaded — download it from Settings → Models.",
+    "model-missing": "هذا النموذج غير منزّل — نزّله من الإعدادات ← نماذج تحويل الكلام إلى نص.",
     "insufficient-ram": "Not enough memory for this model — choose a smaller one.",
     "insufficient-disk": "Not enough free disk space for the output.",
     "ffmpeg-missing": "ffmpeg was not found on the backend — install it or set SUBSMELT_FFMPEG.",
@@ -1050,5 +1051,18 @@
     "retriedAll": "أُعيدت محاولة {{ok}} من {{total}} ملفات.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "فشلت إعادة المحاولة: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 لغة. الأفضل للصينية واللغات النادرة.",
+      "nemotron": "سريع ومع علامات الترقيم. الإنجليزية واليابانية والكورية ومعظم اللغات الأوروبية."
+    },
+    "languageUnsupported": "{{model}} لا يدعم {{language}}. اختر نموذج Whisper.",
+    "optionsDecidedByModel": "يحدد {{model}} حجم beam والموجّه ونوع الحوسبة بنفسه.",
+    "modelUnavailable": "لا يمكن تشغيل {{model}} هنا: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

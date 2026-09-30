@@ -724,8 +724,8 @@
     "rawConfigOpen": "Open raw config",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "Model ucapan-ke-teks",
+      "description": "Unduh atau hapus model ucapan-ke-teks di backend transkripsi. Unduhan menampilkan progres secara langsung.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +748,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "Runtime tidak ada"
     },
     "setup": {
       "progress": "{{done}} dari {{total}} selesai",
@@ -898,7 +899,7 @@
     "timeout": "The backend took too long to answer — raise the request timeout in Settings, or use a smaller model.",
     "auth": "The backend rejected the token — check the backend token in Settings.",
     "rate-limit": "The provider rate-limited the request — it will retry; lower parallel chunks if it keeps happening.",
-    "model-missing": "That model is not downloaded — download it from Settings → Models.",
+    "model-missing": "Model itu belum diunduh — unduh dari Pengaturan → Model ucapan-ke-teks.",
     "insufficient-ram": "Not enough memory for this model — choose a smaller one.",
     "insufficient-disk": "Not enough free disk space for the output.",
     "ffmpeg-missing": "ffmpeg was not found on the backend — install it or set SUBSMELT_FFMPEG.",
@@ -1050,5 +1051,18 @@
     "retriedAll": "Mencoba ulang {{ok}} dari {{total}} berkas.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "Gagal mencoba lagi: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 bahasa. Terbaik untuk bahasa Mandarin dan bahasa langka.",
+      "nemotron": "Cepat, dengan tanda baca. Inggris, Jepang, Korea, dan sebagian besar bahasa Eropa."
+    },
+    "languageUnsupported": "{{model}} tidak mendukung {{language}}. Pilih model Whisper.",
+    "optionsDecidedByModel": "{{model}} menentukan sendiri ukuran beam, prompt, dan tipe komputasi.",
+    "modelUnavailable": "{{model}} tidak dapat berjalan di sini: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

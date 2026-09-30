@@ -724,8 +724,8 @@
     "rawConfigOpen": "র কনফিগ খুলুন",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "স্পিচ-টু-টেক্সট মডেল",
+      "description": "ট্রান্সক্রিপশন ব্যাকএন্ডে স্পিচ-টু-টেক্সট মডেল ডাউনলোড বা সরান। ডাউনলোডের অগ্রগতি সরাসরি দেখা যায়।",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +748,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "রানটাইম নেই"
     },
     "setup": {
       "progress": "{{total}}টির মধ্যে {{done}}টি সম্পন্ন",
@@ -898,7 +899,7 @@
     "timeout": "The backend took too long to answer — raise the request timeout in Settings, or use a smaller model.",
     "auth": "The backend rejected the token — check the backend token in Settings.",
     "rate-limit": "The provider rate-limited the request — it will retry; lower parallel chunks if it keeps happening.",
-    "model-missing": "That model is not downloaded — download it from Settings → Models.",
+    "model-missing": "ওই মডেলটি ডাউনলোড করা নেই — সেটিংস → স্পিচ-টু-টেক্সট মডেল থেকে ডাউনলোড করুন।",
     "insufficient-ram": "Not enough memory for this model — choose a smaller one.",
     "insufficient-disk": "Not enough free disk space for the output.",
     "ffmpeg-missing": "ffmpeg was not found on the backend — install it or set SUBSMELT_FFMPEG.",
@@ -1050,5 +1051,18 @@
     "retriedAll": "{{total}}টির মধ্যে {{ok}}টি ফাইল পুনরায় চেষ্টা করা হয়েছে।",
     "failedFallback": "Transcription failed.",
     "retryFailed": "পুনরায় চেষ্টা ব্যর্থ হয়েছে: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "৯৯টি ভাষা। চীনা ও বিরল ভাষার জন্য সেরা।",
+      "nemotron": "দ্রুত, যতিচিহ্নসহ। ইংরেজি, জাপানি, কোরিয়ান ও বেশিরভাগ ইউরোপীয় ভাষা।"
+    },
+    "languageUnsupported": "{{model}} {{language}} সমর্থন করে না। একটি Whisper মডেল বেছে নিন।",
+    "optionsDecidedByModel": "{{model}} নিজেই বিম সাইজ, প্রম্পট ও কম্পিউট টাইপ ঠিক করে।",
+    "modelUnavailable": "{{model}} এখানে চলতে পারে না: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

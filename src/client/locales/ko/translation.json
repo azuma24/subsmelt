@@ -724,8 +724,8 @@
     "rawConfigOpen": "Open raw config",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "음성-텍스트 변환 모델",
+      "description": "전사 백엔드에서 음성-텍스트 변환 모델을 다운로드하거나 삭제합니다. 다운로드 진행 상황이 실시간으로 표시됩니다.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +748,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "런타임 없음"
     },
     "setup": {
       "progress": "{{total}}개 중 {{done}}개 완료",
@@ -898,7 +899,7 @@
     "timeout": "The backend took too long to answer — raise the request timeout in Settings, or use a smaller model.",
     "auth": "The backend rejected the token — check the backend token in Settings.",
     "rate-limit": "The provider rate-limited the request — it will retry; lower parallel chunks if it keeps happening.",
-    "model-missing": "That model is not downloaded — download it from Settings → Models.",
+    "model-missing": "해당 모델이 다운로드되지 않았습니다 — 설정 → 음성-텍스트 변환 모델에서 다운로드하세요.",
     "insufficient-ram": "Not enough memory for this model — choose a smaller one.",
     "insufficient-disk": "Not enough free disk space for the output.",
     "ffmpeg-missing": "ffmpeg was not found on the backend — install it or set SUBSMELT_FFMPEG.",
@@ -1050,5 +1051,18 @@
     "retriedAll": "{{total}}개 중 {{ok}}개 파일을 재시도했습니다.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "재시도 실패: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99개 언어 지원. 중국어와 희귀 언어에 가장 적합합니다.",
+      "nemotron": "빠르고 문장 부호를 자동으로 넣습니다. 영어, 일본어, 한국어, 대부분의 유럽 언어 지원."
+    },
+    "languageUnsupported": "{{model}}은(는) {{language}}을(를) 지원하지 않습니다. Whisper 모델을 선택하세요.",
+    "optionsDecidedByModel": "{{model}}이(가) 빔 크기, 프롬프트, 연산 유형을 직접 결정합니다.",
+    "modelUnavailable": "{{model}}을(를) 여기서 실행할 수 없습니다: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

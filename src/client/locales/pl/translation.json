@@ -724,8 +724,8 @@
     "rawConfigOpen": "Otwórz surową konfigurację",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "Modele mowy na tekst",
+      "description": "Pobieraj lub usuwaj modele mowy na tekst w backendzie transkrypcji. Postęp pobierania jest widoczny na bieżąco.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +748,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "Brak środowiska uruchomieniowego"
     },
     "setup": {
       "progress": "Ukończono {{done}} z {{total}}",
@@ -898,7 +899,7 @@
     "timeout": "The backend took too long to answer — raise the request timeout in Settings, or use a smaller model.",
     "auth": "The backend rejected the token — check the backend token in Settings.",
     "rate-limit": "The provider rate-limited the request — it will retry; lower parallel chunks if it keeps happening.",
-    "model-missing": "That model is not downloaded — download it from Settings → Models.",
+    "model-missing": "Ten model nie jest pobrany — pobierz go w Ustawienia → Modele mowy na tekst.",
     "insufficient-ram": "Not enough memory for this model — choose a smaller one.",
     "insufficient-disk": "Not enough free disk space for the output.",
     "ffmpeg-missing": "ffmpeg was not found on the backend — install it or set SUBSMELT_FFMPEG.",
@@ -1050,5 +1051,18 @@
     "retriedAll": "Ponowiono {{ok}} z {{total}} plików.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "Ponowna próba nie powiodła się: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 języków. Najlepszy do chińskiego i rzadkich języków.",
+      "nemotron": "Szybki, z interpunkcją. Angielski, japoński, koreański i większość języków europejskich."
+    },
+    "languageUnsupported": "{{model}} nie obsługuje języka {{language}}. Wybierz model Whisper.",
+    "optionsDecidedByModel": "{{model}} sam ustala rozmiar beam, prompt i typ obliczeń.",
+    "modelUnavailable": "{{model}} nie może tu działać: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

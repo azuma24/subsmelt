@@ -724,8 +724,8 @@
     "rawConfigOpen": "Open raw config",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "Modèles de reconnaissance vocale",
+      "description": "Téléchargez ou supprimez des modèles de reconnaissance vocale sur le backend de transcription. Les téléchargements affichent leur progression en direct.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +748,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "Runtime manquant"
     },
     "setup": {
       "progress": "{{done}} sur {{total}} terminé",
@@ -898,7 +899,7 @@
     "timeout": "Le backend a mis trop de temps à répondre : augmentez le délai dans les Réglages ou utilisez un modèle plus petit.",
     "auth": "Le backend a rejeté le jeton : vérifiez le jeton dans les Réglages.",
     "rate-limit": "Le fournisseur a limité le débit : nouvelle tentative en cours ; réduisez les segments parallèles si cela persiste.",
-    "model-missing": "Ce modèle n'est pas téléchargé : téléchargez-le dans Réglages → Modèles.",
+    "model-missing": "Ce modèle n'est pas téléchargé : téléchargez-le dans Réglages → Modèles de reconnaissance vocale.",
     "insufficient-ram": "Mémoire insuffisante pour ce modèle : choisissez-en un plus petit.",
     "insufficient-disk": "Espace disque insuffisant pour la sortie.",
     "ffmpeg-missing": "ffmpeg est introuvable sur le backend : installez-le ou définissez SUBSMELT_FFMPEG.",
@@ -1050,5 +1051,18 @@
     "retriedAll": "{{ok}} fichiers sur {{total}} réessayés.",
     "failedFallback": "Échec de la transcription.",
     "retryFailed": "Échec de la nouvelle tentative : {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 langues. Idéal pour le chinois et les langues rares.",
+      "nemotron": "Rapide, avec ponctuation. Anglais, japonais, coréen et la plupart des langues européennes."
+    },
+    "languageUnsupported": "{{model}} ne prend pas en charge {{language}}. Choisissez un modèle Whisper.",
+    "optionsDecidedByModel": "{{model}} choisit lui-même la taille de beam, le prompt et le type de calcul.",
+    "modelUnavailable": "{{model}} ne peut pas s'exécuter ici : {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

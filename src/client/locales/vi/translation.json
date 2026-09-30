@@ -724,8 +724,8 @@
     "rawConfigOpen": "Open raw config",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "Mô hình chuyển giọng nói thành văn bản",
+      "description": "Tải xuống hoặc xóa mô hình chuyển giọng nói thành văn bản trên backend phiên âm. Tiến trình tải xuống hiển thị trực tiếp.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +748,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "Thiếu runtime"
     },
     "setup": {
       "progress": "Hoàn tất {{done}}/{{total}}",
@@ -898,7 +899,7 @@
     "timeout": "The backend took too long to answer — raise the request timeout in Settings, or use a smaller model.",
     "auth": "The backend rejected the token — check the backend token in Settings.",
     "rate-limit": "The provider rate-limited the request — it will retry; lower parallel chunks if it keeps happening.",
-    "model-missing": "That model is not downloaded — download it from Settings → Models.",
+    "model-missing": "Mô hình đó chưa được tải xuống — hãy tải trong Cài đặt → Mô hình chuyển giọng nói thành văn bản.",
     "insufficient-ram": "Not enough memory for this model — choose a smaller one.",
     "insufficient-disk": "Not enough free disk space for the output.",
     "ffmpeg-missing": "ffmpeg was not found on the backend — install it or set SUBSMELT_FFMPEG.",
@@ -1050,5 +1051,18 @@
     "retriedAll": "Đã thử lại {{ok}} trong {{total}} tệp.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "Thử lại thất bại: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 ngôn ngữ. Tốt nhất cho tiếng Trung và các ngôn ngữ hiếm.",
+      "nemotron": "Nhanh, có dấu câu. Tiếng Anh, Nhật, Hàn và hầu hết ngôn ngữ châu Âu."
+    },
+    "languageUnsupported": "{{model}} không hỗ trợ {{language}}. Hãy chọn một mô hình Whisper.",
+    "optionsDecidedByModel": "{{model}} tự quyết định kích thước beam, prompt và kiểu tính toán.",
+    "modelUnavailable": "{{model}} không thể chạy ở đây: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

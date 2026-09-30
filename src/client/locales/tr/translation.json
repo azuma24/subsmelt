@@ -724,8 +724,8 @@
     "rawConfigOpen": "Ham yapılandırmayı aç",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "Konuşmadan metne modelleri",
+      "description": "Transkripsiyon arka ucunda konuşmadan metne modellerini indirin veya kaldırın. İndirmeler ilerlemeyi canlı gösterir.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +748,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "Çalışma zamanı eksik"
     },
     "setup": {
       "progress": "{{total}} adımdan {{done}} tamamlandı",
@@ -898,7 +899,7 @@
     "timeout": "The backend took too long to answer — raise the request timeout in Settings, or use a smaller model.",
     "auth": "The backend rejected the token — check the backend token in Settings.",
     "rate-limit": "The provider rate-limited the request — it will retry; lower parallel chunks if it keeps happening.",
-    "model-missing": "That model is not downloaded — download it from Settings → Models.",
+    "model-missing": "Bu model indirilmemiş — Ayarlar → Konuşmadan metne modelleri bölümünden indirin.",
     "insufficient-ram": "Not enough memory for this model — choose a smaller one.",
     "insufficient-disk": "Not enough free disk space for the output.",
     "ffmpeg-missing": "ffmpeg was not found on the backend — install it or set SUBSMELT_FFMPEG.",
@@ -1050,5 +1051,18 @@
     "retriedAll": "{{total}} dosyadan {{ok}} tanesi yeniden denendi.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "Yeniden deneme başarısız: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 dil. Çince ve nadir diller için en iyisi.",
+      "nemotron": "Hızlı, noktalamalı. İngilizce, Japonca, Korece ve çoğu Avrupa dili."
+    },
+    "languageUnsupported": "{{model}}, {{language}} dilini desteklemiyor. Bir Whisper modeli seçin.",
+    "optionsDecidedByModel": "{{model}}, beam boyutunu, istemi ve hesaplama türünü kendisi belirler.",
+    "modelUnavailable": "{{model}} burada çalışamıyor: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

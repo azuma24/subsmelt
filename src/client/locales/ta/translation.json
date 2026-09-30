@@ -724,8 +724,8 @@
     "rawConfigOpen": "மூல உள்ளமைவைத் திற",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "பேச்சு-முதல்-உரை மாதிரிகள்",
+      "description": "படியெடுத்தல் பின்தளத்தில் பேச்சு-முதல்-உரை மாதிரிகளைப் பதிவிறக்கவும் அல்லது அகற்றவும். பதிவிறக்க முன்னேற்றம் நேரலையாகக் காட்டப்படும்.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +748,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "இயக்கச்சூழல் இல்லை"
     },
     "setup": {
       "progress": "{{total}} இல் {{done}} முடிந்தது",
@@ -898,7 +899,7 @@
     "timeout": "The backend took too long to answer — raise the request timeout in Settings, or use a smaller model.",
     "auth": "The backend rejected the token — check the backend token in Settings.",
     "rate-limit": "The provider rate-limited the request — it will retry; lower parallel chunks if it keeps happening.",
-    "model-missing": "That model is not downloaded — download it from Settings → Models.",
+    "model-missing": "அந்த மாதிரி பதிவிறக்கப்படவில்லை — அமைப்புகள் → பேச்சு-முதல்-உரை மாதிரிகள் பகுதியில் பதிவிறக்கவும்.",
     "insufficient-ram": "Not enough memory for this model — choose a smaller one.",
     "insufficient-disk": "Not enough free disk space for the output.",
     "ffmpeg-missing": "ffmpeg was not found on the backend — install it or set SUBSMELT_FFMPEG.",
@@ -1050,5 +1051,18 @@
     "retriedAll": "{{total}} இல் {{ok}} கோப்புகள் மீண்டும் முயற்சிக்கப்பட்டன.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "மீண்டும் முயற்சி தோல்வியடைந்தது: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 மொழிகள். சீனம் மற்றும் அரிய மொழிகளுக்குச் சிறந்தது.",
+      "nemotron": "வேகமானது, நிறுத்தற்குறிகளுடன். ஆங்கிலம், ஜப்பானியம், கொரியம் மற்றும் பெரும்பாலான ஐரோப்பிய மொழிகள்."
+    },
+    "languageUnsupported": "{{model}} {{language}} மொழியை ஆதரிக்காது. ஒரு Whisper மாதிரியைத் தேர்ந்தெடுக்கவும்.",
+    "optionsDecidedByModel": "{{model}} பீம் அளவு, ப்ராம்ப்ட் மற்றும் கணக்கீட்டு வகையைத் தானே தீர்மானிக்கிறது.",
+    "modelUnavailable": "{{model}} இங்கே இயங்க முடியாது: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

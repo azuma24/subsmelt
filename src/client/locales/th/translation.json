@@ -724,8 +724,8 @@
     "rawConfigOpen": "Open raw config",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "โมเดลแปลงเสียงพูดเป็นข้อความ",
+      "description": "ดาวน์โหลดหรือลบโมเดลแปลงเสียงพูดเป็นข้อความบนแบ็กเอนด์ถอดเสียง การดาวน์โหลดแสดงความคืบหน้าแบบสด",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +748,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "ไม่มีรันไทม์"
     },
     "setup": {
       "progress": "เสร็จแล้ว {{done}} จาก {{total}}",
@@ -898,7 +899,7 @@
     "timeout": "The backend took too long to answer — raise the request timeout in Settings, or use a smaller model.",
     "auth": "The backend rejected the token — check the backend token in Settings.",
     "rate-limit": "The provider rate-limited the request — it will retry; lower parallel chunks if it keeps happening.",
-    "model-missing": "That model is not downloaded — download it from Settings → Models.",
+    "model-missing": "โมเดลนั้นยังไม่ได้ดาวน์โหลด — ดาวน์โหลดได้ที่ การตั้งค่า → โมเดลแปลงเสียงพูดเป็นข้อความ",
     "insufficient-ram": "Not enough memory for this model — choose a smaller one.",
     "insufficient-disk": "Not enough free disk space for the output.",
     "ffmpeg-missing": "ffmpeg was not found on the backend — install it or set SUBSMELT_FFMPEG.",
@@ -1050,5 +1051,18 @@
     "retriedAll": "ลองใหม่ {{ok}} จาก {{total}} ไฟล์",
     "failedFallback": "Transcription failed.",
     "retryFailed": "ลองใหม่ไม่สำเร็จ: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 ภาษา เหมาะที่สุดสำหรับภาษาจีนและภาษาที่พบน้อย",
+      "nemotron": "รวดเร็ว ใส่เครื่องหมายวรรคตอนให้ รองรับอังกฤษ ญี่ปุ่น เกาหลี และภาษายุโรปส่วนใหญ่"
+    },
+    "languageUnsupported": "{{model}} ไม่รองรับ{{language}} โปรดเลือกโมเดล Whisper",
+    "optionsDecidedByModel": "{{model}} กำหนดขนาด beam, พรอมต์ และประเภทการประมวลผลเอง",
+    "modelUnavailable": "{{model}} ไม่สามารถทำงานที่นี่ได้: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }

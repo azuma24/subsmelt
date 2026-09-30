@@ -724,8 +724,8 @@
     "rawConfigOpen": "Buksan ang raw config",
     "invalidJson": "{{field}} must be valid JSON. Fix it before saving.",
     "models": {
-      "title": "Whisper Models",
-      "description": "Download or remove Whisper models on the transcription backend. Downloads stream live progress.",
+      "title": "Mga modelo ng speech-to-text",
+      "description": "Mag-download o mag-alis ng mga modelo ng speech-to-text sa transcription backend. Makikita nang live ang progreso ng mga download.",
       "needsBackend": "Set a transcription backend URL above to manage models.",
       "loading": "Loading models…",
       "empty": "The backend reported no models.",
@@ -748,7 +748,8 @@
       "deleteTitle": "Delete model",
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
-      "deleteFailed": "Delete of {{model}} failed: {{message}}"
+      "deleteFailed": "Delete of {{model}} failed: {{message}}",
+      "runtimeMissing": "Walang runtime"
     },
     "setup": {
       "progress": "{{done}} sa {{total}} ang tapos",
@@ -898,7 +899,7 @@
     "timeout": "The backend took too long to answer — raise the request timeout in Settings, or use a smaller model.",
     "auth": "The backend rejected the token — check the backend token in Settings.",
     "rate-limit": "The provider rate-limited the request — it will retry; lower parallel chunks if it keeps happening.",
-    "model-missing": "That model is not downloaded — download it from Settings → Models.",
+    "model-missing": "Hindi pa na-download ang modelong iyon — i-download ito sa Mga Setting → Mga modelo ng speech-to-text.",
     "insufficient-ram": "Not enough memory for this model — choose a smaller one.",
     "insufficient-disk": "Not enough free disk space for the output.",
     "ffmpeg-missing": "ffmpeg was not found on the backend — install it or set SUBSMELT_FFMPEG.",
@@ -1050,5 +1051,18 @@
     "retriedAll": "Inulit ang {{ok}} sa {{total}} file.",
     "failedFallback": "Transcription failed.",
     "retryFailed": "Nabigo ang muling pagsubok: {{message}}"
+  },
+  "stt": {
+    "engineStrength": {
+      "whisper": "99 wika. Pinakamainam para sa Chinese at mga bihirang wika.",
+      "nemotron": "Mabilis, may bantas. English, Japanese, Korean, at karamihan ng mga wikang European."
+    },
+    "languageUnsupported": "Hindi sinusuportahan ng {{model}} ang {{language}}. Pumili ng Whisper model.",
+    "optionsDecidedByModel": "Ang {{model}} mismo ang nagpapasya ng beam size, prompt at compute type.",
+    "modelUnavailable": "Hindi mapapatakbo rito ang {{model}}: {{reason}}",
+    "engine": {
+      "whisper": "Whisper",
+      "nemotron": "NVIDIA Nemotron"
+    }
   }
 }
