@@ -117,6 +117,11 @@ export function partialOutputPath(outputPath: string): string {
   return `${outputPath}${PARTIAL_SUFFIX}`;
 }
 
+/** Drop the in-flight `.part` of a job that no longer exists; a no-op when there is none. */
+export function removePartialOutput(outputPath: string): void {
+  fs.rmSync(partialOutputPath(outputPath), { force: true });
+}
+
 /** Prefer the in-flight `.part` file so Preview can show cues before the job finishes. */
 export function resolveTranslatedOutputPath(outputPath: string): string {
   const partial = partialOutputPath(outputPath);

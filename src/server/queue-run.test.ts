@@ -29,13 +29,20 @@ function chatCompletion(content: string): Response {
   return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
 }
 
-// Chat completions hang until the test releases them; everything else 404s so
-// the model-context probe falls back without touching the network.
+// The availability probe passes; chat completions hang until the test releases
+// them or the engine aborts them; everything else 404s so the model-context
+// probe falls back without touching the network.
 const release: Array<() => void> = [];
-globalThis.fetch = (async (input: string | URL | Request) => {
+globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
   const url = String(input instanceof Request ? input.url : input);
+  if (url.endsWith("/v1/models")) return new Response('{"data":[]}', { status: 200 });
   if (!url.endsWith("/chat/completions")) return new Response("{}", { status: 404 });
-  return new Promise<Response>((resolve) => {
+  return new Promise<Response>((resolve, reject) => {
+    init?.signal?.addEventListener(
+      "abort",
+      () => reject(Object.assign(new Error("aborted"), { name: "AbortError" })),
+      { once: true },
+    );
     release.push(() => resolve(chatCompletion("Translated Title")));
   });
 }) as typeof fetch;
@@ -92,6 +99,27 @@ test("a job queued while the run repairs titles is processed by that run", async
 
   assert.equal(db.getJob(late)?.status, "error");
   config.setSetting("title_sidecar", "0");
+});
+
+test("stopping a job returns it to pending with its progress cleared", async () => {
+  const job = addJob({ srtExists: true, outputExists: false });
+  const run = queue.processQueue();
+  await waitFor(() => release.length > 0, "the job to call the LLM");
+  // Stands in for a throttled progress tick that landed before the stop.
+  db.updateJob(job, { completed_cues: 42 });
+
+  queue.requestStop();
+  await run;
+  release.length = 0;
+
+  try {
+    // The next run starts the file over, so a kept count would show the
+    // pending job as part-done.
+    assert.deepEqual([db.getJob(job)?.status, db.getJob(job)?.completed_cues], ["pending", 0]);
+  } finally {
+    // Keep the boot-resume run below from picking this job up and hanging on its LLM call.
+    db.deleteJob(job);
+  }
 });
 
 test("resuming at boot processes the pending jobs a previous process left behind", async () => {

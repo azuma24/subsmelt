@@ -81,10 +81,16 @@ db.exec(`
 // Wire up logger
 setLogDb(db);
 
-// On startup, reset stuck "translating" jobs
-db.prepare(
-  "UPDATE jobs SET status = 'pending', updated_at = datetime('now') WHERE status = 'translating'",
-).run();
+// Jobs the previous process left translating go back to pending. Nothing
+// resumes from the partial, so their progress count goes back to zero too.
+export function resetInterruptedJobs(): number {
+  return db
+    .prepare(
+      "UPDATE jobs SET status = 'pending', completed_cues = 0, updated_at = datetime('now') WHERE status = 'translating'",
+    )
+    .run().changes;
+}
+resetInterruptedJobs();
 
 // --- Row types ---
 

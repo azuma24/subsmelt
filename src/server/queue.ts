@@ -605,9 +605,11 @@ async function runJob(
   } catch (error: any) {
     const durationSeconds = (Date.now() - startTime) / 1000;
     if (error.message === "STOP_REQUESTED" || shouldStop) {
-      // Graceful stop — reset job to pending so it can resume later
+      // Graceful stop — reset job to pending so it can be picked up later. The
+      // next run starts the file over, so the progress count goes back to zero.
       updateJob(job.id, {
         status: "pending",
+        completed_cues: 0,
         error: null,
         duration_seconds: durationSeconds,
       });

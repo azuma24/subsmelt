@@ -3,7 +3,13 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { PARTIAL_SUFFIX, partialOutputPath, resolveTranslatedOutputPath, translateFile } from "./engine.js";
+import {
+  PARTIAL_SUFFIX,
+  partialOutputPath,
+  removePartialOutput,
+  resolveTranslatedOutputPath,
+  translateFile,
+} from "./engine.js";
 import { retryTranslate } from "./ai-client.js";
 
 // The stubbed endpoint below trips the SDK's compatibility-mode warning on every call.
@@ -149,6 +155,22 @@ test("renaming a partial onto the output is atomic and leaves no partial behind"
 
   assert.equal(fs.existsSync(partial), false);
   assert.equal(fs.readFileSync(output, "utf8"), "partial content");
+});
+
+test("removing a job's partial leaves a finished output alone and tolerates a missing partial", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-rm-partial-"));
+  const output = path.join(dir, "Episode 01.chi.srt");
+  const partial = partialOutputPath(output);
+  fs.writeFileSync(partial, "half done", "utf8");
+  fs.writeFileSync(output, "finished", "utf8");
+  assert.equal(fs.existsSync(partial), true);
+
+  removePartialOutput(output);
+  assert.equal(fs.existsSync(partial), false);
+  assert.equal(fs.readFileSync(output, "utf8"), "finished");
+
+  removePartialOutput(output);
+  assert.equal(fs.readFileSync(output, "utf8"), "finished");
 });
 
 test("retryTranslate reports the real attempt budget to onRetry", async () => {

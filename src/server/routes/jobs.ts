@@ -16,6 +16,7 @@ import {
   pinJob,
   unpinJob,
   reorderJobs,
+  type JobRow,
 } from "../db.js";
 import { MEDIA_DIR } from "../scanner.js";
 import {
@@ -29,6 +30,7 @@ import {
   readSubtitleFileText,
   applyCueEdits,
   writeSubtitleFile,
+  removePartialOutput,
   resolveTranslatedOutputPath,
   type CueEdit,
 } from "../translator.js";
@@ -66,6 +68,15 @@ function enrichJobs(jobs: any[]): any[] {
       source_lang: task?.source_lang || "",
     };
   });
+}
+
+// A stopped or failed job leaves its in-flight .part beside the media; deleting
+// the job must take that with it.
+function removePartialsOfDeleted(before: JobRow[]) {
+  const remaining = new Set(getJobs().map((job) => job.id));
+  for (const job of before) {
+    if (!remaining.has(job.id)) removePartialOutput(job.output_path);
+  }
 }
 
 // A single-job reset/force/delete that changed no row was refused either because
@@ -167,7 +178,9 @@ export function registerJobsRoutes(app: Express): void {
 
   app.delete("/api/jobs/:id", (req, res) => {
     const id = parseInt(req.params.id, 10);
+    const job = getJob(id);
     if (deleteJob(id) === 0) return rejectUnchanged(res, id);
+    if (job) removePartialOutput(job.output_path);
     res.json({ ok: true });
   });
 
@@ -179,13 +192,17 @@ export function registerJobsRoutes(app: Express): void {
     const ids = rawIds.filter(
       (v): v is number => typeof v === "number" && Number.isInteger(v),
     );
+    const before = getJobs();
     const deleted = deleteJobs(ids);
+    removePartialsOfDeleted(before);
     logger.info("queue", `Deleted ${deleted} selected pending jobs from queue`);
     res.json({ ok: true, deleted });
   });
 
   app.post("/api/jobs/clear", (_req, res) => {
+    const before = getJobs();
     const cleared = clearFinishedJobs();
+    removePartialsOfDeleted(before);
     logger.info("queue", `Cleared ${cleared} finished jobs`);
     res.json({ ok: true, cleared });
   });
