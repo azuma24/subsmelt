@@ -44,7 +44,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   const [dashboardSortDir, setDashboardSortDir] = useState<DashboardSortDir>("desc");
   const [previewJobId, setPreviewJobId] = useState<number | null>(null);
   const [previewSearch, setPreviewSearch] = useState("");
-  const [detailsJob, setDetailsJob] = useState<JobRow | null>(null);
+  const [detailsJobId, setDetailsJobId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   // File-level selection for batch transcription (by videoPath), independent of
   // the job-id selection used for bulk translation.
@@ -232,27 +232,34 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
     }
   };
 
+  const reportFailure = (e: unknown) =>
+    addToast(e instanceof Error ? e.message : t("dashboard.toast.actionFailed"), "error");
+
   const handleRunAll = async () => {
     try {
       await startQueueMutation.mutateAsync();
       addToast(t("dashboard.toast.queueStarted"), "info");
     } catch (e) {
-      addToast(e instanceof Error ? e.message : t("dashboard.toast.actionFailed"), "error");
+      reportFailure(e);
     }
   };
 
   const handleRunSelected = async () => {
     if (selectedPendingIds.length === 0) return;
-    await startSelectedMutation.mutateAsync(selectedPendingIds);
-    addToast(t("dashboard.toast.runSelectedStarted", { count: selectedPendingIds.length }), "info");
-    setSelectedIds(new Set());
+    try {
+      await startSelectedMutation.mutateAsync(selectedPendingIds);
+      addToast(t("dashboard.toast.runSelectedStarted", { count: selectedPendingIds.length }), "info");
+      setSelectedIds(new Set());
+    } catch (e) {
+      reportFailure(e);
+    }
   };
 
   const handleStop = async () => {
     try {
       await stopQueueMutation.mutateAsync();
     } catch (e) {
-      addToast(e instanceof Error ? e.message : t("dashboard.toast.actionFailed"), "error");
+      reportFailure(e);
     }
   };
 
@@ -263,11 +270,14 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
       confirmLabel: t("dashboard.confirm.clearConfirm"),
       danger: true,
     });
-    if (ok) {
+    if (!ok) return;
+    try {
       await clearJobsMutation.mutateAsync();
       setScanResult(null);
       setSelectedIds(new Set());
       addToast(t("dashboard.toast.jobsCleared"), "info");
+    } catch (e) {
+      reportFailure(e);
     }
   };
 
@@ -280,14 +290,17 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
       danger: true,
     });
     if (!ok) return;
-
-    const result = await deleteSelectedMutation.mutateAsync(selectedPendingIds);
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      selectedPendingIds.forEach((id) => next.delete(id));
-      return next;
-    });
-    addToast(t("dashboard.toast.selectedDeleted", { count: result.deleted }), "info");
+    try {
+      const result = await deleteSelectedMutation.mutateAsync(selectedPendingIds);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        selectedPendingIds.forEach((id) => next.delete(id));
+        return next;
+      });
+      addToast(t("dashboard.toast.selectedDeleted", { count: result.deleted }), "info");
+    } catch (e) {
+      reportFailure(e);
+    }
   };
 
   const handleSelectVisiblePending = () => {
@@ -296,8 +309,12 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
 
   const handleRetryVisibleErrors = async () => {
     if (visibleErrorIds.length === 0) return;
-    const result = await retrySelectedMutation.mutateAsync(visibleErrorIds);
-    addToast(t("dashboard.toast.retrySelectedStarted", { count: result.updated }), "info");
+    try {
+      const result = await retrySelectedMutation.mutateAsync(visibleErrorIds);
+      addToast(t("dashboard.toast.retrySelectedStarted", { count: result.updated }), "info");
+    } catch (e) {
+      reportFailure(e);
+    }
   };
 
   const handleRetranslateVisible = async () => {
@@ -309,9 +326,12 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
       danger: true,
     });
     if (!ok) return;
-
-    const result = await forceSelectedMutation.mutateAsync(visibleRetranslatableIds);
-    addToast(t("dashboard.toast.forceSelectedStarted", { count: result.updated }), "info");
+    try {
+      const result = await forceSelectedMutation.mutateAsync(visibleRetranslatableIds);
+      addToast(t("dashboard.toast.forceSelectedStarted", { count: result.updated }), "info");
+    } catch (e) {
+      reportFailure(e);
+    }
   };
 
   const toggleSelectedJob = (id: number) => {
@@ -363,6 +383,10 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   ];
 
   const selectStatus = (key: string) => { setStatusFilter(key); setActiveTab("queue"); };
+  // Read live so the drawer follows progress and status instead of showing the
+  // row as it was when opened; it closes on its own if the job is deleted.
+  const detailsJob = detailsJobId === null ? null : jobsById.get(detailsJobId) ?? null;
+  const openDetails = (job: JobRow) => setDetailsJobId(job.id);
 
   return (
     <div className="flex min-h-full flex-col">
@@ -511,12 +535,12 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
                     onToggleSelected={toggleSelectedJob}
                     onPreview={setPreviewJobId}
                     onOpenLogs={(jobId) => navigate(`/logs?job=${jobId}`)}
-                    onOpenDetails={setDetailsJob}
+                    onOpenDetails={openDetails}
                   />
                 ))}
               </div>
             ) : (
-              <JobsTableDesktop jobs={filteredJobs} currentJobId={currentJobId} selectedIds={selectedIds} setSelectedIds={setSelectedIds} onPreview={setPreviewJobId} onOpenLogs={(jobId) => navigate(`/logs?job=${jobId}`)} onOpenDetails={setDetailsJob} />
+              <JobsTableDesktop jobs={filteredJobs} currentJobId={currentJobId} selectedIds={selectedIds} setSelectedIds={setSelectedIds} onPreview={setPreviewJobId} onOpenLogs={(jobId) => navigate(`/logs?job=${jobId}`)} onOpenDetails={openDetails} />
             )
           )}
 
@@ -565,8 +589,8 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
 
       <JobDetailsDrawer
         job={detailsJob}
-        open={!!detailsJob}
-        onClose={() => setDetailsJob(null)}
+        open={detailsJob !== null}
+        onClose={() => setDetailsJobId(null)}
         onOpenLogs={(jobId) => navigate(`/logs?job=${jobId}`)}
       />
 

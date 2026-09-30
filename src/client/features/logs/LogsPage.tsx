@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import * as api from "../../api";
 import { useLogsQuery, useTranscriptionLogsQuery } from "../../hooks";
-import { fullTime, highlightText, relativeTime } from "../../lib";
+import { fullTime, getErrorMessage, highlightText, relativeTime } from "../../lib";
 import type { LogEntry } from "../../types";
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmModal";
@@ -57,11 +57,14 @@ export function LogsPage({ isMobile }: { isMobile: boolean }) {
 
   const handleClear = async () => {
     const ok = await confirm({ title: t("logs.confirm.clearTitle"), message: t("logs.confirm.clearMessage"), confirmLabel: t("logs.confirm.clearConfirm"), danger: true });
-    if (ok) {
+    if (!ok) return;
+    try {
       await api.clearLogsApi();
       addToast(t("logs.toast.cleared"), "info");
-      logsQuery.refetch();
+    } catch (e: unknown) {
+      addToast(t("logs.toast.clearFailed", { message: getErrorMessage(e) }), "error");
     }
+    logsQuery.refetch();
   };
 
   // L1 level quick-pill toggle
