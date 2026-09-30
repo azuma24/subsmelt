@@ -162,6 +162,14 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     opts.onConnectionUsed?.({ id: c.id, label: c.label });
   };
   const reservedConnectionIds = new Set(opts.reservedConnectionIds ?? []);
+  // One failed chunk worker fails the whole job, so its siblings must stop
+  // calling the LLM and rewriting the partial instead of running the file to
+  // completion for a job already marked error. Every LLM call below listens to
+  // this signal, which also relays the caller's stop request.
+  const jobAbort = new AbortController();
+  const abortSignal = opts.abortSignal
+    ? AbortSignal.any([opts.abortSignal, jobAbort.signal])
+    : jobAbort.signal;
   // Connection probing, the per-job timeout breaker and the acquire/release
   // wrapper live in connection-health.ts — extracted so they can be tested.
   const health = createConnectionHealth({
@@ -169,7 +177,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     onRetry: opts.onRetry,
     acquireConnection: opts.acquireConnection,
     reservedConnectionIds: reservedConnectionIds,
-    abortSignal: opts.abortSignal,
+    abortSignal,
   });
   const withConnection = health.withConnection;
   const liveConnections = health.live;
@@ -223,7 +231,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
         provider: conn.provider,
         lang: opts.lang,
         temperature: 0.3,
-        abortSignal: opts.abortSignal,
+        abortSignal,
         maxAnalysisLines: opts.maxAnalysisLines,
         requestTimeoutMs: jobTimeoutMs,
         onUsage: opts.onUsage,
@@ -304,7 +312,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
               provider: conn.provider,
               systemPrompt,
               temperature: attemptTemp,
-              abortSignal: opts.abortSignal,
+              abortSignal,
               disableToolCalls: opts.disableToolCalls,
               requestTimeoutMs: jobTimeoutMs,
               contextPromptPrefix,
@@ -354,7 +362,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
               provider: conn.provider,
               systemPrompt,
               temperature: opts.temperature,
-              abortSignal: opts.abortSignal,
+              abortSignal,
               disableToolCalls: opts.disableToolCalls,
               requestTimeoutMs: timeoutMs,
               onUsage: opts.onUsage,
@@ -499,7 +507,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
           lang: opts.lang,
           additional: effectiveAdditional,
           temperature: opts.temperature,
-          abortSignal: opts.abortSignal,
+          abortSignal,
           disableToolCalls: opts.disableToolCalls,
           requestTimeoutMs: jobTimeoutMs,
           onUsage: opts.onUsage,
@@ -549,10 +557,15 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // Worker: drain the shared chunk queue. workerIndex picks the primary
   // connection in parallel mode.
   async function worker(workerIndex: number) {
-    while (chunkQueue.length > 0) {
-      const block = chunkQueue.shift();
-      if (!block) break;
-      await processChunk(block, workerIndex);
+    try {
+      while (chunkQueue.length > 0) {
+        const block = chunkQueue.shift();
+        if (!block) break;
+        await processChunk(block, workerIndex);
+      }
+    } catch (e) {
+      jobAbort.abort(e);
+      throw e;
     }
   }
 
