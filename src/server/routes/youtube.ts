@@ -16,10 +16,10 @@ import {
   savePlaylist,
   type YoutubePlaylist,
 } from "../youtube/playlists.js";
-import { checkPlaylist, isSyncing, liveSyncDeps, nextCheckAt, onYoutubeLane } from "../youtube/scheduler.js";
 import type { YoutubeStore } from "../youtube/store.js";
 import { changeBackfill, isUnavailableEntry, listPlaylistWithYtdlp } from "../youtube/sync.js";
 import { isPlaylistId, parsePlaylistInput } from "../youtube/urls.js";
+import { CooldownError, liveSyncDeps, nextCheckAt, type YoutubeWorker } from "../youtube/worker.js";
 import { ffmpegVersion, resolveYtdlpBin, updateYtdlp, ytdlpVersion } from "../youtube/ytdlp.js";
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
@@ -37,24 +37,29 @@ function notesFolderStatus() {
   }
 }
 
-export async function youtubeStatus() {
+export async function youtubeStatus(worker?: YoutubeWorker) {
   const [ytdlp, ffmpeg] = await Promise.all([ytdlpVersion(), ffmpegVersion()]);
+  const cooldown = worker?.activeCooldown() ?? null;
   return {
     ytdlp: { available: ytdlp !== null, version: ytdlp, path: resolveYtdlpBin() },
     ffmpeg: { available: ffmpeg !== null, version: ffmpeg },
     apiKey: Boolean(getSetting("youtube_api_key")),
     notes: notesFolderStatus(),
+    cooldown: cooldown && { until: cooldown.until, cause: cooldown.cause },
   };
 }
 
-function playlistSummary(store: YoutubeStore, playlist: YoutubePlaylist) {
+function playlistSummary(store: YoutubeStore, worker: YoutubeWorker, playlist: YoutubePlaylist) {
   const { firstSyncAt: _firstSyncAt, ...sync } = store.getSyncState(playlist.id);
   return {
     ...playlist,
-    sync: { ...sync, checking: isSyncing(playlist.id), nextCheckAt: nextCheckAt(playlist, sync.lastCheckedAt) },
+    sync: { ...sync, checking: worker.isChecking(playlist.id), nextCheckAt: nextCheckAt(playlist, sync.lastCheckedAt) },
     counts: store.counts(playlist.id),
   };
 }
+
+// A cooldown refusal is the server asking the client to wait, not a YouTube failure.
+const laneErrorStatus = (error: unknown, fallback: number) => (error instanceof CooldownError ? 503 : fallback);
 
 function withPlaylist(res: Response, id: string): YoutubePlaylist | null {
   const playlist = isPlaylistId(id) ? findPlaylist(id) : undefined;
@@ -65,9 +70,9 @@ function withPlaylist(res: Response, id: string): YoutubePlaylist | null {
   return playlist;
 }
 
-export function registerYoutubeRoutes(app: Express, store: YoutubeStore): void {
+export function registerYoutubeRoutes(app: Express, store: YoutubeStore, worker: YoutubeWorker): void {
   app.get("/api/youtube/status", async (_req, res) => {
-    res.json(await youtubeStatus());
+    res.json(await youtubeStatus(worker));
   });
 
   app.post("/api/youtube/ytdlp/update", async (_req, res) => {
@@ -94,7 +99,7 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore): void {
   });
 
   app.get("/api/youtube/playlists", (_req, res) => {
-    res.json({ playlists: readPlaylists().map((p) => playlistSummary(store, p)) });
+    res.json({ playlists: readPlaylists().map((p) => playlistSummary(store, worker, p)) });
   });
 
   app.post("/api/youtube/playlists/preview", async (req, res) => {
@@ -102,9 +107,9 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore): void {
     if (!id) return res.status(400).json({ error: "Paste a link to a YouTube playlist" });
     let listing;
     try {
-      listing = await onYoutubeLane(() => listPlaylistWithYtdlp(id));
+      listing = await worker.youtubeCall(() => listPlaylistWithYtdlp(id));
     } catch (error) {
-      return res.status(502).json({ error: message(error) });
+      return res.status(laneErrorStatus(error, 502)).json({ error: message(error) });
     }
     const key = getSetting("youtube_api_key");
     let addedDates: Map<string, string> | null = null;
@@ -146,8 +151,8 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore): void {
     store.deleteSyncState(id);
     savePlaylist(playlist);
     logger.info("youtube", `Followed playlist ${title} (${id})`);
-    checkPlaylist(store, playlist).catch(() => undefined);
-    res.status(201).json(playlistSummary(store, playlist));
+    worker.checkPlaylist(playlist).catch(() => undefined);
+    res.status(201).json(playlistSummary(store, worker, playlist));
   });
 
   app.put("/api/youtube/playlists/:id", (req, res) => {
@@ -161,7 +166,7 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore): void {
     const updated: YoutubePlaylist = { ...playlist, ...fields.value };
     savePlaylist(updated);
     broadcast("youtube:playlist", { playlistId: playlist.id });
-    res.json(playlistSummary(store, updated));
+    res.json(playlistSummary(store, worker, updated));
   });
 
   app.delete("/api/youtube/playlists/:id", (req, res) => {
@@ -178,9 +183,9 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore): void {
     const playlist = withPlaylist(res, req.params.id);
     if (!playlist) return;
     try {
-      res.json({ ok: true, ...(await checkPlaylist(store, playlist)) });
+      res.json({ ok: true, ...(await worker.checkPlaylist(playlist)) });
     } catch (error) {
-      res.status(502).json({ error: message(error) });
+      res.status(laneErrorStatus(error, 502)).json({ error: message(error) });
     }
   });
 
@@ -191,20 +196,25 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore): void {
     if (!backfill.ok) return res.status(400).json({ error: backfill.error });
     if (backfill.value.kind === "added_since" && !getSetting("youtube_api_key")) return res.status(400).json({ error: NO_KEY_ERROR });
     try {
-      const change = await onYoutubeLane(() => changeBackfill(store, playlist, backfill.value, liveSyncDeps()));
+      const change = await worker.youtubeCall(() => changeBackfill(store, playlist, backfill.value, liveSyncDeps()));
       const current = findPlaylist(playlist.id);
       if (current) savePlaylist({ ...current, backfill: backfill.value });
       logger.info("youtube", `Changed backfill of ${playlist.title}: ${change.released} released, ${change.skipped} skipped`);
       broadcast("youtube:playlist", { playlistId: playlist.id });
+      worker.kick();
       res.json({ ok: true, ...change });
     } catch (error) {
-      res.status(400).json({ error: message(error) });
+      res.status(laneErrorStatus(error, 400)).json({ error: message(error) });
     }
   });
 
   app.get("/api/youtube/playlists/:id/videos", (req, res) => {
     const playlist = withPlaylist(res, req.params.id);
     if (!playlist) return;
-    res.json({ videos: store.playlistVideos(playlist.id) });
+    const videos = store.playlistVideos(playlist.id).map((video) => {
+      const pct = video.status === "downloading" ? worker.progressOf(video.video_id) : undefined;
+      return pct === undefined ? video : { ...video, pct };
+    });
+    res.json({ videos });
   });
 }

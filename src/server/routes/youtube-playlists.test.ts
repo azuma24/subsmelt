@@ -35,11 +35,16 @@ const { setSetting } = await import("../config.js");
 const { registerSettingsTasksRoutes } = await import("./settings-tasks.js");
 const { registerYoutubeRoutes } = await import("./youtube.js");
 const { YoutubeStore } = await import("../youtube/store.js");
+const { YoutubeWorker } = await import("../youtube/worker.js");
 
 const app = express();
 app.use(express.json());
 registerSettingsTasksRoutes(app);
-registerYoutubeRoutes(app, new YoutubeStore(new Database(":memory:")));
+const store = new YoutubeStore(new Database(":memory:"));
+// Stopped, so no download starts behind the assertions; checks still run on the lane.
+const worker = new YoutubeWorker(store);
+worker.stop();
+registerYoutubeRoutes(app, store, worker);
 const server = app.listen(0, "127.0.0.1");
 await once(server, "listening");
 after(() => server.close());

@@ -6,8 +6,15 @@
 // FAKE_YTDLP_STDOUT_FILE this file's contents written to stdout (for output too big for the environment)
 // FAKE_YTDLP_STDERR      written to stderr
 // FAKE_YTDLP_EXIT        exit code (default 0)
+// FAKE_YTDLP_FAIL_WHEN_ARG  apply STDERR and EXIT only when some argument contains this text
 // FAKE_YTDLP_SLEEP_MS    wait before exiting
+// A run with --paths is a download: it writes <temp>/<id>.part at once, and
+// after the sleep, on success, "<title> [<id>].<ext>" and its .info.json in
+// the home path, the way yt-dlp moves finished files there.
+// FAKE_YTDLP_TITLE       title in the file name (default "Fake video")
+// FAKE_YTDLP_INFO        JSON merged into the written info JSON
 import fs from "node:fs";
+import path from "node:path";
 
 const args = process.argv.slice(2);
 const env = process.env;
@@ -17,10 +24,40 @@ if (args.includes("--version")) {
   process.stdout.write(`${env.FAKE_YTDLP_VERSION ?? "2026.08.19"}\n`);
   process.exit(0);
 }
+
+const failing = !env.FAKE_YTDLP_FAIL_WHEN_ARG || args.some((a) => a.includes(env.FAKE_YTDLP_FAIL_WHEN_ARG));
+const exit = failing ? Number(env.FAKE_YTDLP_EXIT ?? 0) : 0;
+const sleep = Number(env.FAKE_YTDLP_SLEEP_MS ?? 0);
+
+const valueAfter = (flag, prefix = "") => {
+  for (let i = 0; i < args.length - 1; i++) {
+    if (args[i] === flag && args[i + 1].startsWith(prefix)) return args[i + 1].slice(prefix.length);
+  }
+  return null;
+};
+const home = valueAfter("--paths", "home:");
+const temp = valueAfter("--paths", "temp:");
+const videoId = temp ? new URL(args[args.length - 1]).searchParams.get("v") : null;
+
+if (temp) {
+  fs.mkdirSync(temp, { recursive: true });
+  fs.writeFileSync(path.join(temp, `${videoId}.part`), "partial");
+}
 if (env.FAKE_YTDLP_STDOUT) process.stdout.write(env.FAKE_YTDLP_STDOUT);
 if (env.FAKE_YTDLP_STDOUT_FILE) process.stdout.write(fs.readFileSync(env.FAKE_YTDLP_STDOUT_FILE));
-if (env.FAKE_YTDLP_STDERR) process.stderr.write(env.FAKE_YTDLP_STDERR);
-const exit = Number(env.FAKE_YTDLP_EXIT ?? 0);
-const sleep = Number(env.FAKE_YTDLP_SLEEP_MS ?? 0);
-// exitCode rather than process.exit(): exiting outright cuts off stdout still queued for a pipe.
-setTimeout(() => { process.exitCode = exit; }, sleep);
+if (failing && env.FAKE_YTDLP_STDERR) process.stderr.write(env.FAKE_YTDLP_STDERR);
+
+setTimeout(() => {
+  if (home && exit === 0) {
+    const title = env.FAKE_YTDLP_TITLE ?? "Fake video";
+    const ext = valueAfter("--merge-output-format") ?? valueAfter("--audio-format") ?? "webm";
+    const stem = path.join(home, `${title} [${videoId}]`);
+    fs.mkdirSync(home, { recursive: true });
+    const info = { id: videoId, title, formats: [{ url: "https://example.invalid/expiring" }], ...JSON.parse(env.FAKE_YTDLP_INFO ?? "{}") };
+    fs.writeFileSync(`${stem}.info.json`, JSON.stringify(info));
+    fs.writeFileSync(`${stem}.${ext}`, "media");
+    fs.rmSync(path.join(temp, `${videoId}.part`), { force: true });
+  }
+  // exitCode rather than process.exit(): exiting outright cuts off stdout still queued for a pipe.
+  process.exitCode = exit;
+}, sleep);

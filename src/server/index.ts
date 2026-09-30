@@ -28,7 +28,7 @@ import { registerJobsRoutes } from "./routes/jobs.js";
 import { registerModelsRoutes } from "./routes/models.js";
 import { registerYoutubeRoutes } from "./routes/youtube.js";
 import { YoutubeStore } from "./youtube/store.js";
-import { startYoutubeScheduler } from "./youtube/scheduler.js";
+import { YoutubeWorker } from "./youtube/worker.js";
 import {
   registerTranscriptionRoutes,
   getTranscriptionBackendUrl,
@@ -199,7 +199,8 @@ registerModelsRoutes(app);
 registerTranscriptionRoutes(app);
 
 const youtubeStore = new YoutubeStore(db);
-registerYoutubeRoutes(app, youtubeStore);
+const youtubeWorker = new YoutubeWorker(youtubeStore);
+registerYoutubeRoutes(app, youtubeStore, youtubeWorker);
 
 // ======== Notification test ========
 // Sends a sample webhook using the current settings (format + URL), bypassing
@@ -246,5 +247,5 @@ app.listen(PORT, "0.0.0.0", () => {
   if (interval > 0) startAutoScan(interval, scanFolder);
   if (getSetting("watch_enabled") === "1") startWatcher();
   resumeQueueOnBoot();
-  startYoutubeScheduler(youtubeStore);
+  youtubeWorker.start();
 });

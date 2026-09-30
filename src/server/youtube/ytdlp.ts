@@ -139,6 +139,12 @@ const ERROR_PATTERNS: [YtdlpErrorClass, RegExp][] = [
   ["unavailable", /Private video|Video unavailable|This video is unavailable|video has been removed|account associated with this video has been terminated/i],
 ];
 
+/** The line worth showing a user: the last ERROR line, else the last line. */
+export function errorSummary(stderr: string, code: number | null): string {
+  const lines = stderr.split("\n").map((l) => l.trim()).filter(Boolean);
+  return lines.filter((l) => l.startsWith("ERROR:")).pop() ?? lines.pop() ?? `yt-dlp exited with ${code}`;
+}
+
 export function classifyYtdlpError(stderr: string): YtdlpErrorClass {
   for (const [cls, pattern] of ERROR_PATTERNS) {
     if (pattern.test(stderr)) return cls;

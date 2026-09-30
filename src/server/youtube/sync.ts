@@ -2,7 +2,7 @@ import { selectBackfill } from "./backfill.js";
 import type { Backfill, YoutubePlaylist } from "./playlists.js";
 import type { InitialState, ListingEntry, YoutubeStore } from "./store.js";
 import { isVideoId, playlistUrl, videoUrl } from "./urls.js";
-import { runYtdlp } from "./ytdlp.js";
+import { errorSummary, runYtdlp } from "./ytdlp.js";
 
 const LISTING_TIMEOUT_MS = 10 * 60_000;
 // A flat listing of an 889-video playlist is 1.2 MB of JSON; 5,000 videos (YouTube's cap) stays well under this.
@@ -82,18 +82,13 @@ export function isUnavailableEntry(entry: ListingEntry): boolean {
   return entry.title === null && entry.durationS === null;
 }
 
-function lastErrorLine(stderr: string, code: number | null): string {
-  const lines = stderr.split("\n").map((l) => l.trim()).filter(Boolean);
-  return lines.filter((l) => l.startsWith("ERROR:")).pop() ?? lines.pop() ?? `yt-dlp exited with ${code}`;
-}
-
 export async function listPlaylistWithYtdlp(id: string): Promise<FlatListing> {
   const result = await runYtdlp(
     ["-J", "--flat-playlist", "--js-runtimes", "node", "--extractor-args", "youtubetab:approximate_date", "--", playlistUrl(id)],
     { timeoutMs: LISTING_TIMEOUT_MS, maxCaptureBytes: LISTING_MAX_BYTES },
   );
   if (result.timedOut) throw new Error("Listing the playlist timed out");
-  if (result.code !== 0) throw new Error(lastErrorLine(result.stderr, result.code));
+  if (result.code !== 0) throw new Error(errorSummary(result.stderr, result.code));
   return parseFlatListing(result.stdout);
 }
 
