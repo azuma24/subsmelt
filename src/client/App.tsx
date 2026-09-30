@@ -41,6 +41,11 @@ const ConvertPage = lazy(() =>
     default: m.ConvertPage,
   })),
 );
+const YoutubePage = lazy(() =>
+  import("./features/youtube/YoutubePage").then((m) => ({
+    default: m.YoutubePage,
+  })),
+);
 const WhisperPage = lazy(() =>
   import("./features/whisper/WhisperPage").then((m) => ({
     default: m.WhisperPage,
@@ -165,6 +170,10 @@ function AppInner() {
               <Route
                 path="/whisper"
                 element={<WhisperPage isMobile={isMobile} />}
+              />
+              <Route
+                path="/youtube"
+                element={<YoutubePage isMobile={isMobile} />}
               />
               <Route
                 path="/convert"

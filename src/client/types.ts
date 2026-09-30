@@ -297,3 +297,131 @@ export interface WhisperModelDownloadResult {
   model: string;
   cachePath?: string | null;
 }
+
+// --- YouTube ---
+
+export type YoutubeVideoStatus =
+  | "new"
+  | "queued"
+  | "downloading"
+  | "transcribing"
+  | "translating"
+  | "done"
+  | "waiting"
+  | "skipped"
+  | "unavailable"
+  | "failed";
+
+export type YoutubeBackfill =
+  | { kind: "all" }
+  | { kind: "none" }
+  | { kind: "posted_since"; date: string }
+  | { kind: "added_since"; date: string };
+
+export type YoutubeMedia =
+  | { type: "video"; maxHeight: 480 | 720 | 1080 | 1440 | 2160; codec: "h264" | "vp9" | "av1" | "any"; container: "mp4" | "mkv" }
+  | { type: "audio"; format: "m4a" | "opus" };
+
+export interface YoutubePlaylistFields {
+  folder: string;
+  enabled: boolean;
+  mode: "auto" | "manual";
+  backfill: YoutubeBackfill;
+  media: YoutubeMedia;
+  captions: "prefer_youtube" | "whisper_only";
+  subtitleTaskIds: number[];
+  checkEveryMinutes: number;
+}
+
+export interface YoutubePlaylist extends YoutubePlaylistFields {
+  id: string;
+  title: string;
+  sync: {
+    lastCheckedAt: string | null;
+    lastError: string | null;
+    count: number | null;
+    availability: string | null;
+    checking: boolean;
+    nextCheckAt: string | null;
+  };
+  counts: { total: number; removed: number; byStatus: Partial<Record<YoutubeVideoStatus, number>> };
+}
+
+export interface YoutubeVideo {
+  video_id: string;
+  playlist_id: string;
+  title: string;
+  channel: string | null;
+  duration_s: number | null;
+  published_at: string | null;
+  added_at: string | null;
+  status: YoutubeVideoStatus;
+  skip_kind: "user" | "before_start" | "members_only" | null;
+  reason: string | null;
+  attempts: number;
+  retry_after: string | null;
+  media_path: string | null;
+  user_queued_at: string | null;
+  position: number | null;
+  removed_at: string | null;
+  /** Where the transcript came from: "youtube_captions" or "whisper:<model>". */
+  transcript_source: string | null;
+  /** The spoken language and each picked language's route, once the subtitles are written. */
+  subtitles: YoutubeSubtitlePlan | null;
+  /** Download or transcription percentage while running, when the server has one. */
+  pct?: number;
+}
+
+export interface YoutubeSubtitlePlan {
+  /** The spoken language's key, such as "en" or "zh-Hant", when known. */
+  spoken: string | null;
+  routes: { taskId: number; kind: "same" | "captions" | "translate" }[];
+}
+
+/** What holds the subtitle and translation steps back. */
+export interface YoutubePipeline {
+  gpu: { shared: boolean; held: boolean; waitingFor: number; translationRunning: boolean };
+  transcription: { ready: boolean; waiting: number };
+}
+
+export type YoutubeVideoAction = "download" | "retry" | "skip";
+
+export interface YoutubeCooldown {
+  until: string;
+  cause: "rate_limited" | "bot_check";
+}
+
+export interface YoutubePreviewEntry {
+  posted: string | null;
+  added: string | null;
+  durationS: number | null;
+}
+
+export interface YoutubePreview {
+  id: string;
+  title: string;
+  channel: string | null;
+  availability: string | null;
+  count: number;
+  unavailable: number;
+  followed: boolean;
+  folder: string;
+  addedDates: boolean;
+  addedDatesError: string | null;
+  entries: YoutubePreviewEntry[];
+}
+
+export interface YoutubeNotesFolder {
+  path: string;
+  exists: boolean;
+  writable: boolean;
+}
+
+export interface YoutubeStatus {
+  ytdlp: { available: boolean; version: string | null; path: string | null };
+  ffmpeg: { available: boolean; version: string | null };
+  apiKey: boolean;
+  notes: YoutubeNotesFolder;
+  cookies: { present: boolean; updatedAt: string | null };
+  cooldown: YoutubeCooldown | null;
+}

@@ -106,10 +106,12 @@ async function transcribeRelayingProgress(
   videoPath: string,
   controller: AbortController,
   transport: ReturnType<typeof resolveTransportMode>,
+  reportProgress?: (pct: number) => void,
 ) {
   const token = settings.transcription_backend_token;
   const onProgress = ({ pct, processedSeconds, totalSeconds }: { pct: number; processedSeconds: number; totalSeconds: number }) => {
     broadcast("transcription:progress", { path: videoPath, pct, processedSeconds, totalSeconds });
+    reportProgress?.(pct);
   };
   const onPhase = (phase: string) => {
     broadcast("transcription:progress", { path: videoPath, phase });
@@ -203,6 +205,7 @@ export async function runTranscriptionAttempt(opts: {
   outputFormat?: TranscriptionOutputFormat;
   overrides?: TranscriptionOverrides;
   settings?: Record<string, string>;
+  onProgress?: (pct: number) => void;
 }) {
   const settings = opts.settings || getAllSettings();
   const backendUrl = getTranscriptionBackendUrl(settings);
@@ -251,7 +254,7 @@ export async function runTranscriptionAttempt(opts: {
       checkedRequest = await applyPreflightPolicy(backendUrl, request, settings);
     }
     const result = await withTranscriptionSlot(() =>
-      transcribeRelayingProgress(backendUrl, checkedRequest, settings, opts.videoPath, controller, transport),
+      transcribeRelayingProgress(backendUrl, checkedRequest, settings, opts.videoPath, controller, transport, opts.onProgress),
     );
     // Upload mode returns subtitle CONTENT; write it to the local output path
     // (path mode wrote it on the shared filesystem already).
@@ -290,7 +293,7 @@ export async function runTranscriptionAttempt(opts: {
       durationSeconds,
     });
     broadcast("transcription:progress", { path: opts.videoPath, pct: 100, done: true });
-    return { attemptId: attempt.id, result };
+    return { attemptId: attempt.id, result, outputPath, model: checkedRequest.model };
   } catch (error: unknown) {
     const cancelled = isCancellationError(error) || controller.signal.aborted;
     const summary = summarizeTranscriptionError(error);

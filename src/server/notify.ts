@@ -52,6 +52,8 @@ function humanString(event: string, payload: Record<string, unknown>): string {
       return "🏁 Queue finished — all pending translations complete";
     case "queue:stopped":
       return "⏹️ Queue stopped by user request";
+    case "youtube:note":
+      return `📝 Note ready: ${typeof payload.title === "string" ? payload.title : "YouTube video"}`;
     case "test":
       return typeof payload.message === "string" ? payload.message : "🔔 SubSmelt test notification";
     default:

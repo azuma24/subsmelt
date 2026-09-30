@@ -17,7 +17,7 @@ import {
 } from "./queue.js";
 import { transcriptionHistory } from "./transcription-history.js";
 import { logger } from "./logger.js";
-import { getLogs, clearLogs } from "./db.js";
+import db, { getLogs, clearLogs } from "./db.js";
 import { addSSEClient, broadcast } from "./sse.js";
 import { notifyTest } from "./notify.js";
 import { startWatcher, stopWatcher, isWatcherRunning } from "./watcher.js";
@@ -26,6 +26,9 @@ import type { TranscribePostAction } from "./transcription-client.js";
 import { registerSettingsTasksRoutes } from "./routes/settings-tasks.js";
 import { registerJobsRoutes } from "./routes/jobs.js";
 import { registerModelsRoutes } from "./routes/models.js";
+import { registerYoutubeRoutes } from "./routes/youtube.js";
+import { YoutubeStore } from "./youtube/store.js";
+import { YoutubeWorker } from "./youtube/worker.js";
 import {
   registerTranscriptionRoutes,
   getTranscriptionBackendUrl,
@@ -195,6 +198,10 @@ registerModelsRoutes(app);
 
 registerTranscriptionRoutes(app);
 
+const youtubeStore = new YoutubeStore(db);
+const youtubeWorker = new YoutubeWorker(youtubeStore);
+registerYoutubeRoutes(app, youtubeStore, youtubeWorker);
+
 // ======== Notification test ========
 // Sends a sample webhook using the current settings (format + URL), bypassing
 // the notify_events filter so the UI can verify connectivity. Never affects
@@ -240,4 +247,5 @@ app.listen(PORT, "0.0.0.0", () => {
   if (interval > 0) startAutoScan(interval, scanFolder);
   if (getSetting("watch_enabled") === "1") startWatcher();
   resumeQueueOnBoot();
+  youtubeWorker.start();
 });

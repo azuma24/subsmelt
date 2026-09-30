@@ -21,6 +21,7 @@ import { startAutoScan, stopAutoScan } from "../queue.js";
 import { convertSubtitle, probeModelContext, summarizeTranslationError, translateFile } from "../translator.js";
 import { REDACTED_SECRET, parseConnections, resolveConnectionPool, restoreRedactedApiKeys } from "../connections.js";
 import { logger } from "../logger.js";
+import { normalizeMediaSubfolder } from "../media-paths.js";
 import { isWatcherRunning, restartWatcher } from "../watcher.js";
 import { parseTaskUpdate } from "./validation.js";
 
@@ -37,10 +38,15 @@ const SECRET_SETTING_KEYS = new Set([
   "cloud_api_key_anthropic",
   "cloud_api_key_gemini",
   "transcription_backend_token",
+  "youtube_api_key",
 ]);
+// Owned by the YouTube playlist routes. A Settings save sends back the whole
+// settings object it loaded, which would overwrite playlists followed since.
+const ROUTE_OWNED_SETTING_KEYS = new Set(["youtube_playlists"]);
 
 function redactSettings(settings: Record<string, string>): Record<string, string> {
   const redacted = { ...settings };
+  for (const key of ROUTE_OWNED_SETTING_KEYS) delete redacted[key];
   for (const key of SECRET_SETTING_KEYS) {
     if (redacted[key]) redacted[key] = REDACTED_SECRET;
   }
@@ -79,7 +85,12 @@ export function registerSettingsTasksRoutes(app: Express): void {
   });
 
   app.post("/api/settings", (req, res) => {
-    const settings = req.body && typeof req.body === "object" ? req.body : {};
+    const settings = req.body && typeof req.body === "object" ? { ...req.body } : {};
+    if (typeof settings.youtube_download_dir === "string") {
+      const folder = normalizeMediaSubfolder(settings.youtube_download_dir);
+      if (!folder) return res.status(400).json({ error: "The YouTube download folder must be a folder inside the media folder" });
+      settings.youtube_download_dir = folder.replace(/\/+$/, "");
+    }
     const changedKeys: string[] = [];
     // Reject any key not on the writable allow-list (derived from the settings
     // schema). Underscore-prefixed keys are read-only computed fields; unknown
@@ -91,7 +102,7 @@ export function registerSettingsTasksRoutes(app: Express): void {
     const patch: Record<string, string> = {};
     for (const [key, value] of Object.entries(settings)) {
       if (key.startsWith("_")) continue;
-      if (!isWritableSettingKey(key)) {
+      if (!isWritableSettingKey(key) || ROUTE_OWNED_SETTING_KEYS.has(key)) {
         rejected.push(key);
         continue;
       }

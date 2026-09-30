@@ -249,6 +249,17 @@ export function claimPendingJob(ids?: Set<number> | null): JobRow | null {
   })();
 }
 
+/** Jobs translating `srtPath` that have not settled yet: pending or translating. */
+export function countOpenJobsForSubtitle(srtPath: string): number {
+  return (
+    db
+      .prepare(
+        "SELECT COUNT(*) AS count FROM jobs WHERE srt_path = ? AND status IN ('pending', 'translating')",
+      )
+      .get(srtPath) as { count: number }
+  ).count;
+}
+
 export function getJob(id: number): JobRow | undefined {
   return db.prepare(`SELECT * FROM jobs WHERE id = ?`).get(id) as
     | JobRow

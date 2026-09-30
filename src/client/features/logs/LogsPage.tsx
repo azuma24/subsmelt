@@ -159,6 +159,7 @@ export function LogsPage({ isMobile }: { isMobile: boolean }) {
               <option value="translate">{t("logs.category.translate")}</option>
               <option value="queue">{t("logs.category.queue")}</option>
               <option value="system">{t("logs.category.system")}</option>
+              <option value="youtube">{t("logs.category.youtube")}</option>
             </select>
             <input
               type="number"

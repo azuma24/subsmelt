@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
@@ -16,8 +16,11 @@ import { InterfaceSection } from "./sections/InterfaceSection";
 import { LlmSection } from "./sections/LlmSection";
 import { SourcesSection } from "./sections/SourcesSection";
 import { SttSection } from "./sections/SttSection";
+import { YoutubeSection } from "./sections/YoutubeSection";
 
-type SectionKey = "llm" | "engine" | "sources" | "stt" | "iface";
+const SECTION_KEYS = ["llm", "engine", "sources", "stt", "youtube", "iface"] as const;
+type SectionKey = (typeof SECTION_KEYS)[number];
+const isSectionKey = (value: string | null): value is SectionKey => SECTION_KEYS.includes(value as SectionKey);
 
 export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   const { t } = useTranslation();
@@ -35,7 +38,10 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   const [transcriptionTestResult, setTranscriptionTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [testingNotification, setTestingNotification] = useState(false);
   const [notificationTestResult, setNotificationTestResult] = useState<{ ok: boolean; message: string } | null>(null);
-  const [activeSection, setActiveSection] = useState<SectionKey>("llm");
+  // ?section=youtube lets other pages link straight to a section.
+  const [params] = useSearchParams();
+  const requestedSection = params.get("section");
+  const [activeSection, setActiveSection] = useState<SectionKey>(isSectionKey(requestedSection) ? requestedSection : "llm");
 
   // Synchronous mirror of `form` so rapid update()/updateAndSave() calls in the
   // same tick build on each other instead of overwriting from a stale render closure.
@@ -281,6 +287,12 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
         />
       ),
     },
+    youtube: {
+      navLabel: t("settings.youtube.title"),
+      title: t("settings.youtube.title"),
+      description: t("settings.youtube.description"),
+      content: <YoutubeSection settings={settings} update={update} updateAndSaveDebounced={updateAndSaveDebounced} />,
+    },
     iface: {
       navLabel: t("settings.interface.title"),
       title: t("settings.interface.title"),
@@ -288,7 +300,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
       content: <InterfaceSection />,
     },
   };
-  const navOrder: SectionKey[] = ["llm", "engine", "sources", "stt", "iface"];
+  const navOrder: readonly SectionKey[] = SECTION_KEYS;
 
   // First-run signposting. Both queries are already in the app-level cache, so
   // this costs no extra requests. Copy is shared with the Dashboard checklist
@@ -348,7 +360,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
           // that actually rotates. LLM stays open on arrival as before.
           <div className="space-y-2.5">
             {navOrder.map((key) => (
-              <Accordion key={key} title={sectionMeta[key].title} defaultOpen={key === "llm"}>
+              <Accordion key={key} title={sectionMeta[key].title} defaultOpen={key === activeSection}>
                 <div className="space-y-4">
                   <p className="text-[11.5px] leading-6 text-[var(--text-2)]">{sectionMeta[key].description}</p>
                   {sectionMeta[key].content}

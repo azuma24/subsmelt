@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "./api";
-import type { JobPreview, JobRow, LlmHealth, LogEntry, QueueStatus, Task, TranscriptionHealth, TranscriptionHistoryEntry } from "./types";
+import type { JobPreview, JobRow, LlmHealth, LogEntry, QueueStatus, Task, TranscriptionHealth, TranscriptionHistoryEntry, YoutubeVideo } from "./types";
 
 export type SSEEventName =
   | "job:progress"
@@ -13,7 +13,10 @@ export type SSEEventName =
   | "scan:complete"
   | "job:stopped"
   | "transcription:progress"
-  | "model:download";
+  | "model:download"
+  | "youtube:playlist"
+  | "youtube:video"
+  | "youtube:cooldown";
 
 export type SSEEventHandler = (type: SSEEventName, data: Record<string, unknown>) => void;
 
@@ -131,6 +134,44 @@ export function useJobPreview(jobId: number | null) {
   });
 }
 
+export function useYoutubePlaylistsQuery() {
+  return useQuery({
+    queryKey: ["youtube", "playlists"],
+    queryFn: ({ signal }) => api.getYoutubePlaylists({ signal }),
+    // SSE youtube:playlist refreshes this; the timer keeps "checked 6 min ago" honest.
+    refetchInterval: 60_000,
+  });
+}
+
+export function useYoutubeVideosQuery(playlistId: string | null) {
+  return useQuery({
+    queryKey: ["youtube", "videos", playlistId],
+    queryFn: ({ signal }) => api.getYoutubeVideos(playlistId as string, { signal }),
+    enabled: Boolean(playlistId),
+  });
+}
+
+export function useYoutubePipelineQuery() {
+  return useQuery({
+    queryKey: ["youtube", "pipeline"],
+    queryFn: ({ signal }) => api.getYoutubePipeline({ signal }),
+    // Translation jobs start and finish without a YouTube event; the timer catches the GPU hold lifting.
+    refetchInterval: 10_000,
+  });
+}
+
+export function useYoutubeStatusQuery() {
+  return useQuery({ queryKey: ["youtube", "status"], queryFn: ({ signal }) => api.getYoutubeStatus({ signal }), staleTime: 5_000 });
+}
+
+export function useYoutubeNotesFolderQuery(path: string) {
+  return useQuery({
+    queryKey: ["youtube", "notes-folder", path],
+    queryFn: ({ signal }) => api.getYoutubeNotesFolder(path, { signal }),
+    placeholderData: keepPreviousData,
+  });
+}
+
 export function useInvalidateApp() {
   const queryClient = useQueryClient();
   return useMemo(
@@ -157,6 +198,9 @@ const SSE_EVENT_NAMES: readonly SSEEventName[] = [
   "job:stopped",
   "transcription:progress",
   "model:download",
+  "youtube:playlist",
+  "youtube:video",
+  "youtube:cooldown",
 ];
 
 type QueryKey = readonly unknown[];
@@ -193,7 +237,25 @@ export function getSSEInvalidationKeys(name: SSEEventName): QueryKey[] {
       // Per-model download progress is consumed directly by the Model Manager
       // via onEvent; it should not trigger query refetches on every tick.
       return [];
+    case "youtube:playlist":
+      return [["youtube"]];
+    case "youtube:video":
+      // Progress ticks carry a pct and patch the cached rows instead (withVideoProgress).
+      // The status query is left alone: refetching it runs yt-dlp --version.
+      return [["youtube", "playlists"], ["youtube", "videos"], ["youtube", "pipeline"]];
+    case "youtube:cooldown":
+      return [["youtube", "status"], ["youtube", "pipeline"]];
   }
+}
+
+/** A youtube:video progress tick applied to one playlist's cached rows. */
+export function withVideoProgress(
+  old: { videos: YoutubeVideo[] } | undefined,
+  videoId: string,
+  pct: number,
+): { videos: YoutubeVideo[] } | undefined {
+  if (!old) return old;
+  return { videos: old.videos.map((video) => (video.video_id === videoId ? { ...video, status: "downloading", pct } : video)) };
 }
 
 export function createDebouncedInvalidator(
@@ -260,6 +322,14 @@ function ensureSse(queryClient: ReturnType<typeof useQueryClient>): SseSingleton
       // Per-path transcription progress / per-model download progress are consumed
       // directly by their components via onEvent; they must not invalidate queries.
       if (name === "transcription:progress" || name === "model:download") return;
+
+      if (name === "youtube:video") {
+        const { videoId, playlistId, pct } = data as { videoId?: string; playlistId?: string; pct?: number };
+        if (typeof videoId === "string" && typeof playlistId === "string" && typeof pct === "number") {
+          queryClient.setQueryData<{ videos: YoutubeVideo[] }>(["youtube", "videos", playlistId], (old) => withVideoProgress(old, videoId, pct));
+          return;
+        }
+      }
 
       if (name === "job:progress") {
         const { jobId, completed, total } = data as { jobId?: number; completed?: number; total?: number };

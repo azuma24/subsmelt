@@ -304,15 +304,31 @@ function applyPattern(
     .replace(/\{\{ext\}\}/g, ext);
 }
 
+/** Output file name that `task` gives a subtitle whose name without its language is `baseStem`. */
+export function outputNameFor(
+  baseStem: string,
+  task: { output_pattern: string; lang_code: string },
+  ext: string,
+): string {
+  return applyPattern(task.output_pattern, baseStem, task.lang_code, ext.toLowerCase());
+}
+
 /** Output file name, relative to the subtitle's folder, that `task` translates `srtPath` into. */
 function taskOutputName(srtPath: string, task: any): string {
   const ext = path.extname(srtPath);
-  return applyPattern(
-    task.output_pattern,
+  return outputNameFor(
     stripLangSuffix(path.basename(srtPath, ext)),
-    task.lang_code,
-    ext.slice(1).toLowerCase(),
+    task,
+    ext.slice(1),
   );
+}
+
+/**
+ * The YouTube download folder, relative to MEDIA_DIR. Its playlists create
+ * exactly the jobs they ask for, so a library scan leaves it alone.
+ */
+function youtubeFolder(): string | null {
+  return normalizeMediaSubfolder(getSetting("youtube_download_dir"));
 }
 
 export interface ScannedFile {
@@ -395,13 +411,15 @@ export function scanFolder(createJobs = true): ScanResult {
     // Default: full recursive scan
     allFiles = walkDir(MEDIA_DIR);
   }
+  const skippedFolders = [...excludedFolders, youtubeFolder()].filter(
+    (folder): folder is string => Boolean(folder),
+  );
   allFiles = Array.from(new Set(allFiles)).filter((file) => {
-    if (excludedFolders.length === 0) return true;
     const relativePath = path
       .relative(path.resolve(MEDIA_DIR), path.resolve(file))
       .split(path.sep)
       .join("/");
-    return !pathIsInScope(relativePath, excludedFolders);
+    return !pathIsInScope(relativePath, skippedFolders);
   });
 
   // Index videos by (dir, stem)

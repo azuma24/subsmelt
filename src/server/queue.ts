@@ -31,6 +31,11 @@ import {
   tryAcquireConnectionLock,
 } from "./connection-lock.js";
 import { stripLangSuffix } from "./scanner.js";
+import {
+  currentTranslationGate,
+  holdQueueStart,
+  takeHeldStart,
+} from "./gpu-gate.js";
 
 let isRunning = false;
 let shouldStop = false;
@@ -115,6 +120,15 @@ export function resumeQueueOnBoot() {
 
 export async function processQueue(onlyIds?: number[]) {
   if (isRunning) return;
+  const gate = currentTranslationGate();
+  if (!gate.open) {
+    holdQueueStart(onlyIds && onlyIds.length > 0 ? onlyIds : undefined);
+    logger.info(
+      "queue",
+      `Translation waits for ${gate.waitingFor} transcription(s) to finish: Whisper and the translation model share one GPU`,
+    );
+    return;
+  }
   isRunning = true;
   shouldStop = false;
   offlineConnectionIds.clear();
@@ -170,6 +184,13 @@ export async function processQueue(onlyIds?: number[]) {
     offlineConnectionIds.clear();
     resetConnectionLocks();
   }
+}
+
+/** Starts a run the GPU gate held back, once the gate has opened. */
+export function startHeldQueue(): void {
+  if (isRunning) return;
+  const start = takeHeldStart();
+  if (start) void processQueue(start.ids);
 }
 
 /**
