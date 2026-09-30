@@ -37,9 +37,11 @@ test("only transport stalls count toward the breaker", () => {
 });
 
 test("a connection is dropped after the timeout limit and reported once", () => {
-  const events: string[] = [];
+  const dropped: Array<{ id: string; label: string; error: string }> = [];
+  const unavailable: string[] = [];
   const health = createConnectionHealth({
-    onConnectionUnavailable: (info) => events.push(info.error),
+    onConnectionDropped: (info) => dropped.push(info),
+    onConnectionUnavailable: (info) => unavailable.push(info.error),
   });
   const target = conn("flaky");
 
@@ -53,8 +55,12 @@ test("a connection is dropped after the timeout limit and reported once", () => 
 
   // Further failures must not re-announce it.
   health.noteFailure(target, new Error("timeout"));
-  assert.equal(events.length, 1);
-  assert.match(events[0], /timeouts in this job/);
+  assert.deepEqual(dropped, [
+    { id: "flaky", label: "flaky", error: "3 timeouts in this job — skipping for the rest of it" },
+  ]);
+  // The per-job breaker is not an outage: the queue removes an unavailable
+  // connection for the whole run, and this one only for this job.
+  assert.deepEqual(unavailable, []);
 });
 
 test("schema failures never drop a connection, however many there are", () => {

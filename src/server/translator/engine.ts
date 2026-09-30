@@ -90,6 +90,8 @@ export interface TranslateFileOptions {
   onConnectionError?: (info: { id: string; label: string; error: string }) => void;
   /** Fired when a connection fails its 5×/5s availability probe and is skipped. */
   onConnectionUnavailable?: (info: { id: string; label: string; error: string }) => void;
+  /** Fired when repeated timeouts drop a connection for the rest of this job only. */
+  onConnectionDropped?: (info: { id: string; label: string; error: string }) => void;
   /**
    * Optional cross-job connection mutex. Queue-level parallel jobs reserve their
    * primary connection for the whole file; fallback users wait here until that
@@ -174,6 +176,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // wrapper live in connection-health.ts — extracted so they can be tested.
   const health = createConnectionHealth({
     onConnectionUnavailable: opts.onConnectionUnavailable,
+    onConnectionDropped: opts.onConnectionDropped,
     onRetry: opts.onRetry,
     acquireConnection: opts.acquireConnection,
     reservedConnectionIds: reservedConnectionIds,

@@ -447,6 +447,14 @@ async function runJob(
           { stage: "llm_connection_unavailable" },
         );
       },
+      onConnectionDropped: ({ id, label, error }) => {
+        logger.warn(
+          "translate",
+          `LLM connection dropped for the rest of this job: ${label} (${id}) — ${error}`,
+          job.id,
+          { stage: "llm_connection_dropped" },
+        );
+      },
       // Only cascades reach this (the primary is reserved above); they must
       // not block on another worker's job-long hold.
       acquireConnection: tryAcquireConnectionLock,

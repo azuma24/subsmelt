@@ -24,7 +24,10 @@ export interface ConnectionEvent {
 }
 
 export interface ConnectionHealthOptions {
+  /** The availability probe failed every attempt: the connection is down. */
   onConnectionUnavailable?: (info: ConnectionEvent) => void;
+  /** The timeout breaker tripped: the connection is skipped for this job only. */
+  onConnectionDropped?: (info: ConnectionEvent) => void;
   onRetry?: (attempt: number, error: unknown, backoff: number, maxRetries?: number) => void;
   /** Serializes requests per connection; returns a release function. */
   acquireConnection?: (conn: ResolvedConnection) => Promise<() => void>;
@@ -121,7 +124,7 @@ export function createConnectionHealth(options: ConnectionHealthOptions = {}): C
     timeoutCounts.set(conn.id, count);
     if (count >= CONNECTION_TIMEOUT_LIMIT && !disabled.has(conn.id)) {
       disabled.add(conn.id);
-      options.onConnectionUnavailable?.({
+      options.onConnectionDropped?.({
         id: conn.id,
         label: conn.label,
         error: `${count} timeouts in this job — skipping for the rest of it`,
