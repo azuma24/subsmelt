@@ -784,7 +784,19 @@
       "updateNow": "Aktualizovat nyní",
       "updating": "Aktualizace…",
       "updated": "yt-dlp je nyní ve verzi {{version}}.",
-      "updateFailed": "Aktualizace selhala: {{error}}"
+      "updateFailed": "Aktualizace selhala: {{error}}",
+      "cookies": "Soubory cookie pro soukromé playlisty",
+      "cookiesUpload": "Nahrát cookies.txt",
+      "cookiesReplace": "Nahradit cookies.txt",
+      "cookiesRemove": "Odebrat soubory cookie",
+      "cookiesPresent": "Soubory cookie nahrány {{date}}",
+      "cookiesAbsent": "Žádné soubory cookie nejsou nahrány",
+      "cookiesHint": "Neveřejné playlisty soubory cookie nepotřebují. Soubory cookie fungují jako vaše přihlášená relace Google, proto je SubSmelt po nahrání už nikdy nezobrazí.",
+      "cookiesSaved": "Soubory cookie uloženy",
+      "cookiesRemoved": "Soubory cookie odebrány",
+      "cookiesFailed": "Soubory cookie se nepodařilo uložit: {{error}}",
+      "cookiesRemoveTitle": "Odebrat nahrané soubory cookie?",
+      "cookiesRemoveMessage": "Soukromé playlisty se nebudou stahovat, dokud nenahrajete nové soubory cookie. Neveřejné a veřejné playlisty fungují dál."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "yt-dlp není nainstalovaný, takže SubSmelt nemůže číst playlisty.",
-      "noYtdlpHint": "Obraz Dockeru ho obsahuje. Jinde nainstalujte yt-dlp a restartujte SubSmelt."
+      "noYtdlpHint": "Obraz Dockeru ho obsahuje. Jinde nainstalujte yt-dlp a restartujte SubSmelt.",
+      "cooldownTitle": "YouTube požádal SubSmelt o zpomalení.",
+      "cooldownBody": "Stahování je pozastaveno do {{time}}. Přepis a překlad běží dál.",
+      "botCheckTitle": "YouTube chce, aby SubSmelt prokázal, že není bot.",
+      "botCheckBody": "Stahování je pozastaveno do {{time}}. Obvykle pomohou soubory cookie z prohlížeče s přihlášeným účtem.",
+      "addCookies": "Přidat soubory cookie"
     },
     "availability": {
       "public": "Veřejné",
@@ -1150,7 +1167,8 @@
       "waiting": "Čeká na premiéru",
       "skipped": "Přeskočeno",
       "unavailable": "Nedostupné",
-      "failed": "Selhalo"
+      "failed": "Selhalo",
+      "subtitlesNext": "Čeká na titulky"
     },
     "skipKind": {
       "user": "Přeskočili jste to",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, {{count}} videí",
       "monthFootnote": "Malá čísla: videa zveřejněná v daném měsíci."
     },
-    "removedCount": "odebráno z playlistu"
+    "removedCount": "odebráno z playlistu",
+    "actions": {
+      "downloadNow": "Stáhnout nyní",
+      "download": "Stáhnout",
+      "retry": "Zkusit znovu",
+      "skip": "Přeskočit",
+      "failed": "Video se nepodařilo aktualizovat: {{error}}"
+    },
+    "retryAt": "další pokus {{time}}"
   }
 }

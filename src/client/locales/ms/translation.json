@@ -784,7 +784,19 @@
       "updateNow": "Kemas kini sekarang",
       "updating": "Mengemas kini…",
       "updated": "yt-dlp kini {{version}}.",
-      "updateFailed": "Kemas kini gagal: {{error}}"
+      "updateFailed": "Kemas kini gagal: {{error}}",
+      "cookies": "Kuki untuk senarai main peribadi",
+      "cookiesUpload": "Muat naik cookies.txt",
+      "cookiesReplace": "Ganti cookies.txt",
+      "cookiesRemove": "Buang kuki",
+      "cookiesPresent": "Kuki dimuat naik {{date}}",
+      "cookiesAbsent": "Tiada kuki dimuat naik",
+      "cookiesHint": "Senarai main tidak tersenarai tidak memerlukan kuki. Kuki bertindak sebagai sesi Google anda yang telah log masuk, jadi SubSmelt tidak akan memaparkannya lagi selepas dimuat naik.",
+      "cookiesSaved": "Kuki disimpan",
+      "cookiesRemoved": "Kuki dibuang",
+      "cookiesFailed": "Tidak dapat menyimpan kuki: {{error}}",
+      "cookiesRemoveTitle": "Buang kuki yang dimuat naik?",
+      "cookiesRemoveMessage": "Senarai main peribadi berhenti dimuat turun sehingga anda memuat naik kuki baharu. Senarai main tidak tersenarai dan awam terus berfungsi."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "yt-dlp belum dipasang, jadi SubSmelt tidak dapat membaca senarai main.",
-      "noYtdlpHint": "Imej Docker sudah menyertakannya. Di tempat lain, pasang yt-dlp dan mulakan semula SubSmelt."
+      "noYtdlpHint": "Imej Docker sudah menyertakannya. Di tempat lain, pasang yt-dlp dan mulakan semula SubSmelt.",
+      "cooldownTitle": "YouTube meminta SubSmelt memperlahankan kadar.",
+      "cooldownBody": "Muat turun dijeda sehingga {{time}}. Transkripsi dan terjemahan terus berjalan.",
+      "botCheckTitle": "YouTube meminta SubSmelt membuktikan ia bukan bot.",
+      "botCheckBody": "Muat turun dijeda sehingga {{time}}. Kuki daripada pelayar yang telah log masuk biasanya dapat melepasi semakan ini.",
+      "addCookies": "Tambah kuki"
     },
     "availability": {
       "public": "Awam",
@@ -1150,7 +1167,8 @@
       "waiting": "Menunggu tayangan perdana",
       "skipped": "Dilangkau",
       "unavailable": "Tidak tersedia",
-      "failed": "Gagal"
+      "failed": "Gagal",
+      "subtitlesNext": "Menunggu sarikata"
     },
     "skipKind": {
       "user": "Anda melangkau ini",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, {{count}} video",
       "monthFootnote": "Nombor kecil: video yang disiarkan pada bulan itu."
     },
-    "removedCount": "dialih keluar daripada senarai main"
+    "removedCount": "dialih keluar daripada senarai main",
+    "actions": {
+      "downloadNow": "Muat turun sekarang",
+      "download": "Muat turun",
+      "retry": "Cuba lagi",
+      "skip": "Langkau",
+      "failed": "Tidak dapat mengemas kini video: {{error}}"
+    },
+    "retryAt": "cuba semula {{time}}"
   }
 }

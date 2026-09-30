@@ -784,7 +784,19 @@
       "updateNow": "今すぐ更新",
       "updating": "更新中…",
       "updated": "yt-dlpを{{version}}に更新しました。",
-      "updateFailed": "更新に失敗しました: {{error}}"
+      "updateFailed": "更新に失敗しました: {{error}}",
+      "cookies": "非公開プレイリスト用のCookie",
+      "cookiesUpload": "cookies.txtをアップロード",
+      "cookiesReplace": "cookies.txtを置き換え",
+      "cookiesRemove": "Cookieを削除",
+      "cookiesPresent": "{{date}}にCookieをアップロード済み",
+      "cookiesAbsent": "Cookieは未アップロード",
+      "cookiesHint": "限定公開プレイリストにCookieは不要です。CookieはログインしたGoogleセッションとして機能するため、SubSmeltはアップロード後に二度と表示しません。",
+      "cookiesSaved": "Cookieを保存しました",
+      "cookiesRemoved": "Cookieを削除しました",
+      "cookiesFailed": "Cookieを保存できませんでした: {{error}}",
+      "cookiesRemoveTitle": "アップロードしたCookieを削除しますか？",
+      "cookiesRemoveMessage": "新しいCookieをアップロードするまで、非公開プレイリストはダウンロードされません。限定公開と公開のプレイリストは引き続き動作します。"
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "yt-dlpがインストールされていないため、SubSmeltはプレイリストを読み取れません。",
-      "noYtdlpHint": "Dockerイメージには含まれています。それ以外の環境では、yt-dlpをインストールしてSubSmeltを再起動してください。"
+      "noYtdlpHint": "Dockerイメージには含まれています。それ以外の環境では、yt-dlpをインストールしてSubSmeltを再起動してください。",
+      "cooldownTitle": "YouTubeからSubSmeltに速度を落とすよう求められました。",
+      "cooldownBody": "{{time}}までダウンロードを一時停止します。文字起こしと翻訳は続行します。",
+      "botCheckTitle": "YouTubeからSubSmeltにボットでないことの確認を求められました。",
+      "botCheckBody": "{{time}}までダウンロードを一時停止します。ログイン済みブラウザのCookieを使うと、通常は通過できます。",
+      "addCookies": "Cookieを追加"
     },
     "availability": {
       "public": "公開",
@@ -1150,7 +1167,8 @@
       "waiting": "プレミア公開待ち",
       "skipped": "スキップ済み",
       "unavailable": "利用不可",
-      "failed": "失敗"
+      "failed": "失敗",
+      "subtitlesNext": "字幕待ち"
     },
     "skipKind": {
       "user": "あなたがスキップしました",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}、{{count}}本",
       "monthFootnote": "小さな数字: その月に投稿された動画。"
     },
-    "removedCount": "プレイリストから削除済み"
+    "removedCount": "プレイリストから削除済み",
+    "actions": {
+      "downloadNow": "今すぐダウンロード",
+      "download": "ダウンロード",
+      "retry": "再試行",
+      "skip": "スキップ",
+      "failed": "動画を更新できませんでした: {{error}}"
+    },
+    "retryAt": "{{time}}に再試行"
   }
 }

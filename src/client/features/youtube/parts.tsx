@@ -33,7 +33,7 @@ const BANNER_TONE: Record<BannerTone, { box: string; glyph: string }> = {
   info: { box: "border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]", glyph: "i" },
 };
 
-export function Banner({ tone, title, children }: { tone: BannerTone; title: string; children?: ReactNode }) {
+export function Banner({ tone, title, children, action }: { tone: BannerTone; title: string; children?: ReactNode; action?: ReactNode }) {
   const style = BANNER_TONE[tone];
   return (
     <div role={tone === "info" ? "status" : "alert"} className={`flex flex-wrap items-start gap-3 rounded-xl border px-3.5 py-2.5 ${style.box}`}>
@@ -44,6 +44,7 @@ export function Banner({ tone, title, children }: { tone: BannerTone; title: str
         <strong className="font-semibold">{title}</strong>
         {children && <> {children}</>}
       </p>
+      {action}
     </div>
   );
 }

@@ -784,7 +784,19 @@
       "updateNow": "Actualizează acum",
       "updating": "Se actualizează…",
       "updated": "yt-dlp este acum {{version}}.",
-      "updateFailed": "Actualizare eșuată: {{error}}"
+      "updateFailed": "Actualizare eșuată: {{error}}",
+      "cookies": "Cookie-uri pentru listele private",
+      "cookiesUpload": "Încarcă cookies.txt",
+      "cookiesReplace": "Înlocuiește cookies.txt",
+      "cookiesRemove": "Elimină cookie-urile",
+      "cookiesPresent": "Cookie-uri încărcate pe {{date}}",
+      "cookiesAbsent": "Niciun cookie încărcat",
+      "cookiesHint": "Listele nelistate nu au nevoie de cookie-uri. Cookie-urile țin loc de sesiunea ta Google conectată, așa că SubSmelt nu le mai afișează niciodată după încărcare.",
+      "cookiesSaved": "Cookie-uri salvate",
+      "cookiesRemoved": "Cookie-uri eliminate",
+      "cookiesFailed": "Cookie-urile nu au putut fi salvate: {{error}}",
+      "cookiesRemoveTitle": "Elimini cookie-urile încărcate?",
+      "cookiesRemoveMessage": "Listele private nu se mai descarcă până nu încarci cookie-uri noi. Listele nelistate și publice funcționează în continuare."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "yt-dlp nu este instalat, așa că SubSmelt nu poate citi listele de redare.",
-      "noYtdlpHint": "Imaginea Docker îl include. În alte cazuri, instalează yt-dlp și repornește SubSmelt."
+      "noYtdlpHint": "Imaginea Docker îl include. În alte cazuri, instalează yt-dlp și repornește SubSmelt.",
+      "cooldownTitle": "YouTube i-a cerut lui SubSmelt să încetinească.",
+      "cooldownBody": "Descărcările sunt în pauză până la {{time}}. Transcrierea și traducerea continuă.",
+      "botCheckTitle": "YouTube i-a cerut lui SubSmelt să dovedească că nu este un bot.",
+      "botCheckBody": "Descărcările sunt în pauză până la {{time}}. De obicei, cookie-urile dintr-un browser conectat trec de această verificare.",
+      "addCookies": "Adaugă cookie-uri"
     },
     "availability": {
       "public": "Publică",
@@ -1150,7 +1167,8 @@
       "waiting": "Se așteaptă premiera",
       "skipped": "Omis",
       "unavailable": "Indisponibil",
-      "failed": "Eșuat"
+      "failed": "Eșuat",
+      "subtitlesNext": "Așteaptă subtitrările"
     },
     "skipKind": {
       "user": "Ai omis acest videoclip",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, {{count}} videoclipuri",
       "monthFootnote": "Numerele mici: videoclipuri postate în luna respectivă."
     },
-    "removedCount": "eliminate din listă"
+    "removedCount": "eliminate din listă",
+    "actions": {
+      "downloadNow": "Descarcă acum",
+      "download": "Descarcă",
+      "retry": "Reîncearcă",
+      "skip": "Omite",
+      "failed": "Videoclipul nu a putut fi actualizat: {{error}}"
+    },
+    "retryAt": "nouă încercare {{time}}"
   }
 }

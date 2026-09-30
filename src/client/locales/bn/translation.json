@@ -784,7 +784,19 @@
       "updateNow": "এখনই আপডেট করুন",
       "updating": "আপডেট হচ্ছে…",
       "updated": "yt-dlp এখন {{version}}।",
-      "updateFailed": "আপডেট ব্যর্থ হয়েছে: {{error}}"
+      "updateFailed": "আপডেট ব্যর্থ হয়েছে: {{error}}",
+      "cookies": "প্রাইভেট প্লেলিস্টের জন্য কুকি",
+      "cookiesUpload": "cookies.txt আপলোড করুন",
+      "cookiesReplace": "cookies.txt বদলান",
+      "cookiesRemove": "কুকি সরান",
+      "cookiesPresent": "কুকি আপলোড হয়েছে {{date}}",
+      "cookiesAbsent": "কোনো কুকি আপলোড করা হয়নি",
+      "cookiesHint": "আনলিস্টেড প্লেলিস্টে কুকি লাগে না। কুকি আপনার সাইন-ইন করা Google সেশনের মতো কাজ করে, তাই আপলোডের পরে SubSmelt সেগুলি আর কখনো দেখায় না।",
+      "cookiesSaved": "কুকি সংরক্ষিত হয়েছে",
+      "cookiesRemoved": "কুকি সরানো হয়েছে",
+      "cookiesFailed": "কুকি সংরক্ষণ করা যায়নি: {{error}}",
+      "cookiesRemoveTitle": "আপলোড করা কুকি সরাবেন?",
+      "cookiesRemoveMessage": "নতুন কুকি আপলোড না করা পর্যন্ত প্রাইভেট প্লেলিস্ট ডাউনলোড হবে না। আনলিস্টেড ও পাবলিক প্লেলিস্ট কাজ করতে থাকবে।"
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "yt-dlp ইনস্টল করা নেই, তাই SubSmelt প্লেলিস্ট পড়তে পারছে না।",
-      "noYtdlpHint": "Docker ইমেজে এটি অন্তর্ভুক্ত আছে। অন্য ক্ষেত্রে yt-dlp ইনস্টল করে SubSmelt রিস্টার্ট করুন।"
+      "noYtdlpHint": "Docker ইমেজে এটি অন্তর্ভুক্ত আছে। অন্য ক্ষেত্রে yt-dlp ইনস্টল করে SubSmelt রিস্টার্ট করুন।",
+      "cooldownTitle": "YouTube SubSmelt-কে গতি কমাতে বলেছে।",
+      "cooldownBody": "{{time}} পর্যন্ত ডাউনলোড বন্ধ থাকবে। প্রতিলিপি ও অনুবাদ চলতে থাকবে।",
+      "botCheckTitle": "YouTube SubSmelt-কে প্রমাণ করতে বলেছে যে এটি বট নয়।",
+      "botCheckBody": "{{time}} পর্যন্ত ডাউনলোড বন্ধ থাকবে। সাইন-ইন করা ব্রাউজারের কুকি সাধারণত এটি পার করে দেয়।",
+      "addCookies": "কুকি যোগ করুন"
     },
     "availability": {
       "public": "পাবলিক",
@@ -1150,7 +1167,8 @@
       "waiting": "প্রিমিয়ারের অপেক্ষায়",
       "skipped": "এড়িয়ে যাওয়া হয়েছে",
       "unavailable": "অনুপলব্ধ",
-      "failed": "ব্যর্থ"
+      "failed": "ব্যর্থ",
+      "subtitlesNext": "সাবটাইটেলের অপেক্ষায়"
     },
     "skipKind": {
       "user": "আপনি এটি এড়িয়ে গেছেন",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, {{count}}টি ভিডিও",
       "monthFootnote": "ছোট সংখ্যা: সেই মাসে পোস্ট হওয়া ভিডিও।"
     },
-    "removedCount": "প্লেলিস্ট থেকে সরানো হয়েছে"
+    "removedCount": "প্লেলিস্ট থেকে সরানো হয়েছে",
+    "actions": {
+      "downloadNow": "এখনই ডাউনলোড করুন",
+      "download": "ডাউনলোড করুন",
+      "retry": "আবার চেষ্টা করুন",
+      "skip": "এড়িয়ে যান",
+      "failed": "ভিডিও আপডেট করা যায়নি: {{error}}"
+    },
+    "retryAt": "{{time}} আবার চেষ্টা হবে"
   }
 }

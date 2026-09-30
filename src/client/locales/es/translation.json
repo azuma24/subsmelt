@@ -784,7 +784,19 @@
       "updateNow": "Actualizar ahora",
       "updating": "Actualizando…",
       "updated": "yt-dlp ya es {{version}}.",
-      "updateFailed": "Error al actualizar: {{error}}"
+      "updateFailed": "Error al actualizar: {{error}}",
+      "cookies": "Cookies para listas privadas",
+      "cookiesUpload": "Subir cookies.txt",
+      "cookiesReplace": "Reemplazar cookies.txt",
+      "cookiesRemove": "Quitar cookies",
+      "cookiesPresent": "Cookies subidas el {{date}}",
+      "cookiesAbsent": "No hay cookies subidas",
+      "cookiesHint": "Las listas no listadas no necesitan cookies. Las cookies equivalen a tu sesión iniciada de Google, así que SubSmelt no vuelve a mostrarlas tras subirlas.",
+      "cookiesSaved": "Cookies guardadas",
+      "cookiesRemoved": "Cookies eliminadas",
+      "cookiesFailed": "No se pudieron guardar las cookies: {{error}}",
+      "cookiesRemoveTitle": "¿Quitar las cookies subidas?",
+      "cookiesRemoveMessage": "Las listas privadas dejan de descargarse hasta que subas cookies nuevas. Las listas no listadas y públicas siguen funcionando."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "yt-dlp no está instalado, así que SubSmelt no puede leer listas.",
-      "noYtdlpHint": "La imagen de Docker lo incluye. En otros casos, instala yt-dlp y reinicia SubSmelt."
+      "noYtdlpHint": "La imagen de Docker lo incluye. En otros casos, instala yt-dlp y reinicia SubSmelt.",
+      "cooldownTitle": "YouTube pidió a SubSmelt que vaya más despacio.",
+      "cooldownBody": "Las descargas se pausan hasta las {{time}}. La transcripción y la traducción siguen en marcha.",
+      "botCheckTitle": "YouTube pidió a SubSmelt que demuestre que no es un bot.",
+      "botCheckBody": "Las descargas se pausan hasta las {{time}}. Las cookies de un navegador con sesión iniciada suelen resolverlo.",
+      "addCookies": "Añadir cookies"
     },
     "availability": {
       "public": "Pública",
@@ -1150,7 +1167,8 @@
       "waiting": "Esperando el estreno",
       "skipped": "Omitido",
       "unavailable": "No disponible",
-      "failed": "Con error"
+      "failed": "Con error",
+      "subtitlesNext": "Esperando subtítulos"
     },
     "skipKind": {
       "user": "Lo omitiste tú",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, {{count}} vídeos",
       "monthFootnote": "Números pequeños: vídeos publicados ese mes."
     },
-    "removedCount": "quitados de la lista"
+    "removedCount": "quitados de la lista",
+    "actions": {
+      "downloadNow": "Descargar ahora",
+      "download": "Descargar",
+      "retry": "Reintentar",
+      "skip": "Omitir",
+      "failed": "No se pudo actualizar el vídeo: {{error}}"
+    },
+    "retryAt": "nuevo intento {{time}}"
   }
 }

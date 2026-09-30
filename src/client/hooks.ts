@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "./api";
-import type { JobPreview, JobRow, LlmHealth, LogEntry, QueueStatus, Task, TranscriptionHealth, TranscriptionHistoryEntry } from "./types";
+import type { JobPreview, JobRow, LlmHealth, LogEntry, QueueStatus, Task, TranscriptionHealth, TranscriptionHistoryEntry, YoutubeVideo } from "./types";
 
 export type SSEEventName =
   | "job:progress"
@@ -14,7 +14,9 @@ export type SSEEventName =
   | "job:stopped"
   | "transcription:progress"
   | "model:download"
-  | "youtube:playlist";
+  | "youtube:playlist"
+  | "youtube:video"
+  | "youtube:cooldown";
 
 export type SSEEventHandler = (type: SSEEventName, data: Record<string, unknown>) => void;
 
@@ -180,6 +182,8 @@ const SSE_EVENT_NAMES: readonly SSEEventName[] = [
   "transcription:progress",
   "model:download",
   "youtube:playlist",
+  "youtube:video",
+  "youtube:cooldown",
 ];
 
 type QueryKey = readonly unknown[];
@@ -217,8 +221,22 @@ export function getSSEInvalidationKeys(name: SSEEventName): QueryKey[] {
       // via onEvent; it should not trigger query refetches on every tick.
       return [];
     case "youtube:playlist":
+    case "youtube:video":
+      // Progress ticks carry a pct and patch the cached rows instead (withVideoProgress).
       return [["youtube"]];
+    case "youtube:cooldown":
+      return [["youtube", "status"]];
   }
+}
+
+/** A youtube:video progress tick applied to one playlist's cached rows. */
+export function withVideoProgress(
+  old: { videos: YoutubeVideo[] } | undefined,
+  videoId: string,
+  pct: number,
+): { videos: YoutubeVideo[] } | undefined {
+  if (!old) return old;
+  return { videos: old.videos.map((video) => (video.video_id === videoId ? { ...video, status: "downloading", pct } : video)) };
 }
 
 export function createDebouncedInvalidator(
@@ -285,6 +303,14 @@ function ensureSse(queryClient: ReturnType<typeof useQueryClient>): SseSingleton
       // Per-path transcription progress / per-model download progress are consumed
       // directly by their components via onEvent; they must not invalidate queries.
       if (name === "transcription:progress" || name === "model:download") return;
+
+      if (name === "youtube:video") {
+        const { videoId, playlistId, pct } = data as { videoId?: string; playlistId?: string; pct?: number };
+        if (typeof videoId === "string" && typeof playlistId === "string" && typeof pct === "number") {
+          queryClient.setQueryData<{ videos: YoutubeVideo[] }>(["youtube", "videos", playlistId], (old) => withVideoProgress(old, videoId, pct));
+          return;
+        }
+      }
 
       if (name === "job:progress") {
         const { jobId, completed, total } = data as { jobId?: number; completed?: number; total?: number };

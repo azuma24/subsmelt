@@ -784,7 +784,19 @@
       "updateNow": "Jetzt aktualisieren",
       "updating": "Wird aktualisiert…",
       "updated": "yt-dlp ist jetzt {{version}}.",
-      "updateFailed": "Aktualisierung fehlgeschlagen: {{error}}"
+      "updateFailed": "Aktualisierung fehlgeschlagen: {{error}}",
+      "cookies": "Cookies für private Playlists",
+      "cookiesUpload": "cookies.txt hochladen",
+      "cookiesReplace": "cookies.txt ersetzen",
+      "cookiesRemove": "Cookies entfernen",
+      "cookiesPresent": "Cookies hochgeladen am {{date}}",
+      "cookiesAbsent": "Keine Cookies hochgeladen",
+      "cookiesHint": "Nicht gelistete Playlists brauchen keine Cookies. Cookies wirken wie deine angemeldete Google-Sitzung, deshalb zeigt SubSmelt sie nach dem Hochladen nie wieder an.",
+      "cookiesSaved": "Cookies gespeichert",
+      "cookiesRemoved": "Cookies entfernt",
+      "cookiesFailed": "Cookies konnten nicht gespeichert werden: {{error}}",
+      "cookiesRemoveTitle": "Hochgeladene Cookies entfernen?",
+      "cookiesRemoveMessage": "Private Playlists werden erst wieder heruntergeladen, wenn du neue Cookies hochlädst. Nicht gelistete und öffentliche Playlists funktionieren weiter."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "yt-dlp ist nicht installiert, daher kann SubSmelt keine Playlists lesen.",
-      "noYtdlpHint": "Das Docker-Image enthält es. Installiere yt-dlp andernfalls und starte SubSmelt neu."
+      "noYtdlpHint": "Das Docker-Image enthält es. Installiere yt-dlp andernfalls und starte SubSmelt neu.",
+      "cooldownTitle": "YouTube hat SubSmelt gebeten, langsamer zu machen.",
+      "cooldownBody": "Downloads pausieren bis {{time}}. Transkription und Übersetzung laufen weiter.",
+      "botCheckTitle": "YouTube verlangt von SubSmelt einen Nachweis, dass es kein Bot ist.",
+      "botCheckBody": "Downloads pausieren bis {{time}}. Cookies aus einem angemeldeten Browser helfen meist darüber hinweg.",
+      "addCookies": "Cookies hinzufügen"
     },
     "availability": {
       "public": "Öffentlich",
@@ -1150,7 +1167,8 @@
       "waiting": "Wartet auf die Premiere",
       "skipped": "Übersprungen",
       "unavailable": "Nicht verfügbar",
-      "failed": "Fehlgeschlagen"
+      "failed": "Fehlgeschlagen",
+      "subtitlesNext": "Wartet auf Untertitel"
     },
     "skipKind": {
       "user": "Von dir übersprungen",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, {{count}} Videos",
       "monthFootnote": "Kleine Zahlen: in diesem Monat veröffentlichte Videos."
     },
-    "removedCount": "aus der Playlist entfernt"
+    "removedCount": "aus der Playlist entfernt",
+    "actions": {
+      "downloadNow": "Jetzt herunterladen",
+      "download": "Herunterladen",
+      "retry": "Erneut versuchen",
+      "skip": "Überspringen",
+      "failed": "Video konnte nicht aktualisiert werden: {{error}}"
+    },
+    "retryAt": "neuer Versuch {{time}}"
   }
 }

@@ -784,7 +784,19 @@
       "updateNow": "อัปเดตเลย",
       "updating": "กำลังอัปเดต…",
       "updated": "ตอนนี้ yt-dlp เป็นเวอร์ชัน {{version}}",
-      "updateFailed": "อัปเดตไม่สำเร็จ: {{error}}"
+      "updateFailed": "อัปเดตไม่สำเร็จ: {{error}}",
+      "cookies": "คุกกี้สำหรับเพลย์ลิสต์ส่วนตัว",
+      "cookiesUpload": "อัปโหลด cookies.txt",
+      "cookiesReplace": "แทนที่ cookies.txt",
+      "cookiesRemove": "ลบคุกกี้",
+      "cookiesPresent": "อัปโหลดคุกกี้เมื่อ {{date}}",
+      "cookiesAbsent": "ยังไม่ได้อัปโหลดคุกกี้",
+      "cookiesHint": "เพลย์ลิสต์ที่ไม่แสดงในรายการไม่ต้องใช้คุกกี้ คุกกี้ทำหน้าที่เหมือนเซสชัน Google ที่คุณลงชื่อเข้าใช้อยู่ SubSmelt จึงไม่แสดงคุกกี้อีกเลยหลังอัปโหลด",
+      "cookiesSaved": "บันทึกคุกกี้แล้ว",
+      "cookiesRemoved": "ลบคุกกี้แล้ว",
+      "cookiesFailed": "บันทึกคุกกี้ไม่ได้: {{error}}",
+      "cookiesRemoveTitle": "ลบคุกกี้ที่อัปโหลดไว้ไหม",
+      "cookiesRemoveMessage": "เพลย์ลิสต์ส่วนตัวจะหยุดดาวน์โหลดจนกว่าคุณจะอัปโหลดคุกกี้ใหม่ เพลย์ลิสต์ที่ไม่แสดงในรายการและเพลย์ลิสต์สาธารณะยังทำงานตามปกติ"
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "ไม่ได้ติดตั้ง yt-dlp SubSmelt จึงอ่านเพลย์ลิสต์ไม่ได้",
-      "noYtdlpHint": "อิมเมจ Docker มี yt-dlp รวมอยู่แล้ว หากใช้ที่อื่น ให้ติดตั้ง yt-dlp แล้วรีสตาร์ท SubSmelt"
+      "noYtdlpHint": "อิมเมจ Docker มี yt-dlp รวมอยู่แล้ว หากใช้ที่อื่น ให้ติดตั้ง yt-dlp แล้วรีสตาร์ท SubSmelt",
+      "cooldownTitle": "YouTube ขอให้ SubSmelt ชะลอความเร็วลง",
+      "cooldownBody": "หยุดดาวน์โหลดชั่วคราวจนถึง {{time}} การถอดเสียงและการแปลยังทำงานต่อ",
+      "botCheckTitle": "YouTube ขอให้ SubSmelt พิสูจน์ว่าไม่ใช่บอท",
+      "botCheckBody": "หยุดดาวน์โหลดชั่วคราวจนถึง {{time}} คุกกี้จากเบราว์เซอร์ที่ลงชื่อเข้าใช้อยู่มักช่วยผ่านขั้นตอนนี้ได้",
+      "addCookies": "เพิ่มคุกกี้"
     },
     "availability": {
       "public": "สาธารณะ",
@@ -1150,7 +1167,8 @@
       "waiting": "รอการฉายรอบปฐมทัศน์",
       "skipped": "ข้ามแล้ว",
       "unavailable": "ไม่พร้อมใช้งาน",
-      "failed": "ล้มเหลว"
+      "failed": "ล้มเหลว",
+      "subtitlesNext": "รอคำบรรยาย"
     },
     "skipKind": {
       "user": "คุณข้ามวิดีโอนี้",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}} {{count}} วิดีโอ",
       "monthFootnote": "ตัวเลขเล็ก: วิดีโอที่โพสต์ในเดือนนั้น"
     },
-    "removedCount": "ลบออกจากเพลย์ลิสต์แล้ว"
+    "removedCount": "ลบออกจากเพลย์ลิสต์แล้ว",
+    "actions": {
+      "downloadNow": "ดาวน์โหลดเลย",
+      "download": "ดาวน์โหลด",
+      "retry": "ลองอีกครั้ง",
+      "skip": "ข้าม",
+      "failed": "อัปเดตวิดีโอไม่ได้: {{error}}"
+    },
+    "retryAt": "ลองใหม่ {{time}}"
   }
 }

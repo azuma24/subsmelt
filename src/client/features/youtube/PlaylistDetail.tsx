@@ -1,13 +1,28 @@
 import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import * as api from "../../api";
+import { useToast } from "../../components/Toast";
 import { useYoutubeVideosQuery } from "../../hooks";
-import type { YoutubePlaylist, YoutubeVideo } from "../../types";
+import { getErrorMessage } from "../../lib";
+import type { YoutubePlaylist, YoutubeVideo, YoutubeVideoAction } from "../../types";
 import { RowActionsMenu, StatusBadge, Tabs } from "../../ui/primitives";
 import { InlineError } from "../../ui/QueryState";
 import { FORM_CONTROL_CLS } from "../../ui/form-classes";
 import { Banner, Tag } from "./parts";
 import { availabilityLabel, formatDuration, keepLabel, profileLabel, relativeFromNow, shortDate } from "./format";
-import { VIDEO_FILTERS, countByFilter, filterVideos, videoFilterOf, videoStatusDescriptor, type VideoFilter } from "./video-status";
+import {
+  VIDEO_FILTERS,
+  countByFilter,
+  filterVideos,
+  videoActionLabelKey,
+  videoActions,
+  videoFilterOf,
+  videoPipeline,
+  videoStatusDescriptor,
+  type PipeStep,
+  type VideoFilter,
+} from "./video-status";
 
 const PAGE_SIZE = 200;
 // The All tab groups rows in this order: what is moving, what needs a look, what waits, what is finished.
@@ -174,14 +189,48 @@ function statusCounts(videos: YoutubeVideo[]): Partial<Record<YoutubeVideo["stat
 }
 
 function VideoRows({ videos }: { videos: YoutubeVideo[] }) {
+  const { t } = useTranslation();
+  const { addToast } = useToast();
+  const queryClient = useQueryClient();
+  const runAction = async (video: YoutubeVideo, action: YoutubeVideoAction) => {
+    try {
+      await api.youtubeVideoAction(video.video_id, action);
+    } catch (error) {
+      addToast(t("youtube.actions.failed", { error: getErrorMessage(error) }), "error");
+    }
+    void queryClient.invalidateQueries({ queryKey: ["youtube"] });
+  };
   return (
     <ul className="divide-y divide-[var(--border)]">
-      {videos.map((video) => <VideoRow key={video.video_id} video={video} />)}
+      {videos.map((video) => <VideoRow key={video.video_id} video={video} onAction={(action) => void runAction(video, action)} />)}
     </ul>
   );
 }
 
-function VideoRow({ video }: { video: YoutubeVideo }) {
+const PIPE_STEP_CLS: Record<PipeStep, string> = {
+  "": "bg-[var(--surface-3)]",
+  done: "bg-[var(--green)]",
+  now: "bg-[var(--surface-3)]",
+  wait: "bg-[repeating-linear-gradient(90deg,var(--yellow)_0_4px,transparent_4px_7px)]",
+  fail: "bg-[var(--red)]",
+};
+const PIPE_STEP_KEYS = ["stepDownload", "stepSubtitles", "stepTranslate", "stepNote"] as const;
+
+/** Four segments for download, subtitles, translate and note; the running one fills with its percentage. */
+function Pipeline({ steps, pct }: { steps: readonly PipeStep[]; pct: number | undefined }) {
+  const { t } = useTranslation();
+  return (
+    <span className="flex gap-1" aria-hidden="true">
+      {steps.map((step, i) => (
+        <span key={PIPE_STEP_KEYS[i]} title={t(`youtube.empty.${PIPE_STEP_KEYS[i]}`)} className={`relative h-1 w-[34px] overflow-hidden rounded-full ${PIPE_STEP_CLS[step]}`}>
+          {step === "now" && <span className="absolute inset-y-0 left-0 bg-[var(--accent)] transition-[width]" style={{ width: `${pct ?? 100}%` }} />}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function VideoRow({ video, onAction }: { video: YoutubeVideo; onAction: (action: YoutubeVideoAction) => void }) {
   const { t, i18n } = useTranslation();
   const dim = video.status === "skipped" || video.status === "unavailable";
   const title = video.title || t("youtube.privateOrDeleted");
@@ -190,23 +239,39 @@ function VideoRow({ video }: { video: YoutubeVideo }) {
     : video.status === "skipped" && video.skip_kind
       ? t(`youtube.skipKind.${video.skip_kind}`)
       : video.reason;
-  const meta = [video.channel, formatDuration(video.duration_s), video.published_at ? t("youtube.posted", { date: shortDate(video.published_at, i18n.language) }) : null, note].filter(Boolean);
+  const retry = video.retry_after && (video.status === "queued" || video.status === "waiting")
+    ? t("youtube.retryAt", { time: relativeFromNow(video.retry_after, i18n.language) })
+    : null;
+  const meta = [video.channel, formatDuration(video.duration_s), video.published_at ? t("youtube.posted", { date: shortDate(video.published_at, i18n.language) }) : null].filter(Boolean);
   const url = `https://www.youtube.com/watch?v=${video.video_id}`;
+  const menu = [
+    ...videoActions(video.status).map((action) => ({ label: t(videoActionLabelKey(video.status, action)), onClick: () => onAction(action) })),
+    { label: t("youtube.openOnYoutube"), onClick: () => window.open(url, "_blank", "noopener,noreferrer") },
+  ];
 
   return (
-    <li className={`grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1.5 px-3.5 py-2.5 md:grid-cols-[1fr_auto_auto] ${dim ? "opacity-70" : ""}`}>
+    <li className={`grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1.5 px-3.5 py-2.5 md:grid-cols-[1fr_210px_auto] ${dim ? "opacity-70" : ""}`}>
       <div className="min-w-0">
         <p className="line-clamp-2 text-[14px] font-medium leading-5 text-[var(--text)]">{title}</p>
-        <p className="mt-0.5 truncate text-[12px] leading-5 text-[var(--text-3)]">
-          {meta.join(" · ")}
-          {video.removed_at && <> · <span className="text-[var(--yellow)]">{t("youtube.removedTag")}</span></>}
+        <p className="mt-0.5 text-[12px] leading-5 text-[var(--text-3)]">
+          <span className="block truncate">
+            {meta.join(" · ")}
+            {video.removed_at && <> · <span className="text-[var(--yellow)]">{t("youtube.removedTag")}</span></>}
+          </span>
+          {(note || retry) && (
+            <span className={`line-clamp-2 break-words ${video.status === "failed" ? "text-[var(--red)]" : ""}`}>{[note, retry].filter(Boolean).join(" · ")}</span>
+          )}
         </p>
       </div>
-      <div className="col-start-1 row-start-2 md:col-start-auto md:row-start-auto">
-        <StatusBadge status={videoStatusDescriptor(video.status, t)} compact />
+      <div className="col-start-1 row-start-2 flex flex-col items-start gap-1.5 md:col-start-auto md:row-start-auto">
+        <Pipeline steps={videoPipeline(video)} pct={video.pct} />
+        <span className="flex items-center gap-2">
+          <StatusBadge status={videoStatusDescriptor(video, t)} compact />
+          {video.pct !== undefined && <span className="font-mono text-[11px] tabular-nums text-[var(--text-3)]">{video.pct}%</span>}
+        </span>
       </div>
       <div className="col-start-2 row-span-2 row-start-1 md:col-start-auto md:row-span-1 md:row-start-auto">
-        <RowActionsMenu items={[{ label: t("youtube.openOnYoutube"), onClick: () => window.open(url, "_blank", "noopener,noreferrer") }]} />
+        <RowActionsMenu items={menu} />
       </div>
     </li>
   );

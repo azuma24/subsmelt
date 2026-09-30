@@ -784,7 +784,19 @@
       "updateNow": "Mettre à jour maintenant",
       "updating": "Mise à jour…",
       "updated": "yt-dlp est maintenant en version {{version}}.",
-      "updateFailed": "Échec de la mise à jour : {{error}}"
+      "updateFailed": "Échec de la mise à jour : {{error}}",
+      "cookies": "Cookies pour les playlists privées",
+      "cookiesUpload": "Importer cookies.txt",
+      "cookiesReplace": "Remplacer cookies.txt",
+      "cookiesRemove": "Supprimer les cookies",
+      "cookiesPresent": "Cookies importés le {{date}}",
+      "cookiesAbsent": "Aucun cookie importé",
+      "cookiesHint": "Les playlists non répertoriées n’ont pas besoin de cookies. Les cookies valent votre session Google connectée : SubSmelt ne les affiche donc plus jamais après l’import.",
+      "cookiesSaved": "Cookies enregistrés",
+      "cookiesRemoved": "Cookies supprimés",
+      "cookiesFailed": "Impossible d’enregistrer les cookies : {{error}}",
+      "cookiesRemoveTitle": "Supprimer les cookies importés ?",
+      "cookiesRemoveMessage": "Les playlists privées ne se téléchargent plus tant que vous n’importez pas de nouveaux cookies. Les playlists non répertoriées et publiques continuent de fonctionner."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "yt-dlp n’est pas installé, SubSmelt ne peut donc pas lire les playlists.",
-      "noYtdlpHint": "L’image Docker l’inclut. Sinon, installez yt-dlp et redémarrez SubSmelt."
+      "noYtdlpHint": "L’image Docker l’inclut. Sinon, installez yt-dlp et redémarrez SubSmelt.",
+      "cooldownTitle": "YouTube a demandé à SubSmelt de ralentir.",
+      "cooldownBody": "Téléchargements en pause jusqu’à {{time}}. La transcription et la traduction continuent.",
+      "botCheckTitle": "YouTube demande à SubSmelt de prouver qu’il n’est pas un robot.",
+      "botCheckBody": "Téléchargements en pause jusqu’à {{time}}. Des cookies d’un navigateur connecté permettent généralement de passer ce contrôle.",
+      "addCookies": "Ajouter des cookies"
     },
     "availability": {
       "public": "Publique",
@@ -1150,7 +1167,8 @@
       "waiting": "En attente de la première",
       "skipped": "Ignorée",
       "unavailable": "Indisponible",
-      "failed": "Échec"
+      "failed": "Échec",
+      "subtitlesNext": "En attente des sous-titres"
     },
     "skipKind": {
       "user": "Ignorée par vous",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, {{count}} vidéos",
       "monthFootnote": "Petits chiffres : vidéos publiées ce mois-là."
     },
-    "removedCount": "retirées de la playlist"
+    "removedCount": "retirées de la playlist",
+    "actions": {
+      "downloadNow": "Télécharger maintenant",
+      "download": "Télécharger",
+      "retry": "Réessayer",
+      "skip": "Ignorer",
+      "failed": "Impossible de mettre à jour la vidéo : {{error}}"
+    },
+    "retryAt": "nouvel essai {{time}}"
   }
 }

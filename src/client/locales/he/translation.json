@@ -784,7 +784,19 @@
       "updateNow": "עדכון עכשיו",
       "updating": "מעדכן…",
       "updated": "yt-dlp הוא עכשיו {{version}}.",
-      "updateFailed": "העדכון נכשל: {{error}}"
+      "updateFailed": "העדכון נכשל: {{error}}",
+      "cookies": "קובצי Cookie לפלייליסטים פרטיים",
+      "cookiesUpload": "העלאת cookies.txt",
+      "cookiesReplace": "החלפת cookies.txt",
+      "cookiesRemove": "הסרת קובצי Cookie",
+      "cookiesPresent": "קובצי Cookie הועלו ב-{{date}}",
+      "cookiesAbsent": "לא הועלו קובצי Cookie",
+      "cookiesHint": "פלייליסטים לא רשומים לא צריכים קובצי Cookie. קובצי Cookie פועלים כמו החיבור שלכם ל-Google, ולכן SubSmelt לא מציג אותם שוב אחרי ההעלאה.",
+      "cookiesSaved": "קובצי Cookie נשמרו",
+      "cookiesRemoved": "קובצי Cookie הוסרו",
+      "cookiesFailed": "לא ניתן לשמור את קובצי ה-Cookie: {{error}}",
+      "cookiesRemoveTitle": "להסיר את קובצי ה-Cookie שהועלו?",
+      "cookiesRemoveMessage": "פלייליסטים פרטיים לא יורדו עד שתעלו קובצי Cookie חדשים. פלייליסטים לא רשומים וציבוריים ממשיכים לעבוד."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "yt-dlp אינו מותקן, ולכן SubSmelt אינו יכול לקרוא פלייליסטים.",
-      "noYtdlpHint": "תמונת ה-Docker כוללת אותו. בסביבה אחרת, התקינו את yt-dlp והפעילו מחדש את SubSmelt."
+      "noYtdlpHint": "תמונת ה-Docker כוללת אותו. בסביבה אחרת, התקינו את yt-dlp והפעילו מחדש את SubSmelt.",
+      "cooldownTitle": "YouTube ביקש מ-SubSmelt להאט.",
+      "cooldownBody": "ההורדות מושהות עד {{time}}. התמלול והתרגום ממשיכים.",
+      "botCheckTitle": "YouTube ביקש מ-SubSmelt להוכיח שהוא לא בוט.",
+      "botCheckBody": "ההורדות מושהות עד {{time}}. קובצי Cookie מדפדפן מחובר בדרך כלל עוקפים את זה.",
+      "addCookies": "הוספת קובצי Cookie"
     },
     "availability": {
       "public": "ציבורי",
@@ -1150,7 +1167,8 @@
       "waiting": "ממתין לפרמיירה",
       "skipped": "דולג",
       "unavailable": "לא זמין",
-      "failed": "נכשל"
+      "failed": "נכשל",
+      "subtitlesNext": "ממתין לכתוביות"
     },
     "skipKind": {
       "user": "דילגתם על זה",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, {{count}} סרטונים",
       "monthFootnote": "מספרים קטנים: סרטונים שפורסמו באותו חודש."
     },
-    "removedCount": "הוסרו מהפלייליסט"
+    "removedCount": "הוסרו מהפלייליסט",
+    "actions": {
+      "downloadNow": "הורדה עכשיו",
+      "download": "הורדה",
+      "retry": "ניסיון חוזר",
+      "skip": "דילוג",
+      "failed": "לא ניתן לעדכן את הסרטון: {{error}}"
+    },
+    "retryAt": "ניסיון חוזר {{time}}"
   }
 }

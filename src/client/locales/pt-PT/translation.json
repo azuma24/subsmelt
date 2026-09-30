@@ -784,7 +784,19 @@
       "updateNow": "Atualizar agora",
       "updating": "A atualizar…",
       "updated": "O yt-dlp está agora na versão {{version}}.",
-      "updateFailed": "Falha na atualização: {{error}}"
+      "updateFailed": "Falha na atualização: {{error}}",
+      "cookies": "Cookies para listas privadas",
+      "cookiesUpload": "Carregar cookies.txt",
+      "cookiesReplace": "Substituir cookies.txt",
+      "cookiesRemove": "Remover cookies",
+      "cookiesPresent": "Cookies carregados a {{date}}",
+      "cookiesAbsent": "Nenhum cookie carregado",
+      "cookiesHint": "As listas não listadas não precisam de cookies. Os cookies funcionam como a sua sessão Google iniciada, por isso o SubSmelt nunca os volta a mostrar após o carregamento.",
+      "cookiesSaved": "Cookies guardados",
+      "cookiesRemoved": "Cookies removidos",
+      "cookiesFailed": "Não foi possível guardar os cookies: {{error}}",
+      "cookiesRemoveTitle": "Remover os cookies carregados?",
+      "cookiesRemoveMessage": "As listas privadas deixam de ser transferidas até carregar novos cookies. As listas não listadas e públicas continuam a funcionar."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "O yt-dlp não está instalado, por isso o SubSmelt não consegue ler listas de reprodução.",
-      "noYtdlpHint": "A imagem Docker já o inclui. Noutros casos, instale o yt-dlp e reinicie o SubSmelt."
+      "noYtdlpHint": "A imagem Docker já o inclui. Noutros casos, instale o yt-dlp e reinicie o SubSmelt.",
+      "cooldownTitle": "O YouTube pediu ao SubSmelt para abrandar.",
+      "cooldownBody": "Transferências em pausa até às {{time}}. A transcrição e a tradução continuam.",
+      "botCheckTitle": "O YouTube pediu ao SubSmelt que prove que não é um robô.",
+      "botCheckBody": "Transferências em pausa até às {{time}}. Normalmente, cookies de um navegador com sessão iniciada resolvem isto.",
+      "addCookies": "Adicionar cookies"
     },
     "availability": {
       "public": "Público",
@@ -1150,7 +1167,8 @@
       "waiting": "A aguardar a estreia",
       "skipped": "Ignorado",
       "unavailable": "Indisponível",
-      "failed": "Falhou"
+      "failed": "Falhou",
+      "subtitlesNext": "A aguardar legendas"
     },
     "skipKind": {
       "user": "Ignorou este vídeo",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, {{count}} vídeos",
       "monthFootnote": "Números pequenos: vídeos publicados nesse mês."
     },
-    "removedCount": "removidos da lista de reprodução"
+    "removedCount": "removidos da lista de reprodução",
+    "actions": {
+      "downloadNow": "Transferir agora",
+      "download": "Transferir",
+      "retry": "Tentar novamente",
+      "skip": "Ignorar",
+      "failed": "Não foi possível atualizar o vídeo: {{error}}"
+    },
+    "retryAt": "nova tentativa {{time}}"
   }
 }

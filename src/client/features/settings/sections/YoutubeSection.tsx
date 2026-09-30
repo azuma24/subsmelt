@@ -1,7 +1,8 @@
-import { useId, useState } from "react";
+import { useId, useRef, useState, type ChangeEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import * as api from "../../../api";
+import { useConfirm } from "../../../components/ConfirmModal";
 import { useYoutubeStatusQuery } from "../../../hooks";
 import { getErrorMessage } from "../../../lib";
 import { str } from "../../../lib/settings-value";
@@ -83,6 +84,7 @@ export function YoutubeSection({ settings, update, updateAndSaveDebounced }: You
 
   const notes = statusQuery.data?.notes;
   const ytdlp = statusQuery.data?.ytdlp;
+  const cookies = statusQuery.data?.cookies;
 
   return (
     <div className="space-y-5">
@@ -148,6 +150,8 @@ export function YoutubeSection({ settings, update, updateAndSaveDebounced }: You
         )}
       </div>
 
+      <CookiesRow present={cookies?.present} updatedAt={cookies?.updatedAt ?? null} />
+
       <div className="space-y-1.5">
         <span className={FORM_LABEL_CLS}>{t("settings.youtube.downloader")}</span>
         <div className="flex flex-wrap items-center gap-3">
@@ -160,6 +164,70 @@ export function YoutubeSection({ settings, update, updateAndSaveDebounced }: You
         </div>
         {updateResult && <StatusLine state={updateResult} />}
       </div>
+    </div>
+  );
+}
+
+/** Upload or remove cookies.txt. The server only ever reports whether a file is there and since when. */
+function CookiesRow({ present, updatedAt }: { present: boolean | undefined; updatedAt: string | null }) {
+  const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
+  const { confirm } = useConfirm();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const labelId = useId();
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<KeyState | null>(null);
+
+  const run = async (work: () => Promise<unknown>, done: string) => {
+    setBusy(true);
+    try {
+      await work();
+      setResult({ tone: "ok", text: done });
+      await queryClient.invalidateQueries({ queryKey: ["youtube", "status"] });
+    } catch (error) {
+      setResult({ tone: "bad", text: t("settings.youtube.cookiesFailed", { error: getErrorMessage(error) }) });
+    }
+    setBusy(false);
+  };
+
+  const upload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) void run(async () => api.uploadYoutubeCookies(await file.text()), t("settings.youtube.cookiesSaved"));
+  };
+
+  const remove = async () => {
+    const ok = await confirm({
+      title: t("settings.youtube.cookiesRemoveTitle"),
+      message: t("settings.youtube.cookiesRemoveMessage"),
+      confirmLabel: t("settings.youtube.cookiesRemove"),
+      danger: true,
+    });
+    if (ok) void run(api.removeYoutubeCookies, t("settings.youtube.cookiesRemoved"));
+  };
+
+  const state: KeyState = present
+    ? { tone: "ok", text: t("settings.youtube.cookiesPresent", { date: updatedAt ? new Date(updatedAt).toLocaleDateString(i18n.language, { dateStyle: "medium" }) : "" }) }
+    : { tone: "off", text: t("settings.youtube.cookiesAbsent") };
+
+  return (
+    <div className="space-y-1.5" role="group" aria-labelledby={labelId}>
+      <span id={labelId} className={FORM_LABEL_CLS}>
+        {t("settings.youtube.cookies")} <span className="font-normal text-[var(--text-3)]">{t("settings.youtube.optional")}</span>
+      </span>
+      <div className="flex flex-wrap items-center gap-2">
+        <input ref={fileRef} type="file" accept=".txt,text/plain" className="hidden" onChange={upload} />
+        <ActionButton variant="ghost" size="sm" onClick={() => fileRef.current?.click()} busy={busy} disabled={present === undefined}>
+          {present ? t("settings.youtube.cookiesReplace") : t("settings.youtube.cookiesUpload")}
+        </ActionButton>
+        {present && (
+          <button type="button" onClick={() => void remove()} disabled={busy} className="min-h-[44px] rounded-lg px-3 text-[12px] font-medium text-[var(--red)] hover:bg-[var(--red-dim)] disabled:opacity-50">
+            {t("settings.youtube.cookiesRemove")}
+          </button>
+        )}
+      </div>
+      <StatusLine state={result ?? state} />
+      <p className="text-[12px] leading-5 text-[var(--text-3)]">{t("settings.youtube.cookiesHint")}</p>
     </div>
   );
 }

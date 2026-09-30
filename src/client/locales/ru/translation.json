@@ -784,7 +784,19 @@
       "updateNow": "Обновить",
       "updating": "Обновление…",
       "updated": "Теперь yt-dlp версии {{version}}.",
-      "updateFailed": "Не удалось обновить: {{error}}"
+      "updateFailed": "Не удалось обновить: {{error}}",
+      "cookies": "Cookie для закрытых плейлистов",
+      "cookiesUpload": "Загрузить cookies.txt",
+      "cookiesReplace": "Заменить cookies.txt",
+      "cookiesRemove": "Удалить cookie",
+      "cookiesPresent": "Cookie загружены {{date}}",
+      "cookiesAbsent": "Cookie не загружены",
+      "cookiesHint": "Плейлистам с доступом по ссылке cookie не нужны. Cookie действуют как ваш сеанс Google с выполненным входом, поэтому после загрузки SubSmelt больше их не показывает.",
+      "cookiesSaved": "Cookie сохранены",
+      "cookiesRemoved": "Cookie удалены",
+      "cookiesFailed": "Не удалось сохранить cookie: {{error}}",
+      "cookiesRemoveTitle": "Удалить загруженные cookie?",
+      "cookiesRemoveMessage": "Закрытые плейлисты не будут загружаться, пока вы не загрузите новые cookie. Плейлисты с доступом по ссылке и открытые продолжат работать."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "yt-dlp не установлен, поэтому SubSmelt не может читать плейлисты.",
-      "noYtdlpHint": "В образ Docker он входит. В остальных случаях установите yt-dlp и перезапустите SubSmelt."
+      "noYtdlpHint": "В образ Docker он входит. В остальных случаях установите yt-dlp и перезапустите SubSmelt.",
+      "cooldownTitle": "YouTube попросил SubSmelt снизить темп.",
+      "cooldownBody": "Загрузки приостановлены до {{time}}. Транскрибирование и перевод продолжаются.",
+      "botCheckTitle": "YouTube просит SubSmelt доказать, что это не бот.",
+      "botCheckBody": "Загрузки приостановлены до {{time}}. Обычно помогают файлы cookie из браузера, где выполнен вход.",
+      "addCookies": "Добавить cookie"
     },
     "availability": {
       "public": "Открытый доступ",
@@ -1150,7 +1167,8 @@
       "waiting": "Ожидает премьеры",
       "skipped": "Пропущено",
       "unavailable": "Недоступно",
-      "failed": "Ошибка"
+      "failed": "Ошибка",
+      "subtitlesNext": "Ожидает субтитров"
     },
     "skipKind": {
       "user": "Вы пропустили это видео",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, видео: {{count}}",
       "monthFootnote": "Мелкие цифры: видео, опубликованные в этом месяце."
     },
-    "removedCount": "удалено из плейлиста"
+    "removedCount": "удалено из плейлиста",
+    "actions": {
+      "downloadNow": "Загрузить сейчас",
+      "download": "Загрузить",
+      "retry": "Повторить",
+      "skip": "Пропустить",
+      "failed": "Не удалось обновить видео: {{error}}"
+    },
+    "retryAt": "повтор {{time}}"
   }
 }

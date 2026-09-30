@@ -330,8 +330,21 @@ export interface YoutubeVideo {
   status: YoutubeVideoStatus;
   skip_kind: "user" | "before_start" | "members_only" | null;
   reason: string | null;
+  attempts: number;
+  retry_after: string | null;
+  media_path: string | null;
+  user_queued_at: string | null;
   position: number | null;
   removed_at: string | null;
+  /** Download percentage while downloading, when the server has one. */
+  pct?: number;
+}
+
+export type YoutubeVideoAction = "download" | "retry" | "skip";
+
+export interface YoutubeCooldown {
+  until: string;
+  cause: "rate_limited" | "bot_check";
 }
 
 export interface YoutubePreviewEntry {
@@ -359,4 +372,6 @@ export interface YoutubeStatus {
   ffmpeg: { available: boolean; version: string | null };
   apiKey: boolean;
   notes: { path: string; writable: boolean };
+  cookies: { present: boolean; updatedAt: string | null };
+  cooldown: YoutubeCooldown | null;
 }

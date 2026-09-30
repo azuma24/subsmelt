@@ -784,7 +784,19 @@
       "updateNow": "Cập nhật ngay",
       "updating": "Đang cập nhật…",
       "updated": "yt-dlp hiện là {{version}}.",
-      "updateFailed": "Cập nhật thất bại: {{error}}"
+      "updateFailed": "Cập nhật thất bại: {{error}}",
+      "cookies": "Cookie cho danh sách phát riêng tư",
+      "cookiesUpload": "Tải lên cookies.txt",
+      "cookiesReplace": "Thay cookies.txt",
+      "cookiesRemove": "Xóa cookie",
+      "cookiesPresent": "Đã tải cookie lên ngày {{date}}",
+      "cookiesAbsent": "Chưa tải cookie lên",
+      "cookiesHint": "Danh sách phát không công khai không cần cookie. Cookie đóng vai trò phiên Google đã đăng nhập của bạn, nên SubSmelt không bao giờ hiển thị lại sau khi tải lên.",
+      "cookiesSaved": "Đã lưu cookie",
+      "cookiesRemoved": "Đã xóa cookie",
+      "cookiesFailed": "Không thể lưu cookie: {{error}}",
+      "cookiesRemoveTitle": "Xóa cookie đã tải lên?",
+      "cookiesRemoveMessage": "Danh sách phát riêng tư sẽ ngừng tải xuống cho đến khi bạn tải lên cookie mới. Danh sách phát không công khai và công khai vẫn hoạt động."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "yt-dlp chưa được cài đặt nên SubSmelt không thể đọc danh sách phát.",
-      "noYtdlpHint": "Ảnh Docker đã có sẵn yt-dlp. Ở môi trường khác, hãy cài yt-dlp rồi khởi động lại SubSmelt."
+      "noYtdlpHint": "Ảnh Docker đã có sẵn yt-dlp. Ở môi trường khác, hãy cài yt-dlp rồi khởi động lại SubSmelt.",
+      "cooldownTitle": "YouTube yêu cầu SubSmelt chậm lại.",
+      "cooldownBody": "Tải xuống tạm dừng đến {{time}}. Chuyển âm và dịch vẫn tiếp tục.",
+      "botCheckTitle": "YouTube yêu cầu SubSmelt chứng minh không phải bot.",
+      "botCheckBody": "Tải xuống tạm dừng đến {{time}}. Cookie từ trình duyệt đã đăng nhập thường giúp vượt qua bước này.",
+      "addCookies": "Thêm cookie"
     },
     "availability": {
       "public": "Công khai",
@@ -1150,7 +1167,8 @@
       "waiting": "Đang chờ buổi công chiếu",
       "skipped": "Đã bỏ qua",
       "unavailable": "Không khả dụng",
-      "failed": "Thất bại"
+      "failed": "Thất bại",
+      "subtitlesNext": "Đang chờ phụ đề"
     },
     "skipKind": {
       "user": "Bạn đã bỏ qua video này",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, {{count}} video",
       "monthFootnote": "Số nhỏ: video đăng trong tháng đó."
     },
-    "removedCount": "đã xóa khỏi danh sách phát"
+    "removedCount": "đã xóa khỏi danh sách phát",
+    "actions": {
+      "downloadNow": "Tải xuống ngay",
+      "download": "Tải xuống",
+      "retry": "Thử lại",
+      "skip": "Bỏ qua",
+      "failed": "Không thể cập nhật video: {{error}}"
+    },
+    "retryAt": "thử lại {{time}}"
   }
 }

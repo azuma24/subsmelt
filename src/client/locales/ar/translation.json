@@ -784,7 +784,19 @@
       "updateNow": "تحديث الآن",
       "updating": "جارٍ التحديث…",
       "updated": "أصبح yt-dlp الآن بالإصدار {{version}}.",
-      "updateFailed": "فشل التحديث: {{error}}"
+      "updateFailed": "فشل التحديث: {{error}}",
+      "cookies": "ملفات تعريف الارتباط لقوائم التشغيل الخاصة",
+      "cookiesUpload": "رفع cookies.txt",
+      "cookiesReplace": "استبدال cookies.txt",
+      "cookiesRemove": "إزالة ملفات تعريف الارتباط",
+      "cookiesPresent": "تم رفع ملفات تعريف الارتباط في {{date}}",
+      "cookiesAbsent": "لم يتم رفع ملفات تعريف الارتباط",
+      "cookiesHint": "قوائم التشغيل غير المُدرَجة لا تحتاج إلى ملفات تعريف الارتباط. تعمل ملفات تعريف الارتباط كجلسة Google المسجَّل دخولك فيها، لذا لا يعرضها SubSmelt مرة أخرى بعد رفعها.",
+      "cookiesSaved": "تم حفظ ملفات تعريف الارتباط",
+      "cookiesRemoved": "تمت إزالة ملفات تعريف الارتباط",
+      "cookiesFailed": "تعذّر حفظ ملفات تعريف الارتباط: {{error}}",
+      "cookiesRemoveTitle": "إزالة ملفات تعريف الارتباط المرفوعة؟",
+      "cookiesRemoveMessage": "يتوقف تنزيل قوائم التشغيل الخاصة حتى ترفع ملفات تعريف ارتباط جديدة. تستمر قوائم التشغيل غير المُدرَجة والعامة في العمل."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "yt-dlp غير مثبّت، لذا لا يستطيع SubSmelt قراءة قوائم التشغيل.",
-      "noYtdlpHint": "صورة Docker تتضمّنه. في غير ذلك، ثبّت yt-dlp ثم أعد تشغيل SubSmelt."
+      "noYtdlpHint": "صورة Docker تتضمّنه. في غير ذلك، ثبّت yt-dlp ثم أعد تشغيل SubSmelt.",
+      "cooldownTitle": "طلب YouTube من SubSmelt الإبطاء.",
+      "cooldownBody": "يتوقف التنزيل مؤقتًا حتى {{time}}. يستمر النسخ الصوتي والترجمة.",
+      "botCheckTitle": "طلب YouTube من SubSmelt إثبات أنه ليس روبوتًا.",
+      "botCheckBody": "يتوقف التنزيل مؤقتًا حتى {{time}}. عادةً ما تتجاوز ملفات تعريف الارتباط من متصفح مسجَّل الدخول هذا التحقق.",
+      "addCookies": "إضافة ملفات تعريف الارتباط"
     },
     "availability": {
       "public": "عام",
@@ -1150,7 +1167,8 @@
       "waiting": "في انتظار العرض الأول",
       "skipped": "تم تخطيه",
       "unavailable": "غير متاح",
-      "failed": "فشل"
+      "failed": "فشل",
+      "subtitlesNext": "في انتظار الترجمات"
     },
     "skipKind": {
       "user": "تخطيته أنت",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}، {{count}} فيديو",
       "monthFootnote": "الأرقام الصغيرة: الفيديوهات المنشورة في ذلك الشهر."
     },
-    "removedCount": "أُزيلت من قائمة التشغيل"
+    "removedCount": "أُزيلت من قائمة التشغيل",
+    "actions": {
+      "downloadNow": "تنزيل الآن",
+      "download": "تنزيل",
+      "retry": "إعادة المحاولة",
+      "skip": "تخطي",
+      "failed": "تعذّر تحديث الفيديو: {{error}}"
+    },
+    "retryAt": "إعادة المحاولة {{time}}"
   }
 }

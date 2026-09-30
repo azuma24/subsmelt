@@ -784,7 +784,19 @@
       "updateNow": "立即更新",
       "updating": "正在更新…",
       "updated": "yt-dlp 现在是 {{version}}。",
-      "updateFailed": "更新失败：{{error}}"
+      "updateFailed": "更新失败：{{error}}",
+      "cookies": "私享播放列表的 Cookie",
+      "cookiesUpload": "上传 cookies.txt",
+      "cookiesReplace": "替换 cookies.txt",
+      "cookiesRemove": "移除 Cookie",
+      "cookiesPresent": "Cookie 已于 {{date}} 上传",
+      "cookiesAbsent": "未上传 Cookie",
+      "cookiesHint": "不公开播放列表无需 Cookie。Cookie 相当于已登录的 Google 会话，因此上传后 SubSmelt 不会再显示它们。",
+      "cookiesSaved": "Cookie 已保存",
+      "cookiesRemoved": "Cookie 已移除",
+      "cookiesFailed": "无法保存 Cookie：{{error}}",
+      "cookiesRemoveTitle": "移除已上传的 Cookie？",
+      "cookiesRemoveMessage": "在上传新的 Cookie 之前，私享播放列表将停止下载。不公开和公开播放列表不受影响。"
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "未安装 yt-dlp，SubSmelt 无法读取播放列表。",
-      "noYtdlpHint": "Docker 镜像已包含 yt-dlp。其他环境请安装 yt-dlp 并重启 SubSmelt。"
+      "noYtdlpHint": "Docker 镜像已包含 yt-dlp。其他环境请安装 yt-dlp 并重启 SubSmelt。",
+      "cooldownTitle": "YouTube 要求 SubSmelt 放慢速度。",
+      "cooldownBody": "下载暂停至 {{time}}。转录和翻译照常进行。",
+      "botCheckTitle": "YouTube 要求 SubSmelt 证明自己不是机器人。",
+      "botCheckBody": "下载暂停至 {{time}}。使用已登录浏览器的 Cookie 通常可以通过验证。",
+      "addCookies": "添加 Cookie"
     },
     "availability": {
       "public": "公开",
@@ -1150,7 +1167,8 @@
       "waiting": "等待首映",
       "skipped": "已跳过",
       "unavailable": "不可用",
-      "failed": "失败"
+      "failed": "失败",
+      "subtitlesNext": "等待字幕"
     },
     "skipKind": {
       "user": "你跳过了这个视频",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}，{{count}} 个视频",
       "monthFootnote": "小数字：该月发布的视频数。"
     },
-    "removedCount": "已从播放列表中移除"
+    "removedCount": "已从播放列表中移除",
+    "actions": {
+      "downloadNow": "立即下载",
+      "download": "下载",
+      "retry": "重试",
+      "skip": "跳过",
+      "failed": "无法更新视频：{{error}}"
+    },
+    "retryAt": "{{time}}重试"
   }
 }

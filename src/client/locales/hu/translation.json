@@ -784,7 +784,19 @@
       "updateNow": "Frissítés most",
       "updating": "Frissítés…",
       "updated": "A yt-dlp verziója most {{version}}.",
-      "updateFailed": "A frissítés sikertelen: {{error}}"
+      "updateFailed": "A frissítés sikertelen: {{error}}",
+      "cookies": "Sütik privát lejátszási listákhoz",
+      "cookiesUpload": "cookies.txt feltöltése",
+      "cookiesReplace": "cookies.txt cseréje",
+      "cookiesRemove": "Sütik eltávolítása",
+      "cookiesPresent": "Sütik feltöltve: {{date}}",
+      "cookiesAbsent": "Nincsenek feltöltött sütik",
+      "cookiesHint": "A nem listázott lejátszási listákhoz nem kellenek sütik. A sütik a bejelentkezett Google-munkamenetedként működnek, ezért a SubSmelt feltöltés után soha többé nem jeleníti meg őket.",
+      "cookiesSaved": "Sütik mentve",
+      "cookiesRemoved": "Sütik eltávolítva",
+      "cookiesFailed": "Nem sikerült menteni a sütiket: {{error}}",
+      "cookiesRemoveTitle": "Eltávolítod a feltöltött sütiket?",
+      "cookiesRemoveMessage": "A privát lejátszási listák letöltése leáll, amíg új sütiket nem töltesz fel. A nem listázott és nyilvános lejátszási listák továbbra is működnek."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "A yt-dlp nincs telepítve, ezért a SubSmelt nem tudja olvasni a lejátszási listákat.",
-      "noYtdlpHint": "A Docker-image tartalmazza. Máshol telepítsd a yt-dlp-t, és indítsd újra a SubSmeltet."
+      "noYtdlpHint": "A Docker-image tartalmazza. Máshol telepítsd a yt-dlp-t, és indítsd újra a SubSmeltet.",
+      "cooldownTitle": "A YouTube lassításra kérte a SubSmeltet.",
+      "cooldownBody": "A letöltések szünetelnek eddig: {{time}}. Az átírás és a fordítás tovább fut.",
+      "botCheckTitle": "A YouTube azt kéri, hogy a SubSmelt igazolja, hogy nem bot.",
+      "botCheckBody": "A letöltések szünetelnek eddig: {{time}}. Egy bejelentkezett böngésző sütijei általában átsegítenek ezen.",
+      "addCookies": "Sütik hozzáadása"
     },
     "availability": {
       "public": "Nyilvános",
@@ -1150,7 +1167,8 @@
       "waiting": "Várakozás a premierre",
       "skipped": "Kihagyva",
       "unavailable": "Nem elérhető",
-      "failed": "Sikertelen"
+      "failed": "Sikertelen",
+      "subtitlesNext": "Feliratra vár"
     },
     "skipKind": {
       "user": "Te kihagytad",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, {{count}} videó",
       "monthFootnote": "Kis számok: az adott hónapban közzétett videók."
     },
-    "removedCount": "eltávolítva a lejátszási listáról"
+    "removedCount": "eltávolítva a lejátszási listáról",
+    "actions": {
+      "downloadNow": "Letöltés most",
+      "download": "Letöltés",
+      "retry": "Újrapróbálás",
+      "skip": "Kihagyás",
+      "failed": "Nem sikerült frissíteni a videót: {{error}}"
+    },
+    "retryAt": "újrapróbálás {{time}}"
   }
 }

@@ -784,7 +784,19 @@
       "updateNow": "Ενημέρωση τώρα",
       "updating": "Ενημέρωση…",
       "updated": "Το yt-dlp είναι πλέον στην έκδοση {{version}}.",
-      "updateFailed": "Η ενημέρωση απέτυχε: {{error}}"
+      "updateFailed": "Η ενημέρωση απέτυχε: {{error}}",
+      "cookies": "Cookies για ιδιωτικές λίστες",
+      "cookiesUpload": "Μεταφόρτωση cookies.txt",
+      "cookiesReplace": "Αντικατάσταση cookies.txt",
+      "cookiesRemove": "Αφαίρεση cookies",
+      "cookiesPresent": "Τα cookies μεταφορτώθηκαν στις {{date}}",
+      "cookiesAbsent": "Δεν έχουν μεταφορτωθεί cookies",
+      "cookiesHint": "Οι μη καταχωρισμένες λίστες δεν χρειάζονται cookies. Τα cookies λειτουργούν ως η συνδεδεμένη συνεδρία σας στο Google, γι’ αυτό το SubSmelt δεν τα εμφανίζει ξανά μετά τη μεταφόρτωση.",
+      "cookiesSaved": "Τα cookies αποθηκεύτηκαν",
+      "cookiesRemoved": "Τα cookies αφαιρέθηκαν",
+      "cookiesFailed": "Δεν ήταν δυνατή η αποθήκευση των cookies: {{error}}",
+      "cookiesRemoveTitle": "Αφαίρεση των μεταφορτωμένων cookies;",
+      "cookiesRemoveMessage": "Οι ιδιωτικές λίστες σταματούν να λαμβάνονται μέχρι να μεταφορτώσετε νέα cookies. Οι μη καταχωρισμένες και οι δημόσιες λίστες συνεχίζουν να λειτουργούν."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "Το yt-dlp δεν είναι εγκατεστημένο, οπότε το SubSmelt δεν μπορεί να διαβάσει λίστες αναπαραγωγής.",
-      "noYtdlpHint": "Η εικόνα Docker το περιλαμβάνει. Αλλού, εγκαταστήστε το yt-dlp και επανεκκινήστε το SubSmelt."
+      "noYtdlpHint": "Η εικόνα Docker το περιλαμβάνει. Αλλού, εγκαταστήστε το yt-dlp και επανεκκινήστε το SubSmelt.",
+      "cooldownTitle": "Το YouTube ζήτησε από το SubSmelt να κόψει ταχύτητα.",
+      "cooldownBody": "Οι λήψεις σταματούν έως τις {{time}}. Η μεταγραφή και η μετάφραση συνεχίζονται.",
+      "botCheckTitle": "Το YouTube ζήτησε από το SubSmelt να αποδείξει ότι δεν είναι bot.",
+      "botCheckBody": "Οι λήψεις σταματούν έως τις {{time}}. Τα cookies από ένα πρόγραμμα περιήγησης με σύνδεση συνήθως το λύνουν.",
+      "addCookies": "Προσθήκη cookies"
     },
     "availability": {
       "public": "Δημόσια",
@@ -1150,7 +1167,8 @@
       "waiting": "Αναμονή για την πρεμιέρα",
       "skipped": "Παραλείφθηκε",
       "unavailable": "Μη διαθέσιμο",
-      "failed": "Απέτυχε"
+      "failed": "Απέτυχε",
+      "subtitlesNext": "Αναμονή για υπότιτλους"
     },
     "skipKind": {
       "user": "Το παραλείψατε εσείς",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, {{count}} βίντεο",
       "monthFootnote": "Μικροί αριθμοί: βίντεο που δημοσιεύτηκαν εκείνο τον μήνα."
     },
-    "removedCount": "αφαιρέθηκαν από τη λίστα"
+    "removedCount": "αφαιρέθηκαν από τη λίστα",
+    "actions": {
+      "downloadNow": "Λήψη τώρα",
+      "download": "Λήψη",
+      "retry": "Επανάληψη",
+      "skip": "Παράλειψη",
+      "failed": "Δεν ήταν δυνατή η ενημέρωση του βίντεο: {{error}}"
+    },
+    "retryAt": "νέα προσπάθεια {{time}}"
   }
 }

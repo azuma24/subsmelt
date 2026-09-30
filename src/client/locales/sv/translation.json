@@ -784,7 +784,19 @@
       "updateNow": "Uppdatera nu",
       "updating": "Uppdaterar…",
       "updated": "yt-dlp är nu {{version}}.",
-      "updateFailed": "Uppdateringen misslyckades: {{error}}"
+      "updateFailed": "Uppdateringen misslyckades: {{error}}",
+      "cookies": "Cookies för privata spellistor",
+      "cookiesUpload": "Ladda upp cookies.txt",
+      "cookiesReplace": "Ersätt cookies.txt",
+      "cookiesRemove": "Ta bort cookies",
+      "cookiesPresent": "Cookies uppladdade {{date}}",
+      "cookiesAbsent": "Inga cookies uppladdade",
+      "cookiesHint": "Olistade spellistor behöver inga cookies. Cookies fungerar som din inloggade Google-session, så SubSmelt visar dem aldrig igen efter uppladdning.",
+      "cookiesSaved": "Cookies sparade",
+      "cookiesRemoved": "Cookies borttagna",
+      "cookiesFailed": "Kunde inte spara cookies: {{error}}",
+      "cookiesRemoveTitle": "Ta bort de uppladdade cookiesen?",
+      "cookiesRemoveMessage": "Privata spellistor laddas inte ner förrän du laddar upp nya cookies. Olistade och offentliga spellistor fungerar som vanligt."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "yt-dlp är inte installerat, så SubSmelt kan inte läsa spellistor.",
-      "noYtdlpHint": "Docker-avbildningen innehåller det. Annars installerar du yt-dlp och startar om SubSmelt."
+      "noYtdlpHint": "Docker-avbildningen innehåller det. Annars installerar du yt-dlp och startar om SubSmelt.",
+      "cooldownTitle": "YouTube bad SubSmelt att sakta ner.",
+      "cooldownBody": "Nedladdningar pausas till {{time}}. Transkribering och översättning fortsätter.",
+      "botCheckTitle": "YouTube bad SubSmelt bevisa att det inte är en bot.",
+      "botCheckBody": "Nedladdningar pausas till {{time}}. Cookies från en inloggad webbläsare brukar ta sig förbi det här.",
+      "addCookies": "Lägg till cookies"
     },
     "availability": {
       "public": "Offentlig",
@@ -1150,7 +1167,8 @@
       "waiting": "Väntar på premiären",
       "skipped": "Överhoppad",
       "unavailable": "Otillgänglig",
-      "failed": "Misslyckades"
+      "failed": "Misslyckades",
+      "subtitlesNext": "Väntar på undertexter"
     },
     "skipKind": {
       "user": "Du hoppade över den här",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, {{count}} videor",
       "monthFootnote": "Små siffror: videor publicerade den månaden."
     },
-    "removedCount": "borttagna från spellistan"
+    "removedCount": "borttagna från spellistan",
+    "actions": {
+      "downloadNow": "Ladda ner nu",
+      "download": "Ladda ner",
+      "retry": "Försök igen",
+      "skip": "Hoppa över",
+      "failed": "Kunde inte uppdatera videon: {{error}}"
+    },
+    "retryAt": "nytt försök {{time}}"
   }
 }

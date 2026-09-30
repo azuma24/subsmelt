@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import type { TFunction } from "i18next";
 import type { YoutubeVideo } from "../../types";
-import { countByFilter, filterVideos, videoStatusDescriptor } from "./video-status";
+import { countByFilter, filterVideos, videoActionLabelKey, videoActions, videoPipeline, videoStatusDescriptor } from "./video-status";
 import { estimateSelection, formatGigabytes, postedPerMonth } from "./estimate";
 
 const t = ((key: string) => `t:${key}`) as unknown as TFunction;
@@ -10,7 +10,8 @@ const t = ((key: string) => `t:${key}`) as unknown as TFunction;
 function video(video_id: string, status: YoutubeVideo["status"], title: string, channel: string | null = null): YoutubeVideo {
   return {
     video_id, playlist_id: "PL-Smx9IA029hG4XKsjwo6psQhtDfsosa8", title, channel, duration_s: 148, published_at: "2026-09-30",
-    added_at: null, status, skip_kind: null, reason: null, position: 1, removed_at: null,
+    added_at: null, status, skip_kind: null, reason: null, attempts: 0, retry_after: null, media_path: null, user_queued_at: null,
+    position: 1, removed_at: null,
   };
 }
 
@@ -22,23 +23,50 @@ const VIDEOS = [
   video("HiT2MyR-ZYk", "done", "Paperclip - Managing Teams of AI Agents", "Full Stack"),
 ];
 
-test("filterVideos leaves skipped out of All, filters by tab, and searches title and channel", () => {
-  assert.deepEqual(filterVideos(VIDEOS, "all", "").map((v) => v.video_id), ["uXspbC2srEQ", "BHPDsGVciDk", "LKsEieYbUz4", "HiT2MyR-ZYk"]);
-  assert.deepEqual(filterVideos(VIDEOS, "off", "").map((v) => v.video_id), ["RXGzy0H0GS0"]);
-  assert.deepEqual(filterVideos(VIDEOS, "bad", "").map((v) => v.video_id), ["LKsEieYbUz4"]);
+test("filterVideos leaves skipped and unavailable out of All, filters by tab, and searches title and channel", () => {
+  assert.deepEqual(filterVideos(VIDEOS, "all", "").map((v) => v.video_id), ["uXspbC2srEQ", "BHPDsGVciDk", "HiT2MyR-ZYk"]);
+  assert.deepEqual(filterVideos(VIDEOS, "off", "").map((v) => v.video_id), ["RXGzy0H0GS0", "LKsEieYbUz4"]);
+  assert.deepEqual(filterVideos(VIDEOS, "bad", ""), []);
   assert.deepEqual(filterVideos(VIDEOS, "all", "primetime").map((v) => v.video_id), ["BHPDsGVciDk"]);
   assert.deepEqual(filterVideos(VIDEOS, "wait", "primetime"), []);
 });
 
-test("countByFilter groups statuses into tabs and keeps skipped out of All", () => {
+test("countByFilter keeps skipped and unavailable out of Kept and out of Needs attention", () => {
   assert.deepEqual(countByFilter({ queued: 61, new: 3, downloading: 4, done: 38, failed: 1, unavailable: 7, skipped: 784 }), {
-    all: 114, run: 4, wait: 64, done: 38, bad: 8, off: 784,
+    all: 107, run: 4, wait: 64, done: 38, bad: 1, off: 791,
   });
 });
 
 test("videoStatusDescriptor pairs every status with a glyph and a translated label", () => {
-  assert.deepEqual(videoStatusDescriptor("unavailable", t), { glyph: "∅", tone: "bad", label: "t:youtube.status.unavailable" });
-  assert.deepEqual(videoStatusDescriptor("queued", t), { glyph: "··", tone: "neutral", label: "t:youtube.status.queued" });
+  assert.deepEqual(videoStatusDescriptor({ status: "unavailable" }, t), { glyph: "∅", tone: "neutral", label: "t:youtube.status.unavailable" });
+  assert.deepEqual(videoStatusDescriptor({ status: "queued" }, t), { glyph: "··", tone: "neutral", label: "t:youtube.status.queued" });
+  assert.deepEqual(videoStatusDescriptor({ status: "transcribing" }, t), { glyph: "··", tone: "warn", label: "t:youtube.status.subtitlesNext" });
+  assert.deepEqual(videoStatusDescriptor({ status: "transcribing", pct: 40 }, t), { glyph: "≋", tone: "run", label: "t:youtube.status.transcribing" });
+});
+
+test("row actions per status mirror the server's action table", () => {
+  const offered = (["new", "queued", "waiting", "downloading", "transcribing", "translating", "done", "failed", "unavailable", "skipped"] as const)
+    .map((status) => [status, videoActions(status).map((action) => videoActionLabelKey(status, action))]);
+  assert.deepEqual(offered, [
+    ["new", ["youtube.actions.downloadNow", "youtube.actions.skip"]],
+    ["queued", ["youtube.actions.downloadNow", "youtube.actions.skip"]],
+    ["waiting", ["youtube.actions.downloadNow", "youtube.actions.skip"]],
+    ["downloading", []],
+    ["transcribing", []],
+    ["translating", []],
+    ["done", []],
+    ["failed", ["youtube.actions.retry", "youtube.actions.skip"]],
+    ["unavailable", ["youtube.actions.retry"]],
+    ["skipped", ["youtube.actions.download"]],
+  ]);
+});
+
+test("videoPipeline shows where a video is in download, subtitles, translate, note", () => {
+  assert.deepEqual(videoPipeline({ status: "downloading", media_path: null }), ["now", "", "", ""]);
+  assert.deepEqual(videoPipeline({ status: "transcribing", media_path: "YouTube/AI/x.m4a" }), ["done", "wait", "", ""]);
+  assert.deepEqual(videoPipeline({ status: "failed", media_path: null }), ["fail", "", "", ""]);
+  assert.deepEqual(videoPipeline({ status: "failed", media_path: "YouTube/AI/x.m4a" }), ["done", "fail", "", ""]);
+  assert.deepEqual(videoPipeline({ status: "unavailable", media_path: null }), ["", "", "", ""]);
 });
 
 const ENTRIES = [

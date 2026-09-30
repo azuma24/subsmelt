@@ -784,7 +784,19 @@
       "updateNow": "Şimdi güncelle",
       "updating": "Güncelleniyor…",
       "updated": "yt-dlp artık {{version}} sürümünde.",
-      "updateFailed": "Güncelleme başarısız: {{error}}"
+      "updateFailed": "Güncelleme başarısız: {{error}}",
+      "cookies": "Özel oynatma listeleri için çerezler",
+      "cookiesUpload": "cookies.txt yükle",
+      "cookiesReplace": "cookies.txt dosyasını değiştir",
+      "cookiesRemove": "Çerezleri kaldır",
+      "cookiesPresent": "Çerezler yüklendi: {{date}}",
+      "cookiesAbsent": "Yüklenmiş çerez yok",
+      "cookiesHint": "Liste dışı oynatma listeleri çerez gerektirmez. Çerezler, Google’daki açık oturumunuz yerine geçer; bu yüzden SubSmelt yüklemeden sonra onları bir daha asla göstermez.",
+      "cookiesSaved": "Çerezler kaydedildi",
+      "cookiesRemoved": "Çerezler kaldırıldı",
+      "cookiesFailed": "Çerezler kaydedilemedi: {{error}}",
+      "cookiesRemoveTitle": "Yüklenen çerezler kaldırılsın mı?",
+      "cookiesRemoveMessage": "Yeni çerez yükleyene kadar özel oynatma listeleri indirilmez. Liste dışı ve herkese açık oynatma listeleri çalışmaya devam eder."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "yt-dlp yüklü değil, bu yüzden SubSmelt oynatma listelerini okuyamıyor.",
-      "noYtdlpHint": "Docker imajında yer alır. Başka ortamlarda yt-dlp’yi yükleyip SubSmelt’i yeniden başlatın."
+      "noYtdlpHint": "Docker imajında yer alır. Başka ortamlarda yt-dlp’yi yükleyip SubSmelt’i yeniden başlatın.",
+      "cooldownTitle": "YouTube, SubSmelt’ten yavaşlamasını istedi.",
+      "cooldownBody": "İndirmeler {{time}} saatine kadar duraklatıldı. Transkripsiyon ve çeviri devam ediyor.",
+      "botCheckTitle": "YouTube, SubSmelt’ten bot olmadığını kanıtlamasını istedi.",
+      "botCheckBody": "İndirmeler {{time}} saatine kadar duraklatıldı. Oturum açılmış bir tarayıcıdan alınan çerezler genellikle bunu aşar.",
+      "addCookies": "Çerez ekle"
     },
     "availability": {
       "public": "Herkese açık",
@@ -1150,7 +1167,8 @@
       "waiting": "Prömiyer bekleniyor",
       "skipped": "Atlandı",
       "unavailable": "Kullanılamıyor",
-      "failed": "Başarısız"
+      "failed": "Başarısız",
+      "subtitlesNext": "Altyazı bekleniyor"
     },
     "skipKind": {
       "user": "Bunu siz atladınız",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, {{count}} video",
       "monthFootnote": "Küçük sayılar: o ay paylaşılan videolar."
     },
-    "removedCount": "oynatma listesinden kaldırıldı"
+    "removedCount": "oynatma listesinden kaldırıldı",
+    "actions": {
+      "downloadNow": "Şimdi indir",
+      "download": "İndir",
+      "retry": "Yeniden dene",
+      "skip": "Atla",
+      "failed": "Video güncellenemedi: {{error}}"
+    },
+    "retryAt": "yeniden deneme {{time}}"
   }
 }

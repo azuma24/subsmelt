@@ -784,7 +784,19 @@
       "updateNow": "Оновити",
       "updating": "Оновлення…",
       "updated": "Тепер yt-dlp версії {{version}}.",
-      "updateFailed": "Не вдалося оновити: {{error}}"
+      "updateFailed": "Не вдалося оновити: {{error}}",
+      "cookies": "Cookie для плейлистів з обмеженим доступом",
+      "cookiesUpload": "Завантажити cookies.txt",
+      "cookiesReplace": "Замінити cookies.txt",
+      "cookiesRemove": "Вилучити cookie",
+      "cookiesPresent": "Cookie завантажено {{date}}",
+      "cookiesAbsent": "Cookie не завантажено",
+      "cookiesHint": "Плейлистам із доступом за посиланням cookie не потрібні. Cookie діють як ваш сеанс Google із виконаним входом, тому після завантаження SubSmelt більше їх не показує.",
+      "cookiesSaved": "Cookie збережено",
+      "cookiesRemoved": "Cookie вилучено",
+      "cookiesFailed": "Не вдалося зберегти cookie: {{error}}",
+      "cookiesRemoveTitle": "Вилучити завантажені cookie?",
+      "cookiesRemoveMessage": "Плейлисти з обмеженим доступом не завантажуватимуться, доки ви не завантажите нові cookie. Плейлисти з доступом за посиланням і загальнодоступні працюватимуть далі."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "yt-dlp не встановлено, тому SubSmelt не може читати плейлисти.",
-      "noYtdlpHint": "В образ Docker він входить. В інших випадках встановіть yt-dlp і перезапустіть SubSmelt."
+      "noYtdlpHint": "В образ Docker він входить. В інших випадках встановіть yt-dlp і перезапустіть SubSmelt.",
+      "cooldownTitle": "YouTube попросив SubSmelt сповільнитися.",
+      "cooldownBody": "Завантаження призупинено до {{time}}. Транскрибування й переклад тривають.",
+      "botCheckTitle": "YouTube просить SubSmelt довести, що це не бот.",
+      "botCheckBody": "Завантаження призупинено до {{time}}. Зазвичай допомагають файли cookie з браузера, у якому виконано вхід.",
+      "addCookies": "Додати cookie"
     },
     "availability": {
       "public": "Відкритий доступ",
@@ -1150,7 +1167,8 @@
       "waiting": "Очікує прем’єри",
       "skipped": "Пропущено",
       "unavailable": "Недоступно",
-      "failed": "Помилка"
+      "failed": "Помилка",
+      "subtitlesNext": "Очікує субтитрів"
     },
     "skipKind": {
       "user": "Ви пропустили це відео",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, відео: {{count}}",
       "monthFootnote": "Дрібні цифри: відео, опубліковані цього місяця."
     },
-    "removedCount": "видалено з плейлиста"
+    "removedCount": "видалено з плейлиста",
+    "actions": {
+      "downloadNow": "Завантажити зараз",
+      "download": "Завантажити",
+      "retry": "Повторити",
+      "skip": "Пропустити",
+      "failed": "Не вдалося оновити відео: {{error}}"
+    },
+    "retryAt": "повтор {{time}}"
   }
 }

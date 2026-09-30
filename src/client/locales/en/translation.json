@@ -927,7 +927,19 @@
       "updateNow": "Update now",
       "updating": "Updating…",
       "updated": "yt-dlp is now {{version}}.",
-      "updateFailed": "Update failed: {{error}}"
+      "updateFailed": "Update failed: {{error}}",
+      "cookies": "Cookies for Private playlists",
+      "cookiesUpload": "Upload cookies.txt",
+      "cookiesReplace": "Replace cookies.txt",
+      "cookiesRemove": "Remove cookies",
+      "cookiesPresent": "Cookies uploaded {{date}}",
+      "cookiesAbsent": "No cookies uploaded",
+      "cookiesHint": "Unlisted playlists need no cookies. Cookies act as your signed-in Google session, so SubSmelt never shows them again after upload.",
+      "cookiesSaved": "Cookies saved",
+      "cookiesRemoved": "Cookies removed",
+      "cookiesFailed": "Could not save cookies: {{error}}",
+      "cookiesRemoveTitle": "Remove the uploaded cookies?",
+      "cookiesRemoveMessage": "Private playlists stop downloading until you upload new cookies. Unlisted and public playlists keep working."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "yt-dlp is not installed, so SubSmelt cannot read playlists.",
-      "noYtdlpHint": "The Docker image includes it. Elsewhere, install yt-dlp and restart SubSmelt."
+      "noYtdlpHint": "The Docker image includes it. Elsewhere, install yt-dlp and restart SubSmelt.",
+      "cooldownTitle": "YouTube asked SubSmelt to slow down.",
+      "cooldownBody": "Downloads pause until {{time}}. Transcription and translation keep running.",
+      "botCheckTitle": "YouTube asked SubSmelt to prove it is not a bot.",
+      "botCheckBody": "Downloads pause until {{time}}. Cookies from a signed-in browser usually get past this.",
+      "addCookies": "Add cookies"
     },
     "availability": {
       "public": "Public",
@@ -1150,7 +1167,8 @@
       "waiting": "Waiting for the premiere",
       "skipped": "Skipped",
       "unavailable": "Unavailable",
-      "failed": "Failed"
+      "failed": "Failed",
+      "subtitlesNext": "Waiting for subtitles"
     },
     "skipKind": {
       "user": "You skipped this",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, {{count}} videos",
       "monthFootnote": "Small numbers: videos posted that month."
     },
-    "removedCount": "removed from the playlist"
+    "removedCount": "removed from the playlist",
+    "actions": {
+      "downloadNow": "Download now",
+      "download": "Download",
+      "retry": "Retry",
+      "skip": "Skip",
+      "failed": "Could not update the video: {{error}}"
+    },
+    "retryAt": "tries again {{time}}"
   }
 }

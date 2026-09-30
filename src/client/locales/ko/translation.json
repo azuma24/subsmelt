@@ -784,7 +784,19 @@
       "updateNow": "지금 업데이트",
       "updating": "업데이트 중…",
       "updated": "yt-dlp가 {{version}}(으)로 업데이트되었습니다.",
-      "updateFailed": "업데이트 실패: {{error}}"
+      "updateFailed": "업데이트 실패: {{error}}",
+      "cookies": "비공개 재생목록용 쿠키",
+      "cookiesUpload": "cookies.txt 업로드",
+      "cookiesReplace": "cookies.txt 교체",
+      "cookiesRemove": "쿠키 제거",
+      "cookiesPresent": "{{date}}에 쿠키 업로드됨",
+      "cookiesAbsent": "업로드된 쿠키 없음",
+      "cookiesHint": "일부 공개 재생목록에는 쿠키가 필요 없습니다. 쿠키는 로그인된 Google 세션 역할을 하므로 SubSmelt는 업로드 후 다시 표시하지 않습니다.",
+      "cookiesSaved": "쿠키 저장됨",
+      "cookiesRemoved": "쿠키 제거됨",
+      "cookiesFailed": "쿠키를 저장할 수 없습니다: {{error}}",
+      "cookiesRemoveTitle": "업로드한 쿠키를 제거할까요?",
+      "cookiesRemoveMessage": "새 쿠키를 업로드할 때까지 비공개 재생목록은 다운로드되지 않습니다. 일부 공개 및 공개 재생목록은 계속 작동합니다."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "yt-dlp가 설치되어 있지 않아 SubSmelt가 재생목록을 읽을 수 없습니다.",
-      "noYtdlpHint": "Docker 이미지에는 포함되어 있습니다. 다른 환경에서는 yt-dlp를 설치한 뒤 SubSmelt를 다시 시작하세요."
+      "noYtdlpHint": "Docker 이미지에는 포함되어 있습니다. 다른 환경에서는 yt-dlp를 설치한 뒤 SubSmelt를 다시 시작하세요.",
+      "cooldownTitle": "YouTube가 SubSmelt에 속도를 늦추라고 요청했습니다.",
+      "cooldownBody": "{{time}}까지 다운로드가 일시 중지됩니다. 전사와 번역은 계속 진행됩니다.",
+      "botCheckTitle": "YouTube가 SubSmelt에 봇이 아님을 증명하라고 요청했습니다.",
+      "botCheckBody": "{{time}}까지 다운로드가 일시 중지됩니다. 로그인된 브라우저의 쿠키를 사용하면 대개 통과할 수 있습니다.",
+      "addCookies": "쿠키 추가"
     },
     "availability": {
       "public": "공개",
@@ -1150,7 +1167,8 @@
       "waiting": "프리미어 대기 중",
       "skipped": "건너뜀",
       "unavailable": "사용 불가",
-      "failed": "실패"
+      "failed": "실패",
+      "subtitlesNext": "자막 대기 중"
     },
     "skipKind": {
       "user": "직접 건너뜀",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, 동영상 {{count}}개",
       "monthFootnote": "작은 숫자: 해당 월에 게시된 동영상."
     },
-    "removedCount": "재생목록에서 삭제됨"
+    "removedCount": "재생목록에서 삭제됨",
+    "actions": {
+      "downloadNow": "지금 다운로드",
+      "download": "다운로드",
+      "retry": "다시 시도",
+      "skip": "건너뛰기",
+      "failed": "동영상을 업데이트할 수 없습니다: {{error}}"
+    },
+    "retryAt": "{{time}} 재시도"
   }
 }

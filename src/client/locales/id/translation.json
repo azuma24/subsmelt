@@ -784,7 +784,19 @@
       "updateNow": "Perbarui sekarang",
       "updating": "Memperbarui…",
       "updated": "yt-dlp sekarang versi {{version}}.",
-      "updateFailed": "Pembaruan gagal: {{error}}"
+      "updateFailed": "Pembaruan gagal: {{error}}",
+      "cookies": "Cookie untuk playlist pribadi",
+      "cookiesUpload": "Unggah cookies.txt",
+      "cookiesReplace": "Ganti cookies.txt",
+      "cookiesRemove": "Hapus cookie",
+      "cookiesPresent": "Cookie diunggah {{date}}",
+      "cookiesAbsent": "Belum ada cookie yang diunggah",
+      "cookiesHint": "Playlist tidak publik tidak memerlukan cookie. Cookie berfungsi sebagai sesi Google Anda yang sudah login, jadi SubSmelt tidak pernah menampilkannya lagi setelah diunggah.",
+      "cookiesSaved": "Cookie disimpan",
+      "cookiesRemoved": "Cookie dihapus",
+      "cookiesFailed": "Tidak dapat menyimpan cookie: {{error}}",
+      "cookiesRemoveTitle": "Hapus cookie yang diunggah?",
+      "cookiesRemoveMessage": "Playlist pribadi berhenti diunduh sampai Anda mengunggah cookie baru. Playlist tidak publik dan publik tetap berfungsi."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "yt-dlp belum terpasang, sehingga SubSmelt tidak dapat membaca playlist.",
-      "noYtdlpHint": "Image Docker sudah menyertakannya. Di lingkungan lain, pasang yt-dlp lalu mulai ulang SubSmelt."
+      "noYtdlpHint": "Image Docker sudah menyertakannya. Di lingkungan lain, pasang yt-dlp lalu mulai ulang SubSmelt.",
+      "cooldownTitle": "YouTube meminta SubSmelt memperlambat.",
+      "cooldownBody": "Unduhan dijeda hingga {{time}}. Transkripsi dan terjemahan tetap berjalan.",
+      "botCheckTitle": "YouTube meminta SubSmelt membuktikan bahwa ia bukan bot.",
+      "botCheckBody": "Unduhan dijeda hingga {{time}}. Cookie dari browser yang sudah login biasanya bisa melewati ini.",
+      "addCookies": "Tambahkan cookie"
     },
     "availability": {
       "public": "Publik",
@@ -1150,7 +1167,8 @@
       "waiting": "Menunggu tayang perdana",
       "skipped": "Dilewati",
       "unavailable": "Tidak tersedia",
-      "failed": "Gagal"
+      "failed": "Gagal",
+      "subtitlesNext": "Menunggu subjudul"
     },
     "skipKind": {
       "user": "Anda melewati ini",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, {{count}} video",
       "monthFootnote": "Angka kecil: video yang diunggah pada bulan itu."
     },
-    "removedCount": "dihapus dari playlist"
+    "removedCount": "dihapus dari playlist",
+    "actions": {
+      "downloadNow": "Unduh sekarang",
+      "download": "Unduh",
+      "retry": "Coba lagi",
+      "skip": "Lewati",
+      "failed": "Tidak dapat memperbarui video: {{error}}"
+    },
+    "retryAt": "dicoba lagi {{time}}"
   }
 }

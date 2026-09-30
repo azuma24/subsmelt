@@ -784,7 +784,19 @@
       "updateNow": "Atualizar agora",
       "updating": "Atualizando…",
       "updated": "O yt-dlp agora está na versão {{version}}.",
-      "updateFailed": "Falha na atualização: {{error}}"
+      "updateFailed": "Falha na atualização: {{error}}",
+      "cookies": "Cookies para playlists particulares",
+      "cookiesUpload": "Enviar cookies.txt",
+      "cookiesReplace": "Substituir cookies.txt",
+      "cookiesRemove": "Remover cookies",
+      "cookiesPresent": "Cookies enviados em {{date}}",
+      "cookiesAbsent": "Nenhum cookie enviado",
+      "cookiesHint": "Playlists não listadas não precisam de cookies. Os cookies funcionam como sua sessão do Google conectada, então o SubSmelt nunca os mostra de novo após o envio.",
+      "cookiesSaved": "Cookies salvos",
+      "cookiesRemoved": "Cookies removidos",
+      "cookiesFailed": "Não foi possível salvar os cookies: {{error}}",
+      "cookiesRemoveTitle": "Remover os cookies enviados?",
+      "cookiesRemoveMessage": "Playlists particulares param de baixar até você enviar novos cookies. Playlists não listadas e públicas continuam funcionando."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "O yt-dlp não está instalado, então o SubSmelt não consegue ler playlists.",
-      "noYtdlpHint": "A imagem Docker já o inclui. Em outros ambientes, instale o yt-dlp e reinicie o SubSmelt."
+      "noYtdlpHint": "A imagem Docker já o inclui. Em outros ambientes, instale o yt-dlp e reinicie o SubSmelt.",
+      "cooldownTitle": "O YouTube pediu ao SubSmelt para ir mais devagar.",
+      "cooldownBody": "Downloads pausados até {{time}}. Transcrição e tradução continuam.",
+      "botCheckTitle": "O YouTube pediu ao SubSmelt que prove que não é um robô.",
+      "botCheckBody": "Downloads pausados até {{time}}. Cookies de um navegador com login costumam resolver isso.",
+      "addCookies": "Adicionar cookies"
     },
     "availability": {
       "public": "Público",
@@ -1150,7 +1167,8 @@
       "waiting": "Aguardando a estreia",
       "skipped": "Ignorado",
       "unavailable": "Indisponível",
-      "failed": "Falhou"
+      "failed": "Falhou",
+      "subtitlesNext": "Aguardando legendas"
     },
     "skipKind": {
       "user": "Você ignorou este vídeo",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, {{count}} vídeos",
       "monthFootnote": "Números pequenos: vídeos publicados naquele mês."
     },
-    "removedCount": "removidos da playlist"
+    "removedCount": "removidos da playlist",
+    "actions": {
+      "downloadNow": "Baixar agora",
+      "download": "Baixar",
+      "retry": "Tentar novamente",
+      "skip": "Ignorar",
+      "failed": "Não foi possível atualizar o vídeo: {{error}}"
+    },
+    "retryAt": "nova tentativa {{time}}"
   }
 }

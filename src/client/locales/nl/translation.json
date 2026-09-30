@@ -784,7 +784,19 @@
       "updateNow": "Nu bijwerken",
       "updating": "Bijwerken…",
       "updated": "yt-dlp is nu {{version}}.",
-      "updateFailed": "Bijwerken mislukt: {{error}}"
+      "updateFailed": "Bijwerken mislukt: {{error}}",
+      "cookies": "Cookies voor privé-afspeellijsten",
+      "cookiesUpload": "cookies.txt uploaden",
+      "cookiesReplace": "cookies.txt vervangen",
+      "cookiesRemove": "Cookies verwijderen",
+      "cookiesPresent": "Cookies geüpload op {{date}}",
+      "cookiesAbsent": "Geen cookies geüpload",
+      "cookiesHint": "Niet-vermelde afspeellijsten hebben geen cookies nodig. Cookies werken als je ingelogde Google-sessie, dus SubSmelt toont ze na het uploaden nooit meer.",
+      "cookiesSaved": "Cookies opgeslagen",
+      "cookiesRemoved": "Cookies verwijderd",
+      "cookiesFailed": "Kan cookies niet opslaan: {{error}}",
+      "cookiesRemoveTitle": "Geüploade cookies verwijderen?",
+      "cookiesRemoveMessage": "Privé-afspeellijsten worden pas weer gedownload als je nieuwe cookies uploadt. Niet-vermelde en openbare afspeellijsten blijven werken."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "yt-dlp is niet geïnstalleerd, dus SubSmelt kan geen afspeellijsten lezen.",
-      "noYtdlpHint": "De Docker-image bevat het al. Installeer elders yt-dlp en start SubSmelt opnieuw."
+      "noYtdlpHint": "De Docker-image bevat het al. Installeer elders yt-dlp en start SubSmelt opnieuw.",
+      "cooldownTitle": "YouTube vroeg SubSmelt om het rustiger aan te doen.",
+      "cooldownBody": "Downloads pauzeren tot {{time}}. Transcriptie en vertaling gaan door.",
+      "botCheckTitle": "YouTube vroeg SubSmelt te bewijzen dat het geen bot is.",
+      "botCheckBody": "Downloads pauzeren tot {{time}}. Cookies uit een ingelogde browser helpen hier meestal langs.",
+      "addCookies": "Cookies toevoegen"
     },
     "availability": {
       "public": "Openbaar",
@@ -1150,7 +1167,8 @@
       "waiting": "Wacht op de première",
       "skipped": "Overgeslagen",
       "unavailable": "Niet beschikbaar",
-      "failed": "Mislukt"
+      "failed": "Mislukt",
+      "subtitlesNext": "Wacht op ondertitels"
     },
     "skipKind": {
       "user": "Jij hebt dit overgeslagen",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, {{count}} video's",
       "monthFootnote": "Kleine getallen: video's die in die maand zijn geplaatst."
     },
-    "removedCount": "verwijderd uit de afspeellijst"
+    "removedCount": "verwijderd uit de afspeellijst",
+    "actions": {
+      "downloadNow": "Nu downloaden",
+      "download": "Downloaden",
+      "retry": "Opnieuw proberen",
+      "skip": "Overslaan",
+      "failed": "Kan video niet bijwerken: {{error}}"
+    },
+    "retryAt": "nieuwe poging {{time}}"
   }
 }

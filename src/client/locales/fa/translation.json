@@ -784,7 +784,19 @@
       "updateNow": "به‌روزرسانی همین حالا",
       "updating": "در حال به‌روزرسانی…",
       "updated": "yt-dlp اکنون {{version}} است.",
-      "updateFailed": "به‌روزرسانی ناموفق بود: {{error}}"
+      "updateFailed": "به‌روزرسانی ناموفق بود: {{error}}",
+      "cookies": "کوکی برای پلی‌لیست‌های خصوصی",
+      "cookiesUpload": "بارگذاری cookies.txt",
+      "cookiesReplace": "جایگزینی cookies.txt",
+      "cookiesRemove": "حذف کوکی‌ها",
+      "cookiesPresent": "کوکی‌ها در {{date}} بارگذاری شد",
+      "cookiesAbsent": "کوکی‌ای بارگذاری نشده",
+      "cookiesHint": "پلی‌لیست‌های فهرست‌نشده به کوکی نیاز ندارند. کوکی‌ها مانند نشست واردشده‌ی شما در Google عمل می‌کنند، بنابراین SubSmelt پس از بارگذاری هرگز دوباره آن‌ها را نشان نمی‌دهد.",
+      "cookiesSaved": "کوکی‌ها ذخیره شد",
+      "cookiesRemoved": "کوکی‌ها حذف شد",
+      "cookiesFailed": "ذخیره کوکی‌ها ممکن نشد: {{error}}",
+      "cookiesRemoveTitle": "کوکی‌های بارگذاری‌شده حذف شوند؟",
+      "cookiesRemoveMessage": "تا زمانی که کوکی‌های جدید بارگذاری نکنید، پلی‌لیست‌های خصوصی دانلود نمی‌شوند. پلی‌لیست‌های فهرست‌نشده و عمومی همچنان کار می‌کنند."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "yt-dlp نصب نشده است، بنابراین SubSmelt نمی‌تواند پلی‌لیست‌ها را بخواند.",
-      "noYtdlpHint": "تصویر Docker آن را شامل می‌شود. در جاهای دیگر، yt-dlp را نصب کنید و SubSmelt را دوباره راه‌اندازی کنید."
+      "noYtdlpHint": "تصویر Docker آن را شامل می‌شود. در جاهای دیگر، yt-dlp را نصب کنید و SubSmelt را دوباره راه‌اندازی کنید.",
+      "cooldownTitle": "YouTube از SubSmelt خواست سرعتش را کم کند.",
+      "cooldownBody": "دانلودها تا {{time}} متوقف می‌شوند. رونویسی و ترجمه ادامه دارند.",
+      "botCheckTitle": "YouTube از SubSmelt خواست ثابت کند ربات نیست.",
+      "botCheckBody": "دانلودها تا {{time}} متوقف می‌شوند. کوکی‌های مرورگری که در آن وارد حساب شده‌اید معمولاً از این مرحله عبور می‌کنند.",
+      "addCookies": "افزودن کوکی"
     },
     "availability": {
       "public": "عمومی",
@@ -1150,7 +1167,8 @@
       "waiting": "در انتظار نمایش اول",
       "skipped": "ردشده",
       "unavailable": "در دسترس نیست",
-      "failed": "ناموفق"
+      "failed": "ناموفق",
+      "subtitlesNext": "در انتظار زیرنویس"
     },
     "skipKind": {
       "user": "شما آن را رد کردید",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}، {{count}} ویدیو",
       "monthFootnote": "اعداد کوچک: ویدیوهای منتشرشده در آن ماه."
     },
-    "removedCount": "از پلی‌لیست حذف شد"
+    "removedCount": "از پلی‌لیست حذف شد",
+    "actions": {
+      "downloadNow": "دانلود فوری",
+      "download": "دانلود",
+      "retry": "تلاش دوباره",
+      "skip": "رد کردن",
+      "failed": "به‌روزرسانی ویدیو ممکن نشد: {{error}}"
+    },
+    "retryAt": "تلاش دوباره {{time}}"
   }
 }

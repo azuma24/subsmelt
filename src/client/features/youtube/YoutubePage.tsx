@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "../../components/Toast";
 import { useSettingsQuery, useTasksQuery, useYoutubePlaylistsQuery, useYoutubeStatusQuery } from "../../hooks";
 import { str } from "../../lib/settings-value";
-import type { YoutubePlaylist } from "../../types";
+import type { YoutubeCooldown, YoutubePlaylist } from "../../types";
 import { ActionButton } from "../../ui/primitives";
 import { PageError } from "../../ui/QueryState";
 import { Banner } from "./parts";
@@ -107,6 +107,7 @@ export function YoutubePage({ isMobile }: { isMobile: boolean }) {
       {topbar}
       <div className={`w-full max-w-[1040px] flex-1 space-y-3.5 p-3.5 md:p-[18px] ${isMobile ? "pb-6" : ""}`}>
         {ytdlpMissing && <Banner tone="bad" title={t("youtube.banner.noYtdlp")}>{t("youtube.banner.noYtdlpHint")}</Banner>}
+        <CooldownBanner cooldown={statusQuery.data?.cooldown ?? null} onExpired={() => void statusQuery.refetch()} onAddCookies={() => navigate("/settings?section=youtube")} />
         {body}
       </div>
       {dialog && (
@@ -121,6 +122,34 @@ export function YoutubePage({ isMobile }: { isMobile: boolean }) {
         />
       )}
     </div>
+  );
+}
+
+/** YouTube pushed back: downloads pause until the cooldown ends. Refetches the status when it does. */
+function CooldownBanner({ cooldown, onExpired, onAddCookies }: { cooldown: YoutubeCooldown | null; onExpired: () => void; onAddCookies: () => void }) {
+  const { t, i18n } = useTranslation();
+  const untilMs = cooldown ? Date.parse(cooldown.until) : 0;
+  const active = untilMs > Date.now();
+  useEffect(() => {
+    if (!active) return;
+    const timer = setTimeout(onExpired, Math.min(untilMs - Date.now() + 1000, 2 ** 31 - 1));
+    return () => clearTimeout(timer);
+  }, [active, untilMs, onExpired]);
+  if (!cooldown || !active) return null;
+  const time = new Intl.DateTimeFormat(i18n.language, { hour: "numeric", minute: "2-digit", ...(untilMs - Date.now() > 20 * 3_600_000 ? { weekday: "short" } : {}) }).format(untilMs);
+  const bot = cooldown.cause === "bot_check";
+  return (
+    <Banner
+      tone="warn"
+      title={t(bot ? "youtube.banner.botCheckTitle" : "youtube.banner.cooldownTitle")}
+      action={(
+        <button type="button" onClick={onAddCookies} className="-my-2.5 min-h-[44px] shrink-0 self-center rounded-lg px-2 text-[12px] font-medium text-[var(--accent)] hover:underline">
+          {t("youtube.banner.addCookies")}
+        </button>
+      )}
+    >
+      {t(bot ? "youtube.banner.botCheckBody" : "youtube.banner.cooldownBody", { time })}
+    </Banner>
   );
 }
 

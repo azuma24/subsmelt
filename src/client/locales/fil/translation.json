@@ -784,7 +784,19 @@
       "updateNow": "I-update ngayon",
       "updating": "Ina-update…",
       "updated": "Ang yt-dlp ay {{version}} na ngayon.",
-      "updateFailed": "Nabigo ang pag-update: {{error}}"
+      "updateFailed": "Nabigo ang pag-update: {{error}}",
+      "cookies": "Cookies para sa mga pribadong playlist",
+      "cookiesUpload": "I-upload ang cookies.txt",
+      "cookiesReplace": "Palitan ang cookies.txt",
+      "cookiesRemove": "Alisin ang cookies",
+      "cookiesPresent": "Na-upload ang cookies noong {{date}}",
+      "cookiesAbsent": "Walang na-upload na cookies",
+      "cookiesHint": "Hindi kailangan ng cookies ang mga hindi nakalistang playlist. Nagsisilbing naka-sign in mong Google session ang cookies, kaya hindi na ito ipinapakita muli ng SubSmelt pagkatapos i-upload.",
+      "cookiesSaved": "Na-save ang cookies",
+      "cookiesRemoved": "Naalis ang cookies",
+      "cookiesFailed": "Hindi ma-save ang cookies: {{error}}",
+      "cookiesRemoveTitle": "Alisin ang na-upload na cookies?",
+      "cookiesRemoveMessage": "Titigil sa pag-download ang mga pribadong playlist hanggang mag-upload ka ng bagong cookies. Patuloy na gagana ang mga hindi nakalista at pampublikong playlist."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "Hindi naka-install ang yt-dlp, kaya hindi mabasa ng SubSmelt ang mga playlist.",
-      "noYtdlpHint": "Kasama ito sa Docker image. Sa iba, i-install ang yt-dlp at i-restart ang SubSmelt."
+      "noYtdlpHint": "Kasama ito sa Docker image. Sa iba, i-install ang yt-dlp at i-restart ang SubSmelt.",
+      "cooldownTitle": "Hiniling ng YouTube na bagalan ng SubSmelt.",
+      "cooldownBody": "Naka-pause ang mga download hanggang {{time}}. Tuloy ang transcription at pagsasalin.",
+      "botCheckTitle": "Hiniling ng YouTube na patunayan ng SubSmelt na hindi ito bot.",
+      "botCheckBody": "Naka-pause ang mga download hanggang {{time}}. Kadalasang nakakalusot dito ang cookies mula sa browser na naka-sign in.",
+      "addCookies": "Magdagdag ng cookies"
     },
     "availability": {
       "public": "Pampubliko",
@@ -1150,7 +1167,8 @@
       "waiting": "Naghihintay sa premiere",
       "skipped": "Nilaktawan",
       "unavailable": "Hindi available",
-      "failed": "Nabigo"
+      "failed": "Nabigo",
+      "subtitlesNext": "Naghihintay ng subtitle"
     },
     "skipKind": {
       "user": "Nilaktawan mo ito",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, {{count}} video",
       "monthFootnote": "Maliliit na numero: mga video na na-post sa buwang iyon."
     },
-    "removedCount": "inalis sa playlist"
+    "removedCount": "inalis sa playlist",
+    "actions": {
+      "downloadNow": "I-download ngayon",
+      "download": "I-download",
+      "retry": "Subukan muli",
+      "skip": "Laktawan",
+      "failed": "Hindi ma-update ang video: {{error}}"
+    },
+    "retryAt": "susubukan muli {{time}}"
   }
 }

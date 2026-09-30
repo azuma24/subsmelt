@@ -21,6 +21,7 @@ import type {
   YoutubeStatus,
   YoutubeBackfill,
   YoutubeVideo,
+  YoutubeVideoAction,
 } from "./types";
 
 const BASE = "/api";
@@ -359,6 +360,11 @@ export const syncYoutubePlaylist = (playlistId: string) =>
     `/youtube/playlists/${encodeURIComponent(playlistId)}/sync`,
     { method: "POST" },
   );
+export const youtubeVideoAction = (videoId: string, action: YoutubeVideoAction) =>
+  fetchJSON<YoutubeVideo>(`/youtube/videos/${encodeURIComponent(videoId)}/${action}`, { method: "POST" });
+export const uploadYoutubeCookies = (content: string) =>
+  fetchJSON<YoutubeStatus["cookies"]>("/youtube/cookies", { method: "PUT", body: JSON.stringify({ content }) });
+export const removeYoutubeCookies = () => fetchJSON<YoutubeStatus["cookies"]>("/youtube/cookies", { method: "DELETE" });
 export const testYoutubeApiKey = (key: string) =>
   fetchJSON<{ ok: true }>("/youtube/api-key/test", { method: "POST", body: JSON.stringify({ key }) });
 export const updateYtdlp = () =>

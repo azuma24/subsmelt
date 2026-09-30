@@ -784,7 +784,19 @@
       "updateNow": "Aktualizuj teraz",
       "updating": "Aktualizowanie…",
       "updated": "yt-dlp ma teraz wersję {{version}}.",
-      "updateFailed": "Aktualizacja nie powiodła się: {{error}}"
+      "updateFailed": "Aktualizacja nie powiodła się: {{error}}",
+      "cookies": "Pliki cookie dla prywatnych playlist",
+      "cookiesUpload": "Prześlij cookies.txt",
+      "cookiesReplace": "Zastąp cookies.txt",
+      "cookiesRemove": "Usuń pliki cookie",
+      "cookiesPresent": "Pliki cookie przesłane {{date}}",
+      "cookiesAbsent": "Nie przesłano plików cookie",
+      "cookiesHint": "Niepubliczne playlisty nie wymagają plików cookie. Pliki cookie działają jak Twoja zalogowana sesja Google, dlatego po przesłaniu SubSmelt nigdy ich już nie pokazuje.",
+      "cookiesSaved": "Pliki cookie zapisane",
+      "cookiesRemoved": "Pliki cookie usunięte",
+      "cookiesFailed": "Nie udało się zapisać plików cookie: {{error}}",
+      "cookiesRemoveTitle": "Usunąć przesłane pliki cookie?",
+      "cookiesRemoveMessage": "Prywatne playlisty nie będą pobierane, dopóki nie prześlesz nowych plików cookie. Niepubliczne i publiczne playlisty działają dalej."
     }
   },
   "jobDetail": {
@@ -1100,7 +1112,12 @@
     },
     "banner": {
       "noYtdlp": "Nie zainstalowano yt-dlp, więc SubSmelt nie może odczytywać playlist.",
-      "noYtdlpHint": "Obraz Dockera go zawiera. W innych środowiskach zainstaluj yt-dlp i uruchom SubSmelt ponownie."
+      "noYtdlpHint": "Obraz Dockera go zawiera. W innych środowiskach zainstaluj yt-dlp i uruchom SubSmelt ponownie.",
+      "cooldownTitle": "YouTube poprosił SubSmelt o zwolnienie tempa.",
+      "cooldownBody": "Pobieranie wstrzymane do {{time}}. Transkrypcja i tłumaczenie działają dalej.",
+      "botCheckTitle": "YouTube poprosił SubSmelt o potwierdzenie, że nie jest botem.",
+      "botCheckBody": "Pobieranie wstrzymane do {{time}}. Zwykle pomagają pliki cookie z przeglądarki z zalogowanym kontem.",
+      "addCookies": "Dodaj pliki cookie"
     },
     "availability": {
       "public": "Publiczny",
@@ -1150,7 +1167,8 @@
       "waiting": "Czeka na premierę",
       "skipped": "Pominięty",
       "unavailable": "Niedostępny",
-      "failed": "Niepowodzenie"
+      "failed": "Niepowodzenie",
+      "subtitlesNext": "Czeka na napisy"
     },
     "skipKind": {
       "user": "Pominięto przez Ciebie",
@@ -1238,6 +1256,14 @@
       "monthVideos": "{{month}}, filmy: {{count}}",
       "monthFootnote": "Małe liczby: filmy opublikowane w danym miesiącu."
     },
-    "removedCount": "usunięte z playlisty"
+    "removedCount": "usunięte z playlisty",
+    "actions": {
+      "downloadNow": "Pobierz teraz",
+      "download": "Pobierz",
+      "retry": "Ponów",
+      "skip": "Pomiń",
+      "failed": "Nie udało się zaktualizować filmu: {{error}}"
+    },
+    "retryAt": "ponowna próba {{time}}"
   }
 }
