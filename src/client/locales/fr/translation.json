@@ -683,7 +683,9 @@
       "languageJapanese": "Japonais",
       "languageChinese": "Chinois",
       "languageKorean": "Coréen",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "La transcription et la traduction partagent un GPU",
+      "gpuSharedHelp": "Traduire par lots après les transcriptions en attente, pour que le GPU change moins souvent de modèle. La traduction démarre quand même dès que 20 sous-titres attendent."
     },
     "connections": {
       "mode": "Mode de connexion",
@@ -1117,7 +1119,11 @@
       "cooldownBody": "Téléchargements en pause jusqu’à {{time}}. La transcription et la traduction continuent.",
       "botCheckTitle": "YouTube demande à SubSmelt de prouver qu’il n’est pas un robot.",
       "botCheckBody": "Téléchargements en pause jusqu’à {{time}}. Des cookies d’un navigateur connecté permettent généralement de passer ce contrôle.",
-      "addCookies": "Ajouter des cookies"
+      "addCookies": "Ajouter des cookies",
+      "gpuTitle": "La traduction attend la fin des transcriptions ({{n}} restantes).",
+      "gpuBody": "Whisper et le modèle de traduction partagent un seul GPU, SubSmelt traduit donc par lots.",
+      "noBackendTitle": "Les téléchargements continuent. La transcription attend un backend.",
+      "noBackendBody": "Activez la reconnaissance vocale et indiquez l’URL du backend dans les Paramètres."
     },
     "availability": {
       "public": "Publique",
@@ -1168,7 +1174,9 @@
       "skipped": "Ignorée",
       "unavailable": "Indisponible",
       "failed": "Échec",
-      "subtitlesNext": "En attente des sous-titres"
+      "subtitlesNext": "En attente des sous-titres",
+      "gpuWait": "En attente du GPU",
+      "translationHeld": "Traduction en attente du lot"
     },
     "skipKind": {
       "user": "Ignorée par vous",
@@ -1264,6 +1272,15 @@
       "skip": "Ignorer",
       "failed": "Impossible de mettre à jour la vidéo : {{error}}"
     },
-    "retryAt": "nouvel essai {{time}}"
+    "retryAt": "nouvel essai {{time}}",
+    "subs": {
+      "captions": "{{lang}} = sous-titres",
+      "transcript": "{{lang}} = transcription",
+      "transcriptOnly": "Transcription",
+      "creator": "{{lang}} sous-titres du créateur",
+      "translating": "{{lang}} → traduction en cours",
+      "waiting": "{{lang}} → en attente de traduction",
+      "translated": "{{lang}} → traduit"
+    }
   }
 }

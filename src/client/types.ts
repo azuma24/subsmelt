@@ -336,8 +336,24 @@ export interface YoutubeVideo {
   user_queued_at: string | null;
   position: number | null;
   removed_at: string | null;
-  /** Download percentage while downloading, when the server has one. */
+  /** Where the transcript came from: "youtube_captions" or "whisper:<model>". */
+  transcript_source: string | null;
+  /** The spoken language and each picked language's route, once the subtitles are written. */
+  subtitles: YoutubeSubtitlePlan | null;
+  /** Download or transcription percentage while running, when the server has one. */
   pct?: number;
+}
+
+export interface YoutubeSubtitlePlan {
+  /** The spoken language's key, such as "en" or "zh-Hant", when known. */
+  spoken: string | null;
+  routes: { taskId: number; kind: "same" | "captions" | "translate" }[];
+}
+
+/** What holds the subtitle and translation steps back. */
+export interface YoutubePipeline {
+  gpu: { shared: boolean; held: boolean; waitingFor: number; translationRunning: boolean };
+  transcription: { ready: boolean; waiting: number };
 }
 
 export type YoutubeVideoAction = "download" | "retry" | "skip";

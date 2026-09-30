@@ -3,9 +3,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "../../components/Toast";
-import { useSettingsQuery, useTasksQuery, useYoutubePlaylistsQuery, useYoutubeStatusQuery } from "../../hooks";
+import { useSettingsQuery, useTasksQuery, useYoutubePipelineQuery, useYoutubePlaylistsQuery, useYoutubeStatusQuery } from "../../hooks";
 import { str } from "../../lib/settings-value";
-import type { YoutubeCooldown, YoutubePlaylist } from "../../types";
+import type { YoutubeCooldown, YoutubePipeline, YoutubePlaylist } from "../../types";
 import { ActionButton } from "../../ui/primitives";
 import { PageError } from "../../ui/QueryState";
 import { Banner } from "./parts";
@@ -27,6 +27,7 @@ export function YoutubePage({ isMobile }: { isMobile: boolean }) {
   const selectedId = params.get("playlist");
   const playlistsQuery = useYoutubePlaylistsQuery();
   const statusQuery = useYoutubeStatusQuery();
+  const pipelineQuery = useYoutubePipelineQuery();
   const settingsQuery = useSettingsQuery();
   const tasksQuery = useTasksQuery();
   const actions = usePlaylistActions();
@@ -108,6 +109,7 @@ export function YoutubePage({ isMobile }: { isMobile: boolean }) {
       <div className={`w-full max-w-[1040px] flex-1 space-y-3.5 p-3.5 md:p-[18px] ${isMobile ? "pb-6" : ""}`}>
         {ytdlpMissing && <Banner tone="bad" title={t("youtube.banner.noYtdlp")}>{t("youtube.banner.noYtdlpHint")}</Banner>}
         <CooldownBanner cooldown={statusQuery.data?.cooldown ?? null} onExpired={() => void statusQuery.refetch()} onAddCookies={() => navigate("/settings?section=youtube")} />
+        <PipelineBanners pipeline={pipelineQuery.data} onOpenSettings={() => navigate("/settings?section=stt")} />
         {body}
       </div>
       {dialog && (
@@ -150,6 +152,34 @@ function CooldownBanner({ cooldown, onExpired, onAddCookies }: { cooldown: Youtu
     >
       {t(bot ? "youtube.banner.botCheckBody" : "youtube.banner.cooldownBody", { time })}
     </Banner>
+  );
+}
+
+/** Why subtitles or translations are not moving: no transcription backend, or a shared GPU batching the work. */
+function PipelineBanners({ pipeline, onOpenSettings }: { pipeline: YoutubePipeline | undefined; onOpenSettings: () => void }) {
+  const { t } = useTranslation();
+  if (!pipeline) return null;
+  return (
+    <>
+      {pipeline.transcription.waiting > 0 && (
+        <Banner
+          tone="warn"
+          title={t("youtube.banner.noBackendTitle")}
+          action={(
+            <button type="button" onClick={onOpenSettings} className="-my-2.5 min-h-[44px] shrink-0 self-center rounded-lg px-2 text-[12px] font-medium text-[var(--accent)] hover:underline">
+              {t("youtube.dialog.openSettings")}
+            </button>
+          )}
+        >
+          {t("youtube.banner.noBackendBody")}
+        </Banner>
+      )}
+      {pipeline.gpu.held && (
+        <Banner tone="info" glyph="GPU" title={t("youtube.banner.gpuTitle", { n: pipeline.gpu.waitingFor })}>
+          {t("youtube.banner.gpuBody")}
+        </Banner>
+      )}
+    </>
   );
 }
 

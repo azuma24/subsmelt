@@ -683,7 +683,9 @@
       "languageJapanese": "日文",
       "languageChinese": "中文",
       "languageKorean": "韓文",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "轉錄與翻譯共用一張 GPU",
+      "gpuSharedHelp": "先完成待處理的轉錄再分批翻譯，減少 GPU 切換模型的次數。累積 20 份字幕待翻譯時仍會開始翻譯。"
     },
     "connections": {
       "mode": "連線模式",
@@ -1117,7 +1119,11 @@
       "cooldownBody": "下載暫停至 {{time}}。轉錄和翻譯照常進行。",
       "botCheckTitle": "YouTube 要求 SubSmelt 證明自己不是機器人。",
       "botCheckBody": "下載暫停至 {{time}}。使用已登入瀏覽器的 Cookie 通常可以通過驗證。",
-      "addCookies": "新增 Cookie"
+      "addCookies": "新增 Cookie",
+      "gpuTitle": "翻譯等待轉錄完成（剩 {{n}} 部）。",
+      "gpuBody": "Whisper 與翻譯模型共用一張 GPU，所以 SubSmelt 會分批翻譯。",
+      "noBackendTitle": "下載繼續進行。轉錄正在等待後端。",
+      "noBackendBody": "請在設定中開啟語音轉字幕並填寫後端網址。"
     },
     "availability": {
       "public": "公開",
@@ -1168,7 +1174,9 @@
       "skipped": "已略過",
       "unavailable": "無法使用",
       "failed": "失敗",
-      "subtitlesNext": "等待字幕"
+      "subtitlesNext": "等待字幕",
+      "gpuWait": "等待 GPU",
+      "translationHeld": "翻譯等待批次"
     },
     "skipKind": {
       "user": "你略過了這部影片",
@@ -1264,6 +1272,15 @@
       "skip": "略過",
       "failed": "無法更新影片：{{error}}"
     },
-    "retryAt": "{{time}}重試"
+    "retryAt": "{{time}}重試",
+    "subs": {
+      "captions": "{{lang}} = 字幕",
+      "transcript": "{{lang}} = 逐字稿",
+      "transcriptOnly": "逐字稿",
+      "creator": "{{lang}} 創作者字幕",
+      "translating": "{{lang}} → 翻譯中",
+      "waiting": "{{lang}} → 等待翻譯",
+      "translated": "{{lang}} → 已翻譯"
+    }
   }
 }

@@ -683,7 +683,9 @@
       "languageJapanese": "일본어",
       "languageChinese": "중국어",
       "languageKorean": "한국어",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "전사와 번역이 GPU 하나를 함께 사용",
+      "gpuSharedHelp": "대기 중인 전사가 끝난 뒤 묶어서 번역해 GPU의 모델 교체를 줄입니다. 자막 20개가 대기하면 번역을 시작합니다."
     },
     "connections": {
       "mode": "연결 모드",
@@ -1117,7 +1119,11 @@
       "cooldownBody": "{{time}}까지 다운로드가 일시 중지됩니다. 전사와 번역은 계속 진행됩니다.",
       "botCheckTitle": "YouTube가 SubSmelt에 봇이 아님을 증명하라고 요청했습니다.",
       "botCheckBody": "{{time}}까지 다운로드가 일시 중지됩니다. 로그인된 브라우저의 쿠키를 사용하면 대개 통과할 수 있습니다.",
-      "addCookies": "쿠키 추가"
+      "addCookies": "쿠키 추가",
+      "gpuTitle": "번역이 전사 완료를 기다리고 있습니다({{n}}개 남음).",
+      "gpuBody": "Whisper와 번역 모델이 GPU 하나를 함께 쓰므로 SubSmelt는 묶어서 번역합니다.",
+      "noBackendTitle": "다운로드는 계속됩니다. 전사는 백엔드를 기다리고 있습니다.",
+      "noBackendBody": "설정에서 음성 인식을 켜고 백엔드 URL을 입력하세요."
     },
     "availability": {
       "public": "공개",
@@ -1168,7 +1174,9 @@
       "skipped": "건너뜀",
       "unavailable": "사용 불가",
       "failed": "실패",
-      "subtitlesNext": "자막 대기 중"
+      "subtitlesNext": "자막 대기 중",
+      "gpuWait": "GPU 대기 중",
+      "translationHeld": "번역이 일괄 처리를 기다림"
     },
     "skipKind": {
       "user": "직접 건너뜀",
@@ -1264,6 +1272,15 @@
       "skip": "건너뛰기",
       "failed": "동영상을 업데이트할 수 없습니다: {{error}}"
     },
-    "retryAt": "{{time}} 재시도"
+    "retryAt": "{{time}} 재시도",
+    "subs": {
+      "captions": "{{lang}} = 자막",
+      "transcript": "{{lang}} = 대본",
+      "transcriptOnly": "대본",
+      "creator": "{{lang}} 제작자 자막",
+      "translating": "{{lang}} → 번역 중",
+      "waiting": "{{lang}} → 번역 대기",
+      "translated": "{{lang}} → 번역됨"
+    }
   }
 }

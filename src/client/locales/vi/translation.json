@@ -683,7 +683,9 @@
       "languageJapanese": "Tiếng Nhật",
       "languageChinese": "Tiếng Trung",
       "languageKorean": "Tiếng Hàn",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "Chép lời và dịch dùng chung một GPU",
+      "gpuSharedHelp": "Dịch theo lô sau các bản chép lời đang chờ để GPU ít phải đổi mô hình. Khi có 20 phụ đề chờ, việc dịch vẫn bắt đầu."
     },
     "connections": {
       "mode": "Chế độ kết nối",
@@ -1117,7 +1119,11 @@
       "cooldownBody": "Tải xuống tạm dừng đến {{time}}. Chuyển âm và dịch vẫn tiếp tục.",
       "botCheckTitle": "YouTube yêu cầu SubSmelt chứng minh không phải bot.",
       "botCheckBody": "Tải xuống tạm dừng đến {{time}}. Cookie từ trình duyệt đã đăng nhập thường giúp vượt qua bước này.",
-      "addCookies": "Thêm cookie"
+      "addCookies": "Thêm cookie",
+      "gpuTitle": "Bản dịch đang chờ chép lời xong (còn {{n}}).",
+      "gpuBody": "Whisper và mô hình dịch dùng chung một GPU nên SubSmelt dịch theo lô.",
+      "noBackendTitle": "Tải xuống vẫn tiếp tục. Chép lời đang chờ backend.",
+      "noBackendBody": "Bật chuyển giọng nói thành văn bản và nhập URL backend trong Cài đặt."
     },
     "availability": {
       "public": "Công khai",
@@ -1168,7 +1174,9 @@
       "skipped": "Đã bỏ qua",
       "unavailable": "Không khả dụng",
       "failed": "Thất bại",
-      "subtitlesNext": "Đang chờ phụ đề"
+      "subtitlesNext": "Đang chờ phụ đề",
+      "gpuWait": "Đang chờ GPU",
+      "translationHeld": "Bản dịch chờ theo lô"
     },
     "skipKind": {
       "user": "Bạn đã bỏ qua video này",
@@ -1264,6 +1272,15 @@
       "skip": "Bỏ qua",
       "failed": "Không thể cập nhật video: {{error}}"
     },
-    "retryAt": "thử lại {{time}}"
+    "retryAt": "thử lại {{time}}",
+    "subs": {
+      "captions": "{{lang}} = phụ đề",
+      "transcript": "{{lang}} = bản chép lời",
+      "transcriptOnly": "Bản chép lời",
+      "creator": "{{lang}} phụ đề của nhà sáng tạo",
+      "translating": "{{lang}} → đang dịch",
+      "waiting": "{{lang}} → chờ dịch",
+      "translated": "{{lang}} → đã dịch"
+    }
   }
 }

@@ -683,7 +683,9 @@
       "languageJapanese": "ญี่ปุ่น",
       "languageChinese": "จีน",
       "languageKorean": "เกาหลี",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "การถอดเสียงและการแปลใช้ GPU ตัวเดียวกัน",
+      "gpuSharedHelp": "แปลเป็นชุดหลังการถอดเสียงที่ค้างอยู่ เพื่อให้ GPU สลับโมเดลน้อยลง เมื่อมีคำบรรยายรอ 20 ไฟล์ การแปลจะเริ่มอยู่ดี"
     },
     "connections": {
       "mode": "โหมดการเชื่อมต่อ",
@@ -1117,7 +1119,11 @@
       "cooldownBody": "หยุดดาวน์โหลดชั่วคราวจนถึง {{time}} การถอดเสียงและการแปลยังทำงานต่อ",
       "botCheckTitle": "YouTube ขอให้ SubSmelt พิสูจน์ว่าไม่ใช่บอท",
       "botCheckBody": "หยุดดาวน์โหลดชั่วคราวจนถึง {{time}} คุกกี้จากเบราว์เซอร์ที่ลงชื่อเข้าใช้อยู่มักช่วยผ่านขั้นตอนนี้ได้",
-      "addCookies": "เพิ่มคุกกี้"
+      "addCookies": "เพิ่มคุกกี้",
+      "gpuTitle": "การแปลกำลังรอให้ถอดเสียงเสร็จ (เหลือ {{n}})",
+      "gpuBody": "Whisper และโมเดลแปลใช้ GPU ตัวเดียวกัน SubSmelt จึงแปลเป็นชุด",
+      "noBackendTitle": "การดาวน์โหลดยังดำเนินต่อ การถอดเสียงกำลังรอแบ็กเอนด์",
+      "noBackendBody": "เปิดการแปลงเสียงเป็นข้อความและกรอก URL ของแบ็กเอนด์ในการตั้งค่า"
     },
     "availability": {
       "public": "สาธารณะ",
@@ -1168,7 +1174,9 @@
       "skipped": "ข้ามแล้ว",
       "unavailable": "ไม่พร้อมใช้งาน",
       "failed": "ล้มเหลว",
-      "subtitlesNext": "รอคำบรรยาย"
+      "subtitlesNext": "รอคำบรรยาย",
+      "gpuWait": "กำลังรอ GPU",
+      "translationHeld": "การแปลรอชุดงาน"
     },
     "skipKind": {
       "user": "คุณข้ามวิดีโอนี้",
@@ -1264,6 +1272,15 @@
       "skip": "ข้าม",
       "failed": "อัปเดตวิดีโอไม่ได้: {{error}}"
     },
-    "retryAt": "ลองใหม่ {{time}}"
+    "retryAt": "ลองใหม่ {{time}}",
+    "subs": {
+      "captions": "{{lang}} = คำบรรยาย",
+      "transcript": "{{lang}} = บทถอดเสียง",
+      "transcriptOnly": "บทถอดเสียง",
+      "creator": "{{lang}} คำบรรยายจากผู้สร้าง",
+      "translating": "{{lang}} → กำลังแปล",
+      "waiting": "{{lang}} → รอแปล",
+      "translated": "{{lang}} → แปลแล้ว"
+    }
   }
 }

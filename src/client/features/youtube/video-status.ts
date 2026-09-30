@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import type { YoutubeVideo, YoutubeVideoAction, YoutubeVideoStatus } from "../../types";
+import type { YoutubePipeline, YoutubeSubtitlePlan, YoutubeVideo, YoutubeVideoAction, YoutubeVideoStatus } from "../../types";
 import type { StatusDescriptor, StatusTone } from "../../ui/primitives";
 
 /** The filter tabs, in display order after "all". */
@@ -41,8 +41,24 @@ export function videoFilterOf(status: YoutubeVideoStatus): VideoFilter {
 /** A transcribing video with no live progress is waiting for its subtitle step, not running it. */
 const awaitingSubtitles = (video: Pick<YoutubeVideo, "status" | "pct">) => video.status === "transcribing" && video.pct === undefined;
 
-export function videoStatusDescriptor(video: Pick<YoutubeVideo, "status" | "pct">, t: TFunction): StatusDescriptor {
-  if (awaitingSubtitles(video)) return { glyph: "··", tone: "warn", label: t("youtube.status.subtitlesNext") };
+/** What a shared GPU is holding back right now. */
+export interface GpuHold {
+  /** A translation batch runs, so Whisper waits. */
+  whisper: boolean;
+  /** Transcriptions are pending, so translation waits. */
+  translation: boolean;
+}
+
+export const NO_HOLD: GpuHold = { whisper: false, translation: false };
+
+export function gpuHold(pipeline: YoutubePipeline | undefined): GpuHold {
+  if (!pipeline?.gpu.shared) return NO_HOLD;
+  return { whisper: pipeline.gpu.translationRunning, translation: pipeline.gpu.held };
+}
+
+export function videoStatusDescriptor(video: Pick<YoutubeVideo, "status" | "pct">, t: TFunction, hold: GpuHold = NO_HOLD): StatusDescriptor {
+  if (awaitingSubtitles(video)) return { glyph: "··", tone: "warn", label: t(hold.whisper ? "youtube.status.gpuWait" : "youtube.status.subtitlesNext") };
+  if (video.status === "translating" && hold.translation) return { glyph: "··", tone: "warn", label: t("youtube.status.translationHeld") };
   const view = STATUS_VIEW[video.status];
   return { glyph: view.glyph, tone: view.tone, label: t(`youtube.status.${video.status}`) };
 }
@@ -57,9 +73,10 @@ export function videoActionLabelKey(status: YoutubeVideoStatus, action: YoutubeV
   return `youtube.actions.${action}`;
 }
 
-export function videoPipeline(video: Pick<YoutubeVideo, "status" | "pct" | "media_path">): readonly PipeStep[] {
+export function videoPipeline(video: Pick<YoutubeVideo, "status" | "pct" | "media_path">, hold: GpuHold = NO_HOLD): readonly PipeStep[] {
   if (video.status === "failed" && video.media_path) return ["done", "fail", "", ""];
   if (awaitingSubtitles(video)) return ["done", "wait", "", ""];
+  if (video.status === "translating" && hold.translation) return ["done", "done", "wait", ""];
   return STATUS_VIEW[video.status].pipe;
 }
 
@@ -81,4 +98,30 @@ export function filterVideos(videos: YoutubeVideo[], filter: VideoFilter | "all"
     if (filter === "all" ? group === "off" : group !== filter) return false;
     return !needle || `${video.title} ${video.channel ?? ""}`.toLowerCase().includes(needle);
   });
+}
+
+/** "zh-Hant" reads "ZH-Hant": the language upper case, the script or region as written. */
+const spokenLabel = (key: string) => key.replace(/^[a-z]+/, (base) => base.toUpperCase());
+
+/**
+ * One line saying where each subtitle came from: "EN = captions · CHT cc
+ * from creator · JPN → translated". Tasks are named by their language code.
+ */
+export function subtitleSummary(
+  { subtitles: plan, transcript_source: source, status }: { subtitles: YoutubeSubtitlePlan; transcript_source: string | null; status: YoutubeVideoStatus },
+  langCodes: ReadonlyMap<number, string>,
+  hold: GpuHold,
+  t: TFunction,
+): string {
+  const transcript = plan.spoken
+    ? t(source === "youtube_captions" ? "youtube.subs.captions" : "youtube.subs.transcript", { lang: spokenLabel(plan.spoken) })
+    : t("youtube.subs.transcriptOnly");
+  const translation = status !== "translating" ? "youtube.subs.translated" : hold.translation ? "youtube.subs.waiting" : "youtube.subs.translating";
+  const routes = plan.routes.map(({ taskId, kind }) => {
+    const lang = (langCodes.get(taskId) ?? `#${taskId}`).toUpperCase();
+    if (kind === "same") return t("youtube.subs.transcript", { lang });
+    if (kind === "captions") return t("youtube.subs.creator", { lang });
+    return t(translation, { lang });
+  });
+  return [transcript, ...routes].join(" · ");
 }

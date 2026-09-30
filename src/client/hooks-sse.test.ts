@@ -19,8 +19,8 @@ test("SSE invalidation keys are targeted by event type", () => {
   assert.deepEqual(getSSEInvalidationKeys("job:done"), [["jobs"], ["queue-status"], ["logs"], ["transcription-history"]]);
   assert.deepEqual(getSSEInvalidationKeys("scan:complete"), [["jobs"], ["queue-status"], ["logs"], ["settings"], ["transcription-history"]]);
   assert.deepEqual(getSSEInvalidationKeys("youtube:playlist"), [["youtube"]]);
-  assert.deepEqual(getSSEInvalidationKeys("youtube:video"), [["youtube", "playlists"], ["youtube", "videos"]]);
-  assert.deepEqual(getSSEInvalidationKeys("youtube:cooldown"), [["youtube", "status"]]);
+  assert.deepEqual(getSSEInvalidationKeys("youtube:video"), [["youtube", "playlists"], ["youtube", "videos"], ["youtube", "pipeline"]]);
+  assert.deepEqual(getSSEInvalidationKeys("youtube:cooldown"), [["youtube", "status"], ["youtube", "pipeline"]]);
 });
 
 test("a youtube:video progress tick patches only the matching cached row", () => {

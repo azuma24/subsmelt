@@ -683,7 +683,9 @@
       "languageJapanese": "Giapponese",
       "languageChinese": "Cinese",
       "languageKorean": "Coreano",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "Trascrizione e traduzione condividono una GPU",
+      "gpuSharedHelp": "Traduce a lotti dopo le trascrizioni in sospeso, così la GPU cambia modello meno spesso. La traduzione parte comunque quando 20 sottotitoli sono in attesa."
     },
     "connections": {
       "mode": "Modalità di connessione",
@@ -1117,7 +1119,11 @@
       "cooldownBody": "Download in pausa fino alle {{time}}. Trascrizione e traduzione continuano.",
       "botCheckTitle": "YouTube ha chiesto a SubSmelt di dimostrare che non è un bot.",
       "botCheckBody": "Download in pausa fino alle {{time}}. Di solito i cookie di un browser con accesso effettuato risolvono il problema.",
-      "addCookies": "Aggiungi cookie"
+      "addCookies": "Aggiungi cookie",
+      "gpuTitle": "La traduzione attende la fine delle trascrizioni (ne mancano {{n}}).",
+      "gpuBody": "Whisper e il modello di traduzione condividono una GPU, quindi SubSmelt traduce a lotti.",
+      "noBackendTitle": "I download continuano. La trascrizione attende un backend.",
+      "noBackendBody": "Attiva il riconoscimento vocale e imposta l’URL del backend nelle Impostazioni."
     },
     "availability": {
       "public": "Pubblico",
@@ -1168,7 +1174,9 @@
       "skipped": "Saltato",
       "unavailable": "Non disponibile",
       "failed": "Non riuscito",
-      "subtitlesNext": "In attesa dei sottotitoli"
+      "subtitlesNext": "In attesa dei sottotitoli",
+      "gpuWait": "In attesa della GPU",
+      "translationHeld": "La traduzione attende il lotto"
     },
     "skipKind": {
       "user": "Lo hai saltato tu",
@@ -1264,6 +1272,15 @@
       "skip": "Salta",
       "failed": "Impossibile aggiornare il video: {{error}}"
     },
-    "retryAt": "nuovo tentativo {{time}}"
+    "retryAt": "nuovo tentativo {{time}}",
+    "subs": {
+      "captions": "{{lang}} = sottotitoli",
+      "transcript": "{{lang}} = trascrizione",
+      "transcriptOnly": "Trascrizione",
+      "creator": "{{lang}} sottotitoli del creatore",
+      "translating": "{{lang}} → traduzione in corso",
+      "waiting": "{{lang}} → in attesa di traduzione",
+      "translated": "{{lang}} → tradotto"
+    }
   }
 }

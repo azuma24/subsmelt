@@ -683,7 +683,9 @@
       "languageJapanese": "জাপানি",
       "languageChinese": "চীনা",
       "languageKorean": "কোরীয়",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "ট্রান্সক্রিপশন ও অনুবাদ একটি GPU ভাগ করে",
+      "gpuSharedHelp": "অপেক্ষমাণ ট্রান্সক্রিপশনের পরে ব্যাচে অনুবাদ করে, যাতে GPU কম বার মডেল বদলায়। ২০টি সাবটাইটেল অপেক্ষায় থাকলে অনুবাদ তবুও শুরু হয়।"
     },
     "connections": {
       "mode": "সংযোগ মোড",
@@ -1117,7 +1119,11 @@
       "cooldownBody": "{{time}} পর্যন্ত ডাউনলোড বন্ধ থাকবে। প্রতিলিপি ও অনুবাদ চলতে থাকবে।",
       "botCheckTitle": "YouTube SubSmelt-কে প্রমাণ করতে বলেছে যে এটি বট নয়।",
       "botCheckBody": "{{time}} পর্যন্ত ডাউনলোড বন্ধ থাকবে। সাইন-ইন করা ব্রাউজারের কুকি সাধারণত এটি পার করে দেয়।",
-      "addCookies": "কুকি যোগ করুন"
+      "addCookies": "কুকি যোগ করুন",
+      "gpuTitle": "অনুবাদ ট্রান্সক্রিপশন শেষ হওয়ার অপেক্ষায় ({{n}}টি বাকি)।",
+      "gpuBody": "Whisper ও অনুবাদ মডেল একটি GPU ভাগ করে, তাই SubSmelt ব্যাচে অনুবাদ করে।",
+      "noBackendTitle": "ডাউনলোড চলছে। ট্রান্সক্রিপশন একটি ব্যাকএন্ডের অপেক্ষায়।",
+      "noBackendBody": "সেটিংসে স্পিচ-টু-টেক্সট চালু করুন এবং ব্যাকএন্ড URL দিন।"
     },
     "availability": {
       "public": "পাবলিক",
@@ -1168,7 +1174,9 @@
       "skipped": "এড়িয়ে যাওয়া হয়েছে",
       "unavailable": "অনুপলব্ধ",
       "failed": "ব্যর্থ",
-      "subtitlesNext": "সাবটাইটেলের অপেক্ষায়"
+      "subtitlesNext": "সাবটাইটেলের অপেক্ষায়",
+      "gpuWait": "GPU-এর অপেক্ষায়",
+      "translationHeld": "অনুবাদ ব্যাচের অপেক্ষায়"
     },
     "skipKind": {
       "user": "আপনি এটি এড়িয়ে গেছেন",
@@ -1264,6 +1272,15 @@
       "skip": "এড়িয়ে যান",
       "failed": "ভিডিও আপডেট করা যায়নি: {{error}}"
     },
-    "retryAt": "{{time}} আবার চেষ্টা হবে"
+    "retryAt": "{{time}} আবার চেষ্টা হবে",
+    "subs": {
+      "captions": "{{lang}} = ক্যাপশন",
+      "transcript": "{{lang}} = ট্রান্সক্রিপ্ট",
+      "transcriptOnly": "ট্রান্সক্রিপ্ট",
+      "creator": "{{lang}} নির্মাতার ক্যাপশন",
+      "translating": "{{lang}} → অনুবাদ চলছে",
+      "waiting": "{{lang}} → অনুবাদের অপেক্ষায়",
+      "translated": "{{lang}} → অনূদিত"
+    }
   }
 }

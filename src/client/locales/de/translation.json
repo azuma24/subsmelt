@@ -683,7 +683,9 @@
       "languageJapanese": "Japanisch",
       "languageChinese": "Chinesisch",
       "languageKorean": "Koreanisch",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "Transkription und Übersetzung teilen sich eine GPU",
+      "gpuSharedHelp": "Nach ausstehenden Transkriptionen in Stapeln übersetzen, damit die GPU seltener das Modell wechselt. Bei 20 wartenden Untertiteln beginnt die Übersetzung trotzdem."
     },
     "connections": {
       "mode": "Verbindungsmodus",
@@ -1117,7 +1119,11 @@
       "cooldownBody": "Downloads pausieren bis {{time}}. Transkription und Übersetzung laufen weiter.",
       "botCheckTitle": "YouTube verlangt von SubSmelt einen Nachweis, dass es kein Bot ist.",
       "botCheckBody": "Downloads pausieren bis {{time}}. Cookies aus einem angemeldeten Browser helfen meist darüber hinweg.",
-      "addCookies": "Cookies hinzufügen"
+      "addCookies": "Cookies hinzufügen",
+      "gpuTitle": "Die Übersetzung wartet auf laufende Transkriptionen ({{n}} übrig).",
+      "gpuBody": "Whisper und das Übersetzungsmodell teilen sich eine GPU, daher übersetzt SubSmelt in Stapeln.",
+      "noBackendTitle": "Downloads laufen weiter. Die Transkription wartet auf ein Backend.",
+      "noBackendBody": "Aktiviere Sprache-zu-Text und trage die Backend-URL in den Einstellungen ein."
     },
     "availability": {
       "public": "Öffentlich",
@@ -1168,7 +1174,9 @@
       "skipped": "Übersprungen",
       "unavailable": "Nicht verfügbar",
       "failed": "Fehlgeschlagen",
-      "subtitlesNext": "Wartet auf Untertitel"
+      "subtitlesNext": "Wartet auf Untertitel",
+      "gpuWait": "Wartet auf die GPU",
+      "translationHeld": "Übersetzung wartet auf den Stapel"
     },
     "skipKind": {
       "user": "Von dir übersprungen",
@@ -1264,6 +1272,15 @@
       "skip": "Überspringen",
       "failed": "Video konnte nicht aktualisiert werden: {{error}}"
     },
-    "retryAt": "neuer Versuch {{time}}"
+    "retryAt": "neuer Versuch {{time}}",
+    "subs": {
+      "captions": "{{lang}} = Untertitel",
+      "transcript": "{{lang}} = Transkript",
+      "transcriptOnly": "Transkript",
+      "creator": "{{lang}} Untertitel vom Ersteller",
+      "translating": "{{lang}} → wird übersetzt",
+      "waiting": "{{lang}} → wartet auf Übersetzung",
+      "translated": "{{lang}} → übersetzt"
+    }
   }
 }

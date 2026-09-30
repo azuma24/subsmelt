@@ -683,7 +683,9 @@
       "languageJapanese": "Японська",
       "languageChinese": "Китайська",
       "languageKorean": "Корейська",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "Розшифровка й переклад ділять одну GPU",
+      "gpuSharedHelp": "Перекладати пакетами після розшифровок у черзі, щоб GPU рідше змінював модель. Коли чекають 20 субтитрів, переклад однаково починається."
     },
     "connections": {
       "mode": "Режим з'єднання",
@@ -1117,7 +1119,11 @@
       "cooldownBody": "Завантаження призупинено до {{time}}. Транскрибування й переклад тривають.",
       "botCheckTitle": "YouTube просить SubSmelt довести, що це не бот.",
       "botCheckBody": "Завантаження призупинено до {{time}}. Зазвичай допомагають файли cookie з браузера, у якому виконано вхід.",
-      "addCookies": "Додати cookie"
+      "addCookies": "Додати cookie",
+      "gpuTitle": "Переклад чекає завершення розшифровок (залишилося {{n}}).",
+      "gpuBody": "Whisper і модель перекладу ділять одну GPU, тому SubSmelt перекладає пакетами.",
+      "noBackendTitle": "Завантаження тривають. Розшифровка чекає бекенд.",
+      "noBackendBody": "Увімкніть розпізнавання мовлення та вкажіть URL бекенда в налаштуваннях."
     },
     "availability": {
       "public": "Відкритий доступ",
@@ -1168,7 +1174,9 @@
       "skipped": "Пропущено",
       "unavailable": "Недоступно",
       "failed": "Помилка",
-      "subtitlesNext": "Очікує субтитрів"
+      "subtitlesNext": "Очікує субтитрів",
+      "gpuWait": "Очікування GPU",
+      "translationHeld": "Переклад чекає пакета"
     },
     "skipKind": {
       "user": "Ви пропустили це відео",
@@ -1264,6 +1272,15 @@
       "skip": "Пропустити",
       "failed": "Не вдалося оновити відео: {{error}}"
     },
-    "retryAt": "повтор {{time}}"
+    "retryAt": "повтор {{time}}",
+    "subs": {
+      "captions": "{{lang}} = субтитри",
+      "transcript": "{{lang}} = розшифровка",
+      "transcriptOnly": "Розшифровка",
+      "creator": "{{lang}} субтитри автора",
+      "translating": "{{lang}} → перекладається",
+      "waiting": "{{lang}} → чекає перекладу",
+      "translated": "{{lang}} → перекладено"
+    }
   }
 }

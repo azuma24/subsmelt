@@ -151,6 +151,15 @@ export function useYoutubeVideosQuery(playlistId: string | null) {
   });
 }
 
+export function useYoutubePipelineQuery() {
+  return useQuery({
+    queryKey: ["youtube", "pipeline"],
+    queryFn: ({ signal }) => api.getYoutubePipeline({ signal }),
+    // Translation jobs start and finish without a YouTube event; the timer catches the GPU hold lifting.
+    refetchInterval: 10_000,
+  });
+}
+
 export function useYoutubeStatusQuery() {
   return useQuery({ queryKey: ["youtube", "status"], queryFn: ({ signal }) => api.getYoutubeStatus({ signal }), staleTime: 5_000 });
 }
@@ -225,9 +234,9 @@ export function getSSEInvalidationKeys(name: SSEEventName): QueryKey[] {
     case "youtube:video":
       // Progress ticks carry a pct and patch the cached rows instead (withVideoProgress).
       // The status query is left alone: refetching it runs yt-dlp --version.
-      return [["youtube", "playlists"], ["youtube", "videos"]];
+      return [["youtube", "playlists"], ["youtube", "videos"], ["youtube", "pipeline"]];
     case "youtube:cooldown":
-      return [["youtube", "status"]];
+      return [["youtube", "status"], ["youtube", "pipeline"]];
   }
 }
 

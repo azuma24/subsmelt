@@ -683,7 +683,9 @@
       "languageJapanese": "יפנית",
       "languageChinese": "סינית",
       "languageKorean": "קוריאנית",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "תמלול ותרגום חולקים GPU אחד",
+      "gpuSharedHelp": "מתרגם באצוות אחרי התמלולים הממתינים, כך שה-GPU מחליף מודל פחות פעמים. כש-20 כתוביות ממתינות התרגום מתחיל בכל זאת."
     },
     "connections": {
       "mode": "מצב חיבור",
@@ -1117,7 +1119,11 @@
       "cooldownBody": "ההורדות מושהות עד {{time}}. התמלול והתרגום ממשיכים.",
       "botCheckTitle": "YouTube ביקש מ-SubSmelt להוכיח שהוא לא בוט.",
       "botCheckBody": "ההורדות מושהות עד {{time}}. קובצי Cookie מדפדפן מחובר בדרך כלל עוקפים את זה.",
-      "addCookies": "הוספת קובצי Cookie"
+      "addCookies": "הוספת קובצי Cookie",
+      "gpuTitle": "התרגום ממתין לסיום התמלולים (נותרו {{n}}).",
+      "gpuBody": "Whisper ומודל התרגום חולקים GPU אחד, ולכן SubSmelt מתרגם באצוות.",
+      "noBackendTitle": "ההורדות ממשיכות. התמלול ממתין לשרת אחורי.",
+      "noBackendBody": "הפעילו המרת דיבור לטקסט והזינו את כתובת השרת האחורי בהגדרות."
     },
     "availability": {
       "public": "ציבורי",
@@ -1168,7 +1174,9 @@
       "skipped": "דולג",
       "unavailable": "לא זמין",
       "failed": "נכשל",
-      "subtitlesNext": "ממתין לכתוביות"
+      "subtitlesNext": "ממתין לכתוביות",
+      "gpuWait": "ממתין ל-GPU",
+      "translationHeld": "התרגום ממתין לאצווה"
     },
     "skipKind": {
       "user": "דילגתם על זה",
@@ -1264,6 +1272,15 @@
       "skip": "דילוג",
       "failed": "לא ניתן לעדכן את הסרטון: {{error}}"
     },
-    "retryAt": "ניסיון חוזר {{time}}"
+    "retryAt": "ניסיון חוזר {{time}}",
+    "subs": {
+      "captions": "{{lang}} = כתוביות",
+      "transcript": "{{lang}} = תמלול",
+      "transcriptOnly": "תמלול",
+      "creator": "{{lang}} כתוביות מהיוצר",
+      "translating": "{{lang}} ← מתורגם",
+      "waiting": "{{lang}} ← ממתין לתרגום",
+      "translated": "{{lang}} ← תורגם"
+    }
   }
 }

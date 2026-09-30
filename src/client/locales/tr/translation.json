@@ -683,7 +683,9 @@
       "languageJapanese": "Japonca",
       "languageChinese": "Çince",
       "languageKorean": "Korece",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "Döküm ve çeviri tek bir GPU'yu paylaşıyor",
+      "gpuSharedHelp": "Bekleyen dökümlerden sonra toplu çeviri yapar, böylece GPU daha az model değiştirir. 20 altyazı beklediğinde çeviri yine de başlar."
     },
     "connections": {
       "mode": "Bağlantı modu",
@@ -1117,7 +1119,11 @@
       "cooldownBody": "İndirmeler {{time}} saatine kadar duraklatıldı. Transkripsiyon ve çeviri devam ediyor.",
       "botCheckTitle": "YouTube, SubSmelt’ten bot olmadığını kanıtlamasını istedi.",
       "botCheckBody": "İndirmeler {{time}} saatine kadar duraklatıldı. Oturum açılmış bir tarayıcıdan alınan çerezler genellikle bunu aşar.",
-      "addCookies": "Çerez ekle"
+      "addCookies": "Çerez ekle",
+      "gpuTitle": "Çeviri, dökümlerin bitmesini bekliyor ({{n}} kaldı).",
+      "gpuBody": "Whisper ve çeviri modeli tek bir GPU'yu paylaşıyor, bu yüzden SubSmelt toplu olarak çeviriyor.",
+      "noBackendTitle": "İndirmeler sürüyor. Döküm bir arka uç bekliyor.",
+      "noBackendBody": "Ayarlar'da konuşmadan metne özelliğini açın ve arka uç URL'sini girin."
     },
     "availability": {
       "public": "Herkese açık",
@@ -1168,7 +1174,9 @@
       "skipped": "Atlandı",
       "unavailable": "Kullanılamıyor",
       "failed": "Başarısız",
-      "subtitlesNext": "Altyazı bekleniyor"
+      "subtitlesNext": "Altyazı bekleniyor",
+      "gpuWait": "GPU bekleniyor",
+      "translationHeld": "Çeviri toplu işi bekliyor"
     },
     "skipKind": {
       "user": "Bunu siz atladınız",
@@ -1264,6 +1272,15 @@
       "skip": "Atla",
       "failed": "Video güncellenemedi: {{error}}"
     },
-    "retryAt": "yeniden deneme {{time}}"
+    "retryAt": "yeniden deneme {{time}}",
+    "subs": {
+      "captions": "{{lang}} = altyazı",
+      "transcript": "{{lang}} = döküm",
+      "transcriptOnly": "Döküm",
+      "creator": "{{lang}} içerik üreticisinin altyazısı",
+      "translating": "{{lang}} → çevriliyor",
+      "waiting": "{{lang}} → çeviri bekliyor",
+      "translated": "{{lang}} → çevrildi"
+    }
   }
 }

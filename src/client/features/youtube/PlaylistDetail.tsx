@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { useToast } from "../../components/Toast";
-import { useYoutubeVideosQuery } from "../../hooks";
+import { useTasksQuery, useYoutubePipelineQuery, useYoutubeVideosQuery } from "../../hooks";
 import { getErrorMessage } from "../../lib";
 import type { YoutubePlaylist, YoutubeVideo, YoutubeVideoAction } from "../../types";
 import { RowActionsMenu, StatusBadge, Tabs } from "../../ui/primitives";
@@ -15,14 +15,23 @@ import {
   VIDEO_FILTERS,
   countByFilter,
   filterVideos,
+  gpuHold,
+  subtitleSummary,
   videoActionLabelKey,
   videoActions,
   videoFilterOf,
   videoPipeline,
   videoStatusDescriptor,
+  type GpuHold,
   type PipeStep,
   type VideoFilter,
 } from "./video-status";
+
+interface RowContext {
+  hold: GpuHold;
+  /** Each Translations task's language code, to name the routes. */
+  langCodes: ReadonlyMap<number, string>;
+}
 
 const PAGE_SIZE = 200;
 // The All tab groups rows in this order: what is moving, what needs a look, what waits, what is finished.
@@ -38,6 +47,11 @@ const BAR_SEGMENTS: { filter: VideoFilter; color: string }[] = [
 export function PlaylistDetail({ playlist, folderRoot }: { playlist: YoutubePlaylist; folderRoot: string }) {
   const { t, i18n } = useTranslation();
   const videosQuery = useYoutubeVideosQuery(playlist.id);
+  const pipelineQuery = useYoutubePipelineQuery();
+  const tasksQuery = useTasksQuery();
+  const hold = gpuHold(pipelineQuery.data);
+  const langCodes = useMemo(() => new Map((tasksQuery.data ?? []).map((task) => [task.id, task.lang_code])), [tasksQuery.data]);
+  const context: RowContext = { hold, langCodes };
   const [filter, setFilter] = useState<VideoFilter | "all">("all");
   const [query, setQuery] = useState("");
   const [limit, setLimit] = useState(PAGE_SIZE);
@@ -163,11 +177,11 @@ export function PlaylistDetail({ playlist, folderRoot }: { playlist: YoutubePlay
                     <span>{t(`youtube.tabs.${group}`)}</span>
                     <span className="tabular-nums">{rows.length}</span>
                   </h3>
-                  <VideoRows videos={rows} />
+                  <VideoRows videos={rows} context={context} />
                 </section>
               );
             })
-            : <VideoRows videos={shown} />}
+            : <VideoRows videos={shown} context={context} />}
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border)] px-3.5 py-2 text-[12px] text-[var(--text-3)]">
             <span>{t("youtube.showing", { shown: shown.length, total: visible.length })}</span>
             {shown.length < visible.length && (
@@ -188,7 +202,7 @@ function statusCounts(videos: YoutubeVideo[]): Partial<Record<YoutubeVideo["stat
   return counts;
 }
 
-function VideoRows({ videos }: { videos: YoutubeVideo[] }) {
+function VideoRows({ videos, context }: { videos: YoutubeVideo[]; context: RowContext }) {
   const { t } = useTranslation();
   const { addToast } = useToast();
   const queryClient = useQueryClient();
@@ -202,7 +216,7 @@ function VideoRows({ videos }: { videos: YoutubeVideo[] }) {
   };
   return (
     <ul className="divide-y divide-[var(--border)]">
-      {videos.map((video) => <VideoRow key={video.video_id} video={video} onAction={(action) => void runAction(video, action)} />)}
+      {videos.map((video) => <VideoRow key={video.video_id} video={video} context={context} onAction={(action) => void runAction(video, action)} />)}
     </ul>
   );
 }
@@ -230,7 +244,7 @@ function Pipeline({ steps, pct }: { steps: readonly PipeStep[]; pct: number | un
   );
 }
 
-function VideoRow({ video, onAction }: { video: YoutubeVideo; onAction: (action: YoutubeVideoAction) => void }) {
+function VideoRow({ video, context, onAction }: { video: YoutubeVideo; context: RowContext; onAction: (action: YoutubeVideoAction) => void }) {
   const { t, i18n } = useTranslation();
   const dim = video.status === "skipped" || video.status === "unavailable";
   const title = video.title || t("youtube.privateOrDeleted");
@@ -243,6 +257,7 @@ function VideoRow({ video, onAction }: { video: YoutubeVideo; onAction: (action:
     ? t("youtube.retryAt", { time: relativeFromNow(video.retry_after, i18n.language) })
     : null;
   const meta = [video.channel, formatDuration(video.duration_s), video.published_at ? t("youtube.posted", { date: shortDate(video.published_at, i18n.language) }) : null].filter(Boolean);
+  const subtitles = video.subtitles ? subtitleSummary({ ...video, subtitles: video.subtitles }, context.langCodes, context.hold, t) : null;
   const url = `https://www.youtube.com/watch?v=${video.video_id}`;
   const menu = [
     ...videoActions(video.status).map((action) => ({ label: t(videoActionLabelKey(video.status, action)), onClick: () => onAction(action) })),
@@ -258,15 +273,16 @@ function VideoRow({ video, onAction }: { video: YoutubeVideo; onAction: (action:
             {meta.join(" · ")}
             {video.removed_at && <> · <span className="text-[var(--yellow)]">{t("youtube.removedTag")}</span></>}
           </span>
+          {subtitles && <span className="block break-words text-[var(--text-2)]">{subtitles}</span>}
           {(note || retry) && (
             <span className={`line-clamp-2 break-words ${video.status === "failed" ? "text-[var(--red)]" : ""}`}>{[note, retry].filter(Boolean).join(" · ")}</span>
           )}
         </p>
       </div>
       <div className="col-start-1 row-start-2 flex flex-col items-start gap-1.5 md:col-start-auto md:row-start-auto">
-        <Pipeline steps={videoPipeline(video)} pct={video.pct} />
+        <Pipeline steps={videoPipeline(video, context.hold)} pct={video.pct} />
         <span className="flex items-center gap-2">
-          <StatusBadge status={videoStatusDescriptor(video, t)} compact />
+          <StatusBadge status={videoStatusDescriptor(video, t, context.hold)} compact />
           {video.pct !== undefined && <span className="font-mono text-[11px] tabular-nums text-[var(--text-3)]">{video.pct}%</span>}
         </span>
       </div>
