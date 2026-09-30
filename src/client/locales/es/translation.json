@@ -887,12 +887,12 @@
     }
   },
   "errors": {
-    "loading": "Loading…",
-    "loadFailed": "Something went wrong while loading this data.",
-    "retry": "Retry",
-    "reload": "Reload",
-    "boundaryTitle": "Something went wrong.",
-    "boundaryMessage": "An unexpected error occurred while rendering this page.",
+    "loading": "Cargando…",
+    "loadFailed": "Algo salió mal al cargar estos datos.",
+    "retry": "Reintentar",
+    "reload": "Recargar",
+    "boundaryTitle": "Algo salió mal.",
+    "boundaryMessage": "Se produjo un error inesperado al mostrar esta página.",
     "backend-unreachable": "Backend inaccesible: comprueba que el servicio Whisper está activo y la URL en Ajustes.",
     "connection-dropped": "El backend cerró la conexión a mitad de la petición: puede haberse caído o reiniciado; revisa sus registros.",
     "timeout": "El backend tardó demasiado en responder: aumenta el tiempo de espera en Ajustes o usa un modelo más pequeño.",

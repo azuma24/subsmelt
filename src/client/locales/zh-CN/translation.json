@@ -887,12 +887,12 @@
     }
   },
   "errors": {
-    "loading": "Loading…",
-    "loadFailed": "Something went wrong while loading this data.",
-    "retry": "Retry",
-    "reload": "Reload",
-    "boundaryTitle": "Something went wrong.",
-    "boundaryMessage": "An unexpected error occurred while rendering this page.",
+    "loading": "加载中…",
+    "loadFailed": "加载数据时出错。",
+    "retry": "重试",
+    "reload": "重新加载",
+    "boundaryTitle": "出错了。",
+    "boundaryMessage": "渲染此页面时发生意外错误。",
     "backend-unreachable": "无法连接后端 — 请检查 Whisper 服务是否运行以及设置中的 URL。",
     "connection-dropped": "后端在请求中途关闭了连接 — 可能已崩溃或重启，请查看其日志。",
     "timeout": "后端响应超时 — 请在设置中调高超时时间，或改用更小的模型。",

@@ -887,12 +887,12 @@
     }
   },
   "errors": {
-    "loading": "Loading…",
-    "loadFailed": "Something went wrong while loading this data.",
-    "retry": "Retry",
-    "reload": "Reload",
-    "boundaryTitle": "Something went wrong.",
-    "boundaryMessage": "An unexpected error occurred while rendering this page.",
+    "loading": "読み込み中…",
+    "loadFailed": "データの読み込み中に問題が発生しました。",
+    "retry": "再試行",
+    "reload": "再読み込み",
+    "boundaryTitle": "問題が発生しました。",
+    "boundaryMessage": "このページの表示中に予期しないエラーが発生しました。",
     "backend-unreachable": "バックエンドに接続できません。Whisper サービスの起動と設定の URL を確認してください。",
     "connection-dropped": "リクエスト中にバックエンドが接続を閉じました。クラッシュまたは再起動の可能性があります。ログを確認してください。",
     "timeout": "バックエンドの応答が遅すぎました。設定でタイムアウトを延ばすか、小さいモデルを使ってください。",

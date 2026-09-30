@@ -76,6 +76,21 @@ test("shared query-state error keys survive taxonomy additions", () => {
   }
 });
 
+test("error messages are translated in every non-English locale", () => {
+  const english = loadLocale("en");
+  const errorKeys = flattenKeys(english.errors, "errors");
+  const untranslated: string[] = [];
+
+  for (const lang of LANGUAGES) {
+    if (lang.code === "en") continue;
+    const locale = loadLocale(lang.code);
+    for (const key of errorKeys) {
+      if (getNested(locale, key) === getNested(english, key)) untranslated.push(`${lang.code}.${key}`);
+    }
+  }
+  assert.deepEqual(untranslated, [], `errors.* values still identical to English:\n${untranslated.join("\n")}`);
+});
+
 test("RTL locales are marked rtl and other bundled locales remain LTR", () => {
   const RTL_LOCALES = new Set(["ar", "fa", "he"]);
   for (const lang of LANGUAGES) {
