@@ -82,13 +82,14 @@ export function isUnavailableEntry(entry: ListingEntry): boolean {
   return entry.title === null && entry.durationS === null;
 }
 
-export async function listPlaylistWithYtdlp(id: string): Promise<FlatListing> {
+export async function listPlaylistWithYtdlp(id: string, { maxBytes = LISTING_MAX_BYTES } = {}): Promise<FlatListing> {
   const result = await runYtdlp(
     ["-J", "--flat-playlist", "--js-runtimes", "node", "--extractor-args", "youtubetab:approximate_date", "--", playlistUrl(id)],
-    { timeoutMs: LISTING_TIMEOUT_MS, maxCaptureBytes: LISTING_MAX_BYTES },
+    { timeoutMs: LISTING_TIMEOUT_MS, maxCaptureBytes: maxBytes },
   );
   if (result.timedOut) throw new Error("Listing the playlist timed out");
   if (result.code !== 0) throw new Error(errorSummary(result.stderr, result.code));
+  if (result.stdoutTruncated) throw new Error(`The playlist listing is larger than ${maxBytes} bytes`);
   return parseFlatListing(result.stdout);
 }
 

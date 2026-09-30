@@ -34,13 +34,15 @@ export interface RunResult {
   stdout: string;
   stderr: string;
   timedOut: boolean;
+  /** Stdout outgrew maxCaptureBytes and lost its start: never parse it as a document. */
+  stdoutTruncated: boolean;
 }
 
 export interface RunOptions {
   timeoutMs?: number;
   signal?: AbortSignal;
   onStdoutLine?: (line: string) => void;
-  /** Output kept per stream; older output is dropped past it. */
+  /** Output kept per stream; older output is dropped past it and stdoutTruncated set. */
   maxCaptureBytes?: number;
 }
 
@@ -102,12 +104,13 @@ function killTree(child: ChildProcess): void {
 export function runBinary(bin: string, args: string[], options: RunOptions = {}): Promise<RunResult> {
   const { timeoutMs = DEFAULT_TIMEOUT_MS, signal, onStdoutLine, maxCaptureBytes = MAX_CAPTURE_BYTES } = options;
   return new Promise((resolve, reject) => {
-    if (signal?.aborted) return resolve({ code: null, stdout: "", stderr: "", timedOut: false });
+    if (signal?.aborted) return resolve({ code: null, stdout: "", stderr: "", timedOut: false, stdoutTruncated: false });
     const child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"], detached: process.platform !== "win32" });
     let stdout = "";
     let stderr = "";
     let pendingLine = "";
     let timedOut = false;
+    let stdoutTruncated = false;
     const timer = setTimeout(() => {
       timedOut = true;
       killTree(child);
@@ -120,6 +123,7 @@ export function runBinary(bin: string, args: string[], options: RunOptions = {})
     };
 
     child.stdout.setEncoding("utf8").on("data", (chunk: string) => {
+      stdoutTruncated ||= stdout.length + chunk.length > maxCaptureBytes;
       stdout = appendCapped(stdout, chunk, maxCaptureBytes);
       if (!onStdoutLine) return;
       const lines = (pendingLine + chunk).split("\n");
@@ -136,7 +140,7 @@ export function runBinary(bin: string, args: string[], options: RunOptions = {})
     child.on("close", (code) => {
       settle();
       if (onStdoutLine && pendingLine) onStdoutLine(pendingLine);
-      resolve({ code, stdout, stderr, timedOut });
+      resolve({ code, stdout, stderr, timedOut, stdoutTruncated });
     });
   });
 }

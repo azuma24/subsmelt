@@ -61,6 +61,17 @@ function deps(listings: FlatListing[], overrides: Partial<SyncDeps> = {}): SyncD
 const statuses = (store: YoutubeStore) =>
   store.playlistVideos(PL).map((v) => [v.video_id, v.status, v.skip_kind, v.removed_at === null ? "listed" : "removed"]);
 
+test("a listing larger than the capture limit is an error, never a cut-off document", async (t) => {
+  process.env.SUBSMELT_YTDLP_BIN = FAKE_BIN;
+  process.env.FAKE_YTDLP_STDOUT = listingJson([DOTS, PRIME, OLD]);
+  t.after(() => {
+    delete process.env.SUBSMELT_YTDLP_BIN;
+    delete process.env.FAKE_YTDLP_STDOUT;
+  });
+  await assert.rejects(listPlaylistWithYtdlp(PL, { maxBytes: 200 }), { message: "The playlist listing is larger than 200 bytes" });
+  assert.equal((await listPlaylistWithYtdlp(PL, { maxBytes: 10_000 })).entries.length, 3);
+});
+
 test("parseFlatListing reads ids, rounded dates, and private placeholders", () => {
   const listing = parseFlatListing(listingJson([DOTS, PRIVATE, { id: "not-a-video-id" }], 3));
   assert.equal(listing.title, "AI");
