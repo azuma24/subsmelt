@@ -1,6 +1,52 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { convertSubtitle } from "./utils.js";
+import { convertSubtitle, parseSubtitle } from "./utils.js";
+
+function vttCues(content: string) {
+  return (parseSubtitle(content, "vtt") as any[])
+    .filter((node) => node.type === "cue")
+    .map((node) => [node.data.start, node.data.end, node.data.text]);
+}
+
+test("vtt with STYLE, REGION and NOTE blocks and cue identifiers parses every cue", () => {
+  const vtt = `WEBVTT
+
+STYLE
+::cue { color: yellow }
+
+REGION
+id:bottom
+width:40%
+
+NOTE check the names
+
+intro
+00:00:01.000 --> 00:00:02.000
+Hello
+
+2
+00:00:03.000 --> 00:00:04.500
+Second line
+with a break
+
+outro
+00:00:05.000 --> 00:00:06.000 align:start
+Bye
+`;
+  assert.deepEqual(vttCues(vtt), [
+    [1000, 2000, "Hello"],
+    [3000, 4500, "Second line\nwith a break"],
+    [5000, 6000, "Bye"],
+  ]);
+});
+
+test("plain vtt parses the same cues", () => {
+  const vtt = "WEBVTT\r\n\r\n00:00:01.000 --> 00:00:02.000\r\nHello\r\n\r\n00:00:03.000 --> 00:00:04.000\r\nBye\r\n";
+  assert.deepEqual(vttCues(vtt), [
+    [1000, 2000, "Hello"],
+    [3000, 4000, "Bye"],
+  ]);
+});
 
 const SRT = `1
 00:00:01,000 --> 00:00:04,000
