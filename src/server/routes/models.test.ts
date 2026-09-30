@@ -35,3 +35,25 @@ test("the saved api_key goes only to the saved llm_endpoint, never to a caller-s
     { url: "http://lm:1234/v1/models", headers: { Authorization: "Bearer sk-secret-123" } },
   ]);
 });
+
+test("Fetch models on a saved connection uses its saved key, only at its own destination", async (t) => {
+  setSettings({
+    api_key: "",
+    cloud_api_key_openai: "",
+    llm_connections: JSON.stringify([
+      { id: "c1", provider: "openai", apiKey: "sk-c1", model: "gpt-4o", endpoint: "http://localhost:8000/v1" },
+      { id: "c2", provider: "local", apiKey: "sk-c2", model: "m1", endpoint: "http://lan:8080/v1" },
+    ]),
+  });
+  const calls = recordFetches(t);
+
+  await listModels("openai", "", "", "c1");
+  await listModels("local", "", "http://lan:8080/v1", "c2");
+  await listModels("local", "", "http://attacker.example/v1", "c2");
+
+  assert.deepEqual(calls, [
+    { url: "https://api.openai.com/v1/models", headers: { Authorization: "Bearer sk-c1" } },
+    { url: "http://lan:8080/v1/models", headers: { Authorization: "Bearer sk-c2" } },
+    { url: "http://attacker.example/v1/models", headers: {} },
+  ]);
+});

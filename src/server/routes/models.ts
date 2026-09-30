@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { getAllSettings } from "../config.js";
 import { testConnection } from "../translator.js";
-import { resolveConnectionPool } from "../connections.js";
+import { parseConnections, resolveConnectionPool, resolveRequestApiKey } from "../connections.js";
 import type { CloudProvider } from "../translator.js";
 import { logger } from "../logger.js";
 
@@ -58,18 +58,23 @@ type ModelsResult =
   | { status: 200; body: { models: string[]; provider: string } };
 
 // Shared logic for GET/POST /api/models. `keyOverride`/`endpointOverride` let a
-// not-yet-saved connection card fetch its models. The key is used only as an
-// outbound auth header — it is never logged or echoed back.
+// not-yet-saved connection card fetch its models; `connectionId` lets a saved
+// card, whose key the client only sees redacted, use its saved key. The key is
+// used only as an outbound auth header — it is never logged or echoed back.
 export async function listModels(
   provider: string,
   keyOverride: string,
-  endpointOverride: string
+  endpointOverride: string,
+  connectionId = ""
 ): Promise<ModelsResult> {
   const settings = getAllSettings();
+  const connections = parseConnections(settings);
+  const requestKey = (target: string, endpoint: string) =>
+    resolveRequestApiKey({ apiKey: keyOverride, connectionId, provider: target, endpoint }, connections);
   try {
     // ── Cloud providers ────────────────────────────────────────────────────
     if (provider === "openai") {
-      const apiKey = keyOverride || settings.cloud_api_key_openai || "";
+      const apiKey = requestKey("openai", "") || settings.cloud_api_key_openai || "";
       if (!apiKey) return { status: 400, body: { error: "No OpenAI API key configured" } };
       const resp = await fetchWithTimeout("https://api.openai.com/v1/models", {
         headers: { Authorization: `Bearer ${apiKey}` },
@@ -86,7 +91,7 @@ export async function listModels(
     }
 
     if (provider === "anthropic") {
-      const apiKey = keyOverride || settings.cloud_api_key_anthropic || "";
+      const apiKey = requestKey("anthropic", "") || settings.cloud_api_key_anthropic || "";
       if (!apiKey) return { status: 400, body: { error: "No Anthropic API key configured" } };
       const resp = await fetchWithTimeout("https://api.anthropic.com/v1/models", {
         headers: {
@@ -104,7 +109,7 @@ export async function listModels(
     }
 
     if (provider === "gemini") {
-      const apiKey = keyOverride || settings.cloud_api_key_gemini || "";
+      const apiKey = requestKey("gemini", "") || settings.cloud_api_key_gemini || "";
       if (!apiKey) return { status: 400, body: { error: "No Gemini API key configured" } };
       const resp = await fetchWithTimeout(
         `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}&pageSize=100`,
@@ -127,9 +132,9 @@ export async function listModels(
       if (!sanitized) return { status: 400, body: { error: "Invalid endpoint: must be an http(s) URL" } };
       endpoint = sanitized;
     }
-    // The saved api_key was saved for the saved endpoint; any other host gets
-    // only the key the caller sent.
-    const apiKey = keyOverride || (endpoint === savedEndpoint ? settings.api_key || "" : "");
+    // The flat api_key was saved for the flat llm_endpoint; any other host gets
+    // only the request's key or the key of the saved connection it names.
+    const apiKey = requestKey("local", endpoint) || (endpoint === savedEndpoint ? settings.api_key || "" : "");
     const url = endpoint + "/models";
     const resp = await fetchWithTimeout(url, {
       headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
@@ -215,8 +220,8 @@ export function registerModelsRoutes(app: Express): void {
   // POST is the preferred path: the API key travels in the request body, never in
   // the URL/query string (which can leak via logs, proxies, Referer headers).
   app.post("/api/models", async (req, res) => {
-    const body = (req.body || {}) as { provider?: string; key?: string; endpoint?: string };
-    const result = await listModels(body.provider || "local", body.key || "", body.endpoint || "");
+    const body = (req.body || {}) as { provider?: string; key?: string; endpoint?: string; connectionId?: string };
+    const result = await listModels(body.provider || "local", body.key || "", body.endpoint || "", body.connectionId || "");
     res.status(result.status).json(result.body);
   });
 
@@ -226,7 +231,8 @@ export function registerModelsRoutes(app: Express): void {
     const result = await listModels(
       (req.query.provider as string) || "local",
       (req.query.key as string) || "",
-      (req.query.endpoint as string) || ""
+      (req.query.endpoint as string) || "",
+      (req.query.connectionId as string) || ""
     );
     res.status(result.status).json(result.body);
   });
@@ -234,18 +240,25 @@ export function registerModelsRoutes(app: Express): void {
   // ======== Test Connection ========
   app.post("/api/test-connection", async (req, res) => {
     const settings = getAllSettings();
-    const body = (req.body || {}) as { provider?: string; apiKey?: string; model?: string; endpoint?: string };
+    const body = (req.body || {}) as {
+      provider?: string;
+      apiKey?: string;
+      model?: string;
+      endpoint?: string;
+      connectionId?: string;
+    };
 
     // If the client passes explicit connection fields (e.g. a not-yet-saved
     // connection card), test those. Otherwise test the active connection.
     let conn: { apiKey: string; apiHost: string; model: string; provider?: CloudProvider };
     if (body.provider !== undefined || body.apiKey !== undefined || body.model !== undefined) {
-      conn = {
-        apiKey: body.apiKey || "",
-        apiHost: body.endpoint || settings.llm_endpoint || "http://localhost:8000/v1",
-        model: body.model || "",
-        provider: body.provider && body.provider !== "local" ? (body.provider as CloudProvider) : undefined,
-      };
+      const provider = body.provider && body.provider !== "local" ? (body.provider as CloudProvider) : undefined;
+      const apiHost = body.endpoint || settings.llm_endpoint || "http://localhost:8000/v1";
+      const apiKey = resolveRequestApiKey(
+        { apiKey: body.apiKey, connectionId: body.connectionId, provider: provider ?? "local", endpoint: apiHost },
+        parseConnections(settings),
+      );
+      conn = { apiKey: apiKey || "", apiHost, model: body.model || "", provider };
     } else {
       const { pool } = resolveConnectionPool(settings);
       const primary = pool[0];

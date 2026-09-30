@@ -163,6 +163,28 @@ export function restoreRedactedApiKeys(value: string, stored: LlmConnection[]): 
   );
 }
 
+const trimTrailingSlashes = (url: string) => url.trim().replace(/\/+$/, "");
+
+/**
+ * The key for a test or model-list request. A key the request carries wins;
+ * the redaction marker counts as none. Otherwise the saved connection named by
+ * `connectionId` lends its key, but only to where it was saved for: the same
+ * provider and, for local, the same endpoint (`endpoint` is the one the request
+ * will call). Cloud providers ignore the endpoint and always call their own host.
+ */
+export function resolveRequestApiKey(
+  request: { apiKey?: string; connectionId?: string; provider: string; endpoint: string },
+  connections: LlmConnection[],
+): string | undefined {
+  if (request.apiKey && request.apiKey !== REDACTED_SECRET) return request.apiKey;
+  const saved = connections.find((c) => c.id === request.connectionId);
+  if (!saved?.apiKey || saved.provider !== request.provider) return undefined;
+  if (saved.provider === "local" && trimTrailingSlashes(saved.endpoint) !== trimTrailingSlashes(request.endpoint)) {
+    return undefined;
+  }
+  return saved.apiKey;
+}
+
 function toResolved(c: LlmConnection): ResolvedConnection {
   return {
     id: c.id,
