@@ -688,7 +688,9 @@
       "languageJapanese": "Japonština",
       "languageChinese": "Čínština",
       "languageKorean": "Korejština",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "Přepis a překlad sdílejí jednu GPU",
+      "gpuSharedHelp": "Překládat po dávkách po čekajících přepisech, aby GPU méně často měnila model. Při 20 čekajících titulcích se překlad přesto spustí."
     },
     "connections": {
       "mode": "Režim připojení",
@@ -1123,7 +1125,11 @@
       "cooldownBody": "Stahování je pozastaveno do {{time}}. Přepis a překlad běží dál.",
       "botCheckTitle": "YouTube chce, aby SubSmelt prokázal, že není bot.",
       "botCheckBody": "Stahování je pozastaveno do {{time}}. Obvykle pomohou soubory cookie z prohlížeče s přihlášeným účtem.",
-      "addCookies": "Přidat soubory cookie"
+      "addCookies": "Přidat soubory cookie",
+      "gpuTitle": "Překlad čeká na dokončení přepisů (zbývá {{n}}).",
+      "gpuBody": "Whisper a překladový model sdílejí jednu GPU, proto SubSmelt překládá po dávkách.",
+      "noBackendTitle": "Stahování pokračuje. Přepis čeká na backend.",
+      "noBackendBody": "V Nastavení zapněte převod řeči na text a zadejte URL backendu."
     },
     "availability": {
       "public": "Veřejné",
@@ -1174,7 +1180,9 @@
       "skipped": "Přeskočeno",
       "unavailable": "Nedostupné",
       "failed": "Selhalo",
-      "subtitlesNext": "Čeká na titulky"
+      "subtitlesNext": "Čeká na titulky",
+      "gpuWait": "Čeká na GPU",
+      "translationHeld": "Překlad čeká na dávku"
     },
     "skipKind": {
       "user": "Přeskočili jste to",
@@ -1270,6 +1278,15 @@
       "skip": "Přeskočit",
       "failed": "Video se nepodařilo aktualizovat: {{error}}"
     },
-    "retryAt": "další pokus {{time}}"
+    "retryAt": "další pokus {{time}}",
+    "subs": {
+      "captions": "{{lang}} = titulky",
+      "transcript": "{{lang}} = přepis",
+      "transcriptOnly": "Přepis",
+      "creator": "{{lang}} titulky od tvůrce",
+      "translating": "{{lang}} → překládá se",
+      "waiting": "{{lang}} → čeká na překlad",
+      "translated": "{{lang}} → přeloženo"
+    }
   }
 }

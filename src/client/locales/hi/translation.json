@@ -688,7 +688,9 @@
       "languageJapanese": "जापानी",
       "languageChinese": "चीनी",
       "languageKorean": "कोरियाई",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "ट्रांसक्रिप्शन और अनुवाद एक GPU साझा करते हैं",
+      "gpuSharedHelp": "लंबित ट्रांसक्रिप्शन के बाद बैच में अनुवाद करें ताकि GPU कम बार मॉडल बदले। 20 सबटाइटल प्रतीक्षा में होने पर अनुवाद फिर भी शुरू होता है।"
     },
     "connections": {
       "mode": "कनेक्शन मोड",
@@ -1123,7 +1125,11 @@
       "cooldownBody": "डाउनलोड {{time}} तक रुके रहेंगे। प्रतिलेखन और अनुवाद चलते रहेंगे।",
       "botCheckTitle": "YouTube ने SubSmelt से यह साबित करने को कहा कि वह बॉट नहीं है।",
       "botCheckBody": "डाउनलोड {{time}} तक रुके रहेंगे। साइन-इन किए हुए ब्राउज़र की कुकीज़ से आमतौर पर यह रुकावट पार हो जाती है।",
-      "addCookies": "कुकीज़ जोड़ें"
+      "addCookies": "कुकीज़ जोड़ें",
+      "gpuTitle": "अनुवाद ट्रांसक्रिप्शन पूरे होने की प्रतीक्षा कर रहा है ({{n}} बाकी)।",
+      "gpuBody": "Whisper और अनुवाद मॉडल एक ही GPU साझा करते हैं, इसलिए SubSmelt बैच में अनुवाद करता है।",
+      "noBackendTitle": "डाउनलोड जारी हैं। ट्रांसक्रिप्शन बैकएंड की प्रतीक्षा कर रहा है।",
+      "noBackendBody": "सेटिंग्स में स्पीच-टू-टेक्स्ट चालू करें और बैकएंड URL डालें।"
     },
     "availability": {
       "public": "सार्वजनिक",
@@ -1174,7 +1180,9 @@
       "skipped": "छोड़ा गया",
       "unavailable": "उपलब्ध नहीं",
       "failed": "विफल",
-      "subtitlesNext": "उपशीर्षक की प्रतीक्षा में"
+      "subtitlesNext": "उपशीर्षक की प्रतीक्षा में",
+      "gpuWait": "GPU की प्रतीक्षा",
+      "translationHeld": "अनुवाद बैच की प्रतीक्षा में"
     },
     "skipKind": {
       "user": "आपने इसे छोड़ दिया",
@@ -1270,6 +1278,15 @@
       "skip": "छोड़ें",
       "failed": "वीडियो अपडेट नहीं हो सका: {{error}}"
     },
-    "retryAt": "{{time}} फिर से कोशिश"
+    "retryAt": "{{time}} फिर से कोशिश",
+    "subs": {
+      "captions": "{{lang}} = कैप्शन",
+      "transcript": "{{lang}} = ट्रांसक्रिप्ट",
+      "transcriptOnly": "ट्रांसक्रिप्ट",
+      "creator": "{{lang}} निर्माता के कैप्शन",
+      "translating": "{{lang}} → अनुवाद हो रहा है",
+      "waiting": "{{lang}} → अनुवाद की प्रतीक्षा",
+      "translated": "{{lang}} → अनुवादित"
+    }
   }
 }

@@ -688,7 +688,9 @@
       "languageJapanese": "Japoński",
       "languageChinese": "Chiński",
       "languageKorean": "Koreański",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "Transkrypcja i tłumaczenie dzielą jeden GPU",
+      "gpuSharedHelp": "Tłumacz partiami po oczekujących transkrypcjach, aby GPU rzadziej zmieniał model. Tłumaczenie i tak rusza, gdy czeka 20 napisów."
     },
     "connections": {
       "mode": "Tryb połączenia",
@@ -1123,7 +1125,11 @@
       "cooldownBody": "Pobieranie wstrzymane do {{time}}. Transkrypcja i tłumaczenie działają dalej.",
       "botCheckTitle": "YouTube poprosił SubSmelt o potwierdzenie, że nie jest botem.",
       "botCheckBody": "Pobieranie wstrzymane do {{time}}. Zwykle pomagają pliki cookie z przeglądarki z zalogowanym kontem.",
-      "addCookies": "Dodaj pliki cookie"
+      "addCookies": "Dodaj pliki cookie",
+      "gpuTitle": "Tłumaczenie czeka na zakończenie transkrypcji (zostało: {{n}}).",
+      "gpuBody": "Whisper i model tłumaczenia dzielą jeden GPU, więc SubSmelt tłumaczy partiami.",
+      "noBackendTitle": "Pobieranie trwa dalej. Transkrypcja czeka na backend.",
+      "noBackendBody": "Włącz zamianę mowy na tekst i podaj adres URL backendu w Ustawieniach."
     },
     "availability": {
       "public": "Publiczny",
@@ -1174,7 +1180,9 @@
       "skipped": "Pominięty",
       "unavailable": "Niedostępny",
       "failed": "Niepowodzenie",
-      "subtitlesNext": "Czeka na napisy"
+      "subtitlesNext": "Czeka na napisy",
+      "gpuWait": "Czeka na GPU",
+      "translationHeld": "Tłumaczenie czeka na partię"
     },
     "skipKind": {
       "user": "Pominięto przez Ciebie",
@@ -1270,6 +1278,15 @@
       "skip": "Pomiń",
       "failed": "Nie udało się zaktualizować filmu: {{error}}"
     },
-    "retryAt": "ponowna próba {{time}}"
+    "retryAt": "ponowna próba {{time}}",
+    "subs": {
+      "captions": "{{lang}} = napisy",
+      "transcript": "{{lang}} = transkrypcja",
+      "transcriptOnly": "Transkrypcja",
+      "creator": "{{lang}} napisy od twórcy",
+      "translating": "{{lang}} → tłumaczenie",
+      "waiting": "{{lang}} → czeka na tłumaczenie",
+      "translated": "{{lang}} → przetłumaczone"
+    }
   }
 }

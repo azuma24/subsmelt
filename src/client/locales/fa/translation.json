@@ -688,7 +688,9 @@
       "languageJapanese": "ژاپنی",
       "languageChinese": "چینی",
       "languageKorean": "کره‌ای",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "پیاده‌سازی و ترجمه یک GPU مشترک دارند",
+      "gpuSharedHelp": "پس از پیاده‌سازی‌های در صف، دسته‌ای ترجمه می‌کند تا GPU کمتر مدل عوض کند. وقتی ۲۰ زیرنویس منتظر باشند ترجمه به هر حال شروع می‌شود."
     },
     "connections": {
       "mode": "حالت اتصال",
@@ -1123,7 +1125,11 @@
       "cooldownBody": "دانلودها تا {{time}} متوقف می‌شوند. رونویسی و ترجمه ادامه دارند.",
       "botCheckTitle": "YouTube از SubSmelt خواست ثابت کند ربات نیست.",
       "botCheckBody": "دانلودها تا {{time}} متوقف می‌شوند. کوکی‌های مرورگری که در آن وارد حساب شده‌اید معمولاً از این مرحله عبور می‌کنند.",
-      "addCookies": "افزودن کوکی"
+      "addCookies": "افزودن کوکی",
+      "gpuTitle": "ترجمه منتظر پایان پیاده‌سازی‌هاست ({{n}} مانده).",
+      "gpuBody": "Whisper و مدل ترجمه یک GPU مشترک دارند، پس SubSmelt دسته‌ای ترجمه می‌کند.",
+      "noBackendTitle": "دانلودها ادامه دارند. پیاده‌سازی متن منتظر یک سرور پشتیبان است.",
+      "noBackendBody": "در تنظیمات، تبدیل گفتار به متن را روشن کنید و نشانی سرور پشتیبان را وارد کنید."
     },
     "availability": {
       "public": "عمومی",
@@ -1174,7 +1180,9 @@
       "skipped": "ردشده",
       "unavailable": "در دسترس نیست",
       "failed": "ناموفق",
-      "subtitlesNext": "در انتظار زیرنویس"
+      "subtitlesNext": "در انتظار زیرنویس",
+      "gpuWait": "در انتظار GPU",
+      "translationHeld": "ترجمه منتظر دسته است"
     },
     "skipKind": {
       "user": "شما آن را رد کردید",
@@ -1270,6 +1278,15 @@
       "skip": "رد کردن",
       "failed": "به‌روزرسانی ویدیو ممکن نشد: {{error}}"
     },
-    "retryAt": "تلاش دوباره {{time}}"
+    "retryAt": "تلاش دوباره {{time}}",
+    "subs": {
+      "captions": "{{lang}} = زیرنویس",
+      "transcript": "{{lang}} = متن پیاده‌شده",
+      "transcriptOnly": "متن پیاده‌شده",
+      "creator": "{{lang}} زیرنویس سازنده",
+      "translating": "{{lang}} ← در حال ترجمه",
+      "waiting": "{{lang}} ← در انتظار ترجمه",
+      "translated": "{{lang}} ← ترجمه شد"
+    }
   }
 }

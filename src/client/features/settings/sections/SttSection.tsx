@@ -147,6 +147,12 @@ export function SttSection({
           </select>
         </div>
       </div>
+      <ToggleRow
+        title={t("settings.transcription.gpuSharedLabel")}
+        description={t("settings.transcription.gpuSharedHelp")}
+        checked={str(settings.gpu_shared, "0") === "1"}
+        onChange={(checked) => update("gpu_shared", checked ? "1" : "0")}
+      />
       <TranscriptionReadinessPanel settings={settings} healthQuery={healthQuery} dirty={dirty} />
 
       {/* Whisper model manager — proxied to the configured backend. Requires a

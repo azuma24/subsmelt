@@ -688,7 +688,9 @@
       "languageJapanese": "Japonés",
       "languageChinese": "Chino",
       "languageKorean": "Coreano",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "La transcripción y la traducción comparten una GPU",
+      "gpuSharedHelp": "Traduce por lotes después de las transcripciones pendientes para que la GPU cambie menos de modelo. La traducción empieza igualmente cuando hay 20 subtítulos esperando."
     },
     "connections": {
       "mode": "Modo de conexión",
@@ -1123,7 +1125,11 @@
       "cooldownBody": "Las descargas se pausan hasta las {{time}}. La transcripción y la traducción siguen en marcha.",
       "botCheckTitle": "YouTube pidió a SubSmelt que demuestre que no es un bot.",
       "botCheckBody": "Las descargas se pausan hasta las {{time}}. Las cookies de un navegador con sesión iniciada suelen resolverlo.",
-      "addCookies": "Añadir cookies"
+      "addCookies": "Añadir cookies",
+      "gpuTitle": "La traducción espera a que terminen las transcripciones (quedan {{n}}).",
+      "gpuBody": "Whisper y el modelo de traducción comparten una GPU, así que SubSmelt traduce por lotes.",
+      "noBackendTitle": "Las descargas continúan. La transcripción espera un backend.",
+      "noBackendBody": "Activa la conversión de voz a texto y define la URL del backend en Ajustes."
     },
     "availability": {
       "public": "Pública",
@@ -1174,7 +1180,9 @@
       "skipped": "Omitido",
       "unavailable": "No disponible",
       "failed": "Con error",
-      "subtitlesNext": "Esperando subtítulos"
+      "subtitlesNext": "Esperando subtítulos",
+      "gpuWait": "Esperando la GPU",
+      "translationHeld": "La traducción espera al lote"
     },
     "skipKind": {
       "user": "Lo omitiste tú",
@@ -1270,6 +1278,15 @@
       "skip": "Omitir",
       "failed": "No se pudo actualizar el vídeo: {{error}}"
     },
-    "retryAt": "nuevo intento {{time}}"
+    "retryAt": "nuevo intento {{time}}",
+    "subs": {
+      "captions": "{{lang}} = subtítulos",
+      "transcript": "{{lang}} = transcripción",
+      "transcriptOnly": "Transcripción",
+      "creator": "{{lang}} subtítulos del creador",
+      "translating": "{{lang}} → traduciendo",
+      "waiting": "{{lang}} → esperando traducción",
+      "translated": "{{lang}} → traducido"
+    }
   }
 }

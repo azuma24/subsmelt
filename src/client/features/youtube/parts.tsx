@@ -33,12 +33,12 @@ const BANNER_TONE: Record<BannerTone, { box: string; glyph: string }> = {
   info: { box: "border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]", glyph: "i" },
 };
 
-export function Banner({ tone, title, children, action }: { tone: BannerTone; title: string; children?: ReactNode; action?: ReactNode }) {
+export function Banner({ tone, title, children, action, glyph }: { tone: BannerTone; title: string; children?: ReactNode; action?: ReactNode; glyph?: string }) {
   const style = BANNER_TONE[tone];
   return (
     <div role={tone === "info" ? "status" : "alert"} className={`flex flex-wrap items-start gap-3 rounded-xl border px-3.5 py-2.5 ${style.box}`}>
-      <span aria-hidden="true" className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-current text-[11px] font-semibold">
-        {style.glyph}
+      <span aria-hidden="true" className="mt-0.5 flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full border border-current px-1 text-[11px] font-semibold">
+        {glyph ?? style.glyph}
       </span>
       <p className="min-w-0 flex-1 text-[13px] leading-6 text-[var(--text)]">
         <strong className="font-semibold">{title}</strong>

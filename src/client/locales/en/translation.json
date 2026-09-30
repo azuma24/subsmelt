@@ -832,7 +832,9 @@
       "languageEnglish": "English",
       "languageJapanese": "Japanese",
       "languageChinese": "Chinese",
-      "languageKorean": "Korean"
+      "languageKorean": "Korean",
+      "gpuSharedLabel": "Transcription and translation share one GPU",
+      "gpuSharedHelp": "Translate in batches after pending transcriptions, so the GPU swaps models less often. Translation still starts once 20 subtitles are waiting."
     },
     "connections": {
       "mode": "Connection mode",
@@ -1123,7 +1125,11 @@
       "cooldownBody": "Downloads pause until {{time}}. Transcription and translation keep running.",
       "botCheckTitle": "YouTube asked SubSmelt to prove it is not a bot.",
       "botCheckBody": "Downloads pause until {{time}}. Cookies from a signed-in browser usually get past this.",
-      "addCookies": "Add cookies"
+      "addCookies": "Add cookies",
+      "gpuTitle": "Translation waits for transcriptions to finish ({{n}} left).",
+      "gpuBody": "Whisper and the translation model share one GPU, so SubSmelt translates in batches.",
+      "noBackendTitle": "Downloads continue. Transcription waits for a backend.",
+      "noBackendBody": "Turn on speech-to-text and set the backend URL in Settings."
     },
     "availability": {
       "public": "Public",
@@ -1174,7 +1180,9 @@
       "skipped": "Skipped",
       "unavailable": "Unavailable",
       "failed": "Failed",
-      "subtitlesNext": "Waiting for subtitles"
+      "subtitlesNext": "Waiting for subtitles",
+      "gpuWait": "Waiting for the GPU",
+      "translationHeld": "Translation waits for batch"
     },
     "skipKind": {
       "user": "You skipped this",
@@ -1270,6 +1278,15 @@
       "skip": "Skip",
       "failed": "Could not update the video: {{error}}"
     },
-    "retryAt": "tries again {{time}}"
+    "retryAt": "tries again {{time}}",
+    "subs": {
+      "captions": "{{lang}} = captions",
+      "transcript": "{{lang}} = transcript",
+      "transcriptOnly": "Transcript",
+      "creator": "{{lang}} cc from creator",
+      "translating": "{{lang}} → translating",
+      "waiting": "{{lang}} → waiting to translate",
+      "translated": "{{lang}} → translated"
+    }
   }
 }

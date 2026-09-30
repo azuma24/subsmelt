@@ -688,7 +688,9 @@
       "languageJapanese": "Japans",
       "languageChinese": "Chinees",
       "languageKorean": "Koreaans",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "Transcriptie en vertaling delen één GPU",
+      "gpuSharedHelp": "Vertaal in batches na openstaande transcripties, zodat de GPU minder vaak van model wisselt. Bij 20 wachtende ondertitels begint de vertaling toch."
     },
     "connections": {
       "mode": "Verbindingsmodus",
@@ -1123,7 +1125,11 @@
       "cooldownBody": "Downloads pauzeren tot {{time}}. Transcriptie en vertaling gaan door.",
       "botCheckTitle": "YouTube vroeg SubSmelt te bewijzen dat het geen bot is.",
       "botCheckBody": "Downloads pauzeren tot {{time}}. Cookies uit een ingelogde browser helpen hier meestal langs.",
-      "addCookies": "Cookies toevoegen"
+      "addCookies": "Cookies toevoegen",
+      "gpuTitle": "De vertaling wacht tot de transcripties klaar zijn (nog {{n}}).",
+      "gpuBody": "Whisper en het vertaalmodel delen één GPU, dus SubSmelt vertaalt in batches.",
+      "noBackendTitle": "Downloads gaan door. Transcriptie wacht op een backend.",
+      "noBackendBody": "Zet spraak-naar-tekst aan en vul de backend-URL in bij Instellingen."
     },
     "availability": {
       "public": "Openbaar",
@@ -1174,7 +1180,9 @@
       "skipped": "Overgeslagen",
       "unavailable": "Niet beschikbaar",
       "failed": "Mislukt",
-      "subtitlesNext": "Wacht op ondertitels"
+      "subtitlesNext": "Wacht op ondertitels",
+      "gpuWait": "Wacht op de GPU",
+      "translationHeld": "Vertaling wacht op de batch"
     },
     "skipKind": {
       "user": "Jij hebt dit overgeslagen",
@@ -1270,6 +1278,15 @@
       "skip": "Overslaan",
       "failed": "Kan video niet bijwerken: {{error}}"
     },
-    "retryAt": "nieuwe poging {{time}}"
+    "retryAt": "nieuwe poging {{time}}",
+    "subs": {
+      "captions": "{{lang}} = ondertitels",
+      "transcript": "{{lang}} = transcript",
+      "transcriptOnly": "Transcript",
+      "creator": "{{lang}} ondertitels van de maker",
+      "translating": "{{lang}} → wordt vertaald",
+      "waiting": "{{lang}} → wacht op vertaling",
+      "translated": "{{lang}} → vertaald"
+    }
   }
 }

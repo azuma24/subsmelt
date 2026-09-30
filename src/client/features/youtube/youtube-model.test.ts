@@ -11,7 +11,7 @@ function video(video_id: string, status: YoutubeVideo["status"], title: string, 
   return {
     video_id, playlist_id: "PL-Smx9IA029hG4XKsjwo6psQhtDfsosa8", title, channel, duration_s: 148, published_at: "2026-09-30",
     added_at: null, status, skip_kind: null, reason: null, attempts: 0, retry_after: null, media_path: null, user_queued_at: null,
-    position: 1, removed_at: null,
+    position: 1, removed_at: null, subtitles: null, transcript_source: null,
   };
 }
 
@@ -106,4 +106,27 @@ test("format helpers render durations, months and relative times", async () => {
   const now = Date.parse("2026-09-30T10:00:00Z");
   assert.equal(relativeFromNow("2026-09-30T09:54:00Z", "en", now), "6 min. ago");
   assert.equal(relativeFromNow("2026-09-30T10:54:00Z", "en", now), "in 54 min.");
+});
+
+test("a shared GPU shows who waits: Whisper behind a translation batch, translation behind the transcriptions", async () => {
+  const { gpuHold } = await import("./video-status");
+  const pipeline = (shared: boolean, held: boolean, translationRunning: boolean) => ({ gpu: { shared, held, waitingFor: 2, translationRunning }, transcription: { ready: true, waiting: 0 } });
+  assert.deepEqual(gpuHold(pipeline(false, true, true)), { whisper: false, translation: false });
+  const hold = gpuHold(pipeline(true, true, false));
+  assert.deepEqual(hold, { whisper: false, translation: true });
+  assert.deepEqual(videoStatusDescriptor({ status: "translating" }, t, hold), { glyph: "··", tone: "warn", label: "t:youtube.status.translationHeld" });
+  assert.deepEqual(videoPipeline({ status: "translating", media_path: "YouTube/AI/x.m4a" }, hold), ["done", "done", "wait", ""]);
+  assert.deepEqual(videoStatusDescriptor({ status: "transcribing" }, t, gpuHold(pipeline(true, false, true))), { glyph: "··", tone: "warn", label: "t:youtube.status.gpuWait" });
+});
+
+test("subtitleSummary names the transcript's source and each language's route", async () => {
+  const { subtitleSummary, NO_HOLD } = await import("./video-status");
+  const tv = ((key: string, opts?: { lang?: string }) => `${key.replace("youtube.subs.", "")}(${opts?.lang ?? ""})`) as unknown as TFunction;
+  const plan = { spoken: "zh-Hant", routes: [{ taskId: 1, kind: "same" as const }, { taskId: 2, kind: "captions" as const }, { taskId: 3, kind: "translate" as const }] };
+  const translating = { subtitles: plan, transcript_source: "youtube_captions", status: "translating" as const };
+  const codes = new Map([[1, "cht"], [2, "eng"]]);
+  assert.equal(subtitleSummary(translating, codes, NO_HOLD, tv), "captions(ZH-Hant) · transcript(CHT) · creator(ENG) · translating(#3)");
+  assert.equal(subtitleSummary(translating, codes, { whisper: false, translation: true }, tv), "captions(ZH-Hant) · transcript(CHT) · creator(ENG) · waiting(#3)");
+  assert.equal(subtitleSummary({ subtitles: { spoken: "en", routes: [] }, transcript_source: "whisper:small", status: "done" }, codes, NO_HOLD, tv), "transcript(EN)");
+  assert.equal(subtitleSummary({ subtitles: { spoken: null, routes: [{ taskId: 2, kind: "translate" }] }, transcript_source: null, status: "done" }, codes, NO_HOLD, tv), "transcriptOnly() · translated(ENG)");
 });

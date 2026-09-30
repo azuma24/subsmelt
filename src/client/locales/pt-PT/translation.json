@@ -688,7 +688,9 @@
       "languageJapanese": "Japonês",
       "languageChinese": "Chinês",
       "languageKorean": "Coreano",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "Transcrição e tradução partilham uma GPU",
+      "gpuSharedHelp": "Traduz em lotes depois das transcrições pendentes, para a GPU trocar menos vezes de modelo. A tradução começa na mesma quando há 20 legendas à espera."
     },
     "connections": {
       "mode": "Modo de ligação",
@@ -1123,7 +1125,11 @@
       "cooldownBody": "Transferências em pausa até às {{time}}. A transcrição e a tradução continuam.",
       "botCheckTitle": "O YouTube pediu ao SubSmelt que prove que não é um robô.",
       "botCheckBody": "Transferências em pausa até às {{time}}. Normalmente, cookies de um navegador com sessão iniciada resolvem isto.",
-      "addCookies": "Adicionar cookies"
+      "addCookies": "Adicionar cookies",
+      "gpuTitle": "A tradução espera que as transcrições terminem (faltam {{n}}).",
+      "gpuBody": "O Whisper e o modelo de tradução partilham uma GPU, por isso o SubSmelt traduz em lotes.",
+      "noBackendTitle": "As transferências continuam. A transcrição espera por um backend.",
+      "noBackendBody": "Ative a conversão de voz em texto e indique o URL do backend nas Definições."
     },
     "availability": {
       "public": "Público",
@@ -1174,7 +1180,9 @@
       "skipped": "Ignorado",
       "unavailable": "Indisponível",
       "failed": "Falhou",
-      "subtitlesNext": "A aguardar legendas"
+      "subtitlesNext": "A aguardar legendas",
+      "gpuWait": "À espera da GPU",
+      "translationHeld": "Tradução à espera do lote"
     },
     "skipKind": {
       "user": "Ignorou este vídeo",
@@ -1270,6 +1278,15 @@
       "skip": "Ignorar",
       "failed": "Não foi possível atualizar o vídeo: {{error}}"
     },
-    "retryAt": "nova tentativa {{time}}"
+    "retryAt": "nova tentativa {{time}}",
+    "subs": {
+      "captions": "{{lang}} = legendas",
+      "transcript": "{{lang}} = transcrição",
+      "transcriptOnly": "Transcrição",
+      "creator": "{{lang}} legendas do criador",
+      "translating": "{{lang}} → a traduzir",
+      "waiting": "{{lang}} → à espera de tradução",
+      "translated": "{{lang}} → traduzido"
+    }
   }
 }

@@ -688,7 +688,9 @@
       "languageJapanese": "Japán",
       "languageChinese": "Kínai",
       "languageKorean": "Koreai",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "Az átírás és a fordítás egy GPU-n osztozik",
+      "gpuSharedHelp": "A függő átírások után kötegekben fordít, így a GPU ritkábban vált modellt. 20 várakozó feliratnál a fordítás mindenképp elindul."
     },
     "connections": {
       "mode": "Kapcsolati mód",
@@ -1123,7 +1125,11 @@
       "cooldownBody": "A letöltések szünetelnek eddig: {{time}}. Az átírás és a fordítás tovább fut.",
       "botCheckTitle": "A YouTube azt kéri, hogy a SubSmelt igazolja, hogy nem bot.",
       "botCheckBody": "A letöltések szünetelnek eddig: {{time}}. Egy bejelentkezett böngésző sütijei általában átsegítenek ezen.",
-      "addCookies": "Sütik hozzáadása"
+      "addCookies": "Sütik hozzáadása",
+      "gpuTitle": "A fordítás az átiratok befejezésére vár (még {{n}}).",
+      "gpuBody": "A Whisper és a fordítómodell egy GPU-n osztozik, ezért a SubSmelt kötegekben fordít.",
+      "noBackendTitle": "A letöltések folytatódnak. Az átírás háttérszolgáltatásra vár.",
+      "noBackendBody": "Kapcsold be a beszédfelismerést, és add meg a háttérszolgáltatás URL-jét a Beállításokban."
     },
     "availability": {
       "public": "Nyilvános",
@@ -1174,7 +1180,9 @@
       "skipped": "Kihagyva",
       "unavailable": "Nem elérhető",
       "failed": "Sikertelen",
-      "subtitlesNext": "Feliratra vár"
+      "subtitlesNext": "Feliratra vár",
+      "gpuWait": "GPU-ra vár",
+      "translationHeld": "A fordítás a kötegre vár"
     },
     "skipKind": {
       "user": "Te kihagytad",
@@ -1270,6 +1278,15 @@
       "skip": "Kihagyás",
       "failed": "Nem sikerült frissíteni a videót: {{error}}"
     },
-    "retryAt": "újrapróbálás {{time}}"
+    "retryAt": "újrapróbálás {{time}}",
+    "subs": {
+      "captions": "{{lang}} = feliratok",
+      "transcript": "{{lang}} = átirat",
+      "transcriptOnly": "Átirat",
+      "creator": "{{lang}} a készítő felirata",
+      "translating": "{{lang}} → fordítás folyamatban",
+      "waiting": "{{lang}} → fordításra vár",
+      "translated": "{{lang}} → lefordítva"
+    }
   }
 }

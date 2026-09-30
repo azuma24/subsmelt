@@ -159,3 +159,19 @@ test("a selected folder whose name contains a comma is scanned", (t) => {
 
   assert.deepEqual(scan(dir), { "Film.mkv": ["Film.srt"] });
 });
+
+test("the YouTube download folder is left to its playlists: no jobs, no auto-transcription candidates", (t) => {
+  useTasks("zh");
+  config.setSetting("youtube_download_dir", "Tube");
+  t.after(() => config.setSetting("youtube_download_dir", "YouTube"));
+  const tube = path.join(mediaDir, "Tube", "AI");
+  fs.mkdirSync(tube, { recursive: true });
+  for (const file of ["Talk [abcdefghijk].mp4", "Talk [abcdefghijk].en.srt", "Silent [bcdefghijkl].mp4"]) fs.writeFileSync(path.join(tube, file), "");
+  const shows = library("Tube shows", ["Pilot.mkv", "Pilot.en.srt"]);
+
+  const { files } = scanFolder(true);
+
+  assert.deepEqual(files.filter((f) => f.videoPath?.includes(`${path.sep}Tube${path.sep}`)), []);
+  assert.deepEqual(jobsIn(tube), []);
+  assert.deepEqual(jobsIn(shows), [["Pilot.en.srt", "Pilot.zh.srt"]]);
+});

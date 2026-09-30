@@ -688,7 +688,9 @@
       "languageJapanese": "Jepang",
       "languageChinese": "Mandarin",
       "languageKorean": "Korea",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "Transkripsi dan terjemahan berbagi satu GPU",
+      "gpuSharedHelp": "Terjemahkan per batch setelah transkripsi yang tertunda agar GPU lebih jarang berganti model. Terjemahan tetap dimulai saat 20 subtitle menunggu."
     },
     "connections": {
       "mode": "Mode koneksi",
@@ -1123,7 +1125,11 @@
       "cooldownBody": "Unduhan dijeda hingga {{time}}. Transkripsi dan terjemahan tetap berjalan.",
       "botCheckTitle": "YouTube meminta SubSmelt membuktikan bahwa ia bukan bot.",
       "botCheckBody": "Unduhan dijeda hingga {{time}}. Cookie dari browser yang sudah login biasanya bisa melewati ini.",
-      "addCookies": "Tambahkan cookie"
+      "addCookies": "Tambahkan cookie",
+      "gpuTitle": "Terjemahan menunggu transkripsi selesai ({{n}} tersisa).",
+      "gpuBody": "Whisper dan model terjemahan berbagi satu GPU, jadi SubSmelt menerjemahkan per batch.",
+      "noBackendTitle": "Unduhan tetap berjalan. Transkripsi menunggu backend.",
+      "noBackendBody": "Aktifkan ucapan ke teks dan isi URL backend di Pengaturan."
     },
     "availability": {
       "public": "Publik",
@@ -1174,7 +1180,9 @@
       "skipped": "Dilewati",
       "unavailable": "Tidak tersedia",
       "failed": "Gagal",
-      "subtitlesNext": "Menunggu subjudul"
+      "subtitlesNext": "Menunggu subjudul",
+      "gpuWait": "Menunggu GPU",
+      "translationHeld": "Terjemahan menunggu batch"
     },
     "skipKind": {
       "user": "Anda melewati ini",
@@ -1270,6 +1278,15 @@
       "skip": "Lewati",
       "failed": "Tidak dapat memperbarui video: {{error}}"
     },
-    "retryAt": "dicoba lagi {{time}}"
+    "retryAt": "dicoba lagi {{time}}",
+    "subs": {
+      "captions": "{{lang}} = teks",
+      "transcript": "{{lang}} = transkrip",
+      "transcriptOnly": "Transkrip",
+      "creator": "{{lang}} teks dari kreator",
+      "translating": "{{lang}} → sedang diterjemahkan",
+      "waiting": "{{lang}} → menunggu terjemahan",
+      "translated": "{{lang}} → diterjemahkan"
+    }
   }
 }

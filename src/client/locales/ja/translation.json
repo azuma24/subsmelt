@@ -688,7 +688,9 @@
       "languageJapanese": "日本語",
       "languageChinese": "中国語",
       "languageKorean": "韓国語",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "文字起こしと翻訳で 1 枚の GPU を共有する",
+      "gpuSharedHelp": "保留中の文字起こしが終わってからまとめて翻訳し、GPU のモデル切り替えを減らします。字幕が 20 件たまった場合は翻訳を始めます。"
     },
     "connections": {
       "mode": "接続モード",
@@ -1123,7 +1125,11 @@
       "cooldownBody": "{{time}}までダウンロードを一時停止します。文字起こしと翻訳は続行します。",
       "botCheckTitle": "YouTubeからSubSmeltにボットでないことの確認を求められました。",
       "botCheckBody": "{{time}}までダウンロードを一時停止します。ログイン済みブラウザのCookieを使うと、通常は通過できます。",
-      "addCookies": "Cookieを追加"
+      "addCookies": "Cookieを追加",
+      "gpuTitle": "翻訳は文字起こしの完了を待っています（残り {{n}} 件）。",
+      "gpuBody": "Whisper と翻訳モデルが 1 枚の GPU を共有しているため、SubSmelt はまとめて翻訳します。",
+      "noBackendTitle": "ダウンロードは続きます。文字起こしはバックエンドを待っています。",
+      "noBackendBody": "設定で音声認識をオンにし、バックエンドの URL を入力してください。"
     },
     "availability": {
       "public": "公開",
@@ -1174,7 +1180,9 @@
       "skipped": "スキップ済み",
       "unavailable": "利用不可",
       "failed": "失敗",
-      "subtitlesNext": "字幕待ち"
+      "subtitlesNext": "字幕待ち",
+      "gpuWait": "GPU を待っています",
+      "translationHeld": "翻訳はバッチ待ち"
     },
     "skipKind": {
       "user": "あなたがスキップしました",
@@ -1270,6 +1278,15 @@
       "skip": "スキップ",
       "failed": "動画を更新できませんでした: {{error}}"
     },
-    "retryAt": "{{time}}に再試行"
+    "retryAt": "{{time}}に再試行",
+    "subs": {
+      "captions": "{{lang}} = 字幕",
+      "transcript": "{{lang}} = 文字起こし",
+      "transcriptOnly": "文字起こし",
+      "creator": "{{lang}} 投稿者の字幕",
+      "translating": "{{lang}} → 翻訳中",
+      "waiting": "{{lang}} → 翻訳待ち",
+      "translated": "{{lang}} → 翻訳済み"
+    }
   }
 }

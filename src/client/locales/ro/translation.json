@@ -688,7 +688,9 @@
       "languageJapanese": "Japoneză",
       "languageChinese": "Chineză",
       "languageKorean": "Coreeană",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "Transcrierea și traducerea folosesc același GPU",
+      "gpuSharedHelp": "Traduce în loturi după transcrierile în așteptare, ca GPU-ul să schimbe modelul mai rar. Traducerea pornește oricum când 20 de subtitrări așteaptă."
     },
     "connections": {
       "mode": "Mod conexiune",
@@ -1123,7 +1125,11 @@
       "cooldownBody": "Descărcările sunt în pauză până la {{time}}. Transcrierea și traducerea continuă.",
       "botCheckTitle": "YouTube i-a cerut lui SubSmelt să dovedească că nu este un bot.",
       "botCheckBody": "Descărcările sunt în pauză până la {{time}}. De obicei, cookie-urile dintr-un browser conectat trec de această verificare.",
-      "addCookies": "Adaugă cookie-uri"
+      "addCookies": "Adaugă cookie-uri",
+      "gpuTitle": "Traducerea așteaptă terminarea transcrierilor (mai sunt {{n}}).",
+      "gpuBody": "Whisper și modelul de traducere folosesc același GPU, așa că SubSmelt traduce în loturi.",
+      "noBackendTitle": "Descărcările continuă. Transcrierea așteaptă un backend.",
+      "noBackendBody": "Activează conversia vorbire-text și setează URL-ul backendului în Setări."
     },
     "availability": {
       "public": "Publică",
@@ -1174,7 +1180,9 @@
       "skipped": "Omis",
       "unavailable": "Indisponibil",
       "failed": "Eșuat",
-      "subtitlesNext": "Așteaptă subtitrările"
+      "subtitlesNext": "Așteaptă subtitrările",
+      "gpuWait": "Așteaptă GPU-ul",
+      "translationHeld": "Traducerea așteaptă lotul"
     },
     "skipKind": {
       "user": "Ai omis acest videoclip",
@@ -1270,6 +1278,15 @@
       "skip": "Omite",
       "failed": "Videoclipul nu a putut fi actualizat: {{error}}"
     },
-    "retryAt": "nouă încercare {{time}}"
+    "retryAt": "nouă încercare {{time}}",
+    "subs": {
+      "captions": "{{lang}} = subtitrări",
+      "transcript": "{{lang}} = transcriere",
+      "transcriptOnly": "Transcriere",
+      "creator": "{{lang}} subtitrări de la creator",
+      "translating": "{{lang}} → se traduce",
+      "waiting": "{{lang}} → așteaptă traducerea",
+      "translated": "{{lang}} → tradus"
+    }
   }
 }

@@ -1,6 +1,8 @@
 import type { Express, Response } from "express";
 import { getSetting } from "../config.js";
 import { REDACTED_SECRET } from "../connections.js";
+import { countPendingJobs } from "../db.js";
+import { currentTranslationGate, gpuShared } from "../gpu-gate.js";
 import { logger } from "../logger.js";
 import { broadcast } from "../sse.js";
 import { fetchAddedDates, testApiKey } from "../youtube/data-api.js";
@@ -21,7 +23,8 @@ import { IllegalTransitionError, type YoutubeStore } from "../youtube/store.js";
 import { changeBackfill, isUnavailableEntry, listPlaylistWithYtdlp } from "../youtube/sync.js";
 import { isPlaylistId, isVideoId, parsePlaylistInput } from "../youtube/urls.js";
 import type { UserAction } from "../youtube/video-status.js";
-import { CooldownError, liveSyncDeps, nextCheckAt, type YoutubeWorker } from "../youtube/worker.js";
+import { isQueueRunning } from "../queue.js";
+import { CooldownError, liveSyncDeps, nextCheckAt, transcriptionReady, type YoutubeWorker } from "../youtube/worker.js";
 import { ffmpegVersion, resolveYtdlpBin, updateYtdlp, ytdlpVersion } from "../youtube/ytdlp.js";
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
@@ -41,6 +44,21 @@ export async function youtubeStatus(worker?: YoutubeWorker) {
     notes: notesFolderStatus(),
     cookies: cookiesStatus(),
     cooldown: cooldown && { until: cooldown.until, cause: cooldown.cause },
+  };
+}
+
+/** What holds the subtitle and translation steps back: the shared GPU, or no transcription backend. */
+export function pipelineStatus(store: YoutubeStore) {
+  const gate = currentTranslationGate();
+  const ready = transcriptionReady();
+  return {
+    gpu: {
+      shared: gpuShared(),
+      held: !gate.open && countPendingJobs() > 0,
+      waitingFor: gate.open ? 0 : gate.waitingFor,
+      translationRunning: isQueueRunning(),
+    },
+    transcription: { ready, waiting: ready ? 0 : store.statusTotals().transcribing ?? 0 },
   };
 }
 
@@ -68,6 +86,10 @@ function withPlaylist(res: Response, id: string): YoutubePlaylist | null {
 }
 
 export function registerYoutubeRoutes(app: Express, store: YoutubeStore, worker: YoutubeWorker): void {
+  app.get("/api/youtube/pipeline", (_req, res) => {
+    res.json(pipelineStatus(store));
+  });
+
   app.get("/api/youtube/status", async (_req, res) => {
     res.json(await youtubeStatus(worker));
   });
@@ -256,9 +278,10 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore, worker:
   app.get("/api/youtube/playlists/:id/videos", (req, res) => {
     const playlist = withPlaylist(res, req.params.id);
     if (!playlist) return;
-    const videos = store.playlistVideos(playlist.id).map((video) => {
-      const pct = video.status === "downloading" ? worker.progressOf(video.video_id) : undefined;
-      return pct === undefined ? video : { ...video, pct };
+    const videos = store.playlistVideos(playlist.id).map(({ subtitle_plan, ...video }) => {
+      const pct = video.status === "downloading" || video.status === "transcribing" ? worker.progressOf(video.video_id) : undefined;
+      const subtitles = subtitle_plan ? JSON.parse(subtitle_plan) : null;
+      return pct === undefined ? { ...video, subtitles } : { ...video, subtitles, pct };
     });
     res.json({ videos });
   });

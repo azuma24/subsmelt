@@ -688,7 +688,9 @@
       "languageJapanese": "Hapon",
       "languageChinese": "Tsino",
       "languageKorean": "Koreano",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "Iisang GPU ang gamit ng transcription at pagsasalin",
+      "gpuSharedHelp": "Pa-batch na magsalin pagkatapos ng mga nakabinbing transcription para mas madalang magpalit ng modelo ang GPU. Magsisimula pa rin ang pagsasalin kapag 20 subtitle na ang naghihintay."
     },
     "connections": {
       "mode": "Connection mode",
@@ -1123,7 +1125,11 @@
       "cooldownBody": "Naka-pause ang mga download hanggang {{time}}. Tuloy ang transcription at pagsasalin.",
       "botCheckTitle": "Hiniling ng YouTube na patunayan ng SubSmelt na hindi ito bot.",
       "botCheckBody": "Naka-pause ang mga download hanggang {{time}}. Kadalasang nakakalusot dito ang cookies mula sa browser na naka-sign in.",
-      "addCookies": "Magdagdag ng cookies"
+      "addCookies": "Magdagdag ng cookies",
+      "gpuTitle": "Naghihintay ang pagsasalin na matapos ang mga transcription ({{n}} pa).",
+      "gpuBody": "Iisang GPU ang gamit ng Whisper at ng modelo ng pagsasalin, kaya pa-batch magsalin ang SubSmelt.",
+      "noBackendTitle": "Tuloy ang mga download. Naghihintay ng backend ang transcription.",
+      "noBackendBody": "I-on ang speech-to-text at ilagay ang URL ng backend sa Settings."
     },
     "availability": {
       "public": "Pampubliko",
@@ -1174,7 +1180,9 @@
       "skipped": "Nilaktawan",
       "unavailable": "Hindi available",
       "failed": "Nabigo",
-      "subtitlesNext": "Naghihintay ng subtitle"
+      "subtitlesNext": "Naghihintay ng subtitle",
+      "gpuWait": "Naghihintay ng GPU",
+      "translationHeld": "Naghihintay ng batch ang pagsasalin"
     },
     "skipKind": {
       "user": "Nilaktawan mo ito",
@@ -1270,6 +1278,15 @@
       "skip": "Laktawan",
       "failed": "Hindi ma-update ang video: {{error}}"
     },
-    "retryAt": "susubukan muli {{time}}"
+    "retryAt": "susubukan muli {{time}}",
+    "subs": {
+      "captions": "{{lang}} = caption",
+      "transcript": "{{lang}} = transcript",
+      "transcriptOnly": "Transcript",
+      "creator": "{{lang}} caption mula sa creator",
+      "translating": "{{lang}} → isinasalin",
+      "waiting": "{{lang}} → naghihintay ng pagsasalin",
+      "translated": "{{lang}} → naisalin na"
+    }
   }
 }

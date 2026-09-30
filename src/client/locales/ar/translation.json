@@ -688,7 +688,9 @@
       "languageJapanese": "اليابانية",
       "languageChinese": "الصينية",
       "languageKorean": "الكورية",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "التفريغ والترجمة يتشاركان وحدة GPU واحدة",
+      "gpuSharedHelp": "ترجم على دفعات بعد انتهاء التفريغ المعلّق كي تبدّل وحدة GPU النموذج أقل. تبدأ الترجمة على أي حال عند انتظار 20 ملف ترجمة."
     },
     "connections": {
       "mode": "وضع الاتصال",
@@ -1123,7 +1125,11 @@
       "cooldownBody": "يتوقف التنزيل مؤقتًا حتى {{time}}. يستمر النسخ الصوتي والترجمة.",
       "botCheckTitle": "طلب YouTube من SubSmelt إثبات أنه ليس روبوتًا.",
       "botCheckBody": "يتوقف التنزيل مؤقتًا حتى {{time}}. عادةً ما تتجاوز ملفات تعريف الارتباط من متصفح مسجَّل الدخول هذا التحقق.",
-      "addCookies": "إضافة ملفات تعريف الارتباط"
+      "addCookies": "إضافة ملفات تعريف الارتباط",
+      "gpuTitle": "الترجمة بانتظار انتهاء التفريغ (المتبقي {{n}}).",
+      "gpuBody": "يتشارك Whisper ونموذج الترجمة وحدة GPU واحدة، لذا يترجم SubSmelt على دفعات.",
+      "noBackendTitle": "التنزيلات مستمرة. التفريغ بانتظار خادم خلفي.",
+      "noBackendBody": "فعّل تحويل الكلام إلى نص وأدخل عنوان الخادم الخلفي في الإعدادات."
     },
     "availability": {
       "public": "عام",
@@ -1174,7 +1180,9 @@
       "skipped": "تم تخطيه",
       "unavailable": "غير متاح",
       "failed": "فشل",
-      "subtitlesNext": "في انتظار الترجمات"
+      "subtitlesNext": "في انتظار الترجمات",
+      "gpuWait": "بانتظار وحدة GPU",
+      "translationHeld": "الترجمة بانتظار الدفعة"
     },
     "skipKind": {
       "user": "تخطيته أنت",
@@ -1270,6 +1278,15 @@
       "skip": "تخطي",
       "failed": "تعذّر تحديث الفيديو: {{error}}"
     },
-    "retryAt": "إعادة المحاولة {{time}}"
+    "retryAt": "إعادة المحاولة {{time}}",
+    "subs": {
+      "captions": "{{lang}} = ترجمة مصاحبة",
+      "transcript": "{{lang}} = نص مفرغ",
+      "transcriptOnly": "نص مفرغ",
+      "creator": "{{lang}} ترجمة من صانع المحتوى",
+      "translating": "{{lang}} ← قيد الترجمة",
+      "waiting": "{{lang}} ← بانتظار الترجمة",
+      "translated": "{{lang}} ← تمت الترجمة"
+    }
   }
 }

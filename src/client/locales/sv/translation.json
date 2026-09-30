@@ -688,7 +688,9 @@
       "languageJapanese": "Japanska",
       "languageChinese": "Kinesiska",
       "languageKorean": "Koreanska",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "Transkription och översättning delar en GPU",
+      "gpuSharedHelp": "Översätt i omgångar efter väntande transkriptioner så att GPU:n byter modell mer sällan. Översättningen startar ändå när 20 undertexter väntar."
     },
     "connections": {
       "mode": "Anslutningsläge",
@@ -1123,7 +1125,11 @@
       "cooldownBody": "Nedladdningar pausas till {{time}}. Transkribering och översättning fortsätter.",
       "botCheckTitle": "YouTube bad SubSmelt bevisa att det inte är en bot.",
       "botCheckBody": "Nedladdningar pausas till {{time}}. Cookies från en inloggad webbläsare brukar ta sig förbi det här.",
-      "addCookies": "Lägg till cookies"
+      "addCookies": "Lägg till cookies",
+      "gpuTitle": "Översättningen väntar på att transkriptionerna blir klara ({{n}} kvar).",
+      "gpuBody": "Whisper och översättningsmodellen delar en GPU, så SubSmelt översätter i omgångar.",
+      "noBackendTitle": "Nedladdningarna fortsätter. Transkriptionen väntar på en backend.",
+      "noBackendBody": "Slå på tal till text och ange backendens URL i Inställningar."
     },
     "availability": {
       "public": "Offentlig",
@@ -1174,7 +1180,9 @@
       "skipped": "Överhoppad",
       "unavailable": "Otillgänglig",
       "failed": "Misslyckades",
-      "subtitlesNext": "Väntar på undertexter"
+      "subtitlesNext": "Väntar på undertexter",
+      "gpuWait": "Väntar på GPU:n",
+      "translationHeld": "Översättningen väntar på omgången"
     },
     "skipKind": {
       "user": "Du hoppade över den här",
@@ -1270,6 +1278,15 @@
       "skip": "Hoppa över",
       "failed": "Kunde inte uppdatera videon: {{error}}"
     },
-    "retryAt": "nytt försök {{time}}"
+    "retryAt": "nytt försök {{time}}",
+    "subs": {
+      "captions": "{{lang}} = undertexter",
+      "transcript": "{{lang}} = transkription",
+      "transcriptOnly": "Transkription",
+      "creator": "{{lang}} undertexter från skaparen",
+      "translating": "{{lang}} → översätts",
+      "waiting": "{{lang}} → väntar på översättning",
+      "translated": "{{lang}} → översatt"
+    }
   }
 }

@@ -688,7 +688,9 @@
       "languageJapanese": "Ιαπωνικά",
       "languageChinese": "Κινεζικά",
       "languageKorean": "Κορεατικά",
-      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+      "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+      "gpuSharedLabel": "Απομαγνητοφώνηση και μετάφραση μοιράζονται μία GPU",
+      "gpuSharedHelp": "Μετάφραση σε παρτίδες μετά τις εκκρεμείς απομαγνητοφωνήσεις, ώστε η GPU να αλλάζει μοντέλο λιγότερο συχνά. Με 20 υπότιτλους σε αναμονή η μετάφραση ξεκινά ούτως ή άλλως."
     },
     "connections": {
       "mode": "Λειτουργία σύνδεσης",
@@ -1123,7 +1125,11 @@
       "cooldownBody": "Οι λήψεις σταματούν έως τις {{time}}. Η μεταγραφή και η μετάφραση συνεχίζονται.",
       "botCheckTitle": "Το YouTube ζήτησε από το SubSmelt να αποδείξει ότι δεν είναι bot.",
       "botCheckBody": "Οι λήψεις σταματούν έως τις {{time}}. Τα cookies από ένα πρόγραμμα περιήγησης με σύνδεση συνήθως το λύνουν.",
-      "addCookies": "Προσθήκη cookies"
+      "addCookies": "Προσθήκη cookies",
+      "gpuTitle": "Η μετάφραση περιμένει να τελειώσουν οι απομαγνητοφωνήσεις (απομένουν {{n}}).",
+      "gpuBody": "Το Whisper και το μοντέλο μετάφρασης μοιράζονται μία GPU, οπότε το SubSmelt μεταφράζει σε παρτίδες.",
+      "noBackendTitle": "Οι λήψεις συνεχίζονται. Η απομαγνητοφώνηση περιμένει backend.",
+      "noBackendBody": "Ενεργοποιήστε τη μετατροπή ομιλίας σε κείμενο και ορίστε το URL του backend στις Ρυθμίσεις."
     },
     "availability": {
       "public": "Δημόσια",
@@ -1174,7 +1180,9 @@
       "skipped": "Παραλείφθηκε",
       "unavailable": "Μη διαθέσιμο",
       "failed": "Απέτυχε",
-      "subtitlesNext": "Αναμονή για υπότιτλους"
+      "subtitlesNext": "Αναμονή για υπότιτλους",
+      "gpuWait": "Αναμονή για τη GPU",
+      "translationHeld": "Η μετάφραση περιμένει την παρτίδα"
     },
     "skipKind": {
       "user": "Το παραλείψατε εσείς",
@@ -1270,6 +1278,15 @@
       "skip": "Παράλειψη",
       "failed": "Δεν ήταν δυνατή η ενημέρωση του βίντεο: {{error}}"
     },
-    "retryAt": "νέα προσπάθεια {{time}}"
+    "retryAt": "νέα προσπάθεια {{time}}",
+    "subs": {
+      "captions": "{{lang}} = υπότιτλοι",
+      "transcript": "{{lang}} = απομαγνητοφώνηση",
+      "transcriptOnly": "Απομαγνητοφώνηση",
+      "creator": "{{lang}} υπότιτλοι του δημιουργού",
+      "translating": "{{lang}} → μεταφράζεται",
+      "waiting": "{{lang}} → αναμονή μετάφρασης",
+      "translated": "{{lang}} → μεταφράστηκε"
+    }
   }
 }
