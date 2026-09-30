@@ -5,9 +5,11 @@ import queue
 import shutil
 import threading
 from pathlib import Path
-from typing import Iterator, Mapping
+from typing import Callable, Iterator, Mapping
 
-from .catalog import ADVERTISED_MODELS, descriptor_for
+from . import nemotron_runtime
+from .catalog import ADVERTISED_MODELS, MODELS, ModelDescriptor, descriptor_for, to_wire
+from .engine import EngineUnavailableError
 from .model_cache import (
     dir_has_weights,
     cache_dir_name_for_model,
@@ -15,11 +17,33 @@ from .model_cache import (
     describe_model_cache,
     repo_id_for_model,
 )
-from .preflight import (
-    available_ram_mb,
-    model_ram_requirements_mb,
-    model_vram_requirements_mb,
-)
+from .preflight import available_ram_mb
+
+# Whether each engine can run on this host, probed at request time so a binary
+# installed after startup is picked up.
+ENGINE_AVAILABILITY: dict[str, Callable[[], tuple[bool, str | None]]] = {
+    "whisper": lambda: (True, None),
+    "nemotron": nemotron_runtime.availability,
+}
+
+
+def _wire(descriptor: ModelDescriptor) -> dict:
+    available, reason = ENGINE_AVAILABILITY[descriptor.engine]()
+    return to_wire(descriptor, available, reason)
+
+
+def describe_model_info() -> list[dict]:
+    """``capabilities.modelInfo``: every descriptor with its availability."""
+    return [_wire(descriptor) for descriptor in MODELS]
+
+
+def assert_engine_available(model: str) -> None:
+    descriptor = descriptor_for(model)
+    if descriptor is None:
+        return
+    available, reason = ENGINE_AVAILABILITY[descriptor.engine]()
+    if not available:
+        raise EngineUnavailableError(model, reason or f"{descriptor.engine} engine is not available")
 
 
 class ModelNotDownloadedError(RuntimeError):
@@ -90,24 +114,14 @@ def describe_models(env: Mapping[str, str] | None = None) -> list[dict]:
     """
     free_ram = available_ram_mb()
     models: list[dict] = []
-    for model in ADVERTISED_MODELS:
-        cache = describe_model_cache(model, free_ram, env=env)
+    for descriptor in MODELS:
+        cache = describe_model_cache(descriptor.id, free_ram, env=env)
         downloaded = bool(cache["cached"])
         cache_path = cache["cache_path"]
+        entry = _wire(descriptor)
         if downloaded and cache_path:
-            size_mb = _dir_size_mb(Path(cache_path))
-        else:
-            size_mb = descriptor_for(model).size_mb
-        models.append(
-            {
-                "id": model,
-                "downloaded": downloaded,
-                "sizeMb": size_mb,
-                "requiredRamMb": model_ram_requirements_mb(model)["required"],
-                "requiredVramMb": model_vram_requirements_mb(model)["required"],
-                "cachePath": cache_path,
-            }
-        )
+            entry["sizeMb"] = _dir_size_mb(Path(cache_path))
+        models.append({**entry, "downloaded": downloaded, "cachePath": cache_path})
     return models
 
 

@@ -23,12 +23,15 @@ from .model_cache import describe_model_cache
 from .model_manager import (
     ModelNotDownloadedError,
     UnknownModelError,
+    assert_engine_available,
     assert_model_downloaded,
     delete_model,
+    describe_model_info,
     describe_models,
     download_model_events,
     normalize_model,
 )
+from .nemotron_runtime import availability as nemo_speech_availability, binary_version as nemo_speech_version
 from .preflight import (
     DIARIZATION_RAM_MB,
     DIARIZATION_VRAM_MB,
@@ -69,6 +72,7 @@ from .fetch_url import (
     url_fetch_available,
 )
 from .transcribe import (
+    assert_language_supported,
     fake_transcribe_for_tests,
     fake_transcribe_streaming_for_tests,
     run_transcription,
@@ -160,10 +164,11 @@ def capabilities() -> dict:
         # surfaced via /health (which stays open) so an unauthenticated
         # reachability check can still learn a token is needed.
         "authRequired": auth_required(),
-        # Single source of truth: the model-manager's advertised set. Keeping this
-        # derived (not a duplicated literal) means the dropdown the frontend builds
-        # from capabilities.models can never drift from what the backend manages.
+        # ``models`` stays a plain id list for older clients; ``modelInfo`` is
+        # the descriptor per model, both derived from the catalog.
         "models": list(ADVERTISED_MODELS),
+        "modelInfo": describe_model_info(),
+        "nemoSpeech": {"available": nemo_speech_availability()[0], "version": nemo_speech_version()},
         "devices": devices,
         "computeTypes": compute_types,
         "gpus": gpu_info(),
@@ -566,6 +571,21 @@ def preflight(request: TranscribeRequest, _auth: None = Depends(require_token)) 
         raise HTTPException(status_code=400, detail={"code": "path_not_allowed", "message": str(exc)}) from exc
 
 
+def _assert_model_usable(request: TranscribeRequest) -> None:
+    """The model must accept the language, be downloaded and have a working
+    engine, checked before any stream opens so the client gets a real HTTP
+    status. Never silently auto-download: a known model that is not present in
+    the cache is refused with 409 here (first defence); loading later also
+    forces local_files_only=True (second defence) so faster-whisper cannot
+    reach the network either."""
+    try:
+        assert_language_supported(request)
+        assert_model_downloaded(request.model)
+        assert_engine_available(request.model)
+    except (LanguageNotSupportedError, ModelNotDownloadedError, EngineUnavailableError) as exc:
+        raise _map_transcription_error(exc) from exc
+
+
 def validate_transcribe_request(request: TranscribeRequest) -> Path:
     """Shared validation for both the JSON and streaming transcribe endpoints.
 
@@ -594,18 +614,7 @@ def validate_transcribe_request(request: TranscribeRequest) -> Path:
     if not input_path.exists():
         raise HTTPException(status_code=404, detail={"code": "input_missing", "message": "Input media file does not exist"})
 
-    # CRITICAL: never silently auto-download. A known model that is not present
-    # in the cache is refused with 409 here (first defence); loading later also
-    # forces local_files_only=True (second defence) so faster-whisper cannot
-    # reach the network either.
-    try:
-        assert_model_downloaded(request.model)
-    except ModelNotDownloadedError as exc:
-        raise HTTPException(
-            status_code=409,
-            detail={"code": "model_not_downloaded", "model": exc.model},
-        ) from exc
-
+    _assert_model_usable(request)
     return input_path
 
 
@@ -719,13 +728,7 @@ def validate_upload_request(request: TranscribeRequest, upload_size_mb: int, scr
             "suggestedModel": suggested,
         })
 
-    try:
-        assert_model_downloaded(request.model)
-    except ModelNotDownloadedError as exc:
-        raise HTTPException(
-            status_code=409,
-            detail={"code": "model_not_downloaded", "model": exc.model},
-        ) from exc
+    _assert_model_usable(request)
 
 
 def _upload_basename(filename: str | None) -> str:
@@ -756,7 +759,7 @@ def _save_upload(file: UploadFile, dest_dir: Path) -> Path:
 def _map_transcription_error(exc: Exception) -> HTTPException:
     """Translate a transcription exception to the HTTP error every transcribe
     endpoint (path, upload, url) surfaces."""
-    if isinstance(exc, ModelWeightsMissingError):
+    if isinstance(exc, (ModelWeightsMissingError, ModelNotDownloadedError)):
         return HTTPException(status_code=409, detail={"code": "model_not_downloaded", "model": exc.model})
     if isinstance(exc, (CudaUnavailableError, InvalidComputeTypeError)):
         return HTTPException(status_code=400, detail={"code": "invalid_device", "message": str(exc)})

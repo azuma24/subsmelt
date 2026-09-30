@@ -7,7 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Callable, Generator, Iterator, Literal
 
-from . import whisper_engine
+from . import nemotron, whisper_engine
 from .audio import extract_audio
 from .catalog import descriptor_for
 from .diarize import assign_speakers, fake_assign_speakers
@@ -24,6 +24,7 @@ Deliver = Literal["path", "content"]
 
 ENGINE_RUNNERS: dict[str, EngineRunner] = {
     "whisper": whisper_engine.run,
+    "nemotron": nemotron.run,
 }
 
 

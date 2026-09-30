@@ -22,7 +22,10 @@ from pathlib import Path
 from unittest import mock
 
 import app.model_loader as model_loader
+from app.engine import EngineUnavailableError
 from app.model_cache import cache_root_from_env
+from app.nemotron_runtime import NemotronHandle
+from tests.nemotron_fixtures import seed_gguf
 
 
 class GetWhisperModelTests(unittest.TestCase):
@@ -217,6 +220,45 @@ class GetWhisperModelTests(unittest.TestCase):
         # "Tiny" must hit the same cached instance, not load a duplicate.
         second = model_loader.get_whisper_model("Tiny", "cpu", "int8")
         self.assertIs(first, second)
+
+    def test_leasing_nemotron_evicts_the_resident_whisper_model(self):
+        self._seed("tiny", layout="hub")
+        gguf = seed_gguf(Path(self._tmp.name))
+        tiny = model_loader.get_whisper_model("tiny", "cpu", "int8")
+        with mock.patch.dict(os.environ, {"SUBSMELT_NEMO_SPEECH": sys.executable}):
+            with model_loader.lease("nemotron-3.5-asr", "cpu", "int8") as handle:
+                self.assertEqual(handle, NemotronHandle(binary=Path(sys.executable), gguf=gguf))
+                self.assertEqual(list(model_loader._MODEL_CACHE.values()), [handle])
+                self.assertEqual(tiny.model.unload_calls, 1)
+
+    def test_loading_whisper_evicts_the_resident_nemotron_handle(self):
+        self._seed("tiny", layout="hub")
+        seed_gguf(Path(self._tmp.name))
+        with mock.patch.dict(os.environ, {"SUBSMELT_NEMO_SPEECH": sys.executable}):
+            model_loader.get_whisper_model("nemotron-3.5-asr", "cpu", "int8")
+            tiny = model_loader.get_whisper_model("tiny", "cpu", "int8")
+        self.assertEqual(list(model_loader._MODEL_CACHE.values()), [tiny])
+        self.assertTrue(model_loader.unload_model("nemotron-3.5-asr") is False)
+
+    def test_unload_model_releases_a_resident_nemotron_handle(self):
+        seed_gguf(Path(self._tmp.name))
+        with mock.patch.dict(os.environ, {"SUBSMELT_NEMO_SPEECH": sys.executable}):
+            model_loader.get_whisper_model("nemotron-3.5-asr", "cpu", "int8")
+        self.assertTrue(model_loader.unload_model("Nemotron-3.5-ASR"))
+        self.assertEqual(model_loader._MODEL_CACHE, {})
+
+    def test_nemotron_without_gguf_is_weights_missing(self):
+        with mock.patch.dict(os.environ, {"SUBSMELT_NEMO_SPEECH": sys.executable}):
+            with self.assertRaises(model_loader.ModelWeightsMissingError) as ctx:
+                model_loader.get_whisper_model("nemotron-3.5-asr", "cpu", "int8")
+        self.assertEqual(ctx.exception.model, "nemotron-3.5-asr")
+
+    def test_nemotron_without_binary_is_engine_unavailable(self):
+        seed_gguf(Path(self._tmp.name))
+        with mock.patch.dict(os.environ, {"SUBSMELT_NEMO_SPEECH": "/nonexistent/nemo-speech"}):
+            with self.assertRaises(EngineUnavailableError) as ctx:
+                model_loader.get_whisper_model("nemotron-3.5-asr", "cpu", "int8")
+        self.assertEqual(str(ctx.exception), "nemo-speech runtime not found at /nonexistent/nemo-speech")
 
 
 if __name__ == "__main__":
