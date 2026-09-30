@@ -178,10 +178,13 @@ export function registerTranscriptionRoutes(app: Express): void {
       broadcast("transcription:progress", { path: url, pct, processedSeconds, totalSeconds });
     const onPhase = (phase: string) => broadcast("transcription:progress", { path: url, phase });
 
+    const controller = new AbortController();
+    inFlightTranscriptions.set(url, controller);
     try {
       const result = await transcribeUrlWithBackendStreaming(backendUrl, body, {
         timeoutSeconds: transcribeTimeoutSeconds(settings),
         token: settings.transcription_backend_token,
+        signal: controller.signal,
         onProgress,
         onPhase,
       });
@@ -189,26 +192,26 @@ export function registerTranscriptionRoutes(app: Express): void {
       const content = (result as unknown as { content?: string }).content ?? "";
       return res.json({ ok: true, content, language: result.language, segments: result.segments, outputFormat, url });
     } catch (error: any) {
-      broadcast("transcription:progress", { path: url, error: true });
+      const cancelled = controller.signal.aborted;
+      broadcast("transcription:progress", cancelled ? { path: url, cancelled: true } : { path: url, error: true });
       logger.error("system", `URL transcription failed: ${error?.message || error}`);
       // 502 when the backend itself failed/was unreachable; 400 for client errors.
       return res.status(transcriptionErrorStatus(error)).json({ error: error?.message || "URL transcription failed" });
+    } finally {
+      if (inFlightTranscriptions.get(url) === controller) inFlightTranscriptions.delete(url);
     }
   });
 
+  // `path` is the id the run's progress events carry, a media path or the URL
+  // of a URL run. Only validated runs are registered, so any other string
+  // simply misses.
   app.post("/api/transcribe/cancel", (req, res) => {
-    const videoPath = typeof req.body?.path === "string" ? req.body.path : "";
-    if (!videoPath) return res.status(400).json({ error: "path is required" });
-    // Validate the path is inside MEDIA_DIR before using it as a map key.
-    try {
-      assertMediaPathAllowed(videoPath, MEDIA_DIR);
-    } catch (error: any) {
-      return res.status(400).json({ error: error?.message || "Invalid media path" });
-    }
-    const entry = inFlightTranscriptions.get(videoPath);
-    if (!entry) return res.status(404).json({ ok: false, error: "No in-flight transcription for that path" });
-    entry.controller.abort();
-    logger.info("system", `Cancellation requested for transcription ${path.basename(videoPath)}`);
+    const runId = typeof req.body?.path === "string" ? req.body.path : "";
+    if (!runId) return res.status(400).json({ error: "path is required" });
+    const controller = inFlightTranscriptions.get(runId);
+    if (!controller) return res.status(404).json({ ok: false, error: "No in-flight transcription for that path" });
+    controller.abort();
+    logger.info("system", `Cancellation requested for transcription ${path.basename(runId)}`);
     return res.json({ ok: true });
   });
 

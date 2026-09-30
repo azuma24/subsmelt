@@ -84,18 +84,18 @@ async function withTranscriptionSlot<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 // --- In-flight transcription cancellation registry ---
-// Maps the local SubSmelt media path of an in-flight transcription to its
-// AbortController. POST /api/transcribe/cancel aborts the matching controller,
-// which closes the streaming HTTP request → the backend detects the disconnect
-// → stops segment iteration. Entries are removed when the attempt settles.
+// Maps the id a run's progress events carry (the local SubSmelt media path, or
+// the URL for a URL run) to its AbortController. POST /api/transcribe/cancel
+// aborts the matching controller, which closes the HTTP request to the backend.
+// Entries are removed when the run settles.
 //
-// ASSUMPTION: at most one in-flight run per media path. Keying by path means a
-// second concurrent run of the SAME path would overwrite this entry and the
-// first run would become uncancellable (cancel only reaches the active/latest
-// registered run). The UI/queue gate one run per file so this is acceptable;
-// the finally-block below only deletes the entry when attemptId still matches,
-// so a settling run never clobbers a newer run's registration.
-export const inFlightTranscriptions = new Map<string, { controller: AbortController; attemptId: string }>();
+// ASSUMPTION: at most one in-flight run per id. A second concurrent run of the
+// SAME id would overwrite this entry and the first run would become
+// uncancellable (cancel only reaches the active/latest registered run). The
+// UI/queue gate one run per file so this is acceptable; a settling run only
+// deletes the entry while it still holds its own controller, so it never
+// clobbers a newer run's registration.
+export const inFlightTranscriptions = new Map<string, AbortController>();
 
 // Resolves to true when a streaming run succeeded, so we know whether to skip
 // the legacy fallback. Throws StreamingUnsupportedError only for 404s.
@@ -130,6 +130,7 @@ async function transcribeRelayingProgress(
         return await transcribeWithBackendUpload(backendUrl, request, videoPath, {
           timeoutSeconds: transcribeTimeoutSeconds(settings),
           token,
+          signal: controller.signal,
         });
       }
       throw error;
@@ -152,6 +153,7 @@ async function transcribeRelayingProgress(
       return await transcribeWithBackend(backendUrl, request, {
         timeoutSeconds: transcribeTimeoutSeconds(settings),
         token,
+        signal: controller.signal,
       });
     }
     throw error;
@@ -230,7 +232,7 @@ export async function runTranscriptionAttempt(opts: {
   });
 
   const controller = new AbortController();
-  inFlightTranscriptions.set(opts.videoPath, { controller, attemptId: attempt.id });
+  inFlightTranscriptions.set(opts.videoPath, controller);
 
   const transport = resolveTransportMode(settings);
 
@@ -310,7 +312,6 @@ export async function runTranscriptionAttempt(opts: {
     if (typeof carried === "number") (rethrown as Error & { backendStatus?: number }).backendStatus = carried;
     throw rethrown;
   } finally {
-    const current = inFlightTranscriptions.get(opts.videoPath);
-    if (current && current.attemptId === attempt.id) inFlightTranscriptions.delete(opts.videoPath);
+    if (inFlightTranscriptions.get(opts.videoPath) === controller) inFlightTranscriptions.delete(opts.videoPath);
   }
 }

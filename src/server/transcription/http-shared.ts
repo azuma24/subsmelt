@@ -22,15 +22,22 @@ export async function fetchWithTimeout(
 ): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const externalSignal = init.signal ?? undefined;
+  const onExternalAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) controller.abort();
+    else externalSignal.addEventListener("abort", onExternalAbort, { once: true });
+  }
   try {
     return await fetch(url, { ...init, signal: controller.signal });
   } catch (error: unknown) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error(`${label} timed out after ${Math.round(timeoutMs / 1000)}s`);
+      throw abortReasonError(externalSignal, label, timeoutMs);
     }
     throw error;
   } finally {
     clearTimeout(timer);
+    externalSignal?.removeEventListener("abort", onExternalAbort);
   }
 }
 
