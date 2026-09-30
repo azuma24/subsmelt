@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import type { MediaProfile } from "./playlists.js";
@@ -83,19 +83,41 @@ function appendCapped(buffer: string, chunk: string, max: number): string {
   return next.length > max ? next.slice(-max) : next;
 }
 
-/** Spawns without a shell. Resolves on exit, timeout or abort; rejects only if the binary cannot start. */
+// yt-dlp runs ffmpeg and node as children; killing only yt-dlp would leave them running.
+function killTree(child: ChildProcess): void {
+  if (child.pid === undefined || child.exitCode !== null) return;
+  try {
+    if (process.platform === "win32") child.kill("SIGKILL");
+    else process.kill(-child.pid, "SIGKILL");
+  } catch {
+    child.kill("SIGKILL");
+  }
+}
+
+/**
+ * Spawns without a shell, in its own process group, so a timeout or abort
+ * kills yt-dlp and everything it started. Resolves on exit, timeout or abort;
+ * rejects only if the binary cannot start.
+ */
 export function runBinary(bin: string, args: string[], options: RunOptions = {}): Promise<RunResult> {
   const { timeoutMs = DEFAULT_TIMEOUT_MS, signal, onStdoutLine, maxCaptureBytes = MAX_CAPTURE_BYTES } = options;
   return new Promise((resolve, reject) => {
-    const child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"], signal });
+    if (signal?.aborted) return resolve({ code: null, stdout: "", stderr: "", timedOut: false });
+    const child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"], detached: process.platform !== "win32" });
     let stdout = "";
     let stderr = "";
     let pendingLine = "";
     let timedOut = false;
     const timer = setTimeout(() => {
       timedOut = true;
-      child.kill("SIGKILL");
+      killTree(child);
     }, timeoutMs);
+    const onAbort = () => killTree(child);
+    signal?.addEventListener("abort", onAbort, { once: true });
+    const settle = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+    };
 
     child.stdout.setEncoding("utf8").on("data", (chunk: string) => {
       stdout = appendCapped(stdout, chunk, maxCaptureBytes);
@@ -108,12 +130,11 @@ export function runBinary(bin: string, args: string[], options: RunOptions = {})
       stderr = appendCapped(stderr, chunk, maxCaptureBytes);
     });
     child.on("error", (err) => {
-      clearTimeout(timer);
-      if (err.name === "AbortError") resolve({ code: null, stdout, stderr, timedOut });
-      else reject(err);
+      settle();
+      reject(err);
     });
     child.on("close", (code) => {
-      clearTimeout(timer);
+      settle();
       if (onStdoutLine && pendingLine) onStdoutLine(pendingLine);
       resolve({ code, stdout, stderr, timedOut });
     });

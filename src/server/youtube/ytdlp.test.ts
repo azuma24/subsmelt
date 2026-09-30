@@ -125,6 +125,43 @@ test("runYtdlp kills a hung process at the timeout", async (t) => {
   assert.ok(Date.now() - started < 5000);
 });
 
+async function processGone(pid: number): Promise<boolean> {
+  for (let i = 0; i < 100; i++) {
+    try {
+      process.kill(pid, 0);
+    } catch {
+      return true;
+    }
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  return false;
+}
+
+async function childPidOf(file: string): Promise<number> {
+  while (!fs.existsSync(file) || !fs.readFileSync(file, "utf8")) await new Promise((r) => setTimeout(r, 10));
+  return Number(fs.readFileSync(file, "utf8"));
+}
+
+test("a timeout kills the whole process tree, not only yt-dlp", async (t) => {
+  const pidFile = path.join(scratch, "timeout-child.pid");
+  withEnv({ SUBSMELT_YTDLP_BIN: FAKE, FAKE_YTDLP_SLEEP_MS: "10000", FAKE_YTDLP_CHILD_PID_FILE: pidFile }, t);
+  const result = await runYtdlp(["x"], { timeoutMs: 500 });
+  assert.equal(result.timedOut, true);
+  assert.equal(await processGone(await childPidOf(pidFile)), true);
+});
+
+test("an abort kills the whole process tree", async (t) => {
+  const pidFile = path.join(scratch, "abort-child.pid");
+  withEnv({ SUBSMELT_YTDLP_BIN: FAKE, FAKE_YTDLP_SLEEP_MS: "10000", FAKE_YTDLP_CHILD_PID_FILE: pidFile }, t);
+  const controller = new AbortController();
+  const running = runYtdlp(["x"], { signal: controller.signal, timeoutMs: 20_000 });
+  const child = await childPidOf(pidFile);
+  controller.abort();
+  const result = await running;
+  assert.equal(result.code, null);
+  assert.equal(await processGone(child), true);
+});
+
 test("ytdlpVersion and the status route report the resolved binary", async (t) => {
   withEnv({ SUBSMELT_YTDLP_BIN: FAKE, FAKE_YTDLP_VERSION: "2026.09.01" }, t);
   assert.equal(await ytdlpVersion(), "2026.09.01");

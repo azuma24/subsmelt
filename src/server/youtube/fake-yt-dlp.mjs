@@ -8,11 +8,13 @@
 // FAKE_YTDLP_EXIT        exit code (default 0)
 // FAKE_YTDLP_FAIL_WHEN_ARG  apply STDERR and EXIT only when some argument contains this text
 // FAKE_YTDLP_SLEEP_MS    wait before exiting
+// FAKE_YTDLP_CHILD_PID_FILE  start a long-lived child, as yt-dlp starts ffmpeg, and write its pid here
 // A run with --paths is a download: it writes <temp>/<id>.part at once, and
 // after the sleep, on success, "<title> [<id>].<ext>" and its .info.json in
 // the home path, the way yt-dlp moves finished files there.
 // FAKE_YTDLP_TITLE       title in the file name (default "Fake video")
 // FAKE_YTDLP_INFO        JSON merged into the written info JSON
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -23,6 +25,11 @@ if (env.FAKE_YTDLP_ARGV_FILE) fs.appendFileSync(env.FAKE_YTDLP_ARGV_FILE, `${JSO
 if (args.includes("--version")) {
   process.stdout.write(`${env.FAKE_YTDLP_VERSION ?? "2026.08.19"}\n`);
   process.exit(0);
+}
+
+if (env.FAKE_YTDLP_CHILD_PID_FILE) {
+  const child = spawn(process.execPath, ["-e", "setTimeout(() => {}, 60000)"], { stdio: "ignore" });
+  fs.writeFileSync(env.FAKE_YTDLP_CHILD_PID_FILE, String(child.pid));
 }
 
 const failing = !env.FAKE_YTDLP_FAIL_WHEN_ARG || args.some((a) => a.includes(env.FAKE_YTDLP_FAIL_WHEN_ARG));
