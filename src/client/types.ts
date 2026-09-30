@@ -232,6 +232,8 @@ export interface TranscriptionHealth {
       transportModes?: string[];
       gpus?: { name?: string; total_vram_mb?: number; free_vram_mb?: number }[];
       models?: string[];
+      modelInfo?: WhisperModelDescriptor[];
+      nemoSpeech?: { available: boolean; version: string | null };
       devices?: string[];
       computeTypes?: string[];
       outputFormats?: string[];
@@ -249,13 +251,39 @@ export interface TranscriptionHealth {
   };
 }
 
-// Whisper Model Manager — one row per backend-known model.
-export interface WhisperModel {
+export type ModelEngine = "whisper" | "nemotron";
+
+export interface ModelSupports {
+  prompt: boolean;
+  beamSize: boolean;
+  conditionOnPreviousText: boolean;
+  vad: boolean;
+  computeType: boolean;
+  wordTimestamps: boolean;
+  translateTask: boolean;
+}
+
+// What a speech-to-text model can do, as the backend describes it in
+// capabilities.modelInfo. Older backends send only model ids; see
+// descriptorsFrom() in features/whisper/whisper-shared.ts.
+export interface WhisperModelDescriptor {
   id: string;
-  downloaded: boolean;
+  engine: ModelEngine;
+  label: string;
   sizeMb?: number;
   requiredRamMb?: number;
   requiredVramMb?: number;
+  languages: "all" | string[];
+  supports: ModelSupports;
+  available: boolean;
+  unavailableReason: string | null;
+}
+
+// Model Manager: one row per backend-known model. Backends before 0.6.0 send
+// only id, downloaded, sizes and cachePath.
+export interface WhisperModel extends Partial<Omit<WhisperModelDescriptor, "id">> {
+  id: string;
+  downloaded: boolean;
   cachePath?: string | null;
 }
 
