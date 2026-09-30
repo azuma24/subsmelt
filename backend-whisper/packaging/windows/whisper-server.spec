@@ -115,12 +115,6 @@ hiddenimports += collect_submodules("onnxruntime")
 # explicitly so the frozen exe can always start and probe the GPU.
 hiddenimports += collect_submodules("app")
 hiddenimports += ["pynvml"]
-_ffmpeg = os.path.join(SPEC_DIR, "vendor", "ffmpeg.exe")
-if os.path.isfile(_ffmpeg):
-    datas.append((_ffmpeg, "."))
-else:
-    print("[whisper-server.spec] NOTE: vendor/ffmpeg.exe not found — drop it in "
-          "before building so the bundle is self-contained (see README).")
 
 block_cipher = None
 
@@ -177,6 +171,16 @@ coll = COLLECT(
 # nemo-speech\bin\ beside run_server.exe, where app/ looks when
 # SUBSMELT_NEMO_SPEECH is unset. A datas entry would land under _internal\ on
 # PyInstaller 6, so copy it into the finished bundle (COLLECT has already run).
+# ffmpeg.exe: same rule. install-service.ps1 looks for it beside run_server.exe
+# to set SUBSMELT_FFMPEG; as a datas entry PyInstaller 6 hid it in _internal\
+# and the service silently fell back to an ffmpeg on PATH.
+_ffmpeg = os.path.join(SPEC_DIR, "vendor", "ffmpeg.exe")
+if os.path.isfile(_ffmpeg):
+    shutil.copy2(_ffmpeg, os.path.join(DISTPATH, "whisper-server", "ffmpeg.exe"))
+else:
+    print("[whisper-server.spec] NOTE: vendor/ffmpeg.exe not found — drop it in "
+          "before building so the bundle is self-contained (see README).")
+
 _nemo_speech_bin = os.path.join(SPEC_DIR, "vendor", "nemo-speech", "bin")
 if os.path.isdir(_nemo_speech_bin):
     shutil.copytree(_nemo_speech_bin,
