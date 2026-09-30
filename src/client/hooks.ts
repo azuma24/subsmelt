@@ -13,7 +13,8 @@ export type SSEEventName =
   | "scan:complete"
   | "job:stopped"
   | "transcription:progress"
-  | "model:download";
+  | "model:download"
+  | "youtube:playlist";
 
 export type SSEEventHandler = (type: SSEEventName, data: Record<string, unknown>) => void;
 
@@ -131,6 +132,27 @@ export function useJobPreview(jobId: number | null) {
   });
 }
 
+export function useYoutubePlaylistsQuery() {
+  return useQuery({
+    queryKey: ["youtube", "playlists"],
+    queryFn: ({ signal }) => api.getYoutubePlaylists({ signal }),
+    // SSE youtube:playlist refreshes this; the timer keeps "checked 6 min ago" honest.
+    refetchInterval: 60_000,
+  });
+}
+
+export function useYoutubeVideosQuery(playlistId: string | null) {
+  return useQuery({
+    queryKey: ["youtube", "videos", playlistId],
+    queryFn: ({ signal }) => api.getYoutubeVideos(playlistId as string, { signal }),
+    enabled: Boolean(playlistId),
+  });
+}
+
+export function useYoutubeStatusQuery() {
+  return useQuery({ queryKey: ["youtube", "status"], queryFn: ({ signal }) => api.getYoutubeStatus({ signal }), staleTime: 60_000 });
+}
+
 export function useInvalidateApp() {
   const queryClient = useQueryClient();
   return useMemo(
@@ -157,6 +179,7 @@ const SSE_EVENT_NAMES: readonly SSEEventName[] = [
   "job:stopped",
   "transcription:progress",
   "model:download",
+  "youtube:playlist",
 ];
 
 type QueryKey = readonly unknown[];
@@ -193,6 +216,8 @@ export function getSSEInvalidationKeys(name: SSEEventName): QueryKey[] {
       // Per-model download progress is consumed directly by the Model Manager
       // via onEvent; it should not trigger query refetches on every tick.
       return [];
+    case "youtube:playlist":
+      return [["youtube"]];
   }
 }
 

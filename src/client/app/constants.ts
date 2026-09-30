@@ -54,6 +54,7 @@ export const NAV_ITEMS = [
   { path: "/", labelKey: "nav.dashboard", icon: "📊", group: "operate", mobile: "primary" },
   { path: "/translations", labelKey: "nav.translations", icon: "🌐", group: "create", mobile: "primary" },
   { path: "/whisper", labelKey: "nav.whisper", icon: "🎙️", group: "create", mobile: "primary" },
+  { path: "/youtube", labelKey: "nav.youtube", icon: "📺", group: "create", mobile: "overflow" },
   { path: "/convert", labelKey: "nav.convert", icon: "🔄", group: "create", mobile: "overflow" },
   { path: "/settings", labelKey: "nav.settings", icon: "⚙️", group: "system", mobile: "primary" },
   { path: "/logs", labelKey: "nav.logs", icon: "📋", group: "system", mobile: "overflow" },

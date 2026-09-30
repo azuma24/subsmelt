@@ -15,6 +15,12 @@ import type {
   WhisperModel,
   WhisperModelDeleteResult,
   WhisperModelDownloadResult,
+  YoutubePlaylist,
+  YoutubePlaylistFields,
+  YoutubePreview,
+  YoutubeStatus,
+  YoutubeBackfill,
+  YoutubeVideo,
 } from "./types";
 
 const BASE = "/api";
@@ -328,3 +334,32 @@ export const deleteWhisperModel = (model: string) =>
     `/whisper/models/${encodeURIComponent(model)}`,
     { method: "DELETE" },
   );
+
+// YouTube
+export const getYoutubeStatus = (opts?: FetchOpts) => fetchJSON<YoutubeStatus>("/youtube/status", opts);
+export const getYoutubePlaylists = (opts?: FetchOpts) =>
+  fetchJSON<{ playlists: YoutubePlaylist[] }>("/youtube/playlists", opts);
+export const getYoutubeVideos = (playlistId: string, opts?: FetchOpts) =>
+  fetchJSON<{ videos: YoutubeVideo[] }>(`/youtube/playlists/${encodeURIComponent(playlistId)}/videos`, opts);
+export const previewYoutubePlaylist = (url: string) =>
+  fetchJSON<YoutubePreview>("/youtube/playlists/preview", { method: "POST", body: JSON.stringify({ url }) });
+export const followYoutubePlaylist = (payload: YoutubePlaylistFields & { url: string; title: string }) =>
+  fetchJSON<YoutubePlaylist>("/youtube/playlists", { method: "POST", body: JSON.stringify(payload) });
+export const updateYoutubePlaylist = (playlistId: string, payload: Partial<YoutubePlaylistFields>) =>
+  fetchJSON<YoutubePlaylist>(`/youtube/playlists/${encodeURIComponent(playlistId)}`, { method: "PUT", body: JSON.stringify(payload) });
+export const changeYoutubeBackfill = (playlistId: string, backfill: YoutubeBackfill) =>
+  fetchJSON<{ ok: true; kept: number; released: number; skipped: number }>(
+    `/youtube/playlists/${encodeURIComponent(playlistId)}/backfill`,
+    { method: "POST", body: JSON.stringify({ backfill }) },
+  );
+export const unfollowYoutubePlaylist = (playlistId: string) =>
+  fetchJSON<{ ok: true }>(`/youtube/playlists/${encodeURIComponent(playlistId)}`, { method: "DELETE" });
+export const syncYoutubePlaylist = (playlistId: string) =>
+  fetchJSON<{ ok: true; title: string; total: number; added: number; removed: number; restored: number }>(
+    `/youtube/playlists/${encodeURIComponent(playlistId)}/sync`,
+    { method: "POST" },
+  );
+export const testYoutubeApiKey = (key: string) =>
+  fetchJSON<{ ok: true }>("/youtube/api-key/test", { method: "POST", body: JSON.stringify({ key }) });
+export const updateYtdlp = () =>
+  fetchJSON<{ path: string; version: string | null; output: string }>("/youtube/ytdlp/update", { method: "POST" });
