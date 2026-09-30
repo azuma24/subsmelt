@@ -22,6 +22,8 @@ export interface LockableConnection {
 }
 
 const lockTails = new Map<string, Promise<void>>();
+// Links in each chain not yet released; zero means the connection is free.
+const outstanding = new Map<string, number>();
 const waitWarned = new Set<string>();
 
 export async function acquireConnectionLock(
@@ -32,6 +34,7 @@ export async function acquireConnectionLock(
   let releaseCurrent!: () => void;
   const current = new Promise<void>((resolve) => { releaseCurrent = resolve; });
   lockTails.set(conn.id, previous.then(() => current));
+  outstanding.set(conn.id, (outstanding.get(conn.id) ?? 0) + 1);
 
   let timer: ReturnType<typeof setTimeout> | undefined;
   const acquired = await Promise.race([
@@ -52,12 +55,28 @@ export async function acquireConnectionLock(
   return () => {
     if (released) return;
     released = true;
+    outstanding.set(conn.id, (outstanding.get(conn.id) ?? 1) - 1);
     releaseCurrent();
   };
+}
+
+/**
+ * Take the lock only when the connection is free; otherwise proceed at once
+ * without it. For a chunk cascading onto another worker's primary: in parallel
+ * mode that connection is held for the other worker's whole job, so waiting
+ * meant every cascaded chunk paid the full CONNECTION_LOCK_WAIT_MS and then
+ * ran unlocked anyway.
+ */
+export async function tryAcquireConnectionLock(
+  conn: LockableConnection
+): Promise<() => void> {
+  if ((outstanding.get(conn.id) ?? 0) > 0) return () => {};
+  return acquireConnectionLock(conn);
 }
 
 /** Drop all lock state — called when a queue run starts and finishes. */
 export function resetConnectionLocks(): void {
   lockTails.clear();
+  outstanding.clear();
   waitWarned.clear();
 }

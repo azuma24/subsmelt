@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Response } from "express";
 import path from "node:path";
 import fs from "node:fs";
 import { getTasks, getTask } from "../config.js";
@@ -16,6 +16,7 @@ import {
   pinJob,
   unpinJob,
   reorderJobs,
+  type JobRow,
 } from "../db.js";
 import { MEDIA_DIR } from "../scanner.js";
 import {
@@ -29,6 +30,7 @@ import {
   readSubtitleFileText,
   applyCueEdits,
   writeSubtitleFile,
+  removePartialOutput,
   resolveTranslatedOutputPath,
   type CueEdit,
 } from "../translator.js";
@@ -68,6 +70,23 @@ function enrichJobs(jobs: any[]): any[] {
   });
 }
 
+// A stopped or failed job leaves its in-flight .part beside the media; deleting
+// the job must take that with it.
+function removePartialsOfDeleted(before: JobRow[]) {
+  const remaining = new Set(getJobs().map((job) => job.id));
+  for (const job of before) {
+    if (!remaining.has(job.id)) removePartialOutput(job.output_path);
+  }
+}
+
+// A single-job reset/force/delete that changed no row was refused either because
+// a worker is translating the job (409) or because there is no such job (404).
+function rejectUnchanged(res: Response, id: number) {
+  if (getJob(id)?.status === "translating")
+    return res.status(409).json({ error: "Job is translating" });
+  return res.status(404).json({ error: "Job not found" });
+}
+
 export function registerJobsRoutes(app: Express): void {
   // ======== Jobs ========
   app.get("/api/jobs", (_req, res) => {
@@ -80,7 +99,7 @@ export function registerJobsRoutes(app: Express): void {
 
   app.post("/api/jobs/:id/retry", (req, res) => {
     const id = parseInt(req.params.id, 10);
-    resetJob(id);
+    if (resetJob(id) === 0) return rejectUnchanged(res, id);
     logger.info("queue", `Job #${id} reset to pending (retry)`, id);
     setTimeout(() => processQueue(), 100);
     res.json({ ok: true });
@@ -102,7 +121,7 @@ export function registerJobsRoutes(app: Express): void {
 
   app.post("/api/jobs/:id/force", (req, res) => {
     const id = parseInt(req.params.id, 10);
-    forceJob(id);
+    if (forceJob(id) === 0) return rejectUnchanged(res, id);
     logger.info("queue", `Job #${id} marked for force re-translate`, id);
     setTimeout(() => processQueue(), 100);
     res.json({ ok: true });
@@ -158,7 +177,10 @@ export function registerJobsRoutes(app: Express): void {
   });
 
   app.delete("/api/jobs/:id", (req, res) => {
-    deleteJob(parseInt(req.params.id, 10));
+    const id = parseInt(req.params.id, 10);
+    const job = getJob(id);
+    if (deleteJob(id) === 0) return rejectUnchanged(res, id);
+    if (job) removePartialOutput(job.output_path);
     res.json({ ok: true });
   });
 
@@ -170,13 +192,17 @@ export function registerJobsRoutes(app: Express): void {
     const ids = rawIds.filter(
       (v): v is number => typeof v === "number" && Number.isInteger(v),
     );
+    const before = getJobs();
     const deleted = deleteJobs(ids);
+    removePartialsOfDeleted(before);
     logger.info("queue", `Deleted ${deleted} selected pending jobs from queue`);
     res.json({ ok: true, deleted });
   });
 
   app.post("/api/jobs/clear", (_req, res) => {
+    const before = getJobs();
     const cleared = clearFinishedJobs();
+    removePartialsOfDeleted(before);
     logger.info("queue", `Cleared ${cleared} finished jobs`);
     res.json({ ok: true, cleared });
   });

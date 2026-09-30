@@ -32,6 +32,7 @@ export async function transcribeWithBackend(
     method: "POST",
     headers: { "Content-Type": "application/json", ...transcriptionAuthHeaders(options?.token) },
     body: JSON.stringify(request),
+    signal: options?.signal,
   }, timeoutMs, "Transcription backend");
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throwBackendError(body, response.status);

@@ -7,6 +7,7 @@ import {
   getAllSettings,
   setSettings,
   getSetting,
+  envPinnedSettingKeys,
   isLlmConfigured,
   isWritableSettingKey,
   getTasks,
@@ -14,12 +15,14 @@ import {
   updateTask,
   deleteTask,
 } from "../config.js";
+import { deletePendingJobsForTask } from "../db.js";
 import { scanFolder, MEDIA_DIR } from "../scanner.js";
 import { startAutoScan, stopAutoScan } from "../queue.js";
 import { convertSubtitle, probeModelContext, summarizeTranslationError, translateFile } from "../translator.js";
-import { resolveConnectionPool } from "../connections.js";
+import { REDACTED_SECRET, parseConnections, resolveConnectionPool, restoreRedactedApiKeys } from "../connections.js";
 import { logger } from "../logger.js";
 import { isWatcherRunning, restartWatcher } from "../watcher.js";
+import { parseTaskUpdate } from "./validation.js";
 
 // Pure client-driven format conversion (no translation, no DB). The browser
 // uploads file contents; we re-stringify each into the target format and return
@@ -28,7 +31,6 @@ import { isWatcherRunning, restartWatcher } from "../watcher.js";
 const CONVERT_TARGET_FORMATS = ["srt", "vtt", "ass", "ssa"] as const;
 const MAX_CONVERT_FILES = 50;
 const MAX_CONVERT_FILE_BYTES = 10 * 1024 * 1024; // 10 MB per file
-export const REDACTED_SECRET = "__SUBSMELT_SECRET_REDACTED__";
 const SECRET_SETTING_KEYS = new Set([
   "api_key",
   "cloud_api_key_openai",
@@ -62,31 +64,6 @@ function redactSettings(settings: Record<string, string>): Record<string, string
   return redacted;
 }
 
-function restoreRedactedConnections(value: string): string {
-  try {
-    const incoming = JSON.parse(value);
-    const existing = JSON.parse(getSetting("llm_connections") || "[]");
-    if (!Array.isArray(incoming) || !Array.isArray(existing)) return value;
-    const existingById = new Map(existing.map((connection) => [connection?.id, connection]));
-    return JSON.stringify(
-      incoming.map((connection) => {
-        const previous = existingById.get(connection?.id);
-        if (
-          connection &&
-          typeof connection === "object" &&
-          connection.apiKey === REDACTED_SECRET &&
-          previous?.apiKey
-        ) {
-          return { ...connection, apiKey: previous.apiKey };
-        }
-        return connection;
-      })
-    );
-  } catch {
-    return value;
-  }
-}
-
 export function registerSettingsTasksRoutes(app: Express): void {
   // ======== Settings ========
   app.get("/api/settings", (_req, res) => {
@@ -97,6 +74,7 @@ export function registerSettingsTasksRoutes(app: Express): void {
       // Whether an LLM has actually been set up, as opposed to running on the
       // shipped defaults — the merged settings can't distinguish the two.
       _llm_configured: isLlmConfigured(),
+      _env_pinned: envPinnedSettingKeys(),
     });
   });
 
@@ -130,12 +108,17 @@ export function registerSettingsTasksRoutes(app: Express): void {
       const resolved = SECRET_SETTING_KEYS.has(key) && value === REDACTED_SECRET
         ? getSetting(key)
         : key === "llm_connections"
-          ? restoreRedactedConnections(value)
+          ? restoreRedactedApiKeys(value, parseConnections(getAllSettings()))
           : value;
       // Clients (the Settings page included) PUT the whole settings object, so
       // most keys in any given request are unchanged. Writing and logging all of
       // them buried real edits under ~60 keys of noise on every save.
       if (resolved === getSetting(key)) continue;
+      // An env-pinned key would save fine and then stay hidden behind the env value.
+      if (envPinnedSettingKeys().includes(key)) {
+        rejected.push(key);
+        continue;
+      }
       patch[key] = resolved;
       changedKeys.push(key);
     }
@@ -174,14 +157,17 @@ export function registerSettingsTasksRoutes(app: Express): void {
   });
 
   app.put("/api/tasks/:id", (req, res) => {
-    updateTask(parseInt(req.params.id, 10), req.body);
+    const update = parseTaskUpdate(req.body);
+    if (!update.ok) return res.status(400).json({ error: update.error });
+    updateTask(parseInt(req.params.id, 10), update.value);
     res.json({ ok: true });
   });
 
   app.delete("/api/tasks/:id", (req, res) => {
     const id = parseInt(req.params.id, 10);
     deleteTask(id);
-    logger.info("system", `Deleted translation task #${id}`);
+    const removedJobs = deletePendingJobsForTask(id);
+    logger.info("system", `Deleted translation task #${id} and its ${removedJobs} pending job(s)`);
     res.json({ ok: true });
   });
 

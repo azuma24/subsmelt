@@ -154,6 +154,14 @@ const DEFAULT_TASK: TranslationTask = {
 
 // --- Load / Save ---
 
+function defaultConfig(): ConfigData {
+  return {
+    settings: { ...DEFAULT_SETTINGS },
+    tasks: [{ ...DEFAULT_TASK }],
+    _next_task_id: 2,
+  };
+}
+
 function loadConfig(): ConfigData {
   try {
     if (fs.existsSync(CONFIG_FILE)) {
@@ -170,15 +178,16 @@ function loadConfig(): ConfigData {
       return data;
     }
   } catch (e) {
-    console.error("[Config] Failed to load config.json, using defaults:", e);
+    // Keep the operator's tasks, connections and keys recoverable: back the file
+    // up and leave it in place. Only the next save replaces it.
+    const backup = `${CONFIG_FILE}.broken-${new Date().toISOString().replace(/[:.]/g, "-")}`;
+    fs.copyFileSync(CONFIG_FILE, backup);
+    console.error(`[Config] Failed to load ${CONFIG_FILE}; copied it to ${backup} and running on defaults until settings are saved:`, e);
+    return defaultConfig();
   }
 
   // First run — create with defaults
-  const config: ConfigData = {
-    settings: { ...DEFAULT_SETTINGS },
-    tasks: [{ ...DEFAULT_TASK }],
-    _next_task_id: 2,
-  };
+  const config = defaultConfig();
   saveConfig(config);
   return config;
 }
@@ -205,7 +214,7 @@ let _config: ConfigData = loadConfig();
 // --- Settings ---
 
 export function getSetting(key: string): string {
-  return _config.settings[key] ?? DEFAULT_SETTINGS[key] ?? "";
+  return envPinnedSettings[key] ?? _config.settings[key] ?? DEFAULT_SETTINGS[key] ?? "";
 }
 
 export function setSetting(key: string, value: string): void {
@@ -232,7 +241,7 @@ export function isWritableSettingKey(key: string): boolean {
 }
 
 export function getAllSettings(): Record<string, string> {
-  const merged = { ...DEFAULT_SETTINGS, ..._config.settings };
+  const merged = { ...DEFAULT_SETTINGS, ..._config.settings, ...envPinnedSettings };
   // Backfill the connections array from legacy flat keys so the client and the
   // queue always see a populated list, even before the first multi-connection save.
   if (!merged.llm_connections || !merged.llm_connections.trim()) {
@@ -250,7 +259,7 @@ export function isLlmConfigured(): boolean {
   // Pass the connections the defaults would synthesize, so a seeded connection
   // written back by an unrelated settings save isn't mistaken for real setup.
   return computeLlmConfigured(
-    _config.settings,
+    { ..._config.settings, ...envPinnedSettings },
     DEFAULT_SETTINGS,
     migrateConnectionsFromFlat(DEFAULT_SETTINGS),
   );
@@ -350,5 +359,15 @@ export function envSettingOverrides(
     if (value !== undefined && value !== "") overrides[settingKey] = value;
   }
   return overrides;
+}
+
+// Layered over config.json for this process and never saved, so a UI save
+// cannot bake an env value into the file and removing the variable brings the
+// saved value back on the next start.
+const envPinnedSettings = envSettingOverrides();
+
+/** Setting keys whose value comes from the environment; the UI cannot edit them. */
+export function envPinnedSettingKeys(): string[] {
+  return Object.keys(envPinnedSettings);
 }
 

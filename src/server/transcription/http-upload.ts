@@ -139,6 +139,7 @@ export async function transcribeWithBackendUpload(
     method: "POST",
     headers: { ...transcriptionAuthHeaders(options?.token) },
     body: form,
+    signal: options?.signal,
   }, timeoutMs, "Transcription backend upload");
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throwBackendError(body, response.status);

@@ -8,6 +8,7 @@ import {
   localTranscriptionOutputPath,
   transcribePostActionValues,
   resolveTransportMode,
+  type TranscriptionOutputFormat,
 } from "./transcription-client.js";
 
 test("assertMediaPathAllowed accepts files under the media root", () => {
@@ -247,6 +248,48 @@ test("buildTranscriptionRequest rejects invalid STT JSON settings instead of sil
 test("localTranscriptionOutputPath mirrors backend language suffix output naming", () => {
   assert.equal(localTranscriptionOutputPath("/media/anime/Episode 07.mkv", "ja", "vtt"), "/media/anime/Episode 07.ja.vtt");
   assert.equal(localTranscriptionOutputPath("/media/anime/Episode 07.mkv", "auto", "srt"), "/media/anime/Episode 07.srt");
+});
+
+test("buildTranscriptionRequest rejects a language that would reshape the subtitle output path", () => {
+  assert.throws(() => buildTranscriptionRequest({
+    videoPath: "/media/anime/Episode 09.mkv",
+    mediaDir: "/media",
+    settings: {},
+    overrides: { language: "../x" },
+  }), { message: "Unsupported transcription language: ../x" });
+});
+
+test("buildTranscriptionRequest rejects an output format outside srt/vtt/txt/ass", () => {
+  assert.throws(() => buildTranscriptionRequest({
+    videoPath: "/media/anime/Episode 09.mkv",
+    mediaDir: "/media",
+    settings: {},
+    outputFormat: "srt/../../evil" as TranscriptionOutputFormat,
+  }), { message: "Unsupported transcription output format: srt/../../evil" });
+});
+
+test("a valid language and output format still name the subtitle next to the video", () => {
+  const request = buildTranscriptionRequest({
+    videoPath: "/media/anime/Episode 09.mkv",
+    mediaDir: "/media",
+    settings: {},
+    outputFormat: "srt",
+    overrides: { language: "en" },
+  });
+
+  assert.equal(localTranscriptionOutputPath("/media/anime/Episode 09.mkv", request.language, request.output_format), "/media/anime/Episode 09.en.srt");
+});
+
+test("a language with a region subtag names the subtitle with that tag", () => {
+  const request = buildTranscriptionRequest({
+    videoPath: "/media/drama/Episode 01.mkv",
+    mediaDir: "/media",
+    settings: {},
+    outputFormat: "srt",
+    overrides: { language: "zh-TW" },
+  });
+
+  assert.equal(localTranscriptionOutputPath("/media/drama/Episode 01.mkv", request.language, request.output_format), "/media/drama/Episode 01.zh-TW.srt");
 });
 
 test("transcribe post action values remain restricted", () => {

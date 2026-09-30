@@ -16,9 +16,27 @@ export interface SubtitleCue {
 /** Back-compat alias retained for internal call sites. */
 export type CueLike = SubtitleCue;
 
+/**
+ * The `subtitle` parser only understands cue blocks. It throws on WebVTT STYLE
+ * and REGION blocks and on a text cue identifier before the first cue, and it
+ * folds a later text identifier into the previous cue's text. Drop both; the
+ * parser discards identifiers anyway.
+ */
+function stripVttNonCueParts(content: string): string {
+  return content
+    .split(/(?:\r?\n[ \t]*){2,}/)
+    .flatMap((block) => {
+      const lines = block.split(/\r?\n/);
+      if (/^(STYLE|REGION)[ \t]*$/.test(lines[0])) return [];
+      const hasIdentifier = lines.length > 1 && !lines[0].includes("-->") && lines[1].includes("-->");
+      return [(hasIdentifier ? lines.slice(1) : lines).join("\n")];
+    })
+    .join("\n\n");
+}
+
 export function parseSubtitle(fileContent: string, fileExtension: string) {
   if (["srt", "vtt"].includes(fileExtension)) {
-    return parseSync(fileContent);
+    return parseSync(fileExtension === "vtt" ? stripVttNonCueParts(fileContent) : fileContent);
   }
   if (["ass", "ssa"].includes(fileExtension)) {
     const parsedAss = assParser(fileContent);

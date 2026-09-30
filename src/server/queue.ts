@@ -28,6 +28,7 @@ import { notify } from "./notify.js";
 import {
   acquireConnectionLock,
   resetConnectionLocks,
+  tryAcquireConnectionLock,
 } from "./connection-lock.js";
 import { stripLangSuffix } from "./scanner.js";
 
@@ -93,6 +94,25 @@ export function requestStop() {
   }
 }
 
+/**
+ * Whether a fresh process should pick up the jobs it finds pending. Startup
+ * resets jobs left translating by the previous process to pending, and without
+ * this nothing restarted them until the next scan or manual start.
+ */
+export function shouldResumeQueueOnBoot(
+  autoTranslate: string,
+  pendingCount: number,
+): boolean {
+  return autoTranslate === "1" && pendingCount > 0;
+}
+
+export function resumeQueueOnBoot() {
+  const pending = countPendingJobs();
+  if (!shouldResumeQueueOnBoot(getSetting("auto_translate"), pending)) return;
+  logger.info("queue", `Resuming ${pending} pending job(s) found at startup`);
+  processQueue();
+}
+
 export async function processQueue(onlyIds?: number[]) {
   if (isRunning) return;
   isRunning = true;
@@ -120,9 +140,16 @@ export async function processQueue(onlyIds?: number[]) {
       null,
       { stage: "worker_pool" },
     );
-    await Promise.all(
-      Array.from({ length: slots }, (_, i) => adaptiveWorker(i, filter)),
-    );
+    // processQueue() is a no-op while this run is live, so a job queued while
+    // the title repair is calling the LLM has nothing to start it. Repair, then
+    // look for pending work again before declaring the run finished.
+    do {
+      await Promise.all(
+        Array.from({ length: slots }, (_, i) => adaptiveWorker(i, filter)),
+      );
+      if (shouldStop) break;
+      await repairMissingTitles();
+    } while (!shouldStop && hasPendingJobs(filter));
 
     if (shouldStop) {
       logger.info("queue", "Queue stopped by user request");
@@ -132,7 +159,6 @@ export async function processQueue(onlyIds?: number[]) {
       logger.info("queue", "Queue finished — no more pending jobs");
       broadcast("queue:finished", {});
       void notify("queue:finished", {});
-      await repairMissingTitles();
     }
   } finally {
     titleRepairJobs.length = 0;
@@ -346,6 +372,8 @@ async function runJob(
   let lastProgressWrite = 0;
 
   try {
+    if (!task)
+      throw new Error(`Translation task #${job.task_id} no longer exists`);
     if (conns.length === 0)
       throw new Error("No usable LLM connection configured");
     const promptToUse = task?.prompt_override || settings.prompt || "";
@@ -425,7 +453,17 @@ async function runJob(
           { stage: "llm_connection_unavailable" },
         );
       },
-      acquireConnection: acquireConnectionLock,
+      onConnectionDropped: ({ id, label, error }) => {
+        logger.warn(
+          "translate",
+          `LLM connection dropped for the rest of this job: ${label} (${id}) — ${error}`,
+          job.id,
+          { stage: "llm_connection_dropped" },
+        );
+      },
+      // Only cascades reach this (the primary is reserved above); they must
+      // not block on another worker's job-long hold.
+      acquireConnection: tryAcquireConnectionLock,
       reservedConnectionIds,
       prompt: promptToUse,
       lang: targetLang || "English",
@@ -567,9 +605,11 @@ async function runJob(
   } catch (error: any) {
     const durationSeconds = (Date.now() - startTime) / 1000;
     if (error.message === "STOP_REQUESTED" || shouldStop) {
-      // Graceful stop — reset job to pending so it can resume later
+      // Graceful stop — reset job to pending so it can be picked up later. The
+      // next run starts the file over, so the progress count goes back to zero.
       updateJob(job.id, {
         status: "pending",
+        completed_cues: 0,
         error: null,
         duration_seconds: durationSeconds,
       });

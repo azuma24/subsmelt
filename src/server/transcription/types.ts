@@ -134,6 +134,8 @@ export interface TranscribeBackendOptions {
   timeoutSeconds?: number;
   // Optional shared-secret token sent as `Authorization: Bearer <token>`.
   token?: string;
+  // Aborting this signal cancels the HTTP request.
+  signal?: AbortSignal;
 }
 
 export interface TranscriptionProgressUpdate {
@@ -147,9 +149,6 @@ export interface TranscribeStreamingOptions extends TranscribeBackendOptions {
   onProgress?: (update: TranscriptionProgressUpdate) => void;
   // Called on a backend phase line (e.g. "diarizing") for a live status hint.
   onPhase?: (phase: string) => void;
-  // Aborting this signal closes the HTTP stream → backend detects the
-  // disconnect → stops iterating segments and aborts the run.
-  signal?: AbortSignal;
 }
 
 export interface WhisperModelInfo {

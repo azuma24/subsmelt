@@ -27,6 +27,7 @@ export {
   translateFile,
   testConnection,
   partialOutputPath,
+  removePartialOutput,
   resolveTranslatedOutputPath,
 } from "./translator/engine.js";
 

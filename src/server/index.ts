@@ -6,22 +6,22 @@ import asyncPool from "tiny-async-pool";
 import {
   getAllSettings,
   setSetting,
-  envSettingOverrides,
   getSetting,
 } from "./config.js";
 import { scanFolder, listFolderTree, MEDIA_DIR } from "./scanner.js";
-import { processQueue, isQueueRunning, startAutoScan } from "./queue.js";
+import {
+  processQueue,
+  isQueueRunning,
+  startAutoScan,
+  resumeQueueOnBoot,
+} from "./queue.js";
 import { transcriptionHistory } from "./transcription-history.js";
 import { logger } from "./logger.js";
 import { getLogs, clearLogs } from "./db.js";
 import { addSSEClient, broadcast } from "./sse.js";
 import { notifyTest } from "./notify.js";
 import { startWatcher, stopWatcher, isWatcherRunning } from "./watcher.js";
-import {
-  MAX_LOG_LIMIT,
-  MAX_LOG_OFFSET,
-  parseBoundedNonNegativeInt,
-} from "./routes/validation.js";
+import { parseLogsQuery } from "./routes/validation.js";
 import type { TranscribePostAction } from "./transcription-client.js";
 import { registerSettingsTasksRoutes } from "./routes/settings-tasks.js";
 import { registerJobsRoutes } from "./routes/jobs.js";
@@ -31,6 +31,10 @@ import {
   getTranscriptionBackendUrl,
   runTranscriptionAttempt,
 } from "./routes/transcription.js";
+import {
+  claimAutoTranscriptions,
+  releaseAutoTranscription,
+} from "./auto-transcription.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -72,9 +76,13 @@ app.post("/api/scan", async (_req, res) => {
         behavior === "auto_transcribe_and_translate"
           ? "transcribe_and_translate"
           : "transcribe_only";
-      const missingVideos = result.files
-        .filter((file) => file.videoPath && file.subtitles.length === 0)
-        .map((file) => file.videoPath as string);
+      // Claimed in the same tick as the scan, so an overlapping scan either
+      // finds a video claimed here or already sees its new subtitle.
+      const missingVideos = claimAutoTranscriptions(
+        result.files
+          .filter((file) => file.videoPath && file.subtitles.length === 0)
+          .map((file) => file.videoPath as string),
+      );
       // Per-file isolation: a single failure must NOT abort the whole scan
       // batch. Each file is transcribed through runTranscriptionAttempt (which
       // records a history entry and acquires the shared concurrency slot), and
@@ -119,6 +127,8 @@ app.post("/api/scan", async (_req, res) => {
               "system",
               `Auto-transcription failed for ${path.basename(videoPath)}: ${message}`,
             );
+          } finally {
+            releaseAutoTranscription(videoPath);
           }
         },
       )) {
@@ -170,17 +180,9 @@ app.get("/api/watcher/status", (_req, res) => {
 
 // ======== Logs ========
 app.get("/api/logs", (req, res) => {
-  const { level, category, job_id, limit, offset } = req.query;
-  const parsedJobId = typeof job_id === "string" ? parseInt(job_id, 10) : NaN;
-  res.json(
-    getLogs({
-      level: level as string | undefined,
-      category: category as string | undefined,
-      jobId: Number.isFinite(parsedJobId) ? parsedJobId : undefined,
-      limit: parseBoundedNonNegativeInt(limit, 100, MAX_LOG_LIMIT),
-      offset: parseBoundedNonNegativeInt(offset, 0, MAX_LOG_OFFSET),
-    }),
-  );
+  const query = parseLogsQuery(req.query);
+  if (!query.ok) return res.status(400).json({ error: query.error });
+  res.json(getLogs(query.value));
 });
 
 app.delete("/api/logs", (_req, res) => {
@@ -218,9 +220,6 @@ app.get("*", (_req, res) => {
 
 // ======== Start ========
 app.listen(PORT, "0.0.0.0", () => {
-  for (const [key, value] of Object.entries(envSettingOverrides())) {
-    setSetting(key, value);
-  }
   // Reconcile any transcription attempts left "running" by a previous process
   // (e.g. crash/restart mid-transcription) so they no longer hang in history.
   const reconciled = transcriptionHistory.reconcileRunning();
@@ -240,4 +239,5 @@ app.listen(PORT, "0.0.0.0", () => {
   const interval = parseInt(getSetting("auto_scan_interval") || "0", 10);
   if (interval > 0) startAutoScan(interval, scanFolder);
   if (getSetting("watch_enabled") === "1") startWatcher();
+  resumeQueueOnBoot();
 });

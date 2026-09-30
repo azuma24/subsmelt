@@ -65,6 +65,8 @@ const LANG_SUFFIXES = new Set([
   "vietnamese",
 ]);
 
+const FLAG_SUFFIXES = new Set(["sdh", "forced", "cc", "hi"]);
+
 export interface FolderNode {
   name: string;
   path: string;
@@ -247,11 +249,19 @@ export function listFolderTree(): FolderNode {
   };
 }
 
-function parseFolderSetting(raw: string): string[] {
+/** Folder list setting: a JSON array, so names may contain commas, or the legacy comma-separated list. */
+export function parseFolderSetting(raw: string): string[] {
+  let folders: unknown[] = raw.split(",");
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (Array.isArray(parsed)) folders = parsed;
+  } catch {
+    // Not JSON: keep the legacy comma split.
+  }
   return Array.from(
     new Set(
-      raw
-        .split(",")
+      folders
+        .filter((f): f is string => typeof f === "string")
         .map((f) => normalizeMediaSubfolder(f))
         .filter((f): f is string => Boolean(f)),
     ),
@@ -265,16 +275,20 @@ function pathIsInScope(relativePath: string, folders: string[]): boolean {
   );
 }
 
-/** Strip known language suffix from a subtitle stem: "Movie.en" → "Movie" */
+/** A known language code, optionally with a region: "en", "zh-TW". */
+function isLangSuffix(token: string): boolean {
+  const match = /^([a-z]+)(?:-[a-z]{2})?$/i.exec(token);
+  return match !== null && LANG_SUFFIXES.has(match[1].toLowerCase());
+}
+
+/** Strip a trailing language suffix and one flag after it: "Movie.en", "Movie.zh-TW", "Movie.en.sdh" → "Movie" */
 export function stripLangSuffix(stem: string): string {
   const parts = stem.split(".");
-  if (parts.length > 1) {
-    const last = parts[parts.length - 1].toLowerCase();
-    if (LANG_SUFFIXES.has(last)) {
-      return parts.slice(0, -1).join(".");
-    }
-  }
-  return stem;
+  const last = parts.length - 1;
+  const langAt = FLAG_SUFFIXES.has(parts[last].toLowerCase()) ? last - 1 : last;
+  return langAt > 0 && isLangSuffix(parts[langAt])
+    ? parts.slice(0, langAt).join(".")
+    : stem;
 }
 
 /** Apply output pattern substitution */
@@ -288,6 +302,17 @@ function applyPattern(
     .replace(/\{\{name\}\}/g, baseStem)
     .replace(/\{\{lang_code\}\}/g, langCode)
     .replace(/\{\{ext\}\}/g, ext);
+}
+
+/** Output file name, relative to the subtitle's folder, that `task` translates `srtPath` into. */
+function taskOutputName(srtPath: string, task: any): string {
+  const ext = path.extname(srtPath);
+  return applyPattern(
+    task.output_pattern,
+    stripLangSuffix(path.basename(srtPath, ext)),
+    task.lang_code,
+    ext.slice(1).toLowerCase(),
+  );
 }
 
 export interface ScannedFile {
@@ -397,6 +422,35 @@ export function scanFolder(createJobs = true): ScanResult {
     subExts.includes(path.extname(f).toLowerCase()),
   );
 
+  // A subtitle is a task output only when another subtitle would produce exactly
+  // its path; a source whose name merely looks like an output is still a source.
+  const taskOutputs = new Set(
+    srtFiles.flatMap((srtPath) =>
+      outputDetectTasks
+        .map((task: any) =>
+          path.join(path.dirname(srtPath), taskOutputName(srtPath, task)),
+        )
+        .filter((outputPath) => outputPath !== srtPath),
+    ),
+  );
+
+  // Show.srt and Show.eng.srt both translate to Show.zh.srt, and two jobs on one
+  // output would share its .part file. The shortest source name owns each
+  // output, so a source without a language suffix wins.
+  const outputOwners = new Map<string, string>();
+  const sourcesShortestFirst = srtFiles
+    .filter((srtPath) => !taskOutputs.has(srtPath))
+    .sort((a, b) => path.basename(a).length - path.basename(b).length);
+  for (const srtPath of sourcesShortestFirst) {
+    for (const task of outputDetectTasks) {
+      const outputPath = path.join(
+        path.dirname(srtPath),
+        taskOutputName(srtPath, task),
+      );
+      if (!outputOwners.has(outputPath)) outputOwners.set(outputPath, srtPath);
+    }
+  }
+
   // Group by video file
   // Key: videoPath or "orphan:{srtPath}"
   const grouped = new Map<string, ScannedFile>();
@@ -432,36 +486,12 @@ export function scanFolder(createJobs = true): ScanResult {
   };
 
   for (const srtPath of srtFiles) {
+    if (taskOutputs.has(srtPath)) continue;
+
     const ext = path.extname(srtPath);
-    const extNoDot = ext.slice(1).toLowerCase();
     const dir = path.dirname(srtPath);
     const stem = path.basename(srtPath, ext);
     const baseStem = stripLangSuffix(stem);
-
-    // Check if this IS an output file from any task
-    // Strategy 1: pattern-shape match (fast)
-    const isOutputFile = outputDetectTasks.some((task: any) => {
-      // Check against every possible base stem in the same directory
-      // by testing if removing the task suffix yields a valid source file
-      const testPattern = applyPattern(
-        task.output_pattern,
-        "TEST_MARKER",
-        task.lang_code,
-        extNoDot,
-      );
-      const outputStem = path.basename(testPattern, path.extname(testPattern));
-      const suffix = outputStem.replace("TEST_MARKER", "");
-      if (!suffix) return false;
-      if (stem.endsWith(suffix)) return true;
-      // Strategy 2: check if this file's name exactly matches what any srt in the same dir would produce
-      const possibleBaseStem = suffix
-        ? stem.slice(0, stem.length - suffix.length)
-        : stem;
-      if (!possibleBaseStem) return false;
-      const candidateSource = path.join(dir, possibleBaseStem + ext);
-      return fs.existsSync(candidateSource);
-    });
-    if (isOutputFile) continue;
 
     // Match to video
     let videoPath: string | null = null;
@@ -531,14 +561,10 @@ export function scanFolder(createJobs = true): ScanResult {
 
     // For each effective task, compute output and check status
     for (const task of effectiveTasks) {
-      const outputName = applyPattern(
-        task.output_pattern,
-        baseStem,
-        task.lang_code,
-        extNoDot,
-      );
+      const outputName = taskOutputName(srtPath, task);
       const outputPath = path.join(dir, outputName);
       const outputExists = fs.existsSync(outputPath);
+      const outputOwner = outputOwners.get(outputPath) ?? srtPath;
 
       // Check existing job
       const existingJob = getJobBySrtAndTask(srtPath, task.id);
@@ -562,6 +588,14 @@ export function scanFolder(createJobs = true): ScanResult {
         jobId = existingJob.id;
       } else if (outputExists) {
         status = "skipped";
+      } else if (outputOwner !== srtPath) {
+        status = "skipped";
+        if (createJobs) {
+          logger.info(
+            "scan",
+            `Skipped ${path.basename(srtPath)}: ${path.basename(outputOwner)} already translates to ${outputName}`,
+          );
+        }
       } else {
         status = "new";
       }
