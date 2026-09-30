@@ -187,6 +187,18 @@ class ModelManagerEndpointTests(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         resident.model.unload_model.assert_called_once()
 
+    def test_delete_of_an_unknown_id_leaves_a_resident_model_loaded(self):
+        import app.model_loader as model_loader
+
+        resident = types.SimpleNamespace(model=mock.Mock())
+        model_loader._MODEL_CACHE[("bogus", "cuda", "float16")] = resident
+        try:
+            resp = self.client.delete("/models/bogus")
+        finally:
+            model_loader._MODEL_CACHE.clear()
+        self.assertEqual(resp.status_code, 400)
+        resident.model.unload_model.assert_not_called()
+
     def test_delete_404_when_not_present(self):
         resp = self.client.delete("/models/medium")
         self.assertEqual(resp.status_code, 404)

@@ -2,6 +2,7 @@
 
 import os
 import socket
+import threading
 import sys
 import tempfile
 import time
@@ -82,6 +83,23 @@ class FetchUrlTests(unittest.TestCase):
             with self.assertRaises(TimeoutError):
                 fetch_url._resolve_host("slow.example", timeout=0.2)
             self.assertLess(time.monotonic() - started, 1.0)
+
+    def test_stalled_lookups_do_not_pile_up_threads(self):
+        release = threading.Event()
+
+        def stalled_getaddrinfo(*args, **kwargs):
+            release.wait(5)
+            return []
+
+        baseline = threading.active_count()
+        try:
+            with mock.patch.object(socket, "getaddrinfo", stalled_getaddrinfo):
+                for i in range(10):
+                    with self.assertRaises(TimeoutError):
+                        fetch_url._resolve_host(f"stalled{i}.example", timeout=0.02)
+                self.assertLessEqual(threading.active_count() - baseline, fetch_url.DNS_LOOKUP_THREADS)
+        finally:
+            release.set()
 
     def test_download_without_ytdlp_raises_unavailable(self):
         if fetch_url.url_fetch_available():
