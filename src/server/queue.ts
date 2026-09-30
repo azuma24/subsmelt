@@ -28,6 +28,7 @@ import { notify } from "./notify.js";
 import {
   acquireConnectionLock,
   resetConnectionLocks,
+  tryAcquireConnectionLock,
 } from "./connection-lock.js";
 import { stripLangSuffix } from "./scanner.js";
 
@@ -446,7 +447,9 @@ async function runJob(
           { stage: "llm_connection_unavailable" },
         );
       },
-      acquireConnection: acquireConnectionLock,
+      // Only cascades reach this (the primary is reserved above); they must
+      // not block on another worker's job-long hold.
+      acquireConnection: tryAcquireConnectionLock,
       reservedConnectionIds,
       prompt: promptToUse,
       lang: targetLang || "English",
