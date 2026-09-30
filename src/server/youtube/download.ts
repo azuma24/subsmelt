@@ -8,7 +8,8 @@ import { classifyYtdlpError, downloadArgs, errorSummary, PROGRESS_PREFIX, runYtd
 const MIN_TIMEOUT_MS = 60 * 60_000;
 const MEDIA_EXTENSIONS = new Set([".mp4", ".mkv", ".webm", ".m4a", ".opus", ".ogg", ".mka"]);
 // The info JSON of one video is about 700 KB, nearly all of it format lists and expiring URLs.
-const INFO_KEYS_DROPPED = ["formats", "requested_formats", "requested_downloads", "automatic_captions", "thumbnails", "http_headers", "url"];
+// `cookies` holds the session cookie header whenever cookies were used, and must never reach the media folder.
+const INFO_KEYS_DROPPED = ["formats", "requested_formats", "requested_downloads", "automatic_captions", "thumbnails", "http_headers", "url", "cookies"];
 const UPCOMING_RE = /(?:premieres|begin|starts?) in (\d+) (minute|hour|day|week)s?/i;
 const UNIT_MS: Record<string, number> = { minute: 60_000, hour: 3_600_000, day: 86_400_000, week: 604_800_000 };
 const DEFAULT_UPCOMING_MS = 3_600_000;
@@ -102,11 +103,13 @@ function moveFinished(srcDir: string, destDir: string, mediaFile: string): void 
   for (const name of [...others, mediaFile]) moveFile(path.join(srcDir, name), path.join(destDir, name));
 }
 
-function readInfo(file: string): VideoMetadata {
+/** Slims the info JSON in place and returns what the store keeps; a file that does not parse is deleted. */
+function slimInfo(file: string): VideoMetadata {
   let info: Record<string, unknown>;
   try {
     info = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
   } catch {
+    fs.rmSync(file, { force: true });
     return {};
   }
   for (const key of INFO_KEYS_DROPPED) delete info[key];
@@ -144,7 +147,7 @@ async function runOnce(req: DownloadRequest, cookies: string | null, codecPrefer
   const mediaFile = findDownloadedMedia(outDir, req.videoId);
   if (!mediaFile) return { ok: false, errorClass: "other", message: "yt-dlp finished without writing a media file" };
   const infoFile = fs.readdirSync(outDir).find((name) => name.endsWith(".info.json"));
-  const meta = infoFile ? readInfo(path.join(outDir, infoFile)) : {};
+  const meta = infoFile ? slimInfo(path.join(outDir, infoFile)) : {};
   moveFinished(outDir, req.destDir, mediaFile);
   return { ok: true, mediaFile, meta };
 }

@@ -89,7 +89,7 @@ const DOWNLOADED = { status: "transcribing", attempts: 0, reason: null, retry_af
 test("a queued video downloads into the playlist folder with progress, a cookie copy, and no scratch files left", async (t) => {
   const { store, events, worker } = rig(t, {
     FAKE_YTDLP_STDOUT: `[download] Destination: x\n${progress(250)}${progress(260)}${progress(500)}${progress(1000)}`,
-    FAKE_YTDLP_INFO: JSON.stringify({ title: "How to spot a fake, exactly", channel: "TED-Ed", upload_date: "20231015", duration: 234.4 }),
+    FAKE_YTDLP_INFO: JSON.stringify({ title: "How to spot a fake, exactly", channel: "TED-Ed", upload_date: "20231015", duration: 234.4, cookies: "SID=x; Domain=.youtube.com" }),
   });
   fs.mkdirSync(path.join(root, "data", "youtube"), { recursive: true });
   fs.writeFileSync(path.join(root, "data", "youtube", "cookies.txt"), ".youtube.com\tTRUE\t/\tTRUE\t0\tSID\tx\n");
