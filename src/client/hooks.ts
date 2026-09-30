@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "./api";
 import type { JobPreview, JobRow, LlmHealth, LogEntry, QueueStatus, Task, TranscriptionHealth, TranscriptionHistoryEntry, YoutubeVideo } from "./types";
 
@@ -153,6 +153,14 @@ export function useYoutubeVideosQuery(playlistId: string | null) {
 
 export function useYoutubeStatusQuery() {
   return useQuery({ queryKey: ["youtube", "status"], queryFn: ({ signal }) => api.getYoutubeStatus({ signal }), staleTime: 5_000 });
+}
+
+export function useYoutubeNotesFolderQuery(path: string) {
+  return useQuery({
+    queryKey: ["youtube", "notes-folder", path],
+    queryFn: ({ signal }) => api.getYoutubeNotesFolder(path, { signal }),
+    placeholderData: keepPreviousData,
+  });
 }
 
 export function useInvalidateApp() {

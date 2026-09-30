@@ -18,6 +18,7 @@ import type {
   YoutubePlaylist,
   YoutubePlaylistFields,
   YoutubePreview,
+  YoutubeNotesFolder,
   YoutubeStatus,
   YoutubeBackfill,
   YoutubeVideo,
@@ -338,6 +339,8 @@ export const deleteWhisperModel = (model: string) =>
 
 // YouTube
 export const getYoutubeStatus = (opts?: FetchOpts) => fetchJSON<YoutubeStatus>("/youtube/status", opts);
+export const getYoutubeNotesFolder = (path: string, opts?: FetchOpts) =>
+  fetchJSON<YoutubeNotesFolder>(`/youtube/notes-folder?path=${encodeURIComponent(path)}`, opts);
 export const getYoutubePlaylists = (opts?: FetchOpts) =>
   fetchJSON<{ playlists: YoutubePlaylist[] }>("/youtube/playlists", opts);
 export const getYoutubeVideos = (playlistId: string, opts?: FetchOpts) =>

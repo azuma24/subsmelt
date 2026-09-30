@@ -367,11 +367,17 @@ export interface YoutubePreview {
   entries: YoutubePreviewEntry[];
 }
 
+export interface YoutubeNotesFolder {
+  path: string;
+  exists: boolean;
+  writable: boolean;
+}
+
 export interface YoutubeStatus {
   ytdlp: { available: boolean; version: string | null; path: string | null };
   ffmpeg: { available: boolean; version: string | null };
   apiKey: boolean;
-  notes: { path: string; writable: boolean };
+  notes: YoutubeNotesFolder;
   cookies: { present: boolean; updatedAt: string | null };
   cooldown: YoutubeCooldown | null;
 }

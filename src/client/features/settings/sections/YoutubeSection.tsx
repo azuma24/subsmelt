@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import * as api from "../../../api";
 import { useConfirm } from "../../../components/ConfirmModal";
-import { useYoutubeStatusQuery } from "../../../hooks";
+import { useYoutubeNotesFolderQuery, useYoutubeStatusQuery } from "../../../hooks";
 import { getErrorMessage } from "../../../lib";
 import { str } from "../../../lib/settings-value";
 import { FORM_CONTROL_CLS, FORM_LABEL_CLS } from "../../../ui/form-classes";
@@ -82,7 +82,8 @@ export function YoutubeSection({ settings, update, updateAndSaveDebounced }: You
     setUpdating(false);
   };
 
-  const notes = statusQuery.data?.notes;
+  const notesDir = str(settings.youtube_notes_dir, "/notes").trim() || "/notes";
+  const notes = useYoutubeNotesFolderQuery(notesDir).data;
   const ytdlp = statusQuery.data?.ytdlp;
   const cookies = statusQuery.data?.cookies;
 
@@ -146,7 +147,13 @@ export function YoutubeSection({ settings, update, updateAndSaveDebounced }: You
           className={`${FORM_CONTROL_CLS} min-h-[44px] font-mono`}
         />
         {notes && (
-          <StatusLine state={notes.writable ? { tone: "ok", text: t("settings.youtube.notesWritable") } : { tone: "warn", text: t("settings.youtube.notesMissing") }} />
+          <StatusLine
+            state={
+              notes.writable
+                ? { tone: "ok", text: t("settings.youtube.notesWritable") }
+                : { tone: "warn", text: t(notes.exists ? "settings.youtube.notesReadOnly" : "settings.youtube.notesMissing") }
+            }
+          />
         )}
       </div>
 
