@@ -22,6 +22,8 @@ export interface TranscribeResult {
   outputPath: string;
   /** The language Whisper used or detected, when it says. */
   language: string | null;
+  /** The Whisper model that wrote it. */
+  model: string | null;
 }
 
 export interface SubtitleDeps {
@@ -41,11 +43,11 @@ export interface SubtitleInput {
   playlist: Pick<YoutubePlaylist, "captions" | "subtitleTaskIds"> | undefined;
 }
 
-export type TranscriptSource = "existing" | "captions" | "whisper";
 
 export interface SubtitleResult {
   transcriptPath: string;
-  source: TranscriptSource;
+  /** "youtube_captions" or "whisper:<model>"; null for a transcript an earlier run left on disk. */
+  transcriptSource: string | null;
   /** The spoken language's key, when known. */
   spoken: string | null;
   /** The route each picked language took; a caption YouTube did not have became a translation. */
@@ -93,7 +95,7 @@ export async function produceSubtitles(input: SubtitleInput, deps: SubtitleDeps)
   const transcriptFor = (key: string | null) => (key ? `${stem}.${languageFileCode(key)}.srt` : `${stem}.srt`);
 
   let transcriptPath: string | null = null;
-  let source: TranscriptSource = "existing";
+  let transcriptSource: string | null = null;
   if (input.knownTranscript && exists(input.knownTranscript)) {
     transcriptPath = input.knownTranscript;
     spoken ??= suffixLanguage(transcriptPath, stem);
@@ -106,7 +108,7 @@ export async function produceSubtitles(input: SubtitleInput, deps: SubtitleDeps)
     const dest = transcriptFor(spoken);
     if (await fetchOrReport(deps, input.videoId, caption, dest)) {
       transcriptPath = dest;
-      source = "captions";
+      transcriptSource = "youtube_captions";
     }
   }
 
@@ -119,7 +121,7 @@ export async function produceSubtitles(input: SubtitleInput, deps: SubtitleDeps)
     spoken ??= result.language ? languageKey(result.language) : null;
     transcriptPath = transcriptFor(spoken);
     moveInto(result.outputPath, transcriptPath);
-    source = "whisper";
+    transcriptSource = `whisper:${result.model ?? "unknown"}`;
   }
 
   const tasks = (input.playlist?.subtitleTaskIds ?? []).map((id) => getTask(id)).filter((task) => task !== undefined);
@@ -146,7 +148,7 @@ export async function produceSubtitles(input: SubtitleInput, deps: SubtitleDeps)
     jobsCreated += created.changes;
     routes.push({ taskId: task.id, kind: "translate" });
   }
-  return { transcriptPath, source, spoken, routes, jobsCreated };
+  return { transcriptPath, transcriptSource, spoken, routes, jobsCreated };
 }
 
 async function fetchOrReport(deps: SubtitleDeps, videoId: string, lang: string, dest: string): Promise<boolean> {

@@ -293,7 +293,7 @@ export async function runTranscriptionAttempt(opts: {
       durationSeconds,
     });
     broadcast("transcription:progress", { path: opts.videoPath, pct: 100, done: true });
-    return { attemptId: attempt.id, result, outputPath };
+    return { attemptId: attempt.id, result, outputPath, model: checkedRequest.model };
   } catch (error: unknown) {
     const cancelled = isCancellationError(error) || controller.signal.aborted;
     const summary = summarizeTranscriptionError(error);

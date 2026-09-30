@@ -87,7 +87,7 @@ function rig(t: { after: (fn: () => void) => void }, opts: {
       onProgress(50);
       const out = `${req.mediaPath.slice(0, -path.extname(req.mediaPath).length)}.srt`;
       fs.writeFileSync(out, CUE("whisper"));
-      return { outputPath: out, language: opts.detected ?? null };
+      return { outputPath: out, language: opts.detected ?? null, model: "small" };
     },
   });
   // What the download step leaves: the media file and its info JSON in the playlist folder.
@@ -130,7 +130,8 @@ test("creator captions give the transcript and one language, the same language i
   assert.deepEqual(queueStarts, ["start"]);
   assert.deepEqual(row(store), { status: "translating", attempts: 0, reason: null, retry_after: null, subtitle_path: "YouTube/AI/Short talk [iSn77jvjojA].en.srt" });
   assert.deepEqual(fs.existsSync(youtubeTmpRoot()) ? fs.readdirSync(youtubeTmpRoot()) : [], []);
-  assert.deepEqual(plan(store), { spoken: "en", source: "captions", routes: [{ taskId: ENG, kind: "same" }, { taskId: CHT, kind: "captions" }, { taskId: JPN, kind: "translate" }] });
+  assert.deepEqual(plan(store), { spoken: "en", routes: [{ taskId: ENG, kind: "same" }, { taskId: CHT, kind: "captions" }, { taskId: JPN, kind: "translate" }] });
+  assert.equal(store.getVideo(VID)!.transcript_source, "youtube_captions");
 
   worker.finishTranslated();
   assert.equal(store.getVideo(VID)!.status, "translating", "a pending translation keeps the video translating");
@@ -190,7 +191,8 @@ test("a caption YouTube turns out not to have falls back to Whisper for the tran
   assert.deepEqual(captionRuns(), ["^en$", "^zh-Hant$"]);
   assert.deepEqual(whisper.map((r) => r.language), ["en"]);
   assert.deepEqual(jobs(), [[CHT, "Short talk [iSn77jvjojA].en.srt", "Short talk [iSn77jvjojA].cht.srt", "pending"]]);
-  assert.deepEqual(plan(store), { spoken: "en", source: "whisper", routes: [{ taskId: CHT, kind: "translate" }] });
+  assert.deepEqual(plan(store), { spoken: "en", routes: [{ taskId: CHT, kind: "translate" }] });
+  assert.equal(store.getVideo(VID)!.transcript_source, "whisper:small");
 });
 
 test("a 429 on a caption waits out the cooldown instead of falling back, and nothing is spent", async (t) => {

@@ -78,7 +78,9 @@ export interface VideoRow {
   note_path: string | null;
   /** Set when the user asked for this video: it goes first and a filter change leaves it alone. */
   user_queued_at: string | null;
-  /** JSON SubtitlePlan: where the transcript and each picked language came from. */
+  /** Where the transcript came from: "youtube_captions" or "whisper:<model>". */
+  transcript_source: string | null;
+  /** JSON SubtitlePlan: the spoken language and the route each picked language took. */
   subtitle_plan: string | null;
   created_at: string;
   updated_at: string;
@@ -136,15 +138,15 @@ export interface StatusFields {
   mediaPath?: string | null;
   /** The transcript in the spoken language, relative to MEDIA_DIR. */
   subtitlePath?: string | null;
+  transcriptSource?: string | null;
   subtitlePlan?: SubtitlePlan | null;
   userQueuedAt?: string | null;
 }
 
-/** How a video's subtitles were made, kept for the row's summary. */
+/** How a video's picked languages were made, kept for the row's summary. */
 export interface SubtitlePlan {
   /** The spoken language's key, when known. */
   spoken: string | null;
-  source: "existing" | "captions" | "whisper";
   routes: { taskId: number; kind: "same" | "captions" | "translate" }[];
 }
 
@@ -213,7 +215,9 @@ export class YoutubeStore {
     db.exec(SCHEMA);
     const columns = db.prepare("PRAGMA table_info(youtube_videos)").all() as { name: string }[];
     if (!columns.some((c) => c.name === "user_queued_at")) db.exec("ALTER TABLE youtube_videos ADD COLUMN user_queued_at TEXT");
-    if (!columns.some((c) => c.name === "subtitle_plan")) db.exec("ALTER TABLE youtube_videos ADD COLUMN subtitle_plan TEXT");
+    for (const column of ["subtitle_plan", "transcript_source"]) {
+      if (!columns.some((c) => c.name === column)) db.exec(`ALTER TABLE youtube_videos ADD COLUMN ${column} TEXT`);
+    }
   }
 
   /**
@@ -316,7 +320,7 @@ export class YoutubeStore {
     this.db
       .prepare(`
         UPDATE youtube_videos SET status = @to, skip_kind = @skipKind, reason = @reason, retry_after = @retryAfter,
-          attempts = @attempts, media_path = @mediaPath, subtitle_path = @subtitlePath, subtitle_plan = @subtitlePlan, user_queued_at = @userQueuedAt, updated_at = @now
+          attempts = @attempts, media_path = @mediaPath, subtitle_path = @subtitlePath, transcript_source = @transcriptSource, subtitle_plan = @subtitlePlan, user_queued_at = @userQueuedAt, updated_at = @now
         WHERE video_id = @videoId
       `)
       .run({
@@ -328,6 +332,7 @@ export class YoutubeStore {
         attempts: fields.attempts ?? current.attempts,
         mediaPath: fields.mediaPath === undefined ? current.media_path : fields.mediaPath,
         subtitlePath: fields.subtitlePath === undefined ? current.subtitle_path : fields.subtitlePath,
+        transcriptSource: fields.transcriptSource === undefined ? current.transcript_source : fields.transcriptSource,
         subtitlePlan: fields.subtitlePlan === undefined ? current.subtitle_plan : fields.subtitlePlan && JSON.stringify(fields.subtitlePlan),
         userQueuedAt: fields.userQueuedAt === undefined ? current.user_queued_at : fields.userQueuedAt,
         now: fields.now,
@@ -367,6 +372,11 @@ export class YoutubeStore {
   statusTotals(): Partial<Record<VideoStatus, number>> {
     const rows = this.db.prepare("SELECT status, COUNT(*) AS n FROM youtube_videos GROUP BY status").all() as { status: VideoStatus; n: number }[];
     return Object.fromEntries(rows.map((r) => [r.status, r.n]));
+  }
+
+  /** Says why a video waits without moving it, as when its note cannot be written yet. */
+  setReason(videoId: string, reason: string | null, now: string): void {
+    this.db.prepare("UPDATE youtube_videos SET reason = ?, updated_at = ? WHERE video_id = ?").run(reason, now, videoId);
   }
 
   videosInStatus(status: VideoStatus): VideoRow[] {

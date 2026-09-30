@@ -127,7 +127,7 @@ export async function transcribeWithWhisper(req: TranscribeRequest, onProgress: 
   const settings = getAllSettings();
   if (!transcriptionReady(settings)) throw new NotYetError("Transcription waits for a backend");
   const timeoutS = Math.max(Number.parseInt(settings.transcription_request_timeout_s, 10) || 1800, req.durationS ?? 0);
-  const { result, outputPath } = await runTranscriptionAttempt({
+  const { result, outputPath, model } = await runTranscriptionAttempt({
     videoPath: req.mediaPath,
     postAction: "transcribe_only",
     outputFormat: "srt",
@@ -135,7 +135,7 @@ export async function transcribeWithWhisper(req: TranscribeRequest, onProgress: 
     settings: { ...settings, transcription_request_timeout_s: String(timeoutS) },
     onProgress,
   });
-  return { outputPath, language: typeof result.language === "string" && result.language ? result.language : null };
+  return { outputPath, model, language: typeof result.language === "string" && result.language ? result.language : null };
 }
 
 export interface ReconcileResult {
@@ -153,6 +153,8 @@ export class YoutubeWorker {
   private readonly announce: (event: string, data: Record<string, unknown>) => void;
   private readonly checks = new Map<string, Promise<SyncResult>>();
   private readonly progress = new Map<string, number>();
+  /** Videos whose onSubtitlesComplete is still running. */
+  private readonly completing = new Set<string>();
   private readonly abort = new AbortController();
   private readonly transcribe: NonNullable<WorkerOptions["transcribe"]>;
   private readonly queue: QueueControl;
@@ -297,26 +299,34 @@ export class YoutubeWorker {
   }
 
   /**
-   * Moves every translating video whose translation jobs have all settled
-   * on to its note. A failed translation settles too; the Jobs page shows it.
+   * Hands every translating video whose translation jobs have all settled to
+   * onSubtitlesComplete. A failed translation settles too; the Jobs page shows it.
    */
   finishTranslated(): void {
     for (const video of this.store.videosInStatus("translating")) {
-      if (!video.subtitle_path) continue;
+      if (!video.subtitle_path || this.completing.has(video.video_id)) continue;
       if (countOpenJobsForSubtitle(path.join(MEDIA_DIR, video.subtitle_path)) > 0) continue;
-      this.onSubtitlesComplete(video.video_id);
+      this.completing.add(video.video_id);
+      void this.onSubtitlesComplete(video.video_id).finally(() => this.completing.delete(video.video_id));
     }
   }
 
   /**
-   * The hook point for the note export: subtitles and every translation of
-   * the video are finished. Until notes exist the video is done here.
+   * The one place a video leaves translating: its subtitles and every
+   * translation are finished. The note export goes inside the try; when it
+   * throws, the video stays translating with the error as its reason and the
+   * next tick tries again.
    */
-  onSubtitlesComplete(videoId: string): void {
+  async onSubtitlesComplete(videoId: string): Promise<void> {
     const video = this.store.getVideo(videoId);
     if (video?.status !== "translating") return;
-    this.move(video, "done", { now: this.now().toISOString() });
-    logger.info("youtube", `Subtitles and translations of ${video.title} are finished`);
+    try {
+      this.move(video, "done", { now: this.now().toISOString() });
+      logger.info("youtube", `Subtitles and translations of ${video.title} are finished`);
+    } catch (error) {
+      this.store.setReason(videoId, message(error), this.now().toISOString());
+      this.announce("youtube:video", { videoId, playlistId: video.playlist_id, status: video.status });
+    }
   }
 
   /** Videos that will still need Whisper. Queued ones wait out a cooldown and do not count during it. */
@@ -365,9 +375,15 @@ export class YoutubeWorker {
       });
       this.progress.delete(video.video_id);
       const subtitlePath = path.relative(MEDIA_DIR, result.transcriptPath).split(path.sep).join("/");
-      const subtitlePlan = { spoken: result.spoken, source: result.source, routes: result.routes.map(({ taskId, kind }) => ({ taskId, kind })) };
-      this.move(video, "translating", { now: this.now().toISOString(), attempts: 0, subtitlePath, subtitlePlan });
-      logger.info("youtube", `Subtitles of ${video.title}: transcript from ${result.source}, ${result.routes.map((r) => r.kind).join(", ") || "no other languages"}`);
+      const subtitlePlan = { spoken: result.spoken, routes: result.routes.map(({ taskId, kind }) => ({ taskId, kind })) };
+      this.move(video, "translating", {
+        now: this.now().toISOString(),
+        attempts: 0,
+        subtitlePath,
+        subtitlePlan,
+        ...(result.transcriptSource ? { transcriptSource: result.transcriptSource } : {}),
+      });
+      logger.info("youtube", `Subtitles of ${video.title}: transcript from ${result.transcriptSource ?? "an earlier run"}, ${result.routes.map((r) => r.kind).join(", ") || "no other languages"}`);
       if (result.jobsCreated > 0) this.queue.start();
       this.finishTranslated();
       this.queue.startHeld();
