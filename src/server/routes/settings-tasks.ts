@@ -102,6 +102,10 @@ export function registerSettingsTasksRoutes(app: Express): void {
         rejected.push(key);
         continue;
       }
+      // GET may show connections synthesized from env-set values. Posting that
+      // list back unchanged is not an edit, and saving it would copy the env
+      // values (the API key included) into config.json.
+      if (key === "llm_connections" && value === redactSettings(getAllSettings()).llm_connections) continue;
       // Secret values are never returned by GET. A client that saves unrelated
       // settings therefore sends the redaction marker back; preserve the
       // existing secret in that case, while an empty/new value still edits it.
