@@ -15,7 +15,7 @@ Written 2026-09-30 for the next agent. Read this file top to bottom before you t
 | `fix/whisper-backend-audit-0.6.0` | 14 Whisper backend fixes | GitHub #6, Forgejo #5 (same base) |
 | `release/0.6.0` | Integration branch: all of the above merged, plus this handoff, the YouTube PRD and the CHANGELOG draft | none yet |
 
-`release/0.6.0` is the base for all remaining work. On it: `npm test` 469 pass, `npm run typecheck` clean, backend `pytest tests` 289 pass. The shared contracts between the server and client fixes were checked live (saved-connection key reuse only for the saved endpoint; comma folder names scan).
+`release/0.6.0` is the base for all remaining work. On it: `npm test` 473 pass, `npm run typecheck` clean, backend `pytest tests` 291 pass. All eight Codex review findings on PRs #2 and #4 to #6 are answered and resolved on GitHub; four were fixed (1fb89eb, f093611, 5528dda) and merged here. The shared contracts between the server and client fixes were checked live (saved-connection key reuse only for the saved endpoint; comma folder names scan).
 
 ### Not done
 
