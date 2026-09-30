@@ -17,7 +17,9 @@ import { detectSampleLanguage } from "./detect-language";
 import { loadRecentTargets, pushRecentTarget } from "./recent-targets";
 import { TargetLanguageField } from "./TargetLanguageField";
 import { DropZone } from "./DropZone";
-import { StagedFileList, effectiveSource, type StagedFile, type FileRunStatus } from "./StagedFileList";
+import { StagedFileList, type FileRunStatus } from "./StagedFileList";
+import { effectiveSource, skipTranslation, type StagedFile } from "./staged-file";
+import { readSubtitleFile } from "./decode-text";
 import { isSupported, triggerDownload, buildZipBlob, type OutputFile } from "./download-outputs";
 
 const TARGET_FORMATS: ConvertTargetFormat[] = ["srt", "vtt", "ass", "ssa"];
@@ -59,7 +61,7 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
     let cancelled = false;
     void (async () => {
       for (const item of todo) {
-        const text = await item.file.text().catch(() => "");
+        const text = await readSubtitleFile(item.file).catch(() => "");
         const code = detectSampleLanguage(sampleCueText(text));
         if (cancelled) return;
         setStaged((prev) => prev.map((s) => (s.id === item.id ? { ...s, detected: code } : s)));
@@ -147,14 +149,14 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
       setFileStatus((prev) => ({ ...prev, [item.id]: "working" }));
       let ok = false;
       try {
-        const content = await item.file.text();
+        const content = await readSubtitleFile(item.file);
         const source = effectiveSource(item, fromCode);
         const res = await api.convertSubtitles({
           files: [{
             name: item.file.name,
             content,
             sourceLang: source ? findLanguage(source)?.promptName ?? AUTO_SOURCE_LANG : AUTO_SOURCE_LANG,
-            skip: item.skip,
+            skip: skipTranslation(item, fromCode, translate, resolvedTarget?.code ?? null),
           }],
           targetFormat,
           translate,

@@ -2,25 +2,9 @@ import { useTranslation } from "react-i18next";
 import { LANGUAGES, findLanguage, type LanguageEntry } from "./language-table";
 import { extOf, formatBytes } from "./download-outputs";
 
-export interface StagedFile {
-  id: string;
-  file: File;
-  /** Detected source language code; undefined = not attempted yet, null = detection failed. */
-  detected?: string | null;
-  /** Manual per-file source override (language code); null = trust detection. */
-  override: string | null;
-  /** Skip translation for this file (convert format only). */
-  skip: boolean;
-}
+import { effectiveSource, isSameAsTarget, type StagedFile } from "./staged-file";
 
 export type FileRunStatus = "working" | "done" | "error";
-
-/** Effective source code: per-file override, then page-level From, then detection. */
-export function effectiveSource(s: StagedFile, globalFrom?: string): string | null {
-  if (s.override) return s.override;
-  if (globalFrom) return globalFrom;
-  return s.detected ?? null;
-}
 
 interface StagedFileListProps {
   staged: StagedFile[];
@@ -71,7 +55,7 @@ export function StagedFileList({
           const { id, file } = item;
           const source = effectiveSource(item, globalFrom);
           const sourceEntry = source ? findLanguage(source) : undefined;
-          const sameAsTarget = Boolean(translate && resolvedTarget && source && source === resolvedTarget.code);
+          const sameAsTarget = isSameAsTarget(item, globalFrom, translate, resolvedTarget?.code ?? null);
           const status = fileStatus[id];
           return (
             <li
