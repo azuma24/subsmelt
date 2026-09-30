@@ -272,3 +272,20 @@ for (const point of CRASH_POINTS) {
     if (point.reconciled.adopted) assert.deepEqual([store.getVideo(VID)!.title, store.getVideo(VID)!.published_at], ["How to spot a fake, exactly", "2023-10-15"]);
   });
 }
+
+test("kick keeps taking videos from the lane until none is left", async (t) => {
+  const { store, worker } = rig(t);
+  store.applyListing(PL, [{ videoId: "uXspbC2srEQ", title: "Introducing dots", channel: "OpenAI", durationS: 148, publishedAt: "2026-09-30", position: 2, initial: { status: "queued" } }], { complete: false, now: T0 });
+  worker.kick();
+  worker.kick();
+  const statuses = () => [store.getVideo(VID)!.status, store.getVideo("uXspbC2srEQ")!.status];
+  for (let i = 0; i < 500 && statuses().some((s) => s !== "transcribing"); i++) await new Promise((r) => setTimeout(r, 10));
+  assert.deepEqual(statuses(), ["transcribing", "transcribing"]);
+  assert.equal(ytdlpRuns().length, 2);
+});
+
+test("a playlist check that YouTube refuses with 429 starts the cooldown", async (t) => {
+  const { worker } = rig(t, { FAKE_YTDLP_STDERR: "ERROR: [youtube:tab] HTTP Error 429: Too Many Requests\n", FAKE_YTDLP_EXIT: "1" });
+  await assert.rejects(worker.checkPlaylist(playlist()), { message: "ERROR: [youtube:tab] HTTP Error 429: Too Many Requests" });
+  assert.deepEqual(worker.activeCooldown(), { until: "2026-09-30T11:00:00.000Z", cause: "rate_limited", strikes: 1 });
+});
