@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { assertMediaPathAllowed } from "./request.js";
+import { assertMediaPathAllowed, buildTranscriptionRequest } from "./request.js";
 
 function tmpdir(prefix: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -61,4 +61,40 @@ test("a not-yet-created output path under the media dir is still allowed", () =>
   const pending = path.join(media, "show", "Episode 03.chi.srt");
 
   assert.equal(assertMediaPathAllowed(pending, media), path.join(fs.realpathSync(media), "show", "Episode 03.chi.srt"));
+});
+
+function symlinkedMediaDir(): string {
+  const real = tmpdir("subsmelt-real-");
+  const linkRoot = path.join(tmpdir("subsmelt-link-"), "media");
+  fs.symlinkSync(real, linkRoot);
+  fs.mkdirSync(path.join(real, "movies"));
+  fs.writeFileSync(path.join(real, "movies", "a.mkv"), "", "utf8");
+  return linkRoot;
+}
+
+test("a path mapping written against a symlinked media dir rewrites the backend path", () => {
+  const media = symlinkedMediaDir();
+
+  const request = buildTranscriptionRequest({
+    videoPath: path.join(media, "movies", "a.mkv"),
+    mediaDir: media,
+    settings: { transcription_path_map_from: media, transcription_path_map_to: "/data/media" },
+  });
+
+  assert.equal(request.input_path, "/data/media/movies/a.mkv");
+});
+
+test("per-folder defaults written against a symlinked media dir still apply", () => {
+  const media = symlinkedMediaDir();
+
+  const request = buildTranscriptionRequest({
+    videoPath: path.join(media, "movies", "a.mkv"),
+    mediaDir: media,
+    settings: {
+      transcription_model: "small",
+      transcription_folder_defaults: JSON.stringify([{ path: path.join(media, "movies"), model: "large-v3" }]),
+    },
+  });
+
+  assert.equal(request.model, "large-v3");
 });

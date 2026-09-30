@@ -106,7 +106,10 @@ function mapPathForBackend(inputPath: string, settings: TranscriptionSettings): 
     throw new Error("Both transcription path mapping fields are required when path mapping is enabled");
   }
 
-  const fromPrefix = assertAbsoluteFilesystemPrefix(rawFrom, "transcription_path_map_from");
+  // The input arrives realpath-resolved from assertMediaPathAllowed, so the
+  // local prefix must be too. The backend prefix names the backend's own
+  // filesystem and is left as written.
+  const fromPrefix = resolveSymlinks(assertAbsoluteFilesystemPrefix(rawFrom, "transcription_path_map_from"));
   const toPrefix = assertAbsoluteFilesystemPrefix(rawTo, "transcription_path_map_to");
   if (inputPath !== fromPrefix && !inputPath.startsWith(`${fromPrefix}${path.sep}`)) {
     throw new Error(`Transcription input does not match configured mapping prefix: ${inputPath}`);
@@ -186,10 +189,10 @@ function matchingFolderDefaults(inputPath: string, mediaDir: string, settings: T
   const entries = parseJsonObject<unknown>(settings.transcription_folder_defaults, [], "transcription_folder_defaults");
   if (!Array.isArray(entries)) return undefined;
 
-  const mediaRoot = path.resolve(mediaDir);
+  const mediaRoot = resolveSymlinks(mediaDir);
   const candidates = entries
     .filter((entry): entry is TranscriptionFolderDefaults => Boolean(entry && typeof entry === "object" && typeof (entry as TranscriptionFolderDefaults).path === "string"))
-    .map((entry) => ({ ...entry, path: path.resolve(String(entry.path)) }))
+    .map((entry) => ({ ...entry, path: resolveSymlinks(String(entry.path)) }))
     .filter((entry) => {
       const folderPath = String(entry.path);
       return (folderPath === mediaRoot || folderPath.startsWith(`${mediaRoot}${path.sep}`))
