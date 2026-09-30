@@ -22,7 +22,7 @@ const BASE = `Short talk [${VIDEO}]`;
 const MEDIA_FOLDER = path.join(root, "media", "YouTube", FOLDER);
 
 const { createTask, setSetting } = await import("../config.js");
-const { savePlaylist, defaultPlaylistFields } = await import("./playlists.js");
+const { savePlaylist, defaultPlaylistFields, removePlaylist } = await import("./playlists.js");
 const { YoutubeStore } = await import("./store.js");
 const { YoutubeWorker } = await import("./worker.js");
 const { registerYoutubeRoutes } = await import("../routes/youtube.js");
@@ -286,4 +286,34 @@ test("an ASS translation is read by its format and gets its own section", async 
 
 [00:50](https://youtu.be/${VIDEO}?t=50) ご視聴ありがとう。
 `);
+});
+
+function planRoutesTo(t: { after: (fn: () => void) => void }, taskIds: number[]) {
+  const now = "2026-10-01T00:00:00.000Z";
+  store.setStatus(VIDEO, "transcribing", { now, subtitlePlan: { spoken: "en", routes: taskIds.map((taskId) => ({ taskId, kind: "translate" as const })) } });
+  t.after(() => {
+    store.setStatus(VIDEO, "transcribing", { now, subtitlePlan: null });
+    savePlaylist({ id: PL, title: "AI | Talks", ...defaultPlaylistFields(FOLDER), subtitleTaskIds: [chineseTask] });
+  });
+}
+
+test("a task taken off the playlist mid-run still gets its section from the video's plan", async (t) => {
+  planRoutesTo(t, [Number(chineseTask)]);
+  savePlaylist({ id: PL, title: "AI | Talks", ...defaultPlaylistFields(FOLDER), subtitleTaskIds: [] });
+
+  const result = await exportNoteForVideo(deps, VIDEO);
+
+  assert.deepEqual(result.translations, ["zh-TW"]);
+  assert.match(fs.readFileSync(NOTE_FILE, "utf8"), /## Transcript \(繁體中文\)/);
+});
+
+test("an unfollowed playlist's video still exports into its folder with the planned translations", async (t) => {
+  planRoutesTo(t, [Number(chineseTask)]);
+  removePlaylist(PL);
+
+  const result = await exportNoteForVideo(deps, VIDEO);
+
+  assert.equal(result.file, NOTE_FILE);
+  assert.deepEqual(result.translations, ["zh-TW"]);
+  assert.match(fs.readFileSync(NOTE_FILE, "utf8"), /## Transcript \(繁體中文\)/);
 });

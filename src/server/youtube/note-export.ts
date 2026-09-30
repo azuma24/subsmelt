@@ -9,7 +9,7 @@ import { normalizeTimeToMs, parseSubtitle, type SubtitleCue } from "../translato
 import { readSubtitleFileText } from "../translator/encoding.js";
 import { noteFileName, renderNote, safeNoteName, type Chapter, type Cue, type NoteInfo, type NoteTranslation } from "./note.js";
 import { findPlaylist, type YoutubePlaylist } from "./playlists.js";
-import type { VideoRow, YoutubeStore } from "./store.js";
+import type { SubtitlePlan, VideoRow, YoutubeStore } from "./store.js";
 
 export interface NotesFolderStatus {
   path: string;
@@ -142,18 +142,23 @@ function findTranscript(video: VideoRow, besides: Map<string, string>, language:
   return pick ? { file: pick[1], suffix: pick[0] } : null;
 }
 
-function translationsFor(
-  playlist: YoutubePlaylist | undefined,
-  dir: string,
-  base: string,
-  transcript: Transcript,
-  sourceCues: Cue[],
-): NoteTranslation[] {
+type NoteTask = NonNullable<ReturnType<typeof getTask>>;
+
+/**
+ * The tasks whose outputs belong in the note: the routes the video's subtitle
+ * step planned, so a playlist edit or unfollow mid-run changes nothing. Only a
+ * video with no plan falls back to the playlist's current tasks.
+ */
+function noteTasks(video: VideoRow, playlist: YoutubePlaylist | undefined): NoteTask[] {
+  const plan = video.subtitle_plan ? (JSON.parse(video.subtitle_plan) as SubtitlePlan) : null;
+  const ids = plan ? plan.routes.map((route) => route.taskId) : playlist?.subtitleTaskIds ?? [];
+  return ids.map(getTask).filter((task) => task !== undefined);
+}
+
+function translationsFor(tasks: NoteTask[], dir: string, base: string, transcript: Transcript, sourceCues: Cue[]): NoteTranslation[] {
   const sourceTexts = sourceCues.map((c) => c.text).join("\n");
   const out: NoteTranslation[] = [];
-  for (const id of playlist?.subtitleTaskIds ?? []) {
-    const task = getTask(id);
-    if (!task) continue;
+  for (const task of tasks) {
     const file = taskOutputPath(dir, base, task);
     if (file === transcript.file || !fs.existsSync(file)) continue;
     const cues = readCues(file);
@@ -215,7 +220,7 @@ export async function exportNoteForVideo(deps: NoteExportDeps, videoId: string):
   } catch {
     throw new NoteExportError("no_media", `The folder of ${video.media_path} is missing`);
   }
-  const tasks = (playlist?.subtitleTaskIds ?? []).map(getTask).filter((t) => t !== undefined);
+  const tasks = noteTasks(video, playlist);
   const taskOutputs = new Set(tasks.map((task) => taskOutputPath(dir, base, task)));
   const transcript = findTranscript(video, besides, str(info.language), taskOutputs);
   if (!transcript) throw new NoteExportError("no_transcript", `No subtitle found beside ${video.media_path}`);
@@ -228,7 +233,7 @@ export async function exportNoteForVideo(deps: NoteExportDeps, videoId: string):
 
   const cues = readCues(transcript.file);
   const language = str(info.language) ?? transcript.suffix;
-  const translations = translationsFor(playlist, dir, base, transcript, cues);
+  const translations = translationsFor(tasks, dir, base, transcript, cues);
   const title = str(info.title) ?? video.title;
   const channel = str(info.channel) ?? str(info.uploader) ?? video.channel;
   const noteInfo: NoteInfo = {
