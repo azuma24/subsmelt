@@ -65,6 +65,8 @@ const LANG_SUFFIXES = new Set([
   "vietnamese",
 ]);
 
+const FLAG_SUFFIXES = new Set(["sdh", "forced", "cc", "hi"]);
+
 export interface FolderNode {
   name: string;
   path: string;
@@ -265,16 +267,20 @@ function pathIsInScope(relativePath: string, folders: string[]): boolean {
   );
 }
 
-/** Strip known language suffix from a subtitle stem: "Movie.en" → "Movie" */
+/** A known language code, optionally with a region: "en", "zh-TW". */
+function isLangSuffix(token: string): boolean {
+  const match = /^([a-z]+)(?:-[a-z]{2})?$/i.exec(token);
+  return match !== null && LANG_SUFFIXES.has(match[1].toLowerCase());
+}
+
+/** Strip a trailing language suffix and one flag after it: "Movie.en", "Movie.zh-TW", "Movie.en.sdh" → "Movie" */
 export function stripLangSuffix(stem: string): string {
   const parts = stem.split(".");
-  if (parts.length > 1) {
-    const last = parts[parts.length - 1].toLowerCase();
-    if (LANG_SUFFIXES.has(last)) {
-      return parts.slice(0, -1).join(".");
-    }
-  }
-  return stem;
+  const last = parts.length - 1;
+  const langAt = FLAG_SUFFIXES.has(parts[last].toLowerCase()) ? last - 1 : last;
+  return langAt > 0 && isLangSuffix(parts[langAt])
+    ? parts.slice(0, langAt).join(".")
+    : stem;
 }
 
 /** Apply output pattern substitution */

@@ -14,7 +14,7 @@ process.env.DATA_DIR = path.join(root, "data");
 process.env.CONFIG_DIR = path.join(root, "config");
 const config = await import("./config.js");
 const db = await import("./db.js");
-const { scanFolder } = await import("./scanner.js");
+const { scanFolder, stripLangSuffix } = await import("./scanner.js");
 
 function library(name: string, files: string[]): string {
   const dir = path.join(mediaDir, name);
@@ -41,7 +41,10 @@ function scan(dir: string): Record<string, string[]> {
   return Object.fromEntries(
     files
       .filter((file) => file.videoPath?.startsWith(`${dir}${path.sep}`))
-      .map((file) => [file.videoName, file.subtitles.map((sub) => sub.srtName)]),
+      .map((file) => [
+        file.videoName,
+        file.subtitles.map((sub) => sub.srtName).sort(),
+      ]),
   );
 }
 
@@ -92,4 +95,38 @@ test("two sources that translate to one output queue one job, from the source wi
     scanLogs.some((message) => message.includes("Skipped Show.eng.srt")),
     `no skip logged in ${JSON.stringify(scanLogs)}`,
   );
+});
+
+test("stripLangSuffix drops a language with an optional region or subtitle flag", () => {
+  assert.equal(stripLangSuffix("Movie.en"), "Movie");
+  assert.equal(stripLangSuffix("Movie.en.sdh"), "Movie");
+  assert.equal(stripLangSuffix("Movie.en.forced"), "Movie");
+  assert.equal(stripLangSuffix("Movie.eng.cc"), "Movie");
+  assert.equal(stripLangSuffix("Movie.en.hi"), "Movie");
+  assert.equal(stripLangSuffix("Movie.zh-TW"), "Movie");
+  assert.equal(stripLangSuffix("Movie.pt-BR.forced"), "Movie");
+  assert.equal(stripLangSuffix("Movie.v2"), "Movie.v2");
+  assert.equal(stripLangSuffix("Movie.sdh"), "Movie.sdh");
+  assert.equal(stripLangSuffix("Movie.hi"), "Movie.hi");
+  assert.equal(stripLangSuffix("en.sdh"), "en.sdh");
+});
+
+test("flagged and region-coded subtitles match their video, and the full subtitle owns the shared output", () => {
+  useTasks("zh");
+  const dir = library("flags-and-regions", [
+    "Movie.mkv",
+    "Movie.en.srt",
+    "Movie.en.forced.srt",
+    "Drama.mkv",
+    "Drama.zh-TW.srt",
+  ]);
+
+  assert.deepEqual(scan(dir), {
+    "Drama.mkv": ["Drama.zh-TW.srt"],
+    "Movie.mkv": ["Movie.en.forced.srt", "Movie.en.srt"],
+  });
+  assert.deepEqual(jobsIn(dir), [
+    ["Drama.zh-TW.srt", "Drama.zh.srt"],
+    ["Movie.en.srt", "Movie.zh.srt"],
+  ]);
 });
