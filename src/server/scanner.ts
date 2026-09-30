@@ -249,11 +249,19 @@ export function listFolderTree(): FolderNode {
   };
 }
 
-function parseFolderSetting(raw: string): string[] {
+/** Folder list setting: a JSON array, so names may contain commas, or the legacy comma-separated list. */
+export function parseFolderSetting(raw: string): string[] {
+  let folders: unknown[] = raw.split(",");
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (Array.isArray(parsed)) folders = parsed;
+  } catch {
+    // Not JSON: keep the legacy comma split.
+  }
   return Array.from(
     new Set(
-      raw
-        .split(",")
+      folders
+        .filter((f): f is string => typeof f === "string")
         .map((f) => normalizeMediaSubfolder(f))
         .filter((f): f is string => Boolean(f)),
     ),

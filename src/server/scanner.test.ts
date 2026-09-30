@@ -14,7 +14,9 @@ process.env.DATA_DIR = path.join(root, "data");
 process.env.CONFIG_DIR = path.join(root, "config");
 const config = await import("./config.js");
 const db = await import("./db.js");
-const { scanFolder, stripLangSuffix } = await import("./scanner.js");
+const { scanFolder, stripLangSuffix, parseFolderSetting } = await import(
+  "./scanner.js"
+);
 
 function library(name: string, files: string[]): string {
   const dir = path.join(mediaDir, name);
@@ -129,4 +131,31 @@ test("flagged and region-coded subtitles match their video, and the full subtitl
     ["Drama.zh-TW.srt", "Drama.zh.srt"],
     ["Movie.en.srt", "Movie.zh.srt"],
   ]);
+});
+
+test("a folder setting stored as a JSON array keeps commas inside folder names", () => {
+  assert.deepEqual(parseFolderSetting('["Movies, 2024","TV"]'), ["Movies, 2024", "TV"]);
+  assert.deepEqual(parseFolderSetting('[" Anime ", "", "TV"]'), ["Anime", "TV"]);
+});
+
+test("a folder setting stored as the legacy comma list still parses", () => {
+  assert.deepEqual(parseFolderSetting("Movies,TV"), ["Movies", "TV"]);
+  assert.deepEqual(parseFolderSetting(" Movies , ,TV "), ["Movies", "TV"]);
+  assert.deepEqual(parseFolderSetting("   "), []);
+  assert.deepEqual(parseFolderSetting('"abc"'), ['"abc"']);
+  assert.deepEqual(parseFolderSetting("{}"), ["{}"]);
+  assert.deepEqual(parseFolderSetting("[Anime],TV"), ["[Anime]", "TV"]);
+});
+
+test("a selected folder whose name contains a comma is scanned", (t) => {
+  useTasks("zh");
+  const dir = library("Movies, 2024", ["Film.mkv", "Film.srt"]);
+  config.setSetting("scan_mode", "selected");
+  config.setSetting("scan_folders", JSON.stringify(["Movies, 2024"]));
+  t.after(() => {
+    config.setSetting("scan_mode", "recursive");
+    config.setSetting("scan_folders", "");
+  });
+
+  assert.deepEqual(scan(dir), { "Film.mkv": ["Film.srt"] });
 });
