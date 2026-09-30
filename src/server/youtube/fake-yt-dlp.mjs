@@ -22,4 +22,5 @@ if (env.FAKE_YTDLP_STDOUT_FILE) process.stdout.write(fs.readFileSync(env.FAKE_YT
 if (env.FAKE_YTDLP_STDERR) process.stderr.write(env.FAKE_YTDLP_STDERR);
 const exit = Number(env.FAKE_YTDLP_EXIT ?? 0);
 const sleep = Number(env.FAKE_YTDLP_SLEEP_MS ?? 0);
-setTimeout(() => process.exit(exit), sleep);
+// exitCode rather than process.exit(): exiting outright cuts off stdout still queued for a pipe.
+setTimeout(() => { process.exitCode = exit; }, sleep);
