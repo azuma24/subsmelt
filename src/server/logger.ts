@@ -96,7 +96,7 @@ function writeToDB(entry: {
 }
 
 type LogLevel = "info" | "warn" | "error";
-type LogCategory = "scan" | "translate" | "queue" | "system";
+type LogCategory = "scan" | "translate" | "queue" | "system" | "youtube";
 
 function log(
   level: LogLevel,

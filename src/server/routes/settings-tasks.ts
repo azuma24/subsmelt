@@ -37,10 +37,15 @@ const SECRET_SETTING_KEYS = new Set([
   "cloud_api_key_anthropic",
   "cloud_api_key_gemini",
   "transcription_backend_token",
+  "youtube_api_key",
 ]);
+// Owned by the YouTube playlist routes. A Settings save sends back the whole
+// settings object it loaded, which would overwrite playlists followed since.
+const ROUTE_OWNED_SETTING_KEYS = new Set(["youtube_playlists"]);
 
 function redactSettings(settings: Record<string, string>): Record<string, string> {
   const redacted = { ...settings };
+  for (const key of ROUTE_OWNED_SETTING_KEYS) delete redacted[key];
   for (const key of SECRET_SETTING_KEYS) {
     if (redacted[key]) redacted[key] = REDACTED_SECRET;
   }
@@ -91,7 +96,7 @@ export function registerSettingsTasksRoutes(app: Express): void {
     const patch: Record<string, string> = {};
     for (const [key, value] of Object.entries(settings)) {
       if (key.startsWith("_")) continue;
-      if (!isWritableSettingKey(key)) {
+      if (!isWritableSettingKey(key) || ROUTE_OWNED_SETTING_KEYS.has(key)) {
         rejected.push(key);
         continue;
       }
