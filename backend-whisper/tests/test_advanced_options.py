@@ -1,18 +1,18 @@
 import unittest
 
 try:
+    from app.engine import LanguageNotSupportedError
     from app.schemas import AdvancedSttOptions, TranscribeRequest
     from app.transcribe import (
-        EnglishOnlyModelError,
         assert_language_supported,
         assert_supported_advanced_features,
-        faster_whisper_transcribe_kwargs,
         unsupported_advanced_features,
     )
+    from app.whisper_engine import faster_whisper_transcribe_kwargs
 except ModuleNotFoundError as exc:  # pragma: no cover - local host may not have backend deps installed
     AdvancedSttOptions = None
     TranscribeRequest = None
-    EnglishOnlyModelError = None
+    LanguageNotSupportedError = None
     assert_language_supported = None
     assert_supported_advanced_features = None
     faster_whisper_transcribe_kwargs = None
@@ -69,10 +69,14 @@ class AdvancedOptionsTests(unittest.TestCase):
             model="distil-large-v3",
             language="ja",
         )
-        with self.assertRaises(EnglishOnlyModelError) as ctx:
+        with self.assertRaises(LanguageNotSupportedError) as ctx:
             assert_language_supported(request)
-        self.assertIn("English-only", str(ctx.exception))
-        with self.assertRaises(EnglishOnlyModelError):
+        self.assertEqual(
+            str(ctx.exception),
+            "Model 'distil-large-v3' does not support language 'ja'. Use large-v3 or large-v3-turbo.",
+        )
+        self.assertEqual((ctx.exception.model, ctx.exception.language), ("distil-large-v3", "ja"))
+        with self.assertRaises(LanguageNotSupportedError):
             assert_supported_advanced_features(request)
 
     def test_distil_allows_english_and_auto(self):
@@ -91,6 +95,12 @@ class AdvancedOptionsTests(unittest.TestCase):
             language="ja",
         )
         assert_language_supported(request)
+
+    def test_nemotron_rejects_traditional_chinese_and_accepts_japanese(self):
+        assert_language_supported(TranscribeRequest(input_path="/media/a.mkv", model="nemotron-3.5-asr", language="ja"))
+        with self.assertRaises(LanguageNotSupportedError) as ctx:
+            assert_language_supported(TranscribeRequest(input_path="/media/a.mkv", model="nemotron-3.5-asr", language="zh-TW"))
+        self.assertEqual(ctx.exception.language, "zh-TW")
 
 
 if __name__ == "__main__":

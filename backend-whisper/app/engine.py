@@ -8,6 +8,9 @@ caller both need, so it imports nothing from the rest of the app.
 """
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Callable, Generator, Protocol
+
 
 class TranscriptionCancelled(RuntimeError):
     """Raised when a caller requests cancellation mid-transcription.
@@ -32,6 +35,16 @@ class EngineUnavailableError(RuntimeError):
     def __init__(self, model: str, message: str) -> None:
         super().__init__(message)
         self.model = model
+
+
+class EngineRunner(Protocol):
+    def __call__(
+        self,
+        request: object,
+        audio_path: Path,
+        is_cancelled: Callable[[], bool] | None,
+        min_progress_interval: float,
+    ) -> Generator[dict, None, tuple[list, object]]: ...
 
 
 def progress_event(processed_seconds: float, total_seconds: float) -> dict:
