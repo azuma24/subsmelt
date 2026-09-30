@@ -13,6 +13,7 @@ models/
 # Local agent/tool state
 .bg-shell/
 .claude/
+.pi/
 
 # Local env files
 .env
