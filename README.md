@@ -114,11 +114,20 @@ For NVIDIA GPU acceleration, add the GPU overlay:
 docker compose -f docker-compose.yml -f docker-compose.whisper.yml -f docker-compose.whisper.gpu.yml up -d
 ```
 
+Two model families are available, and **Settings → Speech-to-text models** downloads them on demand:
+
+| Family | Models | Strength |
+|--------|--------|----------|
+| Whisper (faster-whisper) | `tiny` to `large-v3`, `large-v3-turbo`, `distil-large-v3` | 99 languages. Best for Chinese and rare languages. |
+| NVIDIA Nemotron | `nemotron-3.5-asr` (742 MB GGUF) | Fast, punctuated, word-level timing. English, Japanese, Korean, Mandarin and most European languages (32 locales). |
+
+Nemotron runs through the bundled [NeMo-Speech.cpp](https://github.com/NVIDIA/NeMo-Speech.cpp) runtime (`nemo-speech`). The Docker image and the Windows installer ship it; a source install sets `SUBSMELT_NEMO_SPEECH` to the binary or puts `nemo-speech` on `PATH`. Beam size, prompt and compute type do not apply to Nemotron and are hidden when it is selected. On Windows the GPU build needs an NVIDIA driver R580 or newer (CUDA 13).
+
 Key STT settings (all in the web UI):
 
 | Setting | What it controls |
 |---------|-----------------|
-| Model / device / compute | faster-whisper model size, CPU/GPU, `int8` / `float16` |
+| Model / device / compute | Whisper size or Nemotron, CPU/GPU, `int8` / `float16` (Whisper only) |
 | Language / output format | Auto-detect or explicit source language; `.srt`, `.vtt`, `.txt` |
 | Missing-subtitle behavior | Ask, auto-transcribe, or auto-transcribe + translate |
 | Low-RAM behavior | Ask, downgrade model, skip, or run anyway |
