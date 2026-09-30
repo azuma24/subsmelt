@@ -35,7 +35,9 @@ db.exec(`
 `);
 
 // Schema migration for existing DBs
-const jobColumns = db.prepare("PRAGMA table_info(jobs)").all() as Array<{ name: string }>;
+const jobColumns = db.prepare("PRAGMA table_info(jobs)").all() as Array<{
+  name: string;
+}>;
 if (!jobColumns.some((c) => c.name === "analysis_context")) {
   db.exec("ALTER TABLE jobs ADD COLUMN analysis_context TEXT");
 }
@@ -59,7 +61,7 @@ if (!jobColumns.some((c) => c.name === "started_at")) {
 // Queue workers claim pending jobs by status/priority rather than materializing
 // the full pending table on every poll.
 db.exec(
-  "CREATE INDEX IF NOT EXISTS idx_jobs_pending_priority ON jobs (status, priority DESC, created_at ASC, id ASC)"
+  "CREATE INDEX IF NOT EXISTS idx_jobs_pending_priority ON jobs (status, priority DESC, created_at ASC, id ASC)",
 );
 
 // --- Schema: Logs ---
@@ -80,7 +82,45 @@ db.exec(`
 setLogDb(db);
 
 // On startup, reset stuck "translating" jobs
-db.prepare("UPDATE jobs SET status = 'pending', updated_at = datetime('now') WHERE status = 'translating'").run();
+db.prepare(
+  "UPDATE jobs SET status = 'pending', updated_at = datetime('now') WHERE status = 'translating'",
+).run();
+
+// --- Row types ---
+
+/** Shape of a `jobs` row as stored in SQLite. */
+export interface JobRow {
+  id: number;
+  task_id: number;
+  srt_path: string;
+  output_path: string;
+  video_path: string | null;
+  status: string;
+  priority: number;
+  force: number;
+  total_cues: number | null;
+  completed_cues: number | null;
+  error: string | null;
+  analysis_context: string | null;
+  used_connections: string | null;
+  duration_seconds: number | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  started_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+/** Shape of a `logs` row as stored in SQLite. */
+export interface LogRow {
+  id: number;
+  timestamp: string;
+  level: string;
+  category: string;
+  message: string;
+  job_id: number | null;
+  meta: string | null;
+}
 
 // --- Jobs ---
 
@@ -94,9 +134,15 @@ export function createJob(job: {
   return db
     .prepare(
       `INSERT OR IGNORE INTO jobs (task_id, srt_path, output_path, video_path, status)
-       VALUES (?, ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?)`,
     )
-    .run(job.task_id, job.srt_path, job.output_path, job.video_path, job.status || "pending");
+    .run(
+      job.task_id,
+      job.srt_path,
+      job.output_path,
+      job.video_path,
+      job.status || "pending",
+    );
 }
 
 export function updateJob(
@@ -112,7 +158,7 @@ export function updateJob(
     force: number;
     input_tokens: number;
     output_tokens: number;
-  }>
+  }>,
 ) {
   const sets: string[] = ["updated_at = datetime('now')"];
   const vals: any[] = [];
@@ -131,77 +177,101 @@ export function updateJob(
  * reported, so the totals build up while the job runs. Deltas are coerced to
  * finite non-negative integers; a no-op when both are zero.
  */
-export function addJobUsage(id: number, inputDelta: number, outputDelta: number) {
-  const inDelta = Number.isFinite(inputDelta) ? Math.max(0, Math.trunc(inputDelta)) : 0;
-  const outDelta = Number.isFinite(outputDelta) ? Math.max(0, Math.trunc(outputDelta)) : 0;
+export function addJobUsage(
+  id: number,
+  inputDelta: number,
+  outputDelta: number,
+) {
+  const inDelta = Number.isFinite(inputDelta)
+    ? Math.max(0, Math.trunc(inputDelta))
+    : 0;
+  const outDelta = Number.isFinite(outputDelta)
+    ? Math.max(0, Math.trunc(outputDelta))
+    : 0;
   if (inDelta === 0 && outDelta === 0) return;
   db.prepare(
-    "UPDATE jobs SET input_tokens = COALESCE(input_tokens, 0) + ?, output_tokens = COALESCE(output_tokens, 0) + ? WHERE id = ?"
+    "UPDATE jobs SET input_tokens = COALESCE(input_tokens, 0) + ?, output_tokens = COALESCE(output_tokens, 0) + ? WHERE id = ?",
   ).run(inDelta, outDelta, id);
 }
 
-export function getJobs(status?: string) {
+export function getJobs(status?: string): JobRow[] {
   if (status) {
     return db
       .prepare(
-        `SELECT * FROM jobs WHERE status = ? ORDER BY priority DESC, created_at ASC`
+        `SELECT * FROM jobs WHERE status = ? ORDER BY priority DESC, created_at ASC`,
       )
-      .all(status);
+      .all(status) as JobRow[];
   }
   return db
     .prepare(`SELECT * FROM jobs ORDER BY priority DESC, created_at DESC`)
-    .all();
+    .all() as JobRow[];
 }
 
 export function countPendingJobs(ids?: Set<number> | null): number {
   if (!ids || ids.size === 0) {
-    return (db.prepare("SELECT COUNT(*) AS count FROM jobs WHERE status = 'pending'").get() as { count: number }).count;
+    return (
+      db
+        .prepare("SELECT COUNT(*) AS count FROM jobs WHERE status = 'pending'")
+        .get() as { count: number }
+    ).count;
   }
   const values = Array.from(ids);
   const placeholders = values.map(() => "?").join(",");
   return (
     db
-      .prepare(`SELECT COUNT(*) AS count FROM jobs WHERE status = 'pending' AND id IN (${placeholders})`)
+      .prepare(
+        `SELECT COUNT(*) AS count FROM jobs WHERE status = 'pending' AND id IN (${placeholders})`,
+      )
       .get(...values) as { count: number }
   ).count;
 }
 
-export function claimPendingJob(ids?: Set<number> | null) {
+export function claimPendingJob(ids?: Set<number> | null): JobRow | null {
   const values = ids && ids.size > 0 ? Array.from(ids) : [];
-  const filter = values.length > 0 ? ` AND id IN (${values.map(() => "?").join(",")})` : "";
+  const filter =
+    values.length > 0 ? ` AND id IN (${values.map(() => "?").join(",")})` : "";
   const select = db.prepare(
-    `SELECT * FROM jobs WHERE status = 'pending'${filter} ORDER BY priority DESC, created_at ASC, id ASC LIMIT 1`
+    `SELECT * FROM jobs WHERE status = 'pending'${filter} ORDER BY priority DESC, created_at ASC, id ASC LIMIT 1`,
   );
   const claim = db.prepare(
-    "UPDATE jobs SET status = 'translating', error = NULL, analysis_context = NULL, used_connections = NULL, input_tokens = 0, output_tokens = 0, started_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND status = 'pending'"
+    "UPDATE jobs SET status = 'translating', error = NULL, analysis_context = NULL, used_connections = NULL, input_tokens = 0, output_tokens = 0, started_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND status = 'pending'",
   );
   return db.transaction(() => {
-    const job = select.get(...values) as any;
+    const job = select.get(...values) as JobRow | undefined;
     if (!job || claim.run(job.id).changes !== 1) return null;
     return job;
   })();
 }
 
-export function getJob(id: number) {
-  return db.prepare(`SELECT * FROM jobs WHERE id = ?`).get(id);
+export function getJob(id: number): JobRow | undefined {
+  return db.prepare(`SELECT * FROM jobs WHERE id = ?`).get(id) as
+    | JobRow
+    | undefined;
 }
 
-export function getJobBySrtAndTask(srtPath: string, taskId: number) {
-  return db.prepare("SELECT * FROM jobs WHERE srt_path = ? AND task_id = ?").get(srtPath, taskId);
+export function getJobBySrtAndTask(
+  srtPath: string,
+  taskId: number,
+): JobRow | undefined {
+  return db
+    .prepare("SELECT * FROM jobs WHERE srt_path = ? AND task_id = ?")
+    .get(srtPath, taskId) as JobRow | undefined;
 }
 
 export function resetJob(id: number) {
   db.prepare(
-    "UPDATE jobs SET status = 'pending', completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE id = ?"
+    "UPDATE jobs SET status = 'pending', completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE id = ?",
   ).run(id);
 }
 
 export function resetJobs(ids: number[]) {
-  const cleanIds = Array.from(new Set(ids.filter((id) => Number.isInteger(id) && id > 0)));
+  const cleanIds = Array.from(
+    new Set(ids.filter((id) => Number.isInteger(id) && id > 0)),
+  );
   if (cleanIds.length === 0) return 0;
 
   const stmt = db.prepare(
-    "UPDATE jobs SET status = 'pending', completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE id = ? AND status = 'error'"
+    "UPDATE jobs SET status = 'pending', completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE id = ? AND status = 'error'",
   );
   let updated = 0;
   const tx = db.transaction(() => {
@@ -213,16 +283,18 @@ export function resetJobs(ids: number[]) {
 
 export function forceJob(id: number) {
   db.prepare(
-    "UPDATE jobs SET status = 'pending', force = 1, completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE id = ?"
+    "UPDATE jobs SET status = 'pending', force = 1, completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE id = ?",
   ).run(id);
 }
 
 export function forceJobs(ids: number[]) {
-  const cleanIds = Array.from(new Set(ids.filter((id) => Number.isInteger(id) && id > 0)));
+  const cleanIds = Array.from(
+    new Set(ids.filter((id) => Number.isInteger(id) && id > 0)),
+  );
   if (cleanIds.length === 0) return 0;
 
   const stmt = db.prepare(
-    "UPDATE jobs SET status = 'pending', force = 1, completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE id = ? AND status IN ('done', 'skipped')"
+    "UPDATE jobs SET status = 'pending', force = 1, completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE id = ? AND status IN ('done', 'skipped')",
   );
   let updated = 0;
   const tx = db.transaction(() => {
@@ -234,22 +306,28 @@ export function forceJobs(ids: number[]) {
 
 export function forceAllJobs() {
   db.prepare(
-    "UPDATE jobs SET status = 'pending', force = 1, completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE status IN ('done', 'skipped')"
+    "UPDATE jobs SET status = 'pending', force = 1, completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE status IN ('done', 'skipped')",
   ).run();
 }
 
 export function pinJob(id: number) {
   const max = db.prepare("SELECT MAX(priority) as m FROM jobs").get() as any;
   const newPriority = (max?.m || 0) + 1;
-  db.prepare("UPDATE jobs SET priority = ?, updated_at = datetime('now') WHERE id = ?").run(newPriority, id);
+  db.prepare(
+    "UPDATE jobs SET priority = ?, updated_at = datetime('now') WHERE id = ?",
+  ).run(newPriority, id);
 }
 
 export function unpinJob(id: number) {
-  db.prepare("UPDATE jobs SET priority = 0, updated_at = datetime('now') WHERE id = ?").run(id);
+  db.prepare(
+    "UPDATE jobs SET priority = 0, updated_at = datetime('now') WHERE id = ?",
+  ).run(id);
 }
 
 export function reorderJobs(jobIds: number[]) {
-  const stmt = db.prepare("UPDATE jobs SET priority = ?, updated_at = datetime('now') WHERE id = ?");
+  const stmt = db.prepare(
+    "UPDATE jobs SET priority = ?, updated_at = datetime('now') WHERE id = ?",
+  );
   const tx = db.transaction(() => {
     for (let i = 0; i < jobIds.length; i++) {
       stmt.run(jobIds.length - i, jobIds[i]);
@@ -263,10 +341,14 @@ export function deleteJob(id: number) {
 }
 
 export function deleteJobs(ids: number[]) {
-  const cleanIds = Array.from(new Set(ids.filter((id) => Number.isInteger(id) && id > 0)));
+  const cleanIds = Array.from(
+    new Set(ids.filter((id) => Number.isInteger(id) && id > 0)),
+  );
   if (cleanIds.length === 0) return 0;
 
-  const stmt = db.prepare("DELETE FROM jobs WHERE id = ? AND status = 'pending'");
+  const stmt = db.prepare(
+    "DELETE FROM jobs WHERE id = ? AND status = 'pending'",
+  );
   let deleted = 0;
   const tx = db.transaction(() => {
     for (const id of cleanIds) {
@@ -289,7 +371,7 @@ export function getLogs(opts?: {
   jobId?: number;
   limit?: number;
   offset?: number;
-}) {
+}): LogRow[] {
   let sql = "SELECT * FROM logs WHERE 1=1";
   const vals: any[] = [];
 
@@ -317,7 +399,7 @@ export function getLogs(opts?: {
     vals.push(opts.offset);
   }
 
-  return db.prepare(sql).all(...vals);
+  return db.prepare(sql).all(...vals) as LogRow[];
 }
 
 export function clearLogs() {

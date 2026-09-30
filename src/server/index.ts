@@ -2,26 +2,26 @@ import express from "express";
 import cors from "cors";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import asyncPool from "tiny-async-pool";
 import {
   getAllSettings,
   setSetting,
   envSettingOverrides,
   getSetting,
 } from "./config.js";
-import { scanFolder, listSubfolders, listFolderTree, MEDIA_DIR } from "./scanner.js";
-import {
-  processQueue,
-  isQueueRunning,
-  requestStop,
-  startAutoScan,
-} from "./queue.js";
+import { scanFolder, listFolderTree, MEDIA_DIR } from "./scanner.js";
+import { processQueue, isQueueRunning, startAutoScan } from "./queue.js";
 import { transcriptionHistory } from "./transcription-history.js";
 import { logger } from "./logger.js";
 import { getLogs, clearLogs } from "./db.js";
 import { addSSEClient, broadcast } from "./sse.js";
 import { notifyTest } from "./notify.js";
 import { startWatcher, stopWatcher, isWatcherRunning } from "./watcher.js";
-import { MAX_LOG_LIMIT, MAX_LOG_OFFSET, parseBoundedNonNegativeInt } from "./routes/validation.js";
+import {
+  MAX_LOG_LIMIT,
+  MAX_LOG_OFFSET,
+  parseBoundedNonNegativeInt,
+} from "./routes/validation.js";
 import type { TranscribePostAction } from "./transcription-client.js";
 import { registerSettingsTasksRoutes } from "./routes/settings-tasks.js";
 import { registerJobsRoutes } from "./routes/jobs.js";
@@ -46,16 +46,11 @@ const staticDir = path.join(__dirname, "../../dist/client");
 app.use(express.static(staticDir));
 
 // ======== SSE (Feature 6) ========
-app.get("/api/events", (req, res) => {
+app.get("/api/events", (_req, res) => {
   addSSEClient(res);
 });
 
 registerSettingsTasksRoutes(app);
-
-// ======== Subfolders ========
-app.get("/api/subfolders", (_req, res) => {
-  res.json({ subfolders: listSubfolders() });
-});
 
 app.get("/api/folders/tree", (_req, res) => {
   res.json({ root: listFolderTree() });
@@ -68,8 +63,15 @@ app.post("/api/scan", async (_req, res) => {
     const settings = getAllSettings();
     const behavior = settings.transcription_missing_subtitle_behavior || "ask";
     const backendUrl = getTranscriptionBackendUrl(settings);
-    if (settings.transcription_enabled === "1" && backendUrl && behavior !== "ask") {
-      const postAction: TranscribePostAction = behavior === "auto_transcribe_and_translate" ? "transcribe_and_translate" : "transcribe_only";
+    if (
+      settings.transcription_enabled === "1" &&
+      backendUrl &&
+      behavior !== "ask"
+    ) {
+      const postAction: TranscribePostAction =
+        behavior === "auto_transcribe_and_translate"
+          ? "transcribe_and_translate"
+          : "transcribe_only";
       const missingVideos = result.files
         .filter((file) => file.videoPath && file.subtitles.length === 0)
         .map((file) => file.videoPath as string);
@@ -77,19 +79,51 @@ app.post("/api/scan", async (_req, res) => {
       // batch. Each file is transcribed through runTranscriptionAttempt (which
       // records a history entry and acquires the shared concurrency slot), and
       // any hard failure is caught + logged here so remaining files continue.
-      await Promise.all(missingVideos.map(async (videoPath) => {
-        try {
-          const { result: transcribed } = await runTranscriptionAttempt({ videoPath, postAction, settings });
-          logger.info("system", `Auto-transcribed ${path.basename(videoPath)} → ${transcribed.subtitle_path || "subtitle output"}`);
-        } catch (error: any) {
-          const message = error?.message || String(error);
-          if (settings.transcription_low_ram_behavior === "skip" && message.startsWith("Transcription skipped:")) {
-            logger.info("system", `Skipped auto-transcription for ${path.basename(videoPath)}: ${message}`);
-            return;
+      // Bound the fan-out so a huge library doesn't spin up hundreds of attempts
+      // (each registering a history row + in-flight entry) before the slot gate
+      // can even hold them back.
+      const scanConcurrency = Math.max(
+        1,
+        Math.min(
+          4,
+          parseInt(settings.transcription_max_concurrent || "1", 10) || 1,
+        ),
+      );
+      for await (const _ of asyncPool(
+        scanConcurrency,
+        missingVideos,
+        async (videoPath) => {
+          try {
+            const { result: transcribed } = await runTranscriptionAttempt({
+              videoPath,
+              postAction,
+              settings,
+            });
+            logger.info(
+              "system",
+              `Auto-transcribed ${path.basename(videoPath)} → ${transcribed.subtitle_path || "subtitle output"}`,
+            );
+          } catch (error: any) {
+            const message = error?.message || String(error);
+            if (
+              settings.transcription_low_ram_behavior === "skip" &&
+              message.startsWith("Transcription skipped:")
+            ) {
+              logger.info(
+                "system",
+                `Skipped auto-transcription for ${path.basename(videoPath)}: ${message}`,
+              );
+              return;
+            }
+            logger.error(
+              "system",
+              `Auto-transcription failed for ${path.basename(videoPath)}: ${message}`,
+            );
           }
-          logger.error("system", `Auto-transcription failed for ${path.basename(videoPath)}: ${message}`);
-        }
-      }));
+        },
+      )) {
+        // Drain the concurrency pool; per-file errors are handled in the iterator.
+      }
       if (missingVideos.length > 0) {
         result = scanFolder(postAction === "transcribe_and_translate");
       }
@@ -97,7 +131,10 @@ app.post("/api/scan", async (_req, res) => {
     if (result.newJobs > 0 && getSetting("auto_translate") === "1") {
       setTimeout(() => processQueue(), 100);
     }
-    broadcast("scan:complete", { newJobs: result.newJobs, total: result.totalSubtitles });
+    broadcast("scan:complete", {
+      newJobs: result.newJobs,
+      total: result.totalSubtitles,
+    });
     res.json(result);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
@@ -142,7 +179,7 @@ app.get("/api/logs", (req, res) => {
       jobId: Number.isFinite(parsedJobId) ? parsedJobId : undefined,
       limit: parseBoundedNonNegativeInt(limit, 100, MAX_LOG_LIMIT),
       offset: parseBoundedNonNegativeInt(offset, 0, MAX_LOG_OFFSET),
-    })
+    }),
   );
 });
 
@@ -167,7 +204,11 @@ app.post("/api/notify/test", async (_req, res) => {
 
 // ======== Health ========
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, queueRunning: isQueueRunning(), watcherRunning: isWatcherRunning() });
+  res.json({
+    ok: true,
+    queueRunning: isQueueRunning(),
+    watcherRunning: isWatcherRunning(),
+  });
 });
 
 // ======== SPA Fallback ========
@@ -184,7 +225,10 @@ app.listen(PORT, "0.0.0.0", () => {
   // (e.g. crash/restart mid-transcription) so they no longer hang in history.
   const reconciled = transcriptionHistory.reconcileRunning();
   if (reconciled > 0) {
-    logger.info("system", `Reconciled ${reconciled} interrupted transcription attempt(s) as failed`);
+    logger.info(
+      "system",
+      `Reconciled ${reconciled} interrupted transcription attempt(s) as failed`,
+    );
   }
 
   logger.info("system", `SubSmelt started on port ${PORT}`);

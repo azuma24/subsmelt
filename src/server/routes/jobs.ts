@@ -24,14 +24,24 @@ import {
   getCurrentJobId,
   requestStop,
 } from "../queue.js";
-import { parseSubtitle, readSubtitleFileText, applyCueEdits, writeSubtitleFile, resolveTranslatedOutputPath, type CueEdit } from "../translator.js";
+import {
+  parseSubtitle,
+  readSubtitleFileText,
+  applyCueEdits,
+  writeSubtitleFile,
+  resolveTranslatedOutputPath,
+  type CueEdit,
+} from "../translator.js";
 import { resolveConnectionPool } from "../connections.js";
 import { estimateCost } from "../pricing.js";
 import { assertMediaPathAllowed } from "../transcription-client.js";
 import { isWatcherRunning } from "../watcher.js";
 import { getAllSettings } from "../config.js";
 import { logger } from "../logger.js";
-import { parsePositiveInteger, parsePositiveIntegerArray } from "./validation.js";
+import {
+  parsePositiveInteger,
+  parsePositiveIntegerArray,
+} from "./validation.js";
 
 // Enrich job rows with task data (since settings/tasks are in config, not SQL JOIN).
 // Also surfaces token usage + an APPROXIMATE est_cost: jobs don't store which
@@ -62,7 +72,7 @@ export function registerJobsRoutes(app: Express): void {
   // ======== Jobs ========
   app.get("/api/jobs", (_req, res) => {
     res.json({
-      jobs: enrichJobs(getJobs() as any[]),
+      jobs: enrichJobs(getJobs()),
       queueRunning: isQueueRunning(),
       currentJobId: getCurrentJobId(),
     });
@@ -78,9 +88,12 @@ export function registerJobsRoutes(app: Express): void {
 
   app.post("/api/jobs/retry-selected", (req, res) => {
     const rawIds = (req.body as { ids?: unknown })?.ids;
-    if (!Array.isArray(rawIds)) return res.status(400).json({ error: "ids must be an array" });
+    if (!Array.isArray(rawIds))
+      return res.status(400).json({ error: "ids must be an array" });
 
-    const ids = rawIds.filter((v): v is number => typeof v === "number" && Number.isInteger(v));
+    const ids = rawIds.filter(
+      (v): v is number => typeof v === "number" && Number.isInteger(v),
+    );
     const updated = resetJobs(ids);
     logger.info("queue", `Reset ${updated} selected error jobs to pending`);
     if (updated > 0) setTimeout(() => processQueue(), 100);
@@ -97,11 +110,17 @@ export function registerJobsRoutes(app: Express): void {
 
   app.post("/api/jobs/force-selected", (req, res) => {
     const rawIds = (req.body as { ids?: unknown })?.ids;
-    if (!Array.isArray(rawIds)) return res.status(400).json({ error: "ids must be an array" });
+    if (!Array.isArray(rawIds))
+      return res.status(400).json({ error: "ids must be an array" });
 
-    const ids = rawIds.filter((v): v is number => typeof v === "number" && Number.isInteger(v));
+    const ids = rawIds.filter(
+      (v): v is number => typeof v === "number" && Number.isInteger(v),
+    );
     const updated = forceJobs(ids);
-    logger.info("queue", `Marked ${updated} selected jobs for force re-translate`);
+    logger.info(
+      "queue",
+      `Marked ${updated} selected jobs for force re-translate`,
+    );
     if (updated > 0) setTimeout(() => processQueue(), 100);
     res.json({ ok: true, updated });
   });
@@ -123,7 +142,10 @@ export function registerJobsRoutes(app: Express): void {
   app.post("/api/jobs/reorder", (req, res) => {
     const { jobIds } = req.body;
     const ids = parsePositiveIntegerArray(jobIds);
-    if (!ids) return res.status(400).json({ error: "jobIds must be an array of positive integers" });
+    if (!ids)
+      return res
+        .status(400)
+        .json({ error: "jobIds must be an array of positive integers" });
     reorderJobs(ids);
     res.json({ ok: true });
   });
@@ -142,9 +164,12 @@ export function registerJobsRoutes(app: Express): void {
 
   app.post("/api/jobs/delete-selected", (req, res) => {
     const rawIds = (req.body as { ids?: unknown })?.ids;
-    if (!Array.isArray(rawIds)) return res.status(400).json({ error: "ids must be an array" });
+    if (!Array.isArray(rawIds))
+      return res.status(400).json({ error: "ids must be an array" });
 
-    const ids = rawIds.filter((v): v is number => typeof v === "number" && Number.isInteger(v));
+    const ids = rawIds.filter(
+      (v): v is number => typeof v === "number" && Number.isInteger(v),
+    );
     const deleted = deleteJobs(ids);
     logger.info("queue", `Deleted ${deleted} selected pending jobs from queue`);
     res.json({ ok: true, deleted });
@@ -159,7 +184,7 @@ export function registerJobsRoutes(app: Express): void {
   // ======== Subtitle Preview (Feature 7) ========
   app.get("/api/jobs/:id/preview", (req, res) => {
     const id = parseInt(req.params.id, 10);
-    const job = getJob(id) as any;
+    const job = getJob(id);
     if (!job) return res.status(404).json({ error: "Job not found" });
 
     // Defense-in-depth: the paths come from the DB but still hit the filesystem,
@@ -168,7 +193,9 @@ export function registerJobsRoutes(app: Express): void {
       assertMediaPathAllowed(job.srt_path, MEDIA_DIR);
       if (job.output_path) assertMediaPathAllowed(job.output_path, MEDIA_DIR);
     } catch (error: any) {
-      return res.status(400).json({ error: error?.message || "Invalid media path" });
+      return res
+        .status(400)
+        .json({ error: error?.message || "Invalid media path" });
     }
 
     try {
@@ -226,7 +253,7 @@ export function registerJobsRoutes(app: Express): void {
   // 1-based cue index from the preview rows. Source file is never touched.
   app.put("/api/jobs/:id/cues", (req, res) => {
     const id = parseInt(req.params.id, 10);
-    const job = getJob(id) as any;
+    const job = getJob(id);
     if (!job) return res.status(404).json({ error: "Job not found" });
 
     // Defense-in-depth: confirm the DB-stored output path is under MEDIA_DIR
@@ -234,7 +261,9 @@ export function registerJobsRoutes(app: Express): void {
     try {
       assertMediaPathAllowed(job.output_path, MEDIA_DIR);
     } catch (error: any) {
-      return res.status(400).json({ error: error?.message || "Invalid media path" });
+      return res
+        .status(400)
+        .json({ error: error?.message || "Invalid media path" });
     }
 
     const rawEdits = (req.body as { edits?: unknown })?.edits;
@@ -250,7 +279,7 @@ export function registerJobsRoutes(app: Express): void {
           !!e &&
           typeof (e as any).index === "number" &&
           Number.isFinite((e as any).index) &&
-          typeof (e as any).text === "string"
+          typeof (e as any).text === "string",
       )
       .map((e) => ({ index: Math.trunc(e.index), text: e.text }));
 
@@ -265,21 +294,27 @@ export function registerJobsRoutes(app: Express): void {
       writeSubtitleFile(job.output_path, output);
       res.json({ ok: true, updated });
     } catch (error: any) {
-      res.status(500).json({ error: `Failed to save edits: ${error?.message || String(error)}` });
+      res
+        .status(500)
+        .json({
+          error: `Failed to save edits: ${error?.message || String(error)}`,
+        });
     }
   });
 
   // Download the translated OUTPUT file as an attachment.
   app.get("/api/jobs/:id/download", (req, res) => {
     const id = parseInt(req.params.id, 10);
-    const job = getJob(id) as any;
+    const job = getJob(id);
     if (!job) return res.status(404).json({ error: "Job not found" });
     // Defense-in-depth: confirm the DB-stored output path is under MEDIA_DIR
     // before reading it off disk.
     try {
       assertMediaPathAllowed(job.output_path, MEDIA_DIR);
     } catch (error: any) {
-      return res.status(400).json({ error: error?.message || "Invalid media path" });
+      return res
+        .status(400)
+        .json({ error: error?.message || "Invalid media path" });
     }
     if (!fs.existsSync(job.output_path)) {
       return res.status(404).json({ error: "Output file not found" });
@@ -288,28 +323,45 @@ export function registerJobsRoutes(app: Express): void {
     try {
       const basename = path.basename(job.output_path);
       const ext = path.extname(basename).slice(1).toLowerCase();
-      const contentType = ext === "vtt" ? "text/vtt; charset=utf-8" : "text/plain; charset=utf-8";
+      const contentType =
+        ext === "vtt" ? "text/vtt; charset=utf-8" : "text/plain; charset=utf-8";
       const content = readSubtitleFileText(job.output_path);
       res.setHeader("Content-Type", contentType);
       // Allow-list filename chars (CRLF/";" etc. could inject response headers).
-      const safeName = basename.replace(/[^A-Za-z0-9._-]/g, "_") || "subtitle.srt";
-      res.setHeader("Content-Disposition", `attachment; filename="${safeName}"`);
+      const safeName =
+        basename.replace(/[^A-Za-z0-9._-]/g, "_") || "subtitle.srt";
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${safeName}"`,
+      );
       res.send(content);
     } catch (error: any) {
-      res.status(500).json({ error: `Failed to download: ${error?.message || String(error)}` });
+      res
+        .status(500)
+        .json({
+          error: `Failed to download: ${error?.message || String(error)}`,
+        });
     }
   });
 
   // ======== Queue ========
   app.post("/api/queue/start", (req, res) => {
-    if (isQueueRunning()) return res.json({ ok: true, message: "Already running" });
+    if (isQueueRunning())
+      return res.json({ ok: true, message: "Already running" });
     const rawIds = (req.body as { ids?: unknown })?.ids;
-    const ids = rawIds === undefined ? undefined : parsePositiveIntegerArray(rawIds);
+    const ids =
+      rawIds === undefined ? undefined : parsePositiveIntegerArray(rawIds);
     if (rawIds !== undefined && !ids) {
-      return res.status(400).json({ error: "ids must be an array of positive integers" });
+      return res
+        .status(400)
+        .json({ error: "ids must be an array of positive integers" });
     }
     processQueue(ids && ids.length > 0 ? ids : undefined);
-    res.json({ ok: true, message: "Queue started", count: ids?.length ?? null });
+    res.json({
+      ok: true,
+      message: "Queue started",
+      count: ids?.length ?? null,
+    });
   });
 
   app.post("/api/queue/stop", (_req, res) => {
@@ -324,7 +376,7 @@ export function registerJobsRoutes(app: Express): void {
       running: isQueueRunning(),
       currentJobId: currentId,
       currentJob: currentJob ? enrichJobs([currentJob])[0] : null,
-      pendingCount: (getJobs("pending") as any[]).length,
+      pendingCount: getJobs("pending").length,
       watcherRunning: isWatcherRunning(),
     });
   });

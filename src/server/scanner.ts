@@ -4,24 +4,65 @@ import { getSetting, getTasks } from "./config.js";
 import { createJob, getJobBySrtAndTask, getJobs } from "./db.js";
 import { parseRules, resolveDirectoryRule } from "./directory-rules.js";
 import { logger } from "./logger.js";
-import { loadTitleSidecar, getTitle, pruneTitleSidecarQueued, type TitleSidecar } from "./translator/title-sidecar.js";
+import {
+  loadTitleSidecar,
+  getTitle,
+  pruneTitleSidecarQueued,
+  type TitleSidecar,
+} from "./translator/title-sidecar.js";
+import {
+  mediaRelativeDir,
+  normalizeMediaSubfolder,
+  resolveMediaSubfolder,
+} from "./media-paths.js";
 
 export const MEDIA_DIR = process.env.MEDIA_DIR || "/media";
 
 const LANG_SUFFIXES = new Set([
-  "en", "eng", "english",
-  "ja", "jp", "jpn", "japanese",
-  "zh", "chi", "cht", "chs", "zht", "zhs", "chinese",
-  "ko", "kor", "korean",
-  "fr", "fra", "french",
-  "de", "deu", "german",
-  "es", "spa", "spanish",
-  "pt", "por", "portuguese",
-  "it", "ita", "italian",
-  "ru", "rus", "russian",
-  "ar", "ara", "arabic",
-  "th", "tha", "thai",
-  "vi", "vie", "vietnamese",
+  "en",
+  "eng",
+  "english",
+  "ja",
+  "jp",
+  "jpn",
+  "japanese",
+  "zh",
+  "chi",
+  "cht",
+  "chs",
+  "zht",
+  "zhs",
+  "chinese",
+  "ko",
+  "kor",
+  "korean",
+  "fr",
+  "fra",
+  "french",
+  "de",
+  "deu",
+  "german",
+  "es",
+  "spa",
+  "spanish",
+  "pt",
+  "por",
+  "portuguese",
+  "it",
+  "ita",
+  "italian",
+  "ru",
+  "rus",
+  "russian",
+  "ar",
+  "ara",
+  "arabic",
+  "th",
+  "tha",
+  "thai",
+  "vi",
+  "vie",
+  "vietnamese",
 ]);
 
 export interface FolderNode {
@@ -60,27 +101,25 @@ function addCounts(a: FolderCounts, b: FolderCounts): FolderCounts {
 }
 
 function parseExtensionSetting(raw: string): Set<string> {
-  return new Set(raw.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean));
-}
-
-function mediaRelativeDir(filePath: string): string | null {
-  const mediaRoot = path.resolve(MEDIA_DIR);
-  const resolved = path.resolve(filePath);
-  if (resolved !== mediaRoot && !resolved.startsWith(`${mediaRoot}${path.sep}`)) return null;
-  const relativeDir = path.relative(mediaRoot, path.dirname(resolved)).split(path.sep).join("/");
-  return relativeDir === "." ? "" : relativeDir;
+  return new Set(
+    raw
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
+  );
 }
 
 function getJobCountsByFolder(): Map<string, FolderCounts> {
   const map = new Map<string, FolderCounts>();
-  for (const job of getJobs() as any[]) {
-    const relativeDir = mediaRelativeDir(job.srt_path);
+  for (const job of getJobs()) {
+    const relativeDir = mediaRelativeDir(job.srt_path, MEDIA_DIR);
     if (relativeDir === null) continue;
 
     const counts = map.get(relativeDir) || createEmptyCounts();
     if (job.status === "pending") counts.pendingJobs += 1;
     if (job.status === "error") counts.errorJobs += 1;
-    if (job.status === "done" || job.status === "skipped") counts.completeJobs += 1;
+    if (job.status === "done" || job.status === "skipped")
+      counts.completeJobs += 1;
     map.set(relativeDir, counts);
   }
   return map;
@@ -110,7 +149,7 @@ function buildFolderNode(
   root: string,
   videoExts: Set<string>,
   subtitleExts: Set<string>,
-  jobCountsByFolder: Map<string, FolderCounts>
+  jobCountsByFolder: Map<string, FolderCounts>,
 ): FolderNode {
   const relativePath = path.relative(root, dir).split(path.sep).join("/");
   const normalizedPath = relativePath === "." ? "" : relativePath;
@@ -118,7 +157,9 @@ function buildFolderNode(
   let children: FolderNode[] = [];
 
   try {
-    const entries = fs.readdirSync(dir, { withFileTypes: true }).filter((entry) => !entry.name.startsWith("."));
+    const entries = fs
+      .readdirSync(dir, { withFileTypes: true })
+      .filter((entry) => !entry.name.startsWith("."));
     for (const entry of entries) {
       if (!entry.isFile()) continue;
       const ext = path.extname(entry.name).toLowerCase();
@@ -129,13 +170,27 @@ function buildFolderNode(
     children = entries
       .filter((entry) => entry.isDirectory())
       .sort((a, b) => a.name.localeCompare(b.name))
-      .map((entry) => buildFolderNode(path.join(dir, entry.name), root, videoExts, subtitleExts, jobCountsByFolder));
+      .map((entry) =>
+        buildFolderNode(
+          path.join(dir, entry.name),
+          root,
+          videoExts,
+          subtitleExts,
+          jobCountsByFolder,
+        ),
+      );
   } catch {
     // skip inaccessible directories
   }
 
-  directCounts = addCounts(directCounts, jobCountsByFolder.get(normalizedPath) || createEmptyCounts());
-  const counts = children.reduce((total, child) => addCounts(total, child.counts), directCounts);
+  directCounts = addCounts(
+    directCounts,
+    jobCountsByFolder.get(normalizedPath) || createEmptyCounts(),
+  );
+  const counts = children.reduce(
+    (total, child) => addCounts(total, child.counts),
+    directCounts,
+  );
 
   return {
     name: path.basename(dir),
@@ -150,49 +205,26 @@ function buildFolderTree(
   root: string,
   videoExts: Set<string>,
   subtitleExts: Set<string>,
-  jobCountsByFolder: Map<string, FolderCounts>
+  jobCountsByFolder: Map<string, FolderCounts>,
 ): FolderNode[] {
   try {
-    return fs.readdirSync(dir, { withFileTypes: true })
+    return fs
+      .readdirSync(dir, { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
       .sort((a, b) => a.name.localeCompare(b.name))
-      .map((entry) => buildFolderNode(path.join(dir, entry.name), root, videoExts, subtitleExts, jobCountsByFolder));
+      .map((entry) =>
+        buildFolderNode(
+          path.join(dir, entry.name),
+          root,
+          videoExts,
+          subtitleExts,
+          jobCountsByFolder,
+        ),
+      );
   } catch {
     // skip inaccessible directories
     return [];
   }
-}
-
-function flattenFolderTree(nodes: FolderNode[], results: string[] = []): string[] {
-  for (const node of nodes) {
-    results.push(node.path);
-    flattenFolderTree(node.children, results);
-  }
-  return results;
-}
-
-function normalizeMediaSubfolder(folder: string): string | null {
-  const trimmed = folder.trim().replace(/\\/g, "/");
-  if (!trimmed || trimmed.includes("\0") || trimmed.startsWith("/")) return null;
-
-  const normalized = path.posix.normalize(trimmed);
-  if (!normalized || normalized === "." || normalized.startsWith("../")) return null;
-  return normalized;
-}
-
-function resolveMediaSubfolder(folder: string): string | null {
-  const normalized = normalizeMediaSubfolder(folder);
-  if (!normalized) return null;
-
-  const mediaRoot = path.resolve(MEDIA_DIR);
-  const fullPath = path.resolve(mediaRoot, ...normalized.split("/"));
-  if (fullPath === mediaRoot || !fullPath.startsWith(`${mediaRoot}${path.sep}`)) return null;
-  return path.join(MEDIA_DIR, ...normalized.split("/"));
-}
-
-/** List all subdirectories of MEDIA_DIR as relative paths */
-export function listSubfolders(): string[] {
-  return flattenFolderTree(listFolderTree().children).sort((a, b) => a.localeCompare(b));
 }
 
 export function listFolderTree(): FolderNode {
@@ -200,7 +232,13 @@ export function listFolderTree(): FolderNode {
   const videoExts = parseExtensionSetting(getSetting("video_extensions"));
   const subtitleExts = parseExtensionSetting(getSetting("subtitle_extensions"));
   const jobCountsByFolder = getJobCountsByFolder();
-  const root = buildFolderNode(mediaRoot, mediaRoot, videoExts, subtitleExts, jobCountsByFolder);
+  const root = buildFolderNode(
+    mediaRoot,
+    mediaRoot,
+    videoExts,
+    subtitleExts,
+    jobCountsByFolder,
+  );
   return {
     name: path.basename(mediaRoot) || mediaRoot,
     path: "",
@@ -210,16 +248,21 @@ export function listFolderTree(): FolderNode {
 }
 
 function parseFolderSetting(raw: string): string[] {
-  return Array.from(new Set(
-    raw
-      .split(",")
-      .map((f) => normalizeMediaSubfolder(f))
-      .filter((f): f is string => Boolean(f))
-  ));
+  return Array.from(
+    new Set(
+      raw
+        .split(",")
+        .map((f) => normalizeMediaSubfolder(f))
+        .filter((f): f is string => Boolean(f)),
+    ),
+  );
 }
 
 function pathIsInScope(relativePath: string, folders: string[]): boolean {
-  return folders.some((folder) => relativePath === folder || relativePath.startsWith(`${folder}/`));
+  return folders.some(
+    (folder) =>
+      relativePath === folder || relativePath.startsWith(`${folder}/`),
+  );
 }
 
 /** Strip known language suffix from a subtitle stem: "Movie.en" → "Movie" */
@@ -239,7 +282,7 @@ function applyPattern(
   pattern: string,
   baseStem: string,
   langCode: string,
-  ext: string
+  ext: string,
 ): string {
   return pattern
     .replace(/\{\{name\}\}/g, baseStem)
@@ -285,23 +328,31 @@ export function scanFolder(createJobs = true): ScanResult {
 
   // Per-directory translation control.
   const directoryRules = parseRules(getSetting("directory_rules") || "[]");
-  const globalTranslateWithoutVideo = getSetting("translate_without_video") === "on";
+  const globalTranslateWithoutVideo =
+    getSetting("translate_without_video") === "on";
   const mediaRoot = path.resolve(MEDIA_DIR);
   // Tasks used for output-file detection: globally-enabled tasks plus any task a
   // directory rule can attach, so a rule's already-translated outputs are recognized.
   const ruleTaskIds = new Set<number>(directoryRules.flatMap((r) => r.taskIds));
   const outputDetectTasks = [
     ...enabledTasks,
-    ...tasks.filter((t: any) => ruleTaskIds.has(t.id) && !enabledTasks.some((e: any) => e.id === t.id)),
+    ...tasks.filter(
+      (t: any) =>
+        ruleTaskIds.has(t.id) && !enabledTasks.some((e: any) => e.id === t.id),
+    ),
   ];
 
   if (!fs.existsSync(MEDIA_DIR)) {
-    throw new Error(`Media directory does not exist: ${MEDIA_DIR}. Check your Docker volume mounts.`);
+    throw new Error(
+      `Media directory does not exist: ${MEDIA_DIR}. Check your Docker volume mounts.`,
+    );
   }
 
   const scanMode = getSetting("scan_mode") || "recursive";
   const selectedFolders = parseFolderSetting(getSetting("scan_folders") || "");
-  const excludedFolders = parseFolderSetting(getSetting("scan_exclude_folders") || "");
+  const excludedFolders = parseFolderSetting(
+    getSetting("scan_exclude_folders") || "",
+  );
 
   let allFiles: string[];
   if (scanMode === "root_only") {
@@ -311,8 +362,9 @@ export function scanFolder(createJobs = true): ScanResult {
     // Scan only selected subdirectories. Root files are covered by root_only mode.
     allFiles = [];
     for (const folder of selectedFolders) {
-      const folderPath = resolveMediaSubfolder(folder);
-      if (folderPath && fs.existsSync(folderPath)) walkDir(folderPath, allFiles);
+      const folderPath = resolveMediaSubfolder(folder, MEDIA_DIR);
+      if (folderPath && fs.existsSync(folderPath))
+        walkDir(folderPath, allFiles);
     }
   } else {
     // Default: full recursive scan
@@ -320,7 +372,10 @@ export function scanFolder(createJobs = true): ScanResult {
   }
   allFiles = Array.from(new Set(allFiles)).filter((file) => {
     if (excludedFolders.length === 0) return true;
-    const relativePath = path.relative(path.resolve(MEDIA_DIR), path.resolve(file)).split(path.sep).join("/");
+    const relativePath = path
+      .relative(path.resolve(MEDIA_DIR), path.resolve(file))
+      .split(path.sep)
+      .join("/");
     return !pathIsInScope(relativePath, excludedFolders);
   });
 
@@ -339,7 +394,7 @@ export function scanFolder(createJobs = true): ScanResult {
 
   // Find subtitles
   const srtFiles = allFiles.filter((f) =>
-    subExts.includes(path.extname(f).toLowerCase())
+    subExts.includes(path.extname(f).toLowerCase()),
   );
 
   // Group by video file
@@ -349,7 +404,11 @@ export function scanFolder(createJobs = true): ScanResult {
   // Pre-populate video entries (even those without subtitles)
   for (const vf of videoFiles) {
     let videoMtime: number | null = null;
-    try { videoMtime = fs.statSync(vf).mtimeMs; } catch { /* skip on stat error */ }
+    try {
+      videoMtime = fs.statSync(vf).mtimeMs;
+    } catch {
+      /* skip on stat error */
+    }
     grouped.set(vf, {
       videoPath: vf,
       videoName: path.basename(vf),
@@ -384,13 +443,20 @@ export function scanFolder(createJobs = true): ScanResult {
     const isOutputFile = outputDetectTasks.some((task: any) => {
       // Check against every possible base stem in the same directory
       // by testing if removing the task suffix yields a valid source file
-      const testPattern = applyPattern(task.output_pattern, "TEST_MARKER", task.lang_code, extNoDot);
+      const testPattern = applyPattern(
+        task.output_pattern,
+        "TEST_MARKER",
+        task.lang_code,
+        extNoDot,
+      );
       const outputStem = path.basename(testPattern, path.extname(testPattern));
       const suffix = outputStem.replace("TEST_MARKER", "");
       if (!suffix) return false;
       if (stem.endsWith(suffix)) return true;
       // Strategy 2: check if this file's name exactly matches what any srt in the same dir would produce
-      const possibleBaseStem = suffix ? stem.slice(0, stem.length - suffix.length) : stem;
+      const possibleBaseStem = suffix
+        ? stem.slice(0, stem.length - suffix.length)
+        : stem;
       if (!possibleBaseStem) return false;
       const candidateSource = path.join(dir, possibleBaseStem + ext);
       return fs.existsSync(candidateSource);
@@ -408,8 +474,15 @@ export function scanFolder(createJobs = true): ScanResult {
     }
 
     // Resolve directory rule for this subtitle's folder.
-    const relDir = path.relative(mediaRoot, path.resolve(dir)).split(path.sep).join("/");
-    const resolved = resolveDirectoryRule(relDir, directoryRules, globalTranslateWithoutVideo);
+    const relDir = path
+      .relative(mediaRoot, path.resolve(dir))
+      .split(path.sep)
+      .join("/");
+    const resolved = resolveDirectoryRule(
+      relDir,
+      directoryRules,
+      globalTranslateWithoutVideo,
+    );
 
     // Orphan gate: subtitles with no companion video only translate where enabled.
     if (videoPath === null && !resolved.translateWithoutVideo) continue;
@@ -428,7 +501,11 @@ export function scanFolder(createJobs = true): ScanResult {
     if (!grouped.has(groupKey)) {
       let videoMtime: number | null = null;
       if (videoPath) {
-        try { videoMtime = fs.statSync(videoPath).mtimeMs; } catch { /* skip on stat error */ }
+        try {
+          videoMtime = fs.statSync(videoPath).mtimeMs;
+        } catch {
+          /* skip on stat error */
+        }
       }
       grouped.set(groupKey, {
         videoPath,
@@ -446,24 +523,42 @@ export function scanFolder(createJobs = true): ScanResult {
 
     // Same base rule as the queue's title step: video stem when present,
     // else the language-suffix-stripped subtitle stem.
-    const titleBase = videoPath ? path.basename(videoPath, path.extname(videoPath)) : baseStem;
+    const titleBase = videoPath
+      ? path.basename(videoPath, path.extname(videoPath))
+      : baseStem;
     const dirBases = titleBasesByDir.get(dir) ?? new Set<string>();
     titleBasesByDir.set(dir, dirBases.add(titleBase));
 
     // For each effective task, compute output and check status
     for (const task of effectiveTasks) {
-      const outputName = applyPattern(task.output_pattern, baseStem, task.lang_code, extNoDot);
+      const outputName = applyPattern(
+        task.output_pattern,
+        baseStem,
+        task.lang_code,
+        extNoDot,
+      );
       const outputPath = path.join(dir, outputName);
       const outputExists = fs.existsSync(outputPath);
 
       // Check existing job
-      const existingJob = getJobBySrtAndTask(srtPath, task.id) as any;
+      const existingJob = getJobBySrtAndTask(srtPath, task.id);
 
-      let status: "done" | "pending" | "translating" | "error" | "skipped" | "new";
+      let status:
+        | "done"
+        | "pending"
+        | "translating"
+        | "error"
+        | "skipped"
+        | "new";
       let jobId: number | null = null;
 
       if (existingJob) {
-        status = existingJob.status;
+        status = existingJob.status as
+          | "done"
+          | "pending"
+          | "translating"
+          | "error"
+          | "skipped";
         jobId = existingJob.id;
       } else if (outputExists) {
         status = "skipped";
@@ -499,7 +594,12 @@ export function scanFolder(createJobs = true): ScanResult {
         outputName,
         status,
         jobId,
-        translatedTitle: getTitle(sidecarFor(path.dirname(outputPath)), titleBase, task.lang_code) ?? null,
+        translatedTitle:
+          getTitle(
+            sidecarFor(path.dirname(outputPath)),
+            titleBase,
+            task.lang_code,
+          ) ?? null,
       });
     }
 
@@ -515,7 +615,7 @@ export function scanFolder(createJobs = true): ScanResult {
   if (createJobs) {
     logger.info(
       "scan",
-      `Scan complete: ${srtFiles.length} subtitle files, ${videoFiles.length} videos, ${newJobs} new jobs created`
+      `Scan complete: ${srtFiles.length} subtitle files, ${videoFiles.length} videos, ${newJobs} new jobs created`,
     );
   }
 
@@ -524,7 +624,8 @@ export function scanFolder(createJobs = true): ScanResult {
   // with an in-flight title write from the queue (fire-and-forget: scan
   // results don't depend on prune completion).
   if (getSetting("title_sidecar") === "1") {
-    for (const [dir, bases] of titleBasesByDir) void pruneTitleSidecarQueued(dir, bases);
+    for (const [dir, bases] of titleBasesByDir)
+      void pruneTitleSidecarQueued(dir, bases);
   }
 
   return { files, newJobs, totalSubtitles: srtFiles.length };

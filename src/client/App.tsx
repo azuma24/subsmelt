@@ -6,7 +6,13 @@ import { ConfirmProvider } from "./components/ConfirmModal";
 import { formatDur } from "./lib";
 import { applyTheme, getThemePref, watchSystemTheme } from "./lib/theme";
 import { applyFontScale, getFontScale } from "./lib/font-scale";
-import { useIsMobile, useJobsQuery, useQueueStatusQuery, useSSE, useSettingsQuery } from "./hooks";
+import {
+  useIsMobile,
+  useJobsQuery,
+  useQueueStatusQuery,
+  useSSE,
+  useSettingsQuery,
+} from "./hooks";
 import type { JobRow } from "./types";
 import { DesktopSidebar, MobileBottomNav } from "./app/shell";
 import { LANGUAGES } from "./app/constants";
@@ -16,19 +22,29 @@ const LogsPage = lazy(() =>
   import("./features/logs/LogsPage").then((m) => ({ default: m.LogsPage })),
 );
 const JobDetailPage = lazy(() =>
-  import("./features/jobs/JobDetailPage").then((m) => ({ default: m.JobDetailPage })),
+  import("./features/jobs/JobDetailPage").then((m) => ({
+    default: m.JobDetailPage,
+  })),
 );
 const TranslationLanguagesPage = lazy(() =>
-  import("./features/tasks/TasksPage").then((m) => ({ default: m.TranslationLanguagesPage })),
+  import("./features/tasks/TasksPage").then((m) => ({
+    default: m.TranslationLanguagesPage,
+  })),
 );
 const SettingsPage = lazy(() =>
-  import("./features/settings/SettingsPage").then((m) => ({ default: m.SettingsPage })),
+  import("./features/settings/SettingsPage").then((m) => ({
+    default: m.SettingsPage,
+  })),
 );
 const ConvertPage = lazy(() =>
-  import("./features/convert/ConvertPage").then((m) => ({ default: m.ConvertPage })),
+  import("./features/convert/ConvertPage").then((m) => ({
+    default: m.ConvertPage,
+  })),
 );
 const WhisperPage = lazy(() =>
-  import("./features/whisper/WhisperPage").then((m) => ({ default: m.WhisperPage })),
+  import("./features/whisper/WhisperPage").then((m) => ({
+    default: m.WhisperPage,
+  })),
 );
 
 export default function App() {
@@ -71,18 +87,32 @@ function AppInner() {
         true,
       );
     }
-    if (type === "queue:finished") addToast(t("dashboard.toast.queueFinished"), "success");
-    if (type === "queue:stopped") addToast(t("dashboard.toast.queueStopped"), "info");
+    if (type === "queue:finished")
+      addToast(t("dashboard.toast.queueFinished"), "success");
+    if (type === "queue:stopped")
+      addToast(t("dashboard.toast.queueStopped"), "info");
   });
 
-  const queueRunning = Boolean(queueQuery.data?.running ?? jobsQuery.data?.queueRunning ?? false);
-  const errorCount = jobsQuery.data?.jobs?.filter((j: JobRow) => j.status === "error").length || 0;
-  const modelName = typeof settingsQuery.data?.model === "string" ? settingsQuery.data.model : "";
+  const queueRunning = Boolean(
+    queueQuery.data?.running ?? jobsQuery.data?.queueRunning ?? false,
+  );
+  const errorCount =
+    jobsQuery.data?.jobs?.filter((j: JobRow) => j.status === "error").length ||
+    0;
+  const modelName =
+    typeof settingsQuery.data?.model === "string"
+      ? settingsQuery.data.model
+      : "";
   const watcherRunning =
-    Boolean(queueQuery.data?.watcherRunning) || Boolean(settingsQuery.data?._watcher_running);
+    Boolean(queueQuery.data?.watcherRunning) ||
+    Boolean(settingsQuery.data?._watcher_running);
 
   useEffect(() => {
-    const current = LANGUAGES.find((lang) => i18n.language === lang.code || i18n.language.startsWith(`${lang.code}-`));
+    const current = LANGUAGES.find(
+      (lang) =>
+        i18n.language === lang.code ||
+        i18n.language.startsWith(`${lang.code}-`),
+    );
     document.documentElement.dir = current?.dir || "ltr";
     document.documentElement.lang = current?.code || "en";
   }, [i18n.language]);
@@ -100,7 +130,6 @@ function AppInner() {
     <div className="flex h-dvh min-h-dvh bg-[var(--bg)] text-[var(--text)]">
       {!isMobile && (
         <DesktopSidebar
-          collapsed={false}
           queueRunning={queueRunning}
           errorCount={errorCount}
           modelName={modelName}
@@ -110,14 +139,35 @@ function AppInner() {
       )}
       <div className="flex min-w-0 flex-1 flex-col">
         <main className={`flex-1 overflow-auto ${isMobile ? "pb-[58px]" : ""}`}>
-          <Suspense fallback={<div className="p-8 text-[var(--text-3)]">{t("common.loading")}</div>}>
+          <Suspense
+            fallback={
+              <div className="p-8 text-[var(--text-3)]">
+                {t("common.loading")}
+              </div>
+            }
+          >
             <Routes>
               <Route path="/" element={<DashboardPage isMobile={isMobile} />} />
-              <Route path="/translations" element={<TranslationLanguagesPage isMobile={isMobile} />} />
-              <Route path="/whisper" element={<WhisperPage isMobile={isMobile} />} />
-              <Route path="/convert" element={<ConvertPage isMobile={isMobile} />} />
-              <Route path="/tasks" element={<Navigate to="/translations" replace />} />
-              <Route path="/settings" element={<SettingsPage isMobile={isMobile} />} />
+              <Route
+                path="/translations"
+                element={<TranslationLanguagesPage isMobile={isMobile} />}
+              />
+              <Route
+                path="/whisper"
+                element={<WhisperPage isMobile={isMobile} />}
+              />
+              <Route
+                path="/convert"
+                element={<ConvertPage isMobile={isMobile} />}
+              />
+              <Route
+                path="/tasks"
+                element={<Navigate to="/translations" replace />}
+              />
+              <Route
+                path="/settings"
+                element={<SettingsPage isMobile={isMobile} />}
+              />
               <Route path="/logs" element={<LogsPage isMobile={isMobile} />} />
               <Route path="/jobs/:id" element={<JobDetailPage />} />
             </Routes>
