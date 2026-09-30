@@ -6,7 +6,7 @@ import { normalizeMediaSubfolder, resolveMediaSubfolder } from "../media-paths.j
 import { MEDIA_DIR } from "../scanner.js";
 import { broadcast } from "../sse.js";
 import { fetchAddedDates } from "./data-api.js";
-import { downloadVideo, findDownloadedMedia, upcomingRetryAt, type DownloadResult } from "./download.js";
+import { downloadVideo, findDownloadedMedia, tidyPlaylistFolder, upcomingRetryAt, type DownloadResult } from "./download.js";
 import { findPlaylist, readPlaylists, savePlaylist, type YoutubePlaylist } from "./playlists.js";
 import type { Cooldown, CooldownCause, VideoRow, YoutubeStore } from "./store.js";
 import { exactUploadDateWithYtdlp, listPlaylistWithYtdlp, syncPlaylist, type SyncDeps, type SyncResult } from "./sync.js";
@@ -270,9 +270,11 @@ export class YoutubeWorker {
 
   /** A queued video whose file is already in the playlist folder skips the download. */
   private adoptExisting(video: VideoRow, folder: PlaylistFolder): boolean {
+    const meta = tidyPlaylistFolder(folder.abs, video.video_id);
     const file = findDownloadedMedia(folder.abs, video.video_id);
     if (!file) return false;
     const nowIso = this.now().toISOString();
+    this.store.updateMetadata(video.video_id, meta, nowIso);
     this.store.setStatus(video.video_id, "downloading", { now: nowIso });
     this.move(video, "transcribing", { now: nowIso, attempts: 0, mediaPath: `${folder.rel}/${file}` });
     return true;

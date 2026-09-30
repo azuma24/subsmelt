@@ -80,13 +80,31 @@ export function findDownloadedMedia(dir: string, videoId: string): string | null
   return names.find((name) => name.includes(`[${videoId}].`) && MEDIA_EXTENSIONS.has(path.extname(name).toLowerCase())) ?? null;
 }
 
+const PARTIAL_SUFFIX = ".subsmelt-partial";
+
+/**
+ * What a crashed run left in the playlist folder: removes half-copied files
+ * of the video and returns the metadata of an info JSON already moved there.
+ */
+export function tidyPlaylistFolder(dir: string, videoId: string): VideoMetadata {
+  let names: string[];
+  try {
+    names = fs.readdirSync(dir).filter((name) => name.includes(`[${videoId}].`));
+  } catch {
+    return {};
+  }
+  for (const name of names.filter((n) => n.endsWith(PARTIAL_SUFFIX))) fs.rmSync(path.join(dir, name), { force: true });
+  const info = names.find((name) => name.endsWith(".info.json"));
+  return info ? slimInfo(path.join(dir, info)) : {};
+}
+
 function moveFile(src: string, dest: string): void {
   try {
     fs.renameSync(src, dest);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "EXDEV") throw error;
     // Another filesystem: copy under a name the existence check ignores, then rename into place.
-    const staging = `${dest}.subsmelt-partial`;
+    const staging = `${dest}${PARTIAL_SUFFIX}`;
     fs.copyFileSync(src, staging);
     fs.renameSync(staging, dest);
     fs.rmSync(src, { force: true });

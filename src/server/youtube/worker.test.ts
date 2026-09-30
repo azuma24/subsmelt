@@ -247,7 +247,8 @@ const CRASH_POINTS: { name: string; files: Record<string, string>; ytdlpRuns: nu
   { name: "before yt-dlp started", files: {}, ytdlpRuns: 1, reconciled: { requeued: 1, adopted: 0 } },
   { name: "mid-download", files: { [`data/youtube/tmp/${VID}/part/${VID}.part`]: "partial", [`data/youtube/tmp/${VID}/cookies.txt`]: "jar" }, ytdlpRuns: 1, reconciled: { requeued: 1, adopted: 0 } },
   { name: "mid-move, info JSON moved but not the media", files: { [`media/YouTube/AI/TED-Ed lesson [${VID}].info.json`]: "{}" }, ytdlpRuns: 1, reconciled: { requeued: 1, adopted: 0 } },
-  { name: "after the move, before the row was updated", files: { [`media/YouTube/AI/TED-Ed lesson [${VID}].info.json`]: "{}", [`media/YouTube/AI/TED-Ed lesson [${VID}].m4a`]: "media" }, ytdlpRuns: 0, reconciled: { requeued: 1, adopted: 1 } },
+  { name: "mid cross-filesystem copy of the media", files: { [`media/YouTube/AI/TED-Ed lesson [${VID}].info.json`]: "{}", [`media/YouTube/AI/TED-Ed lesson [${VID}].m4a.subsmelt-partial`]: "med" }, ytdlpRuns: 1, reconciled: { requeued: 1, adopted: 0 } },
+  { name: "after the move, before the row was updated", files: { [`media/YouTube/AI/TED-Ed lesson [${VID}].info.json`]: JSON.stringify({ title: "How to spot a fake, exactly", upload_date: "20231015" }), [`media/YouTube/AI/TED-Ed lesson [${VID}].m4a`]: "media" }, ytdlpRuns: 0, reconciled: { requeued: 1, adopted: 1 } },
 ];
 
 for (const point of CRASH_POINTS) {
@@ -268,5 +269,6 @@ for (const point of CRASH_POINTS) {
     assert.deepEqual(row(store), DOWNLOADED);
     assert.deepEqual(fs.readdirSync(DEST).sort(), [`TED-Ed lesson [${VID}].info.json`, `TED-Ed lesson [${VID}].m4a`]);
     assert.equal(ytdlpRuns().length, point.ytdlpRuns);
+    if (point.reconciled.adopted) assert.deepEqual([store.getVideo(VID)!.title, store.getVideo(VID)!.published_at], ["How to spot a fake, exactly", "2023-10-15"]);
   });
 }
