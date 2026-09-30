@@ -14,6 +14,7 @@ import {
   updateTask,
   deleteTask,
 } from "../config.js";
+import { deletePendingJobsForTask } from "../db.js";
 import { scanFolder, MEDIA_DIR } from "../scanner.js";
 import { startAutoScan, stopAutoScan } from "../queue.js";
 import { convertSubtitle, probeModelContext, summarizeTranslationError, translateFile } from "../translator.js";
@@ -158,7 +159,8 @@ export function registerSettingsTasksRoutes(app: Express): void {
   app.delete("/api/tasks/:id", (req, res) => {
     const id = parseInt(req.params.id, 10);
     deleteTask(id);
-    logger.info("system", `Deleted translation task #${id}`);
+    const removedJobs = deletePendingJobsForTask(id);
+    logger.info("system", `Deleted translation task #${id} and its ${removedJobs} pending job(s)`);
     res.json({ ok: true });
   });
 

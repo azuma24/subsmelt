@@ -367,6 +367,12 @@ export function clearFinishedJobs(): number {
     .run().changes;
 }
 
+export function deletePendingJobsForTask(taskId: number): number {
+  return db
+    .prepare("DELETE FROM jobs WHERE task_id = ? AND status = 'pending'")
+    .run(taskId).changes;
+}
+
 // --- Logs ---
 
 export function getLogs(opts?: {

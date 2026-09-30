@@ -346,6 +346,8 @@ async function runJob(
   let lastProgressWrite = 0;
 
   try {
+    if (!task)
+      throw new Error(`Translation task #${job.task_id} no longer exists`);
     if (conns.length === 0)
       throw new Error("No usable LLM connection configured");
     const promptToUse = task?.prompt_override || settings.prompt || "";
