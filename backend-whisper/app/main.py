@@ -699,10 +699,26 @@ def validate_upload_request(request: TranscribeRequest, upload_size_mb: int, scr
         ) from exc
 
 
+def _upload_basename(filename: str | None) -> str:
+    """Basename of a client-supplied filename, safe to create under the temp dir.
+
+    Clients send whatever their OS calls the file, so strip both separator
+    styles here rather than trusting ``Path.name`` on the server's platform.
+    """
+    name = (filename or "").replace("\\", "/").rsplit("/", 1)[-1].replace("\0", "").strip()
+    if not name:
+        return "upload.bin"
+    if name in (".", ".."):
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "bad_request", "message": f"Unusable upload filename: {filename!r}"},
+        )
+    return name
+
+
 def _save_upload(file: UploadFile, dest_dir: Path) -> Path:
     """Persist the uploaded stream to a real temp file ffmpeg can read."""
-    filename = Path(file.filename or "upload.bin").name or "upload.bin"
-    dest = dest_dir / filename
+    dest = dest_dir / _upload_basename(file.filename)
     with dest.open("wb") as out:
         shutil.copyfileobj(file.file, out)
     return dest

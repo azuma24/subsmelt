@@ -121,6 +121,26 @@ class UploadEndpointTests(unittest.TestCase):
         if resp.status_code == 409:
             self.assertEqual(resp.json()["detail"]["code"], "model_not_downloaded")
 
+    def test_dotdot_filename_is_400_not_500(self):
+        resp = self.client.post(
+            "/transcribe/upload",
+            files={"file": ("..", io.BytesIO(b"xx"), "audio/wav")},
+            data={"request": '{"model": "small"}'},
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.json()["detail"]["code"], "bad_request")
+
+    def test_upload_is_saved_under_its_basename(self):
+        import tempfile
+        from starlette.datastructures import UploadFile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            for raw in ("nested/../../clip.wav", "C:\\Users\\me\\clip.wav", "clip.wav"):
+                saved = main_module._save_upload(UploadFile(io.BytesIO(b"xx"), filename=raw), Path(tmp))
+                self.assertEqual(saved, Path(tmp) / "clip.wav")
+            saved = main_module._save_upload(UploadFile(io.BytesIO(b"xx"), filename=""), Path(tmp))
+            self.assertEqual(saved, Path(tmp) / "upload.bin")
+
     def test_auth_gate_blocks_missing_token(self):
         os.environ["SUBSMELT_WHISPER_TOKEN"] = "s3cr3t"
         try:
