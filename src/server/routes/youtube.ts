@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import type { Express, Response } from "express";
 import { getSetting } from "../config.js";
 import { REDACTED_SECRET } from "../connections.js";
@@ -16,6 +15,7 @@ import {
   savePlaylist,
   type YoutubePlaylist,
 } from "../youtube/playlists.js";
+import { exportNoteForVideo, NoteExportError, notesFolderStatus, type NoteExportFailure } from "../youtube/note-export.js";
 import { cookiesStatus, parseCookies, removeCookies, saveCookies } from "../youtube/cookies.js";
 import { IllegalTransitionError, type YoutubeStore } from "../youtube/store.js";
 import { changeBackfill, isUnavailableEntry, listPlaylistWithYtdlp } from "../youtube/sync.js";
@@ -29,15 +29,7 @@ const message = (error: unknown) => (error instanceof Error ? error.message : St
 const today = () => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
 const NO_KEY_ERROR = "Added since needs a YouTube Data API key in Settings";
 
-function notesFolderStatus() {
-  const dir = getSetting("youtube_notes_dir");
-  try {
-    fs.accessSync(dir, fs.constants.W_OK);
-    return { path: dir, writable: fs.statSync(dir).isDirectory() };
-  } catch {
-    return { path: dir, writable: false };
-  }
-}
+const NOTE_ERROR_STATUS: Record<NoteExportFailure, number> = { unknown_video: 404, no_media: 409, no_transcript: 409, notes_folder: 503 };
 
 export async function youtubeStatus(worker?: YoutubeWorker) {
   const [ytdlp, ffmpeg] = await Promise.all([ytdlpVersion(), ffmpegVersion()]);
@@ -92,6 +84,25 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore, worker:
     removeCookies();
     logger.info("youtube", "Cookies removed");
     res.json(cookiesStatus());
+  });
+
+  // The Settings field checks the folder as it is typed, before it is saved.
+  app.get("/api/youtube/notes-folder", (req, res) => {
+    const dir = typeof req.query.path === "string" && req.query.path.trim() ? req.query.path.trim() : getSetting("youtube_notes_dir");
+    res.json(notesFolderStatus(dir));
+  });
+
+  app.post("/api/youtube/videos/:videoId/note", async (req, res) => {
+    const { videoId } = req.params;
+    if (!isVideoId(videoId) || !store.getVideo(videoId)) return res.status(404).json({ error: "Unknown video" });
+    try {
+      const { file: _file, ...payload } = await exportNoteForVideo({ store }, videoId);
+      res.json(payload);
+    } catch (error) {
+      const status = error instanceof NoteExportError ? NOTE_ERROR_STATUS[error.kind] : 500;
+      if (status === 500) logger.error("youtube", `Writing the note of ${videoId} failed: ${message(error)}`);
+      res.status(status).json({ error: message(error) });
+    }
   });
 
   app.post("/api/youtube/videos/:videoId/:action", (req, res) => {

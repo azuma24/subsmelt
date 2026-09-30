@@ -347,6 +347,10 @@ export class YoutubeStore {
       .run({ videoId, title: meta.title ?? null, channel: meta.channel ?? null, durationS: meta.durationS ?? null, publishedAt: meta.publishedAt ?? null, now });
   }
 
+  setNotePath(videoId: string, notePath: string, now: string): void {
+    this.db.prepare("UPDATE youtube_videos SET note_path = ?, updated_at = ? WHERE video_id = ?").run(notePath, now, videoId);
+  }
+
   videosInStatus(status: VideoStatus): VideoRow[] {
     return this.db.prepare("SELECT * FROM youtube_videos WHERE status = ? ORDER BY video_id").all(status) as VideoRow[];
   }
