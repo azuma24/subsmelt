@@ -130,8 +130,13 @@ def _resolve_host(host: str, timeout: float = 3.0) -> list[str]:
                 seen.append(ip)
         return seen
 
-    with ThreadPoolExecutor(max_workers=1) as ex:
+    # Not a ``with`` block: the executor's exit waits for the lookup thread,
+    # which would silently stretch ``timeout`` to the full DNS wait.
+    ex = ThreadPoolExecutor(max_workers=1)
+    try:
         return ex.submit(_lookup).result(timeout=timeout)
+    finally:
+        ex.shutdown(wait=False)
 
 
 def _assert_hostname_public(

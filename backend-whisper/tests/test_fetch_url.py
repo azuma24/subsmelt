@@ -1,6 +1,9 @@
 """URL-fetch unit tests (no network, no yt-dlp required)."""
 
+import socket
+import time
 import unittest
+from unittest import mock
 
 from app import fetch_url
 
@@ -63,6 +66,17 @@ class FetchUrlTests(unittest.TestCase):
             raise OSError("no such host")
         # A resolution failure is not an SSRF signal — do not block the fetch.
         fetch_url._assert_hostname_public("http://maybe.example/x", resolver=resolver)
+
+    def test_resolve_host_timeout_is_not_defeated_by_a_slow_lookup(self):
+        def slow_getaddrinfo(*args, **kwargs):
+            time.sleep(2.0)
+            return []
+
+        with mock.patch.object(socket, "getaddrinfo", slow_getaddrinfo):
+            started = time.monotonic()
+            with self.assertRaises(TimeoutError):
+                fetch_url._resolve_host("slow.example", timeout=0.2)
+            self.assertLess(time.monotonic() - started, 1.0)
 
     def test_download_without_ytdlp_raises_unavailable(self):
         if fetch_url.url_fetch_available():
