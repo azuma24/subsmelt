@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from typing import Any
 
 from .gpu import cuda_device_count
-from .model_loader import release_device_memory
+from .model_loader import free_device_cache
 
 # Gated pyannote pipeline (requires HF token + accepted license).
 DIARIZATION_MODEL = "pyannote/speaker-diarization-3.1"
@@ -81,8 +81,11 @@ def _get_pipeline(device: str) -> Any:
                 "— accept the pyannote/speaker-diarization-3.1 license and retry"
             )
         pipeline.to(torch.device(torch_device))
-        for other in list(_PIPELINE_CACHE):
-            release_device_memory(_PIPELINE_CACHE.pop(other))
+        # pyannote has no explicit unload: drop the other device's pipeline,
+        # then free the CUDA cache once nothing references it. A diarization
+        # still running on it keeps its own reference until it finishes.
+        _PIPELINE_CACHE.clear()
+        free_device_cache()
         _PIPELINE_CACHE[torch_device] = pipeline
         return pipeline
 
