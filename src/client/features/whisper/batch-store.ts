@@ -77,7 +77,7 @@ function subscribe(listener: () => void): () => void {
 
 export const getBatchState = (): BatchState => state;
 
-export const useBatchState = (): BatchState => useSyncExternalStore(subscribe, getBatchState);
+export const useBatchState = (): BatchState => useSyncExternalStore(subscribe, getBatchState, getBatchState);
 
 export const applyTranscriptionProgress = (data: Record<string, unknown>): void =>
   setState(applyProgressEvent(state, data));

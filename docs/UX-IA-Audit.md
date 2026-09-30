@@ -2,7 +2,7 @@
 
 > **Historical (2026-06-13).** Partly implemented, and it predates the Whisper
 > and Convert pages. Read it for the reasoning, not as a description of the
-> current UI. Status: [HANDOFF.md](HANDOFF.md) §4.
+> current UI. Status: [HANDOFF.md](HANDOFF.md) §5.
 
 **Author:** Senior Staff UX Architect (audit)
 **Date:** 2026-06-13
