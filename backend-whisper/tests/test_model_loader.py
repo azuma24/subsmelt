@@ -14,6 +14,8 @@ injected to capture the args the loader passes to ``WhisperModel``.
 import os
 import sys
 import tempfile
+import threading
+import time
 import types
 import unittest
 from pathlib import Path
@@ -163,6 +165,43 @@ class GetWhisperModelTests(unittest.TestCase):
             self.assertEqual(list(model_loader._MODEL_CACHE.values()), [base])
             self.assertEqual(tiny.model.unload_calls, 0)
         self.assertEqual(tiny.model.unload_calls, 1)
+
+    def test_competing_load_during_lease_acquisition_cannot_unload_the_leased_model(self):
+        self._seed("tiny", layout="hub")
+        self._seed("base", layout="hub")
+        tiny = model_loader.get_whisper_model("tiny", "cpu", "int8")
+        competitor = threading.Thread(target=model_loader.get_whisper_model, args=("base", "cpu", "int8"))
+
+        class CacheReadTriggersCompetingLoad(dict):
+            """Fires a competing load right after the lease's cache read, the window
+            where the old lock-free fast path let eviction unload a model that was
+            about to be handed out."""
+            fired = False
+
+            def get(self, key, default=None):
+                value = dict.get(self, key, default)
+                if key[0] == "tiny" and value is not None and not self.fired:
+                    self.fired = True
+                    competitor.start()
+                    time.sleep(0.2)
+                return value
+
+        with mock.patch.object(model_loader, "_MODEL_CACHE", CacheReadTriggersCompetingLoad(model_loader._MODEL_CACHE)):
+            with model_loader.lease("tiny", "cpu", "int8") as leased:
+                competitor.join(2.0)
+                self.assertIs(leased, tiny)
+                self.assertEqual(tiny.model.unload_calls, 0)
+        self.assertEqual(tiny.model.unload_calls, 1)
+
+    def test_reloading_an_evicted_but_leased_model_reuses_it(self):
+        self._seed("tiny", layout="hub")
+        self._seed("base", layout="hub")
+        with model_loader.lease("tiny", "cpu", "int8") as tiny:
+            model_loader.get_whisper_model("base", "cpu", "int8")
+            again = model_loader.get_whisper_model("tiny", "cpu", "int8")
+            self.assertIs(again, tiny)
+            self.assertEqual(list(model_loader._MODEL_CACHE.values()), [tiny])
+        self.assertEqual(tiny.model.unload_calls, 0)
 
     def test_unload_model_releases_the_resident_instance_by_id(self):
         self._seed("tiny", layout="hub")
