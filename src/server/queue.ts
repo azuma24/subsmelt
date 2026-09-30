@@ -140,9 +140,16 @@ export async function processQueue(onlyIds?: number[]) {
       null,
       { stage: "worker_pool" },
     );
-    await Promise.all(
-      Array.from({ length: slots }, (_, i) => adaptiveWorker(i, filter)),
-    );
+    // processQueue() is a no-op while this run is live, so a job queued while
+    // the title repair is calling the LLM has nothing to start it. Repair, then
+    // look for pending work again before declaring the run finished.
+    do {
+      await Promise.all(
+        Array.from({ length: slots }, (_, i) => adaptiveWorker(i, filter)),
+      );
+      if (shouldStop) break;
+      await repairMissingTitles();
+    } while (!shouldStop && hasPendingJobs(filter));
 
     if (shouldStop) {
       logger.info("queue", "Queue stopped by user request");
@@ -152,7 +159,6 @@ export async function processQueue(onlyIds?: number[]) {
       logger.info("queue", "Queue finished — no more pending jobs");
       broadcast("queue:finished", {});
       void notify("queue:finished", {});
-      await repairMissingTitles();
     }
   } finally {
     titleRepairJobs.length = 0;

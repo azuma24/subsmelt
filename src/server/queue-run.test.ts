@@ -75,6 +75,25 @@ test("the queue resumes at boot only when auto-translate is on and jobs are pend
   assert.equal(queue.shouldResumeQueueOnBoot("", 3), false);
 });
 
+test("a job queued while the run repairs titles is processed by that run", async () => {
+  config.setSetting("title_sidecar", "1");
+  config.setSetting("disable_tool_calls", "1");
+  // Its output already exists, so the queue skips it and then repairs its title
+  // with an LLM call that the stubbed fetch holds open.
+  addJob({ srtExists: true, outputExists: true });
+  const run = queue.processQueue();
+  await waitFor(() => release.length > 0, "the title repair to call the LLM");
+
+  // What a watcher scan or a retry does while the repair is in flight.
+  const late = addJob({ srtExists: false, outputExists: false });
+  await queue.processQueue();
+  release.shift()!();
+  await run;
+
+  assert.equal(db.getJob(late)?.status, "error");
+  config.setSetting("title_sidecar", "0");
+});
+
 test("resuming at boot processes the pending jobs a previous process left behind", async () => {
   // A job whose source file is gone fails immediately, which is enough to show
   // the queue picked it up: an unprocessed job would still be pending.
