@@ -30,7 +30,9 @@
     "close": "Bezárás",
     "rowActions": "Sor műveletei",
     "home": "Kezdőlap",
-    "openFolder": "Mappa megnyitása {{name}}"
+    "openFolder": "Mappa megnyitása {{name}}",
+    "dismiss": "Bezárás",
+    "dismissAll": "Összes bezárása"
   },
   "dashboard": {
     "title": "Vezérlőpult",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Átírás kész. A forrásfelirat elkészült.",
       "transcriptionFailed": "Az átírás sikertelen: {{message}}",
       "transcriptionRetried": "Átírás újrapróbálva.",
-      "retryFailed": "Az újrapróbálkozás sikertelen: {{error}}"
+      "retryFailed": "Az újrapróbálkozás sikertelen: {{error}}",
+      "jobsFailed": "{{count}} feladat sikertelen",
+      "openDashboard": "Vezérlőpult megnyitása"
     },
     "confirm": {
       "clearTitle": "Befejezett feladatok törlése",

@@ -30,7 +30,9 @@
     "close": "Închide",
     "rowActions": "Acțiuni rând",
     "home": "Acasă",
-    "openFolder": "Deschideți folder {{name}}"
+    "openFolder": "Deschideți folder {{name}}",
+    "dismiss": "Închide",
+    "dismissAll": "Închide toate"
   },
   "dashboard": {
     "title": "Tablou de bord",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Transcriere finalizată. Subtitrarea sursă a fost generată.",
       "transcriptionFailed": "Transcrierea a eșuat: {{message}}",
       "transcriptionRetried": "Transcriere reîncercată.",
-      "retryFailed": "Reîncercarea a eșuat: {{error}}"
+      "retryFailed": "Reîncercarea a eșuat: {{error}}",
+      "jobsFailed": "Sarcini eșuate: {{count}}",
+      "openDashboard": "Deschide tabloul de bord"
     },
     "confirm": {
       "clearTitle": "Golește sarcinile finalizate",

@@ -30,7 +30,9 @@
     "close": "Kapat",
     "rowActions": "Satır işlemleri",
     "home": "Ana Sayfa",
-    "openFolder": "Klasörü aç {{name}}"
+    "openFolder": "Klasörü aç {{name}}",
+    "dismiss": "Kapat",
+    "dismissAll": "Tümünü kapat"
   },
   "dashboard": {
     "title": "Panel",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Transkripsiyon tamamlandı. Kaynak altyazı oluşturuldu.",
       "transcriptionFailed": "Transkripsiyon başarısız: {{message}}",
       "transcriptionRetried": "Transkripsiyon yeniden denendi.",
-      "retryFailed": "Yeniden deneme başarısız: {{error}}"
+      "retryFailed": "Yeniden deneme başarısız: {{error}}",
+      "jobsFailed": "{{count}} iş başarısız oldu",
+      "openDashboard": "Paneli aç"
     },
     "confirm": {
       "clearTitle": "Biten işleri temizle",

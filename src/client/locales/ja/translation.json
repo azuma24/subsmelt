@@ -30,7 +30,9 @@
     "close": "閉じる",
     "rowActions": "行の操作",
     "home": "ホーム",
-    "openFolder": "フォルダを開く {{name}}"
+    "openFolder": "フォルダを開く {{name}}",
+    "dismiss": "閉じる",
+    "dismissAll": "すべて閉じる"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "文字起こしが完了しました。ソース字幕が生成されました。",
       "transcriptionFailed": "文字起こしに失敗しました：{{message}}",
       "transcriptionRetried": "文字起こしを再試行しました。",
-      "retryFailed": "再試行に失敗しました：{{error}}"
+      "retryFailed": "再試行に失敗しました：{{error}}",
+      "jobsFailed": "{{count}} 件のジョブが失敗しました",
+      "openDashboard": "ダッシュボードを開く"
     },
     "confirm": {
       "clearTitle": "完了済みジョブをクリア",

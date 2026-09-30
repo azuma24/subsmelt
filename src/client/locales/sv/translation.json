@@ -30,7 +30,9 @@
     "close": "Stäng",
     "rowActions": "Radåtgärder",
     "home": "Start",
-    "openFolder": "Öppna mapp {{name}}"
+    "openFolder": "Öppna mapp {{name}}",
+    "dismiss": "Stäng",
+    "dismissAll": "Stäng alla"
   },
   "dashboard": {
     "title": "Översikt",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Transkribering klar. Källundertext genererades.",
       "transcriptionFailed": "Transkribering misslyckades: {{message}}",
       "transcriptionRetried": "Transkribering försöktes igen.",
-      "retryFailed": "Nytt försök misslyckades: {{error}}"
+      "retryFailed": "Nytt försök misslyckades: {{error}}",
+      "jobsFailed": "{{count}} jobb misslyckades",
+      "openDashboard": "Öppna översikten"
     },
     "confirm": {
       "clearTitle": "Rensa klara jobb",

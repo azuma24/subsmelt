@@ -30,7 +30,9 @@
     "close": "மூடு",
     "rowActions": "வரிசை செயல்கள்",
     "home": "முகப்பு",
-    "openFolder": "ஃபோல்டர் திறக்கவும் {{name}}"
+    "openFolder": "ஃபோல்டர் திறக்கவும் {{name}}",
+    "dismiss": "நிராகரி",
+    "dismissAll": "அனைத்தையும் நிராகரி"
   },
   "dashboard": {
     "title": "டாஷ்போர்டு",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "படியெடுத்தல் முடிந்தது. மூல வசன வரி உருவாக்கப்பட்டது.",
       "transcriptionFailed": "படியெடுத்தல் தோல்வியடைந்தது: {{message}}",
       "transcriptionRetried": "படியெடுத்தல் மீண்டும் முயற்சிக்கப்பட்டது.",
-      "retryFailed": "மீண்டும் முயற்சி தோல்வியடைந்தது: {{error}}"
+      "retryFailed": "மீண்டும் முயற்சி தோல்வியடைந்தது: {{error}}",
+      "jobsFailed": "{{count}} பணிகள் தோல்வியடைந்தன",
+      "openDashboard": "டாஷ்போர்டைத் திற"
     },
     "confirm": {
       "clearTitle": "முடிந்த பணிகளை அழி",

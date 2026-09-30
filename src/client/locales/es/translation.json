@@ -30,7 +30,9 @@
     "close": "Cerrar",
     "rowActions": "Acciones de fila",
     "home": "Inicio",
-    "openFolder": "Abrir carpeta {{name}}"
+    "openFolder": "Abrir carpeta {{name}}",
+    "dismiss": "Descartar",
+    "dismissAll": "Descartar todo"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Transcripción completada. Se generó el subtítulo de origen.",
       "transcriptionFailed": "Error en la transcripción: {{message}}",
       "transcriptionRetried": "Transcripción reintentada.",
-      "retryFailed": "Error al reintentar: {{error}}"
+      "retryFailed": "Error al reintentar: {{error}}",
+      "jobsFailed": "Fallaron {{count}} trabajos",
+      "openDashboard": "Abrir panel"
     },
     "confirm": {
       "clearTitle": "Borrar trabajos terminados",

@@ -30,7 +30,9 @@
     "close": "बंद करें",
     "rowActions": "पंक्ति क्रियाएँ",
     "home": "होम",
-    "openFolder": "फ़ोल्डर खोलें {{name}}"
+    "openFolder": "फ़ोल्डर खोलें {{name}}",
+    "dismiss": "बंद करें",
+    "dismissAll": "सभी बंद करें"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "ट्रांसक्रिप्शन पूर्ण। स्रोत उपशीर्षक उत्पन्न किया गया।",
       "transcriptionFailed": "ट्रांसक्रिप्शन विफल: {{message}}",
       "transcriptionRetried": "ट्रांसक्रिप्शन पुनः प्रयास किया गया।",
-      "retryFailed": "पुनः प्रयास विफल: {{error}}"
+      "retryFailed": "पुनः प्रयास विफल: {{error}}",
+      "jobsFailed": "{{count}} कार्य विफल रहे",
+      "openDashboard": "डैशबोर्ड खोलें"
     },
     "confirm": {
       "clearTitle": "पूरे हुए कार्य हटाएँ",

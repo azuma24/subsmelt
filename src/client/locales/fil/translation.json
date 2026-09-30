@@ -30,7 +30,9 @@
     "close": "Isara",
     "rowActions": "Mga aksyon sa row",
     "home": "Home",
-    "openFolder": "Buksan ang folder {{name}}"
+    "openFolder": "Buksan ang folder {{name}}",
+    "dismiss": "Isara",
+    "dismissAll": "Isara ang lahat"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Kumpleto na ang transcription. Nabuo ang pinagmulang subtitle.",
       "transcriptionFailed": "Nabigo ang transcription: {{message}}",
       "transcriptionRetried": "Sinubukang muli ang transcription.",
-      "retryFailed": "Nabigo ang muling pagsubok: {{error}}"
+      "retryFailed": "Nabigo ang muling pagsubok: {{error}}",
+      "jobsFailed": "Nabigo ang {{count}} trabaho",
+      "openDashboard": "Buksan ang Dashboard"
     },
     "confirm": {
       "clearTitle": "I-clear ang mga tapos nang trabaho",

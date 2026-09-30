@@ -30,7 +30,9 @@
     "close": "বন্ধ করুন",
     "rowActions": "সারির ক্রিয়া",
     "home": "হোম",
-    "openFolder": "ফোল্ডার খুলুন {{name}}"
+    "openFolder": "ফোল্ডার খুলুন {{name}}",
+    "dismiss": "বন্ধ করুন",
+    "dismissAll": "সব বন্ধ করুন"
   },
   "dashboard": {
     "title": "ড্যাশবোর্ড",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "প্রতিলিপি সম্পূর্ণ। উৎস সাবটাইটেল তৈরি করা হয়েছে।",
       "transcriptionFailed": "প্রতিলিপি ব্যর্থ হয়েছে: {{message}}",
       "transcriptionRetried": "প্রতিলিপি পুনরায় চেষ্টা করা হয়েছে।",
-      "retryFailed": "পুনরায় চেষ্টা ব্যর্থ হয়েছে: {{error}}"
+      "retryFailed": "পুনরায় চেষ্টা ব্যর্থ হয়েছে: {{error}}",
+      "jobsFailed": "{{count}}টি কাজ ব্যর্থ হয়েছে",
+      "openDashboard": "ড্যাশবোর্ড খুলুন"
     },
     "confirm": {
       "clearTitle": "সম্পন্ন কাজ মুছুন",

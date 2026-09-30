@@ -30,7 +30,9 @@
     "close": "닫기",
     "rowActions": "행 작업",
     "home": "홈",
-    "openFolder": "폴더 열기 {{name}}"
+    "openFolder": "폴더 열기 {{name}}",
+    "dismiss": "닫기",
+    "dismissAll": "모두 닫기"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "전사가 완료되었습니다. 소스 자막이 생성되었습니다.",
       "transcriptionFailed": "전사 실패: {{message}}",
       "transcriptionRetried": "전사를 다시 시도했습니다.",
-      "retryFailed": "재시도 실패: {{error}}"
+      "retryFailed": "재시도 실패: {{error}}",
+      "jobsFailed": "작업 {{count}}개가 실패했습니다",
+      "openDashboard": "대시보드 열기"
     },
     "confirm": {
       "clearTitle": "완료된 작업 지우기",

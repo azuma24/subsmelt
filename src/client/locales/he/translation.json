@@ -30,7 +30,9 @@
     "close": "סגירה",
     "rowActions": "פעולות שורה",
     "home": "בית",
-    "openFolder": "פתח תיקייה {{name}}"
+    "openFolder": "פתח תיקייה {{name}}",
+    "dismiss": "סגירה",
+    "dismissAll": "סגירת הכול"
   },
   "dashboard": {
     "title": "לוח בקרה",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "התמלול הושלם. כתובית המקור נוצרה.",
       "transcriptionFailed": "התמלול נכשל: {{message}}",
       "transcriptionRetried": "התמלול נוסה שוב.",
-      "retryFailed": "הניסיון החוזר נכשל: {{error}}"
+      "retryFailed": "הניסיון החוזר נכשל: {{error}}",
+      "jobsFailed": "{{count}} משימות נכשלו",
+      "openDashboard": "פתיחת לוח הבקרה"
     },
     "confirm": {
       "clearTitle": "ניקוי משימות שהסתיימו",

@@ -30,7 +30,9 @@
     "close": "Schließen",
     "rowActions": "Zeilenaktionen",
     "home": "Start",
-    "openFolder": "Ordner öffnen {{name}}"
+    "openFolder": "Ordner öffnen {{name}}",
+    "dismiss": "Schließen",
+    "dismissAll": "Alle schließen"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Transkription abgeschlossen. Quell-Untertitel wurde erstellt.",
       "transcriptionFailed": "Transkription fehlgeschlagen: {{message}}",
       "transcriptionRetried": "Transkription erneut versucht.",
-      "retryFailed": "Wiederholung fehlgeschlagen: {{error}}"
+      "retryFailed": "Wiederholung fehlgeschlagen: {{error}}",
+      "jobsFailed": "{{count}} Aufträge fehlgeschlagen",
+      "openDashboard": "Dashboard öffnen"
     },
     "confirm": {
       "clearTitle": "Erledigte Aufträge entfernen",

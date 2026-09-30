@@ -30,7 +30,9 @@
     "close": "ปิด",
     "rowActions": "การดำเนินการของแถว",
     "home": "หน้าแรก",
-    "openFolder": "เปิดโฟลเดอร์ {{name}}"
+    "openFolder": "เปิดโฟลเดอร์ {{name}}",
+    "dismiss": "ปิด",
+    "dismissAll": "ปิดทั้งหมด"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "ถอดเสียงเสร็จสมบูรณ์ สร้างคำบรรยายต้นฉบับแล้ว",
       "transcriptionFailed": "ถอดเสียงไม่สำเร็จ: {{message}}",
       "transcriptionRetried": "ลองถอดเสียงอีกครั้งแล้ว",
-      "retryFailed": "ลองใหม่ไม่สำเร็จ: {{error}}"
+      "retryFailed": "ลองใหม่ไม่สำเร็จ: {{error}}",
+      "jobsFailed": "มีงานล้มเหลว {{count}} งาน",
+      "openDashboard": "เปิดแดชบอร์ด"
     },
     "confirm": {
       "clearTitle": "ล้างงานที่เสร็จแล้ว",

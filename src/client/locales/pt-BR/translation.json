@@ -30,7 +30,9 @@
     "close": "Fechar",
     "rowActions": "Ações da linha",
     "home": "Início",
-    "openFolder": "Abrir pasta {{name}}"
+    "openFolder": "Abrir pasta {{name}}",
+    "dismiss": "Dispensar",
+    "dismissAll": "Dispensar tudo"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Transcrição concluída. A legenda de origem foi gerada.",
       "transcriptionFailed": "Falha na transcrição: {{message}}",
       "transcriptionRetried": "Transcrição repetida.",
-      "retryFailed": "Falha ao tentar novamente: {{error}}"
+      "retryFailed": "Falha ao tentar novamente: {{error}}",
+      "jobsFailed": "{{count}} trabalhos falharam",
+      "openDashboard": "Abrir painel"
     },
     "confirm": {
       "clearTitle": "Limpar trabalhos concluídos",

@@ -30,7 +30,9 @@
     "close": "Tutup",
     "rowActions": "Tindakan baris",
     "home": "Beranda",
-    "openFolder": "Buka folder {{name}}"
+    "openFolder": "Buka folder {{name}}",
+    "dismiss": "Tutup",
+    "dismissAll": "Tutup semua"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Transkripsi selesai. Subtitle sumber telah dibuat.",
       "transcriptionFailed": "Transkripsi gagal: {{message}}",
       "transcriptionRetried": "Transkripsi dicoba lagi.",
-      "retryFailed": "Gagal mencoba lagi: {{error}}"
+      "retryFailed": "Gagal mencoba lagi: {{error}}",
+      "jobsFailed": "{{count}} pekerjaan gagal",
+      "openDashboard": "Buka Dasbor"
     },
     "confirm": {
       "clearTitle": "Hapus pekerjaan yang selesai",

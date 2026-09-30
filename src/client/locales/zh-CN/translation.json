@@ -30,7 +30,9 @@
     "close": "关闭",
     "rowActions": "行操作",
     "home": "首页",
-    "openFolder": "打开文件夹 {{name}}"
+    "openFolder": "打开文件夹 {{name}}",
+    "dismiss": "关闭",
+    "dismissAll": "全部关闭"
   },
   "dashboard": {
     "title": "仪表板",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "转录完成。已生成源字幕。",
       "transcriptionFailed": "转录失败：{{message}}",
       "transcriptionRetried": "已重试转录。",
-      "retryFailed": "重试失败：{{error}}"
+      "retryFailed": "重试失败：{{error}}",
+      "jobsFailed": "{{count}} 个任务失败",
+      "openDashboard": "打开仪表板"
     },
     "confirm": {
       "clearTitle": "清除已完成的任务",

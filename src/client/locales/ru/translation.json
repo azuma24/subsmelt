@@ -30,7 +30,9 @@
     "close": "Закрыть",
     "rowActions": "Действия со строкой",
     "home": "Главная",
-    "openFolder": "Открыть папку {{name}}"
+    "openFolder": "Открыть папку {{name}}",
+    "dismiss": "Закрыть",
+    "dismissAll": "Закрыть все"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Транскрипция завершена. Исходные субтитры созданы.",
       "transcriptionFailed": "Ошибка транскрипции: {{message}}",
       "transcriptionRetried": "Транскрипция повторена.",
-      "retryFailed": "Не удалось повторить: {{error}}"
+      "retryFailed": "Не удалось повторить: {{error}}",
+      "jobsFailed": "Заданий с ошибкой: {{count}}",
+      "openDashboard": "Открыть панель"
     },
     "confirm": {
       "clearTitle": "Очистить завершённые задания",

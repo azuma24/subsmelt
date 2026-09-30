@@ -30,7 +30,9 @@
     "close": "Zavřít",
     "rowActions": "Akce řádku",
     "home": "Domů",
-    "openFolder": "Otevřít složku {{name}}"
+    "openFolder": "Otevřít složku {{name}}",
+    "dismiss": "Zavřít",
+    "dismissAll": "Zavřít vše"
   },
   "dashboard": {
     "title": "Přehled",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Přepis dokončen. Zdrojové titulky byly vygenerovány.",
       "transcriptionFailed": "Přepis se nezdařil: {{message}}",
       "transcriptionRetried": "Přepis byl zopakován.",
-      "retryFailed": "Opakování se nezdařilo: {{error}}"
+      "retryFailed": "Opakování se nezdařilo: {{error}}",
+      "jobsFailed": "Selhalo úloh: {{count}}",
+      "openDashboard": "Otevřít přehled"
     },
     "confirm": {
       "clearTitle": "Vymazat dokončené úlohy",

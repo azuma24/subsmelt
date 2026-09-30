@@ -147,7 +147,9 @@
     "close": "Close",
     "rowActions": "Row actions",
     "home": "Home",
-    "openFolder": "Open folder {{name}}"
+    "openFolder": "Open folder {{name}}",
+    "dismiss": "Dismiss",
+    "dismissAll": "Dismiss all"
   },
   "errors": {
     "loading": "Loading…",
@@ -276,7 +278,9 @@
       "transcriptionCompleteGenerated": "Transcription complete. Source subtitle was generated.",
       "transcriptionFailed": "Transcription failed: {{message}}",
       "transcriptionRetried": "Transcription retried.",
-      "retryFailed": "Retry failed: {{error}}"
+      "retryFailed": "Retry failed: {{error}}",
+      "jobsFailed": "{{count}} jobs failed",
+      "openDashboard": "Open Dashboard"
     },
     "confirm": {
       "clearTitle": "Clear finished jobs",

@@ -30,7 +30,9 @@
     "close": "بستن",
     "rowActions": "کنش‌های ردیف",
     "home": "خانه",
-    "openFolder": "باز کردن پوشه {{name}}"
+    "openFolder": "باز کردن پوشه {{name}}",
+    "dismiss": "بستن",
+    "dismissAll": "بستن همه"
   },
   "dashboard": {
     "title": "داشبورد",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "رونویسی کامل شد. زیرنویس مبدأ ایجاد شد.",
       "transcriptionFailed": "رونویسی ناموفق بود: {{message}}",
       "transcriptionRetried": "رونویسی دوباره امتحان شد.",
-      "retryFailed": "تلاش مجدد ناموفق بود: {{error}}"
+      "retryFailed": "تلاش مجدد ناموفق بود: {{error}}",
+      "jobsFailed": "{{count}} کار ناموفق بود",
+      "openDashboard": "باز کردن داشبورد"
     },
     "confirm": {
       "clearTitle": "پاک کردن کارهای تمام‌شده",

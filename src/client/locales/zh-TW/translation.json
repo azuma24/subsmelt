@@ -30,7 +30,9 @@
     "close": "關閉",
     "rowActions": "列操作",
     "home": "首頁",
-    "openFolder": "打開資料夾 {{name}}"
+    "openFolder": "打開資料夾 {{name}}",
+    "dismiss": "關閉",
+    "dismissAll": "全部關閉"
   },
   "dashboard": {
     "title": "儀表板",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "轉錄完成。已產生來源字幕。",
       "transcriptionFailed": "轉錄失敗：{{message}}",
       "transcriptionRetried": "已重試轉錄。",
-      "retryFailed": "重試失敗：{{error}}"
+      "retryFailed": "重試失敗：{{error}}",
+      "jobsFailed": "{{count}} 個任務失敗",
+      "openDashboard": "開啟儀表板"
     },
     "confirm": {
       "clearTitle": "清除已完成的任務",

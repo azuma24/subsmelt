@@ -30,7 +30,9 @@
     "close": "Zamknij",
     "rowActions": "Akcje wiersza",
     "home": "Strona główna",
-    "openFolder": "Otwórz folder {{name}}"
+    "openFolder": "Otwórz folder {{name}}",
+    "dismiss": "Zamknij",
+    "dismissAll": "Zamknij wszystkie"
   },
   "dashboard": {
     "title": "Panel",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Transkrypcja zakończona. Wygenerowano napisy źródłowe.",
       "transcriptionFailed": "Transkrypcja nie powiodła się: {{message}}",
       "transcriptionRetried": "Ponowiono transkrypcję.",
-      "retryFailed": "Ponowna próba nie powiodła się: {{error}}"
+      "retryFailed": "Ponowna próba nie powiodła się: {{error}}",
+      "jobsFailed": "Nieudane zadania: {{count}}",
+      "openDashboard": "Otwórz panel"
     },
     "confirm": {
       "clearTitle": "Wyczyść zakończone zadania",

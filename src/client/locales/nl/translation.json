@@ -30,7 +30,9 @@
     "close": "Sluiten",
     "rowActions": "Rijacties",
     "home": "Start",
-    "openFolder": "Map openen {{name}}"
+    "openFolder": "Map openen {{name}}",
+    "dismiss": "Sluiten",
+    "dismissAll": "Alles sluiten"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Transcriptie voltooid. Bronondertiteling is gegenereerd.",
       "transcriptionFailed": "Transcriptie mislukt: {{message}}",
       "transcriptionRetried": "Transcriptie opnieuw geprobeerd.",
-      "retryFailed": "Opnieuw proberen mislukt: {{error}}"
+      "retryFailed": "Opnieuw proberen mislukt: {{error}}",
+      "jobsFailed": "{{count}} taken mislukt",
+      "openDashboard": "Dashboard openen"
     },
     "confirm": {
       "clearTitle": "Voltooide taken wissen",

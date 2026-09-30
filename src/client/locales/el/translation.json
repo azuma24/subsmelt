@@ -30,7 +30,9 @@
     "close": "Κλείσιμο",
     "rowActions": "Ενέργειες γραμμής",
     "home": "Αρχική",
-    "openFolder": "Άνοιγμα φακέλου {{name}}"
+    "openFolder": "Άνοιγμα φακέλου {{name}}",
+    "dismiss": "Κλείσιμο",
+    "dismissAll": "Κλείσιμο όλων"
   },
   "dashboard": {
     "title": "Πίνακας ελέγχου",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Η μεταγραφή ολοκληρώθηκε. Δημιουργήθηκε ο υπότιτλος προέλευσης.",
       "transcriptionFailed": "Η μεταγραφή απέτυχε: {{message}}",
       "transcriptionRetried": "Έγινε επανάληψη της μεταγραφής.",
-      "retryFailed": "Η επανάληψη απέτυχε: {{error}}"
+      "retryFailed": "Η επανάληψη απέτυχε: {{error}}",
+      "jobsFailed": "{{count}} εργασίες απέτυχαν",
+      "openDashboard": "Άνοιγμα πίνακα ελέγχου"
     },
     "confirm": {
       "clearTitle": "Καθαρισμός ολοκληρωμένων εργασιών",

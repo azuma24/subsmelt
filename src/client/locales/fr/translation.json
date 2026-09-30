@@ -30,7 +30,9 @@
     "close": "Fermer",
     "rowActions": "Actions de ligne",
     "home": "Accueil",
-    "openFolder": "Ouvrir le dossier {{name}}"
+    "openFolder": "Ouvrir le dossier {{name}}",
+    "dismiss": "Fermer",
+    "dismissAll": "Tout fermer"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Transcription terminée. Le sous-titre source a été généré.",
       "transcriptionFailed": "Échec de la transcription : {{message}}",
       "transcriptionRetried": "Transcription relancée.",
-      "retryFailed": "Échec de la nouvelle tentative : {{error}}"
+      "retryFailed": "Échec de la nouvelle tentative : {{error}}",
+      "jobsFailed": "{{count}} tâches ont échoué",
+      "openDashboard": "Ouvrir le tableau de bord"
     },
     "confirm": {
       "clearTitle": "Effacer les tâches terminées",

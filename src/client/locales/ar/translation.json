@@ -30,7 +30,9 @@
     "close": "إغلاق",
     "rowActions": "إجراءات الصف",
     "home": "الرئيسية",
-    "openFolder": "فتح المجلد {{name}}"
+    "openFolder": "فتح المجلد {{name}}",
+    "dismiss": "إغلاق",
+    "dismissAll": "إغلاق الكل"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "اكتمل النسخ. تم إنشاء الترجمة المصدر.",
       "transcriptionFailed": "فشل النسخ: {{message}}",
       "transcriptionRetried": "تمت إعادة محاولة النسخ.",
-      "retryFailed": "فشلت إعادة المحاولة: {{error}}"
+      "retryFailed": "فشلت إعادة المحاولة: {{error}}",
+      "jobsFailed": "فشلت {{count}} من المهام",
+      "openDashboard": "فتح لوحة التحكم"
     },
     "confirm": {
       "clearTitle": "مسح المهام المكتملة",

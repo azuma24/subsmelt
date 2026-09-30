@@ -176,7 +176,7 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
     setConverting(false);
     if (errors.length > 0) setFileErrors(errors);
     if (outputs.length === 0) {
-      addToast(t("convert.allFailed"), "error", true);
+      addToast(t("convert.allFailed"), "error", { persistent: true });
       return;
     }
 

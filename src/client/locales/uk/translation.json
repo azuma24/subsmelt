@@ -30,7 +30,9 @@
     "close": "Закрити",
     "rowActions": "Дії з рядком",
     "home": "Головна",
-    "openFolder": "Відкрити папку {{name}}"
+    "openFolder": "Відкрити папку {{name}}",
+    "dismiss": "Закрити",
+    "dismissAll": "Закрити всі"
   },
   "dashboard": {
     "title": "Панель",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Транскрипцію завершено. Вихідні субтитри створено.",
       "transcriptionFailed": "Не вдалося транскрибувати: {{message}}",
       "transcriptionRetried": "Транскрипцію повторено.",
-      "retryFailed": "Не вдалося повторити: {{error}}"
+      "retryFailed": "Не вдалося повторити: {{error}}",
+      "jobsFailed": "Невдалих завдань: {{count}}",
+      "openDashboard": "Відкрити панель"
     },
     "confirm": {
       "clearTitle": "Очистити завершені завдання",

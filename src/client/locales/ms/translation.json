@@ -30,7 +30,9 @@
     "close": "Tutup",
     "rowActions": "Tindakan baris",
     "home": "Laman Utama",
-    "openFolder": "Buka folder {{name}}"
+    "openFolder": "Buka folder {{name}}",
+    "dismiss": "Ketepikan",
+    "dismissAll": "Ketepikan semua"
   },
   "dashboard": {
     "title": "Papan Pemuka",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Transkripsi selesai. Sari kata sumber telah dijana.",
       "transcriptionFailed": "Transkripsi gagal: {{message}}",
       "transcriptionRetried": "Transkripsi dicuba semula.",
-      "retryFailed": "Cubaan semula gagal: {{error}}"
+      "retryFailed": "Cubaan semula gagal: {{error}}",
+      "jobsFailed": "{{count}} kerja gagal",
+      "openDashboard": "Buka Papan Pemuka"
     },
     "confirm": {
       "clearTitle": "Kosongkan kerja yang selesai",
