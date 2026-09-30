@@ -3,14 +3,14 @@
 All notable changes to SubSmelt. The app and the Windows Whisper backend share a
 version number and are released together (`v0.5.6` and `whisper-v0.5.6`).
 
-## [Unreleased]
+## [0.6.0] — 2026-10-01
 
-Planned as 0.6.0 (app `v0.6.0` and Whisper backend `whisper-v0.6.0`).
+App `v0.6.0` and Whisper backend `whisper-v0.6.0`, released together.
 
 ### Added
 
 - **NVIDIA Nemotron 3.5 ASR** as a second speech-to-text engine next to Whisper. Pick `nemotron-3.5-asr` in Settings or per run, download its 742 MB GGUF from the model manager, and get punctuated subtitles with word-level timing in 32 languages, several times faster than `large-v3` at a fraction of the VRAM. The backend runs it through the bundled NeMo-Speech.cpp 0.1.0 runtime (`nemo-speech`, checksum-pinned in the Docker image and the Windows installer; `SUBSMELT_NEMO_SPEECH` for source installs). Long audio is split at silences into chunks of about ten minutes so progress and cancel keep working. The backend advertises `capabilities.modelInfo` (engine, languages, supported options per model); the UI groups models by engine, hides options a model ignores, warns when a model does not support the chosen language, and the heading "Whisper Models" became "Speech-to-text models". A model that does not support the requested language is refused with `language_not_supported` (formerly `english_only_model`), a missing runtime with `engine_unavailable`, and the low-RAM downgrade never switches engines.
-- YouTube playlists are planned for this release; see docs/HANDOFF-0.6.0.md.
+- **YouTube playlists.** A new YouTube page follows playlists shared as Unlisted links (no login; a cookies.txt upload covers Private ones). Per playlist, pick audio (m4a or opus) or video (quality, codec, container), the subtitle languages you want, and a backfill filter: All, None, Posted since, or Added since (needs an optional YouTube Data API key, tested from Settings). New videos download one at a time through a serial lane with live progress; YouTube rate limits and bot checks pause the lane for an hour, doubling to a day, instead of retrying into a ban. Each picked language comes from the transcript when the video is already in that language, from the creator's captions when YouTube has them, and otherwise from Whisper then LLM translation. When Whisper and the LLM share one GPU (`gpu_shared`), they take turns in batches. Every finished video gets one Obsidian note in the mounted `/notes` folder, with wikilinks for channel and playlist, the video embed and timestamped paragraphs per language, and a `youtube:note` webhook. The Docker image now bundles pinned yt-dlp and a minimal ffmpeg; Settings shows the yt-dlp version and updates it into the data folder. Removed videos keep their files.
 
 ### Changed
 
@@ -25,6 +25,8 @@ Planned as 0.6.0 (app `v0.6.0` and Whisper backend `whisper-v0.6.0`).
 
 ### Fixed
 
+- **Long media path in Settings → Sources** wrapped instead of pushing the page sideways.
+- **Windows service never found its bundled ffmpeg** on PyInstaller 6 builds, because it landed under `_internal\`; it now sits beside `run_server.exe` and `SUBSMELT_FFMPEG` is set again.
 - **Saved API key wiped on Settings save** for installs still using the single `api_key` setting. The redaction marker was stored as the key and every translation failed to authenticate. If this already happened, enter the key once more.
 - **Stored API key sent to any endpoint.** `/api/models?endpoint=...` attached the saved local key to whatever address the caller supplied.
 - **Test and Fetch models failed on saved cloud connections** after a reload.

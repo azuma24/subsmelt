@@ -1,8 +1,7 @@
 # SubSmelt — Handoff
 
-Orientation for someone picking this project up. Current as of the
-**0.6.0 release branch** (`release/0.6.0`, 2026-09-30). The version files still
-read 0.5.9 until the release bump. For what changed when, see
+Orientation for someone picking this project up. Current as of **0.6.0**
+(2026-10-01). For what changed when, see
 [../CHANGELOG.md](../CHANGELOG.md); for how to run it, see
 [../README.md](../README.md). For the 0.6.0 release checklist, see
 [HANDOFF-0.6.0.md](HANDOFF-0.6.0.md).
@@ -140,18 +139,22 @@ included**; the model manager downloads those on first use.
 
 ---
 
-## 4. In progress for 0.6.0
+## 4. New in 0.6.0
 
-Two features are being built on their own branches. Neither is merged into
-`release/0.6.0`, and neither ships until it is.
-
-- **YouTube playlists.** Follow an Unlisted playlist, download its videos,
-  transcribe and translate them, and export one note per video. Five stacked
-  branches, `feat/youtube-runtime` to `feat/youtube-notes`. Spec:
-  [PRD-youtube-playlists.md](PRD-youtube-playlists.md).
-- **Nemotron 3.5 ASR.** A second speech-to-text engine in the Whisper backend,
-  run through NeMo-Speech.cpp. Branch `feat/nemotron-asr`. Brief:
-  [handoff-0.6.0/nemotron-engine-brief.md](handoff-0.6.0/nemotron-engine-brief.md).
+- **YouTube playlists** (`src/server/youtube/`, `src/client/features/youtube/`).
+  `YoutubeStore` owns the video tables and refuses status moves the table in
+  `video-status.ts` does not allow. `YoutubeWorker` runs one serial YouTube lane
+  (listing, downloads, caption fetches, cooldown), then subtitles, translation
+  jobs and the note export; `onSubtitlesComplete` is the only exit from
+  `translating`. `gpu-gate.ts` holds translation while YouTube transcriptions
+  are pending when `gpu_shared` is on. yt-dlp always runs through `ytdlp.ts`
+  (argument array, own process group, `--js-runtimes node`); tests use
+  `fake-yt-dlp.mjs`. Spec: [PRD-youtube-playlists.md](PRD-youtube-playlists.md).
+- **Nemotron 3.5 ASR** (`backend-whisper/app/catalog.py`, `nemotron*.py`). One
+  model catalog with engine descriptors and a two-entry engine registry in
+  `transcribe.py`. The engine shells out to the bundled `nemo-speech` 0.1.0,
+  chunked at silences (max 720 s per chunk). The Windows CUDA build needs NVIDIA
+  driver R580 or newer.
 
 ---
 
@@ -213,7 +216,7 @@ the path with `run_server`'s own precedence.
 | [../README.md](../README.md), [../CHANGELOG.md](../CHANGELOG.md), this file | Current |
 | [TODO.md](TODO.md) | Current — open items only |
 | [HANDOFF-0.6.0.md](HANDOFF-0.6.0.md), [handoff-0.6.0/](handoff-0.6.0/) | **Current until 0.6.0 ships** — release checklist, working rules, screenshot and seed scripts |
-| [PRD-youtube-playlists.md](PRD-youtube-playlists.md) | **Current** — spec for the YouTube feature in progress |
+| [PRD-youtube-playlists.md](PRD-youtube-playlists.md) | **Current** — spec for the YouTube feature shipped in 0.6.0 |
 | [why-llm-translation.md](why-llm-translation.md) | Current — explainer for users |
 | [RELEASING.md](RELEASING.md) | **Current** — release procedure and tag-push constraints |
 | [2026-08-11-uxui-audit.md](2026-08-11-uxui-audit.md) | **Current** — covers every screen; Phases A–F implemented (§5), C/D/E roadmap items remain in §4. §4a holds the theme-token rules and their enforcement greps |
