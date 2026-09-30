@@ -4,7 +4,7 @@ import type { JobRow, ScannedFile } from "../../types";
 import type { ManualTranscriptionProgress, TranscribePostAction } from "./transcription-progress";
 import { compareScanFiles, scanFileKey, type DashboardSortBy, type DashboardSortDir } from "./scanSort";
 import { useIsMobile } from "../../hooks";
-import { buildPathTree, collectFolderPaths, relativeDisplayPath } from "../../components/file-tree/build";
+import { buildPathTree, collectFolderPaths, pathMarkerFor, relativeDisplayPath } from "../../components/file-tree/build";
 import { FileTreeView, type FileRowContext } from "../../components/file-tree/FileTreeView";
 import { usePersistedExpansion } from "../../components/file-tree/use-persisted-expansion";
 import { useDrillDown } from "../../components/file-tree/use-drill-down";
@@ -71,7 +71,7 @@ export function ScanResultsPanel({
   const isMobile = useIsMobile();
   const selectedPaths = selectedVideoPaths ?? new Set<string>();
   const batchEnabled = transcriptionEnabled && Boolean(onBatchTranscribe && setSelectedVideoPaths);
-  const marker = mediaDir ? `${mediaDir.replace(/\/+$/, "")}/` : "/media/";
+  const marker = pathMarkerFor(mediaDir);
 
   // The category chips (all/new/missing/orphans) apply before the tree is
   // built, so an empty folder drops out along with its files. Text search

@@ -186,9 +186,11 @@ export const getLogs = (
 export const clearLogsApi = () => fetchJSON("/logs", { method: "DELETE" });
 
 // Connection test — no payload tests the active connection; a payload tests
-// the supplied (possibly unsaved) connection fields.
+// the supplied (possibly unsaved) connection fields. `connectionId` names a
+// saved connection so the server can fall back to its stored key.
 export const testConnection = (payload?: {
   provider?: string;
+  connectionId?: string;
   apiKey?: string;
   model?: string;
   endpoint?: string;

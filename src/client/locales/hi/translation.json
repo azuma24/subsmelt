@@ -30,7 +30,9 @@
     "close": "बंद करें",
     "rowActions": "पंक्ति क्रियाएँ",
     "home": "होम",
-    "openFolder": "फ़ोल्डर खोलें {{name}}"
+    "openFolder": "फ़ोल्डर खोलें {{name}}",
+    "dismiss": "बंद करें",
+    "dismissAll": "सभी बंद करें"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "ट्रांसक्रिप्शन पूर्ण। स्रोत उपशीर्षक उत्पन्न किया गया।",
       "transcriptionFailed": "ट्रांसक्रिप्शन विफल: {{message}}",
       "transcriptionRetried": "ट्रांसक्रिप्शन पुनः प्रयास किया गया।",
-      "retryFailed": "पुनः प्रयास विफल: {{error}}"
+      "retryFailed": "पुनः प्रयास विफल: {{error}}",
+      "jobsFailed": "{{count}} कार्य विफल रहे",
+      "openDashboard": "डैशबोर्ड खोलें"
     },
     "confirm": {
       "clearTitle": "पूरे हुए कार्य हटाएँ",
@@ -313,7 +317,8 @@
       "deleted": "Translation deleted",
       "bulkUpdated": "Updated {{count}} translations",
       "bulkFormatUpdated": "Updated {{count}} translations to .{{format}}",
-      "bulkUpdateFailed": "बल्क अपडेट विफल"
+      "bulkUpdateFailed": "बल्क अपडेट विफल",
+      "saveFailed": "सहेजा नहीं जा सका: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Delete translation",
@@ -773,7 +778,8 @@
       "clearConfirm": "Clear"
     },
     "toast": {
-      "cleared": "Logs cleared"
+      "cleared": "Logs cleared",
+      "clearFailed": "लॉग साफ़ नहीं हो सके: {{message}}"
     },
     "level": {
       "all": "All Levels",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "आउटपुट सेटिंग्स",
     "addFilesToStart": "शुरू करने के लिए ऊपर सबटाइटल फ़ाइलें जोड़ें।",
-    "title": "सबटाइटल कन्वर्टर",
     "description": "सबटाइटल फ़ॉर्मैट बदलें, या एक ही चरण में सबटाइटल का अनुवाद करके फ़ॉर्मैट बदलें। एक या कई फ़ाइलें छोड़ें, ज़रूरत हो तो भाषाएँ चुनें, आउटपुट फ़ॉर्मैट चुनें और डाउनलोड करें।",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "प्रतिलेखन — आवाज़ से पाठ",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1022,11 +1026,12 @@
     "selectFolder": "{{name}} की सभी फ़ाइलें चुनें",
     "transcribingNow": "अभी ट्रांसक्राइब हो रहा है",
     "selectedSummary": "{{count}} फ़ाइलें चुनी गईं",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "मॉडल सूची लोड नहीं हो सकी, इसलिए ट्रांसक्रिप्शन शुरू नहीं हो सकता।"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "आपके शुरू किए गए ट्रांसक्रिप्शन, नवीनतम पहले।",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}} प्रयास",
     "retryAllFailed": "{{count}} विफल पुनः प्रयास करें",
     "retriedAll": "{{total}} में से {{ok}} फ़ाइलें पुनः प्रयास की गईं।",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "पुनः प्रयास विफल: {{message}}"
   }
 }

@@ -68,3 +68,13 @@ test("translation hints prefer a context override, then fall back", () => {
     "errors.schema",
   ]);
 });
+
+test("short tokens must stand alone, so quoted file paths do not misclassify", () => {
+  assert.equal(classifyError("fetch failed: /media/Living Room/ep1.srt"), "backend-unreachable");
+  assert.equal(classifyError("fetch failed: /media/401 - Pilot/ep1.srt"), "backend-unreachable");
+  assert.equal(classifyError("terminated while writing /media/Room 429/out.srt"), "connection-dropped");
+  assert.equal(classifyError("Request failed with status code 401"), "auth");
+  assert.equal(classifyError("HTTP 403"), "auth");
+  assert.equal(classifyError("rate limited (429)"), "rate-limit");
+  assert.equal(classifyError("CUDA OOM while loading large-v3"), "insufficient-ram");
+});

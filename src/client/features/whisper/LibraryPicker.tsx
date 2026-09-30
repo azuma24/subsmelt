@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import type { ScannedFile } from "../../types";
 import { ActionButton, EmptyHint, SelectionBar, SettingsSection } from "../../ui/primitives";
-import { relativeDisplayPath } from "../../components/file-tree/build";
+import { pathMarkerFor, relativeDisplayPath } from "../../components/file-tree/build";
 import { FileTreeView, type FileRowContext, type FolderRowContext } from "../../components/file-tree/FileTreeView";
 import type { TreeExpansion } from "../../components/file-tree/use-persisted-expansion";
 import type { DrillDownState } from "../../components/file-tree/use-drill-down";
@@ -20,6 +20,8 @@ export interface LibraryPickerProps {
   onToggleSortDir: () => void;
   onSelectAll: () => void;
   running: boolean;
+  /** Library root; file paths are shown relative to it. */
+  mediaDir: string;
   visibleFiles: ScannedFile[];
   videoFiles: ScannedFile[];
   isFiltered: boolean;
@@ -50,7 +52,7 @@ export interface LibraryPickerProps {
  */
 export function LibraryPicker({
   isMobile, libraryQuery, onLibraryQueryChange, hideWithSubtitles, onHideWithSubtitlesChange,
-  sortBy, onSortByChange, sortDir, onToggleSortDir, onSelectAll, running, visibleFiles, videoFiles,
+  sortBy, onSortByChange, sortDir, onToggleSortDir, onSelectAll, running, mediaDir, visibleFiles, videoFiles,
   isFiltered, isScanFetching, isScanLoading, onRefreshScan, selectedVisibleCount, onClearSelection,
   onTranscribeSelected, downloadsActive, progress, onCancelBatch, filterActive, tree, selected,
   toggleFile, toggleFolder, fileProgress, activePath, expansion, drill,
@@ -149,7 +151,7 @@ export function LibraryPicker({
               key={f.videoPath as string}
               file={f}
               padLeftPx={12}
-              relPath={relativeDisplayPath(f.videoPath as string)}
+              relPath={relativeDisplayPath(f.videoPath as string, pathMarkerFor(mediaDir))}
               selected={selected}
               toggleFile={toggleFile}
               fileProgress={fileProgress}

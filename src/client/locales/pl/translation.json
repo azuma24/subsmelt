@@ -30,7 +30,9 @@
     "close": "Zamknij",
     "rowActions": "Akcje wiersza",
     "home": "Strona główna",
-    "openFolder": "Otwórz folder {{name}}"
+    "openFolder": "Otwórz folder {{name}}",
+    "dismiss": "Zamknij",
+    "dismissAll": "Zamknij wszystkie"
   },
   "dashboard": {
     "title": "Panel",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Transkrypcja zakończona. Wygenerowano napisy źródłowe.",
       "transcriptionFailed": "Transkrypcja nie powiodła się: {{message}}",
       "transcriptionRetried": "Ponowiono transkrypcję.",
-      "retryFailed": "Ponowna próba nie powiodła się: {{error}}"
+      "retryFailed": "Ponowna próba nie powiodła się: {{error}}",
+      "jobsFailed": "Nieudane zadania: {{count}}",
+      "openDashboard": "Otwórz panel"
     },
     "confirm": {
       "clearTitle": "Wyczyść zakończone zadania",
@@ -313,7 +317,8 @@
       "deleted": "Tłumaczenie usunięte",
       "bulkUpdated": "Zaktualizowano {{count}} tłumaczeń",
       "bulkFormatUpdated": "Zaktualizowano {{count}} tłumaczeń na .{{format}}",
-      "bulkUpdateFailed": "Zbiorcza aktualizacja nie powiodła się"
+      "bulkUpdateFailed": "Zbiorcza aktualizacja nie powiodła się",
+      "saveFailed": "Nie udało się zapisać: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Usuń tłumaczenie",
@@ -773,7 +778,8 @@
       "clearConfirm": "Wyczyść"
     },
     "toast": {
-      "cleared": "Dzienniki wyczyszczone"
+      "cleared": "Dzienniki wyczyszczone",
+      "clearFailed": "Nie udało się wyczyścić dzienników: {{message}}"
     },
     "level": {
       "all": "Wszystkie poziomy",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "Ustawienia wyjścia",
     "addFilesToStart": "Dodaj powyżej pliki napisów, aby rozpocząć.",
-    "title": "Konwerter napisów",
     "description": "Konwertuj formaty napisów albo tłumacz i konwertuj w jednym kroku.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Transkrypcja — Mowa na tekst",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1022,11 +1026,12 @@
     "selectFolder": "Zaznacz wszystkie pliki w {{name}}",
     "transcribingNow": "trwa transkrypcja",
     "selectedSummary": "Wybrano plików: {{count}}",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "Nie udało się wczytać listy modeli, więc nie można rozpocząć transkrypcji."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Rozpoczęte przez Ciebie transkrypcje, od najnowszych.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}} prób",
     "retryAllFailed": "Ponów {{count}} nieudanych",
     "retriedAll": "Ponowiono {{ok}} z {{total}} plików.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "Ponowna próba nie powiodła się: {{message}}"
   }
 }

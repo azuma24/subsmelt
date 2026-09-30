@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import * as api from "../../api";
 import { useLogsQuery, useTranscriptionLogsQuery } from "../../hooks";
-import { fullTime, highlightText, relativeTime } from "../../lib";
+import { fullTime, getErrorMessage, highlightText, relativeTime } from "../../lib";
 import type { LogEntry } from "../../types";
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmModal";
@@ -57,11 +57,14 @@ export function LogsPage({ isMobile }: { isMobile: boolean }) {
 
   const handleClear = async () => {
     const ok = await confirm({ title: t("logs.confirm.clearTitle"), message: t("logs.confirm.clearMessage"), confirmLabel: t("logs.confirm.clearConfirm"), danger: true });
-    if (ok) {
+    if (!ok) return;
+    try {
       await api.clearLogsApi();
       addToast(t("logs.toast.cleared"), "info");
-      logsQuery.refetch();
+    } catch (e: unknown) {
+      addToast(t("logs.toast.clearFailed", { message: getErrorMessage(e) }), "error");
     }
+    logsQuery.refetch();
   };
 
   // L1 level quick-pill toggle
@@ -328,11 +331,15 @@ function LogRow({ entry, search }: { entry: LogEntry; search: string }) {
   const parts = search ? highlightText(entry.message, search) : [entry.message];
   const meta = LEVEL_META[entry.level] || { label: entry.level.toUpperCase(), color: "text-[var(--text-2)]" };
   return (
-    <div className="flex gap-2.5 border-b border-[var(--border-sub)] py-[7px] font-mono text-[12px]">
-      <span className="w-[55px] shrink-0 cursor-default text-[var(--text-3)]" title={fullTime(entry.timestamp)}>{relativeTime(entry.timestamp)}</span>
-      <span className={`w-[40px] shrink-0 font-semibold ${meta.color}`}>{meta.label}</span>
-      <span className="w-[60px] shrink-0 truncate text-[var(--text-3)]">{entry.category}</span>
-      <div className="min-w-0 flex-1">
+    // Phones stack the meta line above a full-width message; from md up the
+    // wrapper dissolves (contents) and the three cells sit in the row as before.
+    <div className="flex flex-col gap-0.5 border-b border-[var(--border-sub)] py-[7px] font-mono text-[12px] md:flex-row md:gap-2.5">
+      <div className="flex gap-2.5 md:contents">
+        <span className="w-[55px] shrink-0 cursor-default text-[var(--text-3)]" title={fullTime(entry.timestamp)}>{relativeTime(entry.timestamp)}</span>
+        <span className={`w-[40px] shrink-0 font-semibold ${meta.color}`}>{meta.label}</span>
+        <span className="w-[60px] shrink-0 truncate text-[var(--text-3)]">{entry.category}</span>
+      </div>
+      <div className="min-w-0 flex-1 break-words">
         <span className={entry.level === "error" ? "text-[var(--red)]" : entry.level === "warn" ? "text-[var(--yellow)]" : "text-[var(--text-2)]"}>{parts.map((part, i) => search && part.toLowerCase() === search.toLowerCase() ? <mark key={i} className="rounded bg-[var(--yellow-dim)] px-0.5 text-[var(--yellow)]">{part}</mark> : <Fragment key={i}>{part}</Fragment>)}</span>
         {entry.job_id && <NavLink to={`/jobs/${entry.job_id}`} className="ml-2 text-[var(--text-2)] hover:text-[var(--accent)]">{t("logs.jobLink", { id: entry.job_id })}</NavLink>}
       </div>

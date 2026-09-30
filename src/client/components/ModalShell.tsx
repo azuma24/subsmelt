@@ -32,6 +32,10 @@ export function ModalShell({
   const resolvedTitleId = titleId || generatedTitleId;
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  // A click's target is the common ancestor of mousedown and mouseup, so a
+  // text selection that starts in the panel and ends over the backdrop reads
+  // as a backdrop click. Close only when the press started there too.
+  const pressStartedOnBackdrop = useRef(false);
 
   useEffect(() => {
     previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -76,7 +80,13 @@ export function ModalShell({
   };
 
   return (
-    <div className={overlayClassName} onClick={onClose}>
+    <div
+      className={overlayClassName}
+      onMouseDown={(event) => { pressStartedOnBackdrop.current = event.target === event.currentTarget; }}
+      onClick={(event) => {
+        if (pressStartedOnBackdrop.current && event.target === event.currentTarget) onClose();
+      }}
+    >
       <div
         ref={panelRef}
         role="dialog"
@@ -84,7 +94,6 @@ export function ModalShell({
         aria-labelledby={labelledBy || (title ? resolvedTitleId : undefined)}
         tabIndex={-1}
         className={panelClassName}
-        onClick={(event) => event.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
         {title && <h3 id={resolvedTitleId} className="text-lg font-semibold text-[var(--text)]">{title}</h3>}

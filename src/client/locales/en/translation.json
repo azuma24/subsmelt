@@ -13,7 +13,6 @@
     "more": "More"
   },
   "whisper": {
-    "title": "Transcribe — Speech to Text",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -78,10 +77,10 @@
     "toggleFolder": "Toggle folder {{name}}",
     "selectFolder": "Select all files in {{name}}",
     "transcribingNow": "transcribing now",
-    "selectedSummary": "{{count}} file(s) selected"
+    "selectedSummary": "{{count}} file(s) selected",
+    "modelsLoadFailed": "The model list could not be loaded, so transcription cannot start."
   },
   "convert": {
-    "title": "Subtitle Converter",
     "description": "Drop a subtitle file, pick From and To, and download the translation. Or switch to Format only to change .srt/.vtt/.ass without translating.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -147,7 +146,9 @@
     "close": "Close",
     "rowActions": "Row actions",
     "home": "Home",
-    "openFolder": "Open folder {{name}}"
+    "openFolder": "Open folder {{name}}",
+    "dismiss": "Dismiss",
+    "dismissAll": "Dismiss all"
   },
   "errors": {
     "loading": "Loading…",
@@ -276,7 +277,9 @@
       "transcriptionCompleteGenerated": "Transcription complete. Source subtitle was generated.",
       "transcriptionFailed": "Transcription failed: {{message}}",
       "transcriptionRetried": "Transcription retried.",
-      "retryFailed": "Retry failed: {{error}}"
+      "retryFailed": "Retry failed: {{error}}",
+      "jobsFailed": "{{count}} jobs failed",
+      "openDashboard": "Open Dashboard"
     },
     "confirm": {
       "clearTitle": "Clear finished jobs",
@@ -457,7 +460,8 @@
       "deleted": "Translation deleted",
       "bulkUpdated": "Updated {{count}} translations",
       "bulkFormatUpdated": "Updated {{count}} translations to .{{format}}",
-      "bulkUpdateFailed": "Bulk update failed"
+      "bulkUpdateFailed": "Bulk update failed",
+      "saveFailed": "Could not save: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Delete translation",
@@ -902,7 +906,7 @@
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Transcriptions you started, newest first.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -919,7 +923,8 @@
     "attempts": "{{count}} attempts",
     "retryAllFailed": "Retry {{count}} failed",
     "retriedAll": "Retried {{ok}} of {{total}} files.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "Retry failed: {{message}}"
   },
   "logs": {
     "title": "Logs",
@@ -938,7 +943,8 @@
       "clearConfirm": "Clear"
     },
     "toast": {
-      "cleared": "Logs cleared"
+      "cleared": "Logs cleared",
+      "clearFailed": "Could not clear logs: {{message}}"
     },
     "level": {
       "all": "All Levels",

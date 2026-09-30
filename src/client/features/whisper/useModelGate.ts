@@ -6,7 +6,7 @@ import type { ModelDownloadProgress } from "../../hooks";
 
 export interface UseModelGateParams {
   whisperModels: WhisperModel[];
-  modelsQuery: { isLoading: boolean };
+  modelsQuery: { isLoading: boolean; isError: boolean };
   modelDownloads: Record<string, ModelDownloadProgress>;
   downloadModel: (modelId: string) => Promise<void>;
   model: string;
@@ -85,11 +85,11 @@ export function useModelGate({
   const ensureModelDownloaded = useCallback(async (modelId: string): Promise<boolean> => {
     const downloaded = isModelDownloaded(modelId);
 
-    // Models list not yet loaded — don't let an unknown state slip through.
+    // Models list not loaded — don't let an unknown state slip through, and
+    // say why the button did nothing.
     if (downloaded === undefined) {
-      if (modelsQuery.isLoading) {
-        addToast(t("whisper.modelsStillLoading"), "info");
-      }
+      if (modelsQuery.isError) addToast(t("whisper.modelsLoadFailed"), "error");
+      else if (modelsQuery.isLoading) addToast(t("whisper.modelsStillLoading"), "info");
       return false;
     }
 
@@ -101,7 +101,7 @@ export function useModelGate({
     }
 
     return confirmAndDownload(modelId);
-  }, [isModelDownloaded, modelsQuery.isLoading, modelDownloads, addToast, t, confirmAndDownload]);
+  }, [isModelDownloaded, modelsQuery.isLoading, modelsQuery.isError, modelDownloads, addToast, t, confirmAndDownload]);
 
   // Handle model picker selection: if the chosen model is not downloaded,
   // prompt the user before committing the selection.

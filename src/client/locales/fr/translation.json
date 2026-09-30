@@ -30,7 +30,9 @@
     "close": "Fermer",
     "rowActions": "Actions de ligne",
     "home": "Accueil",
-    "openFolder": "Ouvrir le dossier {{name}}"
+    "openFolder": "Ouvrir le dossier {{name}}",
+    "dismiss": "Fermer",
+    "dismissAll": "Tout fermer"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Transcription terminée. Le sous-titre source a été généré.",
       "transcriptionFailed": "Échec de la transcription : {{message}}",
       "transcriptionRetried": "Transcription relancée.",
-      "retryFailed": "Échec de la nouvelle tentative : {{error}}"
+      "retryFailed": "Échec de la nouvelle tentative : {{error}}",
+      "jobsFailed": "{{count}} tâches ont échoué",
+      "openDashboard": "Ouvrir le tableau de bord"
     },
     "confirm": {
       "clearTitle": "Effacer les tâches terminées",
@@ -313,7 +317,8 @@
       "deleted": "Translation deleted",
       "bulkUpdated": "Updated {{count}} translations",
       "bulkFormatUpdated": "Updated {{count}} translations to .{{format}}",
-      "bulkUpdateFailed": "Échec de la mise à jour groupée"
+      "bulkUpdateFailed": "Échec de la mise à jour groupée",
+      "saveFailed": "Impossible d'enregistrer : {{message}}"
     },
     "confirm": {
       "deleteTitle": "Delete translation",
@@ -773,7 +778,8 @@
       "clearConfirm": "Clear"
     },
     "toast": {
-      "cleared": "Logs cleared"
+      "cleared": "Logs cleared",
+      "clearFailed": "Impossible d'effacer les journaux : {{message}}"
     },
     "level": {
       "all": "All Levels",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "Paramètres de sortie",
     "addFilesToStart": "Ajoutez des fichiers de sous-titres ci-dessus pour commencer.",
-    "title": "Convertisseur de sous-titres",
     "description": "Convertissez les formats de sous-titres, ou traduisez et convertissez en une seule étape. Déposez un ou plusieurs fichiers, choisissez les langues si nécessaire, sélectionnez le format de sortie, puis téléchargez.",
     "dropzone": "Glissez-déposez des fichiers de sous-titres ici",
     "dropzoneHint": "ou cliquez pour parcourir — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Transcription — Parole en texte",
     "subtitle": "Choisissez des fichiers ou dossiers de votre médiathèque et transcrivez-les en sous-titres. Séparé de la traduction.",
     "disabledNotice": "La transcription vocale est désactivée.",
     "openSettings": "Ouvrir les réglages",
@@ -1022,11 +1026,12 @@
     "selectFolder": "Sélectionner tous les fichiers de {{name}}",
     "transcribingNow": "transcription en cours",
     "selectedSummary": "{{count}} fichier(s) sélectionné(s)",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "La liste des modèles n'a pas pu être chargée, la transcription ne peut donc pas démarrer."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Transcriptions que vous avez lancées, les plus récentes en premier.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}} tentatives",
     "retryAllFailed": "Réessayer {{count}} échecs",
     "retriedAll": "{{ok}} fichiers sur {{total}} réessayés.",
-    "failedFallback": "Échec de la transcription."
+    "failedFallback": "Échec de la transcription.",
+    "retryFailed": "Échec de la nouvelle tentative : {{message}}"
   }
 }

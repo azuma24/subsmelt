@@ -83,6 +83,14 @@ i18n
       order: ["localStorage", "navigator"],
       caches: ["localStorage"],
     },
+    // Only English is bundled; the other locales arrive later through
+    // addResourceBundle, which fires the store's "added" event rather than
+    // "languageChanged". Without binding to it, components keep rendering the
+    // English fallback until something else happens to re-render them.
+    react: {
+      bindI18n: "languageChanged loaded",
+      bindI18nStore: "added",
+    },
   });
 
 i18n.on("languageChanged", (language) => {

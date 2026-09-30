@@ -30,7 +30,9 @@
     "close": "بستن",
     "rowActions": "کنش‌های ردیف",
     "home": "خانه",
-    "openFolder": "باز کردن پوشه {{name}}"
+    "openFolder": "باز کردن پوشه {{name}}",
+    "dismiss": "بستن",
+    "dismissAll": "بستن همه"
   },
   "dashboard": {
     "title": "داشبورد",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "رونویسی کامل شد. زیرنویس مبدأ ایجاد شد.",
       "transcriptionFailed": "رونویسی ناموفق بود: {{message}}",
       "transcriptionRetried": "رونویسی دوباره امتحان شد.",
-      "retryFailed": "تلاش مجدد ناموفق بود: {{error}}"
+      "retryFailed": "تلاش مجدد ناموفق بود: {{error}}",
+      "jobsFailed": "{{count}} کار ناموفق بود",
+      "openDashboard": "باز کردن داشبورد"
     },
     "confirm": {
       "clearTitle": "پاک کردن کارهای تمام‌شده",
@@ -313,7 +317,8 @@
       "deleted": "ترجمه حذف شد",
       "bulkUpdated": "{{count}} ترجمه به‌روزرسانی شد",
       "bulkFormatUpdated": "{{count}} ترجمه به .{{format}} به‌روزرسانی شد",
-      "bulkUpdateFailed": "به‌روزرسانی گروهی ناموفق بود"
+      "bulkUpdateFailed": "به‌روزرسانی گروهی ناموفق بود",
+      "saveFailed": "ذخیره ممکن نشد: {{message}}"
     },
     "confirm": {
       "deleteTitle": "حذف ترجمه",
@@ -773,7 +778,8 @@
       "clearConfirm": "پاک کردن"
     },
     "toast": {
-      "cleared": "گزارش‌ها پاک شدند"
+      "cleared": "گزارش‌ها پاک شدند",
+      "clearFailed": "پاک‌سازی گزارش‌ها ممکن نشد: {{message}}"
     },
     "level": {
       "all": "همه سطوح",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "تنظیمات خروجی",
     "addFilesToStart": "برای شروع، فایل‌های زیرنویس را در بالا اضافه کنید.",
-    "title": "مبدل زیرنویس",
     "description": "قالب زیرنویس را تبدیل کنید یا در یک مرحله ترجمه و تبدیل کنید.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "رونوشت — گفتار به نوشتار",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1022,11 +1026,12 @@
     "selectFolder": "انتخاب همه فایل‌های {{name}}",
     "transcribingNow": "در حال رونویسی",
     "selectedSummary": "{{count}} فایل انتخاب شد",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "بارگیری فهرست مدل‌ها ممکن نشد، بنابراین رونویسی را نمی‌توان شروع کرد."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "رونویسی‌هایی که شروع کرده‌اید، جدیدترین‌ها در ابتدا.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}} تلاش",
     "retryAllFailed": "تلاش دوباره برای {{count}} ناموفق",
     "retriedAll": "{{ok}} از {{total}} فایل دوباره تلاش شد.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "تلاش مجدد ناموفق بود: {{message}}"
   }
 }

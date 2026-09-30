@@ -30,7 +30,9 @@
     "close": "إغلاق",
     "rowActions": "إجراءات الصف",
     "home": "الرئيسية",
-    "openFolder": "فتح المجلد {{name}}"
+    "openFolder": "فتح المجلد {{name}}",
+    "dismiss": "إغلاق",
+    "dismissAll": "إغلاق الكل"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "اكتمل النسخ. تم إنشاء الترجمة المصدر.",
       "transcriptionFailed": "فشل النسخ: {{message}}",
       "transcriptionRetried": "تمت إعادة محاولة النسخ.",
-      "retryFailed": "فشلت إعادة المحاولة: {{error}}"
+      "retryFailed": "فشلت إعادة المحاولة: {{error}}",
+      "jobsFailed": "فشلت {{count}} من المهام",
+      "openDashboard": "فتح لوحة التحكم"
     },
     "confirm": {
       "clearTitle": "مسح المهام المكتملة",
@@ -313,7 +317,8 @@
       "deleted": "Translation deleted",
       "bulkUpdated": "Updated {{count}} translations",
       "bulkFormatUpdated": "Updated {{count}} translations to .{{format}}",
-      "bulkUpdateFailed": "فشل التحديث المجمع"
+      "bulkUpdateFailed": "فشل التحديث المجمع",
+      "saveFailed": "تعذّر الحفظ: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Delete translation",
@@ -773,7 +778,8 @@
       "clearConfirm": "Clear"
     },
     "toast": {
-      "cleared": "Logs cleared"
+      "cleared": "Logs cleared",
+      "clearFailed": "تعذّر مسح السجلات: {{message}}"
     },
     "level": {
       "all": "All Levels",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "إعدادات الإخراج",
     "addFilesToStart": "أضف ملفات الترجمة أعلاه للبدء.",
-    "title": "محول الترجمة",
     "description": "حوّل صيغ الترجمة أو ترجمها وحوّلها في خطوة واحدة. أسقط ملفًا واحدًا أو عدة ملفات، واختر اللغات عند الحاجة، ثم اختر صيغة الإخراج ونزّل النتيجة.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "نسخ صوتي — تحويل الكلام إلى نص",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1022,11 +1026,12 @@
     "selectFolder": "تحديد كل الملفات في {{name}}",
     "transcribingNow": "جارٍ النسخ الآن",
     "selectedSummary": "تم تحديد {{count}} ملف",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "تعذّر تحميل قائمة النماذج، لذا لا يمكن بدء النسخ."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "عمليات النسخ التي بدأتها، الأحدث أولاً.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}} محاولات",
     "retryAllFailed": "إعادة محاولة {{count}} فاشلة",
     "retriedAll": "أُعيدت محاولة {{ok}} من {{total}} ملفات.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "فشلت إعادة المحاولة: {{message}}"
   }
 }

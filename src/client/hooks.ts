@@ -341,23 +341,12 @@ export interface ModelDownloadProgress {
  * Returns the live download-progress map (keyed by model id) plus a
  * `downloadModel` function that kicks off a download, streams progress via
  * SSE, invalidates the models query on completion, and resolves when done.
- *
- * The caller must already subscribe to SSE (WhisperPage calls useSSE itself).
- * We wire the SSE listener here so the hook is self-contained.
+ * Shared by the Whisper page and the Settings model manager so both follow
+ * the same clearing rule.
  */
-export function useModelDownload(
-  onProgress: (downloads: Record<string, ModelDownloadProgress>) => void,
-) {
+export function useModelDownload() {
   const queryClient = useQueryClient();
   const [downloads, setDownloads] = useState<Record<string, ModelDownloadProgress>>({});
-
-  // Keep the onProgress callback stable via ref so the SSE handler doesn't
-  // need to be re-registered on every render.
-  const onProgressRef = useRef(onProgress);
-  useEffect(() => { onProgressRef.current = onProgress; }, [onProgress]);
-
-  // Sync to caller whenever downloads changes.
-  useEffect(() => { onProgressRef.current(downloads); }, [downloads]);
 
   // Listen for model:download SSE events and update progress state.
   // NOTE: we intentionally do NOT delete the entry on error/done here — the

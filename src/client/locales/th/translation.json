@@ -30,7 +30,9 @@
     "close": "ปิด",
     "rowActions": "การดำเนินการของแถว",
     "home": "หน้าแรก",
-    "openFolder": "เปิดโฟลเดอร์ {{name}}"
+    "openFolder": "เปิดโฟลเดอร์ {{name}}",
+    "dismiss": "ปิด",
+    "dismissAll": "ปิดทั้งหมด"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "ถอดเสียงเสร็จสมบูรณ์ สร้างคำบรรยายต้นฉบับแล้ว",
       "transcriptionFailed": "ถอดเสียงไม่สำเร็จ: {{message}}",
       "transcriptionRetried": "ลองถอดเสียงอีกครั้งแล้ว",
-      "retryFailed": "ลองใหม่ไม่สำเร็จ: {{error}}"
+      "retryFailed": "ลองใหม่ไม่สำเร็จ: {{error}}",
+      "jobsFailed": "มีงานล้มเหลว {{count}} งาน",
+      "openDashboard": "เปิดแดชบอร์ด"
     },
     "confirm": {
       "clearTitle": "ล้างงานที่เสร็จแล้ว",
@@ -313,7 +317,8 @@
       "deleted": "Translation deleted",
       "bulkUpdated": "Updated {{count}} translations",
       "bulkFormatUpdated": "Updated {{count}} translations to .{{format}}",
-      "bulkUpdateFailed": "อัปเดตจำนวนมากไม่สำเร็จ"
+      "bulkUpdateFailed": "อัปเดตจำนวนมากไม่สำเร็จ",
+      "saveFailed": "บันทึกไม่สำเร็จ: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Delete translation",
@@ -773,7 +778,8 @@
       "clearConfirm": "Clear"
     },
     "toast": {
-      "cleared": "Logs cleared"
+      "cleared": "Logs cleared",
+      "clearFailed": "ล้างบันทึกไม่สำเร็จ: {{message}}"
     },
     "level": {
       "all": "All Levels",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "การตั้งค่าเอาต์พุต",
     "addFilesToStart": "เพิ่มไฟล์คำบรรยายด้านบนเพื่อเริ่มต้น",
-    "title": "ตัวแปลงคำบรรยาย",
     "description": "แปลงและแปลคำบรรยาย",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "การถอดเสียง — เสียงเป็นข้อความ",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1022,11 +1026,12 @@
     "selectFolder": "เลือกไฟล์ทั้งหมดใน {{name}}",
     "transcribingNow": "กำลังถอดเสียง",
     "selectedSummary": "เลือกแล้ว {{count}} ไฟล์",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "โหลดรายการโมเดลไม่สำเร็จ จึงเริ่มการถอดเสียงไม่ได้"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "การถอดเสียงที่คุณเริ่ม เรียงจากใหม่ไปเก่า",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}} ครั้ง",
     "retryAllFailed": "ลองใหม่ {{count}} รายการที่ล้มเหลว",
     "retriedAll": "ลองใหม่ {{ok}} จาก {{total}} ไฟล์",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "ลองใหม่ไม่สำเร็จ: {{message}}"
   }
 }

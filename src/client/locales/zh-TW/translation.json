@@ -30,7 +30,9 @@
     "close": "關閉",
     "rowActions": "列操作",
     "home": "首頁",
-    "openFolder": "打開資料夾 {{name}}"
+    "openFolder": "打開資料夾 {{name}}",
+    "dismiss": "關閉",
+    "dismissAll": "全部關閉"
   },
   "dashboard": {
     "title": "儀表板",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "轉錄完成。已產生來源字幕。",
       "transcriptionFailed": "轉錄失敗：{{message}}",
       "transcriptionRetried": "已重試轉錄。",
-      "retryFailed": "重試失敗：{{error}}"
+      "retryFailed": "重試失敗：{{error}}",
+      "jobsFailed": "{{count}} 個任務失敗",
+      "openDashboard": "開啟儀表板"
     },
     "confirm": {
       "clearTitle": "清除已完成的任務",
@@ -313,7 +317,8 @@
       "deleted": "翻譯已刪除",
       "bulkUpdated": "Updated {{count}} translations",
       "bulkFormatUpdated": "Updated {{count}} translations to .{{format}}",
-      "bulkUpdateFailed": "批次更新失敗"
+      "bulkUpdateFailed": "批次更新失敗",
+      "saveFailed": "儲存失敗：{{message}}"
     },
     "confirm": {
       "deleteTitle": "刪除翻譯",
@@ -773,7 +778,8 @@
       "clearConfirm": "清除"
     },
     "toast": {
-      "cleared": "日誌已清除"
+      "cleared": "日誌已清除",
+      "clearFailed": "無法清除日誌：{{message}}"
     },
     "level": {
       "all": "所有等級",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "輸出設定",
     "addFilesToStart": "在上方新增字幕檔案即可開始。",
-    "title": "字幕轉換器",
     "description": "轉換字幕格式，或一次完成字幕翻譯與格式轉換。拖放一個或多個檔案，視需要選擇語言，再選擇輸出格式並下載。",
     "dropzone": "將字幕檔拖放到這裡",
     "dropzoneHint": "或點擊瀏覽 — .srt、.vtt、.ass、.ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "轉錄 — 語音轉文字",
     "subtitle": "從媒體庫選取檔案或資料夾，將它們轉錄成字幕。與翻譯功能分開。",
     "disabledNotice": "語音轉文字已停用。",
     "openSettings": "開啟設定",
@@ -1022,11 +1026,12 @@
     "selectFolder": "選取 {{name}} 中的所有檔案",
     "transcribingNow": "正在轉錄",
     "selectedSummary": "已選取 {{count}} 個檔案",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "無法載入模型清單，因此無法開始轉錄。"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "你啟動的轉錄，最新的在前。",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}} 次嘗試",
     "retryAllFailed": "重試 {{count}} 個失敗項",
     "retriedAll": "已重試 {{total}} 個檔案中的 {{ok}} 個。",
-    "failedFallback": "轉錄失敗。"
+    "failedFallback": "轉錄失敗。",
+    "retryFailed": "重試失敗：{{message}}"
   }
 }

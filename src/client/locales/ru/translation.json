@@ -30,7 +30,9 @@
     "close": "Закрыть",
     "rowActions": "Действия со строкой",
     "home": "Главная",
-    "openFolder": "Открыть папку {{name}}"
+    "openFolder": "Открыть папку {{name}}",
+    "dismiss": "Закрыть",
+    "dismissAll": "Закрыть все"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Транскрипция завершена. Исходные субтитры созданы.",
       "transcriptionFailed": "Ошибка транскрипции: {{message}}",
       "transcriptionRetried": "Транскрипция повторена.",
-      "retryFailed": "Не удалось повторить: {{error}}"
+      "retryFailed": "Не удалось повторить: {{error}}",
+      "jobsFailed": "Заданий с ошибкой: {{count}}",
+      "openDashboard": "Открыть панель"
     },
     "confirm": {
       "clearTitle": "Очистить завершённые задания",
@@ -313,7 +317,8 @@
       "deleted": "Translation deleted",
       "bulkUpdated": "Updated {{count}} translations",
       "bulkFormatUpdated": "Updated {{count}} translations to .{{format}}",
-      "bulkUpdateFailed": "Массовое обновление не удалось"
+      "bulkUpdateFailed": "Массовое обновление не удалось",
+      "saveFailed": "Не удалось сохранить: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Delete translation",
@@ -773,7 +778,8 @@
       "clearConfirm": "Clear"
     },
     "toast": {
-      "cleared": "Logs cleared"
+      "cleared": "Logs cleared",
+      "clearFailed": "Не удалось очистить журналы: {{message}}"
     },
     "level": {
       "all": "All Levels",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "Настройки вывода",
     "addFilesToStart": "Добавьте файлы субтитров выше, чтобы начать.",
-    "title": "Конвертер субтитров",
     "description": "Конвертируйте форматы субтитров или переводите и конвертируйте их за один шаг. Перетащите один или несколько файлов, при необходимости выберите языки, формат вывода и скачайте результат.",
     "dropzone": "Перетащите файлы субтитров сюда",
     "dropzoneHint": "или нажмите, чтобы выбрать — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Транскрипция — Речь в текст",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Открыть настройки",
@@ -1022,11 +1026,12 @@
     "selectFolder": "Выбрать все файлы в {{name}}",
     "transcribingNow": "идёт расшифровка",
     "selectedSummary": "Выбрано файлов: {{count}}",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "Не удалось загрузить список моделей, поэтому транскрипцию нельзя запустить."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Запущенные вами транскрипции, сначала новые.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "попыток: {{count}}",
     "retryAllFailed": "Повторить {{count}} неудачных",
     "retriedAll": "Повторено файлов: {{ok}} из {{total}}.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "Не удалось повторить: {{message}}"
   }
 }

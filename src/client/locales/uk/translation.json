@@ -30,7 +30,9 @@
     "close": "Закрити",
     "rowActions": "Дії з рядком",
     "home": "Головна",
-    "openFolder": "Відкрити папку {{name}}"
+    "openFolder": "Відкрити папку {{name}}",
+    "dismiss": "Закрити",
+    "dismissAll": "Закрити всі"
   },
   "dashboard": {
     "title": "Панель",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Транскрипцію завершено. Вихідні субтитри створено.",
       "transcriptionFailed": "Не вдалося транскрибувати: {{message}}",
       "transcriptionRetried": "Транскрипцію повторено.",
-      "retryFailed": "Не вдалося повторити: {{error}}"
+      "retryFailed": "Не вдалося повторити: {{error}}",
+      "jobsFailed": "Невдалих завдань: {{count}}",
+      "openDashboard": "Відкрити панель"
     },
     "confirm": {
       "clearTitle": "Очистити завершені завдання",
@@ -313,7 +317,8 @@
       "deleted": "Переклад видалено",
       "bulkUpdated": "Оновлено {{count}} перекладів",
       "bulkFormatUpdated": "Оновлено {{count}} перекладів до .{{format}}",
-      "bulkUpdateFailed": "Не вдалося виконати масове оновлення"
+      "bulkUpdateFailed": "Не вдалося виконати масове оновлення",
+      "saveFailed": "Не вдалося зберегти: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Видалити переклад",
@@ -773,7 +778,8 @@
       "clearConfirm": "Очистити"
     },
     "toast": {
-      "cleared": "Журнали очищено"
+      "cleared": "Журнали очищено",
+      "clearFailed": "Не вдалося очистити журнали: {{message}}"
     },
     "level": {
       "all": "Усі рівні",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "Налаштування виводу",
     "addFilesToStart": "Додайте файли субтитрів вище, щоб почати.",
-    "title": "Конвертер субтитрів",
     "description": "Конвертуйте формати субтитрів або перекладайте й конвертуйте за один крок.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Транскрипція — Мовлення в текст",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1022,11 +1026,12 @@
     "selectFolder": "Вибрати всі файли в {{name}}",
     "transcribingNow": "триває транскрибування",
     "selectedSummary": "Вибрано файлів: {{count}}",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "Не вдалося завантажити список моделей, тому транскрипцію неможливо запустити."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Транскрипції, які ви запустили, від найновіших.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "спроб: {{count}}",
     "retryAllFailed": "Повторити {{count}} невдалих",
     "retriedAll": "Повторено файлів: {{ok}} з {{total}}.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "Не вдалося повторити: {{message}}"
   }
 }

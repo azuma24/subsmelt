@@ -30,7 +30,9 @@
     "close": "Kapat",
     "rowActions": "Satır işlemleri",
     "home": "Ana Sayfa",
-    "openFolder": "Klasörü aç {{name}}"
+    "openFolder": "Klasörü aç {{name}}",
+    "dismiss": "Kapat",
+    "dismissAll": "Tümünü kapat"
   },
   "dashboard": {
     "title": "Panel",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Transkripsiyon tamamlandı. Kaynak altyazı oluşturuldu.",
       "transcriptionFailed": "Transkripsiyon başarısız: {{message}}",
       "transcriptionRetried": "Transkripsiyon yeniden denendi.",
-      "retryFailed": "Yeniden deneme başarısız: {{error}}"
+      "retryFailed": "Yeniden deneme başarısız: {{error}}",
+      "jobsFailed": "{{count}} iş başarısız oldu",
+      "openDashboard": "Paneli aç"
     },
     "confirm": {
       "clearTitle": "Biten işleri temizle",
@@ -313,7 +317,8 @@
       "deleted": "Çeviri silindi",
       "bulkUpdated": "{{count}} çeviri güncellendi",
       "bulkFormatUpdated": "{{count}} çeviri .{{format}} biçimine güncellendi",
-      "bulkUpdateFailed": "Toplu güncelleme başarısız"
+      "bulkUpdateFailed": "Toplu güncelleme başarısız",
+      "saveFailed": "Kaydedilemedi: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Çeviriyi sil",
@@ -773,7 +778,8 @@
       "clearConfirm": "Temizle"
     },
     "toast": {
-      "cleared": "Günlükler temizlendi"
+      "cleared": "Günlükler temizlendi",
+      "clearFailed": "Günlükler temizlenemedi: {{message}}"
     },
     "level": {
       "all": "Tüm Düzeyler",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "Çıktı ayarları",
     "addFilesToStart": "Başlamak için yukarıya altyazı dosyaları ekleyin.",
-    "title": "Altyazı dönüştürücü",
     "description": "Altyazı biçimlerini dönüştürün ya da tek adımda çevirip dönüştürün.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Transkripsiyon — Konuşmadan metne",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1022,11 +1026,12 @@
     "selectFolder": "{{name}} içindeki tüm dosyaları seç",
     "transcribingNow": "şu anda yazıya dökülüyor",
     "selectedSummary": "{{count}} dosya seçildi",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "Model listesi yüklenemedi, bu yüzden transkripsiyon başlatılamıyor."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Başlattığınız transkripsiyonlar, en yenisi en üstte.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}} deneme",
     "retryAllFailed": "{{count}} başarısızı yeniden dene",
     "retriedAll": "{{total}} dosyadan {{ok}} tanesi yeniden denendi.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "Yeniden deneme başarısız: {{message}}"
   }
 }

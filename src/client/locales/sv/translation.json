@@ -30,7 +30,9 @@
     "close": "Stäng",
     "rowActions": "Radåtgärder",
     "home": "Start",
-    "openFolder": "Öppna mapp {{name}}"
+    "openFolder": "Öppna mapp {{name}}",
+    "dismiss": "Stäng",
+    "dismissAll": "Stäng alla"
   },
   "dashboard": {
     "title": "Översikt",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Transkribering klar. Källundertext genererades.",
       "transcriptionFailed": "Transkribering misslyckades: {{message}}",
       "transcriptionRetried": "Transkribering försöktes igen.",
-      "retryFailed": "Nytt försök misslyckades: {{error}}"
+      "retryFailed": "Nytt försök misslyckades: {{error}}",
+      "jobsFailed": "{{count}} jobb misslyckades",
+      "openDashboard": "Öppna översikten"
     },
     "confirm": {
       "clearTitle": "Rensa klara jobb",
@@ -313,7 +317,8 @@
       "deleted": "Översättning borttagen",
       "bulkUpdated": "Uppdaterade {{count}} översättningar",
       "bulkFormatUpdated": "Uppdaterade {{count}} översättningar till .{{format}}",
-      "bulkUpdateFailed": "Massuppdatering misslyckades"
+      "bulkUpdateFailed": "Massuppdatering misslyckades",
+      "saveFailed": "Kunde inte spara: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Ta bort översättning",
@@ -773,7 +778,8 @@
       "clearConfirm": "Rensa"
     },
     "toast": {
-      "cleared": "Loggar rensade"
+      "cleared": "Loggar rensade",
+      "clearFailed": "Kunde inte rensa loggarna: {{message}}"
     },
     "level": {
       "all": "Alla nivåer",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "Utdatainställningar",
     "addFilesToStart": "Lägg till undertextfiler ovan för att börja.",
-    "title": "Undertextkonverterare",
     "description": "Konvertera undertextformat eller översätt och konvertera i ett steg.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Transkription — Tal till text",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1022,11 +1026,12 @@
     "selectFolder": "Markera alla filer i {{name}}",
     "transcribingNow": "transkriberas nu",
     "selectedSummary": "{{count}} fil(er) markerade",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "Modellistan kunde inte läsas in, så transkriberingen kan inte starta."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Transkriberingar du har startat, nyaste först.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}} försök",
     "retryAllFailed": "Försök om {{count}} misslyckade",
     "retriedAll": "Försökte om {{ok}} av {{total}} filer.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "Nytt försök misslyckades: {{message}}"
   }
 }

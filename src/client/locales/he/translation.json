@@ -30,7 +30,9 @@
     "close": "סגירה",
     "rowActions": "פעולות שורה",
     "home": "בית",
-    "openFolder": "פתח תיקייה {{name}}"
+    "openFolder": "פתח תיקייה {{name}}",
+    "dismiss": "סגירה",
+    "dismissAll": "סגירת הכול"
   },
   "dashboard": {
     "title": "לוח בקרה",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "התמלול הושלם. כתובית המקור נוצרה.",
       "transcriptionFailed": "התמלול נכשל: {{message}}",
       "transcriptionRetried": "התמלול נוסה שוב.",
-      "retryFailed": "הניסיון החוזר נכשל: {{error}}"
+      "retryFailed": "הניסיון החוזר נכשל: {{error}}",
+      "jobsFailed": "{{count}} משימות נכשלו",
+      "openDashboard": "פתיחת לוח הבקרה"
     },
     "confirm": {
       "clearTitle": "ניקוי משימות שהסתיימו",
@@ -313,7 +317,8 @@
       "deleted": "התרגום נמחק",
       "bulkUpdated": "עודכנו {{count}} תרגומים",
       "bulkFormatUpdated": "עודכנו {{count}} תרגומים ל-.{{format}}",
-      "bulkUpdateFailed": "העדכון הקבוצתי נכשל"
+      "bulkUpdateFailed": "העדכון הקבוצתי נכשל",
+      "saveFailed": "לא ניתן לשמור: {{message}}"
     },
     "confirm": {
       "deleteTitle": "מחיקת תרגום",
@@ -773,7 +778,8 @@
       "clearConfirm": "נקה"
     },
     "toast": {
-      "cleared": "היומנים נוקו"
+      "cleared": "היומנים נוקו",
+      "clearFailed": "לא ניתן לנקות את היומנים: {{message}}"
     },
     "level": {
       "all": "כל הרמות",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "הגדרות פלט",
     "addFilesToStart": "הוסף קובצי כתוביות למעלה כדי להתחיל.",
-    "title": "ממיר כתוביות",
     "description": "המרת פורמטי כתוביות או תרגום והמרה בצעד אחד.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "תמלול — דיבור לטקסט",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1022,11 +1026,12 @@
     "selectFolder": "בחירת כל הקבצים ב-{{name}}",
     "transcribingNow": "מתמלל כעת",
     "selectedSummary": "{{count}} קבצים נבחרו",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "לא ניתן לטעון את רשימת המודלים, ולכן אי אפשר להתחיל בתמלול."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "תמלולים שהפעלת, מהחדש לישן.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}} ניסיונות",
     "retryAllFailed": "נסה שוב {{count}} כשלונות",
     "retriedAll": "בוצע ניסיון חוזר ל-{{ok}} מתוך {{total}} קבצים.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "הניסיון החוזר נכשל: {{message}}"
   }
 }

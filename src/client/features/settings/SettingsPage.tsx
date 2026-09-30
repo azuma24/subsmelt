@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
@@ -10,6 +10,7 @@ import { Accordion, ActionButton, SettingsSection } from "../../ui/primitives";
 import { InlineError } from "../../ui/QueryState";
 import { JSON_BLOB_SETTINGS, getStr, validateJsonSetting, type JsonBlobSettingKey } from "./settings-model";
 import { str } from "../../lib/settings-value";
+import { EMPTY_FORM, edit, editMany, isDirty, receiveServer, saved, view, type SettingsForm } from "./settings-form";
 import { EngineSection } from "./sections/EngineSection";
 import { InterfaceSection } from "./sections/InterfaceSection";
 import { LlmSection } from "./sections/LlmSection";
@@ -25,9 +26,10 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   const settingsQuery = useSettingsQuery();
   const tasksQuery = useTasksQuery();
   const jobsQuery = useJobsQuery();
-  const [settings, setSettings] = useState<Record<string, unknown>>({});
+  const [form, setForm] = useState<SettingsForm>(EMPTY_FORM);
+  const settings = useMemo(() => view(form), [form]);
+  const dirty = isDirty(form);
   const transcriptionHealthQuery = useTranscriptionHealthQuery(Boolean(str(settings.transcription_backend_url)));
-  const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testingTranscription, setTestingTranscription] = useState(false);
   const [transcriptionTestResult, setTranscriptionTestResult] = useState<{ ok: boolean; message: string } | null>(null);
@@ -35,26 +37,25 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   const [notificationTestResult, setNotificationTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [activeSection, setActiveSection] = useState<SectionKey>("llm");
 
-  // Synchronous mirror of `settings` so rapid update()/updateAndSave() calls in the
+  // Synchronous mirror of `form` so rapid update()/updateAndSave() calls in the
   // same tick build on each other instead of overwriting from a stale render closure.
-  const settingsRef = useRef<Record<string, unknown>>({});
+  const formRef = useRef<SettingsForm>(EMPTY_FORM);
   // Serializes save POSTs so the last-issued (most complete) body is also the last write.
-  const saveChainRef = useRef<Promise<unknown>>(Promise.resolve());
+  const saveChainRef = useRef<Promise<boolean>>(Promise.resolve(true));
   // Debounce timer for autosaved free-text fields (LLM / Engine), so typing
   // coalesces into one POST instead of one per keystroke.
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    if (settingsQuery.data) {
-      setSettings(settingsQuery.data);
-      settingsRef.current = settingsQuery.data;
-    }
-  }, [settingsQuery.data]);
-
-  const applyNext = (next: Record<string, unknown>) => {
-    settingsRef.current = next;
-    setSettings(next);
+  const applyForm = (next: SettingsForm) => {
+    formRef.current = next;
+    setForm(next);
   };
+
+  // A refetch (scan:complete invalidation, window focus) only replaces the
+  // server snapshot; keys the user is still editing keep their local value.
+  useEffect(() => {
+    if (settingsQuery.data) applyForm(receiveServer(formRef.current, settingsQuery.data));
+  }, [settingsQuery.data]);
 
   // Silent predicate: are both JSON-blob settings well-formed in `s`?
   const jsonBlobsValid = (s: Record<string, unknown>): boolean =>
@@ -62,70 +63,61 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
       (key) => validateJsonSetting(key, getStr(s, key)).ok
     );
 
-  const persist = (next: Record<string, unknown>) => {
-    // Guard EVERY save path (debounced edits, unmount flush, transcription
-    // test) — never persist a malformed JSON blob that could later break
-    // transcription request building. Keep the form dirty so the value isn't
-    // lost; handleSave surfaces the toast on an explicit save.
-    if (!jsonBlobsValid(next)) {
-      setDirty(true);
-      return Promise.resolve();
-    }
+  // Every save goes through here. Resolves true when `body` reached the server;
+  // a malformed JSON blob is never persisted and the edits stay pending so the
+  // value isn't lost (handleSave surfaces the toast on an explicit save).
+  const persist = (body: Record<string, unknown>): Promise<boolean> => {
+    if (!jsonBlobsValid(body)) return Promise.resolve(false);
     saveChainRef.current = saveChainRef.current
-      .then(() => api.saveSettings(next))
-      .then(() => setDirty(false))
+      .then(() => api.saveSettings(body))
+      .then(() => {
+        applyForm(saved(formRef.current, body));
+        return true;
+      })
       .catch((e: unknown) => {
-        // Keep the form dirty so the value isn't lost, and surface the failure
-        // instead of swallowing it (debounced autosaves otherwise fail silently).
-        setDirty(true);
+        // Edits stay pending, and the failure is surfaced instead of swallowed
+        // (debounced autosaves otherwise fail silently).
         addToast(t("settings.saveFailed", { message: getErrorMessage(e) }), "error");
+        return false;
       });
     return saveChainRef.current;
   };
 
   const update = (key: string, value: unknown) => {
-    applyNext({ ...settingsRef.current, [key]: value });
-    setDirty(true);
+    applyForm(edit(formRef.current, key, value));
   };
 
   const updateAndSave = async (key: string, value: unknown) => {
-    const next = { ...settingsRef.current, [key]: value };
-    applyNext(next);
-    await persist(next);
+    applyForm(edit(formRef.current, key, value));
+    await persist(view(formRef.current));
   };
 
   const updateManyAndSave = async (updates: Record<string, unknown>) => {
-    const next = { ...settingsRef.current, ...updates };
-    applyNext(next);
-    await persist(next);
+    applyForm(editMany(formRef.current, updates));
+    await persist(view(formRef.current));
+  };
+
+  const clearSaveTimer = () => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = null;
   };
 
   // Autosave with debounce — for LLM/Engine fields incl. free-text inputs.
   const updateAndSaveDebounced = (key: string, value: unknown, delay = 500) => {
-    applyNext({ ...settingsRef.current, [key]: value });
-    setDirty(true);
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    applyForm(edit(formRef.current, key, value));
+    clearSaveTimer();
     saveTimerRef.current = setTimeout(() => {
       saveTimerRef.current = null;
-      persist(settingsRef.current);
+      void persist(view(formRef.current));
     }, delay);
   };
-
-  // Flush any pending debounced save on unmount so changes aren't lost on navigate.
-  useEffect(() => () => {
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-      persist(settingsRef.current);
-    }
-  }, []);
 
   // Validate the two JSON-blob settings (folder defaults + advanced STT) before
   // any save. On failure we toast and DO NOT persist the malformed value.
   // Returns true when all blobs are valid, false when a save should be blocked.
   const validateJsonBlobs = (): boolean => {
     for (const key of Object.keys(JSON_BLOB_SETTINGS) as JsonBlobSettingKey[]) {
-      const result = validateJsonSetting(key, getStr(settingsRef.current, key));
+      const result = validateJsonSetting(key, getStr(view(formRef.current), key));
       if (!result.ok) {
         const label = t(`settings.transcription.${key === "transcription_folder_defaults" ? "folderDefaults" : "advancedOptions"}`);
         addToast(t("settings.invalidJson", { field: label }), "error");
@@ -135,30 +127,36 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
     return true;
   };
 
+  // Leaving the page flushes whatever is still unsaved: a pending debounced
+  // autosave, and the deferred fields that normally wait for the topbar Save.
+  useEffect(() => () => {
+    clearSaveTimer();
+    if (isDirty(formRef.current) && validateJsonBlobs()) void persist(view(formRef.current));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleSave = async (): Promise<boolean> => {
     if (!validateJsonBlobs()) return false;
+    clearSaveTimer();
     setSaving(true);
-    try {
-      await api.saveSettings(settingsRef.current);
-      setDirty(false);
-      addToast(t("settings.saved"), "success");
-    } catch (e: unknown) {
-      const message = getErrorMessage(e);
-      addToast(t("settings.saveFailed", { message }), "error");
-    }
+    if (await persist(view(formRef.current))) addToast(t("settings.saved"), "success");
     setSaving(false);
     return true;
+  };
+
+  // Tests run against saved settings, so pending edits are flushed first.
+  const flushBeforeTest = async (): Promise<boolean> => {
+    if (!dirty) return true;
+    if (!validateJsonBlobs()) return false;
+    clearSaveTimer();
+    return persist(view(formRef.current));
   };
 
   const handleTranscriptionTest = async () => {
     setTestingTranscription(true);
     setTranscriptionTestResult(null);
     try {
-      if (dirty) {
-        if (!validateJsonBlobs()) { setTestingTranscription(false); return; }
-        await api.saveSettings(settingsRef.current);
-        setDirty(false);
-      }
+      if (!(await flushBeforeTest())) { setTestingTranscription(false); return; }
       const result = await api.getTranscriptionHealth();
       const message = result.ok
         ? t("settings.transcription.testReachable")
@@ -177,12 +175,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
     setTestingNotification(true);
     setNotificationTestResult(null);
     try {
-      // Flush any pending edits so the test uses the latest webhook URL/format.
-      if (dirty) {
-        if (!validateJsonBlobs()) { setTestingNotification(false); return; }
-        await api.saveSettings(settingsRef.current);
-        setDirty(false);
-      }
+      if (!(await flushBeforeTest())) { setTestingNotification(false); return; }
       const result = await api.testNotification();
       if (result.ok) {
         setNotificationTestResult({ ok: true, message: t("settings.notifications.testSent") });
@@ -200,15 +193,20 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
     setTestingNotification(false);
   };
 
+  // The watcher flag is server state, not a user edit: it changes the snapshot
+  // underneath any pending edits instead of becoming one of them.
+  const setWatcherRunning = (running: boolean) =>
+    applyForm(receiveServer(formRef.current, { ...formRef.current.server, _watcher_running: running }));
+
   const toggleWatcher = async () => {
     try {
       if (settings._watcher_running) {
         await api.stopWatcher();
-        setSettings((s) => ({ ...s, _watcher_running: false }));
+        setWatcherRunning(false);
         addToast(t("settings.watcherStopped"), "info");
       } else {
         await api.startWatcher();
-        setSettings((s) => ({ ...s, _watcher_running: true }));
+        setWatcherRunning(true);
         addToast(t("settings.watcherStarted"), "success");
       }
     } catch (e: unknown) {
@@ -335,7 +333,9 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
         <ActionButton size="sm" onClick={handleSave} disabled={!dirty || saving}>{saving ? t("app.saving") : t("app.save")}</ActionButton>
       </div>
 
-      <div className="flex-1 p-3.5 md:p-[18px]">
+      {/* One max width for the checklist and the nav + panel grid, so the
+          checklist does not run past the column it introduces. */}
+      <div className="max-w-[920px] flex-1 p-3.5 md:p-[18px]">
         {settingsQuery.isError && (
           <div className="mb-3.5">
             <InlineError onRetry={() => void settingsQuery.refetch()} />
@@ -357,7 +357,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
             ))}
           </div>
         ) : (
-          <div className="grid max-w-[920px] gap-[18px] md:grid-cols-[185px_1fr]">
+          <div className="grid gap-[18px] md:grid-cols-[185px_1fr]">
             <nav className="flex flex-col gap-px">
               {navOrder.map((key) => (
                 <button

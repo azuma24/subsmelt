@@ -30,7 +30,9 @@
     "close": "닫기",
     "rowActions": "행 작업",
     "home": "홈",
-    "openFolder": "폴더 열기 {{name}}"
+    "openFolder": "폴더 열기 {{name}}",
+    "dismiss": "닫기",
+    "dismissAll": "모두 닫기"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "전사가 완료되었습니다. 소스 자막이 생성되었습니다.",
       "transcriptionFailed": "전사 실패: {{message}}",
       "transcriptionRetried": "전사를 다시 시도했습니다.",
-      "retryFailed": "재시도 실패: {{error}}"
+      "retryFailed": "재시도 실패: {{error}}",
+      "jobsFailed": "작업 {{count}}개가 실패했습니다",
+      "openDashboard": "대시보드 열기"
     },
     "confirm": {
       "clearTitle": "완료된 작업 지우기",
@@ -313,7 +317,8 @@
       "deleted": "Translation deleted",
       "bulkUpdated": "Updated {{count}} translations",
       "bulkFormatUpdated": "Updated {{count}} translations to .{{format}}",
-      "bulkUpdateFailed": "일괄 업데이트 실패"
+      "bulkUpdateFailed": "일괄 업데이트 실패",
+      "saveFailed": "저장하지 못했습니다: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Delete translation",
@@ -773,7 +778,8 @@
       "clearConfirm": "Clear"
     },
     "toast": {
-      "cleared": "Logs cleared"
+      "cleared": "Logs cleared",
+      "clearFailed": "로그를 지우지 못했습니다: {{message}}"
     },
     "level": {
       "all": "All Levels",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "출력 설정",
     "addFilesToStart": "시작하려면 위에서 자막 파일을 추가하세요.",
-    "title": "자막 변환기",
     "description": "자막 형식을 변환하거나 자막 번역과 형식 변환을 한 번에 실행합니다. 하나 이상의 파일을 놓고, 필요하면 언어를 선택한 뒤 출력 형식을 골라 다운로드하세요.",
     "dropzone": "자막 파일을 여기에 끌어다 놓기",
     "dropzoneHint": "또는 클릭하여 찾아보기 — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "전사 — 음성 텍스트 변환",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "설정 열기",
@@ -1022,11 +1026,12 @@
     "selectFolder": "{{name}}의 모든 파일 선택",
     "transcribingNow": "전사 중",
     "selectedSummary": "{{count}}개 파일 선택됨",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "모델 목록을 불러오지 못해 전사를 시작할 수 없습니다."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "시작한 전사 작업을 최신순으로 표시합니다.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}}회 시도",
     "retryAllFailed": "실패한 {{count}}개 재시도",
     "retriedAll": "{{total}}개 중 {{ok}}개 파일을 재시도했습니다.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "재시도 실패: {{message}}"
   }
 }

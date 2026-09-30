@@ -30,7 +30,9 @@
     "close": "Închide",
     "rowActions": "Acțiuni rând",
     "home": "Acasă",
-    "openFolder": "Deschideți folder {{name}}"
+    "openFolder": "Deschideți folder {{name}}",
+    "dismiss": "Închide",
+    "dismissAll": "Închide toate"
   },
   "dashboard": {
     "title": "Tablou de bord",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Transcriere finalizată. Subtitrarea sursă a fost generată.",
       "transcriptionFailed": "Transcrierea a eșuat: {{message}}",
       "transcriptionRetried": "Transcriere reîncercată.",
-      "retryFailed": "Reîncercarea a eșuat: {{error}}"
+      "retryFailed": "Reîncercarea a eșuat: {{error}}",
+      "jobsFailed": "Sarcini eșuate: {{count}}",
+      "openDashboard": "Deschide tabloul de bord"
     },
     "confirm": {
       "clearTitle": "Golește sarcinile finalizate",
@@ -313,7 +317,8 @@
       "deleted": "Traducere ștearsă",
       "bulkUpdated": "S-au actualizat {{count}} traduceri",
       "bulkFormatUpdated": "S-au actualizat {{count}} traduceri în .{{format}}",
-      "bulkUpdateFailed": "Actualizarea în bloc a eșuat"
+      "bulkUpdateFailed": "Actualizarea în bloc a eșuat",
+      "saveFailed": "Nu s-a putut salva: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Șterge traducerea",
@@ -773,7 +778,8 @@
       "clearConfirm": "Golește"
     },
     "toast": {
-      "cleared": "Jurnale golite"
+      "cleared": "Jurnale golite",
+      "clearFailed": "Jurnalele nu au putut fi golite: {{message}}"
     },
     "level": {
       "all": "Toate nivelurile",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "Setări de ieșire",
     "addFilesToStart": "Adaugă fișiere de subtitrare mai sus pentru a începe.",
-    "title": "Convertor de subtitrări",
     "description": "Convertește formate de subtitrări sau traduce și convertește într-un singur pas.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Transcriere — Vorbire în text",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1022,11 +1026,12 @@
     "selectFolder": "Selectează toate fișierele din {{name}}",
     "transcribingNow": "se transcrie acum",
     "selectedSummary": "{{count}} fișier(e) selectate",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "Lista de modele nu a putut fi încărcată, așa că transcrierea nu poate porni."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Transcrierile pornite de tine, cele mai recente primele.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}} încercări",
     "retryAllFailed": "Reîncearcă {{count}} eșuate",
     "retriedAll": "S-au reîncercat {{ok}} din {{total}} fișiere.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "Reîncercarea a eșuat: {{message}}"
   }
 }

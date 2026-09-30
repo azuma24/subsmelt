@@ -30,7 +30,9 @@
     "close": "বন্ধ করুন",
     "rowActions": "সারির ক্রিয়া",
     "home": "হোম",
-    "openFolder": "ফোল্ডার খুলুন {{name}}"
+    "openFolder": "ফোল্ডার খুলুন {{name}}",
+    "dismiss": "বন্ধ করুন",
+    "dismissAll": "সব বন্ধ করুন"
   },
   "dashboard": {
     "title": "ড্যাশবোর্ড",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "প্রতিলিপি সম্পূর্ণ। উৎস সাবটাইটেল তৈরি করা হয়েছে।",
       "transcriptionFailed": "প্রতিলিপি ব্যর্থ হয়েছে: {{message}}",
       "transcriptionRetried": "প্রতিলিপি পুনরায় চেষ্টা করা হয়েছে।",
-      "retryFailed": "পুনরায় চেষ্টা ব্যর্থ হয়েছে: {{error}}"
+      "retryFailed": "পুনরায় চেষ্টা ব্যর্থ হয়েছে: {{error}}",
+      "jobsFailed": "{{count}}টি কাজ ব্যর্থ হয়েছে",
+      "openDashboard": "ড্যাশবোর্ড খুলুন"
     },
     "confirm": {
       "clearTitle": "সম্পন্ন কাজ মুছুন",
@@ -313,7 +317,8 @@
       "deleted": "অনুবাদ মুছে ফেলা হয়েছে",
       "bulkUpdated": "{{count}}টি অনুবাদ আপডেট হয়েছে",
       "bulkFormatUpdated": "{{count}}টি অনুবাদ .{{format}}-এ আপডেট হয়েছে",
-      "bulkUpdateFailed": "বাল্ক আপডেট ব্যর্থ হয়েছে"
+      "bulkUpdateFailed": "বাল্ক আপডেট ব্যর্থ হয়েছে",
+      "saveFailed": "সংরক্ষণ করা যায়নি: {{message}}"
     },
     "confirm": {
       "deleteTitle": "অনুবাদ মুছুন",
@@ -773,7 +778,8 @@
       "clearConfirm": "মুছুন"
     },
     "toast": {
-      "cleared": "লগ মুছে ফেলা হয়েছে"
+      "cleared": "লগ মুছে ফেলা হয়েছে",
+      "clearFailed": "লগ মোছা যায়নি: {{message}}"
     },
     "level": {
       "all": "সব স্তর",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "আউটপুট সেটিংস",
     "addFilesToStart": "শুরু করতে উপরে সাবটাইটেল ফাইল যোগ করুন।",
-    "title": "সাবটাইটেল রূপান্তরকারী",
     "description": "সাবটাইটেল ফরম্যাট বদলান, অথবা এক ধাপে অনুবাদ ও কনভার্ট করুন।",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "প্রতিলিপি — বক্তব্য থেকে লেখা",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1022,11 +1026,12 @@
     "selectFolder": "{{name}}-এর সব ফাইল নির্বাচন করুন",
     "transcribingNow": "এখন প্রতিলিপি হচ্ছে",
     "selectedSummary": "{{count}}টি ফাইল নির্বাচিত",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "মডেলের তালিকা লোড করা যায়নি, তাই প্রতিলিপি শুরু করা যাবে না।"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "আপনার শুরু করা প্রতিলিপি, সবচেয়ে নতুনগুলো আগে।",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}}টি প্রচেষ্টা",
     "retryAllFailed": "{{count}}টি ব্যর্থ পুনরায় চেষ্টা",
     "retriedAll": "{{total}}টির মধ্যে {{ok}}টি ফাইল পুনরায় চেষ্টা করা হয়েছে।",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "পুনরায় চেষ্টা ব্যর্থ হয়েছে: {{message}}"
   }
 }

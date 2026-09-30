@@ -17,7 +17,9 @@ import { detectSampleLanguage } from "./detect-language";
 import { loadRecentTargets, pushRecentTarget } from "./recent-targets";
 import { TargetLanguageField } from "./TargetLanguageField";
 import { DropZone } from "./DropZone";
-import { StagedFileList, effectiveSource, type StagedFile, type FileRunStatus } from "./StagedFileList";
+import { StagedFileList, type FileRunStatus } from "./StagedFileList";
+import { effectiveSource, skipTranslation, type StagedFile } from "./staged-file";
+import { readSubtitleFile } from "./decode-text";
 import { isSupported, triggerDownload, buildZipBlob, type OutputFile } from "./download-outputs";
 
 const TARGET_FORMATS: ConvertTargetFormat[] = ["srt", "vtt", "ass", "ssa"];
@@ -59,7 +61,7 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
     let cancelled = false;
     void (async () => {
       for (const item of todo) {
-        const text = await item.file.text().catch(() => "");
+        const text = await readSubtitleFile(item.file).catch(() => "");
         const code = detectSampleLanguage(sampleCueText(text));
         if (cancelled) return;
         setStaged((prev) => prev.map((s) => (s.id === item.id ? { ...s, detected: code } : s)));
@@ -147,14 +149,14 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
       setFileStatus((prev) => ({ ...prev, [item.id]: "working" }));
       let ok = false;
       try {
-        const content = await item.file.text();
+        const content = await readSubtitleFile(item.file);
         const source = effectiveSource(item, fromCode);
         const res = await api.convertSubtitles({
           files: [{
             name: item.file.name,
             content,
             sourceLang: source ? findLanguage(source)?.promptName ?? AUTO_SOURCE_LANG : AUTO_SOURCE_LANG,
-            skip: item.skip,
+            skip: skipTranslation(item, fromCode, translate, resolvedTarget?.code ?? null),
           }],
           targetFormat,
           translate,
@@ -174,7 +176,7 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
     setConverting(false);
     if (errors.length > 0) setFileErrors(errors);
     if (outputs.length === 0) {
-      addToast(t("convert.allFailed"), "error", true);
+      addToast(t("convert.allFailed"), "error", { persistent: true });
       return;
     }
 
@@ -191,10 +193,8 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className={`sticky top-0 z-30 shrink-0 border-b border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 md:px-[18px] ${isMobile ? "space-y-2" : ""}`}>
-        <div className="flex min-h-[42px] items-center gap-2.5">
-          <span className="text-sm font-semibold text-[var(--text)]">{t("convert.title")}</span>
-        </div>
+      <div className="sticky top-0 z-30 flex h-[50px] shrink-0 items-center gap-2.5 border-b border-[var(--border)] bg-[var(--surface)] px-3.5 md:px-[18px]">
+        <h1 className="text-sm font-semibold text-[var(--text)]">{t("nav.convert")}</h1>
       </div>
 
       <div className="flex-1 overflow-auto p-3.5 md:p-[18px]">

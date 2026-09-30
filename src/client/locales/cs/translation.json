@@ -30,7 +30,9 @@
     "close": "Zavřít",
     "rowActions": "Akce řádku",
     "home": "Domů",
-    "openFolder": "Otevřít složku {{name}}"
+    "openFolder": "Otevřít složku {{name}}",
+    "dismiss": "Zavřít",
+    "dismissAll": "Zavřít vše"
   },
   "dashboard": {
     "title": "Přehled",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Přepis dokončen. Zdrojové titulky byly vygenerovány.",
       "transcriptionFailed": "Přepis se nezdařil: {{message}}",
       "transcriptionRetried": "Přepis byl zopakován.",
-      "retryFailed": "Opakování se nezdařilo: {{error}}"
+      "retryFailed": "Opakování se nezdařilo: {{error}}",
+      "jobsFailed": "Selhalo úloh: {{count}}",
+      "openDashboard": "Otevřít přehled"
     },
     "confirm": {
       "clearTitle": "Vymazat dokončené úlohy",
@@ -313,7 +317,8 @@
       "deleted": "Překlad smazán",
       "bulkUpdated": "Aktualizováno {{count}} překladů",
       "bulkFormatUpdated": "Aktualizováno {{count}} překladů na .{{format}}",
-      "bulkUpdateFailed": "Hromadná aktualizace se nezdařila"
+      "bulkUpdateFailed": "Hromadná aktualizace se nezdařila",
+      "saveFailed": "Uložení se nezdařilo: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Smazat překlad",
@@ -773,7 +778,8 @@
       "clearConfirm": "Vymazat"
     },
     "toast": {
-      "cleared": "Protokoly vymazány"
+      "cleared": "Protokoly vymazány",
+      "clearFailed": "Protokoly se nepodařilo vymazat: {{message}}"
     },
     "level": {
       "all": "Všechny úrovně",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "Nastavení výstupu",
     "addFilesToStart": "Nahoře přidejte soubory s titulky a začněte.",
-    "title": "Převodník titulků",
     "description": "Převádějte formáty titulků nebo titulky v jednom kroku přeložte a převeďte.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Přepis — Řeč na text",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1022,11 +1026,12 @@
     "selectFolder": "Vybrat všechny soubory v {{name}}",
     "transcribingNow": "právě se přepisuje",
     "selectedSummary": "Vybráno souborů: {{count}}",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "Seznam modelů se nepodařilo načíst, takže přepis nelze spustit."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Přepisy, které jste spustili, od nejnovějších.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}} pokusů",
     "retryAllFailed": "Opakovat {{count}} neúspěšných",
     "retriedAll": "Zopakováno {{ok}} z {{total}} souborů.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "Opakování se nezdařilo: {{message}}"
   }
 }

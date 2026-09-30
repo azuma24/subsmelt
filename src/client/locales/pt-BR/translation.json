@@ -30,7 +30,9 @@
     "close": "Fechar",
     "rowActions": "Ações da linha",
     "home": "Início",
-    "openFolder": "Abrir pasta {{name}}"
+    "openFolder": "Abrir pasta {{name}}",
+    "dismiss": "Dispensar",
+    "dismissAll": "Dispensar tudo"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Transcrição concluída. A legenda de origem foi gerada.",
       "transcriptionFailed": "Falha na transcrição: {{message}}",
       "transcriptionRetried": "Transcrição repetida.",
-      "retryFailed": "Falha ao tentar novamente: {{error}}"
+      "retryFailed": "Falha ao tentar novamente: {{error}}",
+      "jobsFailed": "{{count}} trabalhos falharam",
+      "openDashboard": "Abrir painel"
     },
     "confirm": {
       "clearTitle": "Limpar trabalhos concluídos",
@@ -313,7 +317,8 @@
       "deleted": "Translation deleted",
       "bulkUpdated": "Updated {{count}} translations",
       "bulkFormatUpdated": "Updated {{count}} translations to .{{format}}",
-      "bulkUpdateFailed": "Falha na atualização em massa"
+      "bulkUpdateFailed": "Falha na atualização em massa",
+      "saveFailed": "Não foi possível salvar: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Delete translation",
@@ -773,7 +778,8 @@
       "clearConfirm": "Clear"
     },
     "toast": {
-      "cleared": "Logs cleared"
+      "cleared": "Logs cleared",
+      "clearFailed": "Não foi possível limpar os logs: {{message}}"
     },
     "level": {
       "all": "All Levels",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "Configurações de saída",
     "addFilesToStart": "Adicione arquivos de legenda acima para começar.",
-    "title": "Conversor de legendas",
     "description": "Converta formatos de legenda ou traduza e converta em uma única etapa. Solte um ou vários arquivos, escolha os idiomas se necessário, selecione o formato de saída e baixe.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Transcrição — Fala para texto",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1022,11 +1026,12 @@
     "selectFolder": "Selecionar todos os arquivos em {{name}}",
     "transcribingNow": "transcrevendo agora",
     "selectedSummary": "{{count}} arquivo(s) selecionado(s)",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "Não foi possível carregar a lista de modelos, então a transcrição não pode ser iniciada."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Transcrições iniciadas por você, mais recentes primeiro.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}} tentativas",
     "retryAllFailed": "Tentar novamente {{count}} com falha",
     "retriedAll": "{{ok}} de {{total}} arquivos repetidos.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "Falha ao tentar novamente: {{message}}"
   }
 }

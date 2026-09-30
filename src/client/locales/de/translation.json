@@ -30,7 +30,9 @@
     "close": "Schließen",
     "rowActions": "Zeilenaktionen",
     "home": "Start",
-    "openFolder": "Ordner öffnen {{name}}"
+    "openFolder": "Ordner öffnen {{name}}",
+    "dismiss": "Schließen",
+    "dismissAll": "Alle schließen"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Transkription abgeschlossen. Quell-Untertitel wurde erstellt.",
       "transcriptionFailed": "Transkription fehlgeschlagen: {{message}}",
       "transcriptionRetried": "Transkription erneut versucht.",
-      "retryFailed": "Wiederholung fehlgeschlagen: {{error}}"
+      "retryFailed": "Wiederholung fehlgeschlagen: {{error}}",
+      "jobsFailed": "{{count}} Aufträge fehlgeschlagen",
+      "openDashboard": "Dashboard öffnen"
     },
     "confirm": {
       "clearTitle": "Erledigte Aufträge entfernen",
@@ -313,7 +317,8 @@
       "deleted": "Translation deleted",
       "bulkUpdated": "Updated {{count}} translations",
       "bulkFormatUpdated": "Updated {{count}} translations to .{{format}}",
-      "bulkUpdateFailed": "Massenaktualisierung fehlgeschlagen"
+      "bulkUpdateFailed": "Massenaktualisierung fehlgeschlagen",
+      "saveFailed": "Speichern fehlgeschlagen: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Delete translation",
@@ -773,7 +778,8 @@
       "clearConfirm": "Clear"
     },
     "toast": {
-      "cleared": "Logs cleared"
+      "cleared": "Logs cleared",
+      "clearFailed": "Protokolle konnten nicht gelöscht werden: {{message}}"
     },
     "level": {
       "all": "All Levels",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "Ausgabeeinstellungen",
     "addFilesToStart": "Füge oben Untertiteldateien hinzu, um zu beginnen.",
-    "title": "Untertitel-Konverter",
     "description": "Untertitelformate konvertieren oder Untertitel in einem Schritt übersetzen und konvertieren. Eine oder mehrere Dateien ablegen, bei Bedarf Sprachen wählen, Ausgabeformat auswählen und herunterladen.",
     "dropzone": "Untertiteldateien hierher ziehen",
     "dropzoneHint": "oder zum Durchsuchen klicken — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Transkription — Sprache zu Text",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Einstellungen öffnen",
@@ -1022,11 +1026,12 @@
     "selectFolder": "Alle Dateien in {{name}} auswählen",
     "transcribingNow": "wird gerade transkribiert",
     "selectedSummary": "{{count}} Datei(en) ausgewählt",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "Die Modellliste konnte nicht geladen werden, daher kann die Transkription nicht starten."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Von dir gestartete Transkriptionen, neueste zuerst.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}} Versuche",
     "retryAllFailed": "{{count}} fehlgeschlagene wiederholen",
     "retriedAll": "{{ok}} von {{total}} Dateien wiederholt.",
-    "failedFallback": "Transkription fehlgeschlagen."
+    "failedFallback": "Transkription fehlgeschlagen.",
+    "retryFailed": "Wiederholung fehlgeschlagen: {{message}}"
   }
 }

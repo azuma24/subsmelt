@@ -30,7 +30,9 @@
     "close": "閉じる",
     "rowActions": "行の操作",
     "home": "ホーム",
-    "openFolder": "フォルダを開く {{name}}"
+    "openFolder": "フォルダを開く {{name}}",
+    "dismiss": "閉じる",
+    "dismissAll": "すべて閉じる"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "文字起こしが完了しました。ソース字幕が生成されました。",
       "transcriptionFailed": "文字起こしに失敗しました：{{message}}",
       "transcriptionRetried": "文字起こしを再試行しました。",
-      "retryFailed": "再試行に失敗しました：{{error}}"
+      "retryFailed": "再試行に失敗しました：{{error}}",
+      "jobsFailed": "{{count}} 件のジョブが失敗しました",
+      "openDashboard": "ダッシュボードを開く"
     },
     "confirm": {
       "clearTitle": "完了済みジョブをクリア",
@@ -313,7 +317,8 @@
       "deleted": "翻訳を削除しました",
       "bulkUpdated": "Updated {{count}} translations",
       "bulkFormatUpdated": "Updated {{count}} translations to .{{format}}",
-      "bulkUpdateFailed": "一括更新に失敗しました"
+      "bulkUpdateFailed": "一括更新に失敗しました",
+      "saveFailed": "保存に失敗しました：{{message}}"
     },
     "confirm": {
       "deleteTitle": "翻訳を削除",
@@ -773,7 +778,8 @@
       "clearConfirm": "クリア"
     },
     "toast": {
-      "cleared": "ログをクリアしました"
+      "cleared": "ログをクリアしました",
+      "clearFailed": "ログをクリアできませんでした：{{message}}"
     },
     "level": {
       "all": "すべてのレベル",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "出力設定",
     "addFilesToStart": "開始するには上で字幕ファイルを追加してください。",
-    "title": "字幕コンバーター",
     "description": "字幕形式の変換、または字幕翻訳と形式変換を一度に実行できます。1つまたは複数のファイルをドロップし、必要なら言語を選び、出力形式を選んでダウンロードします。",
     "dropzone": "字幕ファイルをここにドラッグ＆ドロップ",
     "dropzoneHint": "またはクリックして選択 — .srt、.vtt、.ass、.ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "文字起こし — 音声をテキストに",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "設定を開く",
@@ -1022,11 +1026,12 @@
     "selectFolder": "{{name}} 内のすべてのファイルを選択",
     "transcribingNow": "文字起こし中",
     "selectedSummary": "{{count}} 件のファイルを選択中",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "モデル一覧を読み込めなかったため、文字起こしを開始できません。"
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "開始した文字起こしを新しい順に表示します。",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}} 回試行",
     "retryAllFailed": "失敗した{{count}}件を再試行",
     "retriedAll": "{{total}} 件中 {{ok}} 件を再試行しました。",
-    "failedFallback": "文字起こしに失敗しました。"
+    "failedFallback": "文字起こしに失敗しました。",
+    "retryFailed": "再試行に失敗しました: {{message}}"
   }
 }

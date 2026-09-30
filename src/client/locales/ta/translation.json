@@ -30,7 +30,9 @@
     "close": "மூடு",
     "rowActions": "வரிசை செயல்கள்",
     "home": "முகப்பு",
-    "openFolder": "ஃபோல்டர் திறக்கவும் {{name}}"
+    "openFolder": "ஃபோல்டர் திறக்கவும் {{name}}",
+    "dismiss": "நிராகரி",
+    "dismissAll": "அனைத்தையும் நிராகரி"
   },
   "dashboard": {
     "title": "டாஷ்போர்டு",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "படியெடுத்தல் முடிந்தது. மூல வசன வரி உருவாக்கப்பட்டது.",
       "transcriptionFailed": "படியெடுத்தல் தோல்வியடைந்தது: {{message}}",
       "transcriptionRetried": "படியெடுத்தல் மீண்டும் முயற்சிக்கப்பட்டது.",
-      "retryFailed": "மீண்டும் முயற்சி தோல்வியடைந்தது: {{error}}"
+      "retryFailed": "மீண்டும் முயற்சி தோல்வியடைந்தது: {{error}}",
+      "jobsFailed": "{{count}} பணிகள் தோல்வியடைந்தன",
+      "openDashboard": "டாஷ்போர்டைத் திற"
     },
     "confirm": {
       "clearTitle": "முடிந்த பணிகளை அழி",
@@ -313,7 +317,8 @@
       "deleted": "மொழிபெயர்ப்பு நீக்கப்பட்டது",
       "bulkUpdated": "{{count}} மொழிபெயர்ப்புகள் புதுப்பிக்கப்பட்டன",
       "bulkFormatUpdated": "{{count}} மொழிபெயர்ப்புகள் .{{format}} ஆகப் புதுப்பிக்கப்பட்டன",
-      "bulkUpdateFailed": "மொத்த புதுப்பிப்பு தோல்வியடைந்தது"
+      "bulkUpdateFailed": "மொத்த புதுப்பிப்பு தோல்வியடைந்தது",
+      "saveFailed": "சேமிக்க முடியவில்லை: {{message}}"
     },
     "confirm": {
       "deleteTitle": "மொழிபெயர்ப்பை நீக்கு",
@@ -773,7 +778,8 @@
       "clearConfirm": "அழி"
     },
     "toast": {
-      "cleared": "பதிவுகள் அழிக்கப்பட்டன"
+      "cleared": "பதிவுகள் அழிக்கப்பட்டன",
+      "clearFailed": "பதிவுகளை அழிக்க முடியவில்லை: {{message}}"
     },
     "level": {
       "all": "அனைத்து நிலைகள்",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "வெளியீட்டு அமைப்புகள்",
     "addFilesToStart": "தொடங்க மேலே வசன வரி கோப்புகளைச் சேர்க்கவும்.",
-    "title": "உபதலைப்பு மாற்றி",
     "description": "வசன வடிவங்களை மாற்றவும், அல்லது ஒரே படியில் மொழிபெயர்த்து மாற்றவும்.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "படியெழுத்து — பேச்சை உரையாக",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1022,11 +1026,12 @@
     "selectFolder": "{{name}} இல் உள்ள அனைத்து கோப்புகளையும் தேர்ந்தெடு",
     "transcribingNow": "இப்போது படியெடுக்கப்படுகிறது",
     "selectedSummary": "{{count}} கோப்புகள் தேர்ந்தெடுக்கப்பட்டன",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "மாதிரிப் பட்டியலை ஏற்ற முடியவில்லை, எனவே படியெடுத்தலைத் தொடங்க முடியாது."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "நீங்கள் தொடங்கிய படியெடுப்புகள், புதியவை முதலில்.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}} முயற்சிகள்",
     "retryAllFailed": "தோல்வியடைந்த {{count}} மீண்டும் முயற்சி",
     "retriedAll": "{{total}} இல் {{ok}} கோப்புகள் மீண்டும் முயற்சிக்கப்பட்டன.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "மீண்டும் முயற்சி தோல்வியடைந்தது: {{message}}"
   }
 }

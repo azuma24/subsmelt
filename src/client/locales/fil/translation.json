@@ -30,7 +30,9 @@
     "close": "Isara",
     "rowActions": "Mga aksyon sa row",
     "home": "Home",
-    "openFolder": "Buksan ang folder {{name}}"
+    "openFolder": "Buksan ang folder {{name}}",
+    "dismiss": "Isara",
+    "dismissAll": "Isara ang lahat"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Kumpleto na ang transcription. Nabuo ang pinagmulang subtitle.",
       "transcriptionFailed": "Nabigo ang transcription: {{message}}",
       "transcriptionRetried": "Sinubukang muli ang transcription.",
-      "retryFailed": "Nabigo ang muling pagsubok: {{error}}"
+      "retryFailed": "Nabigo ang muling pagsubok: {{error}}",
+      "jobsFailed": "Nabigo ang {{count}} trabaho",
+      "openDashboard": "Buksan ang Dashboard"
     },
     "confirm": {
       "clearTitle": "I-clear ang mga tapos nang trabaho",
@@ -313,7 +317,8 @@
       "deleted": "Binura ang salin",
       "bulkUpdated": "Na-update ang {{count}} salin",
       "bulkFormatUpdated": "Na-update ang {{count}} salin sa .{{format}}",
-      "bulkUpdateFailed": "Nabigo ang bulk update"
+      "bulkUpdateFailed": "Nabigo ang bulk update",
+      "saveFailed": "Hindi ma-save: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Burahin ang salin",
@@ -773,7 +778,8 @@
       "clearConfirm": "I-clear"
     },
     "toast": {
-      "cleared": "Na-clear ang mga log"
+      "cleared": "Na-clear ang mga log",
+      "clearFailed": "Hindi ma-clear ang mga log: {{message}}"
     },
     "level": {
       "all": "Lahat ng Level",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "Mga setting ng output",
     "addFilesToStart": "Magdagdag ng mga subtitle file sa itaas para magsimula.",
-    "title": "Subtitle converter",
     "description": "I-convert ang subtitle format, o isalin at i-convert sa isang hakbang.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Transkripsiyon — Speech to text",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1022,11 +1026,12 @@
     "selectFolder": "Piliin ang lahat ng file sa {{name}}",
     "transcribingNow": "kasalukuyang tina-transcribe",
     "selectedSummary": "{{count}} (na) file ang napili",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "Hindi ma-load ang listahan ng modelo, kaya hindi masisimulan ang transcription."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Mga transcription na sinimulan mo, pinakabago muna.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}} pagsubok",
     "retryAllFailed": "Ulitin ang {{count}} nabigo",
     "retriedAll": "Inulit ang {{ok}} sa {{total}} file.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "Nabigo ang muling pagsubok: {{message}}"
   }
 }

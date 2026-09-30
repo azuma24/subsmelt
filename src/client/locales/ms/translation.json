@@ -30,7 +30,9 @@
     "close": "Tutup",
     "rowActions": "Tindakan baris",
     "home": "Laman Utama",
-    "openFolder": "Buka folder {{name}}"
+    "openFolder": "Buka folder {{name}}",
+    "dismiss": "Ketepikan",
+    "dismissAll": "Ketepikan semua"
   },
   "dashboard": {
     "title": "Papan Pemuka",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Transkripsi selesai. Sari kata sumber telah dijana.",
       "transcriptionFailed": "Transkripsi gagal: {{message}}",
       "transcriptionRetried": "Transkripsi dicuba semula.",
-      "retryFailed": "Cubaan semula gagal: {{error}}"
+      "retryFailed": "Cubaan semula gagal: {{error}}",
+      "jobsFailed": "{{count}} kerja gagal",
+      "openDashboard": "Buka Papan Pemuka"
     },
     "confirm": {
       "clearTitle": "Kosongkan kerja yang selesai",
@@ -313,7 +317,8 @@
       "deleted": "Terjemahan dipadam",
       "bulkUpdated": "Mengemas kini {{count}} terjemahan",
       "bulkFormatUpdated": "Mengemas kini {{count}} terjemahan kepada .{{format}}",
-      "bulkUpdateFailed": "Kemas kini pukal gagal"
+      "bulkUpdateFailed": "Kemas kini pukal gagal",
+      "saveFailed": "Tidak dapat menyimpan: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Padam terjemahan",
@@ -773,7 +778,8 @@
       "clearConfirm": "Kosongkan"
     },
     "toast": {
-      "cleared": "Log dikosongkan"
+      "cleared": "Log dikosongkan",
+      "clearFailed": "Tidak dapat mengosongkan log: {{message}}"
     },
     "level": {
       "all": "Semua Tahap",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "Tetapan output",
     "addFilesToStart": "Tambah fail sari kata di atas untuk bermula.",
-    "title": "Penukar sari kata",
     "description": "Tukar format sari kata, atau terjemah dan tukar dalam satu langkah.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Transkripsi — Pertuturan ke teks",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1022,11 +1026,12 @@
     "selectFolder": "Pilih semua fail dalam {{name}}",
     "transcribingNow": "sedang ditranskripsi",
     "selectedSummary": "{{count}} fail dipilih",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "Senarai model tidak dapat dimuatkan, jadi transkripsi tidak boleh dimulakan."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Transkripsi yang anda mulakan, terbaharu dahulu.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}} percubaan",
     "retryAllFailed": "Cuba semula {{count}} gagal",
     "retriedAll": "Mencuba semula {{ok}} daripada {{total}} fail.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "Cubaan semula gagal: {{message}}"
   }
 }

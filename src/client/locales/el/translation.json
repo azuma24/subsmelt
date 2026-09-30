@@ -30,7 +30,9 @@
     "close": "Κλείσιμο",
     "rowActions": "Ενέργειες γραμμής",
     "home": "Αρχική",
-    "openFolder": "Άνοιγμα φακέλου {{name}}"
+    "openFolder": "Άνοιγμα φακέλου {{name}}",
+    "dismiss": "Κλείσιμο",
+    "dismissAll": "Κλείσιμο όλων"
   },
   "dashboard": {
     "title": "Πίνακας ελέγχου",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Η μεταγραφή ολοκληρώθηκε. Δημιουργήθηκε ο υπότιτλος προέλευσης.",
       "transcriptionFailed": "Η μεταγραφή απέτυχε: {{message}}",
       "transcriptionRetried": "Έγινε επανάληψη της μεταγραφής.",
-      "retryFailed": "Η επανάληψη απέτυχε: {{error}}"
+      "retryFailed": "Η επανάληψη απέτυχε: {{error}}",
+      "jobsFailed": "{{count}} εργασίες απέτυχαν",
+      "openDashboard": "Άνοιγμα πίνακα ελέγχου"
     },
     "confirm": {
       "clearTitle": "Καθαρισμός ολοκληρωμένων εργασιών",
@@ -313,7 +317,8 @@
       "deleted": "Η μετάφραση διαγράφηκε",
       "bulkUpdated": "Ενημερώθηκαν {{count}} μεταφράσεις",
       "bulkFormatUpdated": "Ενημερώθηκαν {{count}} μεταφράσεις σε .{{format}}",
-      "bulkUpdateFailed": "Η μαζική ενημέρωση απέτυχε"
+      "bulkUpdateFailed": "Η μαζική ενημέρωση απέτυχε",
+      "saveFailed": "Δεν ήταν δυνατή η αποθήκευση: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Διαγραφή μετάφρασης",
@@ -773,7 +778,8 @@
       "clearConfirm": "Καθαρισμός"
     },
     "toast": {
-      "cleared": "Οι καταγραφές καθαρίστηκαν"
+      "cleared": "Οι καταγραφές καθαρίστηκαν",
+      "clearFailed": "Δεν ήταν δυνατή η εκκαθάριση των καταγραφών: {{message}}"
     },
     "level": {
       "all": "Όλα τα επίπεδα",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "Ρυθμίσεις εξόδου",
     "addFilesToStart": "Προσθέστε αρχεία υποτίτλων παραπάνω για να ξεκινήσετε.",
-    "title": "Μετατροπέας υποτίτλων",
     "description": "Μετατρέψτε μορφές υποτίτλων ή μεταφράστε και μετατρέψτε σε ένα βήμα.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Μεταγραφή — Ομιλία σε κείμενο",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1022,11 +1026,12 @@
     "selectFolder": "Επιλογή όλων των αρχείων στο {{name}}",
     "transcribingNow": "γίνεται μεταγραφή τώρα",
     "selectedSummary": "Επιλέχθηκαν {{count}} αρχεία",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "Δεν ήταν δυνατή η φόρτωση της λίστας μοντέλων, οπότε η μεταγραφή δεν μπορεί να ξεκινήσει."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Μεταγραφές που ξεκινήσατε, πρώτα οι πιο πρόσφατες.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}} προσπάθειες",
     "retryAllFailed": "Επανάληψη {{count}} αποτυχιών",
     "retriedAll": "Επαναλήφθηκαν {{ok}} από {{total}} αρχεία.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "Η επανάληψη απέτυχε: {{message}}"
   }
 }

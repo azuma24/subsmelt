@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import * as api from "../../api";
@@ -28,7 +28,9 @@ import { useModelGate } from "./useModelGate";
 import { RunOptionsSection } from "./RunOptionsSection";
 import { UrlTranscribeSection } from "./UrlTranscribeSection";
 import { LibraryPicker } from "./LibraryPicker";
-import { baseName, COMPUTE_BY_DEVICE, FALLBACK_MODELS, FORMATS, type FileProgress, type OutputFormat } from "./whisper-shared";
+import { InlineError } from "../../ui/QueryState";
+import { applyTranscriptionProgress, cancelBatch, runBatch, useBatchState } from "./batch-store";
+import { baseName, COMPUTE_BY_DEVICE, FALLBACK_MODELS, FORMATS, type OutputFormat } from "./whisper-shared";
 
 const validSortBy = (value: unknown): SortBy => (value === "name" || value === "date" ? value : "date");
 const validSortDir = (value: unknown): SortDir => (value === "asc" || value === "desc" ? value : "desc");
@@ -41,6 +43,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const settings = (settingsQuery.data ?? {}) as Record<string, unknown>;
   const backendConfigured = Boolean(str(settings.transcription_backend_url));
   const enabled = str(settings.transcription_enabled, "0") === "1";
+  const mediaDir = str(settings._media_dir, "/media");
 
   const healthQuery = useTranscriptionHealthQuery(backendConfigured);
   const historyQuery = useTranscriptionHistoryQuery(true, 20);
@@ -48,7 +51,20 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const caps = healthQuery.data?.health?.capabilities;
 
   const retryMutation = useMutationWithInvalidation((id: string) => api.retryTranscriptionAttempt(id));
-  const onRetry = (attempt: TranscriptionHistoryEntry) => retryMutation.mutate(attempt.id);
+  // One retry at a time: the panel disables Retry while this is set, so a
+  // second click cannot start an overlapping run of the same file.
+  const [retryingPath, setRetryingPath] = useState<string | null>(null);
+  const onRetry = async (attempt: TranscriptionHistoryEntry) => {
+    if (retryingPath) return;
+    setRetryingPath(attempt.inputPath);
+    try {
+      await retryMutation.mutateAsync(attempt.id);
+    } catch (e: unknown) {
+      addToast(t("transcriptionHistory.retryFailed", { message: getErrorMessage(e) }), "error");
+    } finally {
+      setRetryingPath(null);
+    }
+  };
 
   // History clearing only drops list entries — subtitle files on disk are kept,
   // and the server refuses to clear attempts that are still running.
@@ -77,8 +93,10 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   // Retries run one after another: firing every failed file at once would stack
   // concurrent transcriptions on a backend that just demonstrated it is unhappy.
   const onRetryAllFailed = async (targets: TranscriptionHistoryEntry[]) => {
+    if (retryingPath) return;
     let ok = 0;
     for (const target of targets) {
+      setRetryingPath(target.inputPath);
       try {
         await retryMutation.mutateAsync(target.id);
         ok += 1;
@@ -86,6 +104,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
         addToast(`${baseName(target.inputPath)}: ${getErrorMessage(e)}`, "error");
       }
     }
+    setRetryingPath(null);
     addToast(t("transcriptionHistory.retriedAll", { ok, total: targets.length }), ok > 0 ? "success" : "error");
     historyQuery.refetch();
   };
@@ -109,9 +128,10 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const whisperModels: WhisperModel[] = modelsQuery.data?.models ?? [];
 
   // Live download progress state + the downloadModel action.
-  const { downloads: modelDownloads, downloadModel } = useModelDownload(() => { /* no external callback needed */ });
+  const { downloads: modelDownloads, downloadModel } = useModelDownload();
 
   // Library file list (non-mutating preview scan of MEDIA_DIR).
+  const queryClient = useQueryClient();
   const scanQuery = useQuery({
     queryKey: ["whisper-library"],
     queryFn: ({ signal }) => api.previewScan({ signal }),
@@ -146,7 +166,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
     () => new Set(visibleFiles.map((f) => f.videoPath as string)),
     [visibleFiles],
   );
-  const tree = useMemo(() => buildFolderTree(visibleFiles, sortBy, sortDir), [visibleFiles, sortBy, sortDir]);
+  const tree = useMemo(() => buildFolderTree(visibleFiles, sortBy, sortDir, mediaDir), [visibleFiles, sortBy, sortDir, mediaDir]);
 
   // Per-run options (default from Settings + advertised capabilities).
   const [model, setModel] = useState("");
@@ -250,19 +270,14 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
     [selected, visiblePaths],
   );
 
-  const [running, setRunning] = useState(false);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
-  const [activePath, setActivePath] = useState<string | null>(null);
-  const [fileProgress, setFileProgress] = useState<Record<string, FileProgress>>({});
-  const cancelRef = useRef(false);
-  // Synchronous mirror of activePath so cancelBatch always targets the file the
-  // loop is actually on (state can lag a render behind).
-  const activePathRef = useRef<string | null>(null);
+  // The batch itself lives in batch-store so it keeps running, with progress
+  // and Cancel intact, while the user is on another page.
+  const { running, progress, activePath, fileProgress } = useBatchState();
 
   // Expand/collapse is persisted per folder in localStorage (default collapsed)
   // and pruned against the folders present after each scan. Prune against the
   // unfiltered tree so narrowing the filter can't silently discard state.
-  const fullTree = useMemo(() => buildFolderTree(videoFiles, sortBy, sortDir), [videoFiles, sortBy, sortDir]);
+  const fullTree = useMemo(() => buildFolderTree(videoFiles, sortBy, sortDir, mediaDir), [videoFiles, sortBy, sortDir, mediaDir]);
   const folderPaths = useMemo(() => collectFolderPaths(fullTree.children), [fullTree]);
   const expansion = usePersistedExpansion("whisper", folderPaths);
   // Text filter switches to a flat list, so the tree (and drill-down) only
@@ -282,24 +297,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   // Live per-file progress from the server's SSE broadcast. Stable callback so
   // useSSE's ref-sync effect doesn't churn every render.
   useSSE(useCallback((type, data) => {
-    if (type !== "transcription:progress") return;
-    const d = data as { path?: string; pct?: number; done?: boolean; error?: boolean; cancelled?: boolean; phase?: string };
-    if (!d.path) return;
-    // Merge so a phase-only line (e.g. "diarizing") keeps the last pct.
-    setFileProgress((prev) => {
-      const cur = prev[d.path as string] || {};
-      return {
-        ...prev,
-        [d.path as string]: {
-          ...cur,
-          ...(d.pct !== undefined ? { pct: d.pct } : {}),
-          ...(d.done !== undefined ? { done: d.done } : {}),
-          ...(d.error !== undefined ? { error: d.error } : {}),
-          ...(d.cancelled !== undefined ? { cancelled: d.cancelled } : {}),
-          ...(d.phase !== undefined ? { phase: d.phase } : {}),
-        },
-      };
-    });
+    if (type === "transcription:progress") applyTranscriptionProgress(data);
   }, []));
 
   const toggle = (vp: string) =>
@@ -319,17 +317,9 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   };
   const selectAll = () => setSelected(new Set(visibleFiles.map((f) => f.videoPath as string)));
 
-  const cancelBatch = async () => {
-    cancelRef.current = true;
-    const target = activePathRef.current;
-    if (target) {
-      try { await api.cancelTranscription({ path: target }); } catch { /* best-effort */ }
-    }
-  };
-
   const transcribeSelected = async () => {
     const paths = selectedVisible;
-    if (paths.length === 0) return;
+    if (paths.length === 0 || running) return;
 
     // Gate 1: check the selected model is downloaded before we start the batch.
     // On decline, cancel the run (leave model selected, do nothing else).
@@ -344,41 +334,30 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
       });
       if (!ok) return;
     }
-    setRunning(true);
-    cancelRef.current = false;
-    setFileProgress({});  // drop stale badges from a previous run
-    setProgress({ done: 0, total: paths.length });
-    let ok = 0;
-    for (let i = 0; i < paths.length; i++) {
-      if (cancelRef.current) break;
-      activePathRef.current = paths[i];
-      setActivePath(paths[i]);
-      try {
-        await api.transcribeVideo({
-          videoPath: paths[i],
-          outputFormat: effFormat,
-          postAction: "transcribe_only",
-          model: effModel,
-          language: effLang,
-          device: effDevice,
-          computeType: effCompute,
-          speakerDiarization: canDiarize && effDiarize,
-        });
-        ok += 1;
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : t("whisper.failedFallback");
-        if (!/cancelled/i.test(msg)) addToast(`${baseName(paths[i])}: ${msg}`, "error");
-      }
-      setProgress({ done: i + 1, total: paths.length });
-    }
-    activePathRef.current = null;
-    setActivePath(null);
-    setRunning(false);
-    setProgress(null);
-    setSelected(new Set());
-    addToast(t("whisper.batchDone", { ok, total: paths.length, format: effFormat.toUpperCase() }), ok > 0 ? "success" : "error");
-    scanQuery.refetch();
-    historyQuery.refetch();
+    // Everything the run needs is captured now; the callbacks still work
+    // after this page unmounts because the toast provider is app-level and
+    // invalidation marks the queries stale for their next mount.
+    await runBatch({
+      paths,
+      transcribe: api.transcribeVideo,
+      request: (videoPath) => ({
+        videoPath,
+        outputFormat: effFormat,
+        postAction: "transcribe_only",
+        model: effModel,
+        language: effLang,
+        device: effDevice,
+        computeType: effCompute,
+        speakerDiarization: canDiarize && effDiarize,
+      }),
+      onFileError: (path, message) => addToast(`${baseName(path)}: ${message}`, "error"),
+      onFinished: (ok, total) => {
+        setSelected(new Set());
+        addToast(t("whisper.batchDone", { ok, total, format: effFormat.toUpperCase() }), ok > 0 ? "success" : "error");
+        void queryClient.invalidateQueries({ queryKey: ["whisper-library"] });
+        void queryClient.invalidateQueries({ queryKey: ["transcription-history"] });
+      },
+    });
   };
 
   const downloadsActive = Object.values(modelDownloads).some((dl) => dl.active);
@@ -387,10 +366,8 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
     // Same page chrome as the Converter: sticky title bar + scrolling body, so
     // switching between sibling pages doesn't change the header pattern.
     <div className="flex h-full flex-col">
-      <div className="sticky top-0 z-30 shrink-0 border-b border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 md:px-[18px]">
-        <div className="flex min-h-[42px] items-center gap-2.5">
-          <h1 className="text-sm font-semibold text-[var(--text)]">{t("whisper.title")}</h1>
-        </div>
+      <div className="sticky top-0 z-30 flex h-[50px] shrink-0 items-center gap-2.5 border-b border-[var(--border)] bg-[var(--surface)] px-3.5 md:px-[18px]">
+        <h1 className="text-sm font-semibold text-[var(--text)]">{t("nav.whisper")}</h1>
       </div>
       <div className="flex-1 overflow-auto">
         <div className={`mx-auto w-full max-w-[1100px] space-y-4 ${isMobile ? "p-3 pb-24" : "p-5"}`}>
@@ -412,6 +389,10 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
 
       {enabled && backendConfigured && (
         <>
+          {modelsQuery.isError && (
+            <InlineError message={t("whisper.modelsLoadFailed")} onRetry={() => void modelsQuery.refetch()} />
+          )}
+
           {/* ── 1. Run options ─────────────────────────────────────────────
               Everyday knobs stay visible; device/compute/diarize are expert
               settings and live behind the Advanced disclosure. */}
@@ -466,6 +447,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
             onToggleSortDir={toggleSortDir}
             onSelectAll={selectAll}
             running={running}
+            mediaDir={mediaDir}
             visibleFiles={visibleFiles}
             videoFiles={videoFiles}
             isFiltered={isFiltered}
@@ -496,8 +478,8 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]">
         <TranscriptionHistoryPanel
           attempts={attempts}
-          transcribingPath={activePath}
-          isRetryPending={retryMutation.isPending}
+          transcribingPath={retryingPath ?? activePath}
+          isRetryPending={retryingPath !== null}
           isTranscribePending={running}
           onRetry={onRetry}
           onClear={onClearHistory}

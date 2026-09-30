@@ -1,15 +1,16 @@
 import type { ScannedFile } from "../../types";
-import { buildPathTree, type PathTreeNode } from "../../components/file-tree/build";
+import { buildPathTree, pathMarkerFor, type PathTreeNode } from "../../components/file-tree/build";
 
 export type SortBy = "name" | "date";
 export type SortDir = "asc" | "desc";
 
 export type TreeNode = PathTreeNode<ScannedFile>;
 
-export function buildFolderTree(files: ScannedFile[], sortBy: SortBy, sortDir: SortDir): TreeNode {
+export function buildFolderTree(files: ScannedFile[], sortBy: SortBy, sortDir: SortDir, mediaDir?: string): TreeNode {
   const dirMul = sortDir === "asc" ? 1 : -1;
   return buildPathTree(files, {
     pathOf: (f) => f.videoPath as string,
+    marker: pathMarkerFor(mediaDir),
     // Folders sort by name only (no single mtime); direction still applies so
     // the whole tree flips consistently when the user toggles asc/desc.
     compareFolders: (a, b) => a.localeCompare(b) * dirMul,

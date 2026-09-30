@@ -30,7 +30,9 @@
     "close": "Bezárás",
     "rowActions": "Sor műveletei",
     "home": "Kezdőlap",
-    "openFolder": "Mappa megnyitása {{name}}"
+    "openFolder": "Mappa megnyitása {{name}}",
+    "dismiss": "Bezárás",
+    "dismissAll": "Összes bezárása"
   },
   "dashboard": {
     "title": "Vezérlőpult",
@@ -132,7 +134,9 @@
       "transcriptionCompleteGenerated": "Átírás kész. A forrásfelirat elkészült.",
       "transcriptionFailed": "Az átírás sikertelen: {{message}}",
       "transcriptionRetried": "Átírás újrapróbálva.",
-      "retryFailed": "Az újrapróbálkozás sikertelen: {{error}}"
+      "retryFailed": "Az újrapróbálkozás sikertelen: {{error}}",
+      "jobsFailed": "{{count}} feladat sikertelen",
+      "openDashboard": "Vezérlőpult megnyitása"
     },
     "confirm": {
       "clearTitle": "Befejezett feladatok törlése",
@@ -313,7 +317,8 @@
       "deleted": "Fordítás törölve",
       "bulkUpdated": "{{count}} fordítás frissítve",
       "bulkFormatUpdated": "{{count}} fordítás frissítve erre: .{{format}}",
-      "bulkUpdateFailed": "A tömeges frissítés sikertelen"
+      "bulkUpdateFailed": "A tömeges frissítés sikertelen",
+      "saveFailed": "A mentés sikertelen: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Fordítás törlése",
@@ -773,7 +778,8 @@
       "clearConfirm": "Törlés"
     },
     "toast": {
-      "cleared": "Naplók törölve"
+      "cleared": "Naplók törölve",
+      "clearFailed": "A naplók törlése nem sikerült: {{message}}"
     },
     "level": {
       "all": "Összes szint",
@@ -910,7 +916,6 @@
   "convert": {
     "outputSettings": "Kimeneti beállítások",
     "addFilesToStart": "A kezdéshez adj hozzá feliratfájlokat fent.",
-    "title": "Feliratkonvertáló",
     "description": "Feliratformátumok konvertálása, vagy fordítás és konvertálás egy lépésben.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -957,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Átírás — Beszédből szöveg",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1022,11 +1026,12 @@
     "selectFolder": "Az összes fájl kijelölése itt: {{name}}",
     "transcribingNow": "éppen átírás alatt",
     "selectedSummary": "{{count}} fájl kijelölve",
-    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo."
+    "englishOnlyHint": "distil-large-v3 is English-only — Japanese/Chinese/Korean need large-v3 or large-v3-turbo.",
+    "modelsLoadFailed": "A modellek listája nem tölthető be, ezért az átírás nem indítható el."
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Az általad indított átírások, a legújabb elöl.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",
@@ -1043,6 +1048,7 @@
     "attempts": "{{count}} próbálkozás",
     "retryAllFailed": "{{count}} sikertelen újrapróbálása",
     "retriedAll": "{{total}} fájlból {{ok}} újrapróbálva.",
-    "failedFallback": "Transcription failed."
+    "failedFallback": "Transcription failed.",
+    "retryFailed": "Az újrapróbálkozás sikertelen: {{message}}"
   }
 }

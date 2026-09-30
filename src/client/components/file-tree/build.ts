@@ -6,6 +6,12 @@
 
 export const DEFAULT_PATH_MARKER = "/media/";
 
+/** The marker for a library root: "/srv/library" → "/srv/library/". */
+export function pathMarkerFor(mediaDir: string | undefined): string {
+  const trimmed = (mediaDir ?? "").replace(/\/+$/, "");
+  return trimmed ? `${trimmed}/` : DEFAULT_PATH_MARKER;
+}
+
 export interface PathTreeNode<F> {
   name: string;
   /** Folder path relative to the marker, e.g. "movies/2024". "" is the root. */

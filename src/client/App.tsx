@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { lazy, Suspense, useEffect, useRef } from "react";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ToastProvider, useToast } from "./components/Toast";
 import { ConfirmProvider } from "./components/ConfirmModal";
@@ -65,6 +65,10 @@ function AppInner() {
   const settingsQuery = useSettingsQuery();
   const queueQuery = useQueueStatusQuery();
   const location = useLocation();
+  const navigate = useNavigate();
+  // Failures since the user last dismissed the failure toast. They collapse
+  // into one toast that counts up, instead of one persistent toast per job.
+  const failedJobsRef = useRef(0);
 
   useSSE((type, data) => {
     if (type === "job:done") {
@@ -78,13 +82,19 @@ function AppInner() {
       );
     }
     if (type === "job:error") {
+      failedJobsRef.current += 1;
+      const count = failedJobsRef.current;
       addToast(
-        t("dashboard.toast.jobFailed", {
-          name: String(data.srtName ?? ""),
-          error: String(data.error ?? ""),
-        }),
+        count === 1
+          ? t("dashboard.toast.jobFailed", { name: String(data.srtName ?? ""), error: String(data.error ?? "") })
+          : t("dashboard.toast.jobsFailed", { count }),
         "error",
-        true,
+        {
+          persistent: true,
+          key: "job:error",
+          action: { label: t("dashboard.toast.openDashboard"), onClick: () => navigate("/") },
+          onDismiss: () => { failedJobsRef.current = 0; },
+        },
       );
     }
     if (type === "queue:finished")
