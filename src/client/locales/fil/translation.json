@@ -1138,6 +1138,7 @@
     "noMatch": "Walang tumutugmang video.",
     "clearFilters": "I-clear ang mga filter",
     "noVideos": "Wala pang nakalistang video. Pindutin ang Suriin ngayon para basahin ang playlist.",
+    "allFiltered": "Naalis ng filter ang lahat ng video rito. Lalabas dito ang mga video na idaragdag sa playlist mula ngayon.",
     "showing": "Ipinapakita ang {{shown}} sa {{total}} video",
     "status": {
       "new": "Bago, naghihintay sa iyo",
@@ -1171,7 +1172,8 @@
       "followed": "Fino-follow na ang {{title}}. Sinusuri ito ngayon.",
       "checked": "Nasuri ang {{title}}: {{added}} bago, {{removed}} inalis.",
       "checkFailed": "Nabigo ang pagsusuri: {{error}}",
-      "unfollowed": "Na-unfollow ang {{title}}."
+      "unfollowed": "Na-unfollow ang {{title}}.",
+      "saved": "Na-save ang playlist."
     },
     "dialog": {
       "title": "Mag-follow ng playlist",

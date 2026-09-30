@@ -27,8 +27,9 @@ export function PlaylistDetail({ playlist, folderRoot }: { playlist: YoutubePlay
   const [query, setQuery] = useState("");
   const [limit, setLimit] = useState(PAGE_SIZE);
 
-  const counts = countByFilter(playlist.counts.byStatus);
   const videos = videosQuery.data?.videos ?? [];
+  // Counted from the rows themselves once loaded, so the tabs match the list, removed videos included.
+  const counts = countByFilter(videosQuery.data ? statusCounts(videos) : playlist.counts.byStatus);
   const visible = useMemo(() => filterVideos(videos, filter, query), [videos, filter, query]);
   const shown = visible.slice(0, limit);
   const availability = availabilityLabel(playlist.sync.availability, t);
@@ -121,6 +122,13 @@ export function PlaylistDetail({ playlist, folderRoot }: { playlist: YoutubePlay
         <p className="rounded-xl border border-dashed border-[var(--border)] px-4 py-10 text-center text-[13px] leading-6 text-[var(--text-2)]">
           {playlist.sync.checking ? t("youtube.checking") : t("youtube.noVideos")}
         </p>
+      ) : visible.length === 0 && filter === "all" && !query && counts.off > 0 ? (
+        <div className="rounded-xl border border-dashed border-[var(--border)] px-4 py-10 text-center text-[13px] leading-6 text-[var(--text-2)]">
+          <p>{t("youtube.allFiltered")}</p>
+          <button type="button" onClick={() => selectTab("off")} className="mt-1 min-h-[44px] px-2 font-medium text-[var(--accent)] hover:underline">
+            {t("youtube.tabs.off")} ({counts.off})
+          </button>
+        </div>
       ) : visible.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[var(--border)] px-4 py-10 text-center text-[13px] text-[var(--text-2)]">
           {t("youtube.noMatch")}{" "}
@@ -157,6 +165,12 @@ export function PlaylistDetail({ playlist, folderRoot }: { playlist: YoutubePlay
       )}
     </div>
   );
+}
+
+function statusCounts(videos: YoutubeVideo[]): Partial<Record<YoutubeVideo["status"], number>> {
+  const counts: Partial<Record<YoutubeVideo["status"], number>> = {};
+  for (const video of videos) counts[video.status] = (counts[video.status] ?? 0) + 1;
+  return counts;
 }
 
 function VideoRows({ videos }: { videos: YoutubeVideo[] }) {

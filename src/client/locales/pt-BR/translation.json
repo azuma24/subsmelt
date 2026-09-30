@@ -1138,6 +1138,7 @@
     "noMatch": "Nenhum vídeo encontrado.",
     "clearFilters": "Limpar filtros",
     "noVideos": "Nenhum vídeo listado ainda. Pressione Verificar agora para ler a playlist.",
+    "allFiltered": "O filtro deixou de fora todos os vídeos daqui. Os vídeos adicionados à playlist a partir de agora aparecerão aqui.",
     "showing": "Mostrando {{shown}} de {{total}} vídeos",
     "status": {
       "new": "Novo, aguardando você",
@@ -1171,7 +1172,8 @@
       "followed": "Seguindo {{title}}. Verificando agora.",
       "checked": "{{title}} verificada: {{added}} novos, {{removed}} removidos.",
       "checkFailed": "Falha na verificação: {{error}}",
-      "unfollowed": "Você deixou de seguir {{title}}."
+      "unfollowed": "Você deixou de seguir {{title}}.",
+      "saved": "Playlist salva."
     },
     "dialog": {
       "title": "Seguir uma playlist",

@@ -8,7 +8,7 @@ import { str } from "../../../lib/settings-value";
 import { FORM_CONTROL_CLS, FORM_LABEL_CLS } from "../../../ui/form-classes";
 import { ActionButton } from "../../../ui/primitives";
 
-// GET /api/settings returns this in place of a saved secret.
+// GET /api/settings returns this in place of a saved secret (REDACTED_SECRET in src/server/connections.ts).
 const REDACTED_SECRET = "__SUBSMELT_SECRET_REDACTED__";
 
 type KeyState = { tone: "off" | "ok" | "warn" | "bad"; text: string };

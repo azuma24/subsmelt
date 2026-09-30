@@ -1138,6 +1138,7 @@
     "noMatch": "일치하는 동영상이 없습니다.",
     "clearFilters": "필터 지우기",
     "noVideos": "아직 나열된 동영상이 없습니다. 지금 확인을 눌러 재생목록을 읽어 오세요.",
+    "allFiltered": "여기 있는 모든 동영상이 필터에서 제외되었습니다. 지금부터 재생목록에 추가되는 동영상이 여기에 표시됩니다.",
     "showing": "동영상 {{total}}개 중 {{shown}}개 표시 중",
     "status": {
       "new": "새 동영상, 대기 중",
@@ -1171,7 +1172,8 @@
       "followed": "{{title}}을(를) 팔로우합니다. 지금 확인하는 중입니다.",
       "checked": "{{title}} 확인 완료: 새 동영상 {{added}}개, 삭제 {{removed}}개.",
       "checkFailed": "확인 실패: {{error}}",
-      "unfollowed": "{{title}} 팔로우를 취소했습니다."
+      "unfollowed": "{{title}} 팔로우를 취소했습니다.",
+      "saved": "재생목록을 저장했습니다."
     },
     "dialog": {
       "title": "재생목록 팔로우",

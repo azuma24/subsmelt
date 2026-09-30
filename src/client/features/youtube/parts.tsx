@@ -33,7 +33,7 @@ const BANNER_TONE: Record<BannerTone, { box: string; glyph: string }> = {
   info: { box: "border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]", glyph: "i" },
 };
 
-export function Banner({ tone, title, children, action }: { tone: BannerTone; title: string; children?: ReactNode; action?: ReactNode }) {
+export function Banner({ tone, title, children }: { tone: BannerTone; title: string; children?: ReactNode }) {
   const style = BANNER_TONE[tone];
   return (
     <div role={tone === "info" ? "status" : "alert"} className={`flex flex-wrap items-start gap-3 rounded-xl border px-3.5 py-2.5 ${style.box}`}>
@@ -44,7 +44,6 @@ export function Banner({ tone, title, children, action }: { tone: BannerTone; ti
         <strong className="font-semibold">{title}</strong>
         {children && <> {children}</>}
       </p>
-      {action}
     </div>
   );
 }
@@ -58,7 +57,7 @@ export function Segmented<T extends string>({
 }: {
   labelId: string;
   value: T;
-  options: { value: T; label: string; hint?: string; disabled?: boolean; title?: string }[];
+  options: { value: T; label: string; hint?: string; disabled?: boolean }[];
   onChange: (value: T) => void;
 }) {
   return (
@@ -71,7 +70,6 @@ export function Segmented<T extends string>({
             type="button"
             aria-pressed={selected}
             disabled={option.disabled}
-            title={option.title}
             onClick={() => onChange(option.value)}
             className={`flex min-h-[44px] flex-1 basis-[120px] flex-col items-start justify-center rounded-lg border px-3 py-1.5 text-left text-[13px] leading-5 transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${selected ? "border-[var(--accent)] bg-[var(--accent-dim)] font-medium text-[var(--text)]" : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)]"}`}
           >

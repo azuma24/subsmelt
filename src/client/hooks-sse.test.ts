@@ -16,6 +16,7 @@ test("SSE invalidation keys are targeted by event type", () => {
   assert.deepEqual(getSSEInvalidationKeys("job:progress"), [["jobs"], ["queue-status"]]);
   assert.deepEqual(getSSEInvalidationKeys("job:done"), [["jobs"], ["queue-status"], ["logs"], ["transcription-history"]]);
   assert.deepEqual(getSSEInvalidationKeys("scan:complete"), [["jobs"], ["queue-status"], ["logs"], ["settings"], ["transcription-history"]]);
+  assert.deepEqual(getSSEInvalidationKeys("youtube:playlist"), [["youtube"]]);
 });
 
 test("createDebouncedInvalidator batches duplicate keys until flushed", () => {

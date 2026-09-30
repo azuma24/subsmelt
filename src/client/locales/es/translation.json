@@ -1138,6 +1138,7 @@
     "noMatch": "Ningún vídeo coincide.",
     "clearFilters": "Borrar filtros",
     "noVideos": "Aún no hay vídeos. Pulsa Comprobar ahora para leer la lista.",
+    "allFiltered": "El filtro dejó fuera todos los vídeos de aquí. Los vídeos que añadas a la lista a partir de ahora aparecerán aquí.",
     "showing": "Mostrando {{shown}} de {{total}} vídeos",
     "status": {
       "new": "Nuevo, esperando tu decisión",
@@ -1171,7 +1172,8 @@
       "followed": "Siguiendo {{title}}. Comprobándola ahora.",
       "checked": "{{title}} comprobada: {{added}} nuevos, {{removed}} quitados.",
       "checkFailed": "Error en la comprobación: {{error}}",
-      "unfollowed": "Has dejado de seguir {{title}}."
+      "unfollowed": "Has dejado de seguir {{title}}.",
+      "saved": "Lista guardada."
     },
     "dialog": {
       "title": "Seguir una lista",

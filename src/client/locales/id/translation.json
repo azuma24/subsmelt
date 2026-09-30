@@ -1138,6 +1138,7 @@
     "noMatch": "Tidak ada video yang cocok.",
     "clearFilters": "Hapus filter",
     "noVideos": "Belum ada video yang terdaftar. Tekan Periksa sekarang untuk membaca playlist.",
+    "allFiltered": "Semua video di sini dikecualikan oleh filter. Video yang ditambahkan ke playlist mulai sekarang akan muncul di sini.",
     "showing": "Menampilkan {{shown}} dari {{total}} video",
     "status": {
       "new": "Baru, menunggu Anda",
@@ -1171,7 +1172,8 @@
       "followed": "Mengikuti {{title}}. Sedang memeriksanya.",
       "checked": "{{title}} diperiksa: {{added}} baru, {{removed}} dihapus.",
       "checkFailed": "Pemeriksaan gagal: {{error}}",
-      "unfollowed": "Berhenti mengikuti {{title}}."
+      "unfollowed": "Berhenti mengikuti {{title}}.",
+      "saved": "Playlist disimpan."
     },
     "dialog": {
       "title": "Ikuti playlist",

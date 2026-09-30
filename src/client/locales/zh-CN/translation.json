@@ -1138,6 +1138,7 @@
     "noMatch": "没有匹配的视频。",
     "clearFilters": "清除筛选",
     "noVideos": "还没有列出视频。点击“立即检查”来读取播放列表。",
+    "allFiltered": "这里的所有视频都被筛选条件排除了。从现在起添加到播放列表的视频会显示在这里。",
     "showing": "显示 {{total}} 个视频中的 {{shown}} 个",
     "status": {
       "new": "新视频，等你处理",
@@ -1171,7 +1172,8 @@
       "followed": "已关注 {{title}}，正在检查。",
       "checked": "已检查 {{title}}：新增 {{added}} 个，移除 {{removed}} 个。",
       "checkFailed": "检查失败：{{error}}",
-      "unfollowed": "已取消关注 {{title}}。"
+      "unfollowed": "已取消关注 {{title}}。",
+      "saved": "播放列表已保存。"
     },
     "dialog": {
       "title": "关注播放列表",

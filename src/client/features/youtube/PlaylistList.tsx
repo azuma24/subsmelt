@@ -42,7 +42,7 @@ function PlaylistRow({ playlist, folderRoot, actions, onOpen, onEdit }: { playli
           <button
             type="button"
             onClick={() => onOpen(playlist)}
-            className="min-h-[32px] text-left text-[16px] font-semibold text-[var(--text)] underline-offset-4 hover:text-[var(--accent)] hover:underline"
+            className="min-h-[44px] text-left text-[16px] font-semibold text-[var(--text)] underline-offset-4 hover:text-[var(--accent)] hover:underline"
           >
             {playlist.title}
           </button>

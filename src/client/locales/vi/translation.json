@@ -1138,6 +1138,7 @@
     "noMatch": "Không có video nào khớp.",
     "clearFilters": "Xóa bộ lọc",
     "noVideos": "Chưa có video nào. Nhấn Kiểm tra ngay để đọc danh sách phát.",
+    "allFiltered": "Bộ lọc đã loại mọi video ở đây. Video được thêm vào danh sách phát từ bây giờ sẽ xuất hiện ở đây.",
     "showing": "Đang hiển thị {{shown}} trên {{total}} video",
     "status": {
       "new": "Mới, đang chờ bạn",
@@ -1171,7 +1172,8 @@
       "followed": "Đang theo dõi {{title}}. Đang kiểm tra ngay.",
       "checked": "Đã kiểm tra {{title}}: {{added}} mới, {{removed}} đã xóa.",
       "checkFailed": "Kiểm tra thất bại: {{error}}",
-      "unfollowed": "Đã bỏ theo dõi {{title}}."
+      "unfollowed": "Đã bỏ theo dõi {{title}}.",
+      "saved": "Đã lưu danh sách phát."
     },
     "dialog": {
       "title": "Theo dõi một danh sách phát",

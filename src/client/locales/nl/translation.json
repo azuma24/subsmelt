@@ -1138,6 +1138,7 @@
     "noMatch": "Geen video's gevonden.",
     "clearFilters": "Filters wissen",
     "noVideos": "Nog geen video's in de lijst. Druk op Nu controleren om de afspeellijst te lezen.",
+    "allFiltered": "Het filter heeft alle video's hier uitgesloten. Video's die je vanaf nu aan de playlist toevoegt, verschijnen hier.",
     "showing": "{{shown}} van {{total}} video's weergegeven",
     "status": {
       "new": "Nieuw, wacht op jou",
@@ -1171,7 +1172,8 @@
       "followed": "{{title}} wordt gevolgd. Wordt nu gecontroleerd.",
       "checked": "{{title}} gecontroleerd: {{added}} nieuw, {{removed}} verwijderd.",
       "checkFailed": "Controle mislukt: {{error}}",
-      "unfollowed": "{{title}} ontvolgd."
+      "unfollowed": "{{title}} ontvolgd.",
+      "saved": "Playlist opgeslagen."
     },
     "dialog": {
       "title": "Een afspeellijst volgen",

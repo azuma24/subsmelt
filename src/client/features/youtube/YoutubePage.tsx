@@ -48,7 +48,7 @@ export function YoutubePage({ isMobile }: { isMobile: boolean }) {
 
   const onSaved = (playlistId: string, title: string, created: boolean) => {
     setDialog(null);
-    addToast(created ? t("youtube.toast.followed", { title }) : t("youtube.toast.checked", { title, added: 0, removed: 0 }), "success");
+    addToast(created ? t("youtube.toast.followed", { title }) : t("youtube.toast.saved"), "success");
     void queryClient.invalidateQueries({ queryKey: ["youtube"] });
     if (created) setParams({ playlist: playlistId });
   };
@@ -97,7 +97,7 @@ export function YoutubePage({ isMobile }: { isMobile: boolean }) {
         </div>
       );
     }
-    if (selected) return <PlaylistDetail playlist={selected} folderRoot={folderRoot} />;
+    if (selected) return <PlaylistDetail key={selected.id} playlist={selected} folderRoot={folderRoot} />;
     if (playlists.length === 0) return <EmptyState onFollow={() => setDialog({ kind: "follow" })} disabled={ytdlpMissing} />;
     return <PlaylistList playlists={playlists} folderRoot={folderRoot} actions={actions} onOpen={openPlaylist} onEdit={(p) => setDialog({ kind: "edit", playlist: p })} />;
   })();

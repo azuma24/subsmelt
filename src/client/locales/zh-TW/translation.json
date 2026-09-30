@@ -1138,6 +1138,7 @@
     "noMatch": "沒有符合的影片。",
     "clearFilters": "清除篩選",
     "noVideos": "尚未列出任何影片。按一下「立即檢查」來讀取播放清單。",
+    "allFiltered": "這裡的所有影片都被篩選條件排除了。從現在起加入播放清單的影片會顯示在這裡。",
     "showing": "顯示 {{total}} 部影片中的 {{shown}} 部",
     "status": {
       "new": "新影片，等你處理",
@@ -1171,7 +1172,8 @@
       "followed": "已追蹤 {{title}}，正在檢查。",
       "checked": "已檢查 {{title}}：新增 {{added}} 部，移除 {{removed}} 部。",
       "checkFailed": "檢查失敗：{{error}}",
-      "unfollowed": "已取消追蹤 {{title}}。"
+      "unfollowed": "已取消追蹤 {{title}}。",
+      "saved": "播放清單已儲存。"
     },
     "dialog": {
       "title": "追蹤播放清單",

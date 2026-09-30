@@ -1138,6 +1138,7 @@
     "noMatch": "Keine passenden Videos.",
     "clearFilters": "Filter zurücksetzen",
     "noVideos": "Noch keine Videos aufgelistet. Tippe auf „Jetzt prüfen“, um die Playlist zu lesen.",
+    "allFiltered": "Alle Videos hier wurden vom Filter ausgeschlossen. Videos, die ab jetzt zur Playlist hinzugefügt werden, erscheinen hier.",
     "showing": "{{shown}} von {{total}} Videos werden angezeigt",
     "status": {
       "new": "Neu, wartet auf dich",
@@ -1171,7 +1172,8 @@
       "followed": "{{title}} wird gefolgt. Die Prüfung läuft.",
       "checked": "{{title}} geprüft: {{added}} neu, {{removed}} entfernt.",
       "checkFailed": "Prüfung fehlgeschlagen: {{error}}",
-      "unfollowed": "{{title}} wird nicht mehr gefolgt."
+      "unfollowed": "{{title}} wird nicht mehr gefolgt.",
+      "saved": "Playlist gespeichert."
     },
     "dialog": {
       "title": "Playlist folgen",

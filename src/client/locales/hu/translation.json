@@ -1138,6 +1138,7 @@
     "noMatch": "Nincs egyező videó.",
     "clearFilters": "Szűrők törlése",
     "noVideos": "Még nincsenek listázott videók. A lejátszási lista beolvasásához nyomd meg az Ellenőrzés most gombot.",
+    "allFiltered": "A szűrő minden itteni videót kihagyott. A lejátszási listához mostantól hozzáadott videók itt jelennek meg.",
     "showing": "{{shown}} / {{total}} videó látható",
     "status": {
       "new": "Új, rád vár",
@@ -1171,7 +1172,8 @@
       "followed": "Követed: {{title}}. Ellenőrzés folyamatban.",
       "checked": "{{title}} ellenőrizve: {{added}} új, {{removed}} eltávolítva.",
       "checkFailed": "Az ellenőrzés sikertelen: {{error}}",
-      "unfollowed": "Megszüntetted a(z) {{title}} követését."
+      "unfollowed": "Megszüntetted a(z) {{title}} követését.",
+      "saved": "Lejátszási lista mentve."
     },
     "dialog": {
       "title": "Lejátszási lista követése",

@@ -1138,6 +1138,7 @@
     "noMatch": "Eşleşen video yok.",
     "clearFilters": "Filtreleri temizle",
     "noVideos": "Henüz listelenmiş video yok. Oynatma listesini okumak için Şimdi kontrol et’e basın.",
+    "allFiltered": "Filtre buradaki tüm videoları dışarıda bıraktı. Bundan sonra oynatma listesine eklenen videolar burada görünür.",
     "showing": "{{total}} videodan {{shown}} tanesi gösteriliyor",
     "status": {
       "new": "Yeni, sizi bekliyor",
@@ -1171,7 +1172,8 @@
       "followed": "{{title}} takip ediliyor. Şimdi kontrol ediliyor.",
       "checked": "{{title}} kontrol edildi: {{added}} yeni, {{removed}} kaldırıldı.",
       "checkFailed": "Kontrol başarısız: {{error}}",
-      "unfollowed": "{{title}} takibi bırakıldı."
+      "unfollowed": "{{title}} takibi bırakıldı.",
+      "saved": "Oynatma listesi kaydedildi."
     },
     "dialog": {
       "title": "Bir oynatma listesini takip et",

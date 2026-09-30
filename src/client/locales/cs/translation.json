@@ -1138,6 +1138,7 @@
     "noMatch": "Žádná videa neodpovídají.",
     "clearFilters": "Zrušit filtry",
     "noVideos": "Zatím nejsou uvedena žádná videa. Playlist načtete tlačítkem Zkontrolovat nyní.",
+    "allFiltered": "Všechna videa zde vyřadil filtr. Videa přidaná do playlistu od teď se objeví tady.",
     "showing": "Zobrazeno {{shown}} z {{total}} videí",
     "status": {
       "new": "Nové, čeká na vás",
@@ -1171,7 +1172,8 @@
       "followed": "Sledujete {{title}}. Probíhá kontrola.",
       "checked": "{{title}} zkontrolován: {{added}} nových, {{removed}} odebraných.",
       "checkFailed": "Kontrola selhala: {{error}}",
-      "unfollowed": "{{title}} se už nesleduje."
+      "unfollowed": "{{title}} se už nesleduje.",
+      "saved": "Playlist uložen."
     },
     "dialog": {
       "title": "Sledovat playlist",

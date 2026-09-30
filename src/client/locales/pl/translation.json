@@ -1138,6 +1138,7 @@
     "noMatch": "Brak pasujących filmów.",
     "clearFilters": "Wyczyść filtry",
     "noVideos": "Nie ma jeszcze żadnych filmów na liście. Naciśnij Sprawdź teraz, aby odczytać playlistę.",
+    "allFiltered": "Filtr pominął wszystkie filmy z tej listy. Filmy dodane do playlisty od teraz pojawią się tutaj.",
     "showing": "Wyświetlono {{shown}} z {{total}} filmów",
     "status": {
       "new": "Nowy, czeka na Ciebie",
@@ -1171,7 +1172,8 @@
       "followed": "Obserwujesz {{title}}. Trwa sprawdzanie.",
       "checked": "Sprawdzono {{title}}: nowe {{added}}, usunięte {{removed}}.",
       "checkFailed": "Sprawdzenie nie powiodło się: {{error}}",
-      "unfollowed": "Przestano obserwować {{title}}."
+      "unfollowed": "Przestano obserwować {{title}}.",
+      "saved": "Playlista zapisana."
     },
     "dialog": {
       "title": "Obserwuj playlistę",

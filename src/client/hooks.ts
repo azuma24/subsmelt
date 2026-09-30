@@ -150,7 +150,7 @@ export function useYoutubeVideosQuery(playlistId: string | null) {
 }
 
 export function useYoutubeStatusQuery() {
-  return useQuery({ queryKey: ["youtube", "status"], queryFn: ({ signal }) => api.getYoutubeStatus({ signal }), staleTime: 60_000 });
+  return useQuery({ queryKey: ["youtube", "status"], queryFn: ({ signal }) => api.getYoutubeStatus({ signal }), staleTime: 5_000 });
 }
 
 export function useInvalidateApp() {

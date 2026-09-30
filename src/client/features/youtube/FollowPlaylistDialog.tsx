@@ -1,4 +1,5 @@
-import { useId, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { ModalShell } from "../../components/ModalShell";
@@ -76,6 +77,10 @@ export function FollowPlaylistDialog({ playlist, tasks, hasApiKey, folderRoot, o
   const [captions, setCaptions] = useState(playlist?.captions ?? "prefer_youtube");
   const [every, setEvery] = useState(playlist?.checkEveryMinutes ?? 60);
   const [folder, setFolder] = useState(playlist?.folder ?? "");
+  // The folder a lookup filled in, so a new lookup can replace it without overwriting one the user typed.
+  const autoFolderRef = useRef<string | null>(null);
+  const urlRef = useRef(url);
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -89,15 +94,22 @@ export function FollowPlaylistDialog({ playlist, tasks, hasApiKey, folderRoot, o
   const lookUp = async () => {
     setLookingUp(true);
     setLookupError(null);
+    const requested = url;
     try {
-      const result = await api.previewYoutubePlaylist(url);
+      const result = await api.previewYoutubePlaylist(requested);
+      if (urlRef.current !== requested) return;
       setPreview(result);
-      if (!folder) setFolder(result.folder);
+      if (!folder || folder === autoFolderRef.current) {
+        setFolder(result.folder);
+        autoFolderRef.current = result.folder;
+      }
     } catch (error) {
+      if (urlRef.current !== requested) return;
       setPreview(null);
       setLookupError(getErrorMessage(error));
+    } finally {
+      setLookingUp(false);
     }
-    setLookingUp(false);
   };
 
   const chooseMediaType = (type: YoutubeMedia["type"]) => {
@@ -132,12 +144,13 @@ export function FollowPlaylistDialog({ playlist, tasks, hasApiKey, folderRoot, o
         if (JSON.stringify(nextBackfill) !== JSON.stringify(playlist.backfill)) await api.changeYoutubeBackfill(playlist.id, nextBackfill);
         onSaved(playlist.id, playlist.title, false);
       } else if (preview) {
-        await api.followYoutubePlaylist({ url, title: preview.title, ...fields });
+        await api.followYoutubePlaylist({ url: preview.id, title: preview.title, ...fields });
         onSaved(preview.id, preview.title, true);
       }
     } catch (error) {
       setSaveError(getErrorMessage(error));
       setSaving(false);
+      void queryClient.invalidateQueries({ queryKey: ["youtube"] });
     }
   };
 
@@ -176,6 +189,7 @@ export function FollowPlaylistDialog({ playlist, tasks, hasApiKey, folderRoot, o
               readOnly={editing}
               onChange={(e) => {
                 setUrl(e.target.value);
+                urlRef.current = e.target.value;
                 setPreview(null);
               }}
               onKeyDown={(e) => {
@@ -280,7 +294,7 @@ export function FollowPlaylistDialog({ playlist, tasks, hasApiKey, folderRoot, o
           {!hasApiKey && (
             <p className={hintCls}>
               {t("youtube.dialog.addedHint")}{" "}
-              <button type="button" onClick={onOpenSettings} className="min-h-[32px] font-medium text-[var(--accent)] hover:underline">{t("youtube.dialog.openSettings")}</button>
+              <button type="button" onClick={onOpenSettings} className="min-h-[44px] font-medium text-[var(--accent)] hover:underline">{t("youtube.dialog.openSettings")}</button>
             </p>
           )}
           {preview?.addedDatesError && <p className="text-[12px] leading-5 text-[var(--yellow)]">{t("youtube.dialog.addedUnavailable", { error: preview.addedDatesError })}</p>}
