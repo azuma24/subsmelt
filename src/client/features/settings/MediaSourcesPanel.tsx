@@ -224,7 +224,7 @@ export function MediaSourcesPanel({
               {loading
                 ? t("settings.sources.loadingSources")
                 : t("settings.sources.detectedCount", { count: allSubfolders.length })}
-              <span className="ml-2 font-mono text-[var(--text-3)]">{mediaDir}</span>
+              <span className="ml-2 break-all font-mono text-[var(--text-3)]">{mediaDir}</span>
             </div>
           </div>
           <button
