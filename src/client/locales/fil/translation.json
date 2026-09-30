@@ -313,7 +313,8 @@
       "deleted": "Binura ang salin",
       "bulkUpdated": "Na-update ang {{count}} salin",
       "bulkFormatUpdated": "Na-update ang {{count}} salin sa .{{format}}",
-      "bulkUpdateFailed": "Nabigo ang bulk update"
+      "bulkUpdateFailed": "Nabigo ang bulk update",
+      "saveFailed": "Hindi ma-save: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Burahin ang salin",
@@ -773,7 +774,8 @@
       "clearConfirm": "I-clear"
     },
     "toast": {
-      "cleared": "Na-clear ang mga log"
+      "cleared": "Na-clear ang mga log",
+      "clearFailed": "Hindi ma-clear ang mga log: {{message}}"
     },
     "level": {
       "all": "Lahat ng Level",

@@ -313,7 +313,8 @@
       "deleted": "Terjemahan dipadam",
       "bulkUpdated": "Mengemas kini {{count}} terjemahan",
       "bulkFormatUpdated": "Mengemas kini {{count}} terjemahan kepada .{{format}}",
-      "bulkUpdateFailed": "Kemas kini pukal gagal"
+      "bulkUpdateFailed": "Kemas kini pukal gagal",
+      "saveFailed": "Tidak dapat menyimpan: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Padam terjemahan",
@@ -773,7 +774,8 @@
       "clearConfirm": "Kosongkan"
     },
     "toast": {
-      "cleared": "Log dikosongkan"
+      "cleared": "Log dikosongkan",
+      "clearFailed": "Tidak dapat mengosongkan log: {{message}}"
     },
     "level": {
       "all": "Semua Tahap",

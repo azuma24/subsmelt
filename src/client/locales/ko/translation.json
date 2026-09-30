@@ -313,7 +313,8 @@
       "deleted": "Translation deleted",
       "bulkUpdated": "Updated {{count}} translations",
       "bulkFormatUpdated": "Updated {{count}} translations to .{{format}}",
-      "bulkUpdateFailed": "일괄 업데이트 실패"
+      "bulkUpdateFailed": "일괄 업데이트 실패",
+      "saveFailed": "저장하지 못했습니다: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Delete translation",
@@ -773,7 +774,8 @@
       "clearConfirm": "Clear"
     },
     "toast": {
-      "cleared": "Logs cleared"
+      "cleared": "Logs cleared",
+      "clearFailed": "로그를 지우지 못했습니다: {{message}}"
     },
     "level": {
       "all": "All Levels",

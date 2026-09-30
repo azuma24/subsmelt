@@ -313,7 +313,8 @@
       "deleted": "Translation deleted",
       "bulkUpdated": "Updated {{count}} translations",
       "bulkFormatUpdated": "Updated {{count}} translations to .{{format}}",
-      "bulkUpdateFailed": "Cập nhật hàng loạt thất bại"
+      "bulkUpdateFailed": "Cập nhật hàng loạt thất bại",
+      "saveFailed": "Không thể lưu: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Delete translation",
@@ -773,7 +774,8 @@
       "clearConfirm": "Clear"
     },
     "toast": {
-      "cleared": "Logs cleared"
+      "cleared": "Logs cleared",
+      "clearFailed": "Không thể xóa nhật ký: {{message}}"
     },
     "level": {
       "all": "All Levels",

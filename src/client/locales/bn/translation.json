@@ -313,7 +313,8 @@
       "deleted": "অনুবাদ মুছে ফেলা হয়েছে",
       "bulkUpdated": "{{count}}টি অনুবাদ আপডেট হয়েছে",
       "bulkFormatUpdated": "{{count}}টি অনুবাদ .{{format}}-এ আপডেট হয়েছে",
-      "bulkUpdateFailed": "বাল্ক আপডেট ব্যর্থ হয়েছে"
+      "bulkUpdateFailed": "বাল্ক আপডেট ব্যর্থ হয়েছে",
+      "saveFailed": "সংরক্ষণ করা যায়নি: {{message}}"
     },
     "confirm": {
       "deleteTitle": "অনুবাদ মুছুন",
@@ -773,7 +774,8 @@
       "clearConfirm": "মুছুন"
     },
     "toast": {
-      "cleared": "লগ মুছে ফেলা হয়েছে"
+      "cleared": "লগ মুছে ফেলা হয়েছে",
+      "clearFailed": "লগ মোছা যায়নি: {{message}}"
     },
     "level": {
       "all": "সব স্তর",

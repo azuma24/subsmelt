@@ -313,7 +313,8 @@
       "deleted": "翻译已删除",
       "bulkUpdated": "Updated {{count}} translations",
       "bulkFormatUpdated": "Updated {{count}} translations to .{{format}}",
-      "bulkUpdateFailed": "批量更新失败"
+      "bulkUpdateFailed": "批量更新失败",
+      "saveFailed": "保存失败：{{message}}"
     },
     "confirm": {
       "deleteTitle": "删除翻译",
@@ -773,7 +774,8 @@
       "clearConfirm": "清除"
     },
     "toast": {
-      "cleared": "日志已清除"
+      "cleared": "日志已清除",
+      "clearFailed": "无法清除日志：{{message}}"
     },
     "level": {
       "all": "所有级别",

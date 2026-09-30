@@ -313,7 +313,8 @@
       "deleted": "Překlad smazán",
       "bulkUpdated": "Aktualizováno {{count}} překladů",
       "bulkFormatUpdated": "Aktualizováno {{count}} překladů na .{{format}}",
-      "bulkUpdateFailed": "Hromadná aktualizace se nezdařila"
+      "bulkUpdateFailed": "Hromadná aktualizace se nezdařila",
+      "saveFailed": "Uložení se nezdařilo: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Smazat překlad",
@@ -773,7 +774,8 @@
       "clearConfirm": "Vymazat"
     },
     "toast": {
-      "cleared": "Protokoly vymazány"
+      "cleared": "Protokoly vymazány",
+      "clearFailed": "Protokoly se nepodařilo vymazat: {{message}}"
     },
     "level": {
       "all": "Všechny úrovně",

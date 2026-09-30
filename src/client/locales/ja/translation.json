@@ -313,7 +313,8 @@
       "deleted": "翻訳を削除しました",
       "bulkUpdated": "Updated {{count}} translations",
       "bulkFormatUpdated": "Updated {{count}} translations to .{{format}}",
-      "bulkUpdateFailed": "一括更新に失敗しました"
+      "bulkUpdateFailed": "一括更新に失敗しました",
+      "saveFailed": "保存に失敗しました：{{message}}"
     },
     "confirm": {
       "deleteTitle": "翻訳を削除",
@@ -773,7 +774,8 @@
       "clearConfirm": "クリア"
     },
     "toast": {
-      "cleared": "ログをクリアしました"
+      "cleared": "ログをクリアしました",
+      "clearFailed": "ログをクリアできませんでした：{{message}}"
     },
     "level": {
       "all": "すべてのレベル",

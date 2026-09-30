@@ -313,7 +313,8 @@
       "deleted": "Переклад видалено",
       "bulkUpdated": "Оновлено {{count}} перекладів",
       "bulkFormatUpdated": "Оновлено {{count}} перекладів до .{{format}}",
-      "bulkUpdateFailed": "Не вдалося виконати масове оновлення"
+      "bulkUpdateFailed": "Не вдалося виконати масове оновлення",
+      "saveFailed": "Не вдалося зберегти: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Видалити переклад",
@@ -773,7 +774,8 @@
       "clearConfirm": "Очистити"
     },
     "toast": {
-      "cleared": "Журнали очищено"
+      "cleared": "Журнали очищено",
+      "clearFailed": "Не вдалося очистити журнали: {{message}}"
     },
     "level": {
       "all": "Усі рівні",

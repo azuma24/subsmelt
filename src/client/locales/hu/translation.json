@@ -313,7 +313,8 @@
       "deleted": "Fordítás törölve",
       "bulkUpdated": "{{count}} fordítás frissítve",
       "bulkFormatUpdated": "{{count}} fordítás frissítve erre: .{{format}}",
-      "bulkUpdateFailed": "A tömeges frissítés sikertelen"
+      "bulkUpdateFailed": "A tömeges frissítés sikertelen",
+      "saveFailed": "A mentés sikertelen: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Fordítás törlése",
@@ -773,7 +774,8 @@
       "clearConfirm": "Törlés"
     },
     "toast": {
-      "cleared": "Naplók törölve"
+      "cleared": "Naplók törölve",
+      "clearFailed": "A naplók törlése nem sikerült: {{message}}"
     },
     "level": {
       "all": "Összes szint",

@@ -313,7 +313,8 @@
       "deleted": "Traducere ștearsă",
       "bulkUpdated": "S-au actualizat {{count}} traduceri",
       "bulkFormatUpdated": "S-au actualizat {{count}} traduceri în .{{format}}",
-      "bulkUpdateFailed": "Actualizarea în bloc a eșuat"
+      "bulkUpdateFailed": "Actualizarea în bloc a eșuat",
+      "saveFailed": "Nu s-a putut salva: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Șterge traducerea",
@@ -773,7 +774,8 @@
       "clearConfirm": "Golește"
     },
     "toast": {
-      "cleared": "Jurnale golite"
+      "cleared": "Jurnale golite",
+      "clearFailed": "Jurnalele nu au putut fi golite: {{message}}"
     },
     "level": {
       "all": "Toate nivelurile",

@@ -313,7 +313,8 @@
       "deleted": "Vertaling verwijderd",
       "bulkUpdated": "{{count}} vertalingen bijgewerkt",
       "bulkFormatUpdated": "{{count}} vertalingen bijgewerkt naar .{{format}}",
-      "bulkUpdateFailed": "Bulkupdate mislukt"
+      "bulkUpdateFailed": "Bulkupdate mislukt",
+      "saveFailed": "Kan niet opslaan: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Vertaling verwijderen",
@@ -773,7 +774,8 @@
       "clearConfirm": "Wissen"
     },
     "toast": {
-      "cleared": "Logboeken gewist"
+      "cleared": "Logboeken gewist",
+      "clearFailed": "Kan logboeken niet wissen: {{message}}"
     },
     "level": {
       "all": "Alle niveaus",

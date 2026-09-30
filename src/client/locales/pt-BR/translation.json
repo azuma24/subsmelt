@@ -313,7 +313,8 @@
       "deleted": "Translation deleted",
       "bulkUpdated": "Updated {{count}} translations",
       "bulkFormatUpdated": "Updated {{count}} translations to .{{format}}",
-      "bulkUpdateFailed": "Falha na atualização em massa"
+      "bulkUpdateFailed": "Falha na atualização em massa",
+      "saveFailed": "Não foi possível salvar: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Delete translation",
@@ -773,7 +774,8 @@
       "clearConfirm": "Clear"
     },
     "toast": {
-      "cleared": "Logs cleared"
+      "cleared": "Logs cleared",
+      "clearFailed": "Não foi possível limpar os logs: {{message}}"
     },
     "level": {
       "all": "All Levels",

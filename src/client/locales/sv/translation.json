@@ -313,7 +313,8 @@
       "deleted": "Översättning borttagen",
       "bulkUpdated": "Uppdaterade {{count}} översättningar",
       "bulkFormatUpdated": "Uppdaterade {{count}} översättningar till .{{format}}",
-      "bulkUpdateFailed": "Massuppdatering misslyckades"
+      "bulkUpdateFailed": "Massuppdatering misslyckades",
+      "saveFailed": "Kunde inte spara: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Ta bort översättning",
@@ -773,7 +774,8 @@
       "clearConfirm": "Rensa"
     },
     "toast": {
-      "cleared": "Loggar rensade"
+      "cleared": "Loggar rensade",
+      "clearFailed": "Kunde inte rensa loggarna: {{message}}"
     },
     "level": {
       "all": "Alla nivåer",

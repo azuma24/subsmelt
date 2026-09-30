@@ -313,7 +313,8 @@
       "deleted": "Çeviri silindi",
       "bulkUpdated": "{{count}} çeviri güncellendi",
       "bulkFormatUpdated": "{{count}} çeviri .{{format}} biçimine güncellendi",
-      "bulkUpdateFailed": "Toplu güncelleme başarısız"
+      "bulkUpdateFailed": "Toplu güncelleme başarısız",
+      "saveFailed": "Kaydedilemedi: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Çeviriyi sil",
@@ -773,7 +774,8 @@
       "clearConfirm": "Temizle"
     },
     "toast": {
-      "cleared": "Günlükler temizlendi"
+      "cleared": "Günlükler temizlendi",
+      "clearFailed": "Günlükler temizlenemedi: {{message}}"
     },
     "level": {
       "all": "Tüm Düzeyler",

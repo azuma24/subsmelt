@@ -2,6 +2,7 @@ import { useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { useTasksQuery, useMutationWithInvalidation } from "../../hooks";
+import { getErrorMessage } from "../../lib";
 import type { Task } from "../../types";
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmModal";
@@ -46,17 +47,25 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
     if (!editing || !editing.target_lang || !editing.lang_code) return;
     const normalizedOutputPattern = applyOutputFormat(editing.output_pattern, selectedOutputFormat);
     const sourceLang = editing.source_lang || AUTO_SOURCE_LANG;
-    if (isNew) {
-      const created = await createMutation.mutateAsync({ source_lang: sourceLang, target_lang: editing.target_lang, output_pattern: normalizedOutputPattern, lang_code: editing.lang_code });
-      // Use the created task's own id — picking the "newest" by array position
-      // races with any concurrent create and could tag the wrong task.
-      if (editing.prompt_override && created?.id) {
-        await api.updateTask(created.id, { prompt_override: editing.prompt_override });
+    try {
+      if (isNew) {
+        const created = await createMutation.mutateAsync({ source_lang: sourceLang, target_lang: editing.target_lang, output_pattern: normalizedOutputPattern, lang_code: editing.lang_code });
+        // Use the created task's own id — picking the "newest" by array position
+        // races with any concurrent create and could tag the wrong task. The
+        // create endpoint ignores prompt_override, so it goes in a follow-up
+        // update that also refreshes the list (a stale card would drop the
+        // prompt on the next edit).
+        if (editing.prompt_override && created?.id) {
+          await updateMutation.mutateAsync({ id: created.id, payload: { prompt_override: editing.prompt_override } });
+        }
+        addToast(t("translation_languages.toast.created", { lang: editing.target_lang }), "success");
+      } else if (editing.id) {
+        await updateMutation.mutateAsync({ id: editing.id, payload: { ...editing, source_lang: sourceLang, output_pattern: normalizedOutputPattern } });
+        addToast(t("translation_languages.toast.updated"), "success");
       }
-      addToast(t("translation_languages.toast.created", { lang: editing.target_lang }), "success");
-    } else if (editing.id) {
-      await updateMutation.mutateAsync({ id: editing.id, payload: { ...editing, source_lang: sourceLang, output_pattern: normalizedOutputPattern } });
-      addToast(t("translation_languages.toast.updated"), "success");
+    } catch (e: unknown) {
+      addToast(t("translation_languages.toast.saveFailed", { message: getErrorMessage(e) }), "error");
+      return;
     }
     setEditing(null);
     setIsNew(false);

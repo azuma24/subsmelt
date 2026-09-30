@@ -313,7 +313,8 @@
       "deleted": "ترجمه حذف شد",
       "bulkUpdated": "{{count}} ترجمه به‌روزرسانی شد",
       "bulkFormatUpdated": "{{count}} ترجمه به .{{format}} به‌روزرسانی شد",
-      "bulkUpdateFailed": "به‌روزرسانی گروهی ناموفق بود"
+      "bulkUpdateFailed": "به‌روزرسانی گروهی ناموفق بود",
+      "saveFailed": "ذخیره ممکن نشد: {{message}}"
     },
     "confirm": {
       "deleteTitle": "حذف ترجمه",
@@ -773,7 +774,8 @@
       "clearConfirm": "پاک کردن"
     },
     "toast": {
-      "cleared": "گزارش‌ها پاک شدند"
+      "cleared": "گزارش‌ها پاک شدند",
+      "clearFailed": "پاک‌سازی گزارش‌ها ممکن نشد: {{message}}"
     },
     "level": {
       "all": "همه سطوح",

@@ -313,7 +313,8 @@
       "deleted": "Tłumaczenie usunięte",
       "bulkUpdated": "Zaktualizowano {{count}} tłumaczeń",
       "bulkFormatUpdated": "Zaktualizowano {{count}} tłumaczeń na .{{format}}",
-      "bulkUpdateFailed": "Zbiorcza aktualizacja nie powiodła się"
+      "bulkUpdateFailed": "Zbiorcza aktualizacja nie powiodła się",
+      "saveFailed": "Nie udało się zapisać: {{message}}"
     },
     "confirm": {
       "deleteTitle": "Usuń tłumaczenie",
@@ -773,7 +774,8 @@
       "clearConfirm": "Wyczyść"
     },
     "toast": {
-      "cleared": "Dzienniki wyczyszczone"
+      "cleared": "Dzienniki wyczyszczone",
+      "clearFailed": "Nie udało się wyczyścić dzienników: {{message}}"
     },
     "level": {
       "all": "Wszystkie poziomy",

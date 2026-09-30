@@ -313,7 +313,8 @@
       "deleted": "翻譯已刪除",
       "bulkUpdated": "Updated {{count}} translations",
       "bulkFormatUpdated": "Updated {{count}} translations to .{{format}}",
-      "bulkUpdateFailed": "批次更新失敗"
+      "bulkUpdateFailed": "批次更新失敗",
+      "saveFailed": "儲存失敗：{{message}}"
     },
     "confirm": {
       "deleteTitle": "刪除翻譯",
@@ -773,7 +774,8 @@
       "clearConfirm": "清除"
     },
     "toast": {
-      "cleared": "日誌已清除"
+      "cleared": "日誌已清除",
+      "clearFailed": "無法清除日誌：{{message}}"
     },
     "level": {
       "all": "所有等級",
