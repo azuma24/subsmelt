@@ -96,6 +96,25 @@ function killTree(child: ChildProcess): void {
   }
 }
 
+const running = new Set<ChildProcess>();
+let exitHooked = false;
+
+// A detached group gets neither the terminal's Ctrl-C nor a service stop, so the server passes them on.
+function stopTreesOnExit(): void {
+  if (exitHooked) return;
+  exitHooked = true;
+  const killAll = () => {
+    for (const child of running) killTree(child);
+  };
+  process.on("exit", killAll);
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.once(signal, () => {
+      killAll();
+      process.kill(process.pid, signal);
+    });
+  }
+}
+
 /**
  * Spawns without a shell, in its own process group, so a timeout or abort
  * kills yt-dlp and everything it started. Resolves on exit, timeout or abort;
@@ -105,7 +124,9 @@ export function runBinary(bin: string, args: string[], options: RunOptions = {})
   const { timeoutMs = DEFAULT_TIMEOUT_MS, signal, onStdoutLine, maxCaptureBytes = MAX_CAPTURE_BYTES } = options;
   return new Promise((resolve, reject) => {
     if (signal?.aborted) return resolve({ code: null, stdout: "", stderr: "", timedOut: false, stdoutTruncated: false });
+    stopTreesOnExit();
     const child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"], detached: process.platform !== "win32" });
+    running.add(child);
     let stdout = "";
     let stderr = "";
     let pendingLine = "";
@@ -118,6 +139,7 @@ export function runBinary(bin: string, args: string[], options: RunOptions = {})
     const onAbort = () => killTree(child);
     signal?.addEventListener("abort", onAbort, { once: true });
     const settle = () => {
+      running.delete(child);
       clearTimeout(timer);
       signal?.removeEventListener("abort", onAbort);
     };

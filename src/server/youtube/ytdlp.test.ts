@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -159,6 +161,19 @@ test("an abort kills the whole process tree", async (t) => {
   controller.abort();
   const result = await running;
   assert.equal(result.code, null);
+  assert.equal(await processGone(child), true);
+});
+
+test("interrupting the server stops the yt-dlp tree it started", async (t) => {
+  const pidFile = path.join(scratch, "sigterm-child.pid");
+  const script = path.join(scratch, "run-and-wait.mts");
+  fs.writeFileSync(script, `import { runYtdlp } from ${JSON.stringify(path.join(path.dirname(FAKE), "ytdlp.ts"))};\nawait runYtdlp(["x"], { timeoutMs: 20_000 });\n`);
+  withEnv({ SUBSMELT_YTDLP_BIN: FAKE, FAKE_YTDLP_SLEEP_MS: "10000", FAKE_YTDLP_CHILD_PID_FILE: pidFile }, t);
+  const server = spawn(process.execPath, ["--import", "tsx", script], { stdio: "ignore" });
+  const child = await childPidOf(pidFile);
+  server.kill("SIGTERM");
+  const [, signal] = await once(server, "exit");
+  assert.equal(signal, "SIGTERM");
   assert.equal(await processGone(child), true);
 });
 
