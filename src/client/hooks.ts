@@ -221,9 +221,11 @@ export function getSSEInvalidationKeys(name: SSEEventName): QueryKey[] {
       // via onEvent; it should not trigger query refetches on every tick.
       return [];
     case "youtube:playlist":
+      return [["youtube"]];
     case "youtube:video":
       // Progress ticks carry a pct and patch the cached rows instead (withVideoProgress).
-      return [["youtube"]];
+      // The status query is left alone: refetching it runs yt-dlp --version.
+      return [["youtube", "playlists"], ["youtube", "videos"]];
     case "youtube:cooldown":
       return [["youtube", "status"]];
   }
