@@ -12,7 +12,7 @@ import {
   forceAllJobs,
   deleteJob,
   deleteJobs,
-  clearJobs,
+  clearFinishedJobs,
   pinJob,
   unpinJob,
   reorderJobs,
@@ -176,9 +176,9 @@ export function registerJobsRoutes(app: Express): void {
   });
 
   app.post("/api/jobs/clear", (_req, res) => {
-    clearJobs();
-    logger.info("queue", "All jobs cleared");
-    res.json({ ok: true });
+    const cleared = clearFinishedJobs();
+    logger.info("queue", `Cleared ${cleared} finished jobs`);
+    res.json({ ok: true, cleared });
   });
 
   // ======== Subtitle Preview (Feature 7) ========

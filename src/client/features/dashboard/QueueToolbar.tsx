@@ -18,13 +18,13 @@ interface QueueToolbarProps {
   visiblePendingIds: number[];
   visibleErrorIds: number[];
   visibleRetranslatableIds: number[];
-  jobsCount: number;
+  finishedJobCount: number;
   isRetryPending: boolean;
   isForcePending: boolean;
   onSelectVisiblePending: () => void;
   onRetryVisibleErrors: () => void;
   onRetranslateVisible: () => void;
-  onClearAll: () => void;
+  onClearFinished: () => void;
   t: TFunction;
 }
 
@@ -48,13 +48,13 @@ export function QueueToolbar({
   visiblePendingIds,
   visibleErrorIds,
   visibleRetranslatableIds,
-  jobsCount,
+  finishedJobCount,
   isRetryPending,
   isForcePending,
   onSelectVisiblePending,
   onRetryVisibleErrors,
   onRetranslateVisible,
-  onClearAll,
+  onClearFinished,
   t,
 }: QueueToolbarProps) {
   const showTabs = dashboardTabs.length > 1;
@@ -80,7 +80,7 @@ export function QueueToolbar({
               "Filters" accordion where they used to live. A zero-count action
               is hidden rather than rendered disabled — four gray buttons above
               the list were pure noise when nothing was actionable. */}
-          {(visiblePendingIds.length > 0 || visibleErrorIds.length > 0 || visibleRetranslatableIds.length > 0 || jobsCount > 0) && (
+          {(visiblePendingIds.length > 0 || visibleErrorIds.length > 0 || visibleRetranslatableIds.length > 0 || finishedJobCount > 0) && (
             <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t("dashboard.bulkActionsLabel")}>
               {visiblePendingIds.length > 0 && (
                 <ActionButton size="sm" variant="ghost" onClick={onSelectVisiblePending}>
@@ -97,8 +97,8 @@ export function QueueToolbar({
                   {t("dashboard.retranslateVisible", { count: visibleRetranslatableIds.length })}
                 </ActionButton>
               )}
-              {jobsCount > 0 && (
-                <ActionButton size="sm" variant="danger" onClick={onClearAll}>
+              {finishedJobCount > 0 && (
+                <ActionButton size="sm" variant="danger" onClick={onClearFinished}>
                   {t("dashboard.clearAll")}
                 </ActionButton>
               )}

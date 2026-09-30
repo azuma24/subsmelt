@@ -39,6 +39,7 @@ export interface DashboardDerivedState {
   activeJobs: JobRow[];
   doneJobs: JobRow[];
   errorJobs: JobRow[];
+  finishedJobCount: number;
   jobsById: Map<number, JobRow>;
   selectedPendingCount: number;
   selectedPendingIds: number[];
@@ -122,6 +123,7 @@ export function useDashboardDerivedState({
     activeJobs,
     doneJobs,
     errorJobs,
+    finishedJobCount: doneJobs.length + errorJobs.length + skippedJobs.length,
     jobsById,
     selectedPendingCount,
     selectedPendingIds,

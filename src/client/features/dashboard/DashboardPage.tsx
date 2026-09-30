@@ -7,7 +7,7 @@ import { useJobsQuery, useMutationWithInvalidation, useQueueStatusQuery, useSett
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmModal";
 import type { JobRow, ScannedFile } from "../../types";
-import { ActionButton, EmptyHint, RowActionsMenu, SelectionBar } from "../../ui/primitives";
+import { ActionButton, EmptyHint, SelectionBar } from "../../ui/primitives";
 import { JobsTableDesktop } from "./JobsTableDesktop";
 import { JobCardMobile } from "./JobCardMobile";
 import { JobDetailsDrawer } from "./JobDetailsDrawer";
@@ -141,6 +141,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
     activeJobs,
     doneJobs,
     errorJobs,
+    finishedJobCount,
     jobsById,
     selectedPendingCount,
     selectedPendingIds,
@@ -255,10 +256,10 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
     }
   };
 
-  const handleClearAll = async () => {
+  const handleClearFinished = async () => {
     const ok = await confirm({
       title: t("dashboard.confirm.clearTitle"),
-      message: t("dashboard.confirm.clearMessage", { count: jobs.length }),
+      message: t("dashboard.confirm.clearMessage", { count: finishedJobCount }),
       confirmLabel: t("dashboard.confirm.clearConfirm"),
       danger: true,
     });
@@ -368,34 +369,21 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
       {/* ── Topbar (L1 — Executive Summary) ── */}
       <div className="sticky top-0 z-30 flex h-[50px] shrink-0 items-center gap-2.5 border-b border-[var(--border)] bg-[var(--surface)] px-3.5 md:px-[18px]">
         {/* Title with readable typography */}
-        <span className="flex-1 text-balance text-2xl sr-only md:not-sr-only md:text-sm font-semibold text-[var(--text)]">{t("nav.dashboard")}</span>
-        <span className="flex-1 text-pretty text-sm font-semibold text-[var(--text)] md:hidden">{t("nav.dashboard")}</span>
+        {/* Phones already show "Dashboard" in the bottom tab bar, so the title is
+            screen-reader only there and the header keeps room for all actions. */}
+        <span className="sr-only md:not-sr-only md:flex-1 md:text-sm md:font-semibold md:text-[var(--text)]">{t("nav.dashboard")}</span>
         {/* Scan + Run actions */}
         <div
-          className="flex items-center gap-1.5"
+          className="ml-auto flex min-w-0 items-center gap-1.5 overflow-x-auto"
           aria-label={t("dashboard.hero.scanActions")}
         >
-          {/* At phone widths three buttons wrap the 50px topbar onto two cramped
-              lines — the scan actions collapse into a menu and only the primary
-              Run/Stop control stays out. */}
-          {isMobile ? (
-            <RowActionsMenu
-              items={[
-                { label: scanPreviewMutation.isPending ? t("dashboard.previewing") : t("dashboard.previewScan"), onClick: handlePreviewScan, disabled: scanPreviewMutation.isPending || scanMutation.isPending },
-                { label: scanMutation.isPending ? t("dashboard.scanning") : t("dashboard.scanFolders"), onClick: handleScan, disabled: scanMutation.isPending || scanPreviewMutation.isPending },
-              ]}
-            />
-          ) : (
-            <>
-              <ActionButton variant="ghost" size="sm" onClick={handlePreviewScan} busy={scanPreviewMutation.isPending} disabled={scanMutation.isPending}>
-                {scanPreviewMutation.isPending ? t("dashboard.previewing") : t("dashboard.previewScan")}
-              </ActionButton>
-              <ActionButton variant="ghost" size="sm" onClick={handleScan} busy={scanMutation.isPending} disabled={scanPreviewMutation.isPending}>
-                {scanMutation.isPending ? t("dashboard.scanning") : t("dashboard.scanFolders")}
-              </ActionButton>
-              <span className="mx-0.5 hidden h-[18px] w-px bg-[var(--border)] sm:block" />
-            </>
-          )}
+          <ActionButton className="shrink-0 whitespace-nowrap" variant="ghost" size="sm" onClick={handlePreviewScan} busy={scanPreviewMutation.isPending} disabled={scanMutation.isPending}>
+            {scanPreviewMutation.isPending ? t("dashboard.previewing") : t("dashboard.previewScan")}
+          </ActionButton>
+          <ActionButton className="shrink-0 whitespace-nowrap" variant="ghost" size="sm" onClick={handleScan} busy={scanMutation.isPending} disabled={scanPreviewMutation.isPending}>
+            {scanMutation.isPending ? t("dashboard.scanning") : t("dashboard.scanFolders")}
+          </ActionButton>
+          <span className="mx-0.5 hidden h-[18px] w-px shrink-0 bg-[var(--border)] sm:block" />
           {queueRunning ? (
             <ActionButton variant="danger" size="sm" onClick={handleStop}>{t("dashboard.stop")}</ActionButton>
           ) : (
@@ -406,6 +394,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
 
       {/* ── Content ── */}
       <div className="flex-1 space-y-4 p-3.5 md:p-[18px]">
+
 
         {/* L1: Cockpit metric band — status filters + token usage in one row */}
         <DashboardHero
@@ -479,13 +468,13 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
             visiblePendingIds={visiblePendingIds}
             visibleErrorIds={visibleErrorIds}
             visibleRetranslatableIds={visibleRetranslatableIds}
-            jobsCount={jobs.length}
+            finishedJobCount={finishedJobCount}
             isRetryPending={retrySelectedMutation.isPending}
             isForcePending={forceSelectedMutation.isPending}
             onSelectVisiblePending={handleSelectVisiblePending}
             onRetryVisibleErrors={handleRetryVisibleErrors}
             onRetranslateVisible={handleRetranslateVisible}
-            onClearAll={handleClearAll}
+            onClearFinished={handleClearFinished}
             t={t}
           />
 

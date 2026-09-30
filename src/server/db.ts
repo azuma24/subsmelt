@@ -359,8 +359,12 @@ export function deleteJobs(ids: number[]) {
   return deleted;
 }
 
-export function clearJobs() {
-  db.prepare("DELETE FROM jobs").run();
+// Pending and translating jobs stay: a worker may hold one, and deleting its
+// row would hide work that is still running.
+export function clearFinishedJobs(): number {
+  return db
+    .prepare("DELETE FROM jobs WHERE status IN ('done', 'skipped', 'error')")
+    .run().changes;
 }
 
 // --- Logs ---
