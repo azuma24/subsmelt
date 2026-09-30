@@ -17,11 +17,7 @@ import { getLogs, clearLogs } from "./db.js";
 import { addSSEClient, broadcast } from "./sse.js";
 import { notifyTest } from "./notify.js";
 import { startWatcher, stopWatcher, isWatcherRunning } from "./watcher.js";
-import {
-  MAX_LOG_LIMIT,
-  MAX_LOG_OFFSET,
-  parseBoundedNonNegativeInt,
-} from "./routes/validation.js";
+import { parseLogsQuery } from "./routes/validation.js";
 import type { TranscribePostAction } from "./transcription-client.js";
 import { registerSettingsTasksRoutes } from "./routes/settings-tasks.js";
 import { registerJobsRoutes } from "./routes/jobs.js";
@@ -170,17 +166,9 @@ app.get("/api/watcher/status", (_req, res) => {
 
 // ======== Logs ========
 app.get("/api/logs", (req, res) => {
-  const { level, category, job_id, limit, offset } = req.query;
-  const parsedJobId = typeof job_id === "string" ? parseInt(job_id, 10) : NaN;
-  res.json(
-    getLogs({
-      level: level as string | undefined,
-      category: category as string | undefined,
-      jobId: Number.isFinite(parsedJobId) ? parsedJobId : undefined,
-      limit: parseBoundedNonNegativeInt(limit, 100, MAX_LOG_LIMIT),
-      offset: parseBoundedNonNegativeInt(offset, 0, MAX_LOG_OFFSET),
-    }),
-  );
+  const query = parseLogsQuery(req.query);
+  if (!query.ok) return res.status(400).json({ error: query.error });
+  res.json(getLogs(query.value));
 });
 
 app.delete("/api/logs", (_req, res) => {

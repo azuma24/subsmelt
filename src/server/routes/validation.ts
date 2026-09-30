@@ -64,3 +64,37 @@ export function parseTaskUpdate(body: unknown): Parsed<TaskUpdate> {
   }
   return { ok: true, value: update };
 }
+
+export type LogsQuery = {
+  level?: string;
+  category?: string;
+  jobId?: number;
+  limit: number;
+  offset: number;
+};
+
+const LOGS_QUERY_KEYS = ["level", "category", "job_id", "limit", "offset"] as const;
+
+/** Query of GET /api/logs. Repeated keys (`level[]=a&level[]=b`) arrive as arrays. */
+export function parseLogsQuery(query: Record<string, unknown>): Parsed<LogsQuery> {
+  for (const key of LOGS_QUERY_KEYS) {
+    const value = query[key];
+    if (value !== undefined && typeof value !== "string") {
+      return { ok: false, error: `${key} must be a single value` };
+    }
+  }
+  const { level, category, job_id, limit, offset } = query as Partial<
+    Record<(typeof LOGS_QUERY_KEYS)[number], string>
+  >;
+  const parsedJobId = job_id === undefined ? NaN : parseInt(job_id, 10);
+  return {
+    ok: true,
+    value: {
+      level,
+      category,
+      jobId: Number.isFinite(parsedJobId) ? parsedJobId : undefined,
+      limit: parseBoundedNonNegativeInt(limit, 100, MAX_LOG_LIMIT),
+      offset: parseBoundedNonNegativeInt(offset, 0, MAX_LOG_OFFSET),
+    },
+  };
+}
