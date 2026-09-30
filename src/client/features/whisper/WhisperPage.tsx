@@ -41,6 +41,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const settings = (settingsQuery.data ?? {}) as Record<string, unknown>;
   const backendConfigured = Boolean(str(settings.transcription_backend_url));
   const enabled = str(settings.transcription_enabled, "0") === "1";
+  const mediaDir = str(settings._media_dir, "/media");
 
   const healthQuery = useTranscriptionHealthQuery(backendConfigured);
   const historyQuery = useTranscriptionHistoryQuery(true, 20);
@@ -146,7 +147,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
     () => new Set(visibleFiles.map((f) => f.videoPath as string)),
     [visibleFiles],
   );
-  const tree = useMemo(() => buildFolderTree(visibleFiles, sortBy, sortDir), [visibleFiles, sortBy, sortDir]);
+  const tree = useMemo(() => buildFolderTree(visibleFiles, sortBy, sortDir, mediaDir), [visibleFiles, sortBy, sortDir, mediaDir]);
 
   // Per-run options (default from Settings + advertised capabilities).
   const [model, setModel] = useState("");
@@ -262,7 +263,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   // Expand/collapse is persisted per folder in localStorage (default collapsed)
   // and pruned against the folders present after each scan. Prune against the
   // unfiltered tree so narrowing the filter can't silently discard state.
-  const fullTree = useMemo(() => buildFolderTree(videoFiles, sortBy, sortDir), [videoFiles, sortBy, sortDir]);
+  const fullTree = useMemo(() => buildFolderTree(videoFiles, sortBy, sortDir, mediaDir), [videoFiles, sortBy, sortDir, mediaDir]);
   const folderPaths = useMemo(() => collectFolderPaths(fullTree.children), [fullTree]);
   const expansion = usePersistedExpansion("whisper", folderPaths);
   // Text filter switches to a flat list, so the tree (and drill-down) only
@@ -466,6 +467,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
             onToggleSortDir={toggleSortDir}
             onSelectAll={selectAll}
             running={running}
+            mediaDir={mediaDir}
             visibleFiles={visibleFiles}
             videoFiles={videoFiles}
             isFiltered={isFiltered}

@@ -190,3 +190,13 @@ test("allPaths with nested subfolders aggregates all descendant paths recursivel
   assert.ok(showNode, "folder 'show' should exist");
   assert.equal(showNode.allPaths.length, 3);
 });
+
+test("folders are relative to the configured media dir, not a hard-coded /media/", () => {
+  const files = [
+    file("/srv/library/shows/ep1.mkv", "ep1.mkv", 1),
+    file("/srv/library/movie.mkv", "movie.mkv", 2),
+  ];
+  const tree = buildFolderTree(files, "name", "asc", "/srv/library/");
+  assert.deepEqual(tree.children.map((n) => n.path), ["shows"]);
+  assert.deepEqual(tree.files.map((f) => f.videoName), ["movie.mkv"]);
+});
