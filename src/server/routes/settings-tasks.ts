@@ -17,7 +17,7 @@ import {
 import { scanFolder, MEDIA_DIR } from "../scanner.js";
 import { startAutoScan, stopAutoScan } from "../queue.js";
 import { convertSubtitle, probeModelContext, summarizeTranslationError, translateFile } from "../translator.js";
-import { resolveConnectionPool } from "../connections.js";
+import { REDACTED_SECRET, parseConnections, resolveConnectionPool, restoreRedactedApiKeys } from "../connections.js";
 import { logger } from "../logger.js";
 import { isWatcherRunning, restartWatcher } from "../watcher.js";
 
@@ -28,7 +28,6 @@ import { isWatcherRunning, restartWatcher } from "../watcher.js";
 const CONVERT_TARGET_FORMATS = ["srt", "vtt", "ass", "ssa"] as const;
 const MAX_CONVERT_FILES = 50;
 const MAX_CONVERT_FILE_BYTES = 10 * 1024 * 1024; // 10 MB per file
-export const REDACTED_SECRET = "__SUBSMELT_SECRET_REDACTED__";
 const SECRET_SETTING_KEYS = new Set([
   "api_key",
   "cloud_api_key_openai",
@@ -60,31 +59,6 @@ function redactSettings(settings: Record<string, string>): Record<string, string
     }
   }
   return redacted;
-}
-
-function restoreRedactedConnections(value: string): string {
-  try {
-    const incoming = JSON.parse(value);
-    const existing = JSON.parse(getSetting("llm_connections") || "[]");
-    if (!Array.isArray(incoming) || !Array.isArray(existing)) return value;
-    const existingById = new Map(existing.map((connection) => [connection?.id, connection]));
-    return JSON.stringify(
-      incoming.map((connection) => {
-        const previous = existingById.get(connection?.id);
-        if (
-          connection &&
-          typeof connection === "object" &&
-          connection.apiKey === REDACTED_SECRET &&
-          previous?.apiKey
-        ) {
-          return { ...connection, apiKey: previous.apiKey };
-        }
-        return connection;
-      })
-    );
-  } catch {
-    return value;
-  }
 }
 
 export function registerSettingsTasksRoutes(app: Express): void {
@@ -130,7 +104,7 @@ export function registerSettingsTasksRoutes(app: Express): void {
       const resolved = SECRET_SETTING_KEYS.has(key) && value === REDACTED_SECRET
         ? getSetting(key)
         : key === "llm_connections"
-          ? restoreRedactedConnections(value)
+          ? restoreRedactedApiKeys(value, parseConnections(getAllSettings()))
           : value;
       // Clients (the Settings page included) PUT the whole settings object, so
       // most keys in any given request are unchanged. Writing and logging all of
