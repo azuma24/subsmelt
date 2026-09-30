@@ -1,7 +1,7 @@
 # TODO — Open Items
 
 Known gaps with no work in progress. Context and rationale live in
-[HANDOFF.md](HANDOFF.md) §4; shipped work is in [../CHANGELOG.md](../CHANGELOG.md).
+[HANDOFF.md](HANDOFF.md) §5; shipped work is in [../CHANGELOG.md](../CHANGELOG.md).
 
 ## Security
 
