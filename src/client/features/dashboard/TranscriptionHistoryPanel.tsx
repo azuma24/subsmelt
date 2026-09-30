@@ -61,12 +61,12 @@ export function TranscriptionHistoryPanel({
   return (
     <div className="p-3.5">
       <div className="flex items-center justify-between gap-3 mb-3">
-        <div>
+        <div className="min-w-0">
           <h2 className="text-[13.5px] font-semibold text-[var(--text)]">{t("transcriptionHistory.title")}</h2>
           <p className="text-[11px] text-[var(--text-3)]">{t("transcriptionHistory.description")}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] text-[var(--text-3)]">{t("transcriptionHistory.shown", { count: groups.length })}</span>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="whitespace-nowrap text-[11px] text-[var(--text-3)]">{t("transcriptionHistory.shown", { count: groups.length })}</span>
           {onRetryAllFailed && failed.length > 0 && (
             <button
               type="button"

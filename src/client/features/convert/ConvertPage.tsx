@@ -193,10 +193,8 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className={`sticky top-0 z-30 shrink-0 border-b border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 md:px-[18px] ${isMobile ? "space-y-2" : ""}`}>
-        <div className="flex min-h-[42px] items-center gap-2.5">
-          <span className="text-sm font-semibold text-[var(--text)]">{t("convert.title")}</span>
-        </div>
+      <div className="sticky top-0 z-30 flex h-[50px] shrink-0 items-center gap-2.5 border-b border-[var(--border)] bg-[var(--surface)] px-3.5 md:px-[18px]">
+        <h1 className="text-sm font-semibold text-[var(--text)]">{t("nav.convert")}</h1>
       </div>
 
       <div className="flex-1 overflow-auto p-3.5 md:p-[18px]">

@@ -366,10 +366,8 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
     // Same page chrome as the Converter: sticky title bar + scrolling body, so
     // switching between sibling pages doesn't change the header pattern.
     <div className="flex h-full flex-col">
-      <div className="sticky top-0 z-30 shrink-0 border-b border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 md:px-[18px]">
-        <div className="flex min-h-[42px] items-center gap-2.5">
-          <h1 className="text-sm font-semibold text-[var(--text)]">{t("whisper.title")}</h1>
-        </div>
+      <div className="sticky top-0 z-30 flex h-[50px] shrink-0 items-center gap-2.5 border-b border-[var(--border)] bg-[var(--surface)] px-3.5 md:px-[18px]">
+        <h1 className="text-sm font-semibold text-[var(--text)]">{t("nav.whisper")}</h1>
       </div>
       <div className="flex-1 overflow-auto">
         <div className={`mx-auto w-full max-w-[1100px] space-y-4 ${isMobile ? "p-3 pb-24" : "p-5"}`}>

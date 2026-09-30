@@ -916,7 +916,6 @@
   "convert": {
     "outputSettings": "输出设置",
     "addFilesToStart": "在上方添加字幕文件即可开始。",
-    "title": "字幕转换器",
     "description": "转换字幕格式，或一次完成字幕翻译与格式转换。拖放一个或多个文件，按需选择语言，再选择输出格式并下载。",
     "dropzone": "将字幕文件拖放到这里",
     "dropzoneHint": "或点击浏览 — .srt、.vtt、.ass、.ssa",
@@ -963,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "转录 — 语音转文字",
     "subtitle": "从媒体库选择文件或文件夹，并将它们转录为字幕。与翻译功能分开。",
     "disabledNotice": "语音转文字已禁用。",
     "openSettings": "打开设置",
@@ -1033,7 +1031,7 @@
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "你发起的转录，最新的在前。",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",

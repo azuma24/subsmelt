@@ -916,7 +916,6 @@
   "convert": {
     "outputSettings": "Configurações de saída",
     "addFilesToStart": "Adicione arquivos de legenda acima para começar.",
-    "title": "Conversor de legendas",
     "description": "Converta formatos de legenda ou traduza e converta em uma única etapa. Solte um ou vários arquivos, escolha os idiomas se necessário, selecione o formato de saída e baixe.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -963,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Transcrição — Fala para texto",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1033,7 +1031,7 @@
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Transcrições iniciadas por você, mais recentes primeiro.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",

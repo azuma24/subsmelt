@@ -916,7 +916,6 @@
   "convert": {
     "outputSettings": "வெளியீட்டு அமைப்புகள்",
     "addFilesToStart": "தொடங்க மேலே வசன வரி கோப்புகளைச் சேர்க்கவும்.",
-    "title": "உபதலைப்பு மாற்றி",
     "description": "வசன வடிவங்களை மாற்றவும், அல்லது ஒரே படியில் மொழிபெயர்த்து மாற்றவும்.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -963,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "படியெழுத்து — பேச்சை உரையாக",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1033,7 +1031,7 @@
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "நீங்கள் தொடங்கிய படியெடுப்புகள், புதியவை முதலில்.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",

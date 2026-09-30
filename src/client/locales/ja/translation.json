@@ -916,7 +916,6 @@
   "convert": {
     "outputSettings": "出力設定",
     "addFilesToStart": "開始するには上で字幕ファイルを追加してください。",
-    "title": "字幕コンバーター",
     "description": "字幕形式の変換、または字幕翻訳と形式変換を一度に実行できます。1つまたは複数のファイルをドロップし、必要なら言語を選び、出力形式を選んでダウンロードします。",
     "dropzone": "字幕ファイルをここにドラッグ＆ドロップ",
     "dropzoneHint": "またはクリックして選択 — .srt、.vtt、.ass、.ssa",
@@ -963,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "文字起こし — 音声をテキストに",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "設定を開く",
@@ -1033,7 +1031,7 @@
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "開始した文字起こしを新しい順に表示します。",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",

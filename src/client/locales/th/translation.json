@@ -916,7 +916,6 @@
   "convert": {
     "outputSettings": "การตั้งค่าเอาต์พุต",
     "addFilesToStart": "เพิ่มไฟล์คำบรรยายด้านบนเพื่อเริ่มต้น",
-    "title": "ตัวแปลงคำบรรยาย",
     "description": "แปลงและแปลคำบรรยาย",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -963,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "การถอดเสียง — เสียงเป็นข้อความ",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1033,7 +1031,7 @@
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "การถอดเสียงที่คุณเริ่ม เรียงจากใหม่ไปเก่า",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",

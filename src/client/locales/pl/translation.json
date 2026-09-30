@@ -916,7 +916,6 @@
   "convert": {
     "outputSettings": "Ustawienia wyjścia",
     "addFilesToStart": "Dodaj powyżej pliki napisów, aby rozpocząć.",
-    "title": "Konwerter napisów",
     "description": "Konwertuj formaty napisów albo tłumacz i konwertuj w jednym kroku.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -963,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Transkrypcja — Mowa na tekst",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1033,7 +1031,7 @@
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Rozpoczęte przez Ciebie transkrypcje, od najnowszych.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",

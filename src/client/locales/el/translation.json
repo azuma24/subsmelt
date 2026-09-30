@@ -916,7 +916,6 @@
   "convert": {
     "outputSettings": "Ρυθμίσεις εξόδου",
     "addFilesToStart": "Προσθέστε αρχεία υποτίτλων παραπάνω για να ξεκινήσετε.",
-    "title": "Μετατροπέας υποτίτλων",
     "description": "Μετατρέψτε μορφές υποτίτλων ή μεταφράστε και μετατρέψτε σε ένα βήμα.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -963,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Μεταγραφή — Ομιλία σε κείμενο",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1033,7 +1031,7 @@
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Μεταγραφές που ξεκινήσατε, πρώτα οι πιο πρόσφατες.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",

@@ -916,7 +916,6 @@
   "convert": {
     "outputSettings": "আউটপুট সেটিংস",
     "addFilesToStart": "শুরু করতে উপরে সাবটাইটেল ফাইল যোগ করুন।",
-    "title": "সাবটাইটেল রূপান্তরকারী",
     "description": "সাবটাইটেল ফরম্যাট বদলান, অথবা এক ধাপে অনুবাদ ও কনভার্ট করুন।",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -963,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "প্রতিলিপি — বক্তব্য থেকে লেখা",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1033,7 +1031,7 @@
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "আপনার শুরু করা প্রতিলিপি, সবচেয়ে নতুনগুলো আগে।",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",

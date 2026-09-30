@@ -916,7 +916,6 @@
   "convert": {
     "outputSettings": "Setări de ieșire",
     "addFilesToStart": "Adaugă fișiere de subtitrare mai sus pentru a începe.",
-    "title": "Convertor de subtitrări",
     "description": "Convertește formate de subtitrări sau traduce și convertește într-un singur pas.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -963,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Transcriere — Vorbire în text",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1033,7 +1031,7 @@
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Transcrierile pornite de tine, cele mai recente primele.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",

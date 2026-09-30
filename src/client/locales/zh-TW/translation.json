@@ -916,7 +916,6 @@
   "convert": {
     "outputSettings": "輸出設定",
     "addFilesToStart": "在上方新增字幕檔案即可開始。",
-    "title": "字幕轉換器",
     "description": "轉換字幕格式，或一次完成字幕翻譯與格式轉換。拖放一個或多個檔案，視需要選擇語言，再選擇輸出格式並下載。",
     "dropzone": "將字幕檔拖放到這裡",
     "dropzoneHint": "或點擊瀏覽 — .srt、.vtt、.ass、.ssa",
@@ -963,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "轉錄 — 語音轉文字",
     "subtitle": "從媒體庫選取檔案或資料夾，將它們轉錄成字幕。與翻譯功能分開。",
     "disabledNotice": "語音轉文字已停用。",
     "openSettings": "開啟設定",
@@ -1033,7 +1031,7 @@
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "你啟動的轉錄，最新的在前。",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",

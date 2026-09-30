@@ -916,7 +916,6 @@
   "convert": {
     "outputSettings": "Nastavení výstupu",
     "addFilesToStart": "Nahoře přidejte soubory s titulky a začněte.",
-    "title": "Převodník titulků",
     "description": "Převádějte formáty titulků nebo titulky v jednom kroku přeložte a převeďte.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -963,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Přepis — Řeč na text",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1033,7 +1031,7 @@
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Přepisy, které jste spustili, od nejnovějších.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",

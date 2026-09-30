@@ -238,7 +238,7 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
                   </button>
                   {/* Edit stays inline (≤2 clicks); Delete → overflow menu */}
                   <div className="flex items-center gap-1.5">
-                    <button onClick={() => openEdit(task)} className="text-[11px] text-[var(--text-2)] hover:text-[var(--text)]">{t("translation_languages.edit")}</button>
+                    <ActionButton size="sm" variant="ghost" onClick={() => openEdit(task)}>{t("translation_languages.edit")}</ActionButton>
                     <RowActionsMenu
                       items={[
                         {

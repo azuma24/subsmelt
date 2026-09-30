@@ -916,7 +916,6 @@
   "convert": {
     "outputSettings": "Ajustes de salida",
     "addFilesToStart": "Añade archivos de subtítulos arriba para empezar.",
-    "title": "Conversor de subtítulos",
     "description": "Convierte formatos de subtítulos, o traduce y convierte en un solo paso. Suelta uno o varios archivos, elige idiomas si hace falta, selecciona el formato de salida y descarga.",
     "dropzone": "Arrastra y suelta archivos de subtítulos aquí",
     "dropzoneHint": "o haz clic para explorar — .srt, .vtt, .ass, .ssa",
@@ -963,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Transcripción — Voz a texto",
     "subtitle": "Elige archivos o carpetas de tu biblioteca multimedia y transcríbelos a subtítulos. Separado de la traducción.",
     "disabledNotice": "La voz a texto está desactivada.",
     "openSettings": "Abrir ajustes",
@@ -1033,7 +1031,7 @@
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Transcripciones que iniciaste, las más recientes primero.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",

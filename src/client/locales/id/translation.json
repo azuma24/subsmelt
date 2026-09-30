@@ -916,7 +916,6 @@
   "convert": {
     "outputSettings": "Pengaturan keluaran",
     "addFilesToStart": "Tambahkan berkas subtitle di atas untuk memulai.",
-    "title": "Konverter subtitle",
     "description": "Konversi format subtitle, atau terjemahkan dan konversi subtitle dalam satu langkah. Jatuhkan satu atau banyak file, pilih bahasa bila perlu, pilih format keluaran, lalu unduh.",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -963,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "Transkripsi — Ucapan ke teks",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1033,7 +1031,7 @@
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "Transkripsi yang Anda mulai, terbaru lebih dulu.",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",

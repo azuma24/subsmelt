@@ -916,7 +916,6 @@
   "convert": {
     "outputSettings": "आउटपुट सेटिंग्स",
     "addFilesToStart": "शुरू करने के लिए ऊपर सबटाइटल फ़ाइलें जोड़ें।",
-    "title": "सबटाइटल कन्वर्टर",
     "description": "सबटाइटल फ़ॉर्मैट बदलें, या एक ही चरण में सबटाइटल का अनुवाद करके फ़ॉर्मैट बदलें। एक या कई फ़ाइलें छोड़ें, ज़रूरत हो तो भाषाएँ चुनें, आउटपुट फ़ॉर्मैट चुनें और डाउनलोड करें।",
     "dropzone": "Drag & drop subtitle files here",
     "dropzoneHint": "or click to browse — .srt, .vtt, .ass, .ssa",
@@ -963,7 +962,6 @@
     "needLlm": "Set up an LLM connection in Settings first."
   },
   "whisper": {
-    "title": "प्रतिलेखन — आवाज़ से पाठ",
     "subtitle": "Pick files or folders from your media library and transcribe them to subtitles. Separate from translation.",
     "disabledNotice": "Speech-to-text is disabled.",
     "openSettings": "Open Settings",
@@ -1033,7 +1031,7 @@
   },
   "transcriptionHistory": {
     "title": "Recent transcriptions",
-    "description": "History is JSON-backed and safe to keep outside the jobs queue.",
+    "description": "आपके शुरू किए गए ट्रांसक्रिप्शन, नवीनतम पहले।",
     "empty": "No transcription attempts yet.",
     "shown": "{{count}} shown",
     "retry": "Retry",

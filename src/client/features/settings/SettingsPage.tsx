@@ -333,7 +333,9 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
         <ActionButton size="sm" onClick={handleSave} disabled={!dirty || saving}>{saving ? t("app.saving") : t("app.save")}</ActionButton>
       </div>
 
-      <div className="flex-1 p-3.5 md:p-[18px]">
+      {/* One max width for the checklist and the nav + panel grid, so the
+          checklist does not run past the column it introduces. */}
+      <div className="max-w-[920px] flex-1 p-3.5 md:p-[18px]">
         {settingsQuery.isError && (
           <div className="mb-3.5">
             <InlineError onRetry={() => void settingsQuery.refetch()} />
@@ -355,7 +357,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
             ))}
           </div>
         ) : (
-          <div className="grid max-w-[920px] gap-[18px] md:grid-cols-[185px_1fr]">
+          <div className="grid gap-[18px] md:grid-cols-[185px_1fr]">
             <nav className="flex flex-col gap-px">
               {navOrder.map((key) => (
                 <button
