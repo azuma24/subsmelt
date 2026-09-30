@@ -226,3 +226,21 @@ test("following again re-applies the new backfill to videos still waiting or fil
     ["BHPDsGVciDk", "skipped", "user", "listed"],
   ]);
 });
+
+test("a filter change releases skipped videos to new on a manual playlist and never re-skips a video the user queued", async () => {
+  const store = new YoutubeStore(new Database(":memory:"));
+  const manual = playlist({ mode: "manual", backfill: { kind: "none" } });
+  await syncPlaylist(store, manual, deps([parseFlatListing(listingJson([DOTS, PRIME, OLD]))]));
+  store.applyUserAction("qN6OM1IzjIE", "download", LATER.toISOString());
+
+  const change = await changeBackfill(store, manual, { kind: "posted_since", date: "2026-09-01" }, deps([]));
+  assert.deepEqual(change, { kept: 0, released: 2, skipped: 0 });
+  const back = await changeBackfill(store, manual, { kind: "none" }, deps([]));
+  assert.deepEqual(back, { kept: 0, released: 0, skipped: 2 });
+  await changeBackfill(store, manual, { kind: "all" }, deps([]));
+  assert.deepEqual(statuses(store), [
+    ["uXspbC2srEQ", "new", null, "listed"],
+    ["BHPDsGVciDk", "new", null, "listed"],
+    ["qN6OM1IzjIE", "queued", null, "listed"],
+  ]);
+});

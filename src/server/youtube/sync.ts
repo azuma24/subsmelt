@@ -171,7 +171,7 @@ export interface BackfillChange {
 /**
  * Re-runs a new backfill choice over the videos the first sync found. Only
  * videos that are still waiting or were left out by the filter move; the
- * user's own skips and anything further along stay where they are.
+ * user's own skips and picks and anything further along stay where they are.
  */
 export async function changeBackfill(
   store: YoutubeStore,
@@ -185,7 +185,7 @@ export async function changeBackfill(
 
   const candidates = store
     .playlistVideos(playlist.id)
-    .filter((v) => v.playlist_id === playlist.id && v.first_seen_at <= firstSyncAt && !v.removed_at)
+    .filter((v) => v.playlist_id === playlist.id && v.first_seen_at <= firstSyncAt && !v.removed_at && !v.user_queued_at)
     .filter((v) => v.status === "new" || v.status === "queued" || (v.status === "skipped" && v.skip_kind === "before_start"));
 
   const addedDates = backfill.kind === "added_since" ? await deps.addedDates(playlist.id) : null;
@@ -195,11 +195,13 @@ export async function changeBackfill(
     { exactUploadDate: deps.exactUploadDate, addedDates, today: now.slice(0, 10) },
   );
 
+  // A released video goes where a newly listed one would: straight to the lane, or to the user on a manual playlist.
+  const releaseTo = playlist.mode === "auto" ? "queued" : "new";
   const result: BackfillChange = { kept: 0, released: 0, skipped: 0 };
   for (const video of candidates) {
     const keep = selected.has(video.video_id);
     if (keep && video.status === "skipped") {
-      store.setStatus(video.video_id, "queued", { now });
+      store.setStatus(video.video_id, releaseTo, { now });
       result.released += 1;
     } else if (!keep && video.status !== "skipped") {
       store.setStatus(video.video_id, "skipped", { skipKind: "before_start", now });
