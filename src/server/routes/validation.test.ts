@@ -7,6 +7,7 @@ import {
   parsePositiveInteger,
   parsePositiveIntegerArray,
   parseTaskUpdate,
+  validateOutputPattern,
 } from "./validation.js";
 
 test("parseBoundedNonNegativeInt applies fallback and maximum", () => {
@@ -44,6 +45,19 @@ test("parseTaskUpdate rejects editable fields of the wrong type", () => {
   assert.deepEqual(parseTaskUpdate({ enabled: "0" }), { ok: false, error: "enabled must be 0 or 1" });
   assert.deepEqual(parseTaskUpdate({ lang_code: "" }), { ok: false, error: "lang_code must not be empty" });
   assert.deepEqual(parseTaskUpdate(["French"]), { ok: false, error: "Request body must be a JSON object" });
+});
+
+test("validateOutputPattern accepts filename templates and defaults, rejects media-folder escapes", () => {
+  assert.equal(validateOutputPattern("{{name}}.{{lang_code}}.srt").ok, true);
+  assert.deepEqual(validateOutputPattern(""), { ok: true, value: "{{name}}.{{lang_code}}.srt" });
+  assert.equal(validateOutputPattern("sub/{{name}}.{{lang_code}}.srt").ok, true);
+  assert.equal(validateOutputPattern("../../../etc/{{name}}.srt").ok, false);
+  assert.equal(validateOutputPattern("/etc/subtitles/{{name}}.srt").ok, false);
+  assert.equal(validateOutputPattern("..\\{{name}}.srt").ok, false);
+  assert.deepEqual(
+    parseTaskUpdate({ output_pattern: "../../{{name}}.srt" }),
+    { ok: false, error: "output_pattern must stay inside the media folder" },
+  );
 });
 
 test("parseLogsQuery reads the log filters", () => {

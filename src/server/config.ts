@@ -208,8 +208,10 @@ function saveConfig(config: ConfigData): void {
   fs.writeFileSync(tmpPath, json, "utf8");
   try {
     fs.renameSync(tmpPath, CONFIG_FILE);
+    fs.chmodSync(CONFIG_FILE, 0o600);
   } catch {
     fs.writeFileSync(CONFIG_FILE, json, "utf8");
+    fs.chmodSync(CONFIG_FILE, 0o600);
     try {
       fs.unlinkSync(tmpPath);
     } catch (e) {

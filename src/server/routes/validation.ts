@@ -27,6 +27,20 @@ export function parsePositiveIntegerArray(value: unknown): number[] | null {
 
 export type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
 
+/**
+ * A task's output_pattern is composed into an output path inside MEDIA_DIR
+ * (path.join of the media folder and the substituted pattern), so `..`, an
+ * absolute prefix or a backslash would escape the media folder when the queue
+ * writes the translation.
+ */
+export function validateOutputPattern(pattern: string): Parsed<string> {
+  const value = pattern.trim() || "{{name}}.{{lang_code}}.srt";
+  if (value.includes("..") || value.startsWith("/") || value.includes("\\")) {
+    return { ok: false, error: "output_pattern must stay inside the media folder" };
+  }
+  return { ok: true, value };
+}
+
 export type TaskUpdate = Partial<{
   source_lang: string;
   target_lang: string;
@@ -56,6 +70,12 @@ export function parseTaskUpdate(body: unknown): Parsed<TaskUpdate> {
     if (value === undefined) continue;
     if (typeof value !== "string") return { ok: false, error: `${field} must be a string` };
     if (!value && REQUIRED_TASK_FIELDS.has(field)) return { ok: false, error: `${field} must not be empty` };
+    if (field === "output_pattern") {
+      const pattern = validateOutputPattern(value);
+      if (!pattern.ok) return { ok: false, error: pattern.error };
+      update[field] = pattern.value;
+      continue;
+    }
     update[field] = value;
   }
   if (input.enabled !== undefined) {

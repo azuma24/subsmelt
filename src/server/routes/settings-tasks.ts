@@ -23,7 +23,7 @@ import { REDACTED_SECRET, parseConnections, resolveConnectionPool, restoreRedact
 import { logger } from "../logger.js";
 import { normalizeMediaSubfolder } from "../media-paths.js";
 import { isWatcherRunning, restartWatcher } from "../watcher.js";
-import { parseTaskUpdate } from "./validation.js";
+import { parseTaskUpdate, validateOutputPattern } from "./validation.js";
 
 // Pure client-driven format conversion (no translation, no DB). The browser
 // uploads file contents; we re-stringify each into the target format and return
@@ -161,10 +161,14 @@ export function registerSettingsTasksRoutes(app: Express): void {
   app.post("/api/tasks", (req, res) => {
     const { source_lang, target_lang, output_pattern, lang_code } = req.body;
     if (!target_lang || !lang_code) return res.status(400).json({ error: "target_lang and lang_code are required" });
+    if (output_pattern !== undefined && typeof output_pattern !== "string")
+      return res.status(400).json({ error: "output_pattern must be a string" });
+    const pattern = validateOutputPattern(typeof output_pattern === "string" ? output_pattern : "");
+    if (!pattern.ok) return res.status(400).json({ error: pattern.error });
     const result = createTask({
       source_lang: source_lang || AUTO_SOURCE_LANGUAGE,
       target_lang,
-      output_pattern: output_pattern || "{{name}}.{{lang_code}}.srt",
+      output_pattern: pattern.value,
       lang_code,
     });
     logger.info("system", `Created translation task: ${target_lang} (${lang_code})`);

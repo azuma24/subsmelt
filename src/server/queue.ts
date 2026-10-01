@@ -30,7 +30,8 @@ import {
   resetConnectionLocks,
   tryAcquireConnectionLock,
 } from "./connection-lock.js";
-import { stripLangSuffix } from "./scanner.js";
+import { stripLangSuffix, MEDIA_DIR } from "./scanner.js";
+import { assertMediaPathAllowed } from "./transcription-client.js";
 import {
   currentTranslationGate,
   holdQueueStart,
@@ -397,6 +398,12 @@ async function runJob(
       throw new Error(`Translation task #${job.task_id} no longer exists`);
     if (conns.length === 0)
       throw new Error("No usable LLM connection configured");
+    // Same boundary the routes enforce on preview/cues/download: DB-stored
+    // paths still hit the filesystem here, so confirm they stay under MEDIA_DIR
+    // before translating (a traversal output_pattern would otherwise write
+    // anywhere the job runs).
+    assertMediaPathAllowed(job.srt_path, MEDIA_DIR);
+    if (job.output_path) assertMediaPathAllowed(job.output_path, MEDIA_DIR);
     const promptToUse = task?.prompt_override || settings.prompt || "";
 
     const primary = conns[0];
