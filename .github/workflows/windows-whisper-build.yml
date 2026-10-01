@@ -132,8 +132,9 @@ jobs:
               try { Invoke-RestMethod http://127.0.0.1:8766/health -TimeoutSec 2 | Out-Null; break } catch { Start-Sleep 1 }
             }
             Invoke-RestMethod -Method Post http://127.0.0.1:8766/models/download -ContentType "application/json" -Body '{"model":"tiny"}' -TimeoutSec 300 | Out-Null
-            $request = '{"model":"tiny","language":"en","output_format":"srt","device":"cpu","compute_type":"int8"}'
-            $out = curl.exe -sS -w "`n%{http_code}" -F "file=@tone.wav" -F "request=$request" http://127.0.0.1:8766/transcribe/upload
+            # A file, not an argument: PowerShell strips the JSON's quotes on the way to curl.exe.
+            Set-Content -Path request.json -NoNewline -Value '{"model":"tiny","language":"en","output_format":"srt","device":"cpu","compute_type":"int8"}'
+            $out = curl.exe -sS -w "`n%{http_code}" -F "file=@tone.wav" -F "request=<request.json" http://127.0.0.1:8766/transcribe/upload
             $code = ($out | Select-Object -Last 1)
             Write-Host ($out -join "`n")
             if ($code -ne "200") { throw "Whisper transcription through the frozen server returned HTTP $code" }
