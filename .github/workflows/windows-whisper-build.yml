@@ -112,7 +112,35 @@ jobs:
           if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }
           Get-Content server.out, server.err -ErrorAction SilentlyContinue
           if (-not $ok) { throw "run_server.exe never answered /health (exit code $($proc.ExitCode))" }
-          Write-Host "health: version $($h.version)"
+          Write-Host "health: version $($h.capabilities.version)"
+
+      # Decode and transcribe through the frozen bundle with Whisper tiny on CPU.
+      # /health passing says nothing about faster-whisper's audio path: an
+      # unpinned PyAV once broke every Whisper transcription while it was green.
+      - name: Smoke test frozen Whisper transcription
+        run: |
+          $exe = "dist/whisper-server/run_server.exe"
+          $env:SUBSMELT_WHISPER_HOST = "127.0.0.1"
+          $env:SUBSMELT_WHISPER_PORT = "8766"
+          $env:SUBSMELT_WHISPER_LOG_FILE = ""
+          $env:HF_HOME = "$env:RUNNER_TEMP\hf"
+          python -c "import wave; w = wave.open('tone.wav', 'wb'); w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000); w.writeframes(bytes(32000)); w.close()"
+          $proc = Start-Process -FilePath $exe -PassThru -NoNewWindow `
+            -RedirectStandardOutput whisper.out -RedirectStandardError whisper.err
+          try {
+            for ($i = 0; $i -lt 90; $i++) {
+              try { Invoke-RestMethod http://127.0.0.1:8766/health -TimeoutSec 2 | Out-Null; break } catch { Start-Sleep 1 }
+            }
+            Invoke-RestMethod -Method Post http://127.0.0.1:8766/models/download -ContentType "application/json" -Body '{"model":"tiny"}' -TimeoutSec 300 | Out-Null
+            $request = '{"model":"tiny","language":"en","output_format":"srt","device":"cpu","compute_type":"int8"}'
+            $out = curl.exe -sS -w "`n%{http_code}" -F "file=@tone.wav" -F "request=$request" http://127.0.0.1:8766/transcribe/upload
+            $code = ($out | Select-Object -Last 1)
+            Write-Host ($out -join "`n")
+            if ($code -ne "200") { throw "Whisper transcription through the frozen server returned HTTP $code" }
+          } finally {
+            if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }
+            Get-Content whisper.err -Tail 30 -ErrorAction SilentlyContinue
+          }
 
       # The tray + GUI controllers ship INSIDE the bundle (they launch and stop
       # run_server.exe). They are small onefile builds with no CUDA deps; both
