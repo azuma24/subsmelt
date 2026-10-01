@@ -103,6 +103,7 @@
       "unpin": "Unpin",
       "preview": "Preview",
       "retry": "Retry",
+      "cancel": "Hủy",
       "retranslate": "Re-translate",
       "translateAnyway": "Vẫn dịch",
       "details": "Details",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "Đã thử lại phiên âm.",
       "retryFailed": "Thử lại thất bại: {{error}}",
       "jobsFailed": "{{count}} tác vụ thất bại",
-      "openDashboard": "Mở Bảng điều khiển"
+      "openDashboard": "Mở Bảng điều khiển",
+      "jobCancelled": "Đã hủy công việc — hàng đợi tiếp tục"
     },
     "confirm": {
       "clearTitle": "Xóa các tác vụ đã xong",

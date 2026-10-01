@@ -122,6 +122,47 @@ test("stopping a job returns it to pending with its progress cleared", async () 
   }
 });
 
+test("cancelling one translating job ends it as cancelled and the queue continues", async () => {
+  const first = addJob({ srtExists: true, outputExists: false });
+  const second = addJob({ srtExists: true, outputExists: false });
+  const run = queue.processQueue();
+  await waitFor(() => release.length > 0, "the first job to call the LLM");
+
+  assert.equal(queue.requestJobCancel(first), true);
+  await waitFor(() => db.getJob(first)?.status === "error", "the cancelled job to settle");
+  // The freed worker picks up the next pending job instead of stopping.
+  await waitFor(() => db.getJob(second)?.status === "translating", "the queue to continue with the next job");
+
+  queue.requestStop();
+  await run;
+  release.length = 0;
+
+  assert.equal(db.getJob(first)?.error, "Cancelled by user");
+  // The settle path must unregister the job: a stale cancel marker would make
+  // its next run insta-fail with "Cancelled by user".
+  assert.equal(queue.requestJobCancel(first), false);
+  db.deleteJob(first);
+  db.deleteJob(second);
+});
+
+test("a translating job reports the connection running it", async () => {
+  const job = addJob({ srtExists: true, outputExists: false });
+  const run = queue.processQueue();
+  await waitFor(() => release.length > 0, "the job to call the LLM");
+
+  const connection = queue.getJobConnection(job);
+  assert.ok(connection, "the job should report a connection while translating");
+  assert.ok(connection.label.length > 0);
+  assert.ok(queue.getActiveJobConnections().some((entry) => entry.jobId === job));
+
+  queue.requestStop();
+  await run;
+  release.length = 0;
+
+  assert.equal(queue.getJobConnection(job), null);
+  db.deleteJob(job);
+});
+
 test("resuming at boot processes the pending jobs a previous process left behind", async () => {
   // A job whose source file is gone fails immediately, which is enough to show
   // the queue picked it up: an unprocessed job would still be pending.

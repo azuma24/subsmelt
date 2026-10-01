@@ -103,6 +103,7 @@
       "unpin": "Rögzítés feloldása",
       "preview": "Előnézet",
       "retry": "Újra",
+      "cancel": "Mégse",
       "retranslate": "Újrafordítás",
       "translateAnyway": "Fordítás mindenképp",
       "details": "Részletek",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "Átírás újrapróbálva.",
       "retryFailed": "Az újrapróbálkozás sikertelen: {{error}}",
       "jobsFailed": "{{count}} feladat sikertelen",
-      "openDashboard": "Vezérlőpult megnyitása"
+      "openDashboard": "Vezérlőpult megnyitása",
+      "jobCancelled": "Feladat megszakítva — a sor folytatódik"
     },
     "confirm": {
       "clearTitle": "Befejezett feladatok törlése",

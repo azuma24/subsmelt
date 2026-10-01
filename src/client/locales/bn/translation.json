@@ -103,6 +103,7 @@
       "unpin": "আনপিন করুন",
       "preview": "প্রিভিউ",
       "retry": "পুনরায় চেষ্টা",
+      "cancel": "বাতিল",
       "retranslate": "পুনরায় অনুবাদ",
       "translateAnyway": "তবুও অনুবাদ করুন",
       "details": "বিস্তারিত",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "প্রতিলিপি পুনরায় চেষ্টা করা হয়েছে।",
       "retryFailed": "পুনরায় চেষ্টা ব্যর্থ হয়েছে: {{error}}",
       "jobsFailed": "{{count}}টি কাজ ব্যর্থ হয়েছে",
-      "openDashboard": "ড্যাশবোর্ড খুলুন"
+      "openDashboard": "ড্যাশবোর্ড খুলুন",
+      "jobCancelled": "কাজ বাতিল হয়েছে — সারি চলছে"
     },
     "confirm": {
       "clearTitle": "সম্পন্ন কাজ মুছুন",

@@ -103,6 +103,7 @@
       "unpin": "I-unpin",
       "preview": "I-preview",
       "retry": "Ulitin",
+      "cancel": "Kanselahin",
       "retranslate": "Muling isalin",
       "translateAnyway": "Isalin pa rin",
       "details": "Mga Detalye",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "Sinubukang muli ang transcription.",
       "retryFailed": "Nabigo ang muling pagsubok: {{error}}",
       "jobsFailed": "Nabigo ang {{count}} trabaho",
-      "openDashboard": "Buksan ang Dashboard"
+      "openDashboard": "Buksan ang Dashboard",
+      "jobCancelled": "Kanselahin ang gawain — tuloy ang pila"
     },
     "confirm": {
       "clearTitle": "I-clear ang mga tapos nang trabaho",

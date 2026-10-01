@@ -103,6 +103,7 @@
       "unpin": "Unpin",
       "preview": "Preview",
       "retry": "Retry",
+      "cancel": "إلغاء",
       "retranslate": "Re-translate",
       "translateAnyway": "ترجم على أي حال",
       "details": "Details",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "تمت إعادة محاولة النسخ.",
       "retryFailed": "فشلت إعادة المحاولة: {{error}}",
       "jobsFailed": "فشلت {{count}} من المهام",
-      "openDashboard": "فتح لوحة التحكم"
+      "openDashboard": "فتح لوحة التحكم",
+      "jobCancelled": "تم إلغاء المهمة — تستمر قائمة الانتظار"
     },
     "confirm": {
       "clearTitle": "مسح المهام المكتملة",

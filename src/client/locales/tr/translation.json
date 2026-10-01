@@ -103,6 +103,7 @@
       "unpin": "Sabitlemeyi kaldır",
       "preview": "Önizle",
       "retry": "Yeniden dene",
+      "cancel": "İptal",
       "retranslate": "Yeniden çevir",
       "translateAnyway": "Yine de çevir",
       "details": "Ayrıntılar",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "Transkripsiyon yeniden denendi.",
       "retryFailed": "Yeniden deneme başarısız: {{error}}",
       "jobsFailed": "{{count}} iş başarısız oldu",
-      "openDashboard": "Paneli aç"
+      "openDashboard": "Paneli aç",
+      "jobCancelled": "İş iptal edildi — kuyruk devam ediyor"
     },
     "confirm": {
       "clearTitle": "Biten işleri temizle",

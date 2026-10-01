@@ -103,6 +103,7 @@
       "unpin": "優先解除",
       "preview": "プレビュー",
       "retry": "再試行",
+      "cancel": "キャンセル",
       "retranslate": "再翻訳",
       "translateAnyway": "それでも翻訳",
       "details": "詳細",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "文字起こしを再試行しました。",
       "retryFailed": "再試行に失敗しました：{{error}}",
       "jobsFailed": "{{count}} 件のジョブが失敗しました",
-      "openDashboard": "ダッシュボードを開く"
+      "openDashboard": "ダッシュボードを開く",
+      "jobCancelled": "ジョブをキャンセルしました — キューは続行します"
     },
     "confirm": {
       "clearTitle": "完了済みジョブをクリア",

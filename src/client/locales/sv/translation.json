@@ -103,6 +103,7 @@
       "unpin": "Lossa",
       "preview": "Förhandsgranska",
       "retry": "Försök igen",
+      "cancel": "Avbryt",
       "retranslate": "Översätt om",
       "translateAnyway": "Översätt ändå",
       "details": "Detaljer",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "Transkribering försöktes igen.",
       "retryFailed": "Nytt försök misslyckades: {{error}}",
       "jobsFailed": "{{count}} jobb misslyckades",
-      "openDashboard": "Öppna översikten"
+      "openDashboard": "Öppna översikten",
+      "jobCancelled": "Jobbet avbröts — kön fortsätter"
     },
     "confirm": {
       "clearTitle": "Rensa klara jobb",

@@ -95,7 +95,7 @@ Use exactly this markdown structure:
 
     return result.text?.trim() || "";
   } catch (e: any) {
-    if (e?.message === "STOP_REQUESTED") throw e;
+    if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED") throw e;
     return "";
   }
 }

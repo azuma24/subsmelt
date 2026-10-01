@@ -103,6 +103,7 @@
       "unpin": "בטל הצמדה",
       "preview": "תצוגה מקדימה",
       "retry": "נסה שוב",
+      "cancel": "ביטול",
       "retranslate": "תרגם מחדש",
       "translateAnyway": "תרגם בכל זאת",
       "details": "פרטים",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "התמלול נוסה שוב.",
       "retryFailed": "הניסיון החוזר נכשל: {{error}}",
       "jobsFailed": "{{count}} משימות נכשלו",
-      "openDashboard": "פתיחת לוח הבקרה"
+      "openDashboard": "פתיחת לוח הבקרה",
+      "jobCancelled": "המשימה בוטלה — התור ממשיך"
     },
     "confirm": {
       "clearTitle": "ניקוי משימות שהסתיימו",

@@ -103,6 +103,7 @@
       "unpin": "Відкріпити",
       "preview": "Перегляд",
       "retry": "Повторити",
+      "cancel": "Скасувати",
       "retranslate": "Перекласти повторно",
       "translateAnyway": "Усе одно перекласти",
       "details": "Деталі",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "Транскрипцію повторено.",
       "retryFailed": "Не вдалося повторити: {{error}}",
       "jobsFailed": "Невдалих завдань: {{count}}",
-      "openDashboard": "Відкрити панель"
+      "openDashboard": "Відкрити панель",
+      "jobCancelled": "Завдання скасовано — черга продовжує"
     },
     "confirm": {
       "clearTitle": "Очистити завершені завдання",

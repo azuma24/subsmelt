@@ -44,7 +44,24 @@ let currentJobId: number | null = null;
 // Jobs translating right now (one per active worker in parallel mode).
 const activeJobIds = new Set<number>();
 // One AbortController per in-flight job; requestStop() aborts them all.
-const abortControllers = new Set<AbortController>();
+const abortControllers = new Map<number, AbortController>();
+// Jobs the user cancelled while translating: their abort surfaces through the
+// same fetch errors a stop does, so runJob needs this set to tell the two
+// apart — a cancelled job ends as error, a stopped one back to pending.
+const cancelledJobIds = new Set<number>();
+// The LLM connection each translating job runs on, so the dashboard can show
+// which machine is working on what in parallel mode.
+const jobConnections = new Map<number, { label: string; host: string }>();
+
+/** The connection a translating job currently runs on, or null. */
+export function getJobConnection(jobId: number): { label: string; host: string } | null {
+  return jobConnections.get(jobId) ?? null;
+}
+
+/** Every translating job with its connection, for the queue status surface. */
+export function getActiveJobConnections(): { jobId: number; label: string; host: string }[] {
+  return Array.from(jobConnections, ([jobId, { label, host }]) => ({ jobId, label, host }));
+}
 // Hard ceiling on concurrent translation workers (matches the per-file connection cap).
 const MAX_WORKERS = 32;
 // Progress (completed_cues) is written to SQLite on every cue-advance, which with
@@ -94,10 +111,24 @@ export function requestStop() {
   if (isRunning) {
     shouldStop = true;
     // Abort every in-flight LLM request immediately — don't wait for onProgress
-    for (const controller of abortControllers)
+    for (const controller of abortControllers.values())
       controller.abort("stop_requested");
     logger.info("queue", "Stop requested — aborting in-flight LLM calls");
   }
+}
+
+/**
+ * Cancels one translating job: aborts its LLM calls, ends the job as a
+ * cancelled error, and leaves the queue running — the worker that freed up
+ * claims the next pending job. Unlike a stop, the job does not come back.
+ */
+export function requestJobCancel(jobId: number): boolean {
+  const controller = abortControllers.get(jobId);
+  if (!controller) return false;
+  cancelledJobIds.add(jobId);
+  controller.abort(new Error("JOB_CANCELLED"));
+  logger.info("queue", `Cancel requested for job #${jobId}`, jobId);
+  return true;
 }
 
 /**
@@ -182,6 +213,7 @@ export async function processQueue(onlyIds?: number[]) {
     currentJobId = null;
     activeJobIds.clear();
     abortControllers.clear();
+    cancelledJobIds.clear();
     offlineConnectionIds.clear();
     resetConnectionLocks();
   }
@@ -382,7 +414,7 @@ async function runJob(
 
   // Per-job abort controller — aborted immediately by requestStop()
   const jobAbort = new AbortController();
-  abortControllers.add(jobAbort);
+  abortControllers.set(job.id, jobAbort);
 
   const usedConnLabels: string[] = [];
   const usedConnIds = new Set<string>();
@@ -411,6 +443,8 @@ async function runJob(
       primary.apiHost || settings.llm_endpoint || "http://localhost:8000/v1";
     const apiKey = primary.apiKey || "";
     const model = primary.model || "";
+    jobConnections.set(job.id, { label: primary.label, host: apiHost });
+    broadcast("job:connection", { jobId: job.id, label: primary.label, host: apiHost });
     logger.info(
       "queue",
       `LLM mode: ${llmModeForJob} (${conns.length} connection${conns.length === 1 ? "" : "s"}) — primary ${primary.label}`,
@@ -425,7 +459,7 @@ async function runJob(
     );
 
     // Probe model context window (LM Studio only — graceful no-op elsewhere).
-    const ctxInfo = await probeModelContext(apiHost, model, chunkSize);
+    const ctxInfo = await probeModelContext(apiHost, model, chunkSize, jobAbort.signal);
     const parallelChunks =
       configuredParallel > 1
         ? configuredParallel // user explicitly set parallel — respect it
@@ -462,6 +496,14 @@ async function runJob(
         if (!usedConnIds.has(id)) {
           usedConnIds.add(id);
           usedConnLabels.push(label);
+        }
+        // A fallback switch moves the job to another machine; keep the
+        // dashboard's attribution current.
+        const switched = conns.find((c) => c.id === id);
+        if (switched) {
+          const host = switched.apiHost || settings.llm_endpoint || apiHost;
+          jobConnections.set(job.id, { label, host });
+          broadcast("job:connection", { jobId: job.id, label, host });
         }
       },
       onConnectionError: ({ id, label, error }) => {
@@ -509,6 +551,7 @@ async function runJob(
       abortSignal: jobAbort.signal,
       onProgress: (completed, total) => {
         if (shouldStop) throw new Error("STOP_REQUESTED");
+        if (cancelledJobIds.has(job.id)) throw new Error("JOB_CANCELLED");
         lastTotalCues = total;
         // Skip the DB write + broadcast on intermediate ticks; always land the
         // final tick so the stored completed_cues is exact when the job settles.
@@ -632,6 +675,22 @@ async function runJob(
     return false;
   } catch (error: any) {
     const durationSeconds = (Date.now() - startTime) / 1000;
+    // A stop wins over a cancel: every interrupted job goes back to pending,
+    // none gets picked out as "Cancelled by user".
+    if (!shouldStop && (error.message === "JOB_CANCELLED" || cancelledJobIds.has(job.id))) {
+      cancelledJobIds.delete(job.id);
+      // A user cancel is terminal: the job ends as a cancelled error (Retry is
+      // offered from there) instead of returning to the queue. The partial
+      // output stays on disk, so a later retry resumes from it.
+      updateJob(job.id, {
+        status: "error",
+        error: "Cancelled by user",
+        duration_seconds: durationSeconds,
+      });
+      logger.info("queue", `Job #${job.id} cancelled by user`, job.id);
+      broadcast("job:cancelled", { jobId: job.id, srtName });
+      return false;
+    }
     if (error.message === "STOP_REQUESTED" || shouldStop) {
       // Graceful stop — reset job to pending so it can be picked up later. The
       // next run starts the file over, so the progress count goes back to zero.
@@ -700,7 +759,10 @@ async function runJob(
     });
     return false;
   } finally {
-    abortControllers.delete(jobAbort);
+    abortControllers.delete(job.id);
+    // A cancel that raced a completing job must not poison its later retries.
+    cancelledJobIds.delete(job.id);
+    jobConnections.delete(job.id);
     activeJobIds.delete(job.id);
     currentJobId =
       activeJobIds.size > 0

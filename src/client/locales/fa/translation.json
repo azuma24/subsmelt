@@ -103,6 +103,7 @@
       "unpin": "برداشتن سنجاق",
       "preview": "پیش‌نمایش",
       "retry": "تلاش مجدد",
+      "cancel": "لغو",
       "retranslate": "ترجمه مجدد",
       "translateAnyway": "با این حال ترجمه شود",
       "details": "جزئیات",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "رونویسی دوباره امتحان شد.",
       "retryFailed": "تلاش مجدد ناموفق بود: {{error}}",
       "jobsFailed": "{{count}} کار ناموفق بود",
-      "openDashboard": "باز کردن داشبورد"
+      "openDashboard": "باز کردن داشبورد",
+      "jobCancelled": "کار لغو شد — صف ادامه دارد"
     },
     "confirm": {
       "clearTitle": "پاک کردن کارهای تمام‌شده",

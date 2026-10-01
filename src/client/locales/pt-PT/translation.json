@@ -103,6 +103,7 @@
       "unpin": "Desafixar",
       "preview": "Pré-visualizar",
       "retry": "Repetir",
+      "cancel": "Cancelar",
       "retranslate": "Retraduzir",
       "translateAnyway": "Traduzir mesmo assim",
       "details": "Detalhes",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "Transcrição repetida.",
       "retryFailed": "Falha ao tentar novamente: {{error}}",
       "jobsFailed": "{{count}} trabalhos falharam",
-      "openDashboard": "Abrir painel"
+      "openDashboard": "Abrir painel",
+      "jobCancelled": "Trabalho cancelado — a fila continua"
     },
     "confirm": {
       "clearTitle": "Limpar trabalhos concluídos",

@@ -127,7 +127,19 @@ export function JobsTableDesktop({
             )}
           </div>
         </div>
-        <div className={`${TD} flex items-center`} role="cell">{job.status === "translating" ? <ProgressSmall pct={pct} /> : job.status === "done" ? <span className="text-[10px] text-[var(--text-3)]">{t("dashboard.cues", { completed: job.completed_cues, total: job.total_cues })}</span> : null}</div>
+        <div className={`${TD} flex flex-col items-start justify-center gap-0.5`} role="cell">
+          {job.status === "translating" ? (
+            <>
+              <ProgressSmall pct={pct} />
+              {/* Parallel mode runs jobs on different connections; name the machine. */}
+              {job.connection && (
+                <span className="max-w-[140px] truncate text-[10px] leading-4 text-[var(--text-3)]" title={job.connection.host}>
+                  {job.connection.label}
+                </span>
+              )}
+            </>
+          ) : job.status === "done" ? <span className="text-[10px] text-[var(--text-3)]">{t("dashboard.cues", { completed: job.completed_cues, total: job.total_cues })}</span> : null}
+        </div>
         <div className={`${TD} font-mono text-[11.5px] text-[var(--text-2)] whitespace-nowrap`} role="cell">{job.duration_seconds ? formatDur(job.duration_seconds) : ""}</div>
         <div className={TD} role="cell">
           {/* One primary action per status; everything else lives behind the ⋯
@@ -135,6 +147,10 @@ export function JobsTableDesktop({
               and the delete glyph wrapped onto its own orphan line. */}
           <div className="flex items-center gap-1.5">
             {(job.status === "done" || job.status === "translating") && <MiniBtn onClick={() => onPreview(job.id)}>{t("dashboard.action.preview")}</MiniBtn>}
+            {/* A translating job can be cancelled on its own: the LLM work is
+                aborted and the job ends as a cancelled error, while the queue
+                keeps running with the next pending job. */}
+            {job.status === "translating" && <MiniBtn color="yellow" onClick={() => jobActions.cancel(job.id)}>{t("dashboard.action.cancel")}</MiniBtn>}
             {job.status === "error" && <MiniBtn color="yellow" onClick={() => jobActions.retry(job.id)}>{t("dashboard.action.retry")}</MiniBtn>}
             {/* A skipped job was never translated, so "Re-translate" is the wrong
                 promise — it gets its own wording and a highlighted treatment. */}

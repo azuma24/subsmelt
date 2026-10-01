@@ -103,6 +103,7 @@
       "unpin": "Unpin",
       "preview": "Preview",
       "retry": "Retry",
+      "cancel": "रद्द करें",
       "retranslate": "Re-translate",
       "translateAnyway": "फिर भी अनुवाद करें",
       "details": "Details",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "ट्रांसक्रिप्शन पुनः प्रयास किया गया।",
       "retryFailed": "पुनः प्रयास विफल: {{error}}",
       "jobsFailed": "{{count}} कार्य विफल रहे",
-      "openDashboard": "डैशबोर्ड खोलें"
+      "openDashboard": "डैशबोर्ड खोलें",
+      "jobCancelled": "कार्य रद्द किया गया — कतार जारी है"
     },
     "confirm": {
       "clearTitle": "पूरे हुए कार्य हटाएँ",

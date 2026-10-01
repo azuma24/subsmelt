@@ -103,6 +103,7 @@
       "unpin": "Losmaken",
       "preview": "Voorbeeld",
       "retry": "Opnieuw proberen",
+      "cancel": "Annuleren",
       "retranslate": "Opnieuw vertalen",
       "translateAnyway": "Toch vertalen",
       "details": "Details",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "Transcriptie opnieuw geprobeerd.",
       "retryFailed": "Opnieuw proberen mislukt: {{error}}",
       "jobsFailed": "{{count}} taken mislukt",
-      "openDashboard": "Dashboard openen"
+      "openDashboard": "Dashboard openen",
+      "jobCancelled": "Taak geannuleerd — de wachtrij gaat door"
     },
     "confirm": {
       "clearTitle": "Voltooide taken wissen",

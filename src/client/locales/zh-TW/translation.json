@@ -103,6 +103,7 @@
       "unpin": "取消置頂",
       "preview": "預覽",
       "retry": "重試",
+      "cancel": "取消",
       "retranslate": "重新翻譯",
       "translateAnyway": "仍要翻譯",
       "details": "詳細資料",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "已重試轉錄。",
       "retryFailed": "重試失敗：{{error}}",
       "jobsFailed": "{{count}} 個任務失敗",
-      "openDashboard": "開啟儀表板"
+      "openDashboard": "開啟儀表板",
+      "jobCancelled": "工作已取消 — 佇列繼續"
     },
     "confirm": {
       "clearTitle": "清除已完成的任務",

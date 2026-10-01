@@ -103,6 +103,7 @@
       "unpin": "Unpin",
       "preview": "Preview",
       "retry": "Retry",
+      "cancel": "Annuler",
       "retranslate": "Re-translate",
       "translateAnyway": "Traduire quand même",
       "details": "Details",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "Transcription relancée.",
       "retryFailed": "Échec de la nouvelle tentative : {{error}}",
       "jobsFailed": "{{count}} tâches ont échoué",
-      "openDashboard": "Ouvrir le tableau de bord"
+      "openDashboard": "Ouvrir le tableau de bord",
+      "jobCancelled": "Tâche annulée — la file continue"
     },
     "confirm": {
       "clearTitle": "Effacer les tâches terminées",

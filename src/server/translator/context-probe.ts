@@ -65,7 +65,8 @@ export interface ModelContextInfo {
 export async function probeModelContext(
   apiHost: string,
   model: string,
-  chunkSize = 20
+  chunkSize = 20,
+  abortSignal?: AbortSignal
 ): Promise<ModelContextInfo> {
   const FALLBACK: ModelContextInfo = {
     maxContextTokens: null,
@@ -82,7 +83,10 @@ export async function probeModelContext(
     // permitted (self-hosted) but warn via isSafeHttpUrl. Invalid scheme → bail.
     if (!isSafeHttpUrl(url)) return FALLBACK;
 
-    const resp = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    // The probe honours the job's abort signal too, so a stop or cancel that
+    // lands during the probe takes effect immediately instead of at the first
+    // translation call.
+    const resp = await fetch(url, { signal: AbortSignal.any([AbortSignal.timeout(5000), ...(abortSignal ? [abortSignal] : [])]) });
     if (!resp.ok) return FALLBACK;
 
     const json = (await resp.json()) as { data?: Array<{ id: string; max_context_length?: number }> };

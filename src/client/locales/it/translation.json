@@ -103,6 +103,7 @@
       "unpin": "Unpin",
       "preview": "Preview",
       "retry": "Retry",
+      "cancel": "Annulla",
       "retranslate": "Re-translate",
       "translateAnyway": "Traduci comunque",
       "details": "Details",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "Trascrizione ritentata.",
       "retryFailed": "Nuovo tentativo non riuscito: {{error}}",
       "jobsFailed": "{{count}} lavori non riusciti",
-      "openDashboard": "Apri la dashboard"
+      "openDashboard": "Apri la dashboard",
+      "jobCancelled": "Lavoro annullato — la coda continua"
     },
     "confirm": {
       "clearTitle": "Cancella lavori completati",

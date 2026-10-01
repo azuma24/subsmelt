@@ -247,7 +247,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       markUsed(conn);
       break;
     } catch (e: any) {
-      if (e?.message === "STOP_REQUESTED") throw e;
+      if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED") throw e;
       analysisErr = e;
       opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(e?.message || e) });
     }
@@ -339,7 +339,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
         markUsed(conn);
         return { result, conn };
       } catch (e: any) {
-        if (e?.message === "STOP_REQUESTED") throw e;
+        if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED") throw e;
         // exhausted retries on this connection — cascade to the next
         noteConnectionFailure(conn, e);
         opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(e?.message || e) });
@@ -382,7 +382,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
         markUsed(conn);
         return r;
       } catch (e: any) {
-        if (e?.message === "STOP_REQUESTED") throw e;
+        if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED") throw e;
         lastErr = e;
         noteConnectionFailure(conn, e);
         opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(e?.message || e) });
@@ -479,7 +479,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       translatedWindow = chunkResult?.result ?? null;
       pass1Conn = chunkResult?.conn ?? null;
     } catch (e: any) {
-      if (e?.message === "STOP_REQUESTED") throw e;
+      if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED") throw e;
       translatedWindow = null;
     }
 
@@ -522,7 +522,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
         }));
         if (refined) translatedWindow = refined;
       } catch (e: any) {
-        if (e?.message === "STOP_REQUESTED") throw e;
+        if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED") throw e;
         // Keep the pass-1 translatedWindow untouched (same as the null case).
       }
     }
@@ -591,7 +591,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
         // timeout (times five retries) per line here either.
         cue.data.translatedText = await translateSingleWithFallback(cue.data.text || "", connections);
       } catch (e: any) {
-        if (e?.message === "STOP_REQUESTED") throw e;
+        if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED") throw e;
         // Every cue must end with some text — never drop a line from output.
         // When even the per-line fallback can't translate, pass the source
         // through so the cue still appears (untranslated, but present).

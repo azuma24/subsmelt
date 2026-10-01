@@ -103,6 +103,7 @@
       "unpin": "Unpin",
       "preview": "Preview",
       "retry": "Retry",
+      "cancel": "ยกเลิก",
       "retranslate": "Re-translate",
       "translateAnyway": "แปลอยู่ดี",
       "details": "Details",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "ลองถอดเสียงอีกครั้งแล้ว",
       "retryFailed": "ลองใหม่ไม่สำเร็จ: {{error}}",
       "jobsFailed": "มีงานล้มเหลว {{count}} งาน",
-      "openDashboard": "เปิดแดชบอร์ด"
+      "openDashboard": "เปิดแดชบอร์ด",
+      "jobCancelled": "ยกเลิกงานแล้ว — คิวดำเนินต่อไป"
     },
     "confirm": {
       "clearTitle": "ล้างงานที่เสร็จแล้ว",

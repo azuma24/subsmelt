@@ -245,6 +245,7 @@
       "unpin": "Unpin",
       "preview": "Preview",
       "retry": "Retry",
+      "cancel": "Cancel",
       "retranslate": "Re-translate",
       "translateAnyway": "Translate anyway",
       "details": "Details",
@@ -279,7 +280,8 @@
       "transcriptionRetried": "Transcription retried.",
       "retryFailed": "Retry failed: {{error}}",
       "jobsFailed": "{{count}} jobs failed",
-      "openDashboard": "Open Dashboard"
+      "openDashboard": "Open Dashboard",
+      "jobCancelled": "Job cancelled — the queue continues"
     },
     "confirm": {
       "clearTitle": "Clear finished jobs",

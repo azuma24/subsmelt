@@ -103,6 +103,7 @@
       "unpin": "Nyahsemat",
       "preview": "Pratonton",
       "retry": "Cuba semula",
+      "cancel": "Batalkan",
       "retranslate": "Terjemah semula",
       "translateAnyway": "Terjemah juga",
       "details": "Butiran",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "Transkripsi dicuba semula.",
       "retryFailed": "Cubaan semula gagal: {{error}}",
       "jobsFailed": "{{count}} kerja gagal",
-      "openDashboard": "Buka Papan Pemuka"
+      "openDashboard": "Buka Papan Pemuka",
+      "jobCancelled": "Kerja dibatalkan — barisan diteruskan"
     },
     "confirm": {
       "clearTitle": "Kosongkan kerja yang selesai",

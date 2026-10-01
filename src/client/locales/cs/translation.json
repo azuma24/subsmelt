@@ -103,6 +103,7 @@
       "unpin": "Odepnout",
       "preview": "Náhled",
       "retry": "Opakovat",
+      "cancel": "Zrušit",
       "retranslate": "Znovu přeložit",
       "translateAnyway": "Přesto přeložit",
       "details": "Podrobnosti",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "Přepis byl zopakován.",
       "retryFailed": "Opakování se nezdařilo: {{error}}",
       "jobsFailed": "Selhalo úloh: {{count}}",
-      "openDashboard": "Otevřít přehled"
+      "openDashboard": "Otevřít přehled",
+      "jobCancelled": "Úloha zrušena — fronta pokračuje"
     },
     "confirm": {
       "clearTitle": "Vymazat dokončené úlohy",

@@ -8,6 +8,8 @@ export type SSEEventName =
   | "job:start"
   | "job:done"
   | "job:error"
+  | "job:connection"
+  | "job:cancelled"
   | "queue:finished"
   | "queue:stopped"
   | "scan:complete"
@@ -192,6 +194,8 @@ const SSE_EVENT_NAMES: readonly SSEEventName[] = [
   "job:start",
   "job:done",
   "job:error",
+  "job:connection",
+  "job:cancelled",
   "queue:finished",
   "queue:stopped",
   "scan:complete",
@@ -223,6 +227,8 @@ export function getSSEInvalidationKeys(name: SSEEventName): QueryKey[] {
       return [["jobs"], ["queue-status"]];
     case "job:done":
     case "job:error":
+    case "job:cancelled":
+    case "job:connection":
     case "job:stopped":
     case "queue:finished":
     case "queue:stopped":

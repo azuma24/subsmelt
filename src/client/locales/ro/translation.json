@@ -103,6 +103,7 @@
       "unpin": "Anulează fixarea",
       "preview": "Previzualizează",
       "retry": "Reîncearcă",
+      "cancel": "Anulare",
       "retranslate": "Retradu",
       "translateAnyway": "Tradu oricum",
       "details": "Detalii",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "Transcriere reîncercată.",
       "retryFailed": "Reîncercarea a eșuat: {{error}}",
       "jobsFailed": "Sarcini eșuate: {{count}}",
-      "openDashboard": "Deschide tabloul de bord"
+      "openDashboard": "Deschide tabloul de bord",
+      "jobCancelled": "Sarcina anulată — coada continuă"
     },
     "confirm": {
       "clearTitle": "Golește sarcinile finalizate",

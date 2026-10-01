@@ -70,7 +70,16 @@ export function JobCardMobile({
           />
         </div>
       </div>
-      {job.status === "translating" && <div className="mt-3"><ProgressSmall pct={pct} /></div>}
+      {job.status === "translating" && (
+        <div className="mt-3">
+          <ProgressSmall pct={pct} />
+          {job.connection && (
+            <div className="mt-0.5 truncate text-[11px] text-[var(--text-3)]" title={job.connection.host}>
+              {job.connection.label}
+            </div>
+          )}
+        </div>
+      )}
       <div className="mt-3 grid grid-cols-2 gap-2">
         {(job.status === "done" || job.status === "translating") ? (
           <ActionButton size="sm" onClick={() => onPreview(job.id)}>{t("dashboard.action.preview")}</ActionButton>
@@ -83,6 +92,10 @@ export function JobCardMobile({
         )}
         {job.status === "error" ? (
           <ActionButton size="sm" variant="warning" busy={jobActions.isRetrying} onClick={() => jobActions.retry(job.id)}>{t("dashboard.action.retry")}</ActionButton>
+        ) : job.status === "translating" ? (
+          // Cancelling one translating job aborts its LLM work and ends it as a
+          // cancelled error; the queue keeps running with the next pending job.
+          <ActionButton size="sm" variant="danger" busy={jobActions.isCancelling} onClick={() => jobActions.cancel(job.id)}>{t("dashboard.action.cancel")}</ActionButton>
         ) : job.status === "skipped" ? (
           // Never translated (an existing target subtitle was found), so this is
           // an opt-in "do it anyway", not a re-run of previous work.

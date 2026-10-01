@@ -193,6 +193,16 @@ class RequestTimeoutError extends Error {
   }
 }
 
+/**
+ * The error an aborted signal should surface: a deliberate per-job cancel
+ * keeps its identity; every other abort — requestStop's "stop_requested"
+ * string, a bare abort — reads as a queue stop.
+ */
+export function controlledAbortError(signal: AbortSignal): Error {
+  const reason = signal.reason;
+  return reason instanceof Error && reason.message === "JOB_CANCELLED" ? reason : new Error("STOP_REQUESTED");
+}
+
 export async function withAbortTimeout<T>(
   run: (signal: AbortSignal) => Promise<T>,
   timeoutMs = REQUEST_TIMEOUT_MS,
@@ -211,14 +221,15 @@ export async function withAbortTimeout<T>(
   try {
     return await run(controller.signal);
   } catch (error: any) {
-    // Distinguish stop vs timeout
-    if (externalSignal?.aborted) throw new Error("STOP_REQUESTED");
+    // Distinguish stop/cancel vs timeout: only a deliberate per-job cancel
+    // keeps its identity.
+    if (externalSignal?.aborted) throw controlledAbortError(externalSignal);
     // fetch rejects with the abort reason ("timeout"), not an AbortError, so
-    // our own signal is what marks a timeout.
-    if (controller.signal.aborted || error?.name === "AbortError" || error?.message === "STOP_REQUESTED") {
-      throw error?.message === "STOP_REQUESTED"
-        ? error
-        : new RequestTimeoutError(timeoutMs);
+    // our own signal is what marks a timeout — unless the reason came from the
+    // external stop/cancel forwarded into it.
+    if (error?.message === "JOB_CANCELLED" || error?.message === "STOP_REQUESTED") throw error;
+    if (controller.signal.aborted || error?.name === "AbortError") {
+      throw new RequestTimeoutError(timeoutMs);
     }
     // Wrap non-object throws (plain strings, numbers) so they always have .message
     if (error !== null && typeof error !== "object") {
@@ -346,7 +357,7 @@ export async function translateChunk(
       const fromNumbered = extractNumberedTranslations(result.text || "", subtitles.length);
       if (fromNumbered) return fromNumbered;
     } catch (e: any) {
-      if (e?.message === "STOP_REQUESTED" || e instanceof RequestTimeoutError) throw e;
+      if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED" || e instanceof RequestTimeoutError) throw e;
       // fall through to plain-text path
     }
   }
@@ -445,7 +456,7 @@ export async function translateSingle(
         if (single) return single;
       }
     } catch (e: any) {
-      if (e?.message === "STOP_REQUESTED" || e instanceof RequestTimeoutError) throw e;
+      if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED" || e instanceof RequestTimeoutError) throw e;
       // fall through to plain-text path
     }
   }

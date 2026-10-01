@@ -103,6 +103,7 @@
       "unpin": "Unpin",
       "preview": "Preview",
       "retry": "Retry",
+      "cancel": "Abbrechen",
       "retranslate": "Re-translate",
       "translateAnyway": "Trotzdem übersetzen",
       "details": "Details",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "Transkription erneut versucht.",
       "retryFailed": "Wiederholung fehlgeschlagen: {{error}}",
       "jobsFailed": "{{count}} Aufträge fehlgeschlagen",
-      "openDashboard": "Dashboard öffnen"
+      "openDashboard": "Dashboard öffnen",
+      "jobCancelled": "Job abgebrochen — die Warteschlange läuft weiter"
     },
     "confirm": {
       "clearTitle": "Erledigte Aufträge entfernen",

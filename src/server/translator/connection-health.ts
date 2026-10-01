@@ -1,4 +1,5 @@
 import type { ResolvedConnection } from "../connections.js";
+import { controlledAbortError } from "./ai-client.js";
 
 /**
  * Per-job connection health: availability probing, the timeout breaker, and the
@@ -146,7 +147,9 @@ export function createConnectionHealth(options: ConnectionHealthOptions = {}): C
 
     let lastErr: unknown;
     for (let attempt = 1; attempt <= OFFLINE_ATTEMPTS; attempt++) {
-      if (options.abortSignal?.aborted) throw new Error("STOP_REQUESTED");
+      // Only a deliberate per-job cancel keeps its identity; every other abort
+      // reads as a queue stop.
+      if (options.abortSignal?.aborted) throw controlledAbortError(options.abortSignal);
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort("connection_probe_timeout"), OFFLINE_RETRY_MS);
       try {

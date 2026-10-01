@@ -103,6 +103,7 @@
       "unpin": "Unpin",
       "preview": "Preview",
       "retry": "Retry",
+      "cancel": "Отмена",
       "retranslate": "Re-translate",
       "translateAnyway": "Всё равно перевести",
       "details": "Details",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "Транскрипция повторена.",
       "retryFailed": "Не удалось повторить: {{error}}",
       "jobsFailed": "Заданий с ошибкой: {{count}}",
-      "openDashboard": "Открыть панель"
+      "openDashboard": "Открыть панель",
+      "jobCancelled": "Задача отменена — очередь продолжается"
     },
     "confirm": {
       "clearTitle": "Очистить завершённые задания",

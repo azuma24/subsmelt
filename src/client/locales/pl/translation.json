@@ -103,6 +103,7 @@
       "unpin": "Odepnij",
       "preview": "Podgląd",
       "retry": "Ponów",
+      "cancel": "Anuluj",
       "retranslate": "Przetłumacz ponownie",
       "translateAnyway": "Przetłumacz mimo to",
       "details": "Szczegóły",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "Ponowiono transkrypcję.",
       "retryFailed": "Ponowna próba nie powiodła się: {{error}}",
       "jobsFailed": "Nieudane zadania: {{count}}",
-      "openDashboard": "Otwórz panel"
+      "openDashboard": "Otwórz panel",
+      "jobCancelled": "Zadanie anulowane — kolejka działa dalej"
     },
     "confirm": {
       "clearTitle": "Wyczyść zakończone zadania",

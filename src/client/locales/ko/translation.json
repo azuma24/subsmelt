@@ -103,6 +103,7 @@
       "unpin": "Unpin",
       "preview": "Preview",
       "retry": "Retry",
+      "cancel": "취소",
       "retranslate": "Re-translate",
       "translateAnyway": "그래도 번역",
       "details": "Details",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "전사를 다시 시도했습니다.",
       "retryFailed": "재시도 실패: {{error}}",
       "jobsFailed": "작업 {{count}}개가 실패했습니다",
-      "openDashboard": "대시보드 열기"
+      "openDashboard": "대시보드 열기",
+      "jobCancelled": "작업이 취소되었습니다 — 대기열 계속"
     },
     "confirm": {
       "clearTitle": "완료된 작업 지우기",

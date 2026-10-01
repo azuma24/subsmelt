@@ -24,6 +24,9 @@ import {
   isQueueRunning,
   getCurrentJobId,
   requestStop,
+  requestJobCancel,
+  getJobConnection,
+  getActiveJobConnections,
 } from "../queue.js";
 import {
   parseSubtitle,
@@ -66,6 +69,8 @@ function enrichJobs(jobs: any[]): any[] {
       target_lang: task?.target_lang || "",
       lang_code: task?.lang_code || "",
       source_lang: task?.source_lang || "",
+      // Which machine (LLM connection) a translating job runs on; null otherwise.
+      connection: job.status === "translating" ? getJobConnection(job.id) : null,
     };
   });
 }
@@ -124,6 +129,17 @@ export function registerJobsRoutes(app: Express): void {
     if (forceJob(id) === 0) return rejectUnchanged(res, id);
     logger.info("queue", `Job #${id} marked for force re-translate`, id);
     setTimeout(() => processQueue(), 100);
+    res.json({ ok: true });
+  });
+
+  // Cancels one translating job: its LLM calls are aborted and it ends as a
+  // cancelled error, while the queue keeps running with the next pending job.
+  app.post("/api/jobs/:id/cancel", (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const job = getJob(id);
+    if (!job) return res.status(404).json({ error: "Job not found" });
+    if (job.status !== "translating") return res.status(409).json({ error: "Job is not translating" });
+    if (!requestJobCancel(id)) return res.status(409).json({ error: "Job is not translating" });
     res.json({ ok: true });
   });
 
@@ -402,6 +418,9 @@ export function registerJobsRoutes(app: Express): void {
       running: isQueueRunning(),
       currentJobId: currentId,
       currentJob: currentJob ? enrichJobs([currentJob])[0] : null,
+      // Parallel mode runs several jobs at once, each pinned to a connection
+      // ("machine"); the dashboard shows the pairing.
+      activeConnections: getActiveJobConnections(),
       pendingCount: getJobs("pending").length,
       watcherRunning: isWatcherRunning(),
     });

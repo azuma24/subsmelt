@@ -103,6 +103,7 @@
       "unpin": "Unpin",
       "preview": "Preview",
       "retry": "Retry",
+      "cancel": "Batalkan",
       "retranslate": "Re-translate",
       "translateAnyway": "Tetap terjemahkan",
       "details": "Details",
@@ -137,7 +138,8 @@
       "transcriptionRetried": "Transkripsi dicoba lagi.",
       "retryFailed": "Gagal mencoba lagi: {{error}}",
       "jobsFailed": "{{count}} pekerjaan gagal",
-      "openDashboard": "Buka Dasbor"
+      "openDashboard": "Buka Dasbor",
+      "jobCancelled": "Pekerjaan dibatalkan — antrean berlanjut"
     },
     "confirm": {
       "clearTitle": "Hapus pekerjaan yang selesai",

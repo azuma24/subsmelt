@@ -21,6 +21,7 @@ interface UseJobActionsOptions {
 export interface JobActions {
   retry: (id: number) => void;
   retranslate: (id: number) => void;
+  cancel: (id: number) => void;
   pin: (id: number) => void;
   unpin: (id: number) => void;
   // Confirms before deleting; resolves when the flow settles (cancel or done).
@@ -30,6 +31,7 @@ export interface JobActions {
   // disabled to prevent double-fire (frontend-audit §11).
   isRetrying: boolean;
   isRetranslating: boolean;
+  isCancelling: boolean;
   isPinning: boolean;
   isUnpinning: boolean;
   isDeleting: boolean;
@@ -48,6 +50,7 @@ export function useJobActions(options: UseJobActionsOptions = {}): JobActions {
 
   const retryMutation = useMutationWithInvalidation((id: number) => api.retryJob(id));
   const forceMutation = useMutationWithInvalidation((id: number) => api.forceJob(id));
+  const cancelMutation = useMutationWithInvalidation((id: number) => api.cancelJob(id));
   const pinMutation = useMutationWithInvalidation((id: number) => api.pinJob(id));
   const unpinMutation = useMutationWithInvalidation((id: number) => api.unpinJob(id));
   const deleteMutation = useMutationWithInvalidation((id: number) => api.deleteJobApi(id));
@@ -70,6 +73,16 @@ export function useJobActions(options: UseJobActionsOptions = {}): JobActions {
       });
     },
     [forceMutation, addToast, t, showError]
+  );
+
+  const cancel = useCallback(
+    (id: number) => {
+      cancelMutation.mutate(id, {
+        onSuccess: () => addToast(t("dashboard.toast.jobCancelled"), "info"),
+        onError: () => showError("dashboard.toast.actionFailed"),
+      });
+    },
+    [cancelMutation, addToast, t, showError]
   );
 
   const pin = useCallback(
@@ -109,12 +122,14 @@ export function useJobActions(options: UseJobActionsOptions = {}): JobActions {
   return {
     retry,
     retranslate,
+    cancel,
     pin,
     unpin,
     remove,
     classifyErrorReason,
     isRetrying: retryMutation.isPending,
     isRetranslating: forceMutation.isPending,
+    isCancelling: cancelMutation.isPending,
     isPinning: pinMutation.isPending,
     isUnpinning: unpinMutation.isPending,
     isDeleting: deleteMutation.isPending,

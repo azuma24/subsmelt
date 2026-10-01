@@ -31,12 +31,16 @@ export interface JobRow {
   est_cost?: number | null;
   /** When the job was claimed (SQLite UTC timestamp); null while pending. */
   started_at?: string | null;
+  /** The LLM connection ("machine") a translating job runs on; null otherwise. */
+  connection?: { label: string; host: string } | null;
 }
 
 export interface QueueStatus {
   running: boolean;
   currentJobId: number | null;
   currentJob: JobRow | null;
+  /** Parallel mode: every translating job with the connection running it. */
+  activeConnections: { jobId: number; label: string; host: string }[];
   pendingCount: number;
   watcherRunning: boolean;
 }

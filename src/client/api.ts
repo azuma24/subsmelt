@@ -115,6 +115,8 @@ export const retryJob = (id: number) =>
   fetchJSON(`/jobs/${id}/retry`, { method: "POST" });
 export const forceJob = (id: number) =>
   fetchJSON(`/jobs/${id}/force`, { method: "POST" });
+export const cancelJob = (id: number) =>
+  fetchJSON(`/jobs/${id}/cancel`, { method: "POST" });
 export const retryJobsApi = (ids: number[]) =>
   fetchJSON<{ ok: boolean; updated: number }>("/jobs/retry-selected", {
     method: "POST",
@@ -320,6 +322,10 @@ export const cancelTranscription = (payload: { path: string }) =>
   fetchJSON<{ ok: boolean }>("/transcribe/cancel", {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+export const cancelAllTranscriptions = () =>
+  fetchJSON<{ ok: boolean; cancelled: number }>("/transcribe/cancel-all", {
+    method: "POST",
   });
 
 // Whisper Model Manager — proxied through the SubSmelt server to the configured
