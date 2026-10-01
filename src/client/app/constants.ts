@@ -99,6 +99,17 @@ export const PRESETS = [
   { label: "Deutsch", target_lang: "German", lang_code: "deu", output_pattern: "{{name}}.deu.srt" },
   { label: "Português", target_lang: "Portuguese", lang_code: "por", output_pattern: "{{name}}.por.srt" },
   { label: "简体中文", target_lang: "Simplified Chinese", lang_code: "chs", output_pattern: "{{name}}.chs.srt" },
+  { label: "Русский", target_lang: "Russian", lang_code: "rus", output_pattern: "{{name}}.rus.srt" },
+  { label: "العربية", target_lang: "Arabic", lang_code: "ara", output_pattern: "{{name}}.ara.srt" },
+  { label: "ไทย", target_lang: "Thai", lang_code: "tha", output_pattern: "{{name}}.tha.srt" },
+  { label: "Tiếng Việt", target_lang: "Vietnamese", lang_code: "vie", output_pattern: "{{name}}.vie.srt" },
+  { label: "Bahasa Indonesia", target_lang: "Indonesian", lang_code: "ind", output_pattern: "{{name}}.ind.srt" },
+  { label: "Nederlands", target_lang: "Dutch", lang_code: "nld", output_pattern: "{{name}}.nld.srt" },
+  { label: "Polski", target_lang: "Polish", lang_code: "pol", output_pattern: "{{name}}.pol.srt" },
+  { label: "Türkçe", target_lang: "Turkish", lang_code: "tur", output_pattern: "{{name}}.tur.srt" },
+  { label: "हिन्दी", target_lang: "Hindi", lang_code: "hin", output_pattern: "{{name}}.hin.srt" },
+  { label: "Українська", target_lang: "Ukrainian", lang_code: "ukr", output_pattern: "{{name}}.ukr.srt" },
+  { label: "Svenska", target_lang: "Swedish", lang_code: "swe", output_pattern: "{{name}}.swe.srt" },
 ] as const;
 
 export const DEFAULT_PROMPT = `// You are a professional subtitle translator.

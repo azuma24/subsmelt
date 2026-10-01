@@ -63,6 +63,12 @@ test("a task names its language by name first, unless the name is plain Chinese 
   assert.equal(taskLanguageKey({ target_lang: "Klingon", lang_code: "tlh" }), "tlh");
 });
 
+test("parenthetical qualifiers never break the name lookup", () => {
+  assert.equal(languageKey("Traditional Chinese (Taiwan)"), "zh-Hant");
+  assert.equal(languageKey("Spanish (Spain)"), "es");
+  assert.equal(taskLanguageKey({ target_lang: "Traditional Chinese (Taiwan)", lang_code: "chi" }), "zh-Hant");
+});
+
 test("transcripts are named with a suffix the scanner strips, and Whisper gets the base language", () => {
   assert.deepEqual([languageFileCode("zh-Hant"), languageFileCode("en"), languageFileCode("tlh")], ["zh-TW", "en", "tlh"]);
   assert.deepEqual([whisperLanguage("zh-Hant"), whisperLanguage("pt"), whisperLanguage("fil"), whisperLanguage("sw")], ["zh", "pt", null, "sw"]);

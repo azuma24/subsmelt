@@ -58,6 +58,10 @@ export function languageKey(label: string): string {
   const text = label.trim().toLowerCase().replace(/_/g, "-");
   const direct = BY_ALIAS.get(text);
   if (direct) return direct;
+  // A parenthetical never names a language: "Traditional Chinese (Taiwan)" is "traditional chinese".
+  const bare = text.replace(/\s*\([^)]*\)/g, "").replace(/\s+/g, " ").trim();
+  const stripped = bare ? BY_ALIAS.get(bare) : undefined;
+  if (stripped) return stripped;
   const [base, ...rest] = text.split("-");
   if (base === "zh") {
     const script = rest.map((part) => CHINESE_SCRIPT[part]).find(Boolean);

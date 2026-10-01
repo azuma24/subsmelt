@@ -69,7 +69,7 @@ export function createProgressTracker(expectedFiles: number): (line: string) => 
   };
 }
 
-/** The finished media file for a video in `dir`, found by the id in its name. */
+/** The finished media file for a video in `dir`, found by the id in its name, brackets or not. */
 export function findDownloadedMedia(dir: string, videoId: string): string | null {
   let names: string[];
   try {
@@ -77,7 +77,7 @@ export function findDownloadedMedia(dir: string, videoId: string): string | null
   } catch {
     return null;
   }
-  return names.find((name) => name.includes(`[${videoId}].`) && MEDIA_EXTENSIONS.has(path.extname(name).toLowerCase())) ?? null;
+  return names.find((name) => name.includes(videoId) && MEDIA_EXTENSIONS.has(path.extname(name).toLowerCase())) ?? null;
 }
 
 const PARTIAL_SUFFIX = ".subsmelt-partial";
