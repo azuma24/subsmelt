@@ -3,6 +3,32 @@
 All notable changes to SubSmelt. The app and the Windows Whisper backend share a
 version number and are released together (`v0.5.6` and `whisper-v0.5.6`).
 
+## [0.6.1] — 2026-10-01
+
+### Added
+
+- **Cancel a single translating job.** Each translating row on the dashboard now has Cancel next to Preview (a danger button on mobile). It aborts that job's LLM calls, ends it as a cancelled error you can Retry — keeping its partial output so the retry resumes — and the queue keeps running with the next pending job. Stop keeps its old meaning: everything aborted, every job back to pending.
+- **See which machine is running what.** In parallel mode, every translating row names the LLM connection running it (with its host on hover), and `/api/queue/status` lists all active job–connection pairs. The attribution follows fallback switches live.
+- **Cancel actually stops transcriptions.** The Transcribe page's Cancel now also stops every in-flight transcription — including runs the page displays but doesn't own (another tab, a run that survived a reload, auto-transcription) — which previously kept running with no way to stop them. The Cancel button now appears whenever anything is visibly transcribing, not only during a batch, and closing the page (or a reload) aborts the run it started instead of leaving the backend transcribing into the void.
+
+### Fixed
+
+- **A cancelled job poisoned its own retries.** A cancel racing a completing job left its marker behind, so every later retry of that job failed instantly with "Cancelled by user".
+- **A cancel landing during the model-context probe was ignored** until the first translation call; the probe now honours the job's abort signal.
+- **A stop arriving during a cancel** could label a job "Cancelled by user" instead of returning it to pending like its siblings.
+- **Better-sqlite3 had no binding on Node 26** and failed to compile (`v8::Object::GetPrototype` was removed); the pin moved to 13.0.3, which ships prebuilds for current Node.
+- **The Docker build failed compiling better-sqlite3**: npm auto-runs node-gyp for its `binding.gyp`, and the image has no Python — `npm ci` now skips install scripts, which nothing needs (better-sqlite3 ships N-API prebuilds; esbuild's script is a fallback for its platform binary).
+- **Translations could be written outside the media folder.** A task's output pattern reached `path.join` unsanitized, and the queue — unlike the preview and download routes — never re-checked the path before writing. Patterns containing `..` or an absolute prefix are now refused at task create and update, and the queue asserts both job paths under MEDIA_DIR before translating.
+- **The zh-TW task resolved to plain "zh"**, so Chinese videos copied their Simplified transcript as a zh-TW file without translating. The task now resolves to zh-Hant: Chinese videos get a proper Traditional translation, and `zh-Hant` videos take the cheap copy route.
+- **Downloaded videos whose files were saved without the `[id]` bracket** were re-downloaded; the adoption check now matches the bare video id too.
+- **`config.json` (plaintext LLM keys) was written 0644**; it is now 0600 like `cookies.txt`.
+
+### Changed
+
+- **SSE endpoints are capped** at 100 live connections with one shared heartbeat, so a connection storm can no longer exhaust file descriptors.
+- **Overlapping scans share one walk**: a second `POST /api/scan` receives the running scan's result instead of queueing another full-tree walk that freezes the event loop.
+- **Eleven more translation presets** — Russian, Arabic, Thai, Vietnamese, Indonesian, Dutch, Polish, Turkish, Hindi, Ukrainian and Swedish joined the quick-add list (20 in total), every language the subtitle router supports. (Also in the replaced 0.6.0 image.)
+
 ## [0.6.0] — 2026-10-01
 
 App `v0.6.0` and Whisper backend `whisper-v0.6.0`, released together.
