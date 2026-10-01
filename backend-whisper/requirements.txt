@@ -6,6 +6,10 @@ python-multipart==0.0.20
 pydantic==2.12.5
 psutil==7.1.3
 faster-whisper==1.2.1
+# faster-whisper 1.2.1 decodes audio with av.open(..., metadata_errors=...),
+# which PyAV 19 removed; unpinned, the 0.6.0 Windows build got av 19 and every
+# Whisper transcription failed. 18.1.0 is what 0.5.9 shipped with.
+av==18.1.0
 # NVML bindings for GPU/VRAM detection. Pure-python, safe to install on any
 # host (no CUDA toolkit needed); imports are guarded so absence degrades to
 # CPU-only detection. Exposes the `pynvml` module.
