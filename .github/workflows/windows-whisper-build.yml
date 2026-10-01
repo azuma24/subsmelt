@@ -26,6 +26,9 @@ jobs:
   build:
     needs: test
     runs-on: windows-latest
+    env:
+      # Every pip install in this job resolves to the exact locked versions.
+      PIP_CONSTRAINT: ${{ github.workspace }}/backend-whisper/packaging/windows/constraints.txt
     defaults:
       run:
         working-directory: backend-whisper
@@ -61,7 +64,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install nvidia-cudnn-cu12==9.* nvidia-cublas-cu12 pyinstaller
+          pip install nvidia-cudnn-cu12 nvidia-cublas-cu12 pyinstaller
           pip list
 
       # Fetch ffmpeg.exe + vc_redist.x64.exe + the pinned, SHA-256 verified

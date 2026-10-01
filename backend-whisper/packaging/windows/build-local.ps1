@@ -81,12 +81,14 @@ try {
 
     # --- 2. dependencies ---
     Info "installing dependencies (this can take a few minutes the first time)"
+    # Same exact versions as the CI installer build.
+    $env:PIP_CONSTRAINT = Join-Path $WinDir "constraints.txt"
     & $VenvPy -m pip install --upgrade pip
     & $VenvPy -m pip install -r (Join-Path $BackendRoot "requirements.txt")
     if ($LASTEXITCODE -ne 0) { Die "pip install -r requirements.txt failed" }
     # GPU runtime wheels (cuDNN 9 / cuBLAS) + PyInstaller. These pull large CUDA
     # DLLs; the spec collects them next to the exe. Safe on a CPU-only box too.
-    & $VenvPy -m pip install "nvidia-cudnn-cu12==9.*" nvidia-cublas-cu12 pyinstaller
+    & $VenvPy -m pip install nvidia-cudnn-cu12 nvidia-cublas-cu12 pyinstaller
     if ($LASTEXITCODE -ne 0) { Die "pip install GPU/pyinstaller deps failed" }
 
     # --- 3. vendored binaries ---
