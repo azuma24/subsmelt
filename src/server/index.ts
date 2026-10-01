@@ -64,8 +64,22 @@ app.get("/api/folders/tree", (_req, res) => {
 });
 
 // ======== Scanner ========
+// A scan walks the whole media tree synchronously on the event loop; overlapping
+// requests would queue up back-to-back walks and freeze the server. Concurrent
+// callers share the run already in flight and receive its result.
+let scanInFlight: Promise<ReturnType<typeof scanFolder>> | null = null;
+
 app.post("/api/scan", async (_req, res) => {
-  try {
+  if (scanInFlight) {
+    // A walk is already running: share it instead of queueing another
+    // full-tree walk behind it.
+    try {
+      return res.json(await scanInFlight);
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+  const run = (async (): Promise<ReturnType<typeof scanFolder>> => {
     let result = scanFolder(true);
     const settings = getAllSettings();
     const behavior = settings.transcription_missing_subtitle_behavior || "ask";
@@ -148,9 +162,15 @@ app.post("/api/scan", async (_req, res) => {
       newJobs: result.newJobs,
       total: result.totalSubtitles,
     });
-    res.json(result);
+    return result;
+  })();
+  scanInFlight = run;
+  try {
+    res.json(await run);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
+  } finally {
+    scanInFlight = null;
   }
 });
 
