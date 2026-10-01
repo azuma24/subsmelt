@@ -94,6 +94,26 @@ jobs:
           & $exe --print-config
           if ($LASTEXITCODE -ne 0) { throw "run_server.exe --print-config exited $LASTEXITCODE" }
 
+      # Start the real server and wait for /health. --print-config exits before
+      # app.main is imported, so an import-time crash in the frozen bundle (exit
+      # code 1, nothing in the log) only shows up here.
+      - name: Smoke test frozen server (/health)
+        run: |
+          $exe = "dist/whisper-server/run_server.exe"
+          $env:SUBSMELT_WHISPER_HOST = "127.0.0.1"
+          $env:SUBSMELT_WHISPER_PORT = "8765"
+          $env:SUBSMELT_WHISPER_LOG_FILE = ""
+          $proc = Start-Process -FilePath $exe -PassThru -NoNewWindow `
+            -RedirectStandardOutput server.out -RedirectStandardError server.err
+          $ok = $false
+          for ($i = 0; $i -lt 90 -and -not $proc.HasExited; $i++) {
+            try { $h = Invoke-RestMethod http://127.0.0.1:8765/health -TimeoutSec 2; $ok = $true; break } catch { Start-Sleep 1 }
+          }
+          if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }
+          Get-Content server.out, server.err -ErrorAction SilentlyContinue
+          if (-not $ok) { throw "run_server.exe never answered /health (exit code $($proc.ExitCode))" }
+          Write-Host "health: version $($h.version)"
+
       # The tray + GUI controllers ship INSIDE the bundle (they launch and stop
       # run_server.exe). They are small onefile builds with no CUDA deps; both
       # specs move their exe next to run_server.exe, which is where their
