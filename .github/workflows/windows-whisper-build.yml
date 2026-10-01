@@ -124,6 +124,8 @@ jobs:
           $env:SUBSMELT_WHISPER_PORT = "8766"
           $env:SUBSMELT_WHISPER_LOG_FILE = ""
           $env:HF_HOME = "$env:RUNNER_TEMP\hf"
+          # The installer sets this; point at the ffmpeg.exe bundled beside run_server.exe.
+          $env:SUBSMELT_FFMPEG = (Resolve-Path "dist/whisper-server/ffmpeg.exe").Path
           python -c "import wave; w = wave.open('tone.wav', 'wb'); w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000); w.writeframes(bytes(32000)); w.close()"
           $proc = Start-Process -FilePath $exe -PassThru -NoNewWindow `
             -RedirectStandardOutput whisper.out -RedirectStandardError whisper.err
