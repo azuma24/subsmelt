@@ -503,7 +503,16 @@ def configure_file_logging(config: "ServerConfig") -> bool:
         return False
 
 
+def tolerate_unencodable_output() -> None:
+    """Never crash on a status line: a redirected Windows stdout uses the ANSI
+    code page, which cannot encode characters such as the arrow below."""
+    for stream in (sys.stdout, sys.stderr):
+        if stream is not None and hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
+
+
 def main(argv: list[str] | None = None) -> int:
+    tolerate_unencodable_output()
     args = _parse_args(sys.argv[1:] if argv is None else argv)
 
     # Before load_config()/apply_environment(): minting a key must work on an
