@@ -7,7 +7,13 @@ COPY package.json package-lock.json* ./
 # --legacy-peer-deps: i18next@26 declares typescript as an OPTIONAL peer at
 # "^5 || ^6" while this repo is on typescript@7, which the image's npm 10
 # rejects outright. The peer is types-only and the lockfile resolves cleanly.
-RUN npm ci --legacy-peer-deps
+# --ignore-scripts: better-sqlite3@13 ships a binding.gyp but no install
+# script, so npm 10 auto-runs node-gyp rebuild for it — which needs a Python
+# toolchain node:22-slim does not have. It is unnecessary: the package bundles
+# N-API prebuilds for linux amd64/arm64 and node-gyp-build loads them at
+# require time. The only other install script, esbuild's, is a fallback for a
+# binary the platform optional dependency already provides.
+RUN npm ci --ignore-scripts --legacy-peer-deps
 
 COPY . .
 RUN npm run build
