@@ -1,5 +1,7 @@
 # Handoff: finishing SubSmelt 0.6.0
 
+> **Historical.** 0.6.0 shipped on 2026-10-01 with everything in this checklist. Current state is in [HANDOFF.md](HANDOFF.md); open items are in [TODO.md](TODO.md). Kept for the working rules (§3) and traps (§7), which still apply.
+
 Written 2026-09-30 for the next agent. Read this file top to bottom before you touch code. It tells you what is done, what is left, in what order, how to verify each piece, and which traps already cost time.
 
 ## 1. Where things stand

@@ -67,6 +67,15 @@ its own GitHub release for the installer; the app's notes are not automated.
   your own credentials is the reliable path.
 - **The Windows installer is unsigned**, so SmartScreen warns on every download.
   Tracked in [TODO.md](TODO.md).
+- **A green build is not a working installer by itself.** The Windows workflow's
+  smoke tests (frozen server `/health` and a Whisper `tiny` transcription) are
+  the gate; they run on CPU only, so GPU paths need a check on real hardware.
+- **Installer dependencies are locked** in
+  `backend-whisper/packaging/windows/constraints.txt`. Bump a version there on
+  purpose; never unpin to "get the latest".
+- **Replacing a published installer** (same version): dispatch the workflow with
+  that version, download the artifact, `gh release upload whisper-v<ver> <exe>
+  --clobber`, and add a dated note with the new SHA-256 to the release.
 - **The installer is ~1 GB** because the cuDNN and cuBLAS wheels are bundled. No
   model weights are included; the model manager downloads those on first use.
 

@@ -254,11 +254,14 @@ Docker `v*` tags because the CUDA onedir is ~1–2 GB) and via manual
 
 1. resolve version (from the `whisper-v<ver>` tag or the dispatch input),
 2. install `requirements.txt` + `nvidia-cudnn-cu12` / `nvidia-cublas-cu12` + PyInstaller,
+   all pinned to `constraints.txt` through `PIP_CONSTRAINT` (`build-local.ps1` does the same),
 3. `fetch-vendor.ps1` → `vendor\ffmpeg.exe` + `vendor\vc_redist.x64.exe` +
    `vendor\nemo-speech\bin\`,
 4. `pyinstaller … whisper-server.spec`, then smoke-test `run_server.exe --print-config`
    and fail if `nemo-speech\bin\nemo-speech.exe` is missing from the bundle (the
-   CUDA exe is not run; the runner has no GPU),
+   CUDA exe is not run; the runner has no GPU), then start the frozen server, wait for
+   `/health`, and transcribe a WAV with Whisper `tiny` on CPU through the bundled
+   `ffmpeg.exe`,
 5. `choco install innosetup`, then `ISCC /DMyAppVersion=<ver> installer.iss`,
 6. upload the `Output\*.exe` installer as a build artifact, and — on a tag —
    attach it to a GitHub release.
@@ -266,9 +269,8 @@ Docker `v*` tags because the CUDA onedir is ~1–2 GB) and via manual
 **To cut a release:** push a tag like `whisper-v0.5.6`. **To test the build
 without a release:** run the workflow manually from the Actions tab.
 
-> Not yet in CI (future work): a full packaging smoke test that *installs* the
-> service and asserts `/health` returns 200 (needs a GPU-or-CPU service-lifecycle
-> step), and code signing of the installer.
+> Not yet in CI (future work): installing the service itself (the smoke tests run
+> `run_server.exe` directly), any GPU path, and code signing of the installer.
 
 ---
 

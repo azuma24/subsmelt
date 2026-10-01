@@ -16,8 +16,7 @@ Known gaps with no work in progress. Context and rationale live in
 Sizes re-measured on 2026-09-30 on `release/0.6.0`; the guideline is 200–400
 lines typical, 800 max. These two are the only source files over 800.
 
-- [ ] `backend-whisper/app/main.py` — **892 lines**, up from 816. The 0.6.0
-      backend fixes added to it without extracting anything.
+- [ ] `backend-whisper/app/main.py` — **883 lines**, up from 816 at 0.5.6.
 - [ ] `backend-whisper/packaging/windows/tray/whisper_gui.py` — 858 lines.
 
 ## Whisper control app (Windows)
@@ -34,7 +33,30 @@ lines typical, 800 max. These two are the only source files over 800.
 - [ ] `MediaSourcesPanel` is 349 lines but its main component is still the
       largest single thing in Settings → Sources
 
+## YouTube (after 0.6.0)
+
+- [ ] **Check now waits behind a running download**, because the YouTube lane is serial.
+- [ ] **A cancelled premiere is retried about every hour forever.** Give `waiting` a limit.
+- [ ] **A hard kill (SIGKILL) of the server outside Docker leaves yt-dlp running.**
+      Normal stops and timeouts kill the whole process group.
+- [ ] **A task deleted from the config drops its section from the note**, because the
+      export needs the task's output pattern. Store the output path in `subtitle_plan`.
+- [ ] Not yet tried live: "Added since" against the real YouTube Data API, a real
+      cookies.txt for a Private playlist, and opening a note in Obsidian.
+- [ ] The rate-limit check exists twice (`sync.ts` and `isCooldownCause` in `worker.ts`).
+
+## Open questions
+
+- [ ] **Resuming stopped jobs from `.part` files** — treat "translation equals source"
+      as untranslated, or keep a sidecar list of translated cue indices (HANDOFF §5).
+- [ ] **Installs that stored the redaction marker as their API key** re-enter it once;
+      write a migration or leave it.
+
 ## Testing / infrastructure
+
+- [ ] **Lock the Linux backend Docker image** like the Windows installer
+      (`packaging/windows/constraints.txt`).
+- [ ] The app has no favicon, so every page load logs a `/favicon.ico` 404.
 
 - [ ] The CI runner has no `ffmpeg`, so the backend's ffmpeg paths are only
       exercised against mocks
@@ -75,6 +97,9 @@ lines typical, 800 max. These two are the only source files over 800.
       values were still English. `locale-coverage.test.ts` now fails if any
       `errors.*` value matches English.
 - [x] **First render tests** — see the open item under Testing for their limits.
+- [x] **Windows installer smoke tests and dependency lock** — the build starts the
+      frozen server, checks `/health` and transcribes with Whisper before
+      publishing, and pins every package (`constraints.txt`).
 
 ### 2026-08 UX/UI pass
 Spec and remaining roadmap: [2026-08-11-uxui-audit.md](2026-08-11-uxui-audit.md).

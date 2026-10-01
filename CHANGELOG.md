@@ -7,6 +7,12 @@ version number and are released together (`v0.5.6` and `whisper-v0.5.6`).
 
 App `v0.6.0` and Whisper backend `whisper-v0.6.0`, released together.
 
+The Windows installer attached to `whisper-v0.6.0` was rebuilt the same day. The
+first upload did not start (`No module named 'wave'`: the PyInstaller spec never
+analysed the backend's own imports), and its Whisper models failed to decode
+audio (`open() got an unexpected keyword argument 'metadata_errors'`: an unpinned
+PyAV 19). The rebuilt installer fixes both and builds from locked dependencies.
+
 ### Added
 
 - **NVIDIA Nemotron 3.5 ASR** as a second speech-to-text engine next to Whisper. Pick `nemotron-3.5-asr` in Settings or per run, download its 742 MB GGUF from the model manager, and get punctuated subtitles with word-level timing in 32 languages, several times faster than `large-v3` at a fraction of the VRAM. The backend runs it through the bundled NeMo-Speech.cpp 0.1.0 runtime (`nemo-speech`, checksum-pinned in the Docker image and the Windows installer; `SUBSMELT_NEMO_SPEECH` for source installs). Long audio is split at silences into chunks of about ten minutes so progress and cancel keep working. The backend advertises `capabilities.modelInfo` (engine, languages, supported options per model); the UI groups models by engine, hides options a model ignores, warns when a model does not support the chosen language, and the heading "Whisper Models" became "Speech-to-text models". A model that does not support the requested language is refused with `language_not_supported` (formerly `english_only_model`), a missing runtime with `engine_unavailable`, and the low-RAM downgrade never switches engines.

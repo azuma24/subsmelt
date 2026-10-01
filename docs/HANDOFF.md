@@ -118,7 +118,19 @@ Anything behind a click needs a DOM-based test, which the repo does not have.
 `.github/workflows/ci.yml` runs the TypeScript suite, both typechecks, the
 production build, pytest, and a Docker image build (no push) on every PR and push
 to `main`. Both release workflows declare `needs: test`, so nothing publishes
-without it.
+without it. (CI was found switched off in GitHub's settings during 0.6.0, which is
+why PRs had no checks; check `gh workflow list` if checks go missing.)
+
+The Windows installer build pins every Python package to
+`backend-whisper/packaging/windows/constraints.txt` (via `PIP_CONSTRAINT`), and
+before an installer can be published it starts the frozen `run_server.exe`,
+waits for `/health`, and transcribes a WAV with Whisper `tiny`. Each check exists
+because 0.6.0's first installer broke past the old `--print-config` smoke test:
+the spec never analysed the `app` package (a stdlib import went missing), and an
+unpinned PyAV release broke Whisper decoding. Change a pinned version on purpose
+and let those smoke tests prove it. The Mac cannot build the installer
+(PyInstaller does not cross-compile; Inno Setup is Windows-only): dispatch the
+workflow, or run `build-local.ps1` on a Windows machine.
 
 Releasing is two tags on the same commit — full procedure, constraints and the
 current release status in **[RELEASING.md](RELEASING.md)**:
@@ -133,7 +145,10 @@ git push origin v0.6.0 whisper-v0.6.0
 
 `v*` publishes the Docker image; `whisper-v*` builds the Windows installer and
 creates its GitHub release with the installer attached. The app's release notes
-are written by hand afterwards. The installer is ~1 GB because the cuDNN and
+are written by hand afterwards. To fix an installer without a new version, build
+the same version by dispatch and replace the asset with
+`gh release upload whisper-v<ver> <exe> --clobber`, then say so in the release
+notes (done once for 0.6.0). The installer is ~1 GB because the cuDNN and
 cuBLAS wheels are bundled (703 MB + 528 MB compressed) — **no model weights are
 included**; the model manager downloads those on first use.
 
@@ -178,7 +193,7 @@ Nothing here is in progress. Ordered by what I would fix first.
 
 ### Correctness and coverage
 
-- `backend-whisper/app/main.py` (892 lines, up from 816 at 0.5.6) and
+- `backend-whisper/app/main.py` (883 lines, up from 816 at 0.5.6) and
   `backend-whisper/packaging/windows/tray/whisper_gui.py` (858) exceed the
   800-line guideline. They are the only source files that do. `WhisperPage.tsx`
   is down from 840 to 496 lines.
@@ -189,7 +204,13 @@ Nothing here is in progress. Ordered by what I would fix first.
 - **Installs that stored the redaction marker as their API key** must re-enter
   the key once. No migration was written.
 - The CI runner has no `ffmpeg`, so the backend's ffmpeg paths are only exercised
-  by tests that mock it.
+  by tests that mock it (the Windows build's smoke test does use the bundled
+  `ffmpeg.exe`).
+- **The Linux backend Docker image is not locked** the way the Windows installer
+  is; only the packages in `requirements.txt` are pinned.
+- **GPU paths are tested only on real hardware.** CI has no GPU; Whisper on CUDA
+  (cuDNN 9.27) and Nemotron on CUDA were verified on the maintainer's RTX PRO 6000
+  for 0.6.0. The Windows `nemo-speech` build needs NVIDIA driver R580 or newer.
 - **Render tests cover four screens, first frame only** (see §3). `shell`,
   `LogsPage`, `TasksPage` and `JobDetailPage` have none, and no test clicks
   anything.
@@ -215,7 +236,7 @@ the path with `run_server`'s own precedence.
 |---|---|
 | [../README.md](../README.md), [../CHANGELOG.md](../CHANGELOG.md), this file | Current |
 | [TODO.md](TODO.md) | Current — open items only |
-| [HANDOFF-0.6.0.md](HANDOFF-0.6.0.md), [handoff-0.6.0/](handoff-0.6.0/) | **Current until 0.6.0 ships** — release checklist, working rules, screenshot and seed scripts |
+| [HANDOFF-0.6.0.md](HANDOFF-0.6.0.md), [handoff-0.6.0/](handoff-0.6.0/) | Historical (0.6.0 shipped); its working rules, traps, screenshot and seed scripts still apply |
 | [PRD-youtube-playlists.md](PRD-youtube-playlists.md) | **Current** — spec for the YouTube feature shipped in 0.6.0 |
 | [why-llm-translation.md](why-llm-translation.md) | Current — explainer for users |
 | [RELEASING.md](RELEASING.md) | **Current** — release procedure and tag-push constraints |
