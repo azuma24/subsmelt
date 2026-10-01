@@ -111,9 +111,17 @@ datas += collect_data_files("onnxruntime")
 binaries += collect_dynamic_libs("onnxruntime")
 hiddenimports += collect_submodules("onnxruntime")
 # uvicorn imports app.main:app from a runtime STRING, so PyInstaller's static
-# analysis can miss it — collect the app package (and pynvml for GPU detection)
-# explicitly so the frozen exe can always start and probe the GPU.
-hiddenimports += collect_submodules("app")
+# analysis never reaches the app package on its own. List its modules from the
+# files: collect_submodules("app") imports the package, which is not on sys.path
+# while this spec runs, so it returned nothing and the app's own imports (stdlib
+# modules such as wave) were never analysed or bundled.
+_app_modules = sorted(
+    "app." + name[:-3] for name in os.listdir(APP_DIR)
+    if name.endswith(".py") and name != "__init__.py"
+)
+if "app.main" not in _app_modules:
+    raise SystemExit(f"[whisper-server.spec] no app modules found under {APP_DIR}")
+hiddenimports += ["app", *_app_modules]
 hiddenimports += ["pynvml"]
 
 block_cipher = None
