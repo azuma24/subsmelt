@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { IDLE, applyProgressEvent, beginFile, cancelBatch, endBatch, fileFinished, getBatchState, runBatch, startBatch } from "./batch-store.js";
+import { IDLE, applyProgressEvent, beginFile, cancelBatch, endBatch, fileFinished, getBatchState, hasLiveTranscriptions, runBatch, startBatch } from "./batch-store.js";
 import type { TranscribeRequest, TranscribeResponse } from "../../types.js";
 
 const request = (videoPath: string): TranscribeRequest => ({ videoPath, postAction: "transcribe_only" });
@@ -75,10 +75,48 @@ test("a second batch cannot start while one is running, and cancel stops after t
   assert.equal(secondFinished, false);
   assert.equal(getBatchState().progress?.total, 3);
 
-  await cancelBatch();
+  await cancelBatch({ cancelOne: async () => {}, cancelAll: async () => {} });
   release();
   await first;
   assert.deepEqual(sent, ["/a.mkv"]);
   assert.equal(getBatchState().running, false);
   assert.deepEqual(getBatchState().fileProgress, { "/a.mkv": { pct: 100, done: true } });
+});
+
+test("cancelBatch cancels the active file and everything else in flight", async () => {
+  let release: () => void = () => {};
+  const gate = new Promise<TranscribeResponse>((resolve) => { release = () => resolve(response); });
+  const run = runBatch({
+    paths: ["/a.mkv"],
+    request,
+    transcribe: () => gate,
+    onFileError: () => {},
+    onFinished: () => {},
+  });
+  await Promise.resolve();
+  const cancelledPaths: string[] = [];
+  let allCount = 0;
+  await cancelBatch({
+    cancelOne: async (path) => { cancelledPaths.push(path); },
+    cancelAll: async () => { allCount += 1; },
+  });
+  release();
+  await run;
+  assert.deepEqual(cancelledPaths, ["/a.mkv"]);
+  assert.equal(allCount, 1);
+});
+
+test("cancelBatch with no owned batch still stops the server-side runs", async () => {
+  let allCount = 0;
+  await cancelBatch({ cancelAll: async () => { allCount += 1; } });
+  assert.equal(allCount, 1);
+});
+
+test("hasLiveTranscriptions sees live runs and ignores settled ones", () => {
+  assert.equal(hasLiveTranscriptions({ "/a.mkv": { pct: 40 } }), true);
+  assert.equal(hasLiveTranscriptions({ "/a.mkv": { phase: "loading" } }), true);
+  assert.equal(hasLiveTranscriptions({ "/a.mkv": { pct: 99, done: true } }), false);
+  assert.equal(hasLiveTranscriptions({ "/a.mkv": { error: true } }), false);
+  assert.equal(hasLiveTranscriptions({ "/a.mkv": { cancelled: true } }), false);
+  assert.equal(hasLiveTranscriptions({}), false);
 });

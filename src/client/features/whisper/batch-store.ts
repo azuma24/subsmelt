@@ -115,14 +115,42 @@ export async function runBatch(run: BatchRun): Promise<void> {
   run.onFinished(ok, run.paths.length);
 }
 
-/** Stops after the current file, which is asked to stop as well (best effort). */
-export async function cancelBatch(): Promise<void> {
+export interface CancelDeps {
+  cancelOne?: (path: string) => Promise<unknown>;
+  cancelAll?: () => Promise<unknown>;
+}
+
+/**
+ * Stops the batch after the current file, which is asked to stop as well.
+ * Runs the page shows but does not own — another tab's batch, a run that
+ * survived a reload, an auto-transcription — have no per-path target here, so
+ * the server-side cancel-all stops those too.
+ */
+export async function cancelBatch(deps: CancelDeps = {}): Promise<void> {
   cancelRequested = true;
   const target = state.activePath;
-  if (!target) return;
-  try {
-    await api.cancelTranscription({ path: target });
-  } catch {
-    /* the loop still stops after this file */
+  const cancelOne = deps.cancelOne ?? ((path: string) => api.cancelTranscription({ path }));
+  const cancelAll = deps.cancelAll ?? api.cancelAllTranscriptions;
+  if (target) {
+    try {
+      await cancelOne(target);
+    } catch {
+      /* the loop still stops after this file */
+    }
   }
+  try {
+    await cancelAll();
+  } catch {
+    /* nothing in flight, or the per-path cancel already landed */
+  }
+}
+
+/** Files the page shows as still transcribing, batch-owned or not: progress
+ *  events land here for every server-side run. The Cancel button offers
+ *  itself while any exist, because these runs are otherwise unstoppable
+ *  from this page. */
+export function hasLiveTranscriptions(fileProgress: Record<string, FileProgress>): boolean {
+  return Object.values(fileProgress).some(
+    (fp) => !fp.done && !fp.error && !fp.cancelled && (fp.pct !== undefined || fp.phase !== undefined),
+  );
 }

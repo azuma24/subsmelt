@@ -7,6 +7,7 @@ import type { TreeExpansion } from "../../components/file-tree/use-persisted-exp
 import type { DrillDownState } from "../../components/file-tree/use-drill-down";
 import type { SortBy, SortDir, TreeNode } from "./folderTree";
 import { baseName, type FileProgress, selectCls } from "./whisper-shared";
+import { hasLiveTranscriptions } from "./batch-store";
 
 export interface LibraryPickerProps {
   isMobile: boolean;
@@ -58,6 +59,10 @@ export function LibraryPicker({
   toggleFile, toggleFolder, fileProgress, activePath, expansion, drill,
 }: LibraryPickerProps) {
   const { t } = useTranslation();
+  // Progress events land here for every server-side run, batch-owned or not:
+  // show Cancel while any run is live, or an orphan run (another tab, a
+  // reload survivor) would have no way to be stopped from this page.
+  const liveTranscribing = hasLiveTranscriptions(fileProgress);
 
   return (
     <SettingsSection title={t("whisper.pickerTitle")} description={t("whisper.pickerHint")}>
@@ -131,7 +136,7 @@ export function LibraryPicker({
               ? t("whisper.transcribingProgress", { done: progress.done, total: progress.total })
               : t("whisper.transcribeSelected", { count: selectedVisibleCount })}
           </ActionButton>
-          {running && (
+          {(running || liveTranscribing) && (
             <ActionButton variant="danger" size="sm" onClick={() => { void onCancelBatch(); }}>
               {t("whisper.cancel")}
             </ActionButton>

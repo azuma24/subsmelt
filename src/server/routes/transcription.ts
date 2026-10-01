@@ -117,6 +117,15 @@ export function registerTranscriptionRoutes(app: Express): void {
     const requestedPostAction = req.body?.postAction as TranscribePostAction | undefined;
     const postAction = requestedPostAction && transcribePostActionValues.includes(requestedPostAction) ? requestedPostAction : "transcribe_only";
 
+    // A client that goes away (closed tab, reload) must not leave the backend
+    // transcribing: abort the run when the response closes unfinished. The run
+    // registers its controller by path as it starts, so a disconnect inside
+    // that first registration window is best effort.
+    res.on("close", () => {
+      if (res.writableEnded) return;
+      inFlightTranscriptions.get(videoPath)?.abort();
+    });
+
     try {
       const { result, attemptId } = await runTranscriptionAttempt({
         videoPath,
@@ -180,6 +189,10 @@ export function registerTranscriptionRoutes(app: Express): void {
 
     const controller = new AbortController();
     inFlightTranscriptions.set(url, controller);
+    // Same as file runs: a client that leaves must not keep the backend busy.
+    res.on("close", () => {
+      if (!res.writableEnded) controller.abort();
+    });
     try {
       const result = await transcribeUrlWithBackendStreaming(backendUrl, body, {
         timeoutSeconds: transcribeTimeoutSeconds(settings),
@@ -213,6 +226,20 @@ export function registerTranscriptionRoutes(app: Express): void {
     controller.abort();
     logger.info("system", `Cancellation requested for transcription ${path.basename(runId)}`);
     return res.json({ ok: true });
+  });
+
+  // Stops every in-flight transcription. The Transcribe page's Cancel uses
+  // this as its fallback: runs the page displays but does not own — another
+  // tab, a run that survived a reload, an auto-transcription — have no
+  // per-path cancel target of their own.
+  app.post("/api/transcribe/cancel-all", (_req, res) => {
+    let cancelled = 0;
+    for (const [runId, controller] of inFlightTranscriptions) {
+      controller.abort();
+      logger.info("system", `Cancellation requested for transcription ${path.basename(runId)}`);
+      cancelled += 1;
+    }
+    return res.json({ ok: true, cancelled });
   });
 
   registerTranscriptionModelsRoutes(app);

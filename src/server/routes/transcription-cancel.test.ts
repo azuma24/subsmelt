@@ -44,10 +44,17 @@ async function post(route: string, body: unknown): Promise<{ status: number; bod
 
 // A Whisper backend that answers `slowRoute` only after a delay and 404s every
 // other transcribe route, so path and upload runs take the non-streaming fallback.
-async function startBackend(slowRoute: string, answer: string) {
+// `expectedArrivals` lets a test wait for several concurrent runs to land.
+async function startBackend(slowRoute: string, answer: string, expectedArrivals = 1) {
   let markReceived!: () => void;
   let markClosed!: (hungUp: boolean) => void;
-  const received = new Promise<void>((resolve) => { markReceived = resolve; });
+  const received = new Promise<void>((resolve) => {
+    let arrivals = 0;
+    markReceived = () => {
+      arrivals += 1;
+      if (arrivals >= expectedArrivals) resolve();
+    };
+  });
   const clientHungUp = new Promise<boolean>((resolve) => { markClosed = resolve; });
   const server = http.createServer((req, res) => {
     req.resume();
@@ -136,6 +143,59 @@ test("cancelling an upload run on a backend without the stream route writes no s
     assert.deepEqual(await run, { status: 400, body: { error: "Transcription cancelled" } });
     assert.equal(await backend.clientHungUp, true);
     assert.equal(fs.existsSync(path.join(mediaDir, "show", "b.srt")), false);
+  } finally {
+    backend.close();
+  }
+});
+
+test("cancel-all stops every in-flight transcription", async () => {
+  const backend = await startBackend(
+    "/transcribe",
+    JSON.stringify({ ok: true, subtitle_path: "/srv/show/x.srt", language: "en", segments: 1 }),
+    2,
+  );
+  setSettings({ transcription_enabled: "1", transcription_backend_url: backend.url, transcription_transport: "shared", transcription_max_concurrent: "2" });
+  const first = path.join(mediaDir, "show", "c.mkv");
+  const second = path.join(mediaDir, "show", "d.mkv");
+  fs.writeFileSync(first, "video", "utf8");
+  fs.writeFileSync(second, "video", "utf8");
+  try {
+    const runA = post("/api/transcribe", { videoPath: first });
+    const runB = post("/api/transcribe", { videoPath: second });
+    await backend.received;
+
+    assert.deepEqual(await post("/api/transcribe/cancel-all", {}), { status: 200, body: { ok: true, cancelled: 2 } });
+    const results = await Promise.all([runA, runB]);
+    for (const result of results) {
+      assert.deepEqual(result, { status: 400, body: { error: "Transcription cancelled" } });
+    }
+  } finally {
+    backend.close();
+  }
+});
+
+test("a client that hangs up mid-run cancels the transcription", async () => {
+  const backend = await startBackend(
+    "/transcribe",
+    JSON.stringify({ ok: true, subtitle_path: "/srv/show/e.srt", language: "en", segments: 1 }),
+  );
+  setSettings({ transcription_enabled: "1", transcription_backend_url: backend.url, transcription_transport: "shared" });
+  const videoPath = path.join(mediaDir, "show", "e.mkv");
+  fs.writeFileSync(videoPath, "video", "utf8");
+  try {
+    const client = new AbortController();
+    const run = fetch(`${appUrl}/api/transcribe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ videoPath }),
+      signal: client.signal,
+    });
+    await backend.received;
+    client.abort();
+
+    await assert.rejects(run);
+    // The hangup must reach the backend as a closed connection, not leave it transcribing.
+    assert.equal(await backend.clientHungUp, true);
   } finally {
     backend.close();
   }
