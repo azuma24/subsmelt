@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { IDLE, applyProgressEvent, beginFile, cancelBatch, endBatch, fileFinished, getBatchState, hasLiveTranscriptions, runBatch, startBatch } from "./batch-store.js";
+import { IDLE, applyProgressEvent, applyTranscriptionProgress, beginFile, cancelBatch, endBatch, fileFinished, getBatchState, hasLiveTranscriptions, runBatch, startBatch } from "./batch-store.js";
 import type { TranscribeRequest, TranscribeResponse } from "../../types.js";
 
 const request = (videoPath: string): TranscribeRequest => ({ videoPath, postAction: "transcribe_only" });
@@ -119,4 +119,20 @@ test("hasLiveTranscriptions sees live runs and ignores settled ones", () => {
   assert.equal(hasLiveTranscriptions({ "/a.mkv": { error: true } }), false);
   assert.equal(hasLiveTranscriptions({ "/a.mkv": { cancelled: true } }), false);
   assert.equal(hasLiveTranscriptions({}), false);
+});
+
+test("progress events coalesce into one render per window; terminal events flush", async () => {
+  applyTranscriptionProgress({ path: "/live.mkv", pct: 10 });
+  applyTranscriptionProgress({ path: "/live.mkv", pct: 20 });
+  // Inside the coalescing window: only the latest percentage is held.
+  assert.equal(getBatchState().fileProgress["/live.mkv"]?.pct, undefined);
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  assert.equal(getBatchState().fileProgress["/live.mkv"]?.pct, 20);
+
+  applyTranscriptionProgress({ path: "/live.mkv", pct: 30 });
+  applyTranscriptionProgress({ path: "/live.mkv", done: true, pct: 100 });
+  assert.equal(getBatchState().fileProgress["/live.mkv"]?.done, true);
+  assert.equal(getBatchState().fileProgress["/live.mkv"]?.pct, 100);
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  assert.equal(getBatchState().fileProgress["/live.mkv"]?.pct, 100);
 });

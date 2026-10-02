@@ -4,7 +4,7 @@ import fs from "node:fs";
 import { getSetting } from "./config.js";
 import { MEDIA_DIR } from "./scanner.js";
 import { scanFolder } from "./scanner.js";
-import { processQueue } from "./queue.js";
+import { runQueueSafely } from "./queue.js";
 import { logger } from "./logger.js";
 
 let watcher: FSWatcher | null = null;
@@ -34,7 +34,7 @@ function handleFileChange(filePath: string) {
       const { newJobs } = scanFolder(true);
       if (newJobs > 0) {
         logger.info("scan", `Watcher: ${newJobs} new jobs queued`);
-        if (getSetting("auto_translate") === "1") processQueue();
+        if (getSetting("auto_translate") === "1") runQueueSafely();
       }
     } catch (e: any) {
       logger.error("scan", `Watcher scan error: ${e.message}`);

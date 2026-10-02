@@ -10,7 +10,7 @@ fs.mkdirSync(CONFIG_DIR, { recursive: true });
 
 // --- Schema ---
 
-interface TranslationTask {
+export interface TranslationTask {
   id: number;
   source_lang: string;
   target_lang: string;

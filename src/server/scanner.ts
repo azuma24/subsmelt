@@ -1,7 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
-import { getSetting, getTasks } from "./config.js";
-import { createJob, getJobBySrtAndTask, getJobs } from "./db.js";
+import { getSetting, getTasks, type TranslationTask } from "./config.js";
+import {
+  createJob,
+  listJobPathsAndStatuses,
+  listJobTaskStatuses,
+} from "./db.js";
 import { parseRules, resolveDirectoryRule } from "./directory-rules.js";
 import { logger } from "./logger.js";
 import {
@@ -113,7 +117,7 @@ function parseExtensionSetting(raw: string): Set<string> {
 
 function getJobCountsByFolder(): Map<string, FolderCounts> {
   const map = new Map<string, FolderCounts>();
-  for (const job of getJobs()) {
+  for (const job of listJobPathsAndStatuses()) {
     const relativeDir = mediaRelativeDir(job.srt_path, MEDIA_DIR);
     if (relativeDir === null) continue;
 
@@ -314,7 +318,7 @@ export function outputNameFor(
 }
 
 /** Output file name, relative to the subtitle's folder, that `task` translates `srtPath` into. */
-function taskOutputName(srtPath: string, task: any): string {
+function taskOutputName(srtPath: string, task: TranslationTask): string {
   const ext = path.extname(srtPath);
   return outputNameFor(
     stripLangSuffix(path.basename(srtPath, ext)),
@@ -364,8 +368,8 @@ export function scanFolder(createJobs = true): ScanResult {
   const subExts = getSetting("subtitle_extensions")
     .split(",")
     .map((e) => e.trim().toLowerCase());
-  const tasks = getTasks() as any[];
-  const enabledTasks = tasks.filter((t: any) => t.enabled);
+  const tasks = getTasks();
+  const enabledTasks = tasks.filter((t: TranslationTask) => t.enabled);
 
   // Per-directory translation control.
   const directoryRules = parseRules(getSetting("directory_rules") || "[]");
@@ -378,8 +382,8 @@ export function scanFolder(createJobs = true): ScanResult {
   const outputDetectTasks = [
     ...enabledTasks,
     ...tasks.filter(
-      (t: any) =>
-        ruleTaskIds.has(t.id) && !enabledTasks.some((e: any) => e.id === t.id),
+      (t: TranslationTask) =>
+        ruleTaskIds.has(t.id) && !enabledTasks.some((e: TranslationTask) => e.id === t.id),
     ),
   ];
 
@@ -425,6 +429,15 @@ export function scanFolder(createJobs = true): ScanResult {
   // Index videos by (dir, stem)
   const videoIndex = new Map<string, string>();
   const videoFiles: string[] = [];
+  // The walk is the truth for what exists: every output file this scan could
+  // ask about lives in a walked directory, so membership here answers
+  // fs.existsSync without one syscall per subtitle per task.
+  const scannedFiles = new Set(allFiles);
+  // Job states for every (source subtitle, task) pair, loaded once instead of
+  // one SQLite query per pair.
+  const jobTasks = new Map(
+    listJobTaskStatuses().map((job) => [`${job.srt_path}\u0000${job.task_id}`, job]),
+  );
   for (const f of allFiles) {
     const ext = path.extname(f).toLowerCase();
     if (videoExts.includes(ext)) {
@@ -539,8 +552,8 @@ export function scanFolder(createJobs = true): ScanResult {
     // Rule-attached tasks apply even if globally disabled, as long as the task exists.
     const effectiveTasks = [...enabledTasks];
     for (const tid of resolved.extraTaskIds) {
-      if (effectiveTasks.some((t: any) => t.id === tid)) continue;
-      const extra = tasks.find((t: any) => t.id === tid);
+      if (effectiveTasks.some((t: TranslationTask) => t.id === tid)) continue;
+      const extra = tasks.find((t: TranslationTask) => t.id === tid);
       if (extra) effectiveTasks.push(extra);
     }
     if (effectiveTasks.length === 0) continue;
@@ -581,11 +594,11 @@ export function scanFolder(createJobs = true): ScanResult {
     for (const task of effectiveTasks) {
       const outputName = taskOutputName(srtPath, task);
       const outputPath = path.join(dir, outputName);
-      const outputExists = fs.existsSync(outputPath);
+      const outputExists = scannedFiles.has(outputPath);
       const outputOwner = outputOwners.get(outputPath) ?? srtPath;
 
       // Check existing job
-      const existingJob = getJobBySrtAndTask(srtPath, task.id);
+      const existingJob = jobTasks.get(`${srtPath}\u0000${task.id}`);
 
       let status:
         | "done"

@@ -5,7 +5,7 @@ import { countOpenJobsForSubtitle } from "../db.js";
 import { gpuShared, setYoutubeBacklogSource, transcriptionMayStart } from "../gpu-gate.js";
 import { logger } from "../logger.js";
 import { normalizeMediaSubfolder, resolveMediaSubfolder } from "../media-paths.js";
-import { isQueueRunning, processQueue, startHeldQueue } from "../queue.js";
+import { isQueueRunning, runQueueSafely, startHeldQueue } from "../queue.js";
 import { getTranscriptionBackendUrl, runTranscriptionAttempt } from "../routes/transcription-runtime.js";
 import { MEDIA_DIR } from "../scanner.js";
 import { broadcast } from "../sse.js";
@@ -117,7 +117,7 @@ export interface WorkerOptions {
   queue?: QueueControl;
 }
 
-const liveQueue: QueueControl = { start: () => void processQueue(), startHeld: startHeldQueue, running: isQueueRunning };
+const liveQueue: QueueControl = { start: () => runQueueSafely(), startHeld: startHeldQueue, running: isQueueRunning };
 
 export function transcriptionReady(settings = getAllSettings()): boolean {
   return settings.transcription_enabled === "1" && Boolean(getTranscriptionBackendUrl(settings));
@@ -191,7 +191,11 @@ export class YoutubeWorker {
     this.checkDuePlaylists();
     this.kick();
     this.kickSubtitles();
-    void this.finishTranslated();
+    // A store read or a note export failing here must not become an unhandled
+    // rejection — the worker keeps ticking and the next pass retried it.
+    this.finishTranslated().catch((error) =>
+      logger.error("youtube", `Finishing translated videos failed: ${message(error)}`),
+    );
     this.queue.startHeld();
   }
 

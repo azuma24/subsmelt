@@ -6,6 +6,7 @@ import type { JobPreview, JobRow, LlmHealth, LogEntry, QueueStatus, Task, Transc
 export type SSEEventName =
   | "job:progress"
   | "job:start"
+  | "job:analysis"
   | "job:done"
   | "job:error"
   | "job:connection"
@@ -192,6 +193,7 @@ export function useInvalidateApp() {
 const SSE_EVENT_NAMES: readonly SSEEventName[] = [
   "job:progress",
   "job:start",
+  "job:analysis",
   "job:done",
   "job:error",
   "job:connection",
@@ -225,6 +227,10 @@ export function getSSEInvalidationKeys(name: SSEEventName): QueryKey[] {
     case "job:progress":
     case "job:start":
       return [["jobs"], ["queue-status"]];
+    case "job:analysis":
+      // One event per job when its LLM analysis lands; the jobs list carries
+      // it for the preview view.
+      return [["jobs"]];
     case "job:done":
     case "job:error":
     case "job:cancelled":

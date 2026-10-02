@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { logger } from "./logger.js";
 import type { TranscribePostAction, TranscriptionAdvancedOptions, TranscriptionOutputFormat, TranscriptionSubtitleQualityOptions } from "./transcription-client.js";
 
 const DATA_DIR = process.env.DATA_DIR || "./data";
@@ -104,10 +105,14 @@ export class TranscriptionHistoryStore {
     // enqueue the disk flush onto the serialized chain.
     this.cache = trimmed;
     const json = JSON.stringify(trimmed, null, 2);
-    this.writeChain = this.writeChain.then(() => this.flush(json));
-    // Swallow rejection on the retained chain so one failed flush can't reject
-    // every subsequent enqueued write; flush() already falls back internally.
-    this.writeChain.catch(() => {});
+    // The catch must be part of the retained chain: chaining it separately
+    // leaves writeChain itself rejected, and every later write would silently
+    // never flush again.
+    this.writeChain = this.writeChain
+      .then(() => this.flush(json))
+      .catch((error: any) =>
+        logger.error("system", `History flush failed: ${error?.message || error}`),
+      );
   }
 
   private flush(json: string): void {

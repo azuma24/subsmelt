@@ -10,7 +10,7 @@ import {
 } from "./config.js";
 import { scanFolder, listFolderTree, MEDIA_DIR } from "./scanner.js";
 import {
-  processQueue,
+  runQueueSafely,
   isQueueRunning,
   startAutoScan,
   resumeQueueOnBoot,
@@ -41,6 +41,14 @@ import {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+
+// Backstop for promises no caller owns (a timer callback, a SSE write racing a
+// settle). Each producer catches its own rejections; this keeps one that
+// slipped through from killing the process, and makes it visible.
+process.on("unhandledRejection", (reason) => {
+  logger.error("system", `Unhandled rejection: ${reason instanceof Error ? reason.message : String(reason)}`);
+});
+
 const PORT = parseInt(process.env.PORT || "3000", 10);
 
 // The web UI is served same-origin from this server, so cross-origin browser
@@ -156,7 +164,7 @@ app.post("/api/scan", async (_req, res) => {
       }
     }
     if (result.newJobs > 0 && getSetting("auto_translate") === "1") {
-      setTimeout(() => processQueue(), 100);
+      setTimeout(() => runQueueSafely(), 100);
     }
     broadcast("scan:complete", {
       newJobs: result.newJobs,

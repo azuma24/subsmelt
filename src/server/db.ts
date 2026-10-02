@@ -63,6 +63,12 @@ if (!jobColumns.some((c) => c.name === "started_at")) {
 db.exec(
   "CREATE INDEX IF NOT EXISTS idx_jobs_pending_priority ON jobs (status, priority DESC, created_at ASC, id ASC)",
 );
+// The dashboard list sorts every job by priority/recency; the status-leading
+// index above cannot serve that ordering, so it would be a full scan plus a
+// temporary b-tree per request.
+db.exec(
+  "CREATE INDEX IF NOT EXISTS idx_jobs_list_order ON jobs (priority DESC, created_at DESC, id DESC)",
+);
 
 // --- Schema: Logs ---
 
@@ -77,6 +83,10 @@ db.exec(`
     meta TEXT
   )
 `);
+// The logs view filters by job id most often (open-logs from a job row);
+// without this it reverse-scans the whole append-only table.
+db.exec("CREATE INDEX IF NOT EXISTS idx_logs_job_id ON logs (job_id, id)");
+db.exec("CREATE INDEX IF NOT EXISTS idx_logs_level ON logs (level, id)");
 
 // Wire up logger
 setLogDb(db);
@@ -211,6 +221,40 @@ export function getJobs(status?: string): JobRow[] {
   return db
     .prepare(`SELECT * FROM jobs ORDER BY priority DESC, created_at DESC`)
     .all() as JobRow[];
+}
+
+/** The dashboard list: every column except analysis_context, which is a
+ *  KB-scale blob only the preview endpoint reads. Shipping it for every row
+ *  of every poll inflated the payload for nothing. */
+const JOB_LIST_COLUMNS =
+  "id, task_id, srt_path, output_path, video_path, status, priority, force, total_cues, completed_cues, error, duration_seconds, started_at, created_at, updated_at, input_tokens, output_tokens, used_connections";
+
+export function getJobsForList(): JobRow[] {
+  return db
+    .prepare(
+      `SELECT ${JOB_LIST_COLUMNS} FROM jobs ORDER BY priority DESC, created_at DESC`,
+    )
+    .all() as JobRow[];
+}
+
+/** One row per (source subtitle, task) with its job state, for the scanner to
+ *  match against in memory instead of one query per subtitle per task. */
+export function listJobTaskStatuses(): Array<{
+  id: number;
+  srt_path: string;
+  task_id: number;
+  status: string;
+}> {
+  return db
+    .prepare("SELECT id, srt_path, task_id, status FROM jobs")
+    .all() as Array<{ id: number; srt_path: string; task_id: number; status: string }>;
+}
+
+/** srt_path and status only — folder counts never need the other columns. */
+export function listJobPathsAndStatuses(): Array<{ srt_path: string; status: string }> {
+  return db
+    .prepare("SELECT srt_path, status FROM jobs")
+    .all() as Array<{ srt_path: string; status: string }>;
 }
 
 export function countPendingJobs(ids?: Set<number> | null): number {

@@ -147,7 +147,19 @@ export function resumeQueueOnBoot() {
   const pending = countPendingJobs();
   if (!shouldResumeQueueOnBoot(getSetting("auto_translate"), pending)) return;
   logger.info("queue", `Resuming ${pending} pending job(s) found at startup`);
-  processQueue();
+  runQueueSafely();
+}
+
+/**
+ * Fire-and-forget queue start for call sites that do not await the run
+ * (routes, watcher, boot resume). processQueue can reject — a claim or a
+ * connection-resolution error propagates out of its Promise.all — and a bare
+ * call would surface as an unhandled rejection that kills the process.
+ */
+export function runQueueSafely(onlyIds?: number[]): void {
+  processQueue(onlyIds).catch((error: any) => {
+    logger.error("queue", `Queue run failed: ${error?.message || error}`);
+  });
 }
 
 export async function processQueue(onlyIds?: number[]) {
@@ -223,7 +235,7 @@ export async function processQueue(onlyIds?: number[]) {
 export function startHeldQueue(): void {
   if (isRunning) return;
   const start = takeHeldStart();
-  if (start) void processQueue(start.ids);
+  if (start) runQueueSafely(start.ids);
 }
 
 /**
@@ -810,7 +822,7 @@ export function startAutoScan(
         const { newJobs } = scanFn();
         if (newJobs > 0) {
           logger.info("scan", `Auto-scan: ${newJobs} new files found`);
-          if (getSetting("auto_translate") === "1") processQueue();
+          if (getSetting("auto_translate") === "1") runQueueSafely();
         }
       } catch (e: any) {
         logger.error("scan", `Auto-scan error: ${e.message}`);

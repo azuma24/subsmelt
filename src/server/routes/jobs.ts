@@ -4,6 +4,8 @@ import fs from "node:fs";
 import { getTasks, getTask } from "../config.js";
 import {
   getJobs,
+  getJobsForList,
+  countPendingJobs,
   getJob,
   resetJob,
   resetJobs,
@@ -20,7 +22,7 @@ import {
 } from "../db.js";
 import { MEDIA_DIR } from "../scanner.js";
 import {
-  processQueue,
+  runQueueSafely,
   isQueueRunning,
   getCurrentJobId,
   requestStop,
@@ -96,7 +98,7 @@ export function registerJobsRoutes(app: Express): void {
   // ======== Jobs ========
   app.get("/api/jobs", (_req, res) => {
     res.json({
-      jobs: enrichJobs(getJobs()),
+      jobs: enrichJobs(getJobsForList()),
       queueRunning: isQueueRunning(),
       currentJobId: getCurrentJobId(),
     });
@@ -106,7 +108,7 @@ export function registerJobsRoutes(app: Express): void {
     const id = parseInt(req.params.id, 10);
     if (resetJob(id) === 0) return rejectUnchanged(res, id);
     logger.info("queue", `Job #${id} reset to pending (retry)`, id);
-    setTimeout(() => processQueue(), 100);
+    setTimeout(() => runQueueSafely(), 100);
     res.json({ ok: true });
   });
 
@@ -120,7 +122,7 @@ export function registerJobsRoutes(app: Express): void {
     );
     const updated = resetJobs(ids);
     logger.info("queue", `Reset ${updated} selected error jobs to pending`);
-    if (updated > 0) setTimeout(() => processQueue(), 100);
+    if (updated > 0) setTimeout(() => runQueueSafely(), 100);
     res.json({ ok: true, updated });
   });
 
@@ -128,7 +130,7 @@ export function registerJobsRoutes(app: Express): void {
     const id = parseInt(req.params.id, 10);
     if (forceJob(id) === 0) return rejectUnchanged(res, id);
     logger.info("queue", `Job #${id} marked for force re-translate`, id);
-    setTimeout(() => processQueue(), 100);
+    setTimeout(() => runQueueSafely(), 100);
     res.json({ ok: true });
   });
 
@@ -156,7 +158,7 @@ export function registerJobsRoutes(app: Express): void {
       "queue",
       `Marked ${updated} selected jobs for force re-translate`,
     );
-    if (updated > 0) setTimeout(() => processQueue(), 100);
+    if (updated > 0) setTimeout(() => runQueueSafely(), 100);
     res.json({ ok: true, updated });
   });
 
@@ -188,7 +190,7 @@ export function registerJobsRoutes(app: Express): void {
   app.post("/api/jobs/force-all", (_req, res) => {
     forceAllJobs();
     logger.info("queue", "All done/skipped jobs marked for force re-translate");
-    setTimeout(() => processQueue(), 100);
+    setTimeout(() => runQueueSafely(), 100);
     res.json({ ok: true });
   });
 
@@ -398,7 +400,7 @@ export function registerJobsRoutes(app: Express): void {
         .status(400)
         .json({ error: "ids must be an array of positive integers" });
     }
-    processQueue(ids && ids.length > 0 ? ids : undefined);
+    runQueueSafely(ids && ids.length > 0 ? ids : undefined);
     res.json({
       ok: true,
       message: "Queue started",
@@ -421,7 +423,7 @@ export function registerJobsRoutes(app: Express): void {
       // Parallel mode runs several jobs at once, each pinned to a connection
       // ("machine"); the dashboard shows the pairing.
       activeConnections: getActiveJobConnections(),
-      pendingCount: getJobs("pending").length,
+      pendingCount: countPendingJobs(),
       watcherRunning: isWatcherRunning(),
     });
   });

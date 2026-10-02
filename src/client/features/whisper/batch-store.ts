@@ -79,8 +79,37 @@ export const getBatchState = (): BatchState => state;
 
 export const useBatchState = (): BatchState => useSyncExternalStore(subscribe, getBatchState, getBatchState);
 
-export const applyTranscriptionProgress = (data: Record<string, unknown>): void =>
-  setState(applyProgressEvent(state, data));
+export const applyTranscriptionProgress = (data: Record<string, unknown>): void => {
+  // The backend emits several progress lines per second for hours-long
+  // batches, and each setState re-renders the whole page. Coalesce render
+  // updates to one per window; terminal events flush immediately.
+  const terminal = data.done === true || data.error === true || data.cancelled === true;
+  const base = pendingState ?? state;
+  const next = applyProgressEvent(base, data);
+  if (terminal) {
+    if (flushTimer) {
+      clearTimeout(flushTimer);
+      flushTimer = null;
+    }
+    pendingState = null;
+    setState(next);
+    return;
+  }
+  pendingState = next;
+  if (!flushTimer) {
+    flushTimer = setTimeout(() => {
+      flushTimer = null;
+      if (pendingState) {
+        setState(pendingState);
+        pendingState = null;
+      }
+    }, PROGRESS_RENDER_MS);
+  }
+};
+
+const PROGRESS_RENDER_MS = 200;
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingState: BatchState | null = null;
 
 export interface BatchRun {
   paths: string[];

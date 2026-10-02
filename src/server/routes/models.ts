@@ -187,7 +187,15 @@ export function registerModelsRoutes(app: Express): void {
         });
       }
 
-      const data = await resp.json() as any;
+      // The 5s timeout above only covers the headers; a stalled body would
+      // hang this route forever, so deadline the JSON read too.
+      const bodyTimer = setTimeout(() => controller.abort(), 5000);
+      let data: any;
+      try {
+        data = await resp.json() as any;
+      } finally {
+        clearTimeout(bodyTimer);
+      }
       const models: string[] = (data?.data || data?.models || [])
         .map((m: any) => m.id || m.name || m)
         .filter((m: any) => typeof m === "string");

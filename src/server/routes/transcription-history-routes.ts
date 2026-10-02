@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import path from "node:path";
 import { scanFolder, MEDIA_DIR } from "../scanner.js";
-import { processQueue } from "../queue.js";
+import { runQueueSafely } from "../queue.js";
 import { assertMediaPathAllowed } from "../transcription-client.js";
 import { transcriptionHistory } from "../transcription-history.js";
 import { logger } from "../logger.js";
@@ -52,7 +52,7 @@ export function registerTranscriptionHistoryRoutes(app: Express): void {
       let scanResult: ReturnType<typeof scanFolder> | null = null;
       if (attempt.postAction === "transcribe_and_translate") {
         scanResult = scanFolder(true);
-        if (scanResult.newJobs > 0) setTimeout(() => processQueue(), 100);
+        if (scanResult.newJobs > 0) setTimeout(() => runQueueSafely(), 100);
       }
 
       const { ok: _backendOk, ...transcriptionResult } = result as { ok?: boolean } & Record<string, unknown>;
