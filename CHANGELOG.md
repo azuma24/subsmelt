@@ -3,6 +3,14 @@
 All notable changes to SubSmelt. The app and the Windows Whisper backend share a
 version number and are released together (`v0.5.6` and `whisper-v0.5.6`).
 
+## [0.6.3] — 2026-10-02
+
+### Changed
+
+- **The dashboard stops re-rendering every row on each progress tick.** Translating rows are memoized (desktop table and mobile cards), the job actions hook keeps a stable identity, and the row's displayed state comes from one shared helper — so a progress update re-renders only the translating row, not all of them. Large libraries finally stay smooth while a job runs.
+- **Row and card display state comes from one place.** File name, progress, error reason and status-derived flags were derived independently in the desktop table and the mobile card; both now share `jobDerived`, so a new status is one edit instead of two.
+- **The file tree skips offscreen rows** (`content-visibility`) instead of rendering every file in an expanded folder.
+
 ## [0.6.2] — 2026-10-02
 
 ### Fixed
