@@ -3,6 +3,23 @@
 All notable changes to SubSmelt. The app and the Windows Whisper backend share a
 version number and are released together (`v0.5.6` and `whisper-v0.5.6`).
 
+## [0.6.2] — 2026-10-02
+
+### Fixed
+
+- **A database error mid-run crashed the whole server.** Queue starts from routes, the watcher, boot resume and the YouTube worker left `processQueue()`'s rejection unhandled, and one failed claim or query killed the process. Queue starts now catch their own failures, and an `unhandledRejection` backstop logs instead of crashing.
+- **A failed scan permanently excluded videos from auto-transcription.** `/api/scan` claimed videos before transcribing them but only released them per file, so a failure after claiming left them claimed until restart. Claims are now released in a `finally`.
+- **One failed disk flush froze transcription-history persistence for good.** The write chain stayed rejected, so every later write silently never reached disk. The chain now recovers and logs.
+- **The YouTube worker could die on its 30-second tick** when finishing translated videos threw; the tick catches and the next pass retries.
+- **`GET /api/llm-health` could hang forever** on a response whose body never arrived; the JSON read is now deadlined like the headers were.
+- **`job:analysis` events were broadcast but never consumed** — the event was missing from the client's SSE registry. The jobs list now refreshes when an analysis lands.
+
+### Changed
+
+- **Scans stop doing one database query and one file check per subtitle per task.** Job states load once per scan and output existence is answered from the walked file set: a steady-state scan of 500 videos × 2 tasks measured 31 ms → 9 ms, and the gap grows with library size.
+- **The dashboard list stops shipping the analysis blob it never displays**, sorts through a fitting index, and counts pending jobs with `COUNT(*)` instead of loading every row; the logs table gained `job_id`/`level` indexes.
+- **Whisper progress renders coalesce** into one update per 200 ms window (terminal events land immediately) instead of re-rendering the page per backend segment.
+
 ## [0.6.1] — 2026-10-01
 
 ### Added
