@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
@@ -334,14 +334,14 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
     }
   };
 
-  const toggleSelectedJob = (id: number) => {
+  const toggleSelectedJob = useCallback((id: number) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  };
+  }, [setSelectedIds]);
 
   const quickChecks = [
     {
@@ -386,7 +386,8 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   // Read live so the drawer follows progress and status instead of showing the
   // row as it was when opened; it closes on its own if the job is deleted.
   const detailsJob = detailsJobId === null ? null : jobsById.get(detailsJobId) ?? null;
-  const openDetails = (job: JobRow) => setDetailsJobId(job.id);
+  const openLogs = useCallback((jobId: number) => navigate(`/logs?job=${jobId}`), [navigate]);
+  const openDetails = useCallback((job: JobRow) => setDetailsJobId(job.id), []);
 
   return (
     <div className="flex min-h-full flex-col">
@@ -534,13 +535,13 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
                     selected={selectedIds.has(job.id)}
                     onToggleSelected={toggleSelectedJob}
                     onPreview={setPreviewJobId}
-                    onOpenLogs={(jobId) => navigate(`/logs?job=${jobId}`)}
+                    onOpenLogs={openLogs}
                     onOpenDetails={openDetails}
                   />
                 ))}
               </div>
             ) : (
-              <JobsTableDesktop jobs={filteredJobs} currentJobId={currentJobId} selectedIds={selectedIds} setSelectedIds={setSelectedIds} onPreview={setPreviewJobId} onOpenLogs={(jobId) => navigate(`/logs?job=${jobId}`)} onOpenDetails={openDetails} />
+              <JobsTableDesktop jobs={filteredJobs} currentJobId={currentJobId} selectedIds={selectedIds} setSelectedIds={setSelectedIds} onPreview={setPreviewJobId} onOpenLogs={openLogs} onOpenDetails={openDetails} />
             )
           )}
 
@@ -591,7 +592,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
         job={detailsJob}
         open={detailsJob !== null}
         onClose={() => setDetailsJobId(null)}
-        onOpenLogs={(jobId) => navigate(`/logs?job=${jobId}`)}
+        onOpenLogs={openLogs}
       />
 
       {previewJobId !== null && (

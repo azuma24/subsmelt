@@ -1,11 +1,12 @@
-import { useRef, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { memo, useCallback, useRef, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { formatDur } from "../../lib";
-import { useJobActions } from "../../hooks/useJobActions";
+import { useJobActions, type JobActions } from "../../hooks/useJobActions";
 import type { JobRow } from "../../types";
 import { MiniBtn, ProgressSmall, RowActionsMenu } from "../../ui/primitives";
 import { JobStatusBadge } from "../jobs/JobStatusBadge";
+import { jobDerived } from "./job-derived";
 
 interface JobsTableDesktopProps {
   jobs: JobRow[];
@@ -47,29 +48,29 @@ export function JobsTableDesktop({
 }: JobsTableDesktopProps) {
   const { t } = useTranslation();
   const jobActions = useJobActions({
-    onDeleted: (id) =>
+    onDeleted: useCallback((id: number) => {
       setSelectedIds((s) => {
         if (!s.has(id)) return s;
         const n = new Set(s);
         n.delete(id);
         return n;
-      }),
+      });
+    }, [setSelectedIds]),
   });
-  const { classifyErrorReason } = jobActions;
 
   const pendingIds = jobs.filter((j) => j.status === "pending").map((j) => j.id);
   const visiblePendingSelectedCount = pendingIds.filter((id) => selectedIds.has(id)).length;
   const allPendingSelected = pendingIds.length > 0 && visiblePendingSelectedCount === pendingIds.length;
   const somePendingSelected = visiblePendingSelectedCount > 0 && !allPendingSelected;
 
-  const toggleOne = (id: number) => {
+  const toggleOne = useCallback((id: number) => {
     setSelectedIds((s) => {
       const n = new Set(s);
       if (n.has(id)) n.delete(id);
       else n.add(id);
       return n;
     });
-  };
+  }, [setSelectedIds]);
 
   const toggleAllVisible = () => {
     setSelectedIds((s) => {
@@ -83,17 +84,102 @@ export function JobsTableDesktop({
     });
   };
 
-  // Renders the cell contents for a single job row. Used both by the
-  // virtualized and non-virtualized code paths so behavior/markup stay identical.
-  const renderRowCells = (job: JobRow) => {
-    const srtName = job.srt_path.split("/").pop() || "";
-    const pct = job.total_cues > 0 ? Math.round((job.completed_cues / job.total_cues) * 100) : 0;
-    const hasError = job.status === "error" && job.error;
-    const isPending = job.status === "pending";
-    const isSelected = selectedIds.has(job.id);
-    const reason = hasError ? classifyErrorReason(job.error) : null;
-    const isSkipped = job.status === "skipped";
-    return (
+  const shouldVirtualize = jobs.length > VIRTUALIZE_THRESHOLD;
+
+  return (
+    <div className="overflow-x-auto">
+      {/* Fixed tracks sum to 612px; 900px keeps the two flexible columns
+          (file, actions) usable before horizontal scroll kicks in. */}
+      <div className="min-w-[900px] text-[13px]" role="table">
+        {/* Header row — shares the grid template with body rows for column alignment. */}
+        <div role="row" className="grid" style={{ gridTemplateColumns: GRID_COLS }}>
+          <div className={TH} role="columnheader">
+            <input
+              type="checkbox"
+              className="accent-[var(--accent)]"
+              disabled={pendingIds.length === 0}
+              checked={allPendingSelected}
+              ref={(el) => {
+                if (el) el.indeterminate = somePendingSelected;
+              }}
+              onChange={toggleAllVisible}
+              aria-label={t("dashboard.col.selectAll")}
+            />
+          </div>
+          <div className={TH} role="columnheader">{t("dashboard.col.file")}</div>
+          <div className={TH} role="columnheader">{t("dashboard.col.target")}</div>
+          <div className={TH} role="columnheader">{t("dashboard.col.status")}</div>
+          <div className={TH} role="columnheader">{t("dashboard.col.progress")}</div>
+          <div className={TH} role="columnheader">{t("dashboard.col.time")}</div>
+          <div className={TH} role="columnheader">{t("dashboard.col.actions")}</div>
+        </div>
+
+        {jobs.length === 0 && (
+          <div role="row">
+            <div role="cell" className="px-4 py-8 text-center text-[12px] text-[var(--text-3)]">{t("dashboard.noJobsMatchFilter")}</div>
+          </div>
+        )}
+
+        {jobs.length > 0 && shouldVirtualize ? (
+          <VirtualJobRows
+            jobs={jobs}
+            currentJobId={currentJobId}
+            selectedIds={selectedIds}
+            onToggle={toggleOne}
+            onPreview={onPreview}
+            onOpenLogs={onOpenLogs}
+            onOpenDetails={onOpenDetails}
+            jobActions={jobActions}
+          />
+        ) : (
+          jobs.map((job) => (
+            <JobsTableRow
+              key={job.id}
+              job={job}
+              isActive={job.id === currentJobId}
+              isSelected={selectedIds.has(job.id)}
+              onToggle={toggleOne}
+              onPreview={onPreview}
+              onOpenLogs={onOpenLogs}
+              onOpenDetails={onOpenDetails}
+              jobActions={jobActions}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface JobsTableRowProps {
+  job: JobRow;
+  isActive: boolean;
+  isSelected: boolean;
+  onToggle: (id: number) => void;
+  onPreview: (jobId: number) => void;
+  onOpenLogs: (jobId: number) => void;
+  onOpenDetails: (job: JobRow) => void;
+  jobActions: JobActions;
+}
+
+/**
+ * One grid row. Memoized so a progress tick re-renders only the translating
+ * row: the optimistic jobs patch replaces just that job's object, and every
+ * other prop (selection, handlers, actions) holds a stable identity.
+ */
+const JobsTableRow = memo(function JobsTableRow({
+  job,
+  isActive,
+  isSelected,
+  onToggle,
+  onPreview,
+  onOpenLogs,
+  onOpenDetails,
+  jobActions,
+}: JobsTableRowProps) {
+  const { t } = useTranslation();
+  const { srtName, pct, hasError, isPending, isSkipped, reason } = jobDerived(job);
+  return (
       <>
         <div className={`${TD} flex items-center`} role="cell">
           {isPending && (
@@ -101,7 +187,7 @@ export function JobsTableDesktop({
               type="checkbox"
               className="accent-[var(--accent)]"
               checked={isSelected}
-              onChange={() => toggleOne(job.id)}
+              onChange={() => onToggle(job.id)}
               aria-label={t("dashboard.col.select")}
             />
           )}
@@ -177,84 +263,23 @@ export function JobsTableDesktop({
         </div>
       </>
     );
-  };
-
-  const rowClassName = (job: JobRow) => {
-    const isActive = job.id === currentJobId;
-    const isSelected = selectedIds.has(job.id);
-    // No `group` marker any more: the actions cell no longer keys off hover.
-    return `grid items-stretch ${isActive ? "bg-[var(--accent-dim)]" : isSelected ? "bg-[var(--accent-dim)]" : "hover:bg-[var(--surface-2)]"}`;
-  };
-
-  const shouldVirtualize = jobs.length > VIRTUALIZE_THRESHOLD;
-
-  return (
-    <div className="overflow-x-auto">
-      {/* Fixed tracks sum to 612px; 900px keeps the two flexible columns
-          (file, actions) usable before horizontal scroll kicks in. */}
-      <div className="min-w-[900px] text-[13px]" role="table">
-        {/* Header row — shares the grid template with body rows for column alignment. */}
-        <div role="row" className="grid" style={{ gridTemplateColumns: GRID_COLS }}>
-          <div className={TH} role="columnheader">
-            <input
-              type="checkbox"
-              className="accent-[var(--accent)]"
-              disabled={pendingIds.length === 0}
-              checked={allPendingSelected}
-              ref={(el) => {
-                if (el) el.indeterminate = somePendingSelected;
-              }}
-              onChange={toggleAllVisible}
-              aria-label={t("dashboard.col.selectAll")}
-            />
-          </div>
-          <div className={TH} role="columnheader">{t("dashboard.col.file")}</div>
-          <div className={TH} role="columnheader">{t("dashboard.col.target")}</div>
-          <div className={TH} role="columnheader">{t("dashboard.col.status")}</div>
-          <div className={TH} role="columnheader">{t("dashboard.col.progress")}</div>
-          <div className={TH} role="columnheader">{t("dashboard.col.time")}</div>
-          <div className={TH} role="columnheader">{t("dashboard.col.actions")}</div>
-        </div>
-
-        {jobs.length === 0 && (
-          <div role="row">
-            <div role="cell" className="px-4 py-8 text-center text-[12px] text-[var(--text-3)]">{t("dashboard.noJobsMatchFilter")}</div>
-          </div>
-        )}
-
-        {jobs.length > 0 && shouldVirtualize ? (
-          <VirtualJobRows
-            jobs={jobs}
-            renderRowCells={renderRowCells}
-            rowClassName={rowClassName}
-          />
-        ) : (
-          jobs.map((job) => (
-            <div
-              key={job.id}
-              role="row"
-              className={rowClassName(job)}
-              style={{ gridTemplateColumns: GRID_COLS }}
-            >
-              {renderRowCells(job)}
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
+  });
 
 interface VirtualJobRowsProps {
   jobs: JobRow[];
-  renderRowCells: (job: JobRow) => ReactNode;
-  rowClassName: (job: JobRow) => string;
+  currentJobId: number | null;
+  selectedIds: Set<number>;
+  onToggle: (id: number) => void;
+  onPreview: (jobId: number) => void;
+  onOpenLogs: (jobId: number) => void;
+  onOpenDetails: (job: JobRow) => void;
+  jobActions: JobActions;
 }
 
 // Windowed body renderer: only the rows currently in (or near) the viewport are
 // mounted. Rows are absolutely positioned inside a spacer whose height equals
 // the virtualizer's total size, producing the standard top/bottom spacer effect.
-function VirtualJobRows({ jobs, renderRowCells, rowClassName }: VirtualJobRowsProps) {
+function VirtualJobRows({ jobs, currentJobId, selectedIds, onToggle, onPreview, onOpenLogs, onOpenDetails, jobActions }: VirtualJobRowsProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
     count: jobs.length,
@@ -277,12 +302,9 @@ function VirtualJobRows({ jobs, renderRowCells, rowClassName }: VirtualJobRowsPr
           return (
             <div
               key={job.id}
-              role="row"
               data-index={vitem.index}
               ref={virtualizer.measureElement}
-              className={rowClassName(job)}
               style={{
-                gridTemplateColumns: GRID_COLS,
                 position: "absolute",
                 top: 0,
                 left: 0,
@@ -290,7 +312,16 @@ function VirtualJobRows({ jobs, renderRowCells, rowClassName }: VirtualJobRowsPr
                 transform: `translateY(${vitem.start}px)`,
               }}
             >
-              {renderRowCells(job)}
+              <JobsTableRow
+                job={job}
+                isActive={job.id === currentJobId}
+                isSelected={selectedIds.has(job.id)}
+                onToggle={onToggle}
+                onPreview={onPreview}
+                onOpenLogs={onOpenLogs}
+                onOpenDetails={onOpenDetails}
+                jobActions={jobActions}
+              />
             </div>
           );
         })}

@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../api";
 import { useMutationWithInvalidation } from "../hooks";
@@ -119,19 +119,24 @@ export function useJobActions(options: UseJobActionsOptions = {}): JobActions {
     [confirm, deleteMutation, onDeleted, addToast, t, showError]
   );
 
-  return {
-    retry,
-    retranslate,
-    cancel,
-    pin,
-    unpin,
-    remove,
-    classifyErrorReason,
-    isRetrying: retryMutation.isPending,
-    isRetranslating: forceMutation.isPending,
-    isCancelling: cancelMutation.isPending,
-    isPinning: pinMutation.isPending,
-    isUnpinning: unpinMutation.isPending,
-    isDeleting: deleteMutation.isPending,
-  };
+  // A stable identity between renders: memoized job rows compare this object,
+  // so a fresh object per render would make the memo decorative.
+  return useMemo(
+    () => ({
+      retry,
+      retranslate,
+      cancel,
+      pin,
+      unpin,
+      remove,
+      classifyErrorReason,
+      isRetrying: retryMutation.isPending,
+      isRetranslating: forceMutation.isPending,
+      isCancelling: cancelMutation.isPending,
+      isPinning: pinMutation.isPending,
+      isUnpinning: unpinMutation.isPending,
+      isDeleting: deleteMutation.isPending,
+    }),
+    [retry, retranslate, cancel, pin, unpin, remove, retryMutation.isPending, forceMutation.isPending, cancelMutation.isPending, pinMutation.isPending, unpinMutation.isPending, deleteMutation.isPending],
+  );
 }

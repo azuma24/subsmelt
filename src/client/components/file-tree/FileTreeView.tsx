@@ -9,6 +9,12 @@ export const STICKY_HEADER_PX = 36;
 /** Row content starts here; indent is added on top per level. */
 export const ROW_BASE_PADDING_PX = 12;
 
+// Offscreen file rows skip rendering entirely; the intrinsic-size estimate
+// keeps the scrollbar honest until the row is first measured, after which the
+// browser remembers its real height. Folders are excluded — their sticky
+// headers must render to keep the slot layout intact.
+const FILE_ROW_VISIBILITY = "[content-visibility:auto] [contain-intrinsic-size:auto_44px]";
+
 const ANCESTOR_HINT_DEPTH = 2;
 const ANCESTOR_HINT_SEGMENTS = 2;
 const RAIL_CHEVRON_CENTER_PX = 5;
@@ -72,7 +78,7 @@ export function FileTreeView<F, N extends TreeViewNode<F> & { children: N[] }>(p
         <FolderBlock key={node.path} {...props} node={node} depth={0} />
       ))}
       {files.map((f) => (
-        <div key={fileKey(f)}>{renderFile(f, { depth: 0, padLeftPx: ROW_BASE_PADDING_PX })}</div>
+        <div key={fileKey(f)} className={FILE_ROW_VISIBILITY}>{renderFile(f, { depth: 0, padLeftPx: ROW_BASE_PADDING_PX })}</div>
       ))}
     </div>
   );
@@ -133,7 +139,7 @@ function FolderBlock<F, N extends TreeViewNode<F> & { children: N[] }>(props: Fi
             <FolderBlock key={child.path} {...props} node={child} depth={depth + 1} />
           ))}
           {node.files.map((f) => (
-            <div key={props.fileKey(f)}>{props.renderFile(f, { depth: depth + 1, padLeftPx: childPad })}</div>
+            <div key={props.fileKey(f)} className={FILE_ROW_VISIBILITY}>{props.renderFile(f, { depth: depth + 1, padLeftPx: childPad })}</div>
           ))}
         </div>
       )}
