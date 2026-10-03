@@ -51,3 +51,17 @@ test("jobDerived falls back to an empty name for root-level paths", () => {
   assert.equal(jobDerived(row({ srt_path: "/media/Movie.srt" })).srtName, "Movie.srt");
   assert.equal(jobDerived(row({ srt_path: "Movie.srt" })).srtName, "Movie.srt");
 });
+
+test("jobDerived names the machine and model translating a job", () => {
+  const connection = { label: "Local 4090", host: "http://10.0.0.5:1234/v1", model: "Qwen/Qwen2.5-72B-Instruct" };
+  const running = jobDerived(row({ status: "translating", connection }));
+  assert.equal(running.connectionText, "Local 4090 · Qwen/Qwen2.5-72B-Instruct");
+  assert.equal(running.connectionTitle, "Local 4090 — Qwen/Qwen2.5-72B-Instruct — http://10.0.0.5:1234/v1");
+
+  const noModel = jobDerived(row({ status: "translating", connection: { ...connection, model: "" } }));
+  assert.equal(noModel.connectionText, "Local 4090");
+  assert.equal(noModel.connectionTitle, "Local 4090 — http://10.0.0.5:1234/v1");
+
+  const idle = jobDerived(row({ status: "translating", connection: null }));
+  assert.deepEqual([idle.connectionText, idle.connectionTitle], [null, null]);
+});

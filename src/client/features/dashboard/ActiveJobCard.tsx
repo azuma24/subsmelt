@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { JobRow } from "../../types";
 import { elapsedSince, estimateJobEta, estimateQueueEta, formatEta } from "./eta";
+import { jobDerived } from "./job-derived";
 
 interface ActiveJobCardProps {
   job: JobRow;
@@ -29,12 +30,20 @@ export function ActiveJobCard({ job, pendingCount, recentDurationsSeconds = [] }
     ? null
     : estimateJobEta({ completed: job.completed_cues, total: job.total_cues, elapsedMs });
   const queueEtaMs = estimateQueueEta(pendingCount, recentDurationsSeconds);
+  const connection = job.connection;
+  const { connectionTitle } = jobDerived(job);
 
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-[var(--accent-border)] bg-[var(--surface)] px-4 py-[13px] sm:flex-row sm:items-center sm:gap-4">
       <div className="min-w-0 flex-1">
         <p className="text-[10px] font-semibold uppercase tracking-[0.7px] text-[var(--accent)]">{t("app.currentlyTranslating")}</p>
         <h2 className="mt-0.5 truncate text-[13.5px] font-semibold text-[var(--text)]">{job.srt_path.split("/").pop()} → {job.lang_code}</h2>
+        {connection && (
+          <div className="mt-0.5 flex min-w-0 items-baseline gap-1 text-[11.5px]" title={connectionTitle ?? undefined}>
+            <span className="max-w-[40%] shrink-0 truncate text-[var(--text-3)]">{connection.label}{connection.model ? " ·" : ""}</span>
+            {connection.model && <span className="truncate font-mono text-[var(--text-2)]">{connection.model}</span>}
+          </div>
+        )}
         {pendingCount > 0 && (
           <div className="mt-0.5 text-[11.5px] text-[var(--text-2)]">
             {t("dashboard.moreInQueue", { count: pendingCount })}

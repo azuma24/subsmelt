@@ -178,7 +178,7 @@ const JobsTableRow = memo(function JobsTableRow({
   jobActions,
 }: JobsTableRowProps) {
   const { t } = useTranslation();
-  const { srtName, pct, hasError, isPending, isSkipped, reason } = jobDerived(job);
+  const { srtName, pct, hasError, isPending, isSkipped, reason, connectionText, connectionTitle } = jobDerived(job);
   return (
       <>
         <div className={`${TD} flex items-center`} role="cell">
@@ -219,8 +219,8 @@ const JobsTableRow = memo(function JobsTableRow({
               <ProgressSmall pct={pct} />
               {/* Parallel mode runs jobs on different connections; name the machine. */}
               {job.connection && (
-                <span className="max-w-[140px] truncate text-[10px] leading-4 text-[var(--text-3)]" title={job.connection.host}>
-                  {job.connection.label}
+                <span className="max-w-[140px] truncate text-[10px] leading-4 text-[var(--text-3)]" title={connectionTitle ?? undefined}>
+                  {connectionText}
                 </span>
               )}
             </>

@@ -32,7 +32,7 @@ export const JobCardMobile = memo(function JobCardMobile({
 }: JobCardMobileProps) {
   const { t } = useTranslation();
   const jobActions = useJobActions();
-  const { srtName, pct, hasError, isPending, isSkipped, reason } = jobDerived(job);
+  const { srtName, pct, hasError, isPending, isSkipped, reason, connectionText, connectionTitle } = jobDerived(job);
   const isActive = currentJobId === job.id;
 
   return (
@@ -78,8 +78,8 @@ export const JobCardMobile = memo(function JobCardMobile({
         <div className="mt-3">
           <ProgressSmall pct={pct} />
           {job.connection && (
-            <div className="mt-0.5 truncate text-[11px] text-[var(--text-3)]" title={job.connection.host}>
-              {job.connection.label}
+            <div className="mt-0.5 truncate text-[11px] text-[var(--text-3)]" title={connectionTitle ?? undefined}>
+              {connectionText}
             </div>
           )}
         </div>
