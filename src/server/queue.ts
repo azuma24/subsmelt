@@ -51,16 +51,26 @@ const abortControllers = new Map<number, AbortController>();
 const cancelledJobIds = new Set<number>();
 // The LLM connection each translating job runs on, so the dashboard can show
 // which machine is working on what in parallel mode.
-const jobConnections = new Map<number, { label: string; host: string }>();
+export interface JobConnection {
+  label: string;
+  host: string;
+  model: string;
+}
+const jobConnections = new Map<number, JobConnection>();
+
+function setJobConnection(jobId: number, connection: JobConnection): void {
+  jobConnections.set(jobId, connection);
+  broadcast("job:connection", { jobId, ...connection });
+}
 
 /** The connection a translating job currently runs on, or null. */
-export function getJobConnection(jobId: number): { label: string; host: string } | null {
+export function getJobConnection(jobId: number): JobConnection | null {
   return jobConnections.get(jobId) ?? null;
 }
 
 /** Every translating job with its connection, for the queue status surface. */
-export function getActiveJobConnections(): { jobId: number; label: string; host: string }[] {
-  return Array.from(jobConnections, ([jobId, { label, host }]) => ({ jobId, label, host }));
+export function getActiveJobConnections(): ({ jobId: number } & JobConnection)[] {
+  return Array.from(jobConnections, ([jobId, connection]) => ({ jobId, ...connection }));
 }
 // Hard ceiling on concurrent translation workers (matches the per-file connection cap).
 const MAX_WORKERS = 32;
@@ -455,8 +465,7 @@ async function runJob(
       primary.apiHost || settings.llm_endpoint || "http://localhost:8000/v1";
     const apiKey = primary.apiKey || "";
     const model = primary.model || "";
-    jobConnections.set(job.id, { label: primary.label, host: apiHost });
-    broadcast("job:connection", { jobId: job.id, label: primary.label, host: apiHost });
+    setJobConnection(job.id, { label: primary.label, host: apiHost, model });
     logger.info(
       "queue",
       `LLM mode: ${llmModeForJob} (${conns.length} connection${conns.length === 1 ? "" : "s"}) — primary ${primary.label}`,
@@ -514,8 +523,7 @@ async function runJob(
         const switched = conns.find((c) => c.id === id);
         if (switched) {
           const host = switched.apiHost || settings.llm_endpoint || apiHost;
-          jobConnections.set(job.id, { label, host });
-          broadcast("job:connection", { jobId: job.id, label, host });
+          setJobConnection(job.id, { label, host, model: switched.model });
         }
       },
       onConnectionError: ({ id, label, error }) => {

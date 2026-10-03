@@ -32,10 +32,11 @@ function chatCompletion(content: string): Response {
 // The availability probe passes; chat completions hang until the test releases
 // them or the engine aborts them; everything else 404s so the model-context
 // probe falls back without touching the network.
-const release: Array<() => void> = [];
+const release: Array<(content?: string) => void> = [];
 globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
   const url = String(input instanceof Request ? input.url : input);
   if (url.endsWith("/v1/models")) return new Response('{"data":[]}', { status: 200 });
+  if (url.includes("broken.test")) return new Response('{"error":"bad request"}', { status: 400 });
   if (!url.endsWith("/chat/completions")) return new Response("{}", { status: 404 });
   return new Promise<Response>((resolve, reject) => {
     init?.signal?.addEventListener(
@@ -43,7 +44,7 @@ globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) =>
       () => reject(Object.assign(new Error("aborted"), { name: "AbortError" })),
       { once: true },
     );
-    release.push(() => resolve(chatCompletion("Translated Title")));
+    release.push((content = "Translated Title") => resolve(chatCompletion(content)));
   });
 }) as typeof fetch;
 
@@ -145,21 +146,68 @@ test("cancelling one translating job ends it as cancelled and the queue continue
   db.deleteJob(second);
 });
 
-test("a translating job reports the connection running it", async () => {
+function useConnections(mode: string, connections: object[]) {
+  config.setSetting("llm_mode", mode);
+  config.setSetting("llm_connections", JSON.stringify(connections));
+}
+
+function resetConnections() {
+  config.setSetting("llm_mode", "");
+  config.setSetting("llm_connections", "");
+}
+
+test("a translating job reports the connection and model running it", async () => {
+  useConnections("single", [
+    { id: "gpu", label: "Local 4090", provider: "local", model: "Qwen/Qwen2.5-72B-Instruct", endpoint: "http://gpu.test/v1" },
+  ]);
   const job = addJob({ srtExists: true, outputExists: false });
   const run = queue.processQueue();
-  await waitFor(() => release.length > 0, "the job to call the LLM");
+  try {
+    await waitFor(() => release.length > 0, "the job to call the LLM");
 
-  const connection = queue.getJobConnection(job);
-  assert.ok(connection, "the job should report a connection while translating");
-  assert.ok(connection.label.length > 0);
-  assert.ok(queue.getActiveJobConnections().some((entry) => entry.jobId === job));
-
-  queue.requestStop();
-  await run;
-  release.length = 0;
+    const expected = { label: "Local 4090", host: "http://gpu.test/v1", model: "Qwen/Qwen2.5-72B-Instruct" };
+    assert.deepEqual(queue.getJobConnection(job), expected);
+    assert.deepEqual(queue.getActiveJobConnections(), [{ jobId: job, ...expected }]);
+  } finally {
+    queue.requestStop();
+    await run;
+    release.length = 0;
+    resetConnections();
+  }
 
   assert.equal(queue.getJobConnection(job), null);
+  db.deleteJob(job);
+});
+
+test("a fallback switch mid-job reports the model of the connection that took over", async () => {
+  useConnections("fallback", [
+    { id: "broken", label: "Desk GPU", provider: "local", model: "llama-3.1-8b", endpoint: "http://broken.test/v1", order: 0 },
+    { id: "backup", label: "Spare box", provider: "local", model: "gemma-2-27b", endpoint: "http://backup.test/v1", order: 1 },
+  ]);
+  // Two one-cue chunks keep the job translating after the first chunk switches over.
+  config.setSetting("chunk_size", "1");
+  const job = addJob({ srtExists: true, outputExists: false });
+  const twoCues = "1\n00:00:01,000 --> 00:00:02,000\nhello\n\n2\n00:00:03,000 --> 00:00:04,000\nbye\n";
+  fs.writeFileSync(db.getJob(job)!.srt_path, twoCues, "utf8");
+  const run = queue.processQueue();
+  try {
+    // The primary rejects every request, so the first chunk fails over to the backup.
+    await waitFor(() => release.length > 0, "the backup to call the LLM");
+    release.shift()!('["hola"]');
+    await waitFor(() => queue.getJobConnection(job)?.label === "Spare box", "the job to switch connections");
+
+    assert.deepEqual(queue.getJobConnection(job), {
+      label: "Spare box",
+      host: "http://backup.test/v1",
+      model: "gemma-2-27b",
+    });
+  } finally {
+    queue.requestStop();
+    await run;
+    release.length = 0;
+    resetConnections();
+    config.setSetting("chunk_size", "");
+  }
   db.deleteJob(job);
 });
 
