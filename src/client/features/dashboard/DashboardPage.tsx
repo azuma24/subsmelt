@@ -6,13 +6,14 @@ import { getErrorMessage } from "../../lib";
 import { useJobsQuery, useMutationWithInvalidation, useQueueStatusQuery, useSettingsQuery, useTasksQuery, useTranscriptionHistoryQuery } from "../../hooks";
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmModal";
-import type { JobRow, ScannedFile } from "../../types";
+import type { JobRow, ScannedFile, TaskStatus } from "../../types";
 import { ActionButton, EmptyHint, SelectionBar } from "../../ui/primitives";
 import { JobsTableDesktop } from "./JobsTableDesktop";
 import { JobCardMobile } from "./JobCardMobile";
 import { JobDetailsDrawer } from "./JobDetailsDrawer";
 import { PreviewOverlay } from "./PreviewOverlay";
 import { ScanResultsPanel, type ScanFilter } from "./ScanResultsPanel";
+import { withQueuedTask } from "./scan-file-status";
 import { validDashboardSortBy, validDashboardSortDir, type DashboardSortBy, type DashboardSortDir } from "./scanSort";
 import { useDashboardDerivedState } from "./useDashboardDerivedState";
 import { DashboardHero } from "./DashboardHero";
@@ -191,6 +192,10 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
       addToast(t("dashboard.toast.scanFailed", { message: getErrorMessage(e) }), "error");
     }
   };
+
+  const handleFileTranslationQueued = useCallback((srtPath: string, task: TaskStatus) => {
+    setScanResult((prev) => (prev ? withQueuedTask(prev, srtPath, task) : prev));
+  }, []);
 
   const handleScan = async () => {
     try {
@@ -595,6 +600,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
                 sortDir={dashboardSortDir}
                 onSortByChange={handleDashboardSortByChange}
                 onToggleSortDir={handleDashboardSortDirToggle}
+                onFileTranslationQueued={handleFileTranslationQueued}
               />
             </div>
           )}

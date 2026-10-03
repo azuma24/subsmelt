@@ -939,6 +939,14 @@
       "batchTranscribe": "Transcribe {{count}} selected",
       "batchTranscribeTranslate": "Transcribe + Translate {{count}}",
       "clearSelection": "Clear"
+    },
+    "translateFile": {
+      "trigger": "এতে অনুবাদ করুন…",
+      "yourTasks": "আপনার কাজগুলো",
+      "submit": "অনুবাদ করুন",
+      "submitting": "সারিতে যোগ করা হচ্ছে…",
+      "queued": "{{lang}}-এ অনুবাদ সারিতে যোগ হয়েছে",
+      "alreadyQueued": "{{lang}}-এ অনুবাদ ইতিমধ্যে সারিতে আছে"
     }
   },
   "errors": {

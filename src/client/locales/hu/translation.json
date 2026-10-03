@@ -939,6 +939,14 @@
       "batchTranscribe": "Transcribe {{count}} selected",
       "batchTranscribeTranslate": "Transcribe + Translate {{count}}",
       "clearSelection": "Clear"
+    },
+    "translateFile": {
+      "trigger": "Fordítás erre…",
+      "yourTasks": "Feladataid",
+      "submit": "Fordítás",
+      "submitting": "Sorba állítás…",
+      "queued": "A(z) {{lang}} fordítás sorba állítva",
+      "alreadyQueued": "A(z) {{lang}} fordítás már a sorban van"
     }
   },
   "errors": {

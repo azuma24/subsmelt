@@ -939,6 +939,14 @@
       "batchTranscribe": "Transcribe {{count}} selected",
       "batchTranscribeTranslate": "Transcribe + Translate {{count}}",
       "clearSelection": "Clear"
+    },
+    "translateFile": {
+      "trigger": "Isalin sa…",
+      "yourTasks": "Iyong mga gawain",
+      "submit": "Isalin",
+      "submitting": "Idinadagdag sa pila…",
+      "queued": "Naidagdag sa pila ang pagsasalin sa {{lang}}",
+      "alreadyQueued": "Nasa pila na ang pagsasalin sa {{lang}}"
     }
   },
   "errors": {

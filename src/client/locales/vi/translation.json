@@ -939,6 +939,14 @@
       "batchTranscribe": "Transcribe {{count}} selected",
       "batchTranscribeTranslate": "Transcribe + Translate {{count}}",
       "clearSelection": "Clear"
+    },
+    "translateFile": {
+      "trigger": "Dịch sang…",
+      "yourTasks": "Tác vụ của bạn",
+      "submit": "Dịch",
+      "submitting": "Đang thêm vào hàng đợi…",
+      "queued": "Đã thêm bản dịch sang {{lang}} vào hàng đợi",
+      "alreadyQueued": "Bản dịch sang {{lang}} đã có trong hàng đợi"
     }
   },
   "errors": {

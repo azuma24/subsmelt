@@ -939,6 +939,14 @@
       "batchTranscribe": "Transcribe {{count}} selected",
       "batchTranscribeTranslate": "Transcribe + Translate {{count}}",
       "clearSelection": "Clear"
+    },
+    "translateFile": {
+      "trigger": "번역할 언어…",
+      "yourTasks": "내 작업",
+      "submit": "번역",
+      "submitting": "대기열에 추가 중…",
+      "queued": "{{lang}} 번역을 대기열에 추가했습니다",
+      "alreadyQueued": "{{lang}} 번역이 이미 대기열에 있습니다"
     }
   },
   "errors": {

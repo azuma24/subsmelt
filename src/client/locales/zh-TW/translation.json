@@ -939,6 +939,14 @@
       "batchTranscribe": "Transcribe {{count}} selected",
       "batchTranscribeTranslate": "Transcribe + Translate {{count}}",
       "clearSelection": "Clear"
+    },
+    "translateFile": {
+      "trigger": "翻譯成…",
+      "yourTasks": "你的任務",
+      "submit": "翻譯",
+      "submitting": "加入佇列中…",
+      "queued": "已將 {{lang}} 翻譯加入佇列",
+      "alreadyQueued": "{{lang}} 翻譯已在佇列中"
     }
   },
   "errors": {

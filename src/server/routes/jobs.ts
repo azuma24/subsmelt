@@ -45,9 +45,11 @@ import { assertMediaPathAllowed } from "../transcription-client.js";
 import { isWatcherRunning } from "../watcher.js";
 import { getAllSettings } from "../config.js";
 import { logger } from "../logger.js";
+import { queueFileTranslation, type FileTranslationTarget } from "../file-translation.js";
 import {
   parsePositiveInteger,
   parsePositiveIntegerArray,
+  sanitizeLanguageName,
 } from "./validation.js";
 
 // Enrich job rows with task data (since settings/tasks are in config, not SQL JOIN).
@@ -110,6 +112,31 @@ export function registerJobsRoutes(app: Express): void {
     logger.info("queue", `Job #${id} reset to pending (retry)`, id);
     setTimeout(() => runQueueSafely(), 100);
     res.json({ ok: true });
+  });
+
+  // Translate one library subtitle into one language without changing the
+  // global tasks; a language with no task gets a disabled one.
+  app.post("/api/jobs/translate-file", (req, res) => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    if (typeof body.srtPath !== "string" || !body.srtPath)
+      return res.status(400).json({ error: "srtPath is required" });
+    let target: FileTranslationTarget;
+    if (body.taskId !== undefined) {
+      const taskId = parsePositiveInteger(body.taskId);
+      if (taskId === null) return res.status(400).json({ error: "taskId must be a positive integer" });
+      target = { taskId };
+    } else {
+      const langCode = typeof body.langCode === "string" ? body.langCode.trim() : "";
+      const targetLang = typeof body.targetLang === "string" ? sanitizeLanguageName(body.targetLang) : "";
+      if (!langCode || !targetLang)
+        return res.status(400).json({ error: "Either taskId, or both langCode and targetLang, are required" });
+      target = { langCode, targetLang };
+    }
+
+    const result = queueFileTranslation(body.srtPath, target);
+    if (result.kind === "rejected") return res.status(result.status).json({ error: result.error });
+    setTimeout(() => runQueueSafely(), 100);
+    res.json({ ok: true, jobId: result.jobId, taskId: result.taskId, created: result.kind === "queued" });
   });
 
   app.post("/api/jobs/retry-selected", (req, res) => {

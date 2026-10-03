@@ -25,6 +25,15 @@ export function parsePositiveIntegerArray(value: unknown): number[] | null {
   return Array.from(new Set(parsed as number[]));
 }
 
+/**
+ * Language names end up inside the LLM system prompt: cap length and strip
+ * control characters and template-ish braces so request input can't
+ * restructure the prompt.
+ */
+export function sanitizeLanguageName(value: string): string {
+  return value.replace(/[\r\n\t]+/g, " ").replace(/[{}<>]/g, "").trim().slice(0, 60);
+}
+
 export type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
 
 /**

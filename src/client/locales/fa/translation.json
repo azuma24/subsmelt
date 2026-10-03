@@ -939,6 +939,14 @@
       "batchTranscribe": "Transcribe {{count}} selected",
       "batchTranscribeTranslate": "Transcribe + Translate {{count}}",
       "clearSelection": "Clear"
+    },
+    "translateFile": {
+      "trigger": "ترجمه به…",
+      "yourTasks": "کارهای شما",
+      "submit": "ترجمه",
+      "submitting": "در حال افزودن به صف…",
+      "queued": "ترجمه به {{lang}} به صف اضافه شد",
+      "alreadyQueued": "ترجمه به {{lang}} از قبل در صف است"
     }
   },
   "errors": {

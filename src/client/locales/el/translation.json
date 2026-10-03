@@ -939,6 +939,14 @@
       "batchTranscribe": "Transcribe {{count}} selected",
       "batchTranscribeTranslate": "Transcribe + Translate {{count}}",
       "clearSelection": "Clear"
+    },
+    "translateFile": {
+      "trigger": "Μετάφραση σε…",
+      "yourTasks": "Οι εργασίες σας",
+      "submit": "Μετάφραση",
+      "submitting": "Προσθήκη στην ουρά…",
+      "queued": "Η μετάφραση σε {{lang}} προστέθηκε στην ουρά",
+      "alreadyQueued": "Η μετάφραση σε {{lang}} είναι ήδη στην ουρά"
     }
   },
   "errors": {

@@ -250,6 +250,22 @@ export function listJobTaskStatuses(): Array<{
     .all() as Array<{ id: number; srt_path: string; task_id: number; status: string }>;
 }
 
+/** A job that has not finished and would write `outputPath`, other than `exceptId`. */
+export function findUnfinishedJobForOutput(outputPath: string, exceptId: number | null): { id: number } | undefined {
+  return db
+    .prepare(
+      "SELECT id FROM jobs WHERE output_path = ? AND status NOT IN ('done', 'skipped') AND id != ? LIMIT 1",
+    )
+    .get(outputPath, exceptId ?? -1) as { id: number } | undefined;
+}
+
+/** The job for one (source subtitle, task) pair, which the jobs table keeps unique. */
+export function findJobForTask(srtPath: string, taskId: number): { id: number; task_id: number; status: string } | undefined {
+  return db
+    .prepare("SELECT id, task_id, status FROM jobs WHERE srt_path = ? AND task_id = ?")
+    .get(srtPath, taskId) as { id: number; task_id: number; status: string } | undefined;
+}
+
 /** srt_path and status only — folder counts never need the other columns. */
 export function listJobPathsAndStatuses(): Array<{ srt_path: string; status: string }> {
   return db

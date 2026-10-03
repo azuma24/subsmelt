@@ -939,6 +939,14 @@
       "batchTranscribe": "Transcribe {{count}} selected",
       "batchTranscribeTranslate": "Transcribe + Translate {{count}}",
       "clearSelection": "Clear"
+    },
+    "translateFile": {
+      "trigger": "Übersetzen nach…",
+      "yourTasks": "Deine Aufgaben",
+      "submit": "Übersetzen",
+      "submitting": "Wird eingereiht…",
+      "queued": "Übersetzung nach {{lang}} eingereiht",
+      "alreadyQueued": "Übersetzung nach {{lang}} ist bereits eingereiht"
     }
   },
   "errors": {
