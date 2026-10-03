@@ -1,4 +1,5 @@
 import { logger } from "../logger.js";
+import { controlledAbortError } from "./ai-client.js";
 
 // ── Dynamic model context probing ────────────────────────────────────────────
 
@@ -125,7 +126,10 @@ export async function probeModelContext(
     );
 
     return { maxContextTokens: maxCtx, recommendedParallelChunks, recommendedAnalysisLines };
-  } catch {
+  } catch (error: any) {
+    // A stop/cancel aborting the probe is not a probe failure — surface it so
+    // the job's own handling applies instead of silently translating on.
+    if (abortSignal?.aborted) throw controlledAbortError(abortSignal);
     return FALLBACK;
   }
 }

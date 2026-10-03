@@ -1059,6 +1059,7 @@
     "modelNotDownloadedMessageNoSize": "Model \"{{model}}\" is not downloaded yet. Download it now?",
     "modelNotDownloadedTitle": "Model not downloaded",
     "modelsStillLoading": "Model list still loading, try again in a moment.",
+    "modelNotListed": "A kiválasztott modell hiányzik a backend modelllistájából. Válasszon modellt újra.",
     "refresh": "Refresh",
     "refreshAriaLabel": "Refresh file list",
     "sortAriaLabel": "Sort files",

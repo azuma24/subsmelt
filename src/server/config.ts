@@ -287,6 +287,18 @@ export function getTask(id: number): TranslationTask | undefined {
   return _config.tasks.find((t) => t.id === id);
 }
 
+// The lang_code lands in output file names ("Movie.<lang_code>.srt") and in
+// prompt context, so it must be a plain token — a traversal or separator would
+// compose paths outside the media folder.
+const LANG_CODE_RE = /^[A-Za-z0-9_-]+$/;
+
+export function validateTaskLangCode(langCode: string, excludeTaskId?: number): string | null {
+  if (!LANG_CODE_RE.test(langCode)) return "lang_code must contain only letters, digits, dashes and underscores";
+  const duplicate = _config.tasks.some((t) => t.lang_code === langCode && t.id !== excludeTaskId);
+  if (duplicate) return `A task with language code "${langCode}" already exists — two tasks sharing it would write the same output files`;
+  return null;
+}
+
 export function createTask(task: {
   source_lang: string;
   target_lang: string;

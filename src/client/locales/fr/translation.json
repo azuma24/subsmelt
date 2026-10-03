@@ -1059,6 +1059,7 @@
     "modelNotDownloadedMessageNoSize": "Le modèle « {{model}} » n’est pas encore téléchargé. Le télécharger maintenant ?",
     "modelNotDownloadedTitle": "Modèle non téléchargé",
     "modelsStillLoading": "La liste des modèles charge encore, réessayez dans un instant.",
+    "modelNotListed": "Le modèle sélectionné est absent de la liste du backend. Choisissez un modèle à nouveau.",
     "refresh": "Actualiser",
     "refreshAriaLabel": "Actualiser la liste des fichiers",
     "sortAriaLabel": "Trier les fichiers",

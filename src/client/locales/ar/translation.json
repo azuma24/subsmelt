@@ -1059,6 +1059,7 @@
     "modelNotDownloadedMessageNoSize": "Model \"{{model}}\" is not downloaded yet. Download it now?",
     "modelNotDownloadedTitle": "Model not downloaded",
     "modelsStillLoading": "Model list still loading, try again in a moment.",
+    "modelNotListed": "النموذج المحدد غير موجود في قائمة النماذج الخلفية. اختر نموذجًا مرة أخرى.",
     "refresh": "Refresh",
     "refreshAriaLabel": "Refresh file list",
     "sortAriaLabel": "Sort files",

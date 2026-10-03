@@ -1059,6 +1059,7 @@
     "modelNotDownloadedMessageNoSize": "Model \"{{model}}\" is not downloaded yet. Download it now?",
     "modelNotDownloadedTitle": "Model not downloaded",
     "modelsStillLoading": "Model list still loading, try again in a moment.",
+    "modelNotListed": "Das ausgewählte Modell fehlt in der Backend-Modellliste. Wähle ein Modell erneut.",
     "refresh": "Aktualisieren",
     "refreshAriaLabel": "Dateiliste aktualisieren",
     "sortAriaLabel": "Dateien sortieren",

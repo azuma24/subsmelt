@@ -1059,6 +1059,7 @@
     "modelNotDownloadedMessageNoSize": "模型「{{model}}」尚未下載。要現在下載嗎？",
     "modelNotDownloadedTitle": "模型尚未下載",
     "modelsStillLoading": "模型清單仍在載入，請稍後再試。",
+    "modelNotListed": "所選模型不在後端模型清單中，請重新選擇模型。",
     "refresh": "重新整理",
     "refreshAriaLabel": "重新整理檔案清單",
     "sortAriaLabel": "排序檔案",

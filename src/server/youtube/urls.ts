@@ -1,6 +1,12 @@
 export const PLAYLIST_ID_RE = /^[A-Za-z0-9_-]{10,64}$/;
 export const VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/;
 
+// Mix and radio playlists (RD…, radio "RP…") have session-shuffled membership:
+// every sync lists different videos, which marks real entries removed and
+// re-adds strangers, and the Data API refuses them outright. Following one is
+// never what the operator meant, so they do not count as playlists.
+const MIX_PLAYLIST_PREFIX_RE = /^(RD|LM|RP)/;
+
 const YOUTUBE_HOSTS = new Set(["youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com"]);
 const SHORT_HOST = "youtu.be";
 const LIST_PATHS = new Set(["/playlist", "/watch"]);
@@ -30,14 +36,16 @@ function carriesList(url: URL): boolean {
 
 /** Pasted text to a list id. Accepts a bare id, youtube.com / www / m / music.youtube.com
  *  playlist?list=, watch?v=..&list=.., youtu.be/..?list=.., with or without scheme and si= junk.
- *  Returns null for anything else (other hosts, missing list, bad id chars, a lone watch URL). */
+ *  Returns null for anything else (other hosts, missing list, bad id chars, a lone watch URL,
+ *  a mix/radio playlist). */
 export function parsePlaylistInput(input: string): string | null {
   const text = input.trim();
-  if (isPlaylistId(text)) return text;
+  if (isPlaylistId(text)) return MIX_PLAYLIST_PREFIX_RE.test(text) ? null : text;
   const url = parseUrl(text);
   if (!url || !carriesList(url)) return null;
   const list = url.searchParams.get("list") ?? "";
-  return isPlaylistId(list) ? list : null;
+  if (!isPlaylistId(list)) return null;
+  return MIX_PLAYLIST_PREFIX_RE.test(list) ? null : list;
 }
 
 export function playlistUrl(id: string): string {

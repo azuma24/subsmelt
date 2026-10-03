@@ -618,6 +618,9 @@ async function runJob(
 
     const durationSeconds = (Date.now() - startTime) / 1000;
     const wasForced = !!job.force;
+    // A cancel landing while the last LLM call already resolved must not end
+    // as "done" — the user asked for this job to stop.
+    if (cancelledJobIds.has(job.id)) throw new Error("JOB_CANCELLED");
     updateJob(job.id, {
       status: "done",
       duration_seconds: durationSeconds,
@@ -771,15 +774,21 @@ async function runJob(
     });
     return false;
   } finally {
-    abortControllers.delete(job.id);
-    // A cancel that raced a completing job must not poison its later retries.
+    // A cancel during the title-sidecar can settle this run after a re-run has
+    // already claimed the job; only the run that still owns the registrations
+    // may clear them, or it would strip the new run's controller and activity
+    // marker. The cancel marker is per-job, not per-run: clearing it here is
+    // what keeps a stale cancel from killing a re-run.
+    if (abortControllers.get(job.id) === jobAbort) {
+      abortControllers.delete(job.id);
+      jobConnections.delete(job.id);
+      activeJobIds.delete(job.id);
+      currentJobId =
+        activeJobIds.size > 0
+          ? Array.from(activeJobIds)[activeJobIds.size - 1]
+          : null;
+    }
     cancelledJobIds.delete(job.id);
-    jobConnections.delete(job.id);
-    activeJobIds.delete(job.id);
-    currentJobId =
-      activeJobIds.size > 0
-        ? Array.from(activeJobIds)[activeJobIds.size - 1]
-        : null;
   }
 }
 
@@ -811,7 +820,7 @@ let scanTimer: ReturnType<typeof setInterval> | null = null;
 
 export function startAutoScan(
   intervalMinutes: number,
-  scanFn: () => { newJobs: number },
+  scanFn: () => { newJobs: number; totalSubtitles: number },
 ) {
   stopAutoScan();
   if (intervalMinutes <= 0) return;
@@ -819,9 +828,12 @@ export function startAutoScan(
   scanTimer = setInterval(
     () => {
       try {
-        const { newJobs } = scanFn();
-        if (newJobs > 0) {
-          logger.info("scan", `Auto-scan: ${newJobs} new files found`);
+        const result = scanFn();
+        // Same announcement as an HTTP scan, so the UI's caches (including
+        // the sticky media_scanned flag the checklists read) stay current.
+        broadcast("scan:complete", { newJobs: result.newJobs, total: result.totalSubtitles });
+        if (result.newJobs > 0) {
+          logger.info("scan", `Auto-scan: ${result.newJobs} new files found`);
           if (getSetting("auto_translate") === "1") runQueueSafely();
         }
       } catch (e: any) {

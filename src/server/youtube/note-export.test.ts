@@ -139,7 +139,7 @@ duration: "00:45"
 playlist: "[[AI Talks]]"
 language: en
 transcript_source: youtube_captions
-translations: [zh-TW]
+translations: ["zh-TW"]
 tags: [youtube]
 subsmelt_schema: 1
 ---

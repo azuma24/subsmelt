@@ -1059,6 +1059,7 @@
     "modelNotDownloadedMessageNoSize": "Model \"{{model}}\" is not downloaded yet. Download it now?",
     "modelNotDownloadedTitle": "Model not downloaded",
     "modelsStillLoading": "Model list still loading, try again in a moment.",
+    "modelNotListed": "Wala sa listahan ng backend ang napiling modelo. Pumili ng modelo muli.",
     "refresh": "Refresh",
     "refreshAriaLabel": "Refresh file list",
     "sortAriaLabel": "Sort files",

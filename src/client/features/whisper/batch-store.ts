@@ -135,7 +135,10 @@ export async function runBatch(run: BatchRun): Promise<void> {
       ok += 1;
     } catch (e: unknown) {
       const message = getErrorMessage(e);
-      outcome = /cancelled/i.test(message) ? "cancelled" : "error";
+      // Strict match: the server rethrows exactly this string for a user
+      // cancel. A loose /cancelled/i would swallow real backend failures
+      // whose message merely mentions the word ("stream cancelled by ...").
+      outcome = message === "Transcription cancelled" ? "cancelled" : "error";
       if (outcome === "error") run.onFileError(path, message);
     }
     setState(fileFinished(state, path, outcome, i + 1));

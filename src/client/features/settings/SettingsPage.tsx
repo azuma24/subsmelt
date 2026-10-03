@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
@@ -26,6 +27,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   const { t } = useTranslation();
   const { addToast } = useToast();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const settingsQuery = useSettingsQuery();
   const tasksQuery = useTasksQuery();
   const jobsQuery = useJobsQuery();
@@ -78,6 +80,10 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
       .then(() => api.saveSettings(body))
       .then(() => {
         applyForm(saved(formRef.current, body));
+        // The App-level settings cache feeds the sidebar (model name, watcher
+        // state); without this it keeps the pre-save values until an unrelated
+        // event refetches, so the sidebar lagged the model switch.
+        void queryClient.invalidateQueries({ queryKey: ["settings"] });
         return true;
       })
       .catch((e: unknown) => {
@@ -209,10 +215,14 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
       if (settings._watcher_running) {
         await api.stopWatcher();
         setWatcherRunning(false);
+        // The sidebar's watcher dot reads the shared settings cache; without
+        // this it lagged the toggle for up to 30s.
+        void queryClient.invalidateQueries({ queryKey: ["settings"] });
         addToast(t("settings.watcherStopped"), "info");
       } else {
         await api.startWatcher();
         setWatcherRunning(true);
+        void queryClient.invalidateQueries({ queryKey: ["settings"] });
         addToast(t("settings.watcherStarted"), "success");
       }
     } catch (e: unknown) {
@@ -306,7 +316,11 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   // this costs no extra requests. Copy is shared with the Dashboard checklist
   // rather than duplicated — see SetupProgress for why this isn't a wizard.
   const enabledTaskCount = (tasksQuery.data || []).filter((task) => task.enabled === 1).length;
-  const hasDiscoveredMedia = (jobsQuery.data?.jobs || []).length > 0;
+  // The jobs list is transient — Clear finished empties it, and a rescan then
+  // creates no jobs (outputs exist), so a jobs-based step would never clear
+  // again. The server's sticky flag says media was discovered at least once.
+  const hasDiscoveredMedia =
+    (jobsQuery.data?.jobs || []).length > 0 || str(settings.media_scanned) === "1";
   const setupSteps: SetupStep[] = [
     {
       key: "llm",

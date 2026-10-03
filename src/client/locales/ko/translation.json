@@ -1059,6 +1059,7 @@
     "modelNotDownloadedMessageNoSize": "Model \"{{model}}\" is not downloaded yet. Download it now?",
     "modelNotDownloadedTitle": "Model not downloaded",
     "modelsStillLoading": "Model list still loading, try again in a moment.",
+    "modelNotListed": "선택한 모델이 백엔드 모델 목록에 없습니다. 모델을 다시 선택하세요.",
     "refresh": "새로고침",
     "refreshAriaLabel": "파일 목록 새로고침",
     "sortAriaLabel": "파일 정렬",

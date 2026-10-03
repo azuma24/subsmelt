@@ -62,7 +62,7 @@ export function useJobActions(options: UseJobActionsOptions = {}): JobActions {
         onError: () => showError("dashboard.toast.actionFailed"),
       });
     },
-    [retryMutation, addToast, t, showError]
+    [retryMutation.mutate, retryMutation.isPending, addToast, t, showError]
   );
 
   const retranslate = useCallback(
@@ -72,7 +72,7 @@ export function useJobActions(options: UseJobActionsOptions = {}): JobActions {
         onError: () => showError("dashboard.toast.actionFailed"),
       });
     },
-    [forceMutation, addToast, t, showError]
+    [forceMutation.mutate, forceMutation.isPending, addToast, t, showError]
   );
 
   const cancel = useCallback(
@@ -82,21 +82,21 @@ export function useJobActions(options: UseJobActionsOptions = {}): JobActions {
         onError: () => showError("dashboard.toast.actionFailed"),
       });
     },
-    [cancelMutation, addToast, t, showError]
+    [cancelMutation.mutate, cancelMutation.isPending, addToast, t, showError]
   );
 
   const pin = useCallback(
     (id: number) => {
       pinMutation.mutate(id, { onError: () => showError("dashboard.toast.actionFailed") });
     },
-    [pinMutation, showError]
+    [pinMutation.mutate, pinMutation.isPending, showError]
   );
 
   const unpin = useCallback(
     (id: number) => {
       unpinMutation.mutate(id, { onError: () => showError("dashboard.toast.actionFailed") });
     },
-    [unpinMutation, showError]
+    [unpinMutation.mutate, unpinMutation.isPending, showError]
   );
 
   const remove = useCallback(
@@ -116,11 +116,13 @@ export function useJobActions(options: UseJobActionsOptions = {}): JobActions {
         showError("dashboard.toast.deleteFailed");
       }
     },
-    [confirm, deleteMutation, onDeleted, addToast, t, showError]
+    [confirm, deleteMutation.mutate, deleteMutation.isPending, onDeleted, addToast, t, showError]
   );
 
   // A stable identity between renders: memoized job rows compare this object,
-  // so a fresh object per render would make the memo decorative.
+  // so a fresh object per render would make the memo decorative. The deps use
+  // `mutate` (stable per mutation) and the isPending flags — the mutation
+  // result object itself is fresh on every render.
   return useMemo(
     () => ({
       retry,

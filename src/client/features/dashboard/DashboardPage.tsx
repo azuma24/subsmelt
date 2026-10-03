@@ -359,9 +359,22 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
       onClick: () => navigate("/translations"),
     },
     {
-      done: pendingJobs.length > 0 || doneJobs.length > 0 || activeJobs.length > 0,
+      // The jobs list is transient — Clear finished empties it, and a rescan
+      // then creates no jobs (outputs exist). Media discovered at least once
+      // is a sticky server fact, so the step cannot regress into a dead end.
+      done:
+        pendingJobs.length > 0 ||
+        doneJobs.length > 0 ||
+        activeJobs.length > 0 ||
+        str(settings.media_scanned) === "1",
       title: t("dashboard.quickStart.mediaTitle"),
-      hint: pendingJobs.length > 0 || doneJobs.length > 0 || activeJobs.length > 0 ? t("dashboard.quickStart.done") : t("dashboard.quickStart.mediaHint"),
+      hint:
+        pendingJobs.length > 0 ||
+        doneJobs.length > 0 ||
+        activeJobs.length > 0 ||
+        str(settings.media_scanned) === "1"
+          ? t("dashboard.quickStart.done")
+          : t("dashboard.quickStart.mediaHint"),
       action: t("dashboard.quickStart.scanNow"),
       onClick: handleScan,
     },

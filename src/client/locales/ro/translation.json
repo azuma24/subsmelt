@@ -1059,6 +1059,7 @@
     "modelNotDownloadedMessageNoSize": "Model \"{{model}}\" is not downloaded yet. Download it now?",
     "modelNotDownloadedTitle": "Model not downloaded",
     "modelsStillLoading": "Model list still loading, try again in a moment.",
+    "modelNotListed": "Modelul selectat lipsește din lista de modele a backendului. Alegeți din nou un model.",
     "refresh": "Refresh",
     "refreshAriaLabel": "Refresh file list",
     "sortAriaLabel": "Sort files",

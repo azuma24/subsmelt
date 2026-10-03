@@ -5,6 +5,7 @@ import { getSetting } from "./config.js";
 import { MEDIA_DIR } from "./scanner.js";
 import { scanFolder } from "./scanner.js";
 import { runQueueSafely } from "./queue.js";
+import { broadcast } from "./sse.js";
 import { logger } from "./logger.js";
 
 let watcher: FSWatcher | null = null;
@@ -31,9 +32,12 @@ function handleFileChange(filePath: string) {
   if (debounceTimer) clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
     try {
-      const { newJobs } = scanFolder(true);
-      if (newJobs > 0) {
-        logger.info("scan", `Watcher: ${newJobs} new jobs queued`);
+      const result = scanFolder(true);
+      // Same announcement as an HTTP scan, so the UI's caches (including the
+      // sticky media_scanned flag the checklists read) stay current.
+      broadcast("scan:complete", { newJobs: result.newJobs, total: result.totalSubtitles });
+      if (result.newJobs > 0) {
+        logger.info("scan", `Watcher: ${result.newJobs} new jobs queued`);
         if (getSetting("auto_translate") === "1") runQueueSafely();
       }
     } catch (e: any) {

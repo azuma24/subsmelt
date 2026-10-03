@@ -44,8 +44,7 @@ const FILE_TITLE_MAX_BYTES = 180;
 const SENTENCE_END_RE = /[.!?。！？…](?:["'”’)\]」』）]*)$/u;
 // Obsidian breaks links on [ ] # ^ |; the rest are refused by some filesystem or read as a path.
 const UNSAFE_NAME_RE = /[[\]#^|\\/:*?"<>\u0000-\u001f]/g;
-const CJK_RE = /[　-鿿가-힯豈-﫿＀-￯]/u;
-const PLAIN_YAML_RE = /^[A-Za-z0-9_-]+$/;
+const CJK_RE = /[　-鿿가-힯豈-﫿＀-￯]/u;
 
 /** Keeps "#word" in a title or transcript from becoming an Obsidian tag. */
 const escapeTags = (text: string) => text.replace(/(^|\s)#/g, "$1\\#");
@@ -139,7 +138,10 @@ export function groupParagraphs(cues: Cue[], starts: number[]): { start: number;
 }
 
 const yamlString = (value: string) => JSON.stringify(value);
-const yamlList = (values: string[]) => `[${values.map((v) => (PLAIN_YAML_RE.test(v) ? v : yamlString(v))).join(", ")}]`;
+// Quote every list value: PLAIN_YAML_RE values like "no" and "on" are YAML 1.1
+// booleans (Norwegian!), so an unquoted `translations: [no, on]` would read as
+// [false, true] in Obsidian.
+const yamlList = (values: string[]) => `[${values.map((v) => yamlString(v)).join(", ")}]`;
 
 function frontmatter(info: NoteInfo, translations: NoteTranslation[]): string {
   const lines: [string, string | null][] = [

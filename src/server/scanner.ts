@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { getSetting, getTasks, type TranslationTask } from "./config.js";
+import { getSetting, getTasks, setSetting, type TranslationTask } from "./config.js";
 import {
   createJob,
   listJobPathsAndStatuses,
@@ -446,6 +446,14 @@ export function scanFolder(createJobs = true): ScanResult {
       videoIndex.set(`${dir}/${stem}`, f);
       videoFiles.push(f);
     }
+  }
+
+  // "Media discovered" is a sticky fact, not a live one: the setup checklists
+  // read this flag, and the jobs table they used before empties on every
+  // clear/delete — a rescan then creates no jobs (outputs exist), so a
+  // jobs-based step could never clear again. One guarded write, ever.
+  if (videoFiles.length > 0 && getSetting("media_scanned") !== "1") {
+    setSetting("media_scanned", "1");
   }
 
   // Find subtitles

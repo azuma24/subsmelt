@@ -8,7 +8,7 @@ duration: "42:10"
 playlist: "[[Learning]]"
 language: en
 transcript_source: youtube_captions
-translations: [zh-TW]
+translations: ["zh-TW"]
 tags: [youtube]
 subsmelt_schema: 1
 ---

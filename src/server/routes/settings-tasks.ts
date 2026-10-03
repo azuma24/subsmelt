@@ -14,6 +14,7 @@ import {
   createTask,
   updateTask,
   deleteTask,
+  validateTaskLangCode,
 } from "../config.js";
 import { deletePendingJobsForTask } from "../db.js";
 import { scanFolder, MEDIA_DIR } from "../scanner.js";
@@ -163,6 +164,8 @@ export function registerSettingsTasksRoutes(app: Express): void {
     if (!target_lang || !lang_code) return res.status(400).json({ error: "target_lang and lang_code are required" });
     if (output_pattern !== undefined && typeof output_pattern !== "string")
       return res.status(400).json({ error: "output_pattern must be a string" });
+    const langCodeError = validateTaskLangCode(String(lang_code));
+    if (langCodeError) return res.status(400).json({ error: langCodeError });
     const pattern = validateOutputPattern(typeof output_pattern === "string" ? output_pattern : "");
     if (!pattern.ok) return res.status(400).json({ error: pattern.error });
     const result = createTask({
@@ -178,6 +181,10 @@ export function registerSettingsTasksRoutes(app: Express): void {
   app.put("/api/tasks/:id", (req, res) => {
     const update = parseTaskUpdate(req.body);
     if (!update.ok) return res.status(400).json({ error: update.error });
+    if (update.value.lang_code !== undefined) {
+      const langCodeError = validateTaskLangCode(update.value.lang_code, parseInt(req.params.id, 10));
+      if (langCodeError) return res.status(400).json({ error: langCodeError });
+    }
     updateTask(parseInt(req.params.id, 10), update.value);
     res.json({ ok: true });
   });

@@ -1059,6 +1059,7 @@
     "modelNotDownloadedMessageNoSize": "Model \"{{model}}\" is not downloaded yet. Download it now?",
     "modelNotDownloadedTitle": "Model not downloaded",
     "modelsStillLoading": "Model list still loading, try again in a moment.",
+    "modelNotListed": "தேர்ந்தெடுத்த மாதிரி பின்நிலை மாதிரி பட்டியலில் இல்லை. மீண்டும் ஒரு மாதிரியைத் தேர்ந்தெடுக்கவும்.",
     "refresh": "Refresh",
     "refreshAriaLabel": "Refresh file list",
     "sortAriaLabel": "Sort files",

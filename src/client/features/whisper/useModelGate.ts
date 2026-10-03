@@ -96,6 +96,9 @@ export function useModelGate({
     if (downloaded === undefined) {
       if (modelsQuery.isError) addToast(t("whisper.modelsLoadFailed"), "error");
       else if (modelsQuery.isLoading) addToast(t("whisper.modelsStillLoading"), "info");
+      // List loaded fine but the saved model is not in it (deleted mid-session,
+      // or a stale setting): say so instead of silently doing nothing.
+      else addToast(t("whisper.modelNotListed"), "error");
       return false;
     }
 

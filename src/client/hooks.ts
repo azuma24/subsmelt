@@ -311,12 +311,12 @@ type SseSingleton = {
   es: EventSource;
   invalidator: ReturnType<typeof createDebouncedInvalidator>;
   subs: Set<SSEEventHandler>;
+  reopenTimer: ReturnType<typeof setTimeout> | null;
 };
 let sseSingleton: SseSingleton | null = null;
 
 function ensureSse(queryClient: ReturnType<typeof useQueryClient>): SseSingleton {
   if (sseSingleton) return sseSingleton;
-  const es = new EventSource("/api/events");
   const subs = new Set<SSEEventHandler>();
   const invalidator = createDebouncedInvalidator((queryKey) => {
     queryClient.invalidateQueries({ queryKey });
@@ -325,51 +325,87 @@ function ensureSse(queryClient: ReturnType<typeof useQueryClient>): SseSingleton
     invalidator.schedule(name ? getSSEInvalidationKeys(name) : [["jobs"], ["queue-status"], ["logs"], ["transcription-history"]]);
   };
 
-  const bind = (name: SSEEventName) => {
-    es.addEventListener(name, (e) => {
-      const data = parseSSEData((e as MessageEvent).data);
-      // Dispatch to every subscriber; isolate so one throwing handler can't kill others.
-      subs.forEach((fn) => { try { fn(name, data); } catch { /* subscriber error */ } });
+  let attempts = 0;
 
-      // Per-path transcription progress / per-model download progress are consumed
-      // directly by their components via onEvent; they must not invalidate queries.
-      if (name === "transcription:progress" || name === "model:download") return;
+  const open = (): EventSource => {
+    const es = new EventSource("/api/events");
+    let opened = false;
 
-      if (name === "youtube:video") {
-        const { videoId, playlistId, pct } = data as { videoId?: string; playlistId?: string; pct?: number };
-        if (typeof videoId === "string" && typeof playlistId === "string" && typeof pct === "number") {
-          queryClient.setQueryData<{ videos: YoutubeVideo[] }>(["youtube", "videos", playlistId], (old) => withVideoProgress(old, videoId, pct));
-          return;
+    es.onopen = () => {
+      // Recover the events missed while the connection was down — but only
+      // after a real gap; the first open has nothing to recover.
+      if (attempts > 0) refresh();
+      attempts = 0;
+    };
+
+    const bind = (name: SSEEventName) => {
+      es.addEventListener(name, (e) => {
+        const data = parseSSEData((e as MessageEvent).data);
+        // Dispatch to every subscriber; isolate so one throwing handler can't kill others.
+        subs.forEach((fn) => { try { fn(name, data); } catch { /* subscriber error */ } });
+
+        // Per-path transcription progress / per-model download progress are consumed
+        // directly by their components via onEvent; they must not invalidate queries.
+        if (name === "transcription:progress" || name === "model:download") return;
+
+        if (name === "youtube:video") {
+          const { videoId, playlistId, pct } = data as { videoId?: string; playlistId?: string; pct?: number };
+          if (typeof videoId === "string" && typeof playlistId === "string" && typeof pct === "number") {
+            queryClient.setQueryData<{ videos: YoutubeVideo[] }>(["youtube", "videos", playlistId], (old) => withVideoProgress(old, videoId, pct));
+            return;
+          }
         }
-      }
 
-      if (name === "job:progress") {
-        const { jobId, completed, total } = data as { jobId?: number; completed?: number; total?: number };
-        if (typeof jobId === "number" && typeof completed === "number" && typeof total === "number") {
-          // GET /jobs returns an envelope, not a bare array. This updater used a
-          // `Job[]` type that no longer exists, so `old.map` threw on every
-          // job:progress event and the optimistic update never landed.
-          queryClient.setQueryData<JobsResponse>(["jobs"], (old) => {
-            if (!old) return old;
-            return {
-              ...old,
-              jobs: old.jobs.map((job) =>
-                job.id === jobId ? { ...job, completed_cues: completed, total_cues: total } : job
-              ),
-            };
-          });
-          invalidator.schedule([["queue-status"]]);
-          return;
+        if (name === "job:progress") {
+          const { jobId, completed, total } = data as { jobId?: number; completed?: number; total?: number };
+          if (typeof jobId === "number" && typeof completed === "number" && typeof total === "number") {
+            // GET /jobs returns an envelope, not a bare array. This updater used a
+            // `Job[]` type that no longer exists, so `old.map` threw on every
+            // job:progress event and the optimistic update never landed.
+            queryClient.setQueryData<JobsResponse>(["jobs"], (old) => {
+              if (!old) return old;
+              return {
+                ...old,
+                jobs: old.jobs.map((job) =>
+                  job.id === jobId ? { ...job, completed_cues: completed, total_cues: total } : job
+                ),
+              };
+            });
+            invalidator.schedule([["queue-status"]]);
+            return;
+          }
         }
-      }
 
-      refresh(name);
-    });
+        refresh(name);
+      });
+    };
+
+    SSE_EVENT_NAMES.forEach(bind);
+
+    es.onerror = () => {
+      if (es.readyState === EventSource.CLOSED) {
+        // An HTTP-level rejection (the server's 100-client cap answers a bare
+        // 503) or a dead network: EventSource does not retry these by itself,
+        // and refreshing from here would storm the very server that refused
+        // us. Reopen with exponential backoff; subscribers ride along.
+        const delay = Math.min(30_000, 1000 * 2 ** attempts);
+        attempts += 1;
+        if (sseSingleton) {
+          sseSingleton.reopenTimer = setTimeout(() => {
+            if (sseSingleton) sseSingleton.es = open();
+          }, delay);
+        }
+      } else if (opened) {
+        // A dropped socket that EventSource is auto-retrying: recover the
+        // events missed during the gap.
+        refresh();
+      }
+    };
+
+    return es;
   };
 
-  SSE_EVENT_NAMES.forEach(bind);
-  es.onerror = () => refresh();
-  sseSingleton = { es, invalidator, subs };
+  sseSingleton = { es: open(), invalidator, subs, reopenTimer: null };
   return sseSingleton;
 }
 
@@ -387,8 +423,9 @@ export function useSSE(onEvent?: SSEEventHandler) {
     return () => {
       s.subs.delete(sub);
       // Close the shared connection only when the last subscriber unmounts; it
-      // reopens on the next mount.
+      // reopens on the next mount. A pending backoff reopen dies with it.
       if (s.subs.size === 0) {
+        if (s.reopenTimer) clearTimeout(s.reopenTimer);
         s.invalidator.cancel();
         s.es.close();
         sseSingleton = null;

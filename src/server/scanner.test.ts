@@ -175,3 +175,23 @@ test("the YouTube download folder is left to its playlists: no jobs, no auto-tra
   assert.deepEqual(jobsIn(tube), []);
   assert.deepEqual(jobsIn(shows), [["Pilot.en.srt", "Pilot.zh.srt"]]);
 });
+
+test("a scan that finds videos sets the sticky media_scanned flag; an empty scan does not", (t) => {
+  useTasks("zh");
+  // Earlier tests in this suite have scanned libraries with videos; the flag
+  // is sticky by design, so this test controls its own starting state.
+  config.setSetting("media_scanned", "");
+  t.after(() => config.setSetting("media_scanned", "1"));
+  const dir = library("Flagged", ["Show.mkv", "Show.srt"]);
+
+  scanFolder(true);
+  assert.equal(config.getSetting("media_scanned"), "1");
+
+  // An empty library never un-sets the flag: discovery is "at least once".
+  const emptyDir = path.join(mediaDir, "Empty");
+  fs.mkdirSync(emptyDir, { recursive: true });
+  config.setSetting("scan_folders", JSON.stringify(["Empty"]));
+  config.setSetting("scan_mode", "selected");
+  scanFolder(true);
+  assert.equal(config.getSetting("media_scanned"), "1");
+});
