@@ -64,6 +64,12 @@ def merge_short_segments(
     avoids rapid one-word flickers. The merge concatenates text and extends the
     combined time range. The pass is conservative: only segments that satisfy
     ``_is_short`` are merged, and merging never drops or reorders content.
+
+    A forward merge keeps the *following* segment's start time. Taking the
+    earliest start instead would pin the next sentence to the lead-in's clock:
+    audio that opens with silence or music yields a tiny first segment at 0:00,
+    and the merged cue then displays real dialogue seconds before it is spoken.
+    The short lead-in's own words show a beat late instead — the lesser wrong.
     """
     if not segments:
         return []
@@ -75,7 +81,7 @@ def merge_short_segments(
     for segment in segments:
         if carry is not None:
             if _same_speaker(carry, segment):
-                segment = _join(carry, segment)
+                segment = _join_following(carry, segment)
             else:
                 result.append(carry)
             carry = None
@@ -111,6 +117,16 @@ def _join(first: Segment, second: Segment) -> Segment:
     else:
         text = first_text or second_text
     return Segment(start=min(first.start, second.start), end=max(first.end, second.end), text=text, speaker=first.speaker or second.speaker)
+
+
+def _join_following(carry: Segment, following: Segment) -> Segment:
+    """Concatenate a carried lead-in onto ``following``, on ``following``'s clock.
+
+    Same content rules as ``_join``, but the merged cue starts when the
+    following segment starts (see ``merge_short_segments`` for why).
+    """
+    joined = _join(carry, following)
+    return Segment(start=following.start, end=joined.end, text=joined.text, speaker=joined.speaker)
 
 
 def split_long_segments(segments: Sequence[Segment], max_duration: float | None) -> list[Segment]:
