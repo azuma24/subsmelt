@@ -939,6 +939,14 @@
       "batchTranscribe": "Transcribe {{count}} selected",
       "batchTranscribeTranslate": "Transcribe + Translate {{count}}",
       "clearSelection": "Clear"
+    },
+    "translateFile": {
+      "trigger": "Přeložit do…",
+      "yourTasks": "Vaše úlohy",
+      "submit": "Přeložit",
+      "submitting": "Přidávání do fronty…",
+      "queued": "Překlad do {{lang}} přidán do fronty",
+      "alreadyQueued": "Překlad do {{lang}} už je ve frontě"
     }
   },
   "errors": {

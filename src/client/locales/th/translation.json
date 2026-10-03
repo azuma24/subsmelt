@@ -939,6 +939,14 @@
       "batchTranscribe": "Transcribe {{count}} selected",
       "batchTranscribeTranslate": "Transcribe + Translate {{count}}",
       "clearSelection": "Clear"
+    },
+    "translateFile": {
+      "trigger": "แปลเป็น…",
+      "yourTasks": "งานของคุณ",
+      "submit": "แปล",
+      "submitting": "กำลังเพิ่มเข้าคิว…",
+      "queued": "เพิ่มการแปลเป็น {{lang}} เข้าคิวแล้ว",
+      "alreadyQueued": "การแปลเป็น {{lang}} อยู่ในคิวแล้ว"
     }
   },
   "errors": {

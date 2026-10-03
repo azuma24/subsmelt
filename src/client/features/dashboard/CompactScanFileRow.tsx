@@ -1,9 +1,10 @@
 import { useState, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import type { JobRow, ScannedFile } from "../../types";
+import type { JobRow, ScannedFile, TaskStatus } from "../../types";
 import { STATUS_ICON } from "../../app/constants";
 import { isManualTranscriptionBusy, type ManualTranscriptionProgress, type TranscribePostAction } from "./transcription-progress";
 import { getPendingJobIds, getTaskStatus, stageText, stageTone } from "./scan-file-status";
+import { TranslateFileForm } from "./TranslateFileForm";
 
 interface CompactScanFileRowProps {
   file: ScannedFile;
@@ -20,6 +21,8 @@ interface CompactScanFileRowProps {
   batchEnabled: boolean;
   transcriptionEnabled: boolean;
   transcriptionProgressByPath: Record<string, ManualTranscriptionProgress>;
+  /** A one-off translation of one subtitle was queued; `task` is its new chip. */
+  onFileTranslationQueued?: (srtPath: string, task: TaskStatus) => void;
 }
 
 export function CompactScanFileRow({
@@ -36,9 +39,11 @@ export function CompactScanFileRow({
   batchEnabled,
   transcriptionEnabled,
   transcriptionProgressByPath,
+  onFileTranslationQueued,
 }: CompactScanFileRowProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [translatingSrt, setTranslatingSrt] = useState<string | null>(null);
   const hasNew = file.subtitles.some((sub) => sub.tasks.some((task) => {
     const status = getTaskStatus(task, jobsById);
     return status === "new" || status === "pending";
@@ -186,7 +191,18 @@ export function CompactScanFileRow({
           )}
           {file.subtitles.map((sub, j) => (
             <div key={j} className="mt-2 rounded-2xl bg-[var(--surface)] p-3">
-              <div className="text-xs text-[var(--text-2)]">{sub.srtName}</div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 truncate text-xs text-[var(--text-2)]">{sub.srtName}</div>
+                {translatingSrt !== sub.srtPath && (
+                  <button
+                    type="button"
+                    onClick={() => setTranslatingSrt(sub.srtPath)}
+                    className="min-h-[44px] shrink-0 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-medium text-[var(--text)] hover:bg-[var(--surface-2)]"
+                  >
+                    {t("scan.translateFile.trigger")}
+                  </button>
+                )}
+              </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {sub.tasks.map((task, k) => {
                   const status = getTaskStatus(task, jobsById);
@@ -202,6 +218,17 @@ export function CompactScanFileRow({
                   );
                 })}
               </div>
+              {translatingSrt === sub.srtPath && (
+                <TranslateFileForm
+                  srtPath={sub.srtPath}
+                  existingTasks={sub.tasks}
+                  onQueued={(task) => {
+                    setTranslatingSrt(null);
+                    onFileTranslationQueued?.(sub.srtPath, task);
+                  }}
+                  onCancel={() => setTranslatingSrt(null)}
+                />
+              )}
             </div>
           ))}
         </div>

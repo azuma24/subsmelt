@@ -939,6 +939,14 @@
       "batchTranscribe": "Transcribe {{count}} selected",
       "batchTranscribeTranslate": "Transcribe + Translate {{count}}",
       "clearSelection": "Clear"
+    },
+    "translateFile": {
+      "trigger": "இதற்கு மொழிபெயர்…",
+      "yourTasks": "உங்கள் பணிகள்",
+      "submit": "மொழிபெயர்",
+      "submitting": "வரிசையில் சேர்க்கிறது…",
+      "queued": "{{lang}} மொழிபெயர்ப்பு வரிசையில் சேர்க்கப்பட்டது",
+      "alreadyQueued": "{{lang}} மொழிபெயர்ப்பு ஏற்கனவே வரிசையில் உள்ளது"
     }
   },
   "errors": {

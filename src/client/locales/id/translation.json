@@ -939,6 +939,14 @@
       "batchTranscribe": "Transcribe {{count}} selected",
       "batchTranscribeTranslate": "Transcribe + Translate {{count}}",
       "clearSelection": "Clear"
+    },
+    "translateFile": {
+      "trigger": "Terjemahkan ke…",
+      "yourTasks": "Tugas Anda",
+      "submit": "Terjemahkan",
+      "submitting": "Menambahkan ke antrean…",
+      "queued": "Terjemahan ke {{lang}} ditambahkan ke antrean",
+      "alreadyQueued": "Terjemahan ke {{lang}} sudah ada di antrean"
     }
   },
   "errors": {

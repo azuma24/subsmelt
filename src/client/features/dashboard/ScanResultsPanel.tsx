@@ -1,6 +1,6 @@
 import { useMemo, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import type { JobRow, ScannedFile } from "../../types";
+import type { JobRow, ScannedFile, TaskStatus } from "../../types";
 import type { ManualTranscriptionProgress, TranscribePostAction } from "./transcription-progress";
 import { compareScanFiles, scanFileKey, type DashboardSortBy, type DashboardSortDir } from "./scanSort";
 import { useIsMobile } from "../../hooks";
@@ -39,6 +39,7 @@ interface ScanResultsPanelProps {
   sortDir: DashboardSortDir;
   onSortByChange: (value: DashboardSortBy) => void;
   onToggleSortDir: () => void;
+  onFileTranslationQueued?: (srtPath: string, task: TaskStatus) => void;
 }
 
 export function ScanResultsPanel({
@@ -66,6 +67,7 @@ export function ScanResultsPanel({
   sortDir,
   onSortByChange,
   onToggleSortDir,
+  onFileTranslationQueued,
 }: ScanResultsPanelProps) {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
@@ -233,6 +235,7 @@ export function ScanResultsPanel({
                 batchEnabled={batchEnabled}
                 transcriptionEnabled={transcriptionEnabled}
                 transcriptionProgressByPath={transcriptionProgressByPath}
+                onFileTranslationQueued={onFileTranslationQueued}
               />
             ))}
           </div>
@@ -269,6 +272,7 @@ export function ScanResultsPanel({
                 batchEnabled={batchEnabled}
                 transcriptionEnabled={transcriptionEnabled}
                 transcriptionProgressByPath={transcriptionProgressByPath}
+                onFileTranslationQueued={onFileTranslationQueued}
               />
             )}
           />

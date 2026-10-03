@@ -81,3 +81,18 @@ export function stageText(
       return t("scan.transcription.cancelled");
   }
 }
+
+/** Scan results with `task` shown on the subtitle at `srtPath`, replacing any chip for the same task. */
+export function withQueuedTask(files: ScannedFile[], srtPath: string, task: TaskStatus): ScannedFile[] {
+  return files.map((file) => {
+    if (!file.subtitles.some((sub) => sub.srtPath === srtPath)) return file;
+    return {
+      ...file,
+      subtitles: file.subtitles.map((sub) =>
+        sub.srtPath === srtPath
+          ? { ...sub, tasks: [...sub.tasks.filter((t) => t.taskId !== task.taskId), task] }
+          : sub,
+      ),
+    };
+  });
+}

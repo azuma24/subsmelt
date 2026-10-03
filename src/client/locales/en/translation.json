@@ -1104,6 +1104,14 @@
       "cancel": "Cancel",
       "cancelling": "Cancelling…",
       "cancelled": "Transcription cancelled."
+    },
+    "translateFile": {
+      "trigger": "Translate to…",
+      "yourTasks": "Your tasks",
+      "submit": "Translate",
+      "submitting": "Queueing…",
+      "queued": "Queued translation to {{lang}}",
+      "alreadyQueued": "Translation to {{lang}} is already queued"
     }
   },
   "youtube": {

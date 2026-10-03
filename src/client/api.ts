@@ -117,6 +117,15 @@ export const forceJob = (id: number) =>
   fetchJSON(`/jobs/${id}/force`, { method: "POST" });
 export const cancelJob = (id: number) =>
   fetchJSON(`/jobs/${id}/cancel`, { method: "POST" });
+export type TranslateFileRequest = { srtPath: string } & (
+  | { taskId: number }
+  | { langCode: string; targetLang: string }
+);
+export const translateFile = (payload: TranslateFileRequest) =>
+  fetchJSON<{ ok: boolean; jobId: number; taskId: number; created: boolean }>(
+    "/jobs/translate-file",
+    { method: "POST", body: JSON.stringify(payload) },
+  );
 export const retryJobsApi = (ids: number[]) =>
   fetchJSON<{ ok: boolean; updated: number }>("/jobs/retry-selected", {
     method: "POST",

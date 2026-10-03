@@ -939,6 +939,14 @@
       "batchTranscribe": "Transcribe {{count}} selected",
       "batchTranscribeTranslate": "Transcribe + Translate {{count}}",
       "clearSelection": "Clear"
+    },
+    "translateFile": {
+      "trigger": "翻訳先を選ぶ…",
+      "yourTasks": "登録済みのタスク",
+      "submit": "翻訳",
+      "submitting": "キューに追加中…",
+      "queued": "{{lang}} への翻訳をキューに追加しました",
+      "alreadyQueued": "{{lang}} への翻訳はすでにキューにあります"
     }
   },
   "errors": {
