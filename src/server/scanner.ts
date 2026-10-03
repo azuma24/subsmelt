@@ -318,7 +318,7 @@ export function outputNameFor(
 }
 
 /** Output file name, relative to the subtitle's folder, that `task` translates `srtPath` into. */
-function taskOutputName(srtPath: string, task: TranslationTask): string {
+export function taskOutputName(srtPath: string, task: Pick<TranslationTask, "output_pattern" | "lang_code">): string {
   const ext = path.extname(srtPath);
   return outputNameFor(
     stripLangSuffix(path.basename(srtPath, ext)),
@@ -376,14 +376,29 @@ export function scanFolder(createJobs = true): ScanResult {
   const globalTranslateWithoutVideo =
     getSetting("translate_without_video") === "on";
   const mediaRoot = path.resolve(MEDIA_DIR);
-  // Tasks used for output-file detection: globally-enabled tasks plus any task a
-  // directory rule can attach, so a rule's already-translated outputs are recognized.
+  // Job states for every (source subtitle, task) pair, loaded once instead of
+  // one SQLite query per pair.
+  const jobRows = listJobTaskStatuses();
+  const jobTasks = new Map(jobRows.map((job) => [`${job.srt_path}\u0000${job.task_id}`, job]));
+  // Tasks each source already has a job for, which includes one-off
+  // translations on tasks no scan applies.
+  const jobbedTasksBySource = new Map<string, TranslationTask[]>();
+  for (const job of jobRows) {
+    const task = tasks.find((t: TranslationTask) => t.id === job.task_id);
+    if (!task) continue;
+    jobbedTasksBySource.set(job.srt_path, [...(jobbedTasksBySource.get(job.srt_path) ?? []), task]);
+  }
+  // Tasks used for output-file detection: globally-enabled tasks, any task a
+  // directory rule can attach, and any task with a job, so their
+  // already-translated outputs are recognized instead of read as sources.
   const ruleTaskIds = new Set<number>(directoryRules.flatMap((r) => r.taskIds));
+  const jobTaskIds = new Set<number>(jobRows.map((job) => job.task_id));
   const outputDetectTasks = [
     ...enabledTasks,
     ...tasks.filter(
       (t: TranslationTask) =>
-        ruleTaskIds.has(t.id) && !enabledTasks.some((e: TranslationTask) => e.id === t.id),
+        (ruleTaskIds.has(t.id) || jobTaskIds.has(t.id)) &&
+        !enabledTasks.some((e: TranslationTask) => e.id === t.id),
     ),
   ];
 
@@ -433,11 +448,6 @@ export function scanFolder(createJobs = true): ScanResult {
   // ask about lives in a walked directory, so membership here answers
   // fs.existsSync without one syscall per subtitle per task.
   const scannedFiles = new Set(allFiles);
-  // Job states for every (source subtitle, task) pair, loaded once instead of
-  // one SQLite query per pair.
-  const jobTasks = new Map(
-    listJobTaskStatuses().map((job) => [`${job.srt_path}\u0000${job.task_id}`, job]),
-  );
   for (const f of allFiles) {
     const ext = path.extname(f).toLowerCase();
     if (videoExts.includes(ext)) {
@@ -554,17 +564,25 @@ export function scanFolder(createJobs = true): ScanResult {
     );
 
     // Orphan gate: subtitles with no companion video only translate where enabled.
-    if (videoPath === null && !resolved.translateWithoutVideo) continue;
+    const gated = videoPath === null && !resolved.translateWithoutVideo;
 
     // Effective tasks = global enabled tasks ∪ the rule's extra tasks (additive union).
     // Rule-attached tasks apply even if globally disabled, as long as the task exists.
-    const effectiveTasks = [...enabledTasks];
-    for (const tid of resolved.extraTaskIds) {
+    const effectiveTasks = gated ? [] : [...enabledTasks];
+    for (const tid of gated ? [] : resolved.extraTaskIds) {
       if (effectiveTasks.some((t: TranslationTask) => t.id === tid)) continue;
       const extra = tasks.find((t: TranslationTask) => t.id === tid);
       if (extra) effectiveTasks.push(extra);
     }
-    if (effectiveTasks.length === 0) continue;
+    // Shown tasks add the ones this subtitle already has a job for. Those
+    // always take their status from the job, so they never create one.
+    const shownTasks = [
+      ...effectiveTasks,
+      ...(jobbedTasksBySource.get(srtPath) ?? []).filter(
+        (t) => !effectiveTasks.some((e: TranslationTask) => e.id === t.id),
+      ),
+    ];
+    if (shownTasks.length === 0) continue;
 
     const groupKey = videoPath || `orphan:${srtPath}`;
     if (!grouped.has(groupKey)) {
@@ -598,8 +616,8 @@ export function scanFolder(createJobs = true): ScanResult {
     const dirBases = titleBasesByDir.get(dir) ?? new Set<string>();
     titleBasesByDir.set(dir, dirBases.add(titleBase));
 
-    // For each effective task, compute output and check status
-    for (const task of effectiveTasks) {
+    // For each shown task, compute output and check status
+    for (const task of shownTasks) {
       const outputName = taskOutputName(srtPath, task);
       const outputPath = path.join(dir, outputName);
       const outputExists = scannedFiles.has(outputPath);

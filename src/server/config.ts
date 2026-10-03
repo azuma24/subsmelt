@@ -28,6 +28,7 @@ interface ConfigData {
 }
 
 export const AUTO_SOURCE_LANGUAGE = "Automatic";
+export const DEFAULT_OUTPUT_PATTERN = "{{name}}.{{lang_code}}.srt";
 
 // --- Defaults ---
 
@@ -304,6 +305,7 @@ export function createTask(task: {
   target_lang: string;
   output_pattern: string;
   lang_code: string;
+  enabled?: 0 | 1;
 }): { lastInsertRowid: number } {
   const id = _config._next_task_id++;
   const newTask: TranslationTask = {
@@ -312,7 +314,7 @@ export function createTask(task: {
     target_lang: task.target_lang,
     output_pattern: task.output_pattern,
     lang_code: task.lang_code,
-    enabled: 1,
+    enabled: task.enabled ?? 1,
     prompt_override: "",
     created_at: new Date().toISOString(),
   };
