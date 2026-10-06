@@ -20,7 +20,10 @@ function matchesQuery(file: ScannedFile, needle: string): boolean {
   const haystack = `${file.videoPath ?? ""} ${file.videoName ?? ""}`.toLowerCase();
   // Every whitespace-separated term must appear, so "deep stream" narrows rather
   // than widening the way a single substring match would.
-  return needle.split(/\s+/).filter(Boolean).every((term) => haystack.includes(term));
+  return needle
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((term) => haystack.includes(term));
 }
 
 export function hasSubtitles(file: ScannedFile): boolean {

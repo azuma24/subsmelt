@@ -26,7 +26,6 @@ const DEFAULT_CHECK_MINUTES = 60;
 const MAX_CHECK_MINUTES = 7 * 24 * 60;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-
 type Obj = Record<string, unknown>;
 
 const isObj = (v: unknown): v is Obj => !!v && typeof v === "object" && !Array.isArray(v);
@@ -42,7 +41,8 @@ export function parseBackfill(value: unknown, today: string): Parsed<Backfill> {
   if (!isObj(value)) return { ok: false, error: "backfill must be an object" };
   if (value.kind === "all" || value.kind === "none") return { ok: true, value: { kind: value.kind } };
   if (value.kind === "posted_since" || value.kind === "added_since") {
-    if (!isPastOrTodayDate(value.date, today)) return { ok: false, error: "backfill.date must be a YYYY-MM-DD date no later than today" };
+    if (!isPastOrTodayDate(value.date, today))
+      return { ok: false, error: "backfill.date must be a YYYY-MM-DD date no later than today" };
     return { ok: true, value: { kind: value.kind, date: value.date } };
   }
   return { ok: false, error: "backfill.kind must be all, none, posted_since or added_since" };
@@ -55,10 +55,14 @@ function parseMedia(value: unknown): Parsed<MediaProfile> {
     return { ok: true, value: { type: "audio", format: value.format } };
   }
   if (value.type === "video") {
-    if (!oneOf(VIDEO_HEIGHTS, value.maxHeight)) return { ok: false, error: "media.maxHeight must be 480, 720, 1080, 1440 or 2160" };
+    if (!oneOf(VIDEO_HEIGHTS, value.maxHeight))
+      return { ok: false, error: "media.maxHeight must be 480, 720, 1080, 1440 or 2160" };
     if (!oneOf(VIDEO_CODECS, value.codec)) return { ok: false, error: "media.codec must be h264, vp9, av1 or any" };
     if (!oneOf(VIDEO_CONTAINERS, value.container)) return { ok: false, error: "media.container must be mp4 or mkv" };
-    return { ok: true, value: { type: "video", maxHeight: value.maxHeight, codec: value.codec, container: value.container } };
+    return {
+      ok: true,
+      value: { type: "video", maxHeight: value.maxHeight, codec: value.codec, container: value.container },
+    };
   }
   return { ok: false, error: "media.type must be audio or video" };
 }
@@ -90,7 +94,8 @@ export function parsePlaylistFields(body: unknown, base: PlaylistFields, today: 
     out.mode = body.mode;
   }
   if (body.captions !== undefined) {
-    if (!oneOf(CAPTION_SOURCES, body.captions)) return { ok: false, error: "captions must be prefer_youtube or whisper_only" };
+    if (!oneOf(CAPTION_SOURCES, body.captions))
+      return { ok: false, error: "captions must be prefer_youtube or whisper_only" };
     out.captions = body.captions;
   }
   if (body.backfill !== undefined) {
@@ -110,8 +115,16 @@ export function parsePlaylistFields(body: unknown, base: PlaylistFields, today: 
   }
   if (body.checkEveryMinutes !== undefined) {
     const minutes = body.checkEveryMinutes;
-    if (typeof minutes !== "number" || !Number.isInteger(minutes) || minutes < MIN_CHECK_MINUTES || minutes > MAX_CHECK_MINUTES) {
-      return { ok: false, error: `checkEveryMinutes must be a whole number from ${MIN_CHECK_MINUTES} to ${MAX_CHECK_MINUTES}` };
+    if (
+      typeof minutes !== "number" ||
+      !Number.isInteger(minutes) ||
+      minutes < MIN_CHECK_MINUTES ||
+      minutes > MAX_CHECK_MINUTES
+    ) {
+      return {
+        ok: false,
+        error: `checkEveryMinutes must be a whole number from ${MIN_CHECK_MINUTES} to ${MAX_CHECK_MINUTES}`,
+      };
     }
     out.checkEveryMinutes = minutes;
   }
@@ -141,7 +154,10 @@ export function defaultPlaylistFields(folder: string): PlaylistFields {
 
 /** A folder name made from a playlist title: path separators and characters Windows refuses become spaces. */
 export function folderFromTitle(title: string, id: string): string {
-  const cleaned = title.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, " ").replace(/\s+/g, " ").replace(/^[.\s]+|[.\s]+$/g, "");
+  const cleaned = title
+    .replace(/[\\/:*?"<>|\u0000-\u001f]+/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^[.\s]+|[.\s]+$/g, "");
   return normalizeMediaSubfolder(cleaned.slice(0, 80)) ?? id;
 }
 

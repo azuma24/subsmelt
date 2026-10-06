@@ -1,13 +1,7 @@
 import * as assert from "node:assert/strict";
 import { test } from "node:test";
 
-import {
-  getBool,
-  getStr,
-  isJsonBlobSetting,
-  validateJsonSetting,
-  type ClientSettings,
-} from "./settings-model";
+import { getBool, getStr, isJsonBlobSetting, validateJsonSetting, type ClientSettings } from "./settings-model";
 
 test("getStr returns string values and falls back otherwise", () => {
   const s: ClientSettings = { model: "qwen", temperature: undefined };
@@ -39,10 +33,7 @@ test("isJsonBlobSetting recognizes only the two blob keys", () => {
 
 test("validateJsonSetting: folder_defaults must be an array", () => {
   assert.deepEqual(validateJsonSetting("transcription_folder_defaults", "[]"), { ok: true });
-  assert.deepEqual(
-    validateJsonSetting("transcription_folder_defaults", '[{"path":"/m"}]'),
-    { ok: true },
-  );
+  assert.deepEqual(validateJsonSetting("transcription_folder_defaults", '[{"path":"/m"}]'), { ok: true });
   // empty/whitespace is allowed (normalized to default on save)
   assert.deepEqual(validateJsonSetting("transcription_folder_defaults", "   "), { ok: true });
 
@@ -57,10 +48,7 @@ test("validateJsonSetting: folder_defaults must be an array", () => {
 
 test("validateJsonSetting: advanced_stt must be a plain object", () => {
   assert.deepEqual(validateJsonSetting("transcription_advanced_stt", "{}"), { ok: true });
-  assert.deepEqual(
-    validateJsonSetting("transcription_advanced_stt", '{"beam_size":5}'),
-    { ok: true },
-  );
+  assert.deepEqual(validateJsonSetting("transcription_advanced_stt", '{"beam_size":5}'), { ok: true });
   assert.deepEqual(validateJsonSetting("transcription_advanced_stt", ""), { ok: true });
 
   const arr = validateJsonSetting("transcription_advanced_stt", "[]");

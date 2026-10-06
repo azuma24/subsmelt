@@ -20,13 +20,19 @@ export function Breadcrumbs({ path, homeLabel, onJump, maxItems = DEFAULT_MAX_IT
     >
       {entries.map((entry, i) => {
         if (entry === ELLIPSIS) {
-          return <span key={`e${i}`} className="shrink-0 text-faint">… /</span>;
+          return (
+            <span key={`e${i}`} className="shrink-0 text-faint">
+              … /
+            </span>
+          );
         }
         const isLast = i === lastIdx;
         return (
           <span key={entry.path || "home"} className="flex shrink-0 items-center gap-1">
             {isLast ? (
-              <span aria-current="location" className="max-w-[40vw] truncate font-medium text-text">{entry.label}</span>
+              <span aria-current="location" className="max-w-[40vw] truncate font-medium text-text">
+                {entry.label}
+              </span>
             ) : (
               <>
                 <button
@@ -36,7 +42,9 @@ export function Breadcrumbs({ path, homeLabel, onJump, maxItems = DEFAULT_MAX_IT
                 >
                   {entry.label}
                 </button>
-                <span aria-hidden="true" className="text-faint">/</span>
+                <span aria-hidden="true" className="text-faint">
+                  /
+                </span>
               </>
             )}
           </span>

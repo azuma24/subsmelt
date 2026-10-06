@@ -25,7 +25,14 @@ interface NotificationsFieldsProps {
  * The webhook URL autosaves on a debounce; the format select and the event
  * choices save immediately. Nothing here waits on the topbar Save button.
  */
-export function NotificationsFields({ settings, updateAndSave, updateAndSaveDebounced, onTest, testing, testResult }: NotificationsFieldsProps) {
+export function NotificationsFields({
+  settings,
+  updateAndSave,
+  updateAndSaveDebounced,
+  onTest,
+  testing,
+  testResult,
+}: NotificationsFieldsProps) {
   const isMobile = useIsMobile();
   const { t } = useTranslation();
   const events = str(settings.notify_events, "job:error,queue:finished");
@@ -47,19 +54,29 @@ export function NotificationsFields({ settings, updateAndSave, updateAndSaveDebo
           <Field
             label={t("settings.notifications.webhookUrl")}
             value={webhookSaved ? "" : webhook}
-            onChange={(v) => updateAndSaveDebounced("notify_webhook_url", v === "" && hadSavedWebhook.current ? REDACTED_SECRET : v)}
+            onChange={(v) =>
+              updateAndSaveDebounced("notify_webhook_url", v === "" && hadSavedWebhook.current ? REDACTED_SECRET : v)
+            }
             placeholder={webhookSaved ? "••••••••" : "https://discord.com/api/webhooks/…"}
             help={webhookSaved ? t("settings.notifications.webhookSaved") : t("settings.notifications.hint")}
           />
           {webhookSaved && (
-            <button type="button" onClick={removeWebhook} className="mt-1 min-h-touch text-xs text-danger hover:underline">
+            <button
+              type="button"
+              onClick={removeWebhook}
+              className="mt-1 min-h-touch text-xs text-danger hover:underline"
+            >
               {t("settings.notifications.webhookRemove")}
             </button>
           )}
         </div>
         <div className="md:max-w-[240px]">
           <label className={labelCls}>{t("settings.notifications.format")}</label>
-          <Select ariaLabel={t("settings.notifications.format")} value={str(settings.notify_format, "json")} onChange={(value) => updateAndSave("notify_format", value)}>
+          <Select
+            ariaLabel={t("settings.notifications.format")}
+            value={str(settings.notify_format, "json")}
+            onChange={(value) => updateAndSave("notify_format", value)}
+          >
             <option value="json">JSON</option>
             <option value="discord">Discord</option>
             <option value="slack">Slack</option>
@@ -86,7 +103,9 @@ export function NotificationsFields({ settings, updateAndSave, updateAndSaveDebo
             {testing ? t("app.testing") : t("settings.notifications.sendTest")}
           </ActionButton>
           {testResult && (
-            <span className={`text-sm ${testResult.ok ? "text-success" : "text-danger"}`}><Icon name={testResult.ok ? "done" : "error"} /> {testResult.message}</span>
+            <span className={`text-sm ${testResult.ok ? "text-success" : "text-danger"}`}>
+              <Icon name={testResult.ok ? "done" : "error"} /> {testResult.message}
+            </span>
           )}
         </div>
       </div>

@@ -19,10 +19,27 @@ function job(id: number, name: string, status: string): Job {
   });
 }
 
-const zhTask: Task = makeTask({ id: 1, source_lang: "English", target_lang: "Traditional Chinese", output_pattern: "", lang_code: "zh-TW" });
+const zhTask: Task = makeTask({
+  id: 1,
+  source_lang: "English",
+  target_lang: "Traditional Chinese",
+  output_pattern: "",
+  lang_code: "zh-TW",
+});
 
 const configured: QuerySeed = [
-  [["jobs"], { jobs: [job(1, "Episode 01.en.srt", "done"), job(2, "Episode 02.en.srt", "error"), job(3, "Episode 03.en.srt", "pending")], queueRunning: false, currentJobId: null }],
+  [
+    ["jobs"],
+    {
+      jobs: [
+        job(1, "Episode 01.en.srt", "done"),
+        job(2, "Episode 02.en.srt", "error"),
+        job(3, "Episode 03.en.srt", "pending"),
+      ],
+      queueRunning: false,
+      currentJobId: null,
+    },
+  ],
   [["tasks"], [zhTask]],
   [["settings"], { _llm_configured: true }],
 ];
@@ -57,7 +74,10 @@ test("queued jobs render one row each with a status glyph and label", () => {
 });
 
 test("the queue shows a loading skeleton, not the empty hint, before the first jobs response", () => {
-  const seed: QuerySeed = [[["tasks"], [zhTask]], [["settings"], { _llm_configured: true }]];
+  const seed: QuerySeed = [
+    [["tasks"], [zhTask]],
+    [["settings"], { _llm_configured: true }],
+  ];
   const desktop = renderPage(<DashboardPage />, seed);
   const phone = renderPage(<DashboardPage />, seed, { isMobile: true });
 

@@ -31,9 +31,7 @@ export function fileNameOf(inputPath: string): string {
   return inputPath.split(/[\\/]/).pop() || inputPath;
 }
 
-export function groupTranscriptionAttempts(
-  attempts: TranscriptionHistoryEntry[],
-): TranscriptionGroup[] {
+export function groupTranscriptionAttempts(attempts: TranscriptionHistoryEntry[]): TranscriptionGroup[] {
   const byPath = new Map<string, TranscriptionHistoryEntry[]>();
   for (const attempt of attempts) {
     const existing = byPath.get(attempt.inputPath);

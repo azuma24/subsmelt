@@ -22,7 +22,20 @@ interface FieldProps {
   step?: number | "any";
 }
 
-export function Field({ label, value, onChange, placeholder, help, error, type = "text", required, readOnly = false, min, max, step }: FieldProps) {
+export function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+  help,
+  error,
+  type = "text",
+  required,
+  readOnly = false,
+  min,
+  max,
+  step,
+}: FieldProps) {
   const inputId = useId();
   const helpId = `${inputId}-help`;
   const errorId = `${inputId}-error`;
@@ -48,8 +61,16 @@ export function Field({ label, value, onChange, placeholder, help, error, type =
         step={step}
         className={`w-full rounded-sm border bg-surface-raised px-3 py-2 text-sm leading-6 transition-colors focus:border-accent min-h-touch md:min-h-0 ${readOnly ? "cursor-not-allowed text-muted" : "text-text"} ${error ? "border-danger-line" : "border-border"}`}
       />
-      {error && <p id={errorId} className="mt-1 text-xs leading-6 text-danger">{error}</p>}
-      {help && !error && <p id={helpId} className="mt-1 text-xs leading-6 text-faint">{help}</p>}
+      {error && (
+        <p id={errorId} className="mt-1 text-xs leading-6 text-danger">
+          {error}
+        </p>
+      )}
+      {help && !error && (
+        <p id={helpId} className="mt-1 text-xs leading-6 text-faint">
+          {help}
+        </p>
+      )}
     </div>
   );
 }
@@ -68,7 +89,17 @@ interface SelectProps {
   className?: string;
 }
 
-export function Select({ label, ariaLabel, value, onChange, children, help, disabled = false, id, className = "" }: SelectProps) {
+export function Select({
+  label,
+  ariaLabel,
+  value,
+  onChange,
+  children,
+  help,
+  disabled = false,
+  id,
+  className = "",
+}: SelectProps) {
   const generatedId = useId();
   const selectId = id ?? generatedId;
   const helpId = `${selectId}-help`;
@@ -88,9 +119,17 @@ export function Select({ label, ariaLabel, value, onChange, children, help, disa
   if (!label && !help) return control;
   return (
     <div>
-      {label && <label htmlFor={selectId} className={LABEL_CLS}>{label}</label>}
+      {label && (
+        <label htmlFor={selectId} className={LABEL_CLS}>
+          {label}
+        </label>
+      )}
       {control}
-      {help && <p id={helpId} className={HELP_CLS}>{help}</p>}
+      {help && (
+        <p id={helpId} className={HELP_CLS}>
+          {help}
+        </p>
+      )}
     </div>
   );
 }
@@ -109,7 +148,18 @@ interface TextAreaProps {
   className?: string;
 }
 
-export function TextArea({ label, ariaLabel, value, onChange, rows = 4, placeholder, help, mono = false, readOnly = false, className = "" }: TextAreaProps) {
+export function TextArea({
+  label,
+  ariaLabel,
+  value,
+  onChange,
+  rows = 4,
+  placeholder,
+  help,
+  mono = false,
+  readOnly = false,
+  className = "",
+}: TextAreaProps) {
   const id = useId();
   const helpId = `${id}-help`;
   const control = (
@@ -128,9 +178,17 @@ export function TextArea({ label, ariaLabel, value, onChange, rows = 4, placehol
   if (!label && !help) return control;
   return (
     <div>
-      {label && <label htmlFor={id} className={LABEL_CLS}>{label}</label>}
+      {label && (
+        <label htmlFor={id} className={LABEL_CLS}>
+          {label}
+        </label>
+      )}
       {control}
-      {help && <p id={helpId} className={HELP_CLS}>{help}</p>}
+      {help && (
+        <p id={helpId} className={HELP_CLS}>
+          {help}
+        </p>
+      )}
     </div>
   );
 }
@@ -147,7 +205,9 @@ interface CheckboxProps {
 /** A labelled checkbox; the whole label is the hit target. */
 export function Checkbox({ label, checked, onChange, description, disabled = false, className = "" }: CheckboxProps) {
   return (
-    <label className={`flex items-start gap-2 text-sm text-text ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${className}`}>
+    <label
+      className={`flex items-start gap-2 text-sm text-text ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${className}`}
+    >
       <input
         type="checkbox"
         checked={checked}

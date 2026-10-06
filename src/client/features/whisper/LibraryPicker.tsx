@@ -55,11 +55,38 @@ export interface LibraryPickerProps {
  * a text filter is active, and the folder-tree view otherwise.
  */
 export function LibraryPicker({
-  libraryQuery, onLibraryQueryChange, hideWithSubtitles, onHideWithSubtitlesChange,
-  sortBy, onSortByChange, sortDir, onToggleSortDir, onSelectAll, running, mediaDir, visibleFiles, videoFiles,
-  isFiltered, isScanFetching, isScanLoading, onRefreshScan, selectedVisibleCount, onClearSelection,
-  onTranscribeSelected, downloadsActive, progress, onCancelBatch, filterActive, tree, selected,
-  toggleFile, toggleFolder, fileProgress, activePath, expansion, drill,
+  libraryQuery,
+  onLibraryQueryChange,
+  hideWithSubtitles,
+  onHideWithSubtitlesChange,
+  sortBy,
+  onSortByChange,
+  sortDir,
+  onToggleSortDir,
+  onSelectAll,
+  running,
+  mediaDir,
+  visibleFiles,
+  videoFiles,
+  isFiltered,
+  isScanFetching,
+  isScanLoading,
+  onRefreshScan,
+  selectedVisibleCount,
+  onClearSelection,
+  onTranscribeSelected,
+  downloadsActive,
+  progress,
+  onCancelBatch,
+  filterActive,
+  tree,
+  selected,
+  toggleFile,
+  toggleFolder,
+  fileProgress,
+  activePath,
+  expansion,
+  drill,
 }: LibraryPickerProps) {
   const isMobile = useIsMobile();
   const { t } = useTranslation();
@@ -88,11 +115,22 @@ export function LibraryPicker({
           />
           {t("whisper.hideWithSubtitles")}
         </label>
-        <SortControls sortBy={sortBy} sortDir={sortDir} onSortByChange={onSortByChange} onToggleSortDir={onToggleSortDir} />
+        <SortControls
+          sortBy={sortBy}
+          sortDir={sortDir}
+          onSortByChange={onSortByChange}
+          onToggleSortDir={onToggleSortDir}
+        />
         <ActionButton variant="ghost" size="sm" onClick={onSelectAll} disabled={running || visibleFiles.length === 0}>
           {t("whisper.selectAll")}
         </ActionButton>
-        <RefreshButton busy={isScanFetching} onClick={() => { void onRefreshScan(); }} className="ml-auto" />
+        <RefreshButton
+          busy={isScanFetching}
+          onClick={() => {
+            void onRefreshScan();
+          }}
+          className="ml-auto"
+        />
       </div>
 
       {isFiltered && (
@@ -112,7 +150,9 @@ export function LibraryPicker({
           <ActionButton
             variant="primary"
             size="sm"
-            onClick={() => { void onTranscribeSelected(); }}
+            onClick={() => {
+              void onTranscribeSelected();
+            }}
             disabled={running || downloadsActive}
             busy={running}
           >
@@ -121,7 +161,13 @@ export function LibraryPicker({
               : t("whisper.transcribeSelected", { count: selectedVisibleCount })}
           </ActionButton>
           {(running || liveTranscribing) && (
-            <ActionButton variant="danger" size="sm" onClick={() => { void onCancelBatch(); }}>
+            <ActionButton
+              variant="danger"
+              size="sm"
+              onClick={() => {
+                void onCancelBatch();
+              }}
+            >
               {t("whisper.cancel")}
             </ActionButton>
           )}
@@ -135,19 +181,21 @@ export function LibraryPicker({
           )}
           {/* With a text filter, matches from any depth render as one flat
               list labelled by relative path, so hits are unambiguous. */}
-          {!isScanLoading && filterActive && tree.allFiles.map((f) => (
-            <FileRow
-              key={f.videoPath as string}
-              file={f}
-              padLeftPx={12}
-              relPath={relativeDisplayPath(f.videoPath as string, pathMarkerFor(mediaDir))}
-              selected={selected}
-              toggleFile={toggleFile}
-              fileProgress={fileProgress}
-              activePath={activePath}
-              running={running}
-            />
-          ))}
+          {!isScanLoading &&
+            filterActive &&
+            tree.allFiles.map((f) => (
+              <FileRow
+                key={f.videoPath as string}
+                file={f}
+                padLeftPx={12}
+                relPath={relativeDisplayPath(f.videoPath as string, pathMarkerFor(mediaDir))}
+                selected={selected}
+                toggleFile={toggleFile}
+                fileProgress={fileProgress}
+                activePath={activePath}
+                running={running}
+              />
+            ))}
           {!isScanLoading && !filterActive && (
             <FileTreeView
               roots={tree.children}
@@ -157,10 +205,24 @@ export function LibraryPicker({
               homeLabel={t("common.home")}
               fileKey={(f) => f.videoPath as string}
               renderFolderRow={(node, ctx) => (
-                <WhisperFolderRow node={node} ctx={ctx} selected={selected} running={running} toggleFolder={toggleFolder} />
+                <WhisperFolderRow
+                  node={node}
+                  ctx={ctx}
+                  selected={selected}
+                  running={running}
+                  toggleFolder={toggleFolder}
+                />
               )}
               renderFile={(f, ctx: FileRowContext) => (
-                <FileRow file={f} padLeftPx={ctx.padLeftPx} selected={selected} toggleFile={toggleFile} fileProgress={fileProgress} activePath={activePath} running={running} />
+                <FileRow
+                  file={f}
+                  padLeftPx={ctx.padLeftPx}
+                  selected={selected}
+                  toggleFile={toggleFile}
+                  fileProgress={fileProgress}
+                  activePath={activePath}
+                  running={running}
+                />
               )}
             />
           )}
@@ -191,20 +253,38 @@ function FileRow({ file, padLeftPx, relPath, selected, toggleFile, fileProgress,
   const vp = file.videoPath as string;
   const fp = fileProgress[vp];
   const isActive = activePath === vp;
-  const status = fp?.done ? t("whisper.statusDone")
-    : fp?.cancelled ? t("whisper.statusCancelled")
-    : fp?.noSpeech ? t("whisper.statusNoSpeech")
-    : fp?.error ? t("whisper.statusError")
-    : fp?.phase === "diarizing" ? t("whisper.diarizing")
-    : fp?.phase === "waiting_for_gpu" && fp.pct === undefined ? t("whisper.waitingForGpu")
-    : typeof fp?.pct === "number" ? `${Math.round(fp.pct)}%` : "";
+  const status = fp?.done
+    ? t("whisper.statusDone")
+    : fp?.cancelled
+      ? t("whisper.statusCancelled")
+      : fp?.noSpeech
+        ? t("whisper.statusNoSpeech")
+        : fp?.error
+          ? t("whisper.statusError")
+          : fp?.phase === "diarizing"
+            ? t("whisper.diarizing")
+            : fp?.phase === "waiting_for_gpu" && fp.pct === undefined
+              ? t("whisper.waitingForGpu")
+              : typeof fp?.pct === "number"
+                ? `${Math.round(fp.pct)}%`
+                : "";
   return (
-    <label className="flex items-center gap-2 px-3 py-2 text-xs text-muted hover:bg-surface-raised"
-      style={{ paddingLeft: `${padLeftPx}px` }}>
+    <label
+      className="flex items-center gap-2 px-3 py-2 text-xs text-muted hover:bg-surface-raised"
+      style={{ paddingLeft: `${padLeftPx}px` }}
+    >
       {/* Selection is frozen mid-batch: the run works from the list captured at
           start, so letting it change would misrepresent what is queued. */}
-      <input type="checkbox" checked={selected.has(vp)} disabled={running} onChange={() => toggleFile(vp)} className="h-4 w-4 accent-accent" />
-      <span className="truncate"><Icon name="video" /> {relPath ?? (file.videoName || baseName(vp))}</span>
+      <input
+        type="checkbox"
+        checked={selected.has(vp)}
+        disabled={running}
+        onChange={() => toggleFile(vp)}
+        className="h-4 w-4 accent-accent"
+      />
+      <span className="truncate">
+        <Icon name="video" /> {relPath ?? (file.videoName || baseName(vp))}
+      </span>
       <span className="ml-auto flex shrink-0 items-center gap-2">
         {status && (
           // The running file is marked with a glyph + weight, not accent colour
@@ -241,13 +321,21 @@ function WhisperFolderRow({ node, ctx, selected, running, toggleFolder }: Whispe
   const someSel = !allSel && node.allPaths.some((p) => selected.has(p));
   const isDrill = ctx.mode === "drill";
   return (
-    <div className="flex h-9 items-center gap-2 border-b border-border bg-surface-raised px-3 text-xs font-medium text-text"
-      style={{ paddingLeft: `${ctx.padLeftPx}px` }}>
+    <div
+      className="flex h-9 items-center gap-2 border-b border-border bg-surface-raised px-3 text-xs font-medium text-text"
+      style={{ paddingLeft: `${ctx.padLeftPx}px` }}
+    >
       {/* The caret, the checkbox and the name button are three distinct
           controls; each needs a name describing its own action, or a screen
           reader just hears the folder name three times in a row. */}
       {!isDrill && (
-        <button type="button" onClick={ctx.onActivate} className="w-3 shrink-0 text-faint" aria-label={t("whisper.toggleFolder", { name: node.name })} aria-expanded={ctx.open}>
+        <button
+          type="button"
+          onClick={ctx.onActivate}
+          className="w-3 shrink-0 text-faint"
+          aria-label={t("whisper.toggleFolder", { name: node.name })}
+          aria-expanded={ctx.open}
+        >
           <Icon name={ctx.open ? "chevron-down" : "chevron-right"} />
         </button>
       )}
@@ -256,24 +344,34 @@ function WhisperFolderRow({ node, ctx, selected, running, toggleFolder }: Whispe
         aria-label={t("whisper.selectFolder", { name: node.name })}
         checked={allSel}
         disabled={running}
-        ref={(el) => { if (el) el.indeterminate = someSel; }}
+        ref={(el) => {
+          if (el) el.indeterminate = someSel;
+        }}
         onChange={() => toggleFolder(node.allPaths)}
         className="h-4 w-4 accent-accent"
       />
       <button
         type="button"
         onClick={ctx.onActivate}
-        aria-label={isDrill ? t("common.openFolder", { name: node.name }) : t("whisper.toggleFolder", { name: node.name })}
+        aria-label={
+          isDrill ? t("common.openFolder", { name: node.name }) : t("whisper.toggleFolder", { name: node.name })
+        }
         aria-expanded={isDrill ? undefined : ctx.open}
         className="flex min-w-0 flex-1 items-center gap-1 truncate text-left"
       >
         {/* From depth 2 the sticky stack stops growing, so pinned deep headers
             carry their ancestor path inline instead. */}
         {ctx.ancestorHint && <span className="shrink-0 text-xs font-normal text-faint">{ctx.ancestorHint} /</span>}
-        <span className="truncate"><Icon name="folder" /> {node.name}</span>
+        <span className="truncate">
+          <Icon name="folder" /> {node.name}
+        </span>
         <span className="shrink-0 text-xs text-faint">({node.allPaths.length})</span>
       </button>
-      {isDrill && <span aria-hidden="true" className="shrink-0 text-faint">›</span>}
+      {isDrill && (
+        <span aria-hidden="true" className="shrink-0 text-faint">
+          ›
+        </span>
+      )}
     </div>
   );
 }

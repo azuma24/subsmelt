@@ -40,9 +40,7 @@ export function StagedFileList({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-muted">
-          {t("convert.staged", { count: staged.length })}
-        </span>
+        <span className="text-xs font-medium text-muted">{t("convert.staged", { count: staged.length })}</span>
         <button
           type="button"
           onClick={clearFiles}
@@ -59,27 +57,38 @@ export function StagedFileList({
           const sameAsTarget = isSameAsTarget(item, globalFrom, translate, resolvedTarget?.code ?? null);
           const status = fileStatus[id];
           return (
-            <li
-              key={id}
-              className="flex flex-col gap-2 rounded-sm border border-border bg-surface px-3 py-2"
-            >
+            <li key={id} className="flex flex-col gap-2 rounded-sm border border-border bg-surface px-3 py-2">
               <div className="flex items-center gap-2">
                 <span className="font-mono text-xs uppercase text-accent">{extOf(file.name) || "?"}</span>
                 <span className="min-w-0 flex-1 truncate text-xs text-text" title={file.name}>
                   {file.name}
                 </span>
                 {status && (
-                  <span className={`shrink-0 text-xs ${status === "error" ? "text-danger" : status === "done" ? "text-success" : "font-medium text-accent"}`}>
-                    {status === "working" ? t("convert.translating") : status === "done" ? t("whisper.statusDone") : t("whisper.statusError")}
+                  <span
+                    className={`shrink-0 text-xs ${status === "error" ? "text-danger" : status === "done" ? "text-success" : "font-medium text-accent"}`}
+                  >
+                    {status === "working"
+                      ? t("convert.translating")
+                      : status === "done"
+                        ? t("whisper.statusDone")
+                        : t("whisper.statusError")}
                   </span>
                 )}
                 <span className="shrink-0 text-xs tabular-nums text-faint">{formatBytes(file.size)}</span>
-                <IconButton icon="close" label={t("convert.remove")} variant="danger" onClick={() => removeFile(id)} className="text-faint" />
+                <IconButton
+                  icon="close"
+                  label={t("convert.remove")}
+                  variant="danger"
+                  onClick={() => removeFile(id)}
+                  className="text-faint"
+                />
               </div>
               {translate && (
                 <div className="flex flex-wrap items-center gap-2">
                   {/* Detection badge: pending → detecting; null → unknown; code → name. */}
-                  <span className={`rounded-full px-2 py-1 text-xs ${item.detected === undefined ? "bg-surface-raised text-faint" : sourceEntry ? "bg-accent-soft text-accent" : "bg-warning-soft text-warning"}`}>
+                  <span
+                    className={`rounded-full px-2 py-1 text-xs ${item.detected === undefined ? "bg-surface-raised text-faint" : sourceEntry ? "bg-accent-soft text-accent" : "bg-warning-soft text-warning"}`}
+                  >
                     {item.detected === undefined
                       ? t("convert.detecting")
                       : sourceEntry
@@ -95,7 +104,9 @@ export function StagedFileList({
                   >
                     <option value="">{t("convert.sourceAuto")}</option>
                     {LANGUAGES.map((l) => (
-                      <option key={l.code} value={l.code}>{l.englishName}</option>
+                      <option key={l.code} value={l.code}>
+                        {l.englishName}
+                      </option>
                     ))}
                   </select>
                   {sameAsTarget && (

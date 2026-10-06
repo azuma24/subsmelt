@@ -23,7 +23,6 @@ export function canTransition(from: VideoStatus, to: VideoStatus): boolean {
   return TRANSITIONS[from].includes(to);
 }
 
-
 /** What each row action does, and from which statuses it is offered. */
 export const USER_ACTIONS: Record<UserAction, { from: readonly VideoStatus[]; to: VideoStatus }> = {
   // From queued it only moves the video to the front of the lane.

@@ -25,9 +25,14 @@ import {
 export async function listBackendModels(backendUrl: string, token?: string): Promise<WhisperModelInfo[]> {
   const url = normalizeTranscriptionBackendUrl(backendUrl);
   if (!url) throw new Error("Transcription backend URL is not configured");
-  const response = await fetchWithTimeout(`${url}/models`, {
-    headers: { ...transcriptionAuthHeaders(token) },
-  }, SHORT_REQUEST_TIMEOUT_MS, "Whisper model list");
+  const response = await fetchWithTimeout(
+    `${url}/models`,
+    {
+      headers: { ...transcriptionAuthHeaders(token) },
+    },
+    SHORT_REQUEST_TIMEOUT_MS,
+    "Whisper model list",
+  );
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throwBackendError(body, response.status);
   const models = (body as { models?: unknown })?.models;
@@ -35,13 +40,22 @@ export async function listBackendModels(backendUrl: string, token?: string): Pro
 }
 
 // DELETE {backend}/models/{model} → { ok, freedMb }
-export async function deleteBackendModel(backendUrl: string, model: string, token?: string): Promise<WhisperModelDeleteResult> {
+export async function deleteBackendModel(
+  backendUrl: string,
+  model: string,
+  token?: string,
+): Promise<WhisperModelDeleteResult> {
   const url = normalizeTranscriptionBackendUrl(backendUrl);
   if (!url) throw new Error("Transcription backend URL is not configured");
-  const response = await fetchWithTimeout(`${url}/models/${encodeURIComponent(model)}`, {
-    method: "DELETE",
-    headers: { ...transcriptionAuthHeaders(token) },
-  }, SHORT_REQUEST_TIMEOUT_MS, "Whisper model delete");
+  const response = await fetchWithTimeout(
+    `${url}/models/${encodeURIComponent(model)}`,
+    {
+      method: "DELETE",
+      headers: { ...transcriptionAuthHeaders(token) },
+    },
+    SHORT_REQUEST_TIMEOUT_MS,
+    "Whisper model delete",
+  );
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throwBackendError(body, response.status);
   return body as WhisperModelDeleteResult;

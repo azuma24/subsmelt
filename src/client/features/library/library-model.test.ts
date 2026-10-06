@@ -2,7 +2,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import type { Job, ScannedFile, TaskStatus } from "../../types";
 import { makeJob, makeTaskStatus } from "../../test-fixtures";
-import { buildLibraryView, flattenRows, itemLanguageChips, itemStatus, relativeFolder, toLibraryItems, type LibraryRow } from "./library-model";
+import {
+  buildLibraryView,
+  flattenRows,
+  itemLanguageChips,
+  itemStatus,
+  relativeFolder,
+  toLibraryItems,
+  type LibraryRow,
+} from "./library-model";
 import { languageStatusDisplay } from "./task-status";
 
 const task = (langCode: string, status: TaskStatus["status"], jobId: number | null = null): TaskStatus =>
@@ -39,8 +47,18 @@ const files: ScannedFile[] = [
   video("/media/Movies/Arrival.mkv", [task("chi", "translating", 3)]),
   video("/media/Movies/Dune.mkv", [task("chi", "done", 4), task("jpn", "skipped")]),
   video("/media/Movies/Blade Runner.mkv", []),
-  { videoPath: null, videoName: null, videoMtime: null, subtitles: [{ srtPath: "/media/Loose.srt", srtName: "Loose.srt", tasks: [task("chi", "done", 5)] }] },
-  { videoPath: null, videoName: null, videoMtime: null, subtitles: [{ srtPath: "/media/Docs/Notes.srt", srtName: "Notes.srt", tasks: [] }] },
+  {
+    videoPath: null,
+    videoName: null,
+    videoMtime: null,
+    subtitles: [{ srtPath: "/media/Loose.srt", srtName: "Loose.srt", tasks: [task("chi", "done", 5)] }],
+  },
+  {
+    videoPath: null,
+    videoName: null,
+    videoMtime: null,
+    subtitles: [{ srtPath: "/media/Docs/Notes.srt", srtName: "Notes.srt", tasks: [] }],
+  },
 ];
 
 const items = toLibraryItems(files, "/media");
@@ -61,7 +79,10 @@ test("a subtitle no translation target applies to is neither needs-transcription
 });
 
 test("a job that has since finished overrides the scan's stale status", () => {
-  const live = new Map([[1, job(1, "done")], [2, job(2, "done")]]);
+  const live = new Map([
+    [1, job(1, "done")],
+    [2, job(2, "done")],
+  ]);
   assert.equal(itemStatus(byName("Show.S01E02.mkv"), live), "done");
 });
 
@@ -117,19 +138,33 @@ test("a collapsed folder keeps its header and hides its rows", () => {
 
 test("a status filter flattens into one status group across folders", () => {
   const view = buildLibraryView(items, jobs, "done", "", "name", "asc");
-  assert.deepEqual(rowLabels(flattenRows(view.sections, new Set(["Movies"]))), ["# done", "Blade Runner.mkv", "Dune.mkv", "Loose.srt", "Notes.srt"]);
+  assert.deepEqual(rowLabels(flattenRows(view.sections, new Set(["Movies"]))), [
+    "# done",
+    "Blade Runner.mkv",
+    "Dune.mkv",
+    "Loose.srt",
+    "Notes.srt",
+  ]);
 });
 
 test("counts cover the searched set and always equal each filter's list length", () => {
   for (const query of ["", "show", "dune", "nothing-matches"]) {
     const all = buildLibraryView(items, jobs, "all", query, "name", "asc");
     for (const filter of ["all", "error", "needsTranscription", "missingLanguage", "inProgress", "done"] as const) {
-      const listed = flattenRows(buildLibraryView(items, jobs, filter, query, "name", "asc").sections, new Set()).filter((row) => row.type === "item").length;
+      const listed = flattenRows(
+        buildLibraryView(items, jobs, filter, query, "name", "asc").sections,
+        new Set(),
+      ).filter((row) => row.type === "item").length;
       assert.equal(all.counts[filter], listed, `${filter} with query "${query}"`);
     }
   }
   assert.deepEqual(buildLibraryView(items, jobs, "all", "", "name", "asc").counts, {
-    all: 8, error: 1, needsTranscription: 1, missingLanguage: 1, inProgress: 1, done: 4,
+    all: 8,
+    error: 1,
+    needsTranscription: 1,
+    missingLanguage: 1,
+    inProgress: 1,
+    done: 4,
   });
 });
 
@@ -147,7 +182,11 @@ test("a video shows one chip per language, whatever number of source subtitles i
     subtitles: [
       { srtPath: "/media/talk.eng.srt", srtName: "talk.eng.srt", tasks: [task("chi", "skipped")] },
       { srtPath: "/media/talk.ko.srt", srtName: "talk.ko.srt", tasks: [task("chi", "new"), task("jpn", "done")] },
-      { srtPath: "/media/talk.fr.srt", srtName: "talk.fr.srt", tasks: [task("chi", "skipped"), task("jpn", "skipped")] },
+      {
+        srtPath: "/media/talk.fr.srt",
+        srtName: "talk.fr.srt",
+        tasks: [task("chi", "skipped"), task("jpn", "skipped")],
+      },
     ],
   };
   const [item] = toLibraryItems([file], "/media");
@@ -156,22 +195,39 @@ test("a video shows one chip per language, whatever number of source subtitles i
     ["chi:new", "jpn:done"],
   );
   // A running job wins over every other state of that language.
-  const running = { ...file, subtitles: [{ ...file.subtitles[0], tasks: [task("chi", "pending", 7)] }, file.subtitles[1]] };
+  const running = {
+    ...file,
+    subtitles: [{ ...file.subtitles[0], tasks: [task("chi", "pending", 7)] }, file.subtitles[1]],
+  };
   const [runningItem] = toLibraryItems([running], "/media");
   assert.deepEqual(
-    itemLanguageChips(runningItem, new Map([[7, job(7, "translating")]])).map(({ task: t, status }) => `${t.langCode}:${status}`),
+    itemLanguageChips(runningItem, new Map([[7, job(7, "translating")]])).map(
+      ({ task: t, status }) => `${t.langCode}:${status}`,
+    ),
     ["chi:translating", "jpn:done"],
   );
 });
 
 test("a language skipped because its file exists reads Already translated; one another subtitle owns stays Skipped", () => {
   const onDisk = { ...task("chi", "skipped"), outputExists: true };
-  assert.deepEqual(languageStatusDisplay(onDisk, "skipped"), { labelKey: "library.panel.alreadyTranslated", icon: "done" });
+  assert.deepEqual(languageStatusDisplay(onDisk, "skipped"), {
+    labelKey: "library.panel.alreadyTranslated",
+    icon: "done",
+  });
   // The queue skips a job only when its output exists.
-  assert.deepEqual(languageStatusDisplay(task("chi", "skipped", 7), "skipped"), { labelKey: "library.panel.alreadyTranslated", icon: "done" });
+  assert.deepEqual(languageStatusDisplay(task("chi", "skipped", 7), "skipped"), {
+    labelKey: "library.panel.alreadyTranslated",
+    icon: "done",
+  });
   const ownedElsewhere = { ...task("chi", "skipped"), outputExists: false };
-  assert.deepEqual(languageStatusDisplay(ownedElsewhere, "skipped"), { labelKey: "dashboard.status.skipped", icon: "skipped" });
-  assert.deepEqual(languageStatusDisplay(task("chi", "done", 7), "done"), { labelKey: "dashboard.status.done", icon: "done" });
+  assert.deepEqual(languageStatusDisplay(ownedElsewhere, "skipped"), {
+    labelKey: "dashboard.status.skipped",
+    icon: "skipped",
+  });
+  assert.deepEqual(languageStatusDisplay(task("chi", "done", 7), "done"), {
+    labelKey: "dashboard.status.done",
+    icon: "done",
+  });
 });
 
 test("a row's status group comes from the same per-language state as its chips", () => {
@@ -187,7 +243,10 @@ test("a row's status group comes from the same per-language state as its chips",
   };
   const [item] = toLibraryItems([file], "/media");
   const jobsById = new Map([[9, job(9, "pending")]]);
-  assert.deepEqual(itemLanguageChips(item, jobsById).map(({ status }) => status), ["pending"]);
+  assert.deepEqual(
+    itemLanguageChips(item, jobsById).map(({ status }) => status),
+    ["pending"],
+  );
   assert.equal(itemStatus(item, jobsById), "inProgress");
 });
 
@@ -203,12 +262,10 @@ const undatedOrphan: ScannedFile = {
   videoMtime: null,
   subtitles: [{ srtPath: "/media/Z/Orphan.srt", srtName: "Orphan.srt", tasks: [] }],
 };
-const datedItems = toLibraryItems([
-  dated("/media/A/alpha.mkv", 100),
-  dated("/media/A/beta.mkv", 200),
-  dated("/media/B/gamma.mkv", 300),
-  undatedOrphan,
-], "/media");
+const datedItems = toLibraryItems(
+  [dated("/media/A/alpha.mkv", 100), dated("/media/A/beta.mkv", 200), dated("/media/B/gamma.mkv", 300), undatedOrphan],
+  "/media",
+);
 
 test("date sort orders items newest first, folders by their newest file, undated last", () => {
   const view = buildLibraryView(datedItems, new Map(), "all", "", "date", "desc");
@@ -251,5 +308,10 @@ test("name sort desc reverses items and folders alike", () => {
 
 test("a status filter keeps the chosen sort within its flat group", () => {
   const view = buildLibraryView(datedItems, new Map(), "needsTranscription", "", "date", "desc");
-  assert.deepEqual(rowLabels(flattenRows(view.sections, new Set())), ["# needsTranscription", "gamma.mkv", "beta.mkv", "alpha.mkv"]);
+  assert.deepEqual(rowLabels(flattenRows(view.sections, new Set())), [
+    "# needsTranscription",
+    "gamma.mkv",
+    "beta.mkv",
+    "alpha.mkv",
+  ]);
 });

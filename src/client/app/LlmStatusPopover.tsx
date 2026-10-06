@@ -4,12 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { useLlmStatusQuery } from "../hooks";
 import type { LlmConnectionStatus, LlmStatus } from "../types";
-import {
-  connectionStateText,
-  modeLabel,
-  summarizeLlmStatus,
-  TONE_DOT_CLASS,
-} from "./llm-status-summary";
+import { connectionStateText, modeLabel, summarizeLlmStatus, TONE_DOT_CLASS } from "./llm-status-summary";
 
 const PANEL_WIDTH = 320;
 // Under a phone header the panel spans the screen, up to this width.
@@ -212,7 +207,10 @@ export function LlmStatusPopover({ placement, compactBelowLg = false }: LlmStatu
         title={tooltip}
         className={`flex min-h-touch w-full min-w-0 ${compactBelowLg ? "items-start" : "items-center"} gap-2 rounded-sm px-1 text-left text-xs text-muted transition-colors hover:bg-surface-raised hover:text-text md:min-h-0 md:py-1`}
       >
-        <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${compactBelowLg ? "mt-1" : ""} ${TONE_DOT_CLASS[summary.tone]}`} />
+        <span
+          aria-hidden="true"
+          className={`h-2 w-2 shrink-0 rounded-full ${compactBelowLg ? "mt-1" : ""} ${TONE_DOT_CLASS[summary.tone]}`}
+        />
         <span className={textClass}>{summary.text}</span>
         {summary.detail && <span className="sr-only">{summary.detail}</span>}
       </button>
@@ -230,9 +228,7 @@ export function LlmStatusPopover({ placement, compactBelowLg = false }: LlmStatu
               {t("llmStatus.title")}
             </h2>
             {status && status.connections.length > 0 && (
-              <p className="text-xs text-muted">
-                {t("llmStatus.modeLine", { mode: modeLabel(status.mode, t) })}
-              </p>
+              <p className="text-xs text-muted">{t("llmStatus.modeLine", { mode: modeLabel(status.mode, t) })}</p>
             )}
           </div>
           <PanelBody status={status} failed={query.isError} onRetry={() => void query.refetch()} t={t} />

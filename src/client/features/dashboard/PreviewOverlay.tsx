@@ -102,20 +102,21 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
   const { plot, glossary } = useMemo(() => splitAnalysisSections(previewData?.analysis || ""), [previewData?.analysis]);
   // First body line of the analysis (headings skipped) as the collapsed teaser.
   const analysisHint = useMemo(
-    () => (previewData?.analysis || "").split("\n").map((line) => line.trim()).find((line) => line && !line.startsWith("#")) || "",
+    () =>
+      (previewData?.analysis || "")
+        .split("\n")
+        .map((line) => line.trim())
+        .find((line) => line && !line.startsWith("#")) || "",
     [previewData?.analysis],
   );
 
-  const getValue = useCallback(
-    (index: number): string | undefined => edits.get(index),
-    [edits]
-  );
+  const getValue = useCallback((index: number): string | undefined => edits.get(index), [edits]);
   const isDirty = useCallback(
     (index: number): boolean => {
       if (!edits.has(index)) return false;
       return (edits.get(index) ?? "") !== (baseline.get(index) ?? "");
     },
-    [edits, baseline]
+    [edits, baseline],
   );
   const onChange = useCallback((index: number, value: string) => {
     setEdits((prev) => {
@@ -133,7 +134,7 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
       placeholder: t("dashboard.preview.editPlaceholder"),
       editedLabel: t("dashboard.preview.edited"),
     }),
-    [getValue, isDirty, onChange, t]
+    [getValue, isDirty, onChange, t],
   );
 
   // The effective translated text for a line: edited value if present, else
@@ -144,7 +145,7 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
       const edited = edits.get(line.index);
       return edited !== undefined ? edited : line.translated;
     },
-    [edits]
+    [edits],
   );
 
   // Count of cues whose edited value differs from the saved baseline.
@@ -239,8 +240,14 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-center justify-between gap-4 border-b border-border px-6 py-4">
           <div className="min-w-0">
-            <h3 id={titleId} className="break-words text-base font-semibold text-text [overflow-wrap:anywhere]">{title}</h3>
-            {previewData?.targetLang && <p className="text-xs text-faint">→ {previewData.targetLang} • {filteredLines.length}</p>}
+            <h3 id={titleId} className="break-words text-base font-semibold text-text [overflow-wrap:anywhere]">
+              {title}
+            </h3>
+            {previewData?.targetLang && (
+              <p className="text-xs text-faint">
+                → {previewData.targetLang} • {filteredLines.length}
+              </p>
+            )}
           </div>
           <input
             type="search"
@@ -252,100 +259,143 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
           />
           <IconButton icon="close" label={t("common.close")} onClick={onClose} />
         </div>
-          <div className="border-b border-border px-4 py-2">
-            <div className="flex flex-wrap gap-2 text-xs">
-              <button onClick={() => setShowOnlyChanged((v) => !v)} className={`rounded-sm px-2 py-1 ${showOnlyChanged ? "bg-accent text-accent-text" : "bg-surface-raised text-muted"}`}>{t("dashboard.preview.showOnlyChanged")}</button>
-              <button onClick={() => setShowOnlyIssues((v) => !v)} className={`rounded-sm px-2 py-1 ${showOnlyIssues ? "bg-warning text-canvas" : "bg-surface-raised text-muted"}`}>{t("dashboard.preview.showOnlyIssues")}</button>
-              <button onClick={jumpToNextIssue} className="rounded-sm bg-surface-raised px-2 py-1 text-muted">{t("dashboard.preview.nextIssue")}</button>
-            </div>
+        <div className="border-b border-border px-4 py-2">
+          <div className="flex flex-wrap gap-2 text-xs">
+            <button
+              onClick={() => setShowOnlyChanged((v) => !v)}
+              className={`rounded-sm px-2 py-1 ${showOnlyChanged ? "bg-accent text-accent-text" : "bg-surface-raised text-muted"}`}
+            >
+              {t("dashboard.preview.showOnlyChanged")}
+            </button>
+            <button
+              onClick={() => setShowOnlyIssues((v) => !v)}
+              className={`rounded-sm px-2 py-1 ${showOnlyIssues ? "bg-warning text-canvas" : "bg-surface-raised text-muted"}`}
+            >
+              {t("dashboard.preview.showOnlyIssues")}
+            </button>
+            <button onClick={jumpToNextIssue} className="rounded-sm bg-surface-raised px-2 py-1 text-muted">
+              {t("dashboard.preview.nextIssue")}
+            </button>
           </div>
-          <div ref={listRef} className="relative flex-1 overflow-y-auto">
-            {previewQuery.isLoading && <PageLoading label={t("dashboard.preview.loading")} />}
-            {previewQuery.isError && !previewQuery.isLoading && (
-              <PageError onRetry={() => void previewQuery.refetch()} />
-            )}
-            {previewData?.analysis && (
-              <div className="mx-4 mt-4 rounded-md border border-border bg-surface-raised">
-                {/* Collapsed by default: the analysis can run to hundreds of
+        </div>
+        <div ref={listRef} className="relative flex-1 overflow-y-auto">
+          {previewQuery.isLoading && <PageLoading label={t("dashboard.preview.loading")} />}
+          {previewQuery.isError && !previewQuery.isLoading && <PageError onRetry={() => void previewQuery.refetch()} />}
+          {previewData?.analysis && (
+            <div className="mx-4 mt-4 rounded-md border border-border bg-surface-raised">
+              {/* Collapsed by default: the analysis can run to hundreds of
                     lines and used to push every cue row below the fold. */}
-                <button
-                  type="button"
-                  onClick={() => setShowAnalysis((v) => !v)}
-                  aria-expanded={showAnalysis}
-                  className="flex w-full flex-col gap-1 px-4 py-3 text-left"
-                >
-                  <span className="flex w-full items-center justify-between gap-3">
-                    <span className="text-xs uppercase tracking-wide text-faint">{t("dashboard.preview.analysisTitle")}</span>
-                    <span className="shrink-0 text-xs text-accent">{showAnalysis ? t("dashboard.preview.hideAnalysis") : t("dashboard.preview.showAnalysis")}</span>
+              <button
+                type="button"
+                onClick={() => setShowAnalysis((v) => !v)}
+                aria-expanded={showAnalysis}
+                className="flex w-full flex-col gap-1 px-4 py-3 text-left"
+              >
+                <span className="flex w-full items-center justify-between gap-3">
+                  <span className="text-xs uppercase tracking-wide text-faint">
+                    {t("dashboard.preview.analysisTitle")}
                   </span>
-                  {!showAnalysis && analysisHint && (
-                    <span className="block w-full truncate text-xs text-muted">{analysisHint}</span>
-                  )}
-                </button>
-                {showAnalysis && (
-                  <div className="border-t border-border px-4 pb-4 pt-3">
-                    <pre className="max-h-[40vh] overflow-y-auto whitespace-pre-wrap text-xs text-text leading-relaxed">{previewData.analysis}</pre>
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                      <button onClick={() => handleCopy(previewData.analysis || "", t("dashboard.preview.copiedContext"))} className="rounded-sm bg-surface-raised px-2 py-1 text-text">{t("dashboard.preview.copyContext")}</button>
-                      <button onClick={() => handleCopy(plot || "", t("dashboard.preview.copiedPlot"))} className="rounded-sm bg-surface-raised px-2 py-1 text-text">{t("dashboard.preview.copyPlot")}</button>
-                      <button onClick={() => handleCopy(glossary || "", t("dashboard.preview.copiedGlossary"))} className="rounded-sm bg-surface-raised px-2 py-1 text-text">{t("dashboard.preview.copyGlossary")}</button>
-                    </div>
+                  <span className="shrink-0 text-xs text-accent">
+                    {showAnalysis ? t("dashboard.preview.hideAnalysis") : t("dashboard.preview.showAnalysis")}
+                  </span>
+                </span>
+                {!showAnalysis && analysisHint && (
+                  <span className="block w-full truncate text-xs text-muted">{analysisHint}</span>
+                )}
+              </button>
+              {showAnalysis && (
+                <div className="border-t border-border px-4 pb-4 pt-3">
+                  <pre className="max-h-[40vh] overflow-y-auto whitespace-pre-wrap text-xs text-text leading-relaxed">
+                    {previewData.analysis}
+                  </pre>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                    <button
+                      onClick={() => handleCopy(previewData.analysis || "", t("dashboard.preview.copiedContext"))}
+                      className="rounded-sm bg-surface-raised px-2 py-1 text-text"
+                    >
+                      {t("dashboard.preview.copyContext")}
+                    </button>
+                    <button
+                      onClick={() => handleCopy(plot || "", t("dashboard.preview.copiedPlot"))}
+                      className="rounded-sm bg-surface-raised px-2 py-1 text-text"
+                    >
+                      {t("dashboard.preview.copyPlot")}
+                    </button>
+                    <button
+                      onClick={() => handleCopy(glossary || "", t("dashboard.preview.copiedGlossary"))}
+                      className="rounded-sm bg-surface-raised px-2 py-1 text-text"
+                    >
+                      {t("dashboard.preview.copyGlossary")}
+                    </button>
                   </div>
-                )}
-              </div>
-            )}
-            {previewData && filteredLines.length === 0 && !previewQuery.isLoading && (
-              <div className="py-12 text-center text-sm text-faint">{t("dashboard.preview.noLines")}</div>
-            )}
-            {previewData && filteredLines.length > 0 && (
-              <div ref={listStartRef}>
-                {shouldVirtualize ? (
-                  isMobile
-                    ? <PreviewMobileVirtual lines={filteredLines} virtualizer={virtualizer} editCtx={editCtx} effective={effectiveTranslated} />
-                    : <PreviewDesktopVirtual lines={filteredLines} virtualizer={virtualizer} editCtx={editCtx} effective={effectiveTranslated} />
-                ) : isMobile ? (
-                  <PreviewMobileList lines={filteredLines} editCtx={editCtx} effective={effectiveTranslated} />
-                ) : (
-                  <PreviewDesktopTable lines={filteredLines} editCtx={editCtx} effective={effectiveTranslated} />
-                )}
-              </div>
-            )}
-          </div>
-          {previewData && filteredLines.length > 0 && (
-            <div className="border-t border-border px-6 py-3 flex flex-wrap items-center justify-end gap-2">
-              <button
-                onClick={() => {
-                  const tsv = filteredLines.map((l) => `${l.index}\t${l.original}\t${effectiveTranslated(l)}`).join("\n");
-                  void handleCopy(tsv, t("dashboard.toast.copiedTSV"));
-                }}
-                className="rounded-md border border-border px-3 py-2 text-xs text-muted hover:text-text"
-              >
-                {t("dashboard.preview.copyTSV")}
-              </button>
-              <a
-                href={jobDownloadUrl(jobId)}
-                download
-                className="rounded-md border border-border px-3 py-2 text-xs text-muted hover:text-text"
-              >
-                {t("dashboard.preview.download")}
-              </a>
-              <button
-                onClick={() => void handleSave()}
-                disabled={dirtyCount === 0 || isSaving}
-                className={`rounded-md px-3 py-2 text-xs font-medium ${
-                  dirtyCount === 0 || isSaving
-                    ? "cursor-not-allowed bg-surface-raised text-faint"
-                    : "bg-accent text-accent-text hover:brightness-110"
-                }`}
-              >
-                {isSaving
-                  ? t("dashboard.preview.saving")
-                  : dirtyCount > 0
-                    ? t("dashboard.preview.saveChangesCount", { count: dirtyCount })
-                    : t("dashboard.preview.saveChanges")}
-              </button>
+                </div>
+              )}
             </div>
           )}
+          {previewData && filteredLines.length === 0 && !previewQuery.isLoading && (
+            <div className="py-12 text-center text-sm text-faint">{t("dashboard.preview.noLines")}</div>
+          )}
+          {previewData && filteredLines.length > 0 && (
+            <div ref={listStartRef}>
+              {shouldVirtualize ? (
+                isMobile ? (
+                  <PreviewMobileVirtual
+                    lines={filteredLines}
+                    virtualizer={virtualizer}
+                    editCtx={editCtx}
+                    effective={effectiveTranslated}
+                  />
+                ) : (
+                  <PreviewDesktopVirtual
+                    lines={filteredLines}
+                    virtualizer={virtualizer}
+                    editCtx={editCtx}
+                    effective={effectiveTranslated}
+                  />
+                )
+              ) : isMobile ? (
+                <PreviewMobileList lines={filteredLines} editCtx={editCtx} effective={effectiveTranslated} />
+              ) : (
+                <PreviewDesktopTable lines={filteredLines} editCtx={editCtx} effective={effectiveTranslated} />
+              )}
+            </div>
+          )}
+        </div>
+        {previewData && filteredLines.length > 0 && (
+          <div className="border-t border-border px-6 py-3 flex flex-wrap items-center justify-end gap-2">
+            <button
+              onClick={() => {
+                const tsv = filteredLines.map((l) => `${l.index}\t${l.original}\t${effectiveTranslated(l)}`).join("\n");
+                void handleCopy(tsv, t("dashboard.toast.copiedTSV"));
+              }}
+              className="rounded-md border border-border px-3 py-2 text-xs text-muted hover:text-text"
+            >
+              {t("dashboard.preview.copyTSV")}
+            </button>
+            <a
+              href={jobDownloadUrl(jobId)}
+              download
+              className="rounded-md border border-border px-3 py-2 text-xs text-muted hover:text-text"
+            >
+              {t("dashboard.preview.download")}
+            </a>
+            <button
+              onClick={() => void handleSave()}
+              disabled={dirtyCount === 0 || isSaving}
+              className={`rounded-md px-3 py-2 text-xs font-medium ${
+                dirtyCount === 0 || isSaving
+                  ? "cursor-not-allowed bg-surface-raised text-faint"
+                  : "bg-accent text-accent-text hover:brightness-110"
+              }`}
+            >
+              {isSaving
+                ? t("dashboard.preview.saving")
+                : dirtyCount > 0
+                  ? t("dashboard.preview.saveChangesCount", { count: dirtyCount })
+                  : t("dashboard.preview.saveChanges")}
+            </button>
+          </div>
+        )}
       </div>
     </ModalShell>
   );
@@ -362,11 +412,7 @@ function hasIssue(line: PreviewLine, translatedOverride?: string): boolean {
   return Boolean(isUntranslated || isSuspiciousShort || isSuspiciousLong);
 }
 
-function filterLines(
-  lines: PreviewLine[],
-  search: string,
-  effective: (line: PreviewLine) => string
-): PreviewLine[] {
+function filterLines(lines: PreviewLine[], search: string, effective: (line: PreviewLine) => string): PreviewLine[] {
   if (!search) return lines;
   const q = search.toLowerCase();
   return lines.filter((l) => l.original.toLowerCase().includes(q) || effective(l).toLowerCase().includes(q));
@@ -416,7 +462,9 @@ function PreviewDesktopTable({
         </tr>
       </thead>
       <tbody className="divide-y divide-border-subtle">
-        {lines.map((line) => <PreviewLineRow key={line.index} line={line} table editCtx={editCtx} effective={effective} />)}
+        {lines.map((line) => (
+          <PreviewLineRow key={line.index} line={line} table editCtx={editCtx} effective={effective} />
+        ))}
       </tbody>
     </table>
   );
@@ -433,7 +481,9 @@ function PreviewMobileList({
 }) {
   return (
     <div className="space-y-3 p-4">
-      {lines.map((line) => <PreviewLineRow key={line.index} line={line} editCtx={editCtx} effective={effective} />)}
+      {lines.map((line) => (
+        <PreviewLineRow key={line.index} line={line} editCtx={editCtx} effective={effective} />
+      ))}
     </div>
   );
 }
@@ -548,16 +598,23 @@ function PreviewLineRow({
     return (
       <tr id={`preview-line-${line.index}`} className={issue ? "bg-warning-soft" : ""}>
         <td className="px-3 py-2 text-faint text-xs align-top">{line.index}</td>
-        <td className="px-3 py-2 text-xs text-faint font-mono align-top whitespace-nowrap">{formatTimecode(line.start)}</td>
+        <td className="px-3 py-2 text-xs text-faint font-mono align-top whitespace-nowrap">
+          {formatTimecode(line.start)}
+        </td>
         <td className="px-3 py-2 text-muted align-top text-xs">{line.original}</td>
-        <td className="px-3 py-2 align-top text-xs"><TranslatedEditor line={line} editCtx={editCtx} /></td>
+        <td className="px-3 py-2 align-top text-xs">
+          <TranslatedEditor line={line} editCtx={editCtx} />
+        </td>
         <td className="px-3 py-2 align-top">{issue && <Icon name="warning" className="text-warning" />}</td>
       </tr>
     );
   }
 
   return (
-    <div id={`preview-line-${line.index}`} className={`rounded-md border p-3 ${issue ? "border-warning-line bg-warning-soft" : "border-border bg-surface-raised"}`}>
+    <div
+      id={`preview-line-${line.index}`}
+      className={`rounded-md border p-3 ${issue ? "border-warning-line bg-warning-soft" : "border-border bg-surface-raised"}`}
+    >
       <div className="mb-2 flex items-center justify-between text-xs text-faint">
         <span>#{line.index}</span>
         <span className="font-mono">{formatTimecode(line.start)}</span>
@@ -614,7 +671,9 @@ function PreviewLineGridRow({
       <div className="px-3 py-2 text-faint text-xs">{line.index}</div>
       <div className="px-3 py-2 text-xs text-faint font-mono whitespace-nowrap">{formatTimecode(line.start)}</div>
       <div className="px-3 py-2 text-muted text-xs">{line.original}</div>
-      <div className="px-3 py-2 text-xs"><TranslatedEditor line={line} editCtx={editCtx} /></div>
+      <div className="px-3 py-2 text-xs">
+        <TranslatedEditor line={line} editCtx={editCtx} />
+      </div>
       <div className="px-3 py-2">{issue && <Icon name="warning" className="text-warning" />}</div>
     </div>
   );

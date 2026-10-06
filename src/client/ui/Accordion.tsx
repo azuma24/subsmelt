@@ -40,7 +40,10 @@ export function Accordion({ title, defaultOpen = false, children, className = ""
         className={`flex min-h-touch w-full items-center justify-between gap-3 text-sm font-medium text-text leading-6 ${styles.trigger}`}
       >
         <span>{title}</span>
-        <Icon name="chevron-down" className={`text-faint transition-transform duration-fast ${open ? "rotate-180" : ""}`} />
+        <Icon
+          name="chevron-down"
+          className={`text-faint transition-transform duration-fast ${open ? "rotate-180" : ""}`}
+        />
       </button>
       {open && (
         <div id={panelId} role="region" aria-labelledby={triggerId} className={styles.panel}>

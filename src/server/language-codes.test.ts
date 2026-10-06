@@ -1,15 +1,32 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { fileLangCodes, standardLangCode, standardizeTask, standardizeTasks, standardTaskLangCode } from "./language-codes.js";
+import {
+  fileLangCodes,
+  standardLangCode,
+  standardizeTask,
+  standardizeTasks,
+  standardTaskLangCode,
+} from "./language-codes.js";
 
 test("every spelling of a language writes one standard code", () => {
   const cases: [string, string][] = [
-    ["en", "eng"], ["eng", "eng"], ["English", "eng"], ["en-US", "eng"],
-    ["ko", "kor"], ["kor", "kor"], ["Korean", "kor"],
-    ["ja", "jpn"], ["jpn", "jpn"],
-    ["zh-TW", "chi"], ["zh-tw", "chi"], ["cht", "chi"], ["zh-Hant", "chi"],
-    ["zh-CN", "chs"], ["chs", "chs"],
-    ["chi", "chi"], ["zho", "chi"],
+    ["en", "eng"],
+    ["eng", "eng"],
+    ["English", "eng"],
+    ["en-US", "eng"],
+    ["ko", "kor"],
+    ["kor", "kor"],
+    ["Korean", "kor"],
+    ["ja", "jpn"],
+    ["jpn", "jpn"],
+    ["zh-TW", "chi"],
+    ["zh-tw", "chi"],
+    ["cht", "chi"],
+    ["zh-Hant", "chi"],
+    ["zh-CN", "chs"],
+    ["chs", "chs"],
+    ["chi", "chi"],
+    ["zho", "chi"],
   ];
   for (const [input, expected] of cases) assert.equal(standardLangCode(input), expected, input);
   // With Simplified preferred, Simplified is chi and Traditional is cht.
@@ -28,8 +45,15 @@ test("a task's language comes from its name first, so Traditional Chinese with c
 });
 
 const task = (overrides: Partial<Parameters<typeof standardizeTask>[0]>) => ({
-  id: 1, source_lang: "Automatic", target_lang: "English", output_pattern: "{{name}}.eng.srt", lang_code: "eng",
-  enabled: 1, prompt_override: "", created_at: "2026-01-01T00:00:00.000Z", ...overrides,
+  id: 1,
+  source_lang: "Automatic",
+  target_lang: "English",
+  output_pattern: "{{name}}.eng.srt",
+  lang_code: "eng",
+  enabled: 1,
+  prompt_override: "",
+  created_at: "2026-01-01T00:00:00.000Z",
+  ...overrides,
 });
 
 test("an old task moves to the standard code and keeps its old one for files already on disk", () => {
@@ -64,12 +88,22 @@ test(".chi and .zh belong to the preferred Chinese script's task only", () => {
   assert.ok(!fileLangCodes(simplified).includes("chi"));
   assert.ok(!fileLangCodes(simplified, "zh-TW").includes("zh"));
   const preferredSimplified = { target_lang: "Simplified Chinese", lang_code: "chi" };
-  for (const code of ["chi", "zh", "zho", "chinese"]) assert.ok(fileLangCodes(preferredSimplified, "zh-CN").includes(code), code);
+  for (const code of ["chi", "zh", "zho", "chinese"])
+    assert.ok(fileLangCodes(preferredSimplified, "zh-CN").includes(code), code);
   assert.ok(!fileLangCodes({ target_lang: "Traditional Chinese", lang_code: "cht" }, "zh-CN").includes("chi"));
 });
 
 test("Brazilian and European Portuguese keep their region, like Chinese scripts; plain Portuguese is por", () => {
-  for (const [input, expected] of [["pt-BR", "pt-BR"], ["pt-br", "pt-BR"], ["Brazilian Portuguese", "pt-BR"], ["pt-PT", "pt-PT"], ["European Portuguese", "pt-PT"], ["pt", "por"], ["por", "por"], ["Portuguese", "por"]]) {
+  for (const [input, expected] of [
+    ["pt-BR", "pt-BR"],
+    ["pt-br", "pt-BR"],
+    ["Brazilian Portuguese", "pt-BR"],
+    ["pt-PT", "pt-PT"],
+    ["European Portuguese", "pt-PT"],
+    ["pt", "por"],
+    ["por", "por"],
+    ["Portuguese", "por"],
+  ]) {
     assert.equal(standardLangCode(input), expected, input);
   }
   assert.equal(standardTaskLangCode({ target_lang: "Portuguese (Brazil)", lang_code: "pt" }), "pt-BR");
@@ -83,15 +117,35 @@ test("a former code that now names the other Chinese script never counts", () =>
   for (const code of ["chi", "zh", "zho"]) assert.ok(!now.includes(code), code);
   for (const code of ["cht", "zh-TW"]) assert.ok(now.includes(code), code);
   // A former code of the same language, or one the table does not know, still counts.
-  assert.ok(fileLangCodes({ target_lang: "English", lang_code: "eng", former_lang_codes: ["en", "english-subs"] }).includes("english-subs"));
+  assert.ok(
+    fileLangCodes({ target_lang: "English", lang_code: "eng", former_lang_codes: ["en", "english-subs"] }).includes(
+      "english-subs",
+    ),
+  );
   assert.ok(fileLangCodes({ target_lang: "English", lang_code: "eng", former_lang_codes: ["en"] }).includes("en"));
 });
 
 test("standardizing all tasks swaps the Chinese scripts' codes in one go", () => {
-  const traditional = task({ id: 1, target_lang: "Traditional Chinese", lang_code: "chi", output_pattern: "{{name}}.{{lang_code}}.srt" });
-  const simplified = task({ id: 2, target_lang: "Simplified Chinese", lang_code: "chs", output_pattern: "{{name}}.{{lang_code}}.srt" });
+  const traditional = task({
+    id: 1,
+    target_lang: "Traditional Chinese",
+    lang_code: "chi",
+    output_pattern: "{{name}}.{{lang_code}}.srt",
+  });
+  const simplified = task({
+    id: 2,
+    target_lang: "Simplified Chinese",
+    lang_code: "chs",
+    output_pattern: "{{name}}.{{lang_code}}.srt",
+  });
   const swapped = standardizeTasks([simplified, traditional], "zh-CN");
-  assert.deepEqual(swapped.map((t) => t.lang_code), ["chi", "cht"]);
+  assert.deepEqual(
+    swapped.map((t) => t.lang_code),
+    ["chi", "cht"],
+  );
   assert.deepEqual(standardizeTasks(swapped, "zh-CN"), swapped);
-  assert.deepEqual(standardizeTasks(swapped, "zh-TW").map((t) => t.lang_code), ["chs", "chi"]);
+  assert.deepEqual(
+    standardizeTasks(swapped, "zh-TW").map((t) => t.lang_code),
+    ["chs", "chi"],
+  );
 });

@@ -34,7 +34,10 @@ const CUE = (text: string) => `1\n00:00:01,000 --> 00:00:02,000\n${text}\n`;
 
 for (const task of [...config.getTasks()]) config.deleteTask(task.id);
 const task = (target_lang: string, lang_code: string) =>
-  Number(config.createTask({ source_lang: "Automatic", target_lang, output_pattern: `{{name}}.${lang_code}.srt`, lang_code }).lastInsertRowid);
+  Number(
+    config.createTask({ source_lang: "Automatic", target_lang, output_pattern: `{{name}}.${lang_code}.srt`, lang_code })
+      .lastInsertRowid,
+  );
 const ENG = task("English", "eng");
 const CHT = task("Traditional Chinese", "cht");
 const JPN = task("Japanese", "jpn");
@@ -53,14 +56,17 @@ interface Rig {
  * `info`, a fake Whisper that writes an SRT and reports `detected`, and a
  * translation queue that only records its starts.
  */
-function rig(t: { after: (fn: () => void) => void }, opts: {
-  taskIds: number[];
-  info: Record<string, unknown>;
-  captions?: "prefer_youtube" | "whisper_only";
-  fake?: Record<string, string>;
-  detected?: string | null;
-  whisperFails?: string;
-}): Rig {
+function rig(
+  t: { after: (fn: () => void) => void },
+  opts: {
+    taskIds: number[];
+    info: Record<string, unknown>;
+    captions?: "prefer_youtube" | "whisper_only";
+    fake?: Record<string, string>;
+    detected?: string | null;
+    whisperFails?: string;
+  },
+): Rig {
   fs.rmSync(path.join(root, "media"), { recursive: true, force: true });
   fs.rmSync(ARGV, { force: true });
   db.default.prepare("DELETE FROM jobs").run();
@@ -71,11 +77,34 @@ function rig(t: { after: (fn: () => void) => void }, opts: {
     writePlaylists([]);
   });
   savePlaylist({
-    id: PL, title: "AI", folder: "AI", enabled: true, mode: "auto", backfill: { kind: "none" },
-    media: { type: "audio", format: "m4a" }, captions: opts.captions ?? "prefer_youtube", subtitleTaskIds: opts.taskIds, checkEveryMinutes: 60, include: { shorts: false, live: false },
+    id: PL,
+    title: "AI",
+    folder: "AI",
+    enabled: true,
+    mode: "auto",
+    backfill: { kind: "none" },
+    media: { type: "audio", format: "m4a" },
+    captions: opts.captions ?? "prefer_youtube",
+    subtitleTaskIds: opts.taskIds,
+    checkEveryMinutes: 60,
+    include: { shorts: false, live: false },
   });
   const store = new YoutubeStore(new Database(":memory:"));
-  store.applyListing(PL, [{ videoId: VID, title: "Short talk", channel: "AI", durationS: 45, publishedAt: "2026-09-30", position: 1, initial: { status: "queued" } }], { complete: true, now: T0 });
+  store.applyListing(
+    PL,
+    [
+      {
+        videoId: VID,
+        title: "Short talk",
+        channel: "AI",
+        durationS: 45,
+        publishedAt: "2026-09-30",
+        position: 1,
+        initial: { status: "queued" },
+      },
+    ],
+    { complete: true, now: T0 },
+  );
   const events: Rig["events"] = [];
   const clock = { now: new Date(T0) };
   const queueStarts: string[] = [];
@@ -103,15 +132,36 @@ function rig(t: { after: (fn: () => void) => void }, opts: {
 }
 
 const captionRuns = () =>
-  (fs.existsSync(ARGV) ? fs.readFileSync(ARGV, "utf8").trim().split("\n").map((l) => JSON.parse(l) as string[]) : [])
+  (fs.existsSync(ARGV)
+    ? fs
+        .readFileSync(ARGV, "utf8")
+        .trim()
+        .split("\n")
+        .map((l) => JSON.parse(l) as string[])
+    : []
+  )
     .filter((args) => args.includes("--skip-download"))
     .map((args) => args[args.indexOf("--sub-langs") + 1]);
-const filesOnDisk = () => Object.fromEntries(fs.readdirSync(DEST).filter((n) => n.endsWith(".srt")).sort().map((n) => [n, fs.readFileSync(path.join(DEST, n), "utf8")]));
-const jobs = () => db.getJobs().map((j) => [j.task_id, path.basename(j.srt_path), path.basename(j.output_path), j.status]);
+const filesOnDisk = () =>
+  Object.fromEntries(
+    fs
+      .readdirSync(DEST)
+      .filter((n) => n.endsWith(".srt"))
+      .sort()
+      .map((n) => [n, fs.readFileSync(path.join(DEST, n), "utf8")]),
+  );
+const jobs = () =>
+  db.getJobs().map((j) => [j.task_id, path.basename(j.srt_path), path.basename(j.output_path), j.status]);
 const plan = (store: Store) => JSON.parse(store.getVideo(VID)!.subtitle_plan ?? "null");
 const row = (store: Store) => {
   const v = store.getVideo(VID)!;
-  return { status: v.status, attempts: v.attempts, reason: v.reason, retry_after: v.retry_after, subtitle_path: v.subtitle_path };
+  return {
+    status: v.status,
+    attempts: v.attempts,
+    reason: v.reason,
+    retry_after: v.retry_after,
+    subtitle_path: v.subtitle_path,
+  };
 };
 
 test("creator captions give the transcript and one language, the same language is copied, and the rest becomes a translation job", async (t) => {
@@ -131,9 +181,22 @@ test("creator captions give the transcript and one language, the same language i
   });
   assert.deepEqual(jobs(), [[JPN, "Short talk [iSn77jvjojA].eng.srt", "Short talk [iSn77jvjojA].jpn.srt", "pending"]]);
   assert.deepEqual(queueStarts, ["start"]);
-  assert.deepEqual(row(store), { status: "translating", attempts: 0, reason: null, retry_after: null, subtitle_path: "YouTube/AI/Short talk [iSn77jvjojA].eng.srt" });
+  assert.deepEqual(row(store), {
+    status: "translating",
+    attempts: 0,
+    reason: null,
+    retry_after: null,
+    subtitle_path: "YouTube/AI/Short talk [iSn77jvjojA].eng.srt",
+  });
   assert.deepEqual(fs.existsSync(youtubeTmpRoot()) ? fs.readdirSync(youtubeTmpRoot()) : [], []);
-  assert.deepEqual(plan(store), { spoken: "en", routes: [{ taskId: ENG, kind: "same" }, { taskId: CHT, kind: "captions" }, { taskId: JPN, kind: "translate" }] });
+  assert.deepEqual(plan(store), {
+    spoken: "en",
+    routes: [
+      { taskId: ENG, kind: "same" },
+      { taskId: CHT, kind: "captions" },
+      { taskId: JPN, kind: "translate" },
+    ],
+  });
   assert.equal(store.getVideo(VID)!.transcript_source, "youtube_captions");
 
   await worker.finishTranslated();
@@ -142,12 +205,18 @@ test("creator captions give the transcript and one language, the same language i
   db.updateJob(db.getJobs()[0].id, { status: "done" });
   await worker.finishTranslated();
   assert.equal(store.getVideo(VID)!.status, "done");
-  assert.deepEqual(events.map(([name, data]) => [name, data.status ?? data.notePath]), [
-    ["youtube:video", "translating"],
-    ["youtube:note", "AI/Short talk (iSn77jvjojA).md"],
-    ["youtube:video", "done"],
-  ]);
-  assert.ok(fs.existsSync(path.join(NOTES, "AI", "Short talk (iSn77jvjojA).md")), "the note is written before the video is done");
+  assert.deepEqual(
+    events.map(([name, data]) => [name, data.status ?? data.notePath]),
+    [
+      ["youtube:video", "translating"],
+      ["youtube:note", "AI/Short talk (iSn77jvjojA).md"],
+      ["youtube:video", "done"],
+    ],
+  );
+  assert.ok(
+    fs.existsSync(path.join(NOTES, "AI", "Short talk (iSn77jvjojA).md")),
+    "the note is written before the video is done",
+  );
 });
 
 test("without captions Whisper transcribes, its detected language names the transcript, and a video needing no translation finishes at once", async (t) => {
@@ -161,12 +230,15 @@ test("without captions Whisper transcribes, its detected language names the tran
   });
   assert.deepEqual([jobs(), queueStarts], [[], []]);
   assert.equal(store.getVideo(VID)!.status, "done");
-  assert.deepEqual(events.map(([name, data]) => [name, data.status ?? data.notePath]), [
-    ["youtube:video", "transcribing"],
-    ["youtube:video", "translating"],
-    ["youtube:note", "AI/Short talk (iSn77jvjojA).md"],
-    ["youtube:video", "done"],
-  ]);
+  assert.deepEqual(
+    events.map(([name, data]) => [name, data.status ?? data.notePath]),
+    [
+      ["youtube:video", "transcribing"],
+      ["youtube:video", "translating"],
+      ["youtube:note", "AI/Short talk (iSn77jvjojA).md"],
+      ["youtube:video", "done"],
+    ],
+  );
 });
 
 test("Always transcribe ignores creator captions and tells Whisper the spoken language", async (t) => {
@@ -179,8 +251,14 @@ test("Always transcribe ignores creator captions and tells Whisper the spoken la
   await worker.drainSubtitles();
 
   assert.deepEqual(captionRuns(), []);
-  assert.deepEqual(whisper.map((r) => r.language), ["zh"]);
-  assert.deepEqual(Object.keys(filesOnDisk()), ["Short talk [iSn77jvjojA].chi.srt", "Short talk [iSn77jvjojA].cht.srt"]);
+  assert.deepEqual(
+    whisper.map((r) => r.language),
+    ["zh"],
+  );
+  assert.deepEqual(Object.keys(filesOnDisk()), [
+    "Short talk [iSn77jvjojA].chi.srt",
+    "Short talk [iSn77jvjojA].cht.srt",
+  ]);
 });
 
 test("a caption YouTube turns out not to have falls back to Whisper for the transcript and to a job for the language", async (t) => {
@@ -194,7 +272,10 @@ test("a caption YouTube turns out not to have falls back to Whisper for the tran
   await worker.drainSubtitles();
 
   assert.deepEqual(captionRuns(), ["^en$", "^zh-Hant$"]);
-  assert.deepEqual(whisper.map((r) => r.language), ["en"]);
+  assert.deepEqual(
+    whisper.map((r) => r.language),
+    ["en"],
+  );
   assert.deepEqual(jobs(), [[CHT, "Short talk [iSn77jvjojA].eng.srt", "Short talk [iSn77jvjojA].cht.srt", "pending"]]);
   assert.deepEqual(plan(store), { spoken: "en", routes: [{ taskId: CHT, kind: "translate" }] });
   assert.equal(store.getVideo(VID)!.transcript_source, "whisper:small");
@@ -204,7 +285,11 @@ test("a 429 on a caption waits out the cooldown instead of falling back, and not
   const { store, worker, whisper } = rig(t, {
     taskIds: [ENG],
     info: { language: "en", subtitles: { en: [{}] } },
-    fake: { FAKE_YTDLP_FAIL_WHEN_ARG: "--skip-download", FAKE_YTDLP_STDERR: "ERROR: HTTP Error 429: Too Many Requests\n", FAKE_YTDLP_EXIT: "1" },
+    fake: {
+      FAKE_YTDLP_FAIL_WHEN_ARG: "--skip-download",
+      FAKE_YTDLP_STDERR: "ERROR: HTTP Error 429: Too Many Requests\n",
+      FAKE_YTDLP_EXIT: "1",
+    },
   });
 
   await worker.drainSubtitles();
@@ -212,24 +297,49 @@ test("a 429 on a caption waits out the cooldown instead of falling back, and not
   assert.deepEqual(whisper, []);
   const cooldown = store.getCooldown()!;
   assert.equal(cooldown.cause, "rate_limited");
-  assert.deepEqual(row(store), { status: "transcribing", attempts: 0, reason: new CooldownError(cooldown).message, retry_after: cooldown.until, subtitle_path: null });
+  assert.deepEqual(row(store), {
+    status: "transcribing",
+    attempts: 0,
+    reason: new CooldownError(cooldown).message,
+    retry_after: cooldown.until,
+    subtitle_path: null,
+  });
 });
 
 test("a Whisper failure backs off, and the fourth one fails the video", async (t) => {
-  const { store, worker, clock } = rig(t, { taskIds: [], info: {}, whisperFails: "Transcription backend returned HTTP 500" });
+  const { store, worker, clock } = rig(t, {
+    taskIds: [],
+    info: {},
+    whisperFails: "Transcription backend returned HTTP 500",
+  });
 
   await worker.drainSubtitles();
-  assert.deepEqual(row(store), { status: "transcribing", attempts: 1, reason: "Transcription backend returned HTTP 500", retry_after: "2026-10-01T10:10:00.000Z", subtitle_path: null });
+  assert.deepEqual(row(store), {
+    status: "transcribing",
+    attempts: 1,
+    reason: "Transcription backend returned HTTP 500",
+    retry_after: "2026-10-01T10:10:00.000Z",
+    subtitle_path: null,
+  });
 
   for (const at of ["2026-10-01T10:10:00.000Z", "2026-10-01T11:10:00.000Z", "2026-10-01T17:10:00.000Z"]) {
     clock.now = new Date(at);
     await worker.drainSubtitles();
   }
-  assert.deepEqual(row(store), { status: "failed", attempts: 4, reason: "Transcription backend returned HTTP 500", retry_after: null, subtitle_path: null });
+  assert.deepEqual(row(store), {
+    status: "failed",
+    attempts: 4,
+    reason: "Transcription backend returned HTTP 500",
+    retry_after: null,
+    subtitle_path: null,
+  });
 });
 
 test("a transcript and a language already on disk from a run that crashed are not fetched again", async (t) => {
-  const { worker } = rig(t, { taskIds: [ENG, CHT, JPN], info: { language: "en", subtitles: { en: [{}], "zh-Hant": [{}] } } });
+  const { worker } = rig(t, {
+    taskIds: [ENG, CHT, JPN],
+    info: { language: "en", subtitles: { en: [{}], "zh-Hant": [{}] } },
+  });
   fs.writeFileSync(`${STEM}.en.srt`, CUE("kept"));
   fs.writeFileSync(`${STEM}.cht.srt`, CUE("kept too"));
 
@@ -245,7 +355,11 @@ test("a transcript and a language already on disk from a run that crashed are no
 });
 
 const liveWorker = (store: Store, clock: { now: Date }) =>
-  new YoutubeWorker(store, { now: () => clock.now, announce: () => undefined, queue: { start: () => undefined, startHeld: () => undefined, running: () => false } });
+  new YoutubeWorker(store, {
+    now: () => clock.now,
+    announce: () => undefined,
+    queue: { start: () => undefined, startHeld: () => undefined, running: () => false },
+  });
 
 test("the live Whisper path waits for a backend: the video keeps its attempts and looks again in two minutes", async (t) => {
   const { store, clock } = rig(t, { taskIds: [], info: {} });
@@ -253,7 +367,13 @@ test("the live Whisper path waits for a backend: the video keeps its attempts an
 
   await worker.drainSubtitles();
 
-  assert.deepEqual(row(store), { status: "transcribing", attempts: 0, reason: "Transcription waits for a backend", retry_after: "2026-10-01T10:02:00.000Z", subtitle_path: null });
+  assert.deepEqual(row(store), {
+    status: "transcribing",
+    attempts: 0,
+    reason: "Transcription waits for a backend",
+    retry_after: "2026-10-01T10:02:00.000Z",
+    subtitle_path: null,
+  });
   assert.equal(worker.whisperBacklog(), 0, "without a backend a transcribing video does not hold translation");
 });
 
@@ -264,7 +384,21 @@ test("a video waiting for Whisper does not hold back another video that has crea
   // VID sorts first, so the video that cannot go is taken first.
   fs.writeFileSync(`${otherStem}.m4a`, "media");
   fs.writeFileSync(`${otherStem}.info.json`, JSON.stringify({ id: other, language: "en", subtitles: { en: [{}] } }));
-  store.applyListing(PL, [{ videoId: other, title: "Captioned", channel: "AI", durationS: 60, publishedAt: "2026-09-30", position: 2, initial: { status: "queued" } }], { complete: false, now: T0 });
+  store.applyListing(
+    PL,
+    [
+      {
+        videoId: other,
+        title: "Captioned",
+        channel: "AI",
+        durationS: 60,
+        publishedAt: "2026-09-30",
+        position: 2,
+        initial: { status: "queued" },
+      },
+    ],
+    { complete: false, now: T0 },
+  );
   store.setStatus(other, "downloading", { now: T0 });
   store.setStatus(other, "transcribing", { now: T0, mediaPath: `YouTube/AI/Captioned [${other}].m4a` });
   const worker = liveWorker(store, clock);
@@ -279,12 +413,22 @@ test("a caption fetch that keeps failing while Whisper waits asks YouTube again 
   const { store, clock } = rig(t, {
     taskIds: [],
     info: { language: "en", subtitles: { en: [{}] } },
-    fake: { FAKE_YTDLP_FAIL_WHEN_ARG: "--skip-download", FAKE_YTDLP_STDERR: "ERROR: [youtube] iSn77jvjojA: Unable to download video subtitles\n", FAKE_YTDLP_EXIT: "1" },
+    fake: {
+      FAKE_YTDLP_FAIL_WHEN_ARG: "--skip-download",
+      FAKE_YTDLP_STDERR: "ERROR: [youtube] iSn77jvjojA: Unable to download video subtitles\n",
+      FAKE_YTDLP_EXIT: "1",
+    },
   });
   const worker = liveWorker(store, clock);
 
   await worker.drainSubtitles();
-  assert.deepEqual(row(store), { status: "transcribing", attempts: 0, reason: "Transcription waits for a backend", retry_after: "2026-10-01T11:00:00.000Z", subtitle_path: null });
+  assert.deepEqual(row(store), {
+    status: "transcribing",
+    attempts: 0,
+    reason: "Transcription waits for a backend",
+    retry_after: "2026-10-01T11:00:00.000Z",
+    subtitle_path: null,
+  });
   for (const at of ["2026-10-01T10:00:30.000Z", "2026-10-01T10:30:00.000Z"]) {
     clock.now = new Date(at);
     await worker.drainSubtitles();
@@ -302,7 +446,10 @@ test("an unmounted notes folder keeps the video translating with the reason, and
   t.after(() => config.setSettings({ youtube_notes_dir: NOTES }));
 
   await worker.drainSubtitles();
-  assert.deepEqual([store.getVideo(VID)!.status, store.getVideo(VID)!.reason], ["translating", `Notes folder ${missing} is not mounted`]);
+  assert.deepEqual(
+    [store.getVideo(VID)!.status, store.getVideo(VID)!.reason],
+    ["translating", `Notes folder ${missing} is not mounted`],
+  );
 
   fs.mkdirSync(missing);
   await worker.finishTranslated();

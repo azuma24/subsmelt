@@ -26,7 +26,12 @@ import {
   type TranscriptionOutputFormat,
   type TranscriptionTransportMode,
 } from "../transcription-client.js";
-import { NO_SPEECH_SUMMARY, noSpeechVideos, summarizeTranscriptionError, transcriptionHistory } from "../transcription-history.js";
+import {
+  NO_SPEECH_SUMMARY,
+  noSpeechVideos,
+  summarizeTranscriptionError,
+  transcriptionHistory,
+} from "../transcription-history.js";
 import { broadcast } from "../sse.js";
 import { mkdirShared, shareFile } from "../shared-files.js";
 import { standardLangCode } from "../language-codes.js";
@@ -141,7 +146,15 @@ async function transcribeRelayingProgress(
   reportProgress?: (pct: number) => void,
 ) {
   const token = settings.transcription_backend_token;
-  const onProgress = ({ pct, processedSeconds, totalSeconds }: { pct: number; processedSeconds: number; totalSeconds: number }) => {
+  const onProgress = ({
+    pct,
+    processedSeconds,
+    totalSeconds,
+  }: {
+    pct: number;
+    processedSeconds: number;
+    totalSeconds: number;
+  }) => {
     broadcast("transcription:progress", { path: videoPath, pct, processedSeconds, totalSeconds });
     reportProgress?.(pct);
   };
@@ -266,8 +279,8 @@ async function foundNoSpeech(
   } catch {
     return result.segments === 0;
   }
-  const blank = stat.size === 0
-    || (stat.size <= BLANK_CHECK_MAX_BYTES && !(await fs.promises.readFile(outputPath, "utf8")).trim());
+  const blank =
+    stat.size === 0 || (stat.size <= BLANK_CHECK_MAX_BYTES && !(await fs.promises.readFile(outputPath, "utf8")).trim());
   // A coarse filesystem clock can stamp a fresh file a little before the run began.
   const writtenByThisRun = stat.mtimeMs >= startedAtMs - 2_000;
   const noSpeech = result.segments === 0 || blank;
@@ -378,14 +391,28 @@ export async function runTranscriptionAttempt(opts: {
         checked = await applyPreflightPolicy(backendUrl, request, settings);
       }
       reachedBackend = true;
-      const transcribed = await transcribeRelayingProgress(backendUrl, checked, settings, opts.videoPath, controller, transport, opts.onProgress);
+      const transcribed = await transcribeRelayingProgress(
+        backendUrl,
+        checked,
+        settings,
+        opts.videoPath,
+        controller,
+        transport,
+        opts.onProgress,
+      );
       return { result: transcribed, checkedRequest: checked };
     });
     if (await foundNoSpeech(result, transport, outputPath, startedAtMs)) throw new NoSpeechError();
     // Named with the standard code of its language (Movie.eng.srt), the one Whisper
     // was given or the one it detected, unless a subtitle is already there under
     // it and the user did not confirm an overwrite.
-    const namedPath = languageNamedPath(opts.videoPath, request.language, result.language, request.output_format, opts.overwrite === true);
+    const namedPath = languageNamedPath(
+      opts.videoPath,
+      request.language,
+      result.language,
+      request.output_format,
+      opts.overwrite === true,
+    );
     let finalPath = outputPath;
     // Upload mode returns subtitle CONTENT; write it to the local output path
     // (path mode wrote it on the shared filesystem already).
@@ -418,11 +445,12 @@ export async function runTranscriptionAttempt(opts: {
       finalPath = namedPath;
     }
     const finishedAt = new Date().toISOString();
-    const durationSeconds = typeof result.duration_seconds === "number"
-      ? result.duration_seconds
-      : Number.isFinite(startedAtMs)
-        ? Math.max(0, (Date.now() - startedAtMs) / 1000)
-        : null;
+    const durationSeconds =
+      typeof result.duration_seconds === "number"
+        ? result.duration_seconds
+        : Number.isFinite(startedAtMs)
+          ? Math.max(0, (Date.now() - startedAtMs) / 1000)
+          : null;
     noSpeechVideos.clear(opts.videoPath);
     transcriptionHistory.finishAttempt(attempt.id, {
       status: "succeeded",
@@ -455,9 +483,10 @@ export async function runTranscriptionAttempt(opts: {
     // A cancel is not a failure: broadcast {cancelled:true} WITHOUT error so the
     // client renders "cancelled" rather than an error state. Real failures still
     // carry error:true.
-    broadcast("transcription:progress", cancelled
-      ? { path: opts.videoPath, cancelled: true }
-      : { path: opts.videoPath, error: true });
+    broadcast(
+      "transcription:progress",
+      cancelled ? { path: opts.videoPath, cancelled: true } : { path: opts.videoPath, error: true },
+    );
     const rethrown = new Error(cancelled ? "Transcription cancelled" : summary);
     // Preserve the backend HTTP status so the route can still map a 5xx upstream
     // failure to 502 even though we summarize the message here.

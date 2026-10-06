@@ -30,8 +30,7 @@ export function applyFontScale(scale: number): void {
   try {
     // `zoom` is non-standard but supported across Chromium/WebKit; it scales the
     // entire fixed-px UI. Typed loosely because CSSStyleDeclaration omits `zoom`.
-    (document.documentElement.style as unknown as { zoom: string }).zoom =
-      String(clampScale(scale) / 100);
+    (document.documentElement.style as unknown as { zoom: string }).zoom = String(clampScale(scale) / 100);
   } catch {
     /* ignore */
   }

@@ -8,7 +8,9 @@ function memoryStorage(): KeyValueStorage & { data: Map<string, string> } {
   return {
     data,
     getItem: (k) => data.get(k) ?? null,
-    setItem: (k, v) => { data.set(k, v); },
+    setItem: (k, v) => {
+      data.set(k, v);
+    },
   };
 }
 

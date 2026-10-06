@@ -128,7 +128,8 @@ function stopTreesOnExit(): void {
 export function runBinary(bin: string, args: string[], options: RunOptions = {}): Promise<RunResult> {
   const { timeoutMs = DEFAULT_TIMEOUT_MS, signal, onStdoutLine, maxCaptureBytes = MAX_CAPTURE_BYTES } = options;
   return new Promise((resolve, reject) => {
-    if (signal?.aborted) return resolve({ code: null, stdout: "", stderr: "", timedOut: false, stdoutTruncated: false });
+    if (signal?.aborted)
+      return resolve({ code: null, stdout: "", stderr: "", timedOut: false, stdoutTruncated: false });
     stopTreesOnExit();
     const child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"], detached: process.platform !== "win32" });
     running.add(child);
@@ -201,12 +202,18 @@ const ERROR_PATTERNS: [YtdlpErrorClass, RegExp][] = [
   ["members_only", /members[- ]only content|available to this channel's members/i],
   ["upcoming", /Premieres in|live event will begin|This live event will|is upcoming/i],
   ["format", /Requested format is not available/i],
-  ["unavailable", /Private video|Video unavailable|This video is unavailable|video has been removed|account associated with this video has been terminated/i],
+  [
+    "unavailable",
+    /Private video|Video unavailable|This video is unavailable|video has been removed|account associated with this video has been terminated/i,
+  ],
 ];
 
 /** The line worth showing a user: the last ERROR line, else the last line. */
 export function errorSummary(stderr: string, code: number | null): string {
-  const lines = stderr.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = stderr
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
   return lines.filter((l) => l.startsWith("ERROR:")).pop() ?? lines.pop() ?? `yt-dlp exited with ${code}`;
 }
 
@@ -224,28 +231,41 @@ function formatArgs(profile: MediaProfile, codecPreference: boolean): string[] {
     return ["-f", "ba/b", "-S", sort, "-x", "--audio-format", profile.format];
   }
   const acodec = profile.container === "mp4" ? "aac" : "opus";
-  const codecs = codecPreference ? [...(profile.codec === "any" ? [] : [`vcodec:${profile.codec}`]), `acodec:${acodec}`] : [];
+  const codecs = codecPreference
+    ? [...(profile.codec === "any" ? [] : [`vcodec:${profile.codec}`]), `acodec:${acodec}`]
+    : [];
   return [
-    "-f", "bv*+ba/b",
-    "-S", ["lang", `res:${profile.maxHeight}`, ...codecs].join(","),
-    "--merge-output-format", profile.container,
+    "-f",
+    "bv*+ba/b",
+    "-S",
+    ["lang", `res:${profile.maxHeight}`, ...codecs].join(","),
+    "--merge-output-format",
+    profile.container,
   ];
 }
 
 export function downloadArgs(req: DownloadRequest): string[] {
   return [
-    "--js-runtimes", "node",
+    "--js-runtimes",
+    "node",
     "--no-playlist",
     "--newline",
-    "--progress-template", `download:${PROGRESS_PREFIX}%(progress)j`,
-    "--paths", `temp:${req.tmpDir}`,
-    "--paths", `home:${req.homeDir}`,
-    "-o", "%(title).120B [%(id)s].%(ext)s",
+    "--progress-template",
+    `download:${PROGRESS_PREFIX}%(progress)j`,
+    "--paths",
+    `temp:${req.tmpDir}`,
+    "--paths",
+    `home:${req.homeDir}`,
+    "-o",
+    "%(title).120B [%(id)s].%(ext)s",
     "--windows-filenames",
     "--write-info-json",
-    "--sleep-requests", "1",
-    "--sleep-interval", "2",
-    "--max-sleep-interval", "8",
+    "--sleep-requests",
+    "1",
+    "--sleep-interval",
+    "2",
+    "--max-sleep-interval",
+    "8",
     ...(req.cookiesPath ? ["--cookies", req.cookiesPath] : []),
     ...formatArgs(req.profile, req.codecPreference ?? true),
     "--",
@@ -271,16 +291,23 @@ export interface CaptionRequest {
 export function captionArgs(req: CaptionRequest): string[] {
   const pattern = `^${req.lang.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`;
   return [
-    "--js-runtimes", "node",
+    "--js-runtimes",
+    "node",
     "--no-playlist",
     "--skip-download",
     "--write-subs",
-    "--sub-langs", pattern,
-    "--convert-subs", "srt",
-    "--paths", `temp:${req.tmpDir}`,
-    "--paths", `home:${req.homeDir}`,
-    "-o", "%(id)s.%(ext)s",
-    "--sleep-requests", "1",
+    "--sub-langs",
+    pattern,
+    "--convert-subs",
+    "srt",
+    "--paths",
+    `temp:${req.tmpDir}`,
+    "--paths",
+    `home:${req.homeDir}`,
+    "-o",
+    "%(id)s.%(ext)s",
+    "--sleep-requests",
+    "1",
     ...(req.cookiesPath ? ["--cookies", req.cookiesPath] : []),
     "--",
     videoUrl(req.videoId),

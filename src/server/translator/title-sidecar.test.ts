@@ -335,7 +335,7 @@ test("ensureTranslatedTitle: rethrows when translate() throws and writes no side
         langCode: "zh",
         translate,
       }),
-      /translate failed/
+      /translate failed/,
     );
 
     assert.equal(fs.existsSync(path.join(dir, TITLE_SIDECAR_FILENAME)), false);
@@ -380,7 +380,7 @@ test("ensureTranslatedTitle: throws when the sanitized title is empty and writes
         langCode: "zh",
         translate,
       }),
-      /empty title from translator/
+      /empty title from translator/,
     );
 
     assert.equal(fs.existsSync(path.join(dir, TITLE_SIDECAR_FILENAME)), false);

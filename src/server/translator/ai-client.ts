@@ -61,9 +61,11 @@ function reportUsage(result: unknown, onUsage?: (u: TokenUsage) => void): void {
  * `responseHeaders` or `response.headers`.
  */
 export function rateLimitRetryDelayMs(error: unknown, maxMs = 60_000, now = Date.now()): number | null {
-  const err = (error !== null && typeof error === "object" ? error : null) as
-    | { responseHeaders?: unknown; response?: { headers?: unknown } | null; headers?: unknown }
-    | null;
+  const err = (error !== null && typeof error === "object" ? error : null) as {
+    responseHeaders?: unknown;
+    response?: { headers?: unknown } | null;
+    headers?: unknown;
+  } | null;
   const status = errorStatus(error);
 
   const msg = errorMessage(error).toLowerCase();
@@ -163,7 +165,7 @@ export function getAi({ apiKey, apiHost, provider }: { apiKey: string; apiHost: 
 /** Module-level default — overridden per-job via TranslateFileOptions.requestTimeoutMs */
 export const REQUEST_TIMEOUT_MS = Math.max(
   5_000,
-  Number.parseInt(process.env.TRANSLATION_REQUEST_TIMEOUT_MS || "300000", 10) || 300_000
+  Number.parseInt(process.env.TRANSLATION_REQUEST_TIMEOUT_MS || "300000", 10) || 300_000,
 );
 
 /**
@@ -206,7 +208,7 @@ export function controlledAbortError(signal: AbortSignal): Error {
 export async function withAbortTimeout<T>(
   run: (signal: AbortSignal) => Promise<T>,
   timeoutMs = REQUEST_TIMEOUT_MS,
-  externalSignal?: AbortSignal
+  externalSignal?: AbortSignal,
 ): Promise<T> {
   // If external signal is already aborted, short-circuit immediately
   if (externalSignal?.aborted) throw new Error("STOP_REQUESTED");
@@ -246,7 +248,7 @@ export async function retryTranslate<T>(
   fn: (attempt: number) => Promise<T>,
   maxRetries = 5,
   delay = 1000,
-  onRetry?: (attempt: number, error: unknown, backoff: number, maxRetries?: number) => void
+  onRetry?: (attempt: number, error: unknown, backoff: number, maxRetries?: number) => void,
 ): Promise<T> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -274,8 +276,7 @@ export async function retryTranslate<T>(
       // (capped) instead of the default exponential schedule. A 429 with no
       // Retry-After falls back to exponential too.
       const rateLimitMs = rateLimitRetryDelayMs(error);
-      const exponential =
-        delay * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 250);
+      const exponential = delay * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 250);
       const backoff = rateLimitMs && rateLimitMs > 0 ? rateLimitMs : exponential;
       // maxRetries is threaded through so callers can log a truthful "n/N".
       onRetry?.(attempt, error, backoff, maxRetries);
@@ -301,7 +302,7 @@ export async function translateChunk(
     contextPromptPrefix?: string;
     /** Fired after each successful generateText with that call's token usage. */
     onUsage?: (u: TokenUsage) => void;
-  }
+  },
 ): Promise<string[]> {
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost, provider: opts.provider });
   const timeoutMs = opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
@@ -312,13 +313,10 @@ export async function translateChunk(
   if (!opts.disableToolCalls) {
     const tools = {
       submit_translation: tool({
-        description:
-          "Provide the final translated subtitles. Keep order and length identical to input.",
+        description: "Provide the final translated subtitles. Keep order and length identical to input.",
         inputSchema: z
           .object({
-            translated: z.array(
-              z.string().describe("Translated subtitle at the same index")
-            ),
+            translated: z.array(z.string().describe("Translated subtitle at the same index")),
           })
           .strict(),
         execute: async ({ translated }) => {
@@ -329,24 +327,25 @@ export async function translateChunk(
     } as const;
 
     try {
-      const result = normalizeResult(await withAbortTimeout((abortSignal) =>
-        generateText({
-          model: ai(opts.model),
-          temperature: opts.temperature,
-          tools,
-          toolChoice: "required",
-          system:
-            opts.systemPrompt +
-            "\nReturn ONLY using the tool, do not include any extra text.",
-          prompt:
-            `${prefix}Translate the following subtitles. Return the result via the tool as an array of strings with the exact same length and order as input.\n\n` +
-            JSON.stringify(subtitles),
-          maxRetries: 0,
-          abortSignal,
-        }),
-        timeoutMs,
-        opts.abortSignal
-      ));
+      const result = normalizeResult(
+        await withAbortTimeout(
+          (abortSignal) =>
+            generateText({
+              model: ai(opts.model),
+              temperature: opts.temperature,
+              tools,
+              toolChoice: "required",
+              system: opts.systemPrompt + "\nReturn ONLY using the tool, do not include any extra text.",
+              prompt:
+                `${prefix}Translate the following subtitles. Return the result via the tool as an array of strings with the exact same length and order as input.\n\n` +
+                JSON.stringify(subtitles),
+              maxRetries: 0,
+              abortSignal,
+            }),
+          timeoutMs,
+          opts.abortSignal,
+        ),
+      );
       reportUsage(result, opts.onUsage);
 
       if (toolResult && Array.isArray(toolResult)) return toolResult;
@@ -357,29 +356,35 @@ export async function translateChunk(
       const fromNumbered = extractNumberedTranslations(result.text || "", subtitles.length);
       if (fromNumbered) return fromNumbered;
     } catch (e) {
-      if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED" || e instanceof RequestTimeoutError) throw e;
+      if (
+        errorMessage(e) === "STOP_REQUESTED" ||
+        errorMessage(e) === "JOB_CANCELLED" ||
+        e instanceof RequestTimeoutError
+      )
+        throw e;
       // The plain-text prompt is the same size, so it would overflow too.
       if (e instanceof ContextOverflowError) throw e;
       // fall through to plain-text path
     }
   }
 
-  const textResult = normalizeResult(await withAbortTimeout((abortSignal) =>
-    generateText({
-      model: ai(opts.model),
-      temperature: opts.temperature,
-      system:
-        opts.systemPrompt +
-        "\nReturn only JSON array of strings. No markdown, no prose.",
-      prompt:
-        `${prefix}Translate the following subtitles. Return ONLY a JSON array of translated strings with the exact same length and order as input.\n\n` +
-        JSON.stringify(subtitles),
-      maxRetries: 0,
-      abortSignal,
-    }),
-    timeoutMs,
-    opts.abortSignal
-  ));
+  const textResult = normalizeResult(
+    await withAbortTimeout(
+      (abortSignal) =>
+        generateText({
+          model: ai(opts.model),
+          temperature: opts.temperature,
+          system: opts.systemPrompt + "\nReturn only JSON array of strings. No markdown, no prose.",
+          prompt:
+            `${prefix}Translate the following subtitles. Return ONLY a JSON array of translated strings with the exact same length and order as input.\n\n` +
+            JSON.stringify(subtitles),
+          maxRetries: 0,
+          abortSignal,
+        }),
+      timeoutMs,
+      opts.abortSignal,
+    ),
+  );
   reportUsage(textResult, opts.onUsage);
 
   const parsed = extractJsonFromText(textResult.text || "");
@@ -407,7 +412,7 @@ export async function translateSingle(
     requestTimeoutMs?: number;
     /** Fired after each successful generateText with that call's token usage. */
     onUsage?: (u: TokenUsage) => void;
-  }
+  },
 ): Promise<string> {
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost, provider: opts.provider });
   const timeoutMs = opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
@@ -427,24 +432,25 @@ export async function translateSingle(
     } as const;
 
     try {
-      const result = normalizeResult(await withAbortTimeout((abortSignal) =>
-        generateText({
-          model: ai(opts.model),
-          temperature: opts.temperature,
-          tools,
-          toolChoice: "required",
-          system:
-            opts.systemPrompt +
-            "\nReturn ONLY using the tool, do not include any extra text.",
-          prompt:
-            "Translate the following subtitle. Return the result via the tool as plain text only.\n\n" +
-            JSON.stringify(subtitle),
-          maxRetries: 0,
-          abortSignal,
-        }),
-        timeoutMs,
-        opts.abortSignal
-      ));
+      const result = normalizeResult(
+        await withAbortTimeout(
+          (abortSignal) =>
+            generateText({
+              model: ai(opts.model),
+              temperature: opts.temperature,
+              tools,
+              toolChoice: "required",
+              system: opts.systemPrompt + "\nReturn ONLY using the tool, do not include any extra text.",
+              prompt:
+                "Translate the following subtitle. Return the result via the tool as plain text only.\n\n" +
+                JSON.stringify(subtitle),
+              maxRetries: 0,
+              abortSignal,
+            }),
+          timeoutMs,
+          opts.abortSignal,
+        ),
+      );
       reportUsage(result, opts.onUsage);
 
       if (typeof toolResult === "string") return toolResult;
@@ -458,29 +464,34 @@ export async function translateSingle(
         if (single) return single;
       }
     } catch (e) {
-      if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED" || e instanceof RequestTimeoutError) throw e;
+      if (
+        errorMessage(e) === "STOP_REQUESTED" ||
+        errorMessage(e) === "JOB_CANCELLED" ||
+        e instanceof RequestTimeoutError
+      )
+        throw e;
       // The plain-text prompt is the same size, so it would overflow too.
       if (e instanceof ContextOverflowError) throw e;
       // fall through to plain-text path
     }
   }
 
-  const textResult = normalizeResult(await withAbortTimeout((abortSignal) =>
-    generateText({
-      model: ai(opts.model),
-      temperature: opts.temperature,
-      system:
-        opts.systemPrompt +
-        "\nReturn plain translated text only. No explanations, no markdown.",
-      prompt:
-        "Translate the following subtitle line and return only the translated text.\n\n" +
-        JSON.stringify(subtitle),
-      maxRetries: 0,
-      abortSignal,
-    }),
-    timeoutMs,
-    opts.abortSignal
-  ));
+  const textResult = normalizeResult(
+    await withAbortTimeout(
+      (abortSignal) =>
+        generateText({
+          model: ai(opts.model),
+          temperature: opts.temperature,
+          system: opts.systemPrompt + "\nReturn plain translated text only. No explanations, no markdown.",
+          prompt:
+            "Translate the following subtitle line and return only the translated text.\n\n" + JSON.stringify(subtitle),
+          maxRetries: 0,
+          abortSignal,
+        }),
+      timeoutMs,
+      opts.abortSignal,
+    ),
+  );
   reportUsage(textResult, opts.onUsage);
 
   const rawText = textResult.text || "";

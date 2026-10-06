@@ -65,7 +65,9 @@ export function ScanConfirmModal({ scanPlan, onClose, onConfirm, t }: ScanConfir
   const subtitles = countScanSubtitles(scanPlan.files);
   const untargetedSubtitles = countUntargetedSubtitles(scanPlan.files);
   const noTargetApplies = subtitles === 0 && untargetedSubtitles > 0;
-  const folders = scanPlan.topFolders.map((folder) => t("dashboard.scanConfirm.folderCount", { name: folder.name, count: folder.count }));
+  const folders = scanPlan.topFolders.map((folder) =>
+    t("dashboard.scanConfirm.folderCount", { name: folder.name, count: folder.count }),
+  );
   const titleId = useId();
   return (
     <ModalShell
@@ -75,7 +77,9 @@ export function ScanConfirmModal({ scanPlan, onClose, onConfirm, t }: ScanConfir
       panelClassName="mx-auto mt-16 w-full max-w-xl rounded-md border border-border bg-surface p-6"
     >
       <div className="flex items-start justify-between gap-3">
-        <h3 id={titleId} className="pt-2 text-base font-semibold text-text">{t("dashboard.scanConfirm.title")}</h3>
+        <h3 id={titleId} className="pt-2 text-base font-semibold text-text">
+          {t("dashboard.scanConfirm.title")}
+        </h3>
         <button
           type="button"
           onClick={onClose}
@@ -90,25 +94,35 @@ export function ScanConfirmModal({ scanPlan, onClose, onConfirm, t }: ScanConfir
         {noTargetApplies
           ? t("dashboard.scanConfirm.summaryNoTarget", { subtitles: untargetedSubtitles })
           : nothingNew
-          ? t("dashboard.scanConfirm.summaryNothingNew", { subtitles })
-          : t("dashboard.scanConfirm.summary", { subtitles, jobs: scanPlan.newJobs })}
+            ? t("dashboard.scanConfirm.summaryNothingNew", { subtitles })
+            : t("dashboard.scanConfirm.summary", { subtitles, jobs: scanPlan.newJobs })}
       </p>
       <div className="mt-3 rounded-sm border border-border bg-surface-raised p-3">
         <div className="text-xs text-faint">{t("dashboard.scanConfirm.topFolders")}</div>
-        <div className="mt-1 text-sm text-text">{folders.length > 0 ? folders.join(", ") : t("dashboard.scanConfirm.none")}</div>
+        <div className="mt-1 text-sm text-text">
+          {folders.length > 0 ? folders.join(", ") : t("dashboard.scanConfirm.none")}
+        </div>
       </div>
       {/* With nothing to queue, closing is the primary action; a scan still
           refreshes the scan-results tab, so it stays reachable as secondary. */}
       <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
         {nothingNew ? (
           <>
-            <button onClick={onConfirm} className={SECONDARY_BUTTON}>{t("dashboard.scanConfirm.scanAnyway")}</button>
-            <button onClick={onClose} className={PRIMARY_BUTTON}>{t("common.close")}</button>
+            <button onClick={onConfirm} className={SECONDARY_BUTTON}>
+              {t("dashboard.scanConfirm.scanAnyway")}
+            </button>
+            <button onClick={onClose} className={PRIMARY_BUTTON}>
+              {t("common.close")}
+            </button>
           </>
         ) : (
           <>
-            <button onClick={onClose} className={SECONDARY_BUTTON}>{t("common.cancel")}</button>
-            <button onClick={onConfirm} className={PRIMARY_BUTTON}>{t("dashboard.scanConfirm.proceed")}</button>
+            <button onClick={onClose} className={SECONDARY_BUTTON}>
+              {t("common.cancel")}
+            </button>
+            <button onClick={onConfirm} className={PRIMARY_BUTTON}>
+              {t("dashboard.scanConfirm.proceed")}
+            </button>
           </>
         )}
       </div>

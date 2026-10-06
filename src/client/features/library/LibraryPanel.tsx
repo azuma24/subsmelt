@@ -12,7 +12,8 @@ import { ErrorBlock, SubtitleLanguages, TranscribeBlock, type FailedTask } from 
 
 /** At this width the panel sits beside the list; below it, it overlays as a drawer or sheet. */
 const INLINE_PANEL_QUERY = "(min-width: 1024px)";
-const FOCUSABLE = "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])";
+const FOCUSABLE =
+  "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])";
 const TEXT_ENTRY = "input, textarea, select, [contenteditable]";
 
 function useInlinePanel(): boolean {
@@ -36,7 +37,15 @@ interface LibraryPanelProps {
   onQueued: (srtPath: string, task: TaskStatus) => void;
 }
 
-export function LibraryPanel({ item, jobsById, transcriptionEnabled, transcription, onClose, onPreview, onQueued }: LibraryPanelProps) {
+export function LibraryPanel({
+  item,
+  jobsById,
+  transcriptionEnabled,
+  transcription,
+  onClose,
+  onPreview,
+  onQueued,
+}: LibraryPanelProps) {
   const { t } = useTranslation();
   const { addToast } = useToast();
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -65,10 +74,13 @@ export function LibraryPanel({ item, jobsById, transcriptionEnabled, transcripti
     return job?.status === "error" ? [{ task, job }] : [];
   });
   const retry = () => {
-    retryMutation.mutate(failed.map(({ job }) => job.id), {
-      onSuccess: (result) => addToast(t("dashboard.toast.retrySelectedStarted", { count: result.updated }), "info"),
-      onError: () => addToast(t("dashboard.toast.actionFailed"), "error"),
-    });
+    retryMutation.mutate(
+      failed.map(({ job }) => job.id),
+      {
+        onSuccess: (result) => addToast(t("dashboard.toast.retrySelectedStarted", { count: result.updated }), "info"),
+        onError: () => addToast(t("dashboard.toast.actionFailed"), "error"),
+      },
+    );
   };
   const trapTab = (event: ReactKeyboardEvent<HTMLElement>) => {
     if (inline || event.key !== "Tab") return;
@@ -98,7 +110,12 @@ export function LibraryPanel({ item, jobsById, transcriptionEnabled, transcripti
       >
         <header className="flex items-start gap-3 border-b border-border p-4">
           <Icon name={item.kind === "video" ? "video" : "subtitle"} size={20} className="text-muted" />
-          <h2 id="library-panel-title" className="min-w-0 flex-1 break-words text-base font-semibold text-text [overflow-wrap:anywhere]">{item.name}</h2>
+          <h2
+            id="library-panel-title"
+            className="min-w-0 flex-1 break-words text-base font-semibold text-text [overflow-wrap:anywhere]"
+          >
+            {item.name}
+          </h2>
           <button
             ref={closeRef}
             type="button"
@@ -112,9 +129,13 @@ export function LibraryPanel({ item, jobsById, transcriptionEnabled, transcripti
         <div className="flex-1 space-y-6 overflow-y-auto p-4">
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
             <dt className="text-muted">{t("library.panel.folder")}</dt>
-            <dd className="font-mono text-xs leading-5 text-text [overflow-wrap:anywhere]">{item.folder || t("library.folder.root")}</dd>
+            <dd className="font-mono text-xs leading-5 text-text [overflow-wrap:anywhere]">
+              {item.folder || t("library.folder.root")}
+            </dd>
             <dt className="text-muted">{t("library.panel.kind")}</dt>
-            <dd className="text-text">{item.kind === "video" ? t("library.panel.kindVideo") : t("library.panel.kindSubtitle")}</dd>
+            <dd className="text-text">
+              {item.kind === "video" ? t("library.panel.kindVideo") : t("library.panel.kindSubtitle")}
+            </dd>
           </dl>
           {failed.length > 0 && <ErrorBlock failed={failed} busy={retryMutation.isPending} onRetry={retry} />}
           {needsTranscription && videoPath && (
@@ -137,7 +158,12 @@ export function LibraryPanel({ item, jobsById, transcriptionEnabled, transcripti
           ))}
         </div>
         <footer className="border-t border-border px-4 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
-          <Link to="/activity" className="inline-flex min-h-touch items-center text-sm font-medium text-accent underline">{t("library.panel.openActivity")}</Link>
+          <Link
+            to="/activity"
+            className="inline-flex min-h-touch items-center text-sm font-medium text-accent underline"
+          >
+            {t("library.panel.openActivity")}
+          </Link>
         </footer>
       </aside>
     </>

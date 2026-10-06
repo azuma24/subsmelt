@@ -6,7 +6,8 @@ export type SortBy = "name" | "date";
 export type SortDir = "asc" | "desc";
 
 /** Form-control styling for selects; re-exported by whisper-shared. */
-export const selectCls = "rounded-sm border border-border bg-surface px-3 py-2 text-xs text-text min-h-touch md:min-h-0";
+export const selectCls =
+  "rounded-sm border border-border bg-surface px-3 py-2 text-xs text-text min-h-touch md:min-h-0";
 
 export interface SortControlsProps {
   sortBy: SortBy;

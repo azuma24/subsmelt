@@ -2,13 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { subtreeAt, deepestExistingPath } from "./drill-down";
 
-interface N { path: string; children: N[] }
+interface N {
+  path: string;
+  children: N[];
+}
 const node = (path: string, children: N[] = []): N => ({ path, children });
 
-const roots = [
-  node("a", [node("a/b", [node("a/b/c")])]),
-  node("x"),
-];
+const roots = [node("a", [node("a/b", [node("a/b/c")])]), node("x")];
 
 test("subtreeAt root path returns null (caller renders roots)", () => {
   assert.equal(subtreeAt(roots, ""), null);

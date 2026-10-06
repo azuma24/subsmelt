@@ -21,7 +21,10 @@ export function usePlaylistActions() {
     setChecking((prev) => new Set(prev).add(playlist.id));
     try {
       const result = await api.syncYoutubePlaylist(playlist.id);
-      addToast(t("youtube.toast.checked", { title: result.title, added: result.added, removed: result.removed }), "success");
+      addToast(
+        t("youtube.toast.checked", { title: result.title, added: result.added, removed: result.removed }),
+        "success",
+      );
     } catch (error) {
       addToast(t("youtube.toast.checkFailed", { error: getErrorMessage(error) }), "error");
     } finally {

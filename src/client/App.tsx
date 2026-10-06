@@ -21,9 +21,7 @@ import { DashboardPage } from "./features/dashboard";
 import { LibraryPage } from "./features/library/LibraryPage";
 import { LEGACY_REDIRECTS, LegacyRedirect } from "./app/redirects";
 
-const LogsPage = lazy(() =>
-  import("./features/logs/LogsPage").then((m) => ({ default: m.LogsPage })),
-);
+const LogsPage = lazy(() => import("./features/logs/LogsPage").then((m) => ({ default: m.LogsPage })));
 const JobDetailPage = lazy(() =>
   import("./features/jobs/JobDetailPage").then((m) => ({
     default: m.JobDetailPage,
@@ -101,32 +99,22 @@ function AppInner() {
           persistent: true,
           key: "job:error",
           action: { label: t("dashboard.toast.openActivity"), onClick: () => navigate("/activity") },
-          onDismiss: () => { failedJobsRef.current = 0; },
+          onDismiss: () => {
+            failedJobsRef.current = 0;
+          },
         },
       );
     }
-    if (type === "queue:finished")
-      addToast(t("dashboard.toast.queueFinished"), "success");
-    if (type === "queue:stopped")
-      addToast(t("dashboard.toast.queueStopped"), "info");
+    if (type === "queue:finished") addToast(t("dashboard.toast.queueFinished"), "success");
+    if (type === "queue:stopped") addToast(t("dashboard.toast.queueStopped"), "info");
   });
 
-  const queueRunning = Boolean(
-    queueQuery.data?.running ?? jobsQuery.data?.queueRunning ?? false,
-  );
-  const errorCount =
-    jobsQuery.data?.jobs?.filter((j: Job) => j.status === "error").length ||
-    0;
-  const watcherRunning =
-    Boolean(queueQuery.data?.watcherRunning) ||
-    Boolean(settingsQuery.data?._watcher_running);
+  const queueRunning = Boolean(queueQuery.data?.running ?? jobsQuery.data?.queueRunning ?? false);
+  const errorCount = jobsQuery.data?.jobs?.filter((j: Job) => j.status === "error").length || 0;
+  const watcherRunning = Boolean(queueQuery.data?.watcherRunning) || Boolean(settingsQuery.data?._watcher_running);
 
   useEffect(() => {
-    const current = LANGUAGES.find(
-      (lang) =>
-        i18n.language === lang.code ||
-        i18n.language.startsWith(`${lang.code}-`),
-    );
+    const current = LANGUAGES.find((lang) => i18n.language === lang.code || i18n.language.startsWith(`${lang.code}-`));
     document.documentElement.dir = current?.dir || "ltr";
     document.documentElement.lang = current?.code || "en";
   }, [i18n.language]);
@@ -142,58 +130,37 @@ function AppInner() {
 
   return (
     <IsMobileContext.Provider value={isMobile}>
-    <div className="flex h-dvh min-h-dvh bg-canvas text-text">
-      {!isMobile && (
-        <DesktopSidebar
-          queueRunning={queueRunning}
-          errorCount={errorCount}
-          watcherRunning={watcherRunning}
-          currentPath={location.pathname}
-        />
-      )}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <main className={`flex-1 overflow-auto ${isMobile ? "pb-[58px]" : ""}`}>
-          <Suspense
-            fallback={
-              <div className="p-8 text-faint">
-                {t("common.loading")}
-              </div>
-            }
-          >
-            <Routes>
-              <Route path="/" element={<LibraryPage />} />
-              <Route path="/activity" element={<DashboardPage />} />
-              <Route
-                path="/whisper"
-                element={<WhisperPage />}
-              />
-              <Route
-                path="/youtube"
-                element={<YoutubePage />}
-              />
-              <Route
-                path="/convert"
-                element={<ConvertPage />}
-              />
-              <Route
-                path="/settings"
-                element={<SettingsPage />}
-              />
-              <Route
-                path="/settings/languages"
-                element={<TranslationLanguagesPage />}
-              />
-              <Route path="/settings/logs" element={<LogsPage />} />
-              {Object.keys(LEGACY_REDIRECTS).map((from) => (
-                <Route key={from} path={from} element={<LegacyRedirect />} />
-              ))}
-              <Route path="/jobs/:id" element={<JobDetailPage />} />
-            </Routes>
-          </Suspense>
-        </main>
-        {isMobile && <MobileBottomNav currentPath={location.pathname} />}
+      <div className="flex h-dvh min-h-dvh bg-canvas text-text">
+        {!isMobile && (
+          <DesktopSidebar
+            queueRunning={queueRunning}
+            errorCount={errorCount}
+            watcherRunning={watcherRunning}
+            currentPath={location.pathname}
+          />
+        )}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <main className={`flex-1 overflow-auto ${isMobile ? "pb-[58px]" : ""}`}>
+            <Suspense fallback={<div className="p-8 text-faint">{t("common.loading")}</div>}>
+              <Routes>
+                <Route path="/" element={<LibraryPage />} />
+                <Route path="/activity" element={<DashboardPage />} />
+                <Route path="/whisper" element={<WhisperPage />} />
+                <Route path="/youtube" element={<YoutubePage />} />
+                <Route path="/convert" element={<ConvertPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/settings/languages" element={<TranslationLanguagesPage />} />
+                <Route path="/settings/logs" element={<LogsPage />} />
+                {Object.keys(LEGACY_REDIRECTS).map((from) => (
+                  <Route key={from} path={from} element={<LegacyRedirect />} />
+                ))}
+                <Route path="/jobs/:id" element={<JobDetailPage />} />
+              </Routes>
+            </Suspense>
+          </main>
+          {isMobile && <MobileBottomNav currentPath={location.pathname} />}
+        </div>
       </div>
-    </div>
     </IsMobileContext.Provider>
   );
 }

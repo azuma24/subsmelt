@@ -57,7 +57,11 @@ function settingsFor(url: string, language = "auto"): Record<string, string> {
 test("an auto-detected transcript is named with the language it was detected as", async () => {
   const video = path.join(mediaDir, "show", "Talk.mkv");
   fs.writeFileSync(video, "video");
-  const run = await runTranscriptionAttempt({ videoPath: video, postAction: "transcribe_only", settings: settingsFor(await backend("en")) });
+  const run = await runTranscriptionAttempt({
+    videoPath: video,
+    postAction: "transcribe_only",
+    settings: settingsFor(await backend("en")),
+  });
 
   assert.equal(run.outputPath, path.join(mediaDir, "show", "Talk.eng.srt"));
   assert.ok(fs.existsSync(run.outputPath));
@@ -68,7 +72,11 @@ test("an auto-detected transcript is named with the language it was detected as"
 test("a detected language is written with its three-letter code, never a two-letter or locale form", async () => {
   const video = path.join(mediaDir, "show", "Seoul.mkv");
   fs.writeFileSync(video, "video");
-  const run = await runTranscriptionAttempt({ videoPath: video, postAction: "transcribe_only", settings: settingsFor(await backend("ko-KR")) });
+  const run = await runTranscriptionAttempt({
+    videoPath: video,
+    postAction: "transcribe_only",
+    settings: settingsFor(await backend("ko-KR")),
+  });
   assert.equal(path.basename(run.outputPath), "Seoul.kor.srt");
 });
 
@@ -76,7 +84,11 @@ test("an existing subtitle in the detected language is never overwritten: the tr
   const video = path.join(mediaDir, "show", "Kept.mkv");
   fs.writeFileSync(video, "video");
   fs.writeFileSync(path.join(mediaDir, "show", "Kept.eng.srt"), "the user's own subtitle");
-  const run = await runTranscriptionAttempt({ videoPath: video, postAction: "transcribe_only", settings: settingsFor(await backend("en")) });
+  const run = await runTranscriptionAttempt({
+    videoPath: video,
+    postAction: "transcribe_only",
+    settings: settingsFor(await backend("en")),
+  });
 
   assert.equal(run.outputPath, path.join(mediaDir, "show", "Kept.srt"));
   assert.equal(fs.readFileSync(path.join(mediaDir, "show", "Kept.eng.srt"), "utf8"), "the user's own subtitle");
@@ -85,7 +97,11 @@ test("an existing subtitle in the detected language is never overwritten: the tr
 test("a transcript with a set language is renamed to its three-letter code", async () => {
   const video = path.join(mediaDir, "show", "Fixed.mkv");
   fs.writeFileSync(video, "video");
-  const run = await runTranscriptionAttempt({ videoPath: video, postAction: "transcribe_only", settings: settingsFor(await backend("en"), "en") });
+  const run = await runTranscriptionAttempt({
+    videoPath: video,
+    postAction: "transcribe_only",
+    settings: settingsFor(await backend("en"), "en"),
+  });
   assert.equal(path.basename(run.outputPath), "Fixed.eng.srt");
   assert.ok(!fs.existsSync(path.join(mediaDir, "show", "Fixed.en.srt")));
 });
@@ -94,7 +110,12 @@ test("a confirmed overwrite replaces the transcript already there under the stan
   const video = path.join(mediaDir, "show", "Redo.mkv");
   fs.writeFileSync(video, "video");
   fs.writeFileSync(path.join(mediaDir, "show", "Redo.eng.srt"), "the old transcript");
-  const run = await runTranscriptionAttempt({ videoPath: video, postAction: "transcribe_only", overwrite: true, settings: settingsFor(await backend("en")) });
+  const run = await runTranscriptionAttempt({
+    videoPath: video,
+    postAction: "transcribe_only",
+    overwrite: true,
+    settings: settingsFor(await backend("en")),
+  });
 
   assert.equal(run.outputPath, path.join(mediaDir, "show", "Redo.eng.srt"));
   assert.match(fs.readFileSync(run.outputPath, "utf8"), /hello/);
@@ -104,8 +125,16 @@ test("a confirmed overwrite replaces the transcript already there under the stan
 /** An upload backend: it returns the transcript as content and reports `detected`. */
 async function uploadBackend(detected: string) {
   const server = http.createServer(async (req, res) => {
-    for await (const _ of req) { /* drain the upload */ }
-    const result = { type: "result", ok: true, content: "1\n00:00:01,000 --> 00:00:02,000\nhello\n", language: detected, segments: 1 };
+    for await (const _ of req) {
+      /* drain the upload */
+    }
+    const result = {
+      type: "result",
+      ok: true,
+      content: "1\n00:00:01,000 --> 00:00:02,000\nhello\n",
+      language: detected,
+      segments: 1,
+    };
     res.writeHead(200, { "Content-Type": "application/x-ndjson" }).end(`${JSON.stringify(result)}\n`);
   });
   server.listen(0, "127.0.0.1");
@@ -119,7 +148,12 @@ test("an upload run with a confirmed overwrite replaces the transcript under the
   fs.writeFileSync(video, "video");
   fs.writeFileSync(path.join(mediaDir, "show", "UpRedo.eng.srt"), "the old transcript");
   const settings = { ...settingsFor(await uploadBackend("en")), transcription_transport: "upload" };
-  const run = await runTranscriptionAttempt({ videoPath: video, postAction: "transcribe_only", overwrite: true, settings });
+  const run = await runTranscriptionAttempt({
+    videoPath: video,
+    postAction: "transcribe_only",
+    overwrite: true,
+    settings,
+  });
 
   assert.equal(run.outputPath, path.join(mediaDir, "show", "UpRedo.eng.srt"));
   assert.match(fs.readFileSync(run.outputPath, "utf8"), /hello/);
@@ -154,7 +188,14 @@ test("a run cancelled before it reached the backend never holds translation back
   const caller = new AbortController();
   caller.abort();
   try {
-    await assert.rejects(runTranscriptionAttempt({ videoPath: video, postAction: "transcribe_only", settings: { ...settingsFor(url), gpu_shared: "1" }, signal: caller.signal }));
+    await assert.rejects(
+      runTranscriptionAttempt({
+        videoPath: video,
+        postAction: "transcribe_only",
+        settings: { ...settingsFor(url), gpu_shared: "1" },
+        signal: caller.signal,
+      }),
+    );
     assert.equal(requests, 0);
     assert.equal(currentTranslationGate().open, true);
   } finally {

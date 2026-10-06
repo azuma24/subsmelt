@@ -6,7 +6,18 @@ import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
 import { useToast } from "../../ui/Toast";
 import { useConfirm } from "../../ui/ConfirmModal";
-import { LIBRARY_QUERY_KEY, useLibraryQuery, useMutationWithInvalidation, useModelDownload, useSettingsQuery, useSSE, useTranscriptionHealthQuery, useTranscriptionHistoryQuery, useWhisperModelsQuery, useIsMobile } from "../../hooks";
+import {
+  LIBRARY_QUERY_KEY,
+  useLibraryQuery,
+  useMutationWithInvalidation,
+  useModelDownload,
+  useSettingsQuery,
+  useSSE,
+  useTranscriptionHealthQuery,
+  useTranscriptionHistoryQuery,
+  useWhisperModelsQuery,
+  useIsMobile,
+} from "../../hooks";
 import type { ScannedFile, TranscriptionHistoryEntry, WhisperModel } from "../../types";
 import { buildFolderTree } from "./folderTree";
 import { filterLibraryFiles } from "./libraryFilter";
@@ -152,11 +163,11 @@ export function WhisperPage() {
   // discard them), which means `selected` can hold paths that are no longer on
   // screen. Every action works from the intersection instead — transcribing a
   // file the user cannot see is worse than forgetting it was ticked.
-  const visiblePaths = useMemo(
-    () => new Set(visibleFiles.map((f) => f.videoPath as string)),
-    [visibleFiles],
+  const visiblePaths = useMemo(() => new Set(visibleFiles.map((f) => f.videoPath as string)), [visibleFiles]);
+  const tree = useMemo(
+    () => buildFolderTree(visibleFiles, sortBy, sortDir, mediaDir),
+    [visibleFiles, sortBy, sortDir, mediaDir],
   );
-  const tree = useMemo(() => buildFolderTree(visibleFiles, sortBy, sortDir, mediaDir), [visibleFiles, sortBy, sortDir, mediaDir]);
 
   // Per-run options (default from Settings + advertised capabilities).
   const [model, setModel] = useState("");
@@ -172,8 +183,11 @@ export function WhisperPage() {
   // Default the toggle from the saved advanced_stt setting so a user who enabled
   // diarization in Settings doesn't get it silently dropped on every run.
   const sttDiarizationDefault = useMemo(() => {
-    try { return Boolean(JSON.parse(str(settings.transcription_advanced_stt, "{}"))?.speaker_diarization); }
-    catch { return false; }
+    try {
+      return Boolean(JSON.parse(str(settings.transcription_advanced_stt, "{}"))?.speaker_diarization);
+    } catch {
+      return false;
+    }
   }, [settings.transcription_advanced_stt]);
   const effDiarize = diarize ?? sttDiarizationDefault;
   // URL/YouTube input offered only when the backend has yt-dlp installed.
@@ -196,7 +210,12 @@ export function WhisperPage() {
   // for instant UI and persists to settings so it survives a reload (these all
   // fall back to the saved setting via eff()).
   const persistSetting = useMutationWithInvalidation((patch: Record<string, string>) => api.saveSettings(patch));
-  const saveSetting = useCallback((key: string, value: string) => { persistSetting.mutate({ [key]: value }); }, [persistSetting]);
+  const saveSetting = useCallback(
+    (key: string, value: string) => {
+      persistSetting.mutate({ [key]: value });
+    },
+    [persistSetting],
+  );
 
   useEffect(() => {
     if (!settingsQuery.isSuccess) return;
@@ -204,10 +223,13 @@ export function WhisperPage() {
     setSortDir(validSortDir(settings.transcription_sort_dir));
   }, [settings.transcription_sort_by, settings.transcription_sort_dir, settingsQuery.isSuccess]);
 
-  const handleSortByChange = useCallback((value: SortBy) => {
-    setSortBy(value);
-    saveSetting("transcription_sort_by", value);
-  }, [saveSetting]);
+  const handleSortByChange = useCallback(
+    (value: SortBy) => {
+      setSortBy(value);
+      saveSetting("transcription_sort_by", value);
+    },
+    [saveSetting],
+  );
 
   const toggleSortDir = useCallback(() => {
     setSortDir((current) => {
@@ -220,35 +242,56 @@ export function WhisperPage() {
   // Model download/confirm gate — see useModelGate for the isModelDownloaded /
   // confirmAndDownload / ensureModelDownloaded / handleModelChange logic.
   const { isModelDownloaded, ensureModelDownloaded, handleModelChange } = useModelGate({
-    whisperModels, modelsQuery, modelDownloads, downloadModel, model, setModel, saveSetting, confirm, addToast, t,
+    whisperModels,
+    modelsQuery,
+    modelDownloads,
+    downloadModel,
+    model,
+    setModel,
+    saveSetting,
+    confirm,
+    addToast,
+    t,
   });
 
   // Run-options change handlers: write-through to local state + persisted setting.
-  const handleLanguageChange = useCallback((value: string) => {
-    setLanguage(value);
-    saveSetting("transcription_language", value);
-  }, [saveSetting]);
+  const handleLanguageChange = useCallback(
+    (value: string) => {
+      setLanguage(value);
+      saveSetting("transcription_language", value);
+    },
+    [saveSetting],
+  );
 
-  const handleFormatChange = useCallback((value: string) => {
-    setFormat(value);
-    saveSetting("transcription_output_format", value);
-  }, [saveSetting]);
+  const handleFormatChange = useCallback(
+    (value: string) => {
+      setFormat(value);
+      saveSetting("transcription_output_format", value);
+    },
+    [saveSetting],
+  );
 
-  const handleDeviceChange = useCallback((newDevice: string) => {
-    setDevice(newDevice);
-    // Clamp the current compute type into the valid set for the new device
-    // so the persisted setting never becomes invalid (e.g. cpu+float16).
-    const validComputes = COMPUTE_BY_DEVICE[newDevice] ?? ["int8"];
-    const currentCompute = computeType || str(settings.transcription_compute_type, "int8");
-    const clampedCompute = validComputes.includes(currentCompute) ? currentCompute : validComputes[0];
-    if (clampedCompute !== computeType) setComputeType(clampedCompute);
-    persistSetting.mutate({ transcription_device: newDevice, transcription_compute_type: clampedCompute });
-  }, [computeType, settings.transcription_compute_type, persistSetting]);
+  const handleDeviceChange = useCallback(
+    (newDevice: string) => {
+      setDevice(newDevice);
+      // Clamp the current compute type into the valid set for the new device
+      // so the persisted setting never becomes invalid (e.g. cpu+float16).
+      const validComputes = COMPUTE_BY_DEVICE[newDevice] ?? ["int8"];
+      const currentCompute = computeType || str(settings.transcription_compute_type, "int8");
+      const clampedCompute = validComputes.includes(currentCompute) ? currentCompute : validComputes[0];
+      if (clampedCompute !== computeType) setComputeType(clampedCompute);
+      persistSetting.mutate({ transcription_device: newDevice, transcription_compute_type: clampedCompute });
+    },
+    [computeType, settings.transcription_compute_type, persistSetting],
+  );
 
-  const handleComputeChange = useCallback((value: string) => {
-    setComputeType(value);
-    saveSetting("transcription_compute_type", value);
-  }, [saveSetting]);
+  const handleComputeChange = useCallback(
+    (value: string) => {
+      setComputeType(value);
+      saveSetting("transcription_compute_type", value);
+    },
+    [saveSetting],
+  );
 
   const handleDiarizeChange = useCallback((checked: boolean) => {
     setDiarize(checked);
@@ -267,7 +310,10 @@ export function WhisperPage() {
   // Expand/collapse is persisted per folder in localStorage (default collapsed)
   // and pruned against the folders present after each scan. Prune against the
   // unfiltered tree so narrowing the filter can't silently discard state.
-  const fullTree = useMemo(() => buildFolderTree(videoFiles, sortBy, sortDir, mediaDir), [videoFiles, sortBy, sortDir, mediaDir]);
+  const fullTree = useMemo(
+    () => buildFolderTree(videoFiles, sortBy, sortDir, mediaDir),
+    [videoFiles, sortBy, sortDir, mediaDir],
+  );
   const folderPaths = useMemo(() => collectFolderPaths(fullTree.children), [fullTree]);
   const expansion = usePersistedExpansion("whisper", folderPaths);
   // Text filter switches to a flat list, so the tree (and drill-down) only
@@ -286,14 +332,17 @@ export function WhisperPage() {
 
   // Live per-file progress from the server's SSE broadcast. Stable callback so
   // useSSE's ref-sync effect doesn't churn every render.
-  useSSE(useCallback((type, data) => {
-    if (type === "transcription:progress") applyTranscriptionProgress(data);
-  }, []));
+  useSSE(
+    useCallback((type, data) => {
+      if (type === "transcription:progress") applyTranscriptionProgress(data);
+    }, []),
+  );
 
   const toggle = (vp: string) =>
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(vp)) next.delete(vp); else next.add(vp);
+      if (next.has(vp)) next.delete(vp);
+      else next.add(vp);
       return next;
     });
   const toggleFolder = (paths: string[]) => {
@@ -362,118 +411,124 @@ export function WhisperPage() {
         <div className={`mx-auto w-full max-w-[1100px] space-y-4 ${isMobile ? "p-3 pb-24" : "p-6"}`}>
           <p className="text-sm text-muted">{t("whisper.subtitle")}</p>
 
-      {!enabled && (
-        <div className="rounded-md border border-warning-line bg-warning-soft px-4 py-3 text-sm text-warning">
-          <Icon name="warning" /> {t("whisper.disabledNotice")} <Link to="/settings" className="underline">{t("whisper.openSettings")}</Link>
-        </div>
-      )}
-
-      {/* Enabled but no backend URL saved: without this the whole picker is
-          hidden with no explanation of why. */}
-      {enabled && !backendConfigured && (
-        <div className="rounded-md border border-warning-line bg-warning-soft px-4 py-3 text-sm text-warning">
-          <Icon name="warning" /> {t("whisper.backendNotConfigured")} <Link to="/settings" className="underline">{t("whisper.openSettings")}</Link>
-        </div>
-      )}
-
-      {enabled && backendConfigured && (
-        <>
-          {modelsQuery.isError && (
-            <InlineError message={t("whisper.modelsLoadFailed")} onRetry={() => void modelsQuery.refetch()} />
+          {!enabled && (
+            <div className="rounded-md border border-warning-line bg-warning-soft px-4 py-3 text-sm text-warning">
+              <Icon name="warning" /> {t("whisper.disabledNotice")}{" "}
+              <Link to="/settings" className="underline">
+                {t("whisper.openSettings")}
+              </Link>
+            </div>
           )}
 
-          {/* ── 1. Run options ─────────────────────────────────────────────
+          {/* Enabled but no backend URL saved: without this the whole picker is
+          hidden with no explanation of why. */}
+          {enabled && !backendConfigured && (
+            <div className="rounded-md border border-warning-line bg-warning-soft px-4 py-3 text-sm text-warning">
+              <Icon name="warning" /> {t("whisper.backendNotConfigured")}{" "}
+              <Link to="/settings" className="underline">
+                {t("whisper.openSettings")}
+              </Link>
+            </div>
+          )}
+
+          {enabled && backendConfigured && (
+            <>
+              {modelsQuery.isError && (
+                <InlineError message={t("whisper.modelsLoadFailed")} onRetry={() => void modelsQuery.refetch()} />
+              )}
+
+              {/* ── 1. Run options ─────────────────────────────────────────────
               Everyday knobs stay visible; device/compute/diarize are expert
               settings and live behind the Advanced disclosure. */}
-          <RunOptionsSection
-            modelDescriptors={modelDescriptors}
-            effModel={effModel}
-            onModelChange={handleModelChange}
-            isModelDownloaded={isModelDownloaded}
-            modelDownloads={modelDownloads}
-            effLang={effLang}
-            onLanguageChange={handleLanguageChange}
-            effFormat={effFormat}
-            onFormatChange={handleFormatChange}
-            effDevice={effDevice}
-            onDeviceChange={handleDeviceChange}
-            deviceOptions={deviceOptions}
-            effCompute={effCompute}
-            onComputeChange={handleComputeChange}
-            computeOptions={computeOptions}
-            canDiarize={canDiarize}
-            effDiarize={effDiarize}
-            onDiarizeChange={handleDiarizeChange}
-            hasCaps={Boolean(caps)}
-          />
+              <RunOptionsSection
+                modelDescriptors={modelDescriptors}
+                effModel={effModel}
+                onModelChange={handleModelChange}
+                isModelDownloaded={isModelDownloaded}
+                modelDownloads={modelDownloads}
+                effLang={effLang}
+                onLanguageChange={handleLanguageChange}
+                effFormat={effFormat}
+                onFormatChange={handleFormatChange}
+                effDevice={effDevice}
+                onDeviceChange={handleDeviceChange}
+                deviceOptions={deviceOptions}
+                effCompute={effCompute}
+                onComputeChange={handleComputeChange}
+                computeOptions={computeOptions}
+                canDiarize={canDiarize}
+                effDiarize={effDiarize}
+                onDiarizeChange={handleDiarizeChange}
+                hasCaps={Boolean(caps)}
+              />
 
-          {/* ── 2. Transcribe from URL (only when backend has yt-dlp) ────── */}
-          {canUrl && (
-            <UrlTranscribeSection
-              effFormat={effFormat}
-              effModel={effModel}
-              effLang={effLang}
-              effDevice={effDevice}
-              effCompute={effCompute}
-              canDiarize={canDiarize}
-              effDiarize={effDiarize}
-            />
+              {/* ── 2. Transcribe from URL (only when backend has yt-dlp) ────── */}
+              {canUrl && (
+                <UrlTranscribeSection
+                  effFormat={effFormat}
+                  effModel={effModel}
+                  effLang={effLang}
+                  effDevice={effDevice}
+                  effCompute={effCompute}
+                  canDiarize={canDiarize}
+                  effDiarize={effDiarize}
+                />
+              )}
+
+              {/* ── 3. Library — the primary working surface ─────────────────── */}
+              <LibraryPicker
+                libraryQuery={libraryQuery}
+                onLibraryQueryChange={setLibraryQuery}
+                hideWithSubtitles={hideWithSubtitles}
+                onHideWithSubtitlesChange={setHideWithSubtitles}
+                sortBy={sortBy}
+                onSortByChange={handleSortByChange}
+                sortDir={sortDir}
+                onToggleSortDir={toggleSortDir}
+                onSelectAll={selectAll}
+                running={running}
+                mediaDir={mediaDir}
+                visibleFiles={visibleFiles}
+                videoFiles={videoFiles}
+                isFiltered={isFiltered}
+                isScanFetching={scanQuery.isFetching}
+                isScanLoading={scanQuery.isLoading}
+                onRefreshScan={scanQuery.refetch}
+                selectedVisibleCount={selectedVisible.length}
+                onClearSelection={() => setSelected(new Set())}
+                onTranscribeSelected={transcribeSelected}
+                downloadsActive={downloadsActive}
+                progress={progress}
+                onCancelBatch={cancelBatch}
+                filterActive={filterActive}
+                tree={tree}
+                selected={selected}
+                toggleFile={toggle}
+                toggleFolder={toggleFolder}
+                fileProgress={fileProgress}
+                activePath={activePath}
+                expansion={expansion}
+                drill={drill}
+              />
+            </>
           )}
 
-          {/* ── 3. Library — the primary working surface ─────────────────── */}
-          <LibraryPicker
-            libraryQuery={libraryQuery}
-            onLibraryQueryChange={setLibraryQuery}
-            hideWithSubtitles={hideWithSubtitles}
-            onHideWithSubtitlesChange={setHideWithSubtitles}
-            sortBy={sortBy}
-            onSortByChange={handleSortByChange}
-            sortDir={sortDir}
-            onToggleSortDir={toggleSortDir}
-            onSelectAll={selectAll}
-            running={running}
-            mediaDir={mediaDir}
-            visibleFiles={visibleFiles}
-            videoFiles={videoFiles}
-            isFiltered={isFiltered}
-            isScanFetching={scanQuery.isFetching}
-            isScanLoading={scanQuery.isLoading}
-            onRefreshScan={scanQuery.refetch}
-            selectedVisibleCount={selectedVisible.length}
-            onClearSelection={() => setSelected(new Set())}
-            onTranscribeSelected={transcribeSelected}
-            downloadsActive={downloadsActive}
-            progress={progress}
-            onCancelBatch={cancelBatch}
-            filterActive={filterActive}
-            tree={tree}
-            selected={selected}
-            toggleFile={toggle}
-            toggleFolder={toggleFolder}
-            fileProgress={fileProgress}
-            activePath={activePath}
-            expansion={expansion}
-            drill={drill}
-          />
-        </>
-      )}
-
-      {/* Readiness + Model Manager live in Settings → Speech to Text; the Whisper
+          {/* Readiness + Model Manager live in Settings → Speech to Text; the Whisper
           page focuses on picking files and transcribing. */}
-      <section className="rounded-md border border-border bg-surface-raised">
-        <TranscriptionHistoryPanel
-          attempts={attempts}
-          transcribingPath={retryingPath ?? activePath}
-          isRetryPending={retryingPath !== null}
-          isTranscribePending={running}
-          onRetry={onRetry}
-          onClear={onClearHistory}
-          onRemove={onRemoveAttempt}
-          onRetryAllFailed={onRetryAllFailed}
-          isClearPending={clearHistoryMutation.isPending}
-          removingId={removingId}
-        />
-      </section>
+          <section className="rounded-md border border-border bg-surface-raised">
+            <TranscriptionHistoryPanel
+              attempts={attempts}
+              transcribingPath={retryingPath ?? activePath}
+              isRetryPending={retryingPath !== null}
+              isTranscribePending={running}
+              onRetry={onRetry}
+              onClear={onClearHistory}
+              onRemove={onRemoveAttempt}
+              onRetryAllFailed={onRetryAllFailed}
+              isClearPending={clearHistoryMutation.isPending}
+              removingId={removingId}
+            />
+          </section>
         </div>
       </div>
     </div>

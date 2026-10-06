@@ -65,7 +65,9 @@ export function ConnectionsPanel({ settings, update, addToast }: ConnectionsPane
   const [modelsByConn, setModelsByConn] = useState<Record<string, string[]>>({});
   const [loadingByConn, setLoadingByConn] = useState<Record<string, boolean>>({});
   const [testingByConn, setTestingByConn] = useState<Record<string, boolean>>({});
-  const [testResultByConn, setTestResultByConn] = useState<Record<string, { ok: boolean; message: string } | undefined>>({});
+  const [testResultByConn, setTestResultByConn] = useState<
+    Record<string, { ok: boolean; message: string } | undefined>
+  >({});
   const [showKeyByConn, setShowKeyByConn] = useState<Record<string, boolean>>({});
   // Per-card override of the default expansion. Absent = follow the default for
   // the current mode (see `defaultExpanded` below).
@@ -172,8 +174,14 @@ export function ConnectionsPanel({ settings, update, addToast }: ConnectionsPane
     <div className="space-y-4">
       {/* Mode selector */}
       <div>
-        <label id={modeLabelId} className={labelCls}>{t("settings.connections.mode")}</label>
-        <div role="group" aria-labelledby={modeLabelId} className="flex overflow-hidden rounded-sm border border-border">
+        <label id={modeLabelId} className={labelCls}>
+          {t("settings.connections.mode")}
+        </label>
+        <div
+          role="group"
+          aria-labelledby={modeLabelId}
+          className="flex overflow-hidden rounded-sm border border-border"
+        >
           {(["single", "fallback", "parallel"] as LlmMode[]).map((m) => (
             <button
               key={m}
@@ -225,7 +233,12 @@ export function ConnectionsPanel({ settings, update, addToast }: ConnectionsPane
               onTest={() => testConn(c)}
               envPinned={
                 c.id === "local" && c.provider === "local"
-                  ? Object.fromEntries(ENV_LOCAL_FIELDS.filter(({ setting }) => isEnvPinned(settings, setting)).map(({ field, env }) => [field, env]))
+                  ? Object.fromEntries(
+                      ENV_LOCAL_FIELDS.filter(({ setting }) => isEnvPinned(settings, setting)).map(({ field, env }) => [
+                        field,
+                        env,
+                      ]),
+                    )
                   : {}
               }
             />
@@ -330,9 +343,14 @@ function ConnectionCard({
           aria-controls={bodyId}
           className="flex min-h-touch min-w-0 flex-1 items-center gap-2 rounded-sm px-1 text-left hover:bg-surface-highlight"
         >
-          <Icon name="chevron-down" className={`shrink-0 text-faint transition-transform duration-fast ${expanded ? "rotate-180" : ""}`} />
+          <Icon
+            name="chevron-down"
+            className={`shrink-0 text-faint transition-transform duration-fast ${expanded ? "rotate-180" : ""}`}
+          />
           <span className="min-w-0">
-            <span className="block truncate text-sm font-medium text-text">{c.label || t("settings.connections.connectionName")}</span>
+            <span className="block truncate text-sm font-medium text-text">
+              {c.label || t("settings.connections.connectionName")}
+            </span>
             {!expanded && <span className="block truncate text-xs text-faint">{summary}</span>}
           </span>
         </button>
@@ -367,17 +385,21 @@ function ConnectionCard({
 
           {/* Provider */}
           <div>
-            <span id={providerGroupId} className={labelCls}>{t("settings.connections.provider")}</span>
-            <div role="group" aria-labelledby={providerGroupId} className="flex overflow-hidden rounded-sm border border-border">
+            <span id={providerGroupId} className={labelCls}>
+              {t("settings.connections.provider")}
+            </span>
+            <div
+              role="group"
+              aria-labelledby={providerGroupId}
+              className="flex overflow-hidden rounded-sm border border-border"
+            >
               {PROVIDERS.map((p) => (
                 <button
                   key={p}
                   onClick={() => onChangeProvider(p)}
                   aria-pressed={c.provider === p}
                   className={`flex-1 border-r border-border py-2 text-xs font-medium transition-colors last:border-r-0 min-h-touch md:min-h-0 ${
-                    c.provider === p
-                      ? "bg-accent-soft text-accent"
-                      : "bg-surface text-muted hover:text-text"
+                    c.provider === p ? "bg-accent-soft text-accent" : "bg-surface text-muted hover:text-text"
                   }`}
                 >
                   {t(`settings.llmConnection.provider_${p}`)}
@@ -400,41 +422,61 @@ function ConnectionCard({
             <div className="flex items-end gap-2">
               <div className="min-w-0 flex-1">
                 <Field
-                  label={c.provider === "local" ? t("settings.connections.apiKeyOptional") : t("settings.connections.apiKey")}
+                  label={
+                    c.provider === "local" ? t("settings.connections.apiKeyOptional") : t("settings.connections.apiKey")
+                  }
                   value={c.apiKey === REDACTED_SECRET ? "" : c.apiKey}
                   onChange={(v) => onPatch({ apiKey: v })}
                   type={showKey ? "text" : "password"}
                   readOnly={Boolean(envPinned.apiKey)}
                   help={envPinned.apiKey ? t("settings.envPinnedNote", { name: envPinned.apiKey }) : undefined}
-                  placeholder={c.apiKey === REDACTED_SECRET ? "••••••••" : c.provider === "local" ? t("settings.connections.apiKeyPlaceholderLocal") : t("settings.connections.apiKeyPlaceholder")}
+                  placeholder={
+                    c.apiKey === REDACTED_SECRET
+                      ? "••••••••"
+                      : c.provider === "local"
+                        ? t("settings.connections.apiKeyPlaceholderLocal")
+                        : t("settings.connections.apiKeyPlaceholder")
+                  }
                 />
               </div>
               {/* An env key is never sent to the browser, so there is nothing to reveal. */}
-              {!envPinned.apiKey && <button
-                type="button"
-                onClick={onToggleShowKey}
-                aria-pressed={showKey}
-                aria-label={showKey ? t("settings.connections.hideApiKey") : t("settings.connections.showApiKey")}
-                className="flex min-h-touch shrink-0 items-center rounded-sm border border-border bg-surface px-3 text-xs text-muted hover:text-text"
-              >
-                <Icon name={showKey ? "hide-secret" : "show-secret"} />
-              </button>}
+              {!envPinned.apiKey && (
+                <button
+                  type="button"
+                  onClick={onToggleShowKey}
+                  aria-pressed={showKey}
+                  aria-label={showKey ? t("settings.connections.hideApiKey") : t("settings.connections.showApiKey")}
+                  className="flex min-h-touch shrink-0 items-center rounded-sm border border-border bg-surface px-3 text-xs text-muted hover:text-text"
+                >
+                  <Icon name={showKey ? "hide-secret" : "show-secret"} />
+                </button>
+              )}
             </div>
           </div>
 
           {/* Model */}
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <label htmlFor={modelSelectId} className="text-xs font-medium text-muted">{t("settings.connections.model")}</label>
+              <label htmlFor={modelSelectId} className="text-xs font-medium text-muted">
+                {t("settings.connections.model")}
+              </label>
               <button onClick={onFetchModels} className="text-xs text-accent">
                 {loadingModels ? t("common.loading") : t("settings.llmConnection.fetchModels")}
               </button>
             </div>
             {models.length > 0 ? (
-              <Select id={modelSelectId} value={c.model} onChange={(value) => onPatch({ model: value })} disabled={Boolean(envPinned.model)} className="disabled:cursor-not-allowed disabled:text-muted">
+              <Select
+                id={modelSelectId}
+                value={c.model}
+                onChange={(value) => onPatch({ model: value })}
+                disabled={Boolean(envPinned.model)}
+                className="disabled:cursor-not-allowed disabled:text-muted"
+              >
                 <option value="">{t("settings.llmConnection.selectModel")}</option>
                 {models.map((m) => (
-                  <option key={m} value={m}>{m}</option>
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
                 ))}
               </Select>
             ) : (
@@ -447,7 +489,11 @@ function ConnectionCard({
                 className={`${selectCls} read-only:cursor-not-allowed read-only:text-muted`}
               />
             )}
-            {envPinned.model && <p className="mt-1 text-xs leading-6 text-faint">{t("settings.envPinnedNote", { name: envPinned.model })}</p>}
+            {envPinned.model && (
+              <p className="mt-1 text-xs leading-6 text-faint">
+                {t("settings.envPinnedNote", { name: envPinned.model })}
+              </p>
+            )}
           </div>
 
           {/* Test */}
@@ -460,8 +506,12 @@ function ConnectionCard({
             </button>
             {testResult && (
               <span className={`text-xs ${testResult.ok ? "text-success" : "text-danger"}`}>
-                <Icon name={testResult.ok ? "done" : "error"} /> 
-                {testResult.ok ? testResult.message : testResult.message.includes("ECONNREFUSED") ? t("settings.connections.refused") : testResult.message}
+                <Icon name={testResult.ok ? "done" : "error"} />
+                {testResult.ok
+                  ? testResult.message
+                  : testResult.message.includes("ECONNREFUSED")
+                    ? t("settings.connections.refused")
+                    : testResult.message}
               </span>
             )}
           </div>

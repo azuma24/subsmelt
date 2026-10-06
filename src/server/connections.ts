@@ -32,10 +32,14 @@ const ALL_PROVIDERS: CloudProvider[] = ["local", ...CLOUD_PROVIDERS];
 
 function providerLabel(p: CloudProvider): string {
   switch (p) {
-    case "openai": return "OpenAI";
-    case "anthropic": return "Anthropic";
-    case "gemini": return "Gemini";
-    default: return "Local";
+    case "openai":
+      return "OpenAI";
+    case "anthropic":
+      return "Anthropic";
+    case "gemini":
+      return "Gemini";
+    default:
+      return "Local";
   }
 }
 
@@ -80,9 +84,7 @@ export function migrateConnectionsFromFlat(s: Record<string, string>): LlmConnec
 
 function normalizeConnection(c: unknown, index: number): LlmConnection {
   const obj = (c && typeof c === "object" ? c : {}) as Record<string, unknown>;
-  const provider = (ALL_PROVIDERS.includes(obj.provider as CloudProvider)
-    ? obj.provider
-    : "local") as CloudProvider;
+  const provider = (ALL_PROVIDERS.includes(obj.provider as CloudProvider) ? obj.provider : "local") as CloudProvider;
   return {
     id: String(obj.id || provider || `conn-${index}`),
     label: String(obj.label || providerLabel(provider)),
@@ -109,10 +111,7 @@ export function parseConnections(s: Record<string, string>): LlmConnection[] {
       }
       // Parsed but not a usable array — behavior unchanged (migrate), but warn
       // so a malformed `llm_connections` setting isn't silently ignored.
-      logger.warn(
-        "system",
-        "llm_connections parsed to a non-array (or empty); falling back to legacy flat keys"
-      );
+      logger.warn("system", "llm_connections parsed to a non-array (or empty); falling back to legacy flat keys");
     } catch {
       // fall through to migration
     }
@@ -145,7 +144,7 @@ export function restoreRedactedApiKeys(value: string, stored: LlmConnection[]): 
       }
       const key = storedKeys.get(connection.id);
       return { ...connection, apiKey: key && key !== REDACTED_SECRET ? key : "" };
-    })
+    }),
   );
 }
 
@@ -205,9 +204,7 @@ export function resolveConnectionPool(s: Record<string, string>): {
   all: LlmConnection[];
 } {
   const all = parseConnections(s);
-  const mode = (["single", "fallback", "parallel"].includes(s.llm_mode)
-    ? s.llm_mode
-    : "single") as LlmMode;
+  const mode = (["single", "fallback", "parallel"].includes(s.llm_mode) ? s.llm_mode : "single") as LlmMode;
 
   let chosen: LlmConnection[];
   if (mode === "single") {
@@ -216,17 +213,12 @@ export function resolveConnectionPool(s: Record<string, string>): {
     if (!matched && all.length > 0) {
       // Behavior unchanged (use all[0]), but warn so a stale/invalid active id
       // isn't silently resolved to an unexpected connection.
-      logger.warn(
-        "system",
-        `Active connection id "${activeId}" not found; falling back to "${all[0].id}"`
-      );
+      logger.warn("system", `Active connection id "${activeId}" not found; falling back to "${all[0].id}"`);
     }
     const active = matched || all[0];
     chosen = active ? [active] : [];
   } else {
-    chosen = all
-      .filter((c) => c.enabled && isUsable(c))
-      .sort((a, b) => a.order - b.order);
+    chosen = all.filter((c) => c.enabled && isUsable(c)).sort((a, b) => a.order - b.order);
     if (chosen.length === 0) {
       const first = all[0];
       chosen = first ? [first] : [];

@@ -45,8 +45,7 @@ function checkSource(srtPath: string): Rejected | null {
   }
   if (!extensionSetting("subtitle_extensions").has(path.extname(srtPath).toLowerCase()))
     return reject(400, "File is not a subtitle");
-  if (!fs.statSync(srtPath, { throwIfNoEntry: false })?.isFile())
-    return reject(404, "Subtitle file not found");
+  if (!fs.statSync(srtPath, { throwIfNoEntry: false })?.isFile()) return reject(404, "Subtitle file not found");
   return null;
 }
 
@@ -62,7 +61,10 @@ function resolveTask(target: FileTranslationTarget): ResolvedTask | Rejected {
   }
 
   // "kor" and "ko" are one language: match and save on the standard code.
-  const wanted = standardTaskLangCode({ target_lang: target.targetLang, lang_code: target.langCode }, preferredChinese());
+  const wanted = standardTaskLangCode(
+    { target_lang: target.targetLang, lang_code: target.langCode },
+    preferredChinese(),
+  );
   const existing = getTasks().find((t) => standardTaskLangCode(t, preferredChinese()) === wanted);
   if (existing) return { kind: "existing", task: existing };
 
@@ -82,7 +84,10 @@ function saveTask(resolved: ResolvedTask): TranslationTask {
   if (resolved.kind === "existing") return resolved.task;
   const { draft } = resolved;
   const { lastInsertRowid } = createTask({ ...draft, source_lang: AUTO_SOURCE_LANGUAGE, enabled: 0 });
-  logger.info("system", `Created disabled translation task for one-off translations: ${draft.target_lang} (${draft.lang_code})`);
+  logger.info(
+    "system",
+    `Created disabled translation task for one-off translations: ${draft.target_lang} (${draft.lang_code})`,
+  );
   return getTask(lastInsertRowid)!;
 }
 
@@ -124,10 +129,14 @@ export function queueFileTranslation(srtPathInput: string, target: FileTranslati
   if (existing?.status === "pending" || existing?.status === "translating")
     return { kind: "already-queued", jobId: existing.id, taskId: existing.task_id };
   if (existing?.status === "done" || existing?.status === "skipped")
-    return reject(409, `${path.basename(srtPath)} is already translated to ${shape.lang_code}; use re-translate on its job instead`);
+    return reject(
+      409,
+      `${path.basename(srtPath)} is already translated to ${shape.lang_code}; use re-translate on its job instead`,
+    );
 
   const outputPath = path.join(path.dirname(srtPath), taskOutputName(srtPath, shape));
-  if (outputPath === srtPath) return reject(409, `Translating to ${shape.lang_code} would overwrite the source subtitle`);
+  if (outputPath === srtPath)
+    return reject(409, `Translating to ${shape.lang_code} would overwrite the source subtitle`);
   const already = existingTaskOutput(srtPath, shape);
   if (already) return reject(409, `${path.basename(already)} already exists`);
   if (findUnfinishedJobForOutput(outputPath, existing?.id ?? null))

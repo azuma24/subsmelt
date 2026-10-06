@@ -61,17 +61,27 @@ if (failing && env.FAKE_YTDLP_STDERR) process.stderr.write(env.FAKE_YTDLP_STDERR
 
 setTimeout(() => {
   if (home && exit === 0 && args.includes("--skip-download")) {
-    const lang = valueAfter("--sub-langs").replace(/^\^|\$$/g, "").replace(/\\(.)/g, "$1");
+    const lang = valueAfter("--sub-langs")
+      .replace(/^\^|\$$/g, "")
+      .replace(/\\(.)/g, "$1");
     if (!(env.FAKE_YTDLP_NO_SUBS ?? "").split(",").includes(lang)) {
       fs.mkdirSync(home, { recursive: true });
-      fs.writeFileSync(path.join(home, `${videoId}.${lang}.srt`), `1\n00:00:01,000 --> 00:00:02,000\ncaption ${lang}\n`);
+      fs.writeFileSync(
+        path.join(home, `${videoId}.${lang}.srt`),
+        `1\n00:00:01,000 --> 00:00:02,000\ncaption ${lang}\n`,
+      );
     }
   } else if (home && exit === 0) {
     const title = env.FAKE_YTDLP_TITLE ?? "Fake video";
     const ext = valueAfter("--merge-output-format") ?? valueAfter("--audio-format") ?? "webm";
     const stem = path.join(home, `${title} [${videoId}]`);
     fs.mkdirSync(home, { recursive: true });
-    const info = { id: videoId, title, formats: [{ url: "https://example.invalid/expiring" }], ...JSON.parse(env.FAKE_YTDLP_INFO ?? "{}") };
+    const info = {
+      id: videoId,
+      title,
+      formats: [{ url: "https://example.invalid/expiring" }],
+      ...JSON.parse(env.FAKE_YTDLP_INFO ?? "{}"),
+    };
     fs.writeFileSync(`${stem}.info.json`, JSON.stringify(info));
     fs.writeFileSync(`${stem}.${ext}`, "media");
     fs.rmSync(path.join(temp, `${videoId}.part`), { force: true });

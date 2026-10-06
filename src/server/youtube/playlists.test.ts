@@ -8,15 +8,27 @@ import path from "node:path";
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-playlists-"));
 process.env.CONFIG_DIR = path.join(root, "config");
 process.env.DATA_DIR = path.join(root, "data");
-const { defaultPlaylistFields, folderFromTitle, parsePlaylistFields, parseStoredPlaylists, readPlaylists, removePlaylist, savePlaylist } =
-  await import("./playlists.js");
+const {
+  defaultPlaylistFields,
+  folderFromTitle,
+  parsePlaylistFields,
+  parseStoredPlaylists,
+  readPlaylists,
+  removePlaylist,
+  savePlaylist,
+} = await import("./playlists.js");
 
 const TODAY = "2026-09-30";
 const PL = "PL-Smx9IA029hG4XKsjwo6psQhtDfsosa8";
 
 test("parsePlaylistFields fills defaults and accepts a full video profile", () => {
   const parsed = parsePlaylistFields(
-    { media: { type: "video", maxHeight: 720, codec: "h264", container: "mp4" }, backfill: { kind: "posted_since", date: "2026-08-01" }, mode: "manual", subtitleTaskIds: [2, 1, 2] },
+    {
+      media: { type: "video", maxHeight: 720, codec: "h264", container: "mp4" },
+      backfill: { kind: "posted_since", date: "2026-08-01" },
+      mode: "manual",
+      subtitleTaskIds: [2, 1, 2],
+    },
     defaultPlaylistFields("AI"),
     TODAY,
   );
@@ -43,9 +55,18 @@ test("parsePlaylistFields rejects impossible combinations and unsafe input", () 
     return result.ok ? null : result.error;
   };
   assert.equal(error({ media: { type: "audio", format: "mp3" } }), "media.format must be m4a or opus");
-  assert.equal(error({ media: { type: "video", maxHeight: 720, codec: "h264", container: "avi" } }), "media.container must be mp4 or mkv");
-  assert.equal(error({ backfill: { kind: "posted_since", date: "2026-10-01" } }), "backfill.date must be a YYYY-MM-DD date no later than today");
-  assert.equal(error({ backfill: { kind: "posted_since", date: "2026-02-30" } }), "backfill.date must be a YYYY-MM-DD date no later than today");
+  assert.equal(
+    error({ media: { type: "video", maxHeight: 720, codec: "h264", container: "avi" } }),
+    "media.container must be mp4 or mkv",
+  );
+  assert.equal(
+    error({ backfill: { kind: "posted_since", date: "2026-10-01" } }),
+    "backfill.date must be a YYYY-MM-DD date no later than today",
+  );
+  assert.equal(
+    error({ backfill: { kind: "posted_since", date: "2026-02-30" } }),
+    "backfill.date must be a YYYY-MM-DD date no later than today",
+  );
   assert.equal(error({ folder: "../etc" }), "folder must be a relative folder name");
   assert.equal(error({ checkEveryMinutes: 5 }), "checkEveryMinutes must be a whole number from 15 to 10080");
   assert.equal(error([]), "Request body must be a JSON object");
@@ -62,7 +83,10 @@ test("parseStoredPlaylists drops entries that no longer validate", () => {
     { id: "bad id", title: "x" },
     { id: "PLbroken000", media: { type: "audio", format: "flac" } },
   ]);
-  assert.deepEqual(parseStoredPlaylists(stored).map((p) => [p.id, p.title, p.media]), [[PL, "AI", { type: "audio", format: "opus" }]]);
+  assert.deepEqual(
+    parseStoredPlaylists(stored).map((p) => [p.id, p.title, p.media]),
+    [[PL, "AI", { type: "audio", format: "opus" }]],
+  );
   assert.deepEqual(parseStoredPlaylists("not json"), []);
 });
 
@@ -70,7 +94,10 @@ test("savePlaylist replaces by id and removePlaylist reports whether it removed"
   const playlist = { id: PL, title: "AI", ...defaultPlaylistFields("AI") };
   savePlaylist(playlist);
   savePlaylist({ ...playlist, title: "AI renamed" });
-  assert.deepEqual(readPlaylists().map((p) => p.title), ["AI renamed"]);
+  assert.deepEqual(
+    readPlaylists().map((p) => p.title),
+    ["AI renamed"],
+  );
   assert.equal(removePlaylist(PL), true);
   assert.equal(removePlaylist(PL), false);
   assert.deepEqual(readPlaylists(), []);

@@ -3,16 +3,28 @@ import assert from "node:assert/strict";
 import { VIDEO_STATUSES, canTransition } from "./video-status.js";
 
 const ALLOWED = new Set([
-  "new>queued", "new>skipped",
-  "queued>downloading", "queued>skipped",
-  "downloading>transcribing", "downloading>queued", "downloading>waiting", "downloading>unavailable", "downloading>failed", "downloading>skipped",
-  "transcribing>translating", "transcribing>transcribing", "transcribing>failed",
+  "new>queued",
+  "new>skipped",
+  "queued>downloading",
+  "queued>skipped",
+  "downloading>transcribing",
+  "downloading>queued",
+  "downloading>waiting",
+  "downloading>unavailable",
+  "downloading>failed",
+  "downloading>skipped",
+  "transcribing>translating",
+  "transcribing>transcribing",
+  "transcribing>failed",
   "translating>done",
   "done>queued",
-  "waiting>queued", "waiting>skipped",
-  "skipped>queued", "skipped>new",
+  "waiting>queued",
+  "waiting>skipped",
+  "skipped>queued",
+  "skipped>new",
   "unavailable>queued",
-  "failed>queued", "failed>skipped",
+  "failed>queued",
+  "failed>skipped",
 ]);
 
 test("canTransition allows exactly the PRD transition table plus the download-step moves", () => {

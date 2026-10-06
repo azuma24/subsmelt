@@ -23,7 +23,7 @@ export function LogsPage() {
   const initialJobParam = params.get("job");
   const parsedInitialJobId = initialJobParam ? Number(initialJobParam) : NaN;
   const [jobIdFilter, setJobIdFilter] = useState<number | null>(
-    Number.isInteger(parsedInitialJobId) && parsedInitialJobId > 0 ? parsedInitialJobId : null
+    Number.isInteger(parsedInitialJobId) && parsedInitialJobId > 0 ? parsedInitialJobId : null,
   );
   const [level, setLevel] = useState("");
   const [category, setCategory] = useState("");
@@ -40,24 +40,41 @@ export function LogsPage() {
   // in an unrelated field or an SSE-driven re-render doesn't re-filter/re-copy
   // the (up to 300) log entries on every render — only `logs`/`search` matter.
   const chronologicalLogs = useMemo(
-    () => [...(search ? logs.filter((entry) => entry.message.toLowerCase().includes(search.toLowerCase()) || (entry.meta && entry.meta.toLowerCase().includes(search.toLowerCase()))) : logs)].reverse(),
-    [logs, search]
+    () =>
+      [
+        ...(search
+          ? logs.filter(
+              (entry) =>
+                entry.message.toLowerCase().includes(search.toLowerCase()) ||
+                (entry.meta && entry.meta.toLowerCase().includes(search.toLowerCase())),
+            )
+          : logs),
+      ].reverse(),
+    [logs, search],
   );
 
   useEffect(() => {
-    setParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (typeof jobIdFilter === "number" && Number.isInteger(jobIdFilter) && jobIdFilter > 0) {
-        next.set("job", String(jobIdFilter));
-      } else {
-        next.delete("job");
-      }
-      return next;
-    }, { replace: true });
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (typeof jobIdFilter === "number" && Number.isInteger(jobIdFilter) && jobIdFilter > 0) {
+          next.set("job", String(jobIdFilter));
+        } else {
+          next.delete("job");
+        }
+        return next;
+      },
+      { replace: true },
+    );
   }, [jobIdFilter, setParams]);
 
   const handleClear = async () => {
-    const ok = await confirm({ title: t("logs.confirm.clearTitle"), message: t("logs.confirm.clearMessage"), confirmLabel: t("logs.confirm.clearConfirm"), danger: true });
+    const ok = await confirm({
+      title: t("logs.confirm.clearTitle"),
+      message: t("logs.confirm.clearMessage"),
+      confirmLabel: t("logs.confirm.clearConfirm"),
+      danger: true,
+    });
     if (!ok) return;
     try {
       await api.clearLogsApi();
@@ -91,23 +108,26 @@ export function LogsPage() {
               activeKey={source}
               onSelect={(key) => setSource(key as LogSource)}
             />
-            {source === "app" && jobIdFilter && <span className="text-xs text-accent">{t("logs.filteredByJob", { id: jobIdFilter })}</span>}
+            {source === "app" && jobIdFilter && (
+              <span className="text-xs text-accent">{t("logs.filteredByJob", { id: jobIdFilter })}</span>
+            )}
           </div>
         }
         actions={
           <>
             <label className="flex items-center gap-2 text-xs text-muted">
-              <input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} className="accent-accent" />
+              <input
+                type="checkbox"
+                checked={follow}
+                onChange={(e) => setFollow(e.target.checked)}
+                className="accent-accent"
+              />
               {t("logs.follow")}
             </label>
             {/* Clear → overflow menu (L3, destructive). Clearing only ever means
                 the app's own store; the backend's file is not ours to delete. */}
             {source === "app" && (
-              <RowActionsMenu
-                items={[
-                  { label: t("logs.clear"), danger: true, onClick: handleClear },
-                ]}
-              />
+              <RowActionsMenu items={[{ label: t("logs.clear"), danger: true, onClick: handleClear }]} />
             )}
           </>
         }
@@ -116,88 +136,91 @@ export function LogsPage() {
             store's own fields — the backend tail is plain text, so it carries
             only the search box (rendered by BackendLogView). */}
         {source === "app" && (
-        <div className={`mt-2 flex gap-2 ${isMobile ? "flex-col" : "flex-wrap items-center"}`}>
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("logs.search")}
-            aria-label={t("logs.search")}
-            className="min-w-0 flex-1 rounded-sm border border-border bg-surface-raised px-3 py-2 text-sm text-text focus:border-accent"
-          />
-          {/* Level quick-pills */}
-          <div className="flex gap-2">
-            {(["error", "warn", "info"] as const).map((l) => (
-              <button
-                key={l}
-                type="button"
-                onClick={() => toggleLevel(l)}
-                aria-pressed={level === l}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                  level === l
-                    ? l === "error"
-                      ? "border-danger-line bg-danger-soft text-danger"
-                      : l === "warn"
-                        ? "border-warning-line bg-warning-soft text-warning"
-                        : "border-accent-line bg-accent-soft text-accent"
-                    : "border-border bg-surface-raised text-muted hover:text-text"
-                }`}
-              >
-                {l === "error" ? t("logs.level.error") : l === "warn" ? t("logs.level.warn") : t("logs.level.info")}
-              </button>
-            ))}
+          <div className={`mt-2 flex gap-2 ${isMobile ? "flex-col" : "flex-wrap items-center"}`}>
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("logs.search")}
+              aria-label={t("logs.search")}
+              className="min-w-0 flex-1 rounded-sm border border-border bg-surface-raised px-3 py-2 text-sm text-text focus:border-accent"
+            />
+            {/* Level quick-pills */}
+            <div className="flex gap-2">
+              {(["error", "warn", "info"] as const).map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  onClick={() => toggleLevel(l)}
+                  aria-pressed={level === l}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    level === l
+                      ? l === "error"
+                        ? "border-danger-line bg-danger-soft text-danger"
+                        : l === "warn"
+                          ? "border-warning-line bg-warning-soft text-warning"
+                          : "border-accent-line bg-accent-soft text-accent"
+                      : "border-border bg-surface-raised text-muted hover:text-text"
+                  }`}
+                >
+                  {l === "error" ? t("logs.level.error") : l === "warn" ? t("logs.level.warn") : t("logs.level.info")}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
         )}
 
         {/* L3: Filters accordion — category + job-id */}
         {source === "app" && (
-        <Accordion title={t("logs.filters")} defaultOpen={hasFilters} variant="inline" className="mt-2">
-          <div className={`flex gap-2 pt-1 ${isMobile ? "flex-col" : "flex-wrap items-center"}`}>
-            <Select value={category} onChange={(value) => setCategory(value)} ariaLabel={t("logs.category.all")}>
-              <option value="">{t("logs.category.all")}</option>
-              <option value="scan">{t("logs.category.scan")}</option>
-              <option value="translate">{t("logs.category.translate")}</option>
-              <option value="queue">{t("logs.category.queue")}</option>
-              <option value="system">{t("logs.category.system")}</option>
-              <option value="youtube">{t("logs.category.youtube")}</option>
-            </Select>
-            <input
-              type="number"
-              value={jobIdFilter ?? ""}
-              onChange={(e) => {
-                const raw = e.target.value.trim();
-                if (!raw) { setJobIdFilter(null); return; }
-                const next = Number(raw);
-                setJobIdFilter(Number.isInteger(next) && next > 0 ? next : null);
-              }}
-              placeholder={t("logs.jobId")}
-              aria-label={t("logs.jobId")}
-              className="w-28 rounded-sm border border-border bg-surface-raised px-3 py-2 text-sm text-text focus:border-accent"
-            />
-            {typeof jobIdFilter === "number" && jobIdFilter > 0 && (
-              <button onClick={() => setJobIdFilter(null)} className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-xs text-muted">
-                {t("logs.clearJobFilter")}
-              </button>
-            )}
-          </div>
-        </Accordion>
+          <Accordion title={t("logs.filters")} defaultOpen={hasFilters} variant="inline" className="mt-2">
+            <div className={`flex gap-2 pt-1 ${isMobile ? "flex-col" : "flex-wrap items-center"}`}>
+              <Select value={category} onChange={(value) => setCategory(value)} ariaLabel={t("logs.category.all")}>
+                <option value="">{t("logs.category.all")}</option>
+                <option value="scan">{t("logs.category.scan")}</option>
+                <option value="translate">{t("logs.category.translate")}</option>
+                <option value="queue">{t("logs.category.queue")}</option>
+                <option value="system">{t("logs.category.system")}</option>
+                <option value="youtube">{t("logs.category.youtube")}</option>
+              </Select>
+              <input
+                type="number"
+                value={jobIdFilter ?? ""}
+                onChange={(e) => {
+                  const raw = e.target.value.trim();
+                  if (!raw) {
+                    setJobIdFilter(null);
+                    return;
+                  }
+                  const next = Number(raw);
+                  setJobIdFilter(Number.isInteger(next) && next > 0 ? next : null);
+                }}
+                placeholder={t("logs.jobId")}
+                aria-label={t("logs.jobId")}
+                className="w-28 rounded-sm border border-border bg-surface-raised px-3 py-2 text-sm text-text focus:border-accent"
+              />
+              {typeof jobIdFilter === "number" && jobIdFilter > 0 && (
+                <button
+                  onClick={() => setJobIdFilter(null)}
+                  className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-xs text-muted"
+                >
+                  {t("logs.clearJobFilter")}
+                </button>
+              )}
+            </div>
+          </Accordion>
         )}
 
         {/* Entry count */}
         {source === "app" && (
           <div className="pb-1 text-xs text-faint">
-            {search ? t("logs.entriesFiltered", { filtered: chronologicalLogs.length, total: logs.length }) : t("logs.entries", { count: chronologicalLogs.length })}
+            {search
+              ? t("logs.entriesFiltered", { filtered: chronologicalLogs.length, total: logs.length })
+              : t("logs.entries", { count: chronologicalLogs.length })}
           </div>
         )}
       </PageHeader>
 
-      {source === "backend" && (
-        <BackendLogView
-          query={backendLogsQuery}
-          follow={follow}
-        />
-      )}
+      {source === "backend" && <BackendLogView query={backendLogsQuery} follow={follow} />}
 
       {source === "app" && logsQuery.isError && (
         <div className="px-4 pt-2 md:px-4">
@@ -205,15 +228,16 @@ export function LogsPage() {
         </div>
       )}
 
-      {source === "app" && (
-        chronologicalLogs.length === 0 ? (
+      {source === "app" &&
+        (chronologicalLogs.length === 0 ? (
           <div className="flex-1 overflow-y-auto px-4 py-2 md:px-4">
-            <div className="px-4 py-12 text-center text-sm text-faint">{search ? t("logs.noLogsSearch") : jobIdFilter ? t("logs.noLogsForJob") : t("logs.noLogs")}</div>
+            <div className="px-4 py-12 text-center text-sm text-faint">
+              {search ? t("logs.noLogsSearch") : jobIdFilter ? t("logs.noLogsForJob") : t("logs.noLogs")}
+            </div>
           </div>
         ) : (
           <LogList logs={chronologicalLogs} search={search} follow={follow} />
-        )
-      )}
+        ))}
     </div>
   );
 }
@@ -336,13 +360,31 @@ function LogRow({ entry, search }: { entry: LogEntry; search: string }) {
     // wrapper dissolves (contents) and the three cells sit in the row as before.
     <div className="flex flex-col gap-1 border-b border-border-subtle py-2 font-mono text-xs md:flex-row md:gap-3">
       <div className="flex gap-3 md:contents">
-        <span className="w-[55px] shrink-0 cursor-default text-faint" title={fullTime(entry.timestamp)}>{relativeTime(entry.timestamp)}</span>
+        <span className="w-[55px] shrink-0 cursor-default text-faint" title={fullTime(entry.timestamp)}>
+          {relativeTime(entry.timestamp)}
+        </span>
         <span className={`w-[40px] shrink-0 font-semibold ${meta.color}`}>{meta.label}</span>
         <span className="w-[60px] shrink-0 truncate text-faint">{entry.category}</span>
       </div>
       <div className="min-w-0 flex-1 break-words">
-        <span className={entry.level === "error" ? "text-danger" : entry.level === "warn" ? "text-warning" : "text-muted"}>{parts.map((part, i) => search && part.toLowerCase() === search.toLowerCase() ? <mark key={i} className="rounded-sm bg-warning-soft px-1 text-warning">{part}</mark> : <Fragment key={i}>{part}</Fragment>)}</span>
-        {entry.job_id && <NavLink to={`/jobs/${entry.job_id}`} className="ml-2 text-muted hover:text-accent">{t("logs.jobLink", { id: entry.job_id })}</NavLink>}
+        <span
+          className={entry.level === "error" ? "text-danger" : entry.level === "warn" ? "text-warning" : "text-muted"}
+        >
+          {parts.map((part, i) =>
+            search && part.toLowerCase() === search.toLowerCase() ? (
+              <mark key={i} className="rounded-sm bg-warning-soft px-1 text-warning">
+                {part}
+              </mark>
+            ) : (
+              <Fragment key={i}>{part}</Fragment>
+            ),
+          )}
+        </span>
+        {entry.job_id && (
+          <NavLink to={`/jobs/${entry.job_id}`} className="ml-2 text-muted hover:text-accent">
+            {t("logs.jobLink", { id: entry.job_id })}
+          </NavLink>
+        )}
       </div>
     </div>
   );

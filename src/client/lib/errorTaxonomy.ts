@@ -47,20 +47,38 @@ const RULES: Rule[] = [
   { code: "insufficient-ram", patterns: ["insufficient_ram", "not enough memory", "out of memory", /\boom\b/] },
   { code: "insufficient-disk", patterns: ["insufficient_disk", "no space left", "disk full"] },
   { code: "ffmpeg-missing", patterns: ["ffmpeg_missing", "ffmpeg not found", "ffmpeg is not"] },
-  { code: "server-missing", patterns: ["winerror 2", "cannot find the file specified", "run_server executable not found", "enoent"] },
-  { code: "auth", patterns: ["unauthorized", "forbidden", "invalid token", "invalid api key", statusCode(401), statusCode(403)] },
+  {
+    code: "server-missing",
+    patterns: ["winerror 2", "cannot find the file specified", "run_server executable not found", "enoent"],
+  },
+  {
+    code: "auth",
+    patterns: ["unauthorized", "forbidden", "invalid token", "invalid api key", statusCode(401), statusCode(403)],
+  },
   { code: "rate-limit", patterns: ["rate limit", "rate_limit", statusCode(429), "too many requests"] },
   { code: "schema", patterns: ["did not match schema", "no object generated", "validation", "unusable response"] },
   { code: "timeout", patterns: ["timed out", "timeout", "etimedout"] },
   { code: "connection-dropped", patterns: ["terminated", "socket hang up", "econnreset", "premature close"] },
-  { code: "backend-unreachable", patterns: ["fetch failed", "econnrefused", "enotfound", "eai_again", "network error", "failed to connect", "connection refused"] },
+  {
+    code: "backend-unreachable",
+    patterns: [
+      "fetch failed",
+      "econnrefused",
+      "enotfound",
+      "eai_again",
+      "network error",
+      "failed to connect",
+      "connection refused",
+    ],
+  },
 ];
 
 export function classifyError(raw: string | null | undefined): ErrorCode {
   if (!raw || !raw.trim()) return "unknown";
   const text = raw.toLowerCase();
   for (const rule of RULES) {
-    if (rule.patterns.some((pattern) => (typeof pattern === "string" ? text.includes(pattern) : pattern.test(text)))) return rule.code;
+    if (rule.patterns.some((pattern) => (typeof pattern === "string" ? text.includes(pattern) : pattern.test(text))))
+      return rule.code;
   }
   return "unknown";
 }
@@ -84,7 +102,5 @@ export type ErrorContext = "transcription" | "translation";
  */
 export function errorHintKeys(code: ErrorCode, context: ErrorContext = "transcription"): string[] | null {
   if (code === "unknown") return null;
-  return context === "transcription"
-    ? [`errors.${code}`]
-    : [`errors.${context}.${code}`, `errors.${code}`];
+  return context === "transcription" ? [`errors.${code}`] : [`errors.${context}.${code}`, `errors.${code}`];
 }

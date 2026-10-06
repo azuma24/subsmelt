@@ -13,7 +13,9 @@ function memoryStorage(initial: Record<string, string> = {}): KeyValueStorage & 
   return {
     data,
     getItem: (k) => data.get(k) ?? null,
-    setItem: (k, v) => { data.set(k, v); },
+    setItem: (k, v) => {
+      data.set(k, v);
+    },
   };
 }
 
@@ -42,8 +44,12 @@ test("loadExpanded tolerates corrupt JSON and wrong shapes", () => {
 
 test("loadExpanded tolerates a throwing storage (private mode)", () => {
   const storage: KeyValueStorage = {
-    getItem: () => { throw new Error("denied"); },
-    setItem: () => { throw new Error("denied"); },
+    getItem: () => {
+      throw new Error("denied");
+    },
+    setItem: () => {
+      throw new Error("denied");
+    },
   };
   assert.deepEqual(loadExpanded(storage, "x"), new Set());
   assert.doesNotThrow(() => saveExpanded(storage, "x", new Set(["a"])));

@@ -63,10 +63,7 @@ test("translation hints prefer a context override, then fall back", () => {
     "errors.translation.backend-unreachable",
     "errors.backend-unreachable",
   ]);
-  assert.deepEqual(errorHintKeys("schema", "translation"), [
-    "errors.translation.schema",
-    "errors.schema",
-  ]);
+  assert.deepEqual(errorHintKeys("schema", "translation"), ["errors.translation.schema", "errors.schema"]);
 });
 
 test("short tokens must stand alone, so quoted file paths do not misclassify", () => {

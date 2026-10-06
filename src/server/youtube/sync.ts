@@ -2,7 +2,16 @@ import { selectBackfill } from "./backfill.js";
 import { withCookieArgs } from "./cookies.js";
 import type { Backfill, ChannelInclude, YoutubePlaylist } from "./playlists.js";
 import type { ContentKind, InitialState, ListingEntry, VideoRow, YoutubeStore } from "./store.js";
-import { channelContentLists, isChannelId, isChannelUploads, isVideoId, playlistUrl, uploadsPlaylistId, videoUrl, type ChannelInput } from "./urls.js";
+import {
+  channelContentLists,
+  isChannelId,
+  isChannelUploads,
+  isVideoId,
+  playlistUrl,
+  uploadsPlaylistId,
+  videoUrl,
+  type ChannelInput,
+} from "./urls.js";
 import { classifyYtdlpError, errorSummary, runYtdlp } from "./ytdlp.js";
 import { errorMessage } from "../errors.js";
 
@@ -98,10 +107,22 @@ export function isUnavailableEntry(entry: ListingEntry): boolean {
 }
 
 export async function listPlaylistWithYtdlp(id: string, { maxBytes = LISTING_MAX_BYTES } = {}): Promise<FlatListing> {
-  const result = await withCookieArgs((cookies) => runYtdlp(
-    ["-J", "--flat-playlist", "--js-runtimes", "node", "--extractor-args", "youtubetab:approximate_date", ...cookies, "--", playlistUrl(id)],
-    { timeoutMs: LISTING_TIMEOUT_MS, maxCaptureBytes: maxBytes },
-  ));
+  const result = await withCookieArgs((cookies) =>
+    runYtdlp(
+      [
+        "-J",
+        "--flat-playlist",
+        "--js-runtimes",
+        "node",
+        "--extractor-args",
+        "youtubetab:approximate_date",
+        ...cookies,
+        "--",
+        playlistUrl(id),
+      ],
+      { timeoutMs: LISTING_TIMEOUT_MS, maxCaptureBytes: maxBytes },
+    ),
+  );
   if (result.timedOut) throw new Error("Listing the playlist timed out");
   if (result.code !== 0) throw new Error(errorSummary(result.stderr, result.code));
   if (result.stdoutTruncated) throw new Error(`The playlist listing is larger than ${maxBytes} bytes`);
@@ -163,10 +184,11 @@ export function includesContent(include: ChannelInclude, kind: ContentKind | nul
 /** The uploads playlist of a pasted channel. A handle or legacy name costs one yt-dlp call to resolve. */
 export async function resolveChannelWithYtdlp(input: ChannelInput): Promise<string> {
   if ("channelId" in input) return uploadsPlaylistId(input.channelId);
-  const result = await withCookieArgs((cookies) => runYtdlp(
-    ["-J", "--flat-playlist", "--playlist-items", "1", "--js-runtimes", "node", ...cookies, "--", input.url],
-    { timeoutMs: METADATA_TIMEOUT_MS },
-  ));
+  const result = await withCookieArgs((cookies) =>
+    runYtdlp(["-J", "--flat-playlist", "--playlist-items", "1", "--js-runtimes", "node", ...cookies, "--", input.url], {
+      timeoutMs: METADATA_TIMEOUT_MS,
+    }),
+  );
   if (result.timedOut) throw new Error("Looking up the channel timed out");
   if (result.code !== 0) throw new Error(errorSummary(result.stderr, result.code));
   let channelId: unknown;
@@ -175,15 +197,28 @@ export async function resolveChannelWithYtdlp(input: ChannelInput): Promise<stri
   } catch {
     channelId = null;
   }
-  if (typeof channelId !== "string" || !isChannelId(channelId)) throw new Error("YouTube did not return a channel for this link");
+  if (typeof channelId !== "string" || !isChannelId(channelId))
+    throw new Error("YouTube did not return a channel for this link");
   return uploadsPlaylistId(channelId);
 }
 
 export async function exactUploadDateWithYtdlp(videoId: string): Promise<string | null> {
-  const result = await withCookieArgs((cookies) => runYtdlp(
-    ["--skip-download", "--no-playlist", "--js-runtimes", "node", "--print", "%(upload_date)s", ...cookies, "--", videoUrl(videoId)],
-    { timeoutMs: METADATA_TIMEOUT_MS },
-  ));
+  const result = await withCookieArgs((cookies) =>
+    runYtdlp(
+      [
+        "--skip-download",
+        "--no-playlist",
+        "--js-runtimes",
+        "node",
+        "--print",
+        "%(upload_date)s",
+        ...cookies,
+        "--",
+        videoUrl(videoId),
+      ],
+      { timeoutMs: METADATA_TIMEOUT_MS },
+    ),
+  );
   if (result.code === 0) return upload(result.stdout.trim());
   // YouTube pushing back must reach the lane's cooldown; any other failure just leaves the date unknown.
   const cls = classifyYtdlpError(result.stderr);
@@ -207,26 +242,36 @@ function rememberedExactDates(store: YoutubeStore, lookup: SyncDeps["exactUpload
  * backfill filter; later syncs queue whatever is new. Records the outcome in
  * the sync state either way, then rethrows a failure.
  */
-export async function syncPlaylist(store: YoutubeStore, playlist: YoutubePlaylist, deps: SyncDeps): Promise<SyncResult> {
+export async function syncPlaylist(
+  store: YoutubeStore,
+  playlist: YoutubePlaylist,
+  deps: SyncDeps,
+): Promise<SyncResult> {
   const now = deps.now().toISOString();
   try {
     const listing = await deps.listPlaylist(playlist.id);
     const state = store.getSyncState(playlist.id);
     const firstSync = !state.firstSyncAt;
-    const known = store.knownMembers(playlist.id, listing.entries.map((e) => e.videoId));
+    const known = store.knownMembers(
+      playlist.id,
+      listing.entries.map((e) => e.videoId),
+    );
     const unseen = listing.entries.filter((e) => !known.has(e.videoId));
 
     // A channel's added date is its upload date; scanning the uploads for it would cost a request per 50 videos.
     const wantsAddedDates = firstSync && playlist.backfill.kind === "added_since";
-    const addedDates = !isChannelUploads(playlist.id) && (wantsAddedDates || unseen.length > 0)
-      ? await deps.addedDates(playlist.id).catch((error) => {
-        if (wantsAddedDates) throw error;
-        return null;
-      })
-      : null;
+    const addedDates =
+      !isChannelUploads(playlist.id) && (wantsAddedDates || unseen.length > 0)
+        ? await deps.addedDates(playlist.id).catch((error) => {
+            if (wantsAddedDates) throw error;
+            return null;
+          })
+        : null;
 
     // Kinds the follow leaves out are skipped whatever their date, so they cost no lookup.
-    const candidates = listing.entries.filter((e) => !isUnavailableEntry(e) && includesContent(playlist.include, e.contentKind));
+    const candidates = listing.entries.filter(
+      (e) => !isUnavailableEntry(e) && includesContent(playlist.include, e.contentKind),
+    );
     const exactUploadDate = rememberedExactDates(store, deps.exactUploadDate);
     const selection = firstSync
       ? await selectBackfill(playlist.backfill, candidates, { exactUploadDate, addedDates, today: now.slice(0, 10) })
@@ -249,7 +294,12 @@ export async function syncPlaylist(store: YoutubeStore, playlist: YoutubePlaylis
         addedAt: addedDates?.get(entry.videoId) ?? null,
         initial: initialFor(entry),
       })),
-      { complete: listing.entries.length > 0 && listing.entries.length === listing.playlistCount, now, resetUntouched: firstSync, isFollowed: deps.isFollowed },
+      {
+        complete: listing.entries.length > 0 && listing.entries.length === listing.playlistCount,
+        now,
+        resetUntouched: firstSync,
+        isFollowed: deps.isFollowed,
+      },
     );
     store.updateSyncState(playlist.id, {
       lastCheckedAt: now,
@@ -260,7 +310,10 @@ export async function syncPlaylist(store: YoutubeStore, playlist: YoutubePlaylis
     });
     return { title: listingTitle(listing) || playlist.title, total: listing.entries.length, ...counts };
   } catch (error) {
-    store.updateSyncState(playlist.id, { lastCheckedAt: now, lastError: error instanceof Error ? errorMessage(error) : String(error) });
+    store.updateSyncState(playlist.id, {
+      lastCheckedAt: now,
+      lastError: error instanceof Error ? errorMessage(error) : String(error),
+    });
     throw error;
   }
 }
@@ -294,8 +347,12 @@ export async function changeBackfill(
 
   const candidates = store
     .playlistVideos(playlist.id)
-    .filter((v) => v.playlist_id === playlist.id && v.first_seen_at <= firstSyncAt && !v.removed_at && !v.user_queued_at)
-    .filter((v) => v.status === "new" || v.status === "queued" || (v.status === "skipped" && v.skip_kind === "before_start"));
+    .filter(
+      (v) => v.playlist_id === playlist.id && v.first_seen_at <= firstSyncAt && !v.removed_at && !v.user_queued_at,
+    )
+    .filter(
+      (v) => v.status === "new" || v.status === "queued" || (v.status === "skipped" && v.skip_kind === "before_start"),
+    );
 
   const addedDates = backfill.kind === "added_since" ? await deps.addedDates(playlist.id) : null;
   const { selected } = await selectBackfill(
@@ -346,7 +403,9 @@ export async function changeChannelContent(
   const result: ContentChange = { released: 0, skipped: 0 };
   if (!firstSyncAt) return result;
 
-  const listed = store.playlistVideos(playlist.id).filter((v) => v.playlist_id === playlist.id && !v.removed_at && !v.user_queued_at);
+  const listed = store
+    .playlistVideos(playlist.id)
+    .filter((v) => v.playlist_id === playlist.id && !v.removed_at && !v.user_queued_at);
   for (const video of listed) {
     if (includesContent(include, video.content_kind)) continue;
     if (video.status === "new" || video.status === "queued") {
@@ -357,7 +416,9 @@ export async function changeChannelContent(
     }
   }
 
-  const turnedOn = listed.filter((v) => v.status === "skipped" && v.skip_kind === "content" && includesContent(include, v.content_kind));
+  const turnedOn = listed.filter(
+    (v) => v.status === "skipped" && v.skip_kind === "content" && includesContent(include, v.content_kind),
+  );
   const fromBefore = turnedOn.filter((v) => v.first_seen_at <= firstSyncAt);
   const addedDates = playlist.backfill.kind === "added_since" ? await deps.addedDates(playlist.id) : null;
   const { selected } = await selectBackfill(

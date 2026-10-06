@@ -2,8 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { effectiveSource, isSameAsTarget, skipTranslation, type StagedFile } from "./staged-file.js";
 
-const staged = (over: Partial<StagedFile>): StagedFile =>
-  ({ id: "a", file: {} as File, override: null, skip: false, detected: "en", ...over });
+const staged = (over: Partial<StagedFile>): StagedFile => ({
+  id: "a",
+  file: {} as File,
+  override: null,
+  skip: false,
+  detected: "en",
+  ...over,
+});
 
 test("source resolution order is override, page-level From, then detection", () => {
   assert.equal(effectiveSource(staged({ override: "ja" }), "fr"), "ja");

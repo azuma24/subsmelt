@@ -16,10 +16,18 @@ export function JobDetailPage() {
 
   // Don't flash "not found" while the jobs list is still loading (deep-link nav).
   if (jobsQuery.isLoading && !jobsQuery.data) {
-    return <div className="mx-auto max-w-4xl p-6"><EmptyHint text={t("errors.loading")} /></div>;
+    return (
+      <div className="mx-auto max-w-4xl p-6">
+        <EmptyHint text={t("errors.loading")} />
+      </div>
+    );
   }
   if (!job) {
-    return <div className="mx-auto max-w-4xl p-6"><EmptyHint text={t("jobDetail.notFound")} /></div>;
+    return (
+      <div className="mx-auto max-w-4xl p-6">
+        <EmptyHint text={t("jobDetail.notFound")} />
+      </div>
+    );
   }
 
   const pct = job.total_cues > 0 ? Math.round((job.completed_cues / job.total_cues) * 100) : 0;
@@ -31,7 +39,9 @@ export function JobDetailPage() {
           <div className="min-w-0">
             <div className="text-xs uppercase tracking-wide text-faint">{t("jobDetail.title", { id: job.id })}</div>
             <h1 className="mt-1 break-all text-xl font-semibold">{job.srt_path.split("/").pop()}</h1>
-            <p className="mt-2 text-sm text-muted">{job.target_lang} • {job.lang_code}</p>
+            <p className="mt-2 text-sm text-muted">
+              {job.target_lang} • {job.lang_code}
+            </p>
           </div>
           <JobStatusBadge job={job} />
         </div>
@@ -39,10 +49,24 @@ export function JobDetailPage() {
           <DetailCard label={t("app.sourcePath")} value={job.srt_path} mono />
           <DetailCard label={t("app.outputPath")} value={job.output_path} mono />
           <DetailCard label={t("app.duration")} value={job.duration_seconds ? formatDur(job.duration_seconds) : "—"} />
-          <DetailCard label={t("app.priorityForce")} value={`${job.priority > 0 ? t("app.pinned") : t("app.normal")} • ${job.force ? t("app.forceEnabled") : t("app.normalMode")}`} />
+          <DetailCard
+            label={t("app.priorityForce")}
+            value={`${job.priority > 0 ? t("app.pinned") : t("app.normal")} • ${job.force ? t("app.forceEnabled") : t("app.normalMode")}`}
+          />
         </div>
-        {job.status === "translating" && <div className="mt-6"><ProgressSmall pct={pct} large /><div className="mt-2 text-xs text-faint">{t("dashboard.cues", { completed: job.completed_cues, total: job.total_cues })}</div></div>}
-        {job.error && <div className="mt-6 rounded-md border border-danger-line bg-danger-soft p-4 text-xs text-danger whitespace-pre-wrap">{job.error}</div>}
+        {job.status === "translating" && (
+          <div className="mt-6">
+            <ProgressSmall pct={pct} large />
+            <div className="mt-2 text-xs text-faint">
+              {t("dashboard.cues", { completed: job.completed_cues, total: job.total_cues })}
+            </div>
+          </div>
+        )}
+        {job.error && (
+          <div className="mt-6 rounded-md border border-danger-line bg-danger-soft p-4 text-xs text-danger whitespace-pre-wrap">
+            {job.error}
+          </div>
+        )}
       </section>
 
       <section className="rounded-md border border-border bg-surface p-6 md:p-6">
@@ -65,7 +89,9 @@ export function JobDetailPage() {
           <div className="mt-4 space-y-3">
             {previewQuery.data.lines.slice(0, 8).map((line) => (
               <div key={line.index} className="rounded-md border border-border bg-surface-raised p-3">
-                <div className="mb-2 flex items-center justify-between text-xs text-faint"><span>#{line.index}</span></div>
+                <div className="mb-2 flex items-center justify-between text-xs text-faint">
+                  <span>#{line.index}</span>
+                </div>
                 <div className="space-y-2 text-xs">
                   <div>
                     <div className="mb-1 text-xs uppercase text-faint">{t("dashboard.preview.colOriginal")}</div>

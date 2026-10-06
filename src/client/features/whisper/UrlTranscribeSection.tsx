@@ -22,7 +22,13 @@ export interface UrlTranscribeSectionProps {
  * the browser since there's no local media file for a URL.
  */
 export function UrlTranscribeSection({
-  effFormat, effModel, effLang, effDevice, effCompute, canDiarize, effDiarize,
+  effFormat,
+  effModel,
+  effLang,
+  effDevice,
+  effCompute,
+  canDiarize,
+  effDiarize,
 }: UrlTranscribeSectionProps) {
   const isMobile = useIsMobile();
   const { t } = useTranslation();
@@ -36,8 +42,13 @@ export function UrlTranscribeSection({
     setUrlBusy(true);
     try {
       const res = await api.transcribeUrl({
-        url, outputFormat: effFormat, model: effModel, language: effLang,
-        device: effDevice, computeType: effCompute, speakerDiarization: canDiarize && effDiarize,
+        url,
+        outputFormat: effFormat,
+        model: effModel,
+        language: effLang,
+        device: effDevice,
+        computeType: effCompute,
+        speakerDiarization: canDiarize && effDiarize,
       });
       // No local media file for a URL — hand the rendered subtitle to the browser.
       const blob = new Blob([res.content], { type: "text/plain;charset=utf-8" });
@@ -73,7 +84,9 @@ export function UrlTranscribeSection({
         <ActionButton
           variant="primary"
           size="sm"
-          onClick={() => { void transcribeFromUrl(); }}
+          onClick={() => {
+            void transcribeFromUrl();
+          }}
           disabled={!urlValue.trim()}
           busy={urlBusy}
           className={isMobile ? "w-full" : ""}

@@ -22,16 +22,43 @@ const LANGUAGES: Record<string, LanguageEntry> = {
   en: { file: "eng", whisper: "en", aliases: ["eng", "english"] },
   ja: { file: "jpn", whisper: "ja", aliases: ["jp", "jpn", "japanese", "日本語"] },
   zh: { file: "chi", whisper: "zh", aliases: ["chi", "zho", "chinese", "中文"] },
-  "zh-Hant": { file: "cht", whisper: "zh", aliases: ["zh-tw", "zh-hk", "zh-mo", "cht", "zht", "zt", "traditional chinese", "chinese (traditional)", "繁體中文", "正體中文"] },
-  "zh-Hans": { file: "chs", whisper: "zh", aliases: ["zh-cn", "zh-sg", "chs", "zhs", "simplified chinese", "chinese (simplified)", "简体中文"] },
+  "zh-Hant": {
+    file: "cht",
+    whisper: "zh",
+    aliases: [
+      "zh-tw",
+      "zh-hk",
+      "zh-mo",
+      "cht",
+      "zht",
+      "zt",
+      "traditional chinese",
+      "chinese (traditional)",
+      "繁體中文",
+      "正體中文",
+    ],
+  },
+  "zh-Hans": {
+    file: "chs",
+    whisper: "zh",
+    aliases: ["zh-cn", "zh-sg", "chs", "zhs", "simplified chinese", "chinese (simplified)", "简体中文"],
+  },
   ko: { file: "kor", whisper: "ko", aliases: ["kor", "korean", "한국어"] },
   fr: { file: "fra", whisper: "fr", aliases: ["fra", "fre", "french", "français"] },
   de: { file: "deu", whisper: "de", aliases: ["deu", "ger", "german", "deutsch"] },
   es: { file: "spa", whisper: "es", aliases: ["spa", "spanish", "español"] },
   pt: { file: "por", whisper: "pt", aliases: ["por", "portuguese", "português"] },
   // Like Chinese scripts, Brazilian and European Portuguese are written differently enough to keep apart.
-  "pt-BR": { file: "pt-BR", whisper: "pt", aliases: ["pt-br", "brazilian portuguese", "portuguese (brazil)", "português (brasil)", "português brasileiro"] },
-  "pt-PT": { file: "pt-PT", whisper: "pt", aliases: ["pt-pt", "european portuguese", "portuguese (portugal)", "português (portugal)", "português europeu"] },
+  "pt-BR": {
+    file: "pt-BR",
+    whisper: "pt",
+    aliases: ["pt-br", "brazilian portuguese", "portuguese (brazil)", "português (brasil)", "português brasileiro"],
+  },
+  "pt-PT": {
+    file: "pt-PT",
+    whisper: "pt",
+    aliases: ["pt-pt", "european portuguese", "portuguese (portugal)", "português (portugal)", "português europeu"],
+  },
   it: { file: "ita", whisper: "it", aliases: ["ita", "italian", "italiano"] },
   ru: { file: "rus", whisper: "ru", aliases: ["rus", "russian", "русский"] },
   ar: { file: "ara", whisper: "ar", aliases: ["ara", "arabic", "العربية"] },
@@ -51,7 +78,15 @@ for (const [key, entry] of Object.entries(LANGUAGES)) {
   for (const alias of [key.toLowerCase(), ...entry.aliases]) BY_ALIAS.set(alias, key);
 }
 
-const CHINESE_SCRIPT: Record<string, string> = { hant: "zh-Hant", tw: "zh-Hant", hk: "zh-Hant", mo: "zh-Hant", hans: "zh-Hans", cn: "zh-Hans", sg: "zh-Hans" };
+const CHINESE_SCRIPT: Record<string, string> = {
+  hant: "zh-Hant",
+  tw: "zh-Hant",
+  hk: "zh-Hant",
+  mo: "zh-Hant",
+  hans: "zh-Hans",
+  cn: "zh-Hans",
+  sg: "zh-Hans",
+};
 // The languages whose region is part of the language, by the region subtag that picks each variant.
 const REGIONAL: Record<string, Record<string, string>> = { zh: CHINESE_SCRIPT, pt: { br: "pt-BR", pt: "pt-PT" } };
 
@@ -66,7 +101,10 @@ export function languageKey(label: string): string {
   const direct = BY_ALIAS.get(text);
   if (direct) return direct;
   // A parenthetical never names a language: "Traditional Chinese (Taiwan)" is "traditional chinese".
-  const bare = text.replace(/\s*\([^)]*\)/g, "").replace(/\s+/g, " ").trim();
+  const bare = text
+    .replace(/\s*\([^)]*\)/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
   const stripped = bare ? BY_ALIAS.get(bare) : undefined;
   if (stripped) return stripped;
   const [base, ...rest] = text.split("-");
@@ -144,7 +182,11 @@ export type SubtitleRoute =
  * info JSON's `subtitles` (creator uploads only; YouTube's automatic
  * captions live elsewhere and never count).
  */
-export function planSubtitles(spokenLang: string | null, targets: SubtitleTarget[], creatorCaptionLangs: string[]): SubtitleRoute[] {
+export function planSubtitles(
+  spokenLang: string | null,
+  targets: SubtitleTarget[],
+  creatorCaptionLangs: string[],
+): SubtitleRoute[] {
   const spoken = spokenLang ? languageKey(spokenLang) : null;
   const captions = new Map<string, string>();
   for (const caption of creatorCaptionLangs) {
@@ -156,7 +198,8 @@ export function planSubtitles(spokenLang: string | null, targets: SubtitleTarget
     const key = languageKey(lang);
     if (spoken && key === spoken) return { taskId, kind: "same" };
     // A plain "pt" task takes any Portuguese captions; a regional one ("pt-BR") only its own.
-    const captionLang = captions.get(key) ?? (key in REGIONAL ? [...captions].find(([k]) => k.startsWith(`${key}-`))?.[1] : undefined);
+    const captionLang =
+      captions.get(key) ?? (key in REGIONAL ? [...captions].find(([k]) => k.startsWith(`${key}-`))?.[1] : undefined);
     return captionLang ? { taskId, kind: "captions", captionLang } : { taskId, kind: "translate" };
   });
 }

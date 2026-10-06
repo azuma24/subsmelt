@@ -25,8 +25,10 @@ export type TranslationGate = { open: true } | { open: false; waitingFor: number
  */
 export function translationGate(state: GpuState): TranslationGate {
   if (!state.shared) return { open: true };
-  if (state.transcriptionsRunning > 0) return { open: false, waitingFor: Math.max(state.transcriptionsRunning, state.youtubeBacklog) };
-  if (state.youtubeBacklog > 0 && state.subtitlesWaiting < SUBTITLES_WAITING_CAP) return { open: false, waitingFor: state.youtubeBacklog };
+  if (state.transcriptionsRunning > 0)
+    return { open: false, waitingFor: Math.max(state.transcriptionsRunning, state.youtubeBacklog) };
+  if (state.youtubeBacklog > 0 && state.subtitlesWaiting < SUBTITLES_WAITING_CAP)
+    return { open: false, waitingFor: state.youtubeBacklog };
   return { open: true };
 }
 

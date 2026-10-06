@@ -38,9 +38,7 @@ export function DropZone({ onFiles }: DropZoneProps) {
       onDragLeave={() => setIsDragging(false)}
       onDrop={handleDrop}
       className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed px-6 py-12 text-center transition-colors ${
-        isDragging
-          ? "border-accent bg-accent-soft"
-          : "border-border bg-surface-raised hover:border-accent-line"
+        isDragging ? "border-accent bg-accent-soft" : "border-border bg-surface-raised hover:border-accent-line"
       }`}
     >
       <Icon name="folder-open" size={20} />

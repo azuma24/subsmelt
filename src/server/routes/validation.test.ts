@@ -54,17 +54,17 @@ test("validateOutputPattern accepts filename templates and defaults, rejects med
   assert.equal(validateOutputPattern("../../../etc/{{name}}.srt").ok, false);
   assert.equal(validateOutputPattern("/etc/subtitles/{{name}}.srt").ok, false);
   assert.equal(validateOutputPattern("..\\{{name}}.srt").ok, false);
-  assert.deepEqual(
-    parseTaskUpdate({ output_pattern: "../../{{name}}.srt" }),
-    { ok: false, error: "output_pattern must stay inside the media folder" },
-  );
+  assert.deepEqual(parseTaskUpdate({ output_pattern: "../../{{name}}.srt" }), {
+    ok: false,
+    error: "output_pattern must stay inside the media folder",
+  });
 });
 
 test("parseLogsQuery reads the log filters", () => {
-  assert.deepEqual(
-    parseLogsQuery({ level: "error", category: "queue", job_id: "7", limit: "25", offset: "50" }),
-    { ok: true, value: { level: "error", category: "queue", jobId: 7, limit: 25, offset: 50 } },
-  );
+  assert.deepEqual(parseLogsQuery({ level: "error", category: "queue", job_id: "7", limit: "25", offset: "50" }), {
+    ok: true,
+    value: { level: "error", category: "queue", jobId: 7, limit: 25, offset: 50 },
+  });
   assert.deepEqual(parseLogsQuery({}), {
     ok: true,
     value: { level: undefined, category: undefined, jobId: undefined, limit: 100, offset: 0 },
@@ -73,6 +73,9 @@ test("parseLogsQuery reads the log filters", () => {
 
 test("parseLogsQuery rejects repeated or nested query values", () => {
   assert.deepEqual(parseLogsQuery({ level: ["error", "warn"] }), { ok: false, error: "level must be a single value" });
-  assert.deepEqual(parseLogsQuery({ category: { name: "queue" } }), { ok: false, error: "category must be a single value" });
+  assert.deepEqual(parseLogsQuery({ category: { name: "queue" } }), {
+    ok: false,
+    error: "category must be a single value",
+  });
   assert.deepEqual(parseLogsQuery({ limit: ["1", "2"] }), { ok: false, error: "limit must be a single value" });
 });

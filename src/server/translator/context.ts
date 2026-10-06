@@ -2,7 +2,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { generateText } from "ai";
 import { logger } from "../logger.js";
-import { getAi, normalizeResult, withAbortTimeout, REQUEST_TIMEOUT_MS, extractUsage, type CloudProvider, type TokenUsage } from "./ai-client.js";
+import {
+  getAi,
+  normalizeResult,
+  withAbortTimeout,
+  REQUEST_TIMEOUT_MS,
+  extractUsage,
+  type CloudProvider,
+  type TokenUsage,
+} from "./ai-client.js";
 import { ContextOverflowError } from "./context-overflow.js";
 import { DEFAULT_ANALYSIS_LINES, MIN_ANALYSIS_LINES, analysisLinesFor } from "./context-probe.js";
 
@@ -22,7 +30,7 @@ export async function analyzeSubtitlesForContext(
     requestTimeoutMs?: number;
     /** Fired after the analysis generateText with its token usage. */
     onUsage?: (u: TokenUsage) => void;
-  }
+  },
 ): Promise<string> {
   if (!opts.model || subtitles.length === 0) return "";
 
@@ -42,7 +50,7 @@ export async function analyzeSubtitlesForContext(
       if (fewer === null) throw error;
       logger.warn(
         "translate",
-        `Context analysis overflowed ${opts.model}'s context window with ${sample.length} lines; retrying with ${fewer}`
+        `Context analysis overflowed ${opts.model}'s context window with ${sample.length} lines; retrying with ${fewer}`,
       );
       sample = sampleLines(subtitles, fewer);
     }
@@ -69,14 +77,16 @@ function fewerAnalysisLines(current: number, contextTokens: number | null): numb
 
 async function requestAnalysis(
   sample: string[],
-  opts: Parameters<typeof analyzeSubtitlesForContext>[1]
+  opts: Parameters<typeof analyzeSubtitlesForContext>[1],
 ): Promise<string> {
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost, provider: opts.provider });
-  const result = normalizeResult(await withAbortTimeout((abortSignal) =>
-    generateText({
-      model: ai(opts.model),
-      temperature: opts.temperature ?? 0.3,
-      system: `# System Prompt
+  const result = normalizeResult(
+    await withAbortTimeout(
+      (abortSignal) =>
+        generateText({
+          model: ai(opts.model),
+          temperature: opts.temperature ?? 0.3,
+          system: `# System Prompt
 
 You are a subtitle content analyst assisting a translation and glossary extraction system.
 
@@ -105,15 +115,14 @@ Use exactly this markdown structure:
 
 ### 📚 Glossary
 - term: ... | description: ... | category: ... | preferredTranslation: ... | notes: ...`,
-      prompt:
-        `Produce plot summary in ${opts.lang} and glossary from this subtitle sample:\n` +
-        sample.join("\n"),
-      maxRetries: 0,
-      abortSignal,
-    }),
-    opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS,
-    opts.abortSignal
-  ));
+          prompt: `Produce plot summary in ${opts.lang} and glossary from this subtitle sample:\n` + sample.join("\n"),
+          maxRetries: 0,
+          abortSignal,
+        }),
+      opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS,
+      opts.abortSignal,
+    ),
+  );
 
   if (opts.onUsage) {
     const usage = extractUsage(result);
@@ -296,10 +305,7 @@ export interface ChunkGlossaryResult {
  * every known term is available for per-chunk scanning. Purely additive: if
  * nothing parses, this is an empty list and chunk prompts are unchanged.
  */
-export function buildChunkGlossary(
-  analysis: string,
-  seriesGlossary: SeriesGlossary | null
-): ChunkGlossaryResult {
+export function buildChunkGlossary(analysis: string, seriesGlossary: SeriesGlossary | null): ChunkGlossaryResult {
   const parsedGlossary = parseGlossaryFromAnalysis(analysis);
   const glossaryByTerm = new Map<string, GlossaryEntry>();
   for (const e of parsedGlossary) glossaryByTerm.set(e.term.toLowerCase(), e);

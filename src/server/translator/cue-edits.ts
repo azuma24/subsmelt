@@ -3,7 +3,15 @@ import path from "node:path";
 import { parseSync, stringifySync } from "subtitle";
 import assParser from "ass-parser";
 import assStringify from "ass-stringify";
-import { assField, buildAssDocumentFromCues, isAssDocument, normalizeTimeToMs, withDialogueText, type ParsedSubtitle, type SubtitleCue } from "./convert.js";
+import {
+  assField,
+  buildAssDocumentFromCues,
+  isAssDocument,
+  normalizeTimeToMs,
+  withDialogueText,
+  type ParsedSubtitle,
+  type SubtitleCue,
+} from "./convert.js";
 import { mkdirShared, shareFile } from "../shared-files.js";
 
 /** A single manual edit from the preview UI. `index` is the 1-based cue index
@@ -29,11 +37,7 @@ export interface CueEdit {
  *
  * Returns the new document string plus the number of cues actually updated.
  */
-export function applyCueEdits(
-  content: string,
-  ext: string,
-  edits: CueEdit[]
-): { output: string; updated: number } {
+export function applyCueEdits(content: string, ext: string, edits: CueEdit[]): { output: string; updated: number } {
   const normalizedExt = ext.toLowerCase().replace(/^\./, "");
 
   // Build a position→text map (0-based) from the 1-based edit indices, skipping
@@ -131,7 +135,7 @@ export function saveTranslated(
   outputPath: string,
   parsedSubtitle: ParsedSubtitle | null | undefined,
   outputExtension: string,
-  cues: SubtitleCue[]
+  cues: SubtitleCue[],
 ) {
   let newSubtitle: string;
   const ext = outputExtension.toLowerCase();
@@ -148,7 +152,7 @@ export function saveTranslated(
           text: x?.data?.translatedText || x?.data?.text || "",
         },
       })),
-      { format }
+      { format },
     );
   } else if (["ass", "ssa"].includes(ext)) {
     if (parsedSubtitle && isAssDocument(parsedSubtitle) && Array.isArray(parsedSubtitle.full)) {
@@ -165,7 +169,7 @@ export function saveTranslated(
               return withDialogueText(line, translatedText);
             }),
           };
-        })
+        }),
       );
     } else {
       newSubtitle = assStringify(buildAssDocumentFromCues(cues));

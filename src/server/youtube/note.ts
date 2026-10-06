@@ -51,7 +51,10 @@ const escapeTags = (text: string) => text.replace(/(^|\s)#/g, "$1\\#");
 
 /** A name safe as an Obsidian note name or inside `[[ ]]`. */
 export function safeNoteName(name: string): string {
-  return name.replace(UNSAFE_NAME_RE, " ").replace(/\s+/g, " ").replace(/^[.\s]+|[.\s]+$/g, "");
+  return name
+    .replace(UNSAFE_NAME_RE, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^[.\s]+|[.\s]+$/g, "");
 }
 
 function truncateBytes(text: string, maxBytes: number): string {
@@ -95,7 +98,10 @@ function joinTexts(texts: string[]): string {
 }
 
 function cleanCueText(text: string): string {
-  const lines = text.replace(/<[^>]*>/g, "").replace(/\{\\[^}]*\}/g, "").split(/\r?\n/);
+  const lines = text
+    .replace(/<[^>]*>/g, "")
+    .replace(/\{\\[^}]*\}/g, "")
+    .split(/\r?\n/);
   return joinTexts(lines.map((line) => line.replace(/\s+/g, " ").trim()));
 }
 
@@ -170,14 +176,23 @@ function transcriptSection(heading: string, videoId: string, cues: Cue[], starts
 
 /** The whole note for one video: frontmatter, description, chapters, the transcript and one section per translation. */
 export function renderNote(info: NoteInfo, cues: Cue[], translations: NoteTranslation[]): string {
-  const blocks = [frontmatter(info, translations), `# ${escapeTags(info.title)}`, `![](https://www.youtube.com/watch?v=${info.videoId})`];
+  const blocks = [
+    frontmatter(info, translations),
+    `# ${escapeTags(info.title)}`,
+    `![](https://www.youtube.com/watch?v=${info.videoId})`,
+  ];
   const description = info.description?.trim();
   if (description) {
     const quoted = description.split(/\r?\n/).map((line) => (line.trim() ? `> ${line.trimEnd()}` : ">"));
     blocks.push(["> [!info]- Description", ...quoted].join("\n"));
   }
   if (info.chapters.length) {
-    blocks.push(["## Chapters", ...info.chapters.map((c) => `- ${timestampLink(info.videoId, c.start)} ${escapeTags(c.title)}`)].join("\n"));
+    blocks.push(
+      [
+        "## Chapters",
+        ...info.chapters.map((c) => `- ${timestampLink(info.videoId, c.start)} ${escapeTags(c.title)}`),
+      ].join("\n"),
+    );
   }
   const starts = paragraphStarts(cues, info.chapters);
   blocks.push(transcriptSection("Transcript", info.videoId, cues, starts));

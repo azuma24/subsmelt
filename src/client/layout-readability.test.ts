@@ -15,7 +15,9 @@ const dashboard = [
   "src/client/features/dashboard/QueueToolbar.tsx",
   "src/client/features/library/ScanConfirmModal.tsx",
   "src/client/features/dashboard/TranscriptionHistoryPanel.tsx",
-].map((path) => readFileSync(path, "utf8")).join("\n");
+]
+  .map((path) => readFileSync(path, "utf8"))
+  .join("\n");
 
 test("global typography uses readable app font and line-height defaults", () => {
   assert.match(css, /font-family:\s*ui-sans-serif/);
@@ -33,7 +35,7 @@ function lightToken(name: string): string {
 
 function contrastRatio(a: string, b: string): number {
   const luminance = (hex: string) => {
-    const channel = (c: number) => (c /= 255) <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    const channel = (c: number) => ((c /= 255) <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
     const n = parseInt(hex.slice(1), 16);
     return 0.2126 * channel(n >> 16) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255);
   };
@@ -45,7 +47,10 @@ test("light-theme muted text keeps WCAG AA contrast on both panel surfaces", () 
   const muted = lightToken("text-3");
   assert.ok(contrastRatio(muted, lightToken("surface")) >= 4.5, `--text-3 ${muted} on --surface`);
   assert.ok(contrastRatio(muted, lightToken("surface-2")) >= 4.5, `--text-3 ${muted} on --surface-2`);
-  assert.ok(contrastRatio(muted, "#ffffff") < contrastRatio(lightToken("text-2"), "#ffffff"), "--text-3 stays lighter than --text-2");
+  assert.ok(
+    contrastRatio(muted, "#ffffff") < contrastRatio(lightToken("text-2"), "#ffffff"),
+    "--text-3 stays lighter than --text-2",
+  );
 });
 
 test("mobile layout uses dynamic viewport height and safe-area bottom padding", () => {

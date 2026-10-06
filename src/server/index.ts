@@ -3,18 +3,9 @@ import cors from "cors";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import asyncPool from "tiny-async-pool";
-import {
-  getAllSettings,
-  setSetting,
-  getSetting,
-} from "./config.js";
+import { getAllSettings, setSetting, getSetting } from "./config.js";
 import { scanFolder, listFolderTree, MEDIA_DIR } from "./scanner.js";
-import {
-  runQueueSafely,
-  isQueueRunning,
-  startAutoScan,
-  resumeQueueOnBoot,
-} from "./queue.js";
+import { runQueueSafely, isQueueRunning, startAutoScan, resumeQueueOnBoot } from "./queue.js";
 import { noSpeechVideos, transcriptionHistory } from "./transcription-history.js";
 import { logger } from "./logger.js";
 import { crossSiteGuard } from "./cross-site-guard.js";
@@ -37,10 +28,7 @@ import {
   getTranscriptionBackendUrl,
   runTranscriptionAttempt,
 } from "./routes/transcription.js";
-import {
-  claimAutoTranscriptions,
-  releaseAutoTranscription,
-} from "./auto-transcription.js";
+import { claimAutoTranscriptions, releaseAutoTranscription } from "./auto-transcription.js";
 import { TranscriptionInFlightError } from "./transcription/in-flight.js";
 import { NoSpeechError } from "./routes/transcription-runtime.js";
 import { errorMessage } from "./errors.js";
@@ -89,10 +77,7 @@ const staticDir = path.join(__dirname, "../../dist/client");
 // Vite names every built asset by content hash, so those can be cached for a
 // year and never revalidated; index.html and the favicon keep their names and
 // must be checked on every load so a new release shows up.
-app.use(
-  "/assets",
-  express.static(path.join(staticDir, "assets"), { immutable: true, maxAge: "1y", index: false }),
-);
+app.use("/assets", express.static(path.join(staticDir, "assets"), { immutable: true, maxAge: "1y", index: false }));
 app.use(express.static(staticDir, { maxAge: 0, etag: true }));
 
 // ======== SSE (Feature 6) ========
@@ -129,9 +114,7 @@ app.post("/api/scan", async (_req, res) => {
     const backendUrl = getTranscriptionBackendUrl(settings);
     if (typed.transcription_enabled && backendUrl && behavior !== "ask") {
       const postAction: TranscribePostAction =
-        behavior === "auto_transcribe_and_translate"
-          ? "transcribe_and_translate"
-          : "transcribe_only";
+        behavior === "auto_transcribe_and_translate" ? "transcribe_and_translate" : "transcribe_only";
       // Claimed in the same tick as the scan, so an overlapping scan either
       // finds a video claimed here or already sees its new subtitle.
       const missingVideos = claimAutoTranscriptions(
@@ -148,53 +131,43 @@ app.post("/api/scan", async (_req, res) => {
       // (each registering a history row + in-flight entry) before the slot gate
       // can even hold them back.
       const scanConcurrency = typed.transcription_max_concurrent;
-      for await (const _ of asyncPool(
-        scanConcurrency,
-        missingVideos,
-        async (videoPath) => {
-          try {
-            const { result: transcribed } = await runTranscriptionAttempt({
-              videoPath,
-              postAction,
-              settings,
-            });
+      for await (const _ of asyncPool(scanConcurrency, missingVideos, async (videoPath) => {
+        try {
+          const { result: transcribed } = await runTranscriptionAttempt({
+            videoPath,
+            postAction,
+            settings,
+          });
+          logger.info(
+            "system",
+            `Auto-transcribed ${path.basename(videoPath)} → ${transcribed.subtitle_path || "subtitle output"}`,
+          );
+        } catch (error) {
+          const message = errorMessage(error) || String(error);
+          if (error instanceof NoSpeechError) {
             logger.info(
               "system",
-              `Auto-transcribed ${path.basename(videoPath)} → ${transcribed.subtitle_path || "subtitle output"}`,
+              `Auto-transcription of ${path.basename(videoPath)} found no speech; later scans skip it`,
             );
-          } catch (error) {
-            const message = errorMessage(error) || String(error);
-            if (error instanceof NoSpeechError) {
-              logger.info(
-                "system",
-                `Auto-transcription of ${path.basename(videoPath)} found no speech; later scans skip it`,
-              );
-              return;
-            }
-            if (error instanceof TranscriptionInFlightError) {
-              // Someone started this video by hand after the scan queued it.
-              logger.info(
-                "system",
-                `Skipped auto-transcription for ${path.basename(videoPath)}: already being transcribed`,
-              );
-              return;
-            }
-            if (typed.transcription_low_ram_behavior === "skip" && message.startsWith("Transcription skipped:")) {
-              logger.info(
-                "system",
-                `Skipped auto-transcription for ${path.basename(videoPath)}: ${message}`,
-              );
-              return;
-            }
-            logger.error(
-              "system",
-              `Auto-transcription failed for ${path.basename(videoPath)}: ${message}`,
-            );
-          } finally {
-            releaseAutoTranscription(videoPath);
+            return;
           }
-        },
-      )) {
+          if (error instanceof TranscriptionInFlightError) {
+            // Someone started this video by hand after the scan queued it.
+            logger.info(
+              "system",
+              `Skipped auto-transcription for ${path.basename(videoPath)}: already being transcribed`,
+            );
+            return;
+          }
+          if (typed.transcription_low_ram_behavior === "skip" && message.startsWith("Transcription skipped:")) {
+            logger.info("system", `Skipped auto-transcription for ${path.basename(videoPath)}: ${message}`);
+            return;
+          }
+          logger.error("system", `Auto-transcription failed for ${path.basename(videoPath)}: ${message}`);
+        } finally {
+          releaseAutoTranscription(videoPath);
+        }
+      })) {
         // Drain the concurrency pool; per-file errors are handled in the iterator.
       }
       if (missingVideos.length > 0) {
@@ -298,10 +271,7 @@ app.listen(PORT, HOST, () => {
   // (e.g. crash/restart mid-transcription) so they no longer hang in history.
   const reconciled = transcriptionHistory.reconcileRunning();
   if (reconciled > 0) {
-    logger.info(
-      "system",
-      `Reconciled ${reconciled} interrupted transcription attempt(s) as failed`,
-    );
+    logger.info("system", `Reconciled ${reconciled} interrupted transcription attempt(s) as failed`);
   }
 
   logger.info("system", `SubSmelt started on ${HOST}:${PORT}`);

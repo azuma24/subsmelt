@@ -25,7 +25,11 @@ function selectedEntries(entries: YoutubePreviewEntry[], backfill: YoutubeBackfi
   }
 }
 
-export function estimateSelection(entries: YoutubePreviewEntry[], backfill: YoutubeBackfill, media: YoutubeMedia): SelectionEstimate {
+export function estimateSelection(
+  entries: YoutubePreviewEntry[],
+  backfill: YoutubeBackfill,
+  media: YoutubeMedia,
+): SelectionEstimate {
   const rows = selectedEntries(entries, backfill);
   const hours = rows.reduce((sum, e) => sum + (e.durationS ?? 0), 0) / 3600;
   const rate = media.type === "audio" ? AUDIO_GB_PER_HOUR : VIDEO_GB_PER_HOUR[media.maxHeight];
@@ -48,6 +52,9 @@ export function formatGigabytes(gb: number): string {
 }
 
 /** A channel's preview without the Shorts and live streams its follow leaves out. Playlist entries have no kind. */
-export function includedEntries(entries: YoutubePreviewEntry[], include: { shorts: boolean; live: boolean }): YoutubePreviewEntry[] {
+export function includedEntries(
+  entries: YoutubePreviewEntry[],
+  include: { shorts: boolean; live: boolean },
+): YoutubePreviewEntry[] {
   return entries.filter((e) => (e.kind === "short" ? include.shorts : e.kind === "live" ? include.live : true));
 }

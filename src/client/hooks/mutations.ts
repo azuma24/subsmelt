@@ -15,13 +15,11 @@ export function useInvalidateApp() {
       queryClient.invalidateQueries({ queryKey: ["transcription-history"] });
       queryClient.invalidateQueries({ queryKey: ["library"] });
     },
-    [queryClient]
+    [queryClient],
   );
 }
 
-export function useMutationWithInvalidation<TData = unknown, TVars = void>(
-  fn: (vars: TVars) => Promise<TData>
-) {
+export function useMutationWithInvalidation<TData = unknown, TVars = void>(fn: (vars: TVars) => Promise<TData>) {
   const invalidate = useInvalidateApp();
   return useMutation({ mutationFn: fn, onSuccess: invalidate });
 }
@@ -70,19 +68,22 @@ export function useModelDownload() {
    * Starts a model download and waits for it to finish (or throw).
    * Invalidates ["whisper-models"] after a successful download.
    */
-  const downloadModel = useCallback(async (model: string): Promise<void> => {
-    setDownloads((prev) => ({ ...prev, [model]: { active: true, pct: prev[model]?.pct ?? 0 } }));
-    try {
-      await api.downloadWhisperModel(model);
-      await queryClient.invalidateQueries({ queryKey: ["whisper-models"] });
-    } finally {
-      setDownloads((prev) => {
-        const next = { ...prev };
-        delete next[model];
-        return next;
-      });
-    }
-  }, [queryClient]);
+  const downloadModel = useCallback(
+    async (model: string): Promise<void> => {
+      setDownloads((prev) => ({ ...prev, [model]: { active: true, pct: prev[model]?.pct ?? 0 } }));
+      try {
+        await api.downloadWhisperModel(model);
+        await queryClient.invalidateQueries({ queryKey: ["whisper-models"] });
+      } finally {
+        setDownloads((prev) => {
+          const next = { ...prev };
+          delete next[model];
+          return next;
+        });
+      }
+    },
+    [queryClient],
+  );
 
   return { downloads, downloadModel };
 }

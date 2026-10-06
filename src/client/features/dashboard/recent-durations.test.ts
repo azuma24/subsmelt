@@ -9,7 +9,10 @@ const done = (id: number, duration_seconds: number | null, started_at: string | 
 
 test("takes the most recent finished jobs from a newest-first list, not the oldest", () => {
   const jobs = Array.from({ length: 25 }, (_, i) => done(100 - i, i + 1));
-  assert.deepEqual(recentDurationsSeconds(jobs, 20), Array.from({ length: 20 }, (_, i) => i + 1));
+  assert.deepEqual(
+    recentDurationsSeconds(jobs, 20),
+    Array.from({ length: 20 }, (_, i) => i + 1),
+  );
 });
 
 test("orders by start time when it is recorded, skipping jobs without a duration", () => {

@@ -27,7 +27,10 @@ function ModelStatus({ model }: { model: WhisperModel }) {
   return (
     <div className="flex flex-wrap gap-1">
       {model.available === false && (
-        <span className={`${badgeCls} border-danger-line bg-danger-soft text-danger`} title={model.unavailableReason ?? undefined}>
+        <span
+          className={`${badgeCls} border-danger-line bg-danger-soft text-danger`}
+          title={model.unavailableReason ?? undefined}
+        >
           <Icon name="error" />
           {t("settings.models.runtimeMissing")}
           {model.unavailableReason && <span className="sr-only">: {model.unavailableReason}</span>}
@@ -95,7 +98,9 @@ export function ModelManagerPanel({ enabled }: { enabled: boolean }) {
     }
   };
 
-  const groups = groupByEngine((modelsQuery.data?.models ?? []).map((model) => ({ ...model, engine: model.engine ?? modelEngine(model.id) })));
+  const groups = groupByEngine(
+    (modelsQuery.data?.models ?? []).map((model) => ({ ...model, engine: model.engine ?? modelEngine(model.id) })),
+  );
 
   return (
     <div className="rounded-md border border-border bg-surface-raised p-4">
@@ -104,7 +109,12 @@ export function ModelManagerPanel({ enabled }: { enabled: boolean }) {
           <div className="text-sm font-semibold text-text">{t("settings.models.title")}</div>
           <p className="mt-1 text-xs leading-relaxed text-muted">{t("settings.models.description")}</p>
         </div>
-        <ActionButton variant="ghost" size="sm" onClick={() => modelsQuery.refetch()} disabled={!enabled || modelsQuery.isFetching}>
+        <ActionButton
+          variant="ghost"
+          size="sm"
+          onClick={() => modelsQuery.refetch()}
+          disabled={!enabled || modelsQuery.isFetching}
+        >
           {modelsQuery.isFetching ? t("settings.models.refreshing") : t("settings.models.refresh")}
         </ActionButton>
       </div>
@@ -135,7 +145,9 @@ export function ModelManagerPanel({ enabled }: { enabled: boolean }) {
             {groups.map((group) => (
               <tbody key={group.engine}>
                 <tr className="border-t border-border">
-                  <th colSpan={6} scope="colgroup" className="pb-1 pt-3 text-left text-xs font-semibold text-muted">{t(`stt.engine.${group.engine}`)}</th>
+                  <th colSpan={6} scope="colgroup" className="pb-1 pt-3 text-left text-xs font-semibold text-muted">
+                    {t(`stt.engine.${group.engine}`)}
+                  </th>
                 </tr>
                 {group.items.map((model) => {
                   const dl = downloads[model.id];
@@ -148,14 +160,14 @@ export function ModelManagerPanel({ enabled }: { enabled: boolean }) {
                         {model.label && model.label !== model.id && (
                           <div className="mt-1 font-mono text-xs text-faint">{model.id}</div>
                         )}
-                        {model.cachePath && (
-                          <div className="mt-1 break-all text-xs text-faint">{model.cachePath}</div>
-                        )}
+                        {model.cachePath && <div className="mt-1 break-all text-xs text-faint">{model.cachePath}</div>}
                       </td>
                       <td className="py-3 pr-3 text-muted">{formatMb(model.sizeMb)}</td>
                       <td className="py-3 pr-3 text-muted">{formatMb(model.requiredRamMb)}</td>
                       <td className="py-3 pr-3 text-muted">{formatMb(model.requiredVramMb)}</td>
-                      <td className="py-3 pr-3"><ModelStatus model={model} /></td>
+                      <td className="py-3 pr-3">
+                        <ModelStatus model={model} />
+                      </td>
                       <td className="py-3 pr-0">
                         <div className="flex items-center justify-end gap-2">
                           {downloading ? (
@@ -163,7 +175,12 @@ export function ModelManagerPanel({ enabled }: { enabled: boolean }) {
                               <ProgressSmall pct={dl?.pct ?? 0} large />
                             </div>
                           ) : model.downloaded ? (
-                            <ActionButton variant="danger" size="sm" onClick={() => handleDelete(model.id)} disabled={deleting}>
+                            <ActionButton
+                              variant="danger"
+                              size="sm"
+                              onClick={() => handleDelete(model.id)}
+                              disabled={deleting}
+                            >
                               {deleting ? t("settings.models.deleting") : t("settings.models.delete")}
                             </ActionButton>
                           ) : (

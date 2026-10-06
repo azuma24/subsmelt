@@ -42,7 +42,8 @@ export function ModelPicker({ descriptors, value, onChange, className, ariaLabel
           <optgroup key={group.engine} label={t(`stt.engine.${group.engine}`)}>
             {group.items.map((model) => (
               <option key={model.id} value={model.id} disabled={!model.available}>
-                {modelLabel(t, model)}{suffix(model)}
+                {modelLabel(t, model)}
+                {suffix(model)}
               </option>
             ))}
           </optgroup>
@@ -51,8 +52,11 @@ export function ModelPicker({ descriptors, value, onChange, className, ariaLabel
       <p className="mt-1 text-xs leading-snug text-faint">{t(`stt.engineStrength.${selected.engine}`)}</p>
       {!selected.available && (
         <p className="mt-1 text-xs leading-snug text-danger">
-          <Icon name="error" /> 
-          {t("stt.modelUnavailable", { model: selected.label, reason: selected.unavailableReason ?? t("settings.models.runtimeMissing") })}
+          <Icon name="error" />
+          {t("stt.modelUnavailable", {
+            model: selected.label,
+            reason: selected.unavailableReason ?? t("settings.models.runtimeMissing"),
+          })}
         </p>
       )}
     </>
@@ -65,7 +69,7 @@ export function LanguageSupportWarning({ model, language }: { model: WhisperMode
   if (supportsLanguage(model, language)) return null;
   return (
     <p className="mt-1 text-xs leading-snug text-warning">
-      <Icon name="warning" /> 
+      <Icon name="warning" />
       {t("stt.languageUnsupported", { model: model.label, language })}
     </p>
   );

@@ -21,14 +21,20 @@ export type FileOutcome = "done" | "error" | "cancelled";
 
 export const IDLE: BatchState = { running: false, progress: null, activePath: null, fileProgress: {} };
 
-export const startBatch = (state: BatchState, total: number): BatchState =>
-  ({ ...state, running: true, progress: { done: 0, total }, activePath: null, fileProgress: {} });
+export const startBatch = (state: BatchState, total: number): BatchState => ({
+  ...state,
+  running: true,
+  progress: { done: 0, total },
+  activePath: null,
+  fileProgress: {},
+});
 
 export const beginFile = (state: BatchState, path: string): BatchState => ({ ...state, activePath: path });
 
 export function fileFinished(state: BatchState, path: string, outcome: FileOutcome, done: number): BatchState {
   const current = state.fileProgress[path] ?? {};
-  const badge: FileProgress = outcome === "done" ? { ...current, pct: 100, done: true } : { ...current, [outcome]: true };
+  const badge: FileProgress =
+    outcome === "done" ? { ...current, pct: 100, done: true } : { ...current, [outcome]: true };
   return {
     ...state,
     activePath: null,
@@ -38,11 +44,24 @@ export function fileFinished(state: BatchState, path: string, outcome: FileOutco
 }
 
 /** Badges stay so the list still shows what just happened. */
-export const endBatch = (state: BatchState): BatchState => ({ ...state, running: false, progress: null, activePath: null });
+export const endBatch = (state: BatchState): BatchState => ({
+  ...state,
+  running: false,
+  progress: null,
+  activePath: null,
+});
 
 /** Merge a transcription:progress event; a phase-only line keeps the last pct. */
 export function applyProgressEvent(state: BatchState, data: Record<string, unknown>): BatchState {
-  const d = data as { path?: string; pct?: number; done?: boolean; error?: boolean; noSpeech?: boolean; cancelled?: boolean; phase?: string };
+  const d = data as {
+    path?: string;
+    pct?: number;
+    done?: boolean;
+    error?: boolean;
+    noSpeech?: boolean;
+    cancelled?: boolean;
+    phase?: string;
+  };
   if (!d.path) return state;
   const current = state.fileProgress[d.path] ?? {};
   return {

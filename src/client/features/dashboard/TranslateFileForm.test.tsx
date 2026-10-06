@@ -16,8 +16,14 @@ test("a resolved language submits its code and prompt name; an ambiguous one sub
     { srtPath, langCode: "zh-TW", targetLang: "Traditional Chinese (Taiwan)" },
   );
   assert.equal(translateFileRequest(srtPath, { kind: "language", resolution: resolveTargetLanguage("Chinese") }), null);
-  assert.equal(translateFileRequest(srtPath, { kind: "language", resolution: resolveTargetLanguage("Klingonese") }), null);
-  assert.deepEqual(translateFileRequest(srtPath, { kind: "task", task: task(3, "fr", "French") }), { srtPath, taskId: 3 });
+  assert.equal(
+    translateFileRequest(srtPath, { kind: "language", resolution: resolveTargetLanguage("Klingonese") }),
+    null,
+  );
+  assert.deepEqual(translateFileRequest(srtPath, { kind: "task", task: task(3, "fr", "French") }), {
+    srtPath,
+    taskId: 3,
+  });
 });
 
 test("the form offers only tasks the subtitle lacks and holds Translate until a language is chosen", () => {
@@ -46,15 +52,33 @@ test("a queued translation replaces the subtitle's stale chip for that task", ()
           srtPath,
           srtName: "Episode 01.srt",
           tasks: [
-            makeTaskStatus({ taskId: 1, langCode: "eng", targetLang: "English", outputName: "Episode 01.eng.srt", status: "done", jobId: 4 }),
-            makeTaskStatus({ taskId: 2, langCode: "ja", targetLang: "Japanese", outputName: "Episode 01.ja.srt", status: "error", jobId: 5 }),
+            makeTaskStatus({
+              taskId: 1,
+              langCode: "eng",
+              targetLang: "English",
+              outputName: "Episode 01.eng.srt",
+              status: "done",
+              jobId: 4,
+            }),
+            makeTaskStatus({
+              taskId: 2,
+              langCode: "ja",
+              targetLang: "Japanese",
+              outputName: "Episode 01.ja.srt",
+              status: "error",
+              jobId: 5,
+            }),
           ],
         },
       ],
     },
   ];
 
-  const next = withQueuedTask(files, srtPath, makeTaskStatus({ taskId: 2, langCode: "ja", targetLang: "Japanese", status: "pending", jobId: 5 }));
+  const next = withQueuedTask(
+    files,
+    srtPath,
+    makeTaskStatus({ taskId: 2, langCode: "ja", targetLang: "Japanese", status: "pending", jobId: 5 }),
+  );
 
   assert.deepEqual(
     next[0].subtitles[0].tasks.map((t) => `${t.langCode}:${t.status}`),

@@ -17,7 +17,9 @@ export function LanguageChip({ task, status }: { task: TaskStatus; status: strin
   const { t } = useTranslation();
   const { icon, labelKey } = languageStatusDisplay(task, status);
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full h-5 border px-2 font-mono text-xs ${LANGUAGE_TONE[languageState(status)]}`}>
+    <span
+      className={`inline-flex items-center gap-1 rounded-full h-5 border px-2 font-mono text-xs ${LANGUAGE_TONE[languageState(status)]}`}
+    >
       {icon && <Icon name={icon} label={labelKey ? t(labelKey) : status} />}
       {task.langCode}
     </span>

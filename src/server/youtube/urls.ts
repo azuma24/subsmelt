@@ -70,7 +70,8 @@ export function parseChannelInput(input: string): ChannelInput | null {
   const [first = "", second = ""] = url.pathname.split("/").filter(Boolean).map(decodeSegment);
   if (first === "channel") return CHANNEL_ID_RE.test(second) ? { channelId: second } : null;
   if (HANDLE_RE.test(first)) return { url: handleUrl(first) };
-  if ((first === "c" || first === "user") && LEGACY_NAME_RE.test(second)) return { url: `https://www.youtube.com/${first}/${second}` };
+  if ((first === "c" || first === "user") && LEGACY_NAME_RE.test(second))
+    return { url: `https://www.youtube.com/${first}/${second}` };
   return null;
 }
 

@@ -48,7 +48,7 @@ const stringifyQueryKey = (queryKey: QueryKey): string => JSON.stringify(queryKe
 export function parseSSEData(raw: string): Record<string, unknown> {
   try {
     const data = JSON.parse(raw) as unknown;
-    return typeof data === "object" && data !== null && !Array.isArray(data) ? data as Record<string, unknown> : {};
+    return typeof data === "object" && data !== null && !Array.isArray(data) ? (data as Record<string, unknown>) : {};
   } catch {
     return {};
   }
@@ -77,7 +77,15 @@ export function getSSEInvalidationKeys(name: SSEEventName): QueryKey[] {
       return [["jobs"], ["queue-status"], ["logs"], ["transcription-history"], ["llm-status"], ["youtube", "pipeline"]];
     case "queue:finished":
     case "queue:stopped":
-      return [["jobs"], ["queue-status"], ["logs"], ["transcription-history"], ["library"], ["llm-status"], ["youtube", "pipeline"]];
+      return [
+        ["jobs"],
+        ["queue-status"],
+        ["logs"],
+        ["transcription-history"],
+        ["library"],
+        ["llm-status"],
+        ["youtube", "pipeline"],
+      ];
     case "scan:complete":
       return [["jobs"], ["queue-status"], ["logs"], ["settings"], ["transcription-history"], ["library"]];
     case "transcription:progress":
@@ -93,9 +101,16 @@ export function getSSEInvalidationKeys(name: SSEEventName): QueryKey[] {
     case "youtube:video":
       // Progress ticks carry a pct and patch the cached rows instead (withVideoProgress).
       // The status query is left alone: refetching it runs yt-dlp --version.
-      return [["youtube", "playlists"], ["youtube", "videos"], ["youtube", "pipeline"]];
+      return [
+        ["youtube", "playlists"],
+        ["youtube", "videos"],
+        ["youtube", "pipeline"],
+      ];
     case "youtube:cooldown":
-      return [["youtube", "status"], ["youtube", "pipeline"]];
+      return [
+        ["youtube", "status"],
+        ["youtube", "pipeline"],
+      ];
   }
 }
 
@@ -120,7 +135,10 @@ function jobEventPatch(name: SSEEventName, data: Record<string, unknown>): Parti
         : null;
     case "job:connection": {
       const { id, label, host, model } = data;
-      return typeof id === "string" && typeof label === "string" && typeof host === "string" && typeof model === "string"
+      return typeof id === "string" &&
+        typeof label === "string" &&
+        typeof host === "string" &&
+        typeof model === "string"
         ? { connection: { id, label, host, model } }
         : null;
     }
@@ -129,7 +147,11 @@ function jobEventPatch(name: SSEEventName, data: Record<string, unknown>): Parti
     case "job:start":
       return { status: "translating" };
     case "job:done":
-      return { status: "done", connection: null, ...(typeof data.durationSeconds === "number" ? { duration_seconds: data.durationSeconds } : {}) };
+      return {
+        status: "done",
+        connection: null,
+        ...(typeof data.durationSeconds === "number" ? { duration_seconds: data.durationSeconds } : {}),
+      };
     case "job:error":
       return { status: "error", connection: null, ...(typeof data.error === "string" ? { error: data.error } : {}) };
     case "job:cancelled":
@@ -178,10 +200,7 @@ export function createSseInvalidator(
   };
 }
 
-export function createDebouncedInvalidator(
-  invalidate: (queryKey: QueryKey) => void,
-  delayMs = 300,
-) {
+export function createDebouncedInvalidator(invalidate: (queryKey: QueryKey) => void, delayMs = 300) {
   const pending = new Map<string, QueryKey>();
   let timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -227,7 +246,11 @@ const subscribeConnection = (listener: () => void) => {
 };
 
 export function useSseConnected(): boolean {
-  return useSyncExternalStore(subscribeConnection, () => connection.open, () => false);
+  return useSyncExternalStore(
+    subscribeConnection,
+    () => connection.open,
+    () => false,
+  );
 }
 
 /**
@@ -259,7 +282,9 @@ function ensureSse(queryClient: ReturnType<typeof useQueryClient>): SseSingleton
     queryClient.invalidateQueries({ queryKey });
   });
   const refresh = (name?: SSEEventName) => {
-    invalidator.schedule(name ? getSSEInvalidationKeys(name) : [["jobs"], ["queue-status"], ["logs"], ["transcription-history"]]);
+    invalidator.schedule(
+      name ? getSSEInvalidationKeys(name) : [["jobs"], ["queue-status"], ["logs"], ["transcription-history"]],
+    );
   };
 
   let attempts = 0;
@@ -281,21 +306,35 @@ function ensureSse(queryClient: ReturnType<typeof useQueryClient>): SseSingleton
       es.addEventListener(name, (e) => {
         const data = parseSSEData((e as MessageEvent).data);
         // Dispatch to every subscriber; isolate so one throwing handler can't kill others.
-        subs.forEach((fn) => { try { fn(name, data); } catch { /* subscriber error */ } });
+        subs.forEach((fn) => {
+          try {
+            fn(name, data);
+          } catch {
+            /* subscriber error */
+          }
+        });
 
         // Per-path transcription progress / per-model download progress are consumed
         // directly by their components via onEvent; they must not invalidate queries.
         if (name === "transcription:progress" || name === "model:download") return;
 
         if (name === "youtube:video") {
-          const { videoId, playlistId, status, pct } = data as { videoId?: string; playlistId?: string; status?: unknown; pct?: number };
+          const { videoId, playlistId, status, pct } = data as {
+            videoId?: string;
+            playlistId?: string;
+            status?: unknown;
+            pct?: number;
+          };
           if (typeof videoId === "string" && typeof playlistId === "string" && typeof pct === "number") {
-            queryClient.setQueryData<{ videos: YoutubeVideo[] }>(["youtube", "videos", playlistId], (old) => withVideoProgress(old, videoId, status, pct));
+            queryClient.setQueryData<{ videos: YoutubeVideo[] }>(["youtube", "videos", playlistId], (old) =>
+              withVideoProgress(old, videoId, status, pct),
+            );
             return;
           }
         }
 
-        if (name.startsWith("job:")) queryClient.setQueryData<JobsResponse>(["jobs"], (old) => withJobEvent(old, name, data));
+        if (name.startsWith("job:"))
+          queryClient.setQueryData<JobsResponse>(["jobs"], (old) => withJobEvent(old, name, data));
 
         refresh(name);
       });

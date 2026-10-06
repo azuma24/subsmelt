@@ -58,12 +58,17 @@ export async function transcribeWithBackendUpload(
   if (!url) throw new Error("Transcription backend URL is not configured");
   const timeoutMs = resolveTranscribeTimeoutMs(options?.timeoutSeconds);
   const form = await buildUploadForm(request, filePath);
-  const response = await fetchWithTimeout(`${url}/transcribe/upload`, {
-    method: "POST",
-    headers: { ...transcriptionAuthHeaders(options?.token) },
-    body: form,
-    signal: options?.signal,
-  }, timeoutMs, "Transcription backend upload");
+  const response = await fetchWithTimeout(
+    `${url}/transcribe/upload`,
+    {
+      method: "POST",
+      headers: { ...transcriptionAuthHeaders(options?.token) },
+      body: form,
+      signal: options?.signal,
+    },
+    timeoutMs,
+    "Transcription backend upload",
+  );
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throwBackendError(body, response.status);
   return body as BackendTranscriptionResponse;
@@ -84,10 +89,15 @@ export async function transcribeWithBackendUploadStreaming(
   const url = normalizeTranscriptionBackendUrl(backendUrl);
   if (!url) throw new Error("Transcription backend URL is not configured");
   const form = await buildUploadForm(request, filePath);
-  return postTranscriptionStream(`${url}/transcribe/upload/stream`, {
-    headers: { ...transcriptionAuthHeaders(options?.token) },
-    body: form,
-  }, "Transcription backend upload stream", options);
+  return postTranscriptionStream(
+    `${url}/transcribe/upload/stream`,
+    {
+      headers: { ...transcriptionAuthHeaders(options?.token) },
+      body: form,
+    },
+    "Transcription backend upload stream",
+    options,
+  );
 }
 
 /**
@@ -102,8 +112,13 @@ export async function transcribeUrlWithBackendStreaming(
 ): Promise<BackendTranscriptionResponse> {
   const url = normalizeTranscriptionBackendUrl(backendUrl);
   if (!url) throw new Error("Transcription backend URL is not configured");
-  return postTranscriptionStream(`${url}/transcribe/url/stream`, {
-    headers: { "Content-Type": "application/json", ...transcriptionAuthHeaders(options?.token) },
-    body: JSON.stringify(body),
-  }, "Transcription backend URL stream", options);
+  return postTranscriptionStream(
+    `${url}/transcribe/url/stream`,
+    {
+      headers: { "Content-Type": "application/json", ...transcriptionAuthHeaders(options?.token) },
+      body: JSON.stringify(body),
+    },
+    "Transcription backend URL stream",
+    options,
+  );
 }

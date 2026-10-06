@@ -10,9 +10,7 @@ import { TargetLanguageField } from "../convert/TargetLanguageField";
 import { resolveTargetLanguage, type LanguageResolution } from "../convert/resolve-language";
 
 /** What the person picked: one of their tasks, or a language typed into the field. */
-export type TranslateChoice =
-  | { kind: "task"; task: Task }
-  | { kind: "language"; resolution: LanguageResolution };
+export type TranslateChoice = { kind: "task"; task: Task } | { kind: "language"; resolution: LanguageResolution };
 
 /** The chosen language, or null while a typed language is ambiguous or unknown. */
 function chosenLanguage(choice: TranslateChoice): { langCode: string; targetLang: string } | null {
@@ -51,9 +49,7 @@ export function TranslateFileForm({ srtPath, existingTasks, onQueued, onCancel }
 
   const shownTaskIds = new Set(existingTasks.map((task) => task.taskId));
   const quickPicks = tasks.filter((task) => !shownTaskIds.has(task.id));
-  const choice: TranslateChoice = pickedTask
-    ? { kind: "task", task: pickedTask }
-    : { kind: "language", resolution };
+  const choice: TranslateChoice = pickedTask ? { kind: "task", task: pickedTask } : { kind: "language", resolution };
   const request = translateFileRequest(srtPath, choice);
   const language = chosenLanguage(choice);
 
@@ -78,7 +74,9 @@ export function TranslateFileForm({ srtPath, existingTasks, onQueued, onCancel }
         outputExists: false,
       });
       addToast(
-        t(result.created ? "scan.translateFile.queued" : "scan.translateFile.alreadyQueued", { lang: language.targetLang }),
+        t(result.created ? "scan.translateFile.queued" : "scan.translateFile.alreadyQueued", {
+          lang: language.targetLang,
+        }),
         result.created ? "success" : "info",
       );
     } catch {
@@ -125,11 +123,7 @@ export function TranslateFileForm({ srtPath, existingTasks, onQueued, onCancel }
         </p>
       )}
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className={`${buttonBase} text-muted hover:text-text`}
-        >
+        <button type="button" onClick={onCancel} className={`${buttonBase} text-muted hover:text-text`}>
           {t("common.cancel")}
         </button>
         <button

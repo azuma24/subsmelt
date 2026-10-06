@@ -58,7 +58,9 @@ export function BackendLogView({ query, follow }: BackendLogViewProps) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className={`flex gap-2 border-b border-border px-4 py-2 md:px-4 ${isMobile ? "flex-col" : "flex-wrap items-center"}`}>
+      <div
+        className={`flex gap-2 border-b border-border px-4 py-2 md:px-4 ${isMobile ? "flex-col" : "flex-wrap items-center"}`}
+      >
         <input
           type="search"
           value={search}
@@ -89,8 +91,11 @@ export function BackendLogView({ query, follow }: BackendLogViewProps) {
 
       {unreachable && (
         <div className="px-4 pt-2 md:px-4">
-          <div role="status" className="rounded-md border border-warning-line bg-warning-soft px-4 py-3 text-sm text-warning">
-            <Icon name="warning" /> 
+          <div
+            role="status"
+            className="rounded-md border border-warning-line bg-warning-soft px-4 py-3 text-sm text-warning"
+          >
+            <Icon name="warning" />
             {data?.reason === "endpoint-missing"
               ? t("logs.backend.notConfigured")
               : t("logs.backend.unreachable", { message: data?.message || "" })}
@@ -100,8 +105,11 @@ export function BackendLogView({ query, follow }: BackendLogViewProps) {
 
       {(loggingOff || readProblem) && (
         <div className="px-4 pt-2 md:px-4">
-          <div role="status" className="rounded-md border border-warning-line bg-warning-soft px-4 py-3 text-sm text-warning">
-            <Icon name="warning" /> 
+          <div
+            role="status"
+            className="rounded-md border border-warning-line bg-warning-soft px-4 py-3 text-sm text-warning"
+          >
+            <Icon name="warning" />
             {loggingOff ? t("logs.backend.loggingOff") : t("logs.backend.readFailed")}
             {data?.error && <span className="block font-mono text-xs opacity-90">{data.error}</span>}
           </div>
@@ -114,7 +122,10 @@ export function BackendLogView({ query, follow }: BackendLogViewProps) {
         ) : (
           <div className="font-mono text-xs leading-relaxed text-muted">
             {lines.map((line, i) => (
-              <div key={`${i}-${line.slice(0, 24)}`} className="whitespace-pre-wrap break-all border-b border-border-subtle py-1">
+              <div
+                key={`${i}-${line.slice(0, 24)}`}
+                className="whitespace-pre-wrap break-all border-b border-border-subtle py-1"
+              >
                 {search ? highlightText(line, search) : line}
               </div>
             ))}

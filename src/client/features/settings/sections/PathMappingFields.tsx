@@ -24,19 +24,46 @@ export function PathMappingFields({ settings, update }: PathMappingFieldsProps) 
       <div className="space-y-3">
         <div className="md:max-w-[480px]">
           <label className={labelCls}>{t("settings.transcription.transport")}</label>
-          <Select ariaLabel={t("settings.transcription.transport")} value={str(settings.transcription_transport, "auto")} onChange={(value) => update("transcription_transport", value)} disabled={transportPinned} className="disabled:cursor-not-allowed disabled:text-muted">
+          <Select
+            ariaLabel={t("settings.transcription.transport")}
+            value={str(settings.transcription_transport, "auto")}
+            onChange={(value) => update("transcription_transport", value)}
+            disabled={transportPinned}
+            className="disabled:cursor-not-allowed disabled:text-muted"
+          >
             <option value="auto">{t("settings.transcription.transportAuto")}</option>
             <option value="shared">{t("settings.transcription.transportShared")}</option>
             <option value="upload">{t("settings.transcription.transportUpload")}</option>
           </Select>
-          <p className="mt-1 text-xs text-muted">{transportPinned ? t("settings.envPinnedNote", { name: "WHISPER_TRANSPORT" }) : t("settings.transcription.transportHelp")}</p>
+          <p className="mt-1 text-xs text-muted">
+            {transportPinned
+              ? t("settings.envPinnedNote", { name: "WHISPER_TRANSPORT" })
+              : t("settings.transcription.transportHelp")}
+          </p>
         </div>
         <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-2"} md:max-w-[480px]`}>
-          <Field label={t("settings.transcription.pathMapFrom")} value={str(settings.transcription_path_map_from)} onChange={(v) => update("transcription_path_map_from", v)} placeholder="/media" help={t("settings.transcription.pathMapFromHelp")} />
-          <Field label={t("settings.transcription.pathMapTo")} value={str(settings.transcription_path_map_to)} onChange={(v) => update("transcription_path_map_to", v)} placeholder="/mnt/media" help={t("settings.transcription.pathMapToHelp")} />
+          <Field
+            label={t("settings.transcription.pathMapFrom")}
+            value={str(settings.transcription_path_map_from)}
+            onChange={(v) => update("transcription_path_map_from", v)}
+            placeholder="/media"
+            help={t("settings.transcription.pathMapFromHelp")}
+          />
+          <Field
+            label={t("settings.transcription.pathMapTo")}
+            value={str(settings.transcription_path_map_to)}
+            onChange={(v) => update("transcription_path_map_to", v)}
+            placeholder="/mnt/media"
+            help={t("settings.transcription.pathMapToHelp")}
+          />
         </div>
         <div className="rounded-sm border border-border bg-surface-raised px-3 py-2 font-mono text-xs text-muted">
-          {t("settings.transcription.pathMapExample", { source: "/media/anime/Episode 01.mkv", target: "/srv/media/anime/Episode 01.mkv", from: "/media", to: "/srv/media" })}
+          {t("settings.transcription.pathMapExample", {
+            source: "/media/anime/Episode 01.mkv",
+            target: "/srv/media/anime/Episode 01.mkv",
+            from: "/media",
+            to: "/srv/media",
+          })}
         </div>
       </div>
     </Accordion>

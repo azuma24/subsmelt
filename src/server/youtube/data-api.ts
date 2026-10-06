@@ -19,7 +19,8 @@ async function getJson<T>(url: URL, fetchImpl: FetchLike): Promise<T> {
   const res = await fetchImpl(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
   const body = (await res.json().catch(() => null)) as { error?: { message?: unknown } } | null;
   if (!res.ok) {
-    const message = typeof body?.error?.message === "string" ? body.error.message : `YouTube Data API returned HTTP ${res.status}`;
+    const message =
+      typeof body?.error?.message === "string" ? body.error.message : `YouTube Data API returned HTTP ${res.status}`;
     throw new Error(message);
   }
   return body as T;
@@ -30,7 +31,11 @@ async function getJson<T>(url: URL, fetchImpl: FetchLike): Promise<T> {
  * playlistItems.list. `snippet.publishedAt` there is the time the item was
  * added, not when the video was posted.
  */
-export async function fetchAddedDates(playlistId: string, apiKey: string, fetchImpl: FetchLike = fetch): Promise<Map<string, string>> {
+export async function fetchAddedDates(
+  playlistId: string,
+  apiKey: string,
+  fetchImpl: FetchLike = fetch,
+): Promise<Map<string, string>> {
   if (!isPlaylistId(playlistId)) throw new Error(`Invalid playlist id: ${playlistId}`);
   const dates = new Map<string, string>();
   let pageToken: string | undefined;

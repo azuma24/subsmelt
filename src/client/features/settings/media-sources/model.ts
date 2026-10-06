@@ -48,7 +48,9 @@ export const parseDirectoryRules = (raw: string): DirectoryRule[] => {
         id: r.id as string,
         path: typeof r.path === "string" ? r.path.replace(/^\/+|\/+$/g, "") : "",
         enabled: r.enabled !== false,
-        translateWithoutVideo: (TRI_STATES as string[]).includes(r.translateWithoutVideo) ? r.translateWithoutVideo as TriState : "inherit",
+        translateWithoutVideo: (TRI_STATES as string[]).includes(r.translateWithoutVideo)
+          ? (r.translateWithoutVideo as TriState)
+          : "inherit",
         taskIds: Array.isArray(r.taskIds) ? r.taskIds.filter((n: unknown) => typeof n === "number") : [],
       }));
   } catch {
@@ -69,7 +71,10 @@ export const parseFolders = (raw: string): string[] => {
       /* not JSON after all; read it as the legacy list */
     }
   }
-  return raw.split(",").map((f) => f.trim()).filter(Boolean);
+  return raw
+    .split(",")
+    .map((f) => f.trim())
+    .filter(Boolean);
 };
 
 export const serializeFolders = (folders: string[]): string =>
@@ -83,7 +88,7 @@ export const parseProfiles = (raw: string): ScanProfile[] => {
       .map((profile) => ({
         id: typeof profile.id === "string" ? profile.id : createProfileId(),
         name: typeof profile.name === "string" ? profile.name : "",
-        scanMode: (SCAN_MODES as string[]).includes(profile.scanMode) ? profile.scanMode as ScanMode : "recursive",
+        scanMode: (SCAN_MODES as string[]).includes(profile.scanMode) ? (profile.scanMode as ScanMode) : "recursive",
         scanFolders: typeof profile.scanFolders === "string" ? profile.scanFolders : "",
         scanExcludeFolders: typeof profile.scanExcludeFolders === "string" ? profile.scanExcludeFolders : "",
       }))
@@ -94,13 +99,15 @@ export const parseProfiles = (raw: string): ScanProfile[] => {
 };
 
 export const serializeProfiles = (profiles: ScanProfile[]): string =>
-  JSON.stringify(profiles.map((profile) => ({
-    id: profile.id,
-    name: profile.name,
-    scanMode: profile.scanMode,
-    scanFolders: profile.scanFolders,
-    scanExcludeFolders: profile.scanExcludeFolders,
-  })));
+  JSON.stringify(
+    profiles.map((profile) => ({
+      id: profile.id,
+      name: profile.name,
+      scanMode: profile.scanMode,
+      scanFolders: profile.scanFolders,
+      scanExcludeFolders: profile.scanExcludeFolders,
+    })),
+  );
 
 export function flattenFolderTree(nodes: FolderNode[], results: string[] = []): string[] {
   nodes.forEach((node) => {

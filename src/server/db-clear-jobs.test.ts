@@ -24,7 +24,10 @@ test("clearing the queue removes finished jobs and keeps pending and running one
 
   assert.equal(removed, 3);
   assert.deepEqual(
-    db.getJobs().map((job) => job.status).sort(),
+    db
+      .getJobs()
+      .map((job) => job.status)
+      .sort(),
     ["pending", "translating"],
   );
 });

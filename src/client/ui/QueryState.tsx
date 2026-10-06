@@ -10,10 +10,7 @@ export function PageLoading({ label }: { label?: string }) {
   const { t } = useTranslation();
   return (
     <div className="flex min-h-[160px] flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-      <span
-        className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-accent"
-        aria-hidden="true"
-      />
+      <span className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-accent" aria-hidden="true" />
       <p className="text-sm leading-6 text-faint">{label ?? t("errors.loading")}</p>
     </div>
   );
@@ -22,10 +19,7 @@ export function PageLoading({ label }: { label?: string }) {
 export function PageError({ message, onRetry }: { message?: string; onRetry?: () => void }) {
   const { t } = useTranslation();
   return (
-    <div
-      role="alert"
-      className="flex min-h-[160px] flex-col items-center justify-center gap-3 px-6 py-12 text-center"
-    >
+    <div role="alert" className="flex min-h-[160px] flex-col items-center justify-center gap-3 px-6 py-12 text-center">
       <Icon name="warning" size={20} className="text-warning" />
       <p className="text-sm leading-6 text-muted">{message ?? t("errors.loadFailed")}</p>
       {onRetry && (

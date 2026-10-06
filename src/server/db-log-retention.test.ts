@@ -20,7 +20,10 @@ test("logs older than the retention window go, newer ones stay", () => {
   insert.run(new Date(now - 60_000).toISOString(), "a minute ago");
 
   assert.equal(pruneLogs({ now, maxAgeDays: 30, maxRows: 1000 }), 2);
-  assert.deepEqual(getLogs().map((row) => row.message), ["a minute ago", "just inside a month"]);
+  assert.deepEqual(
+    getLogs().map((row) => row.message),
+    ["a minute ago", "just inside a month"],
+  );
 });
 
 test("past the row cap only the newest rows are kept", () => {
@@ -28,6 +31,9 @@ test("past the row cap only the newest rows are kept", () => {
   for (let i = 1; i <= 10; i++) insert.run(new Date(now - (10 - i) * 1000).toISOString(), `entry ${i}`);
 
   assert.equal(pruneLogs({ now, maxAgeDays: 30, maxRows: 3 }), 7);
-  assert.deepEqual(getLogs().map((row) => row.message), ["entry 10", "entry 9", "entry 8"]);
+  assert.deepEqual(
+    getLogs().map((row) => row.message),
+    ["entry 10", "entry 9", "entry 8"],
+  );
   assert.equal(pruneLogs({ now, maxAgeDays: 30, maxRows: 3 }), 0);
 });

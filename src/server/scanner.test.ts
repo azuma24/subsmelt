@@ -43,10 +43,7 @@ async function scan(dir: string): Promise<Record<string, string[]>> {
   return Object.fromEntries(
     files
       .filter((file) => file.videoPath?.startsWith(`${dir}${path.sep}`))
-      .map((file) => [
-        file.videoName,
-        file.subtitles.map((sub) => sub.srtName).sort(),
-      ]),
+      .map((file) => [file.videoName, file.subtitles.map((sub) => sub.srtName).sort()]),
   );
 }
 
@@ -61,13 +58,7 @@ function jobsIn(dir: string): string[][] {
 
 test("a source whose name only resembles a task output is still translated", async () => {
   useTasks("zh");
-  const dir = library("resembles-output", [
-    "Movie.mkv",
-    "Movie.srt",
-    "Movie.zh.srt",
-    "Movie.v2.mkv",
-    "Movie.v2.srt",
-  ]);
+  const dir = library("resembles-output", ["Movie.mkv", "Movie.srt", "Movie.zh.srt", "Movie.v2.mkv", "Movie.v2.srt"]);
 
   assert.deepEqual(await scan(dir), {
     "Movie.mkv": ["Movie.srt"],
@@ -115,10 +106,32 @@ test("stripLangSuffix drops a language with an optional region or subtitle flag"
 });
 
 test("every code a task can write is read back as a language suffix", async () => {
-  for (const code of ["en", "ko", "ja", "zh-TW", "zh-CN", "es", "fr", "de", "pt", "ru", "ar", "th", "vi", "id", "nl", "pl", "tr", "hi", "uk", "sv"]) {
+  for (const code of [
+    "en",
+    "ko",
+    "ja",
+    "zh-TW",
+    "zh-CN",
+    "es",
+    "fr",
+    "de",
+    "pt",
+    "ru",
+    "ar",
+    "th",
+    "vi",
+    "id",
+    "nl",
+    "pl",
+    "tr",
+    "hi",
+    "uk",
+    "sv",
+  ]) {
     assert.equal(stripLangSuffix(`Movie.${code}`), "Movie", code);
   }
-  for (const old of ["swe", "ukr", "hin", "tur", "pol", "nld", "ind"]) assert.equal(stripLangSuffix(`Movie.${old}`), "Movie", old);
+  for (const old of ["swe", "ukr", "hin", "tur", "pol", "nld", "ind"])
+    assert.equal(stripLangSuffix(`Movie.${old}`), "Movie", old);
 });
 
 test("flagged and region-coded subtitles match their video, and the full subtitle owns the shared output", async () => {
@@ -148,9 +161,7 @@ test("with no enabled task a video's subtitle is still listed, with no languages
   const { files } = await scanFolder(true);
   const movie = files.find((file) => file.videoPath === path.join(dir, "Movie.mkv"));
 
-  assert.deepEqual(movie?.subtitles, [
-    { srtPath: path.join(dir, "Movie.srt"), srtName: "Movie.srt", tasks: [] },
-  ]);
+  assert.deepEqual(movie?.subtitles, [{ srtPath: path.join(dir, "Movie.srt"), srtName: "Movie.srt", tasks: [] }]);
   assert.deepEqual(jobsIn(dir), []);
 });
 
@@ -203,12 +214,16 @@ test("the YouTube download folder is left to its playlists: no jobs, no auto-tra
   t.after(() => config.setSetting("youtube_download_dir", "YouTube"));
   const tube = path.join(mediaDir, "Tube", "AI");
   fs.mkdirSync(tube, { recursive: true });
-  for (const file of ["Talk [abcdefghijk].mp4", "Talk [abcdefghijk].en.srt", "Silent [bcdefghijkl].mp4"]) fs.writeFileSync(path.join(tube, file), "");
+  for (const file of ["Talk [abcdefghijk].mp4", "Talk [abcdefghijk].en.srt", "Silent [bcdefghijkl].mp4"])
+    fs.writeFileSync(path.join(tube, file), "");
   const shows = library("Tube shows", ["Pilot.mkv", "Pilot.en.srt"]);
 
   const { files } = await scanFolder(true);
 
-  assert.deepEqual(files.filter((f) => f.videoPath?.includes(`${path.sep}Tube${path.sep}`)), []);
+  assert.deepEqual(
+    files.filter((f) => f.videoPath?.includes(`${path.sep}Tube${path.sep}`)),
+    [],
+  );
   assert.deepEqual(jobsIn(tube), []);
   assert.deepEqual(jobsIn(shows), [["Pilot.en.srt", "Pilot.zh.srt"]]);
 });
@@ -237,7 +252,12 @@ test("an existing output in an old spelling counts as done: no new job, and it i
   config.setSetting("scan_mode", "recursive");
   config.setSetting("scan_folders", "");
   for (const task of [...config.getTasks()]) config.deleteTask(task.id);
-  config.createTask({ source_lang: config.AUTO_SOURCE_LANGUAGE, target_lang: "English", output_pattern: "{{name}}.{{lang_code}}.srt", lang_code: "en" });
+  config.createTask({
+    source_lang: config.AUTO_SOURCE_LANGUAGE,
+    target_lang: "English",
+    output_pattern: "{{name}}.{{lang_code}}.srt",
+    lang_code: "en",
+  });
   const [english] = config.getTasks();
   assert.equal(english.lang_code, "eng");
 
@@ -253,7 +273,12 @@ test("a .chi output counts as the preferred Chinese: Traditional by default, not
   t.after(() => config.setSetting("preferred_chinese", "zh-TW"));
   const useTraditional = () => {
     for (const task of [...config.getTasks()]) config.deleteTask(task.id);
-    config.createTask({ source_lang: config.AUTO_SOURCE_LANGUAGE, target_lang: "Traditional Chinese", output_pattern: "{{name}}.{{lang_code}}.srt", lang_code: "zh-TW" });
+    config.createTask({
+      source_lang: config.AUTO_SOURCE_LANGUAGE,
+      target_lang: "Traditional Chinese",
+      output_pattern: "{{name}}.{{lang_code}}.srt",
+      lang_code: "zh-TW",
+    });
     return config.getTasks()[0];
   };
 
@@ -271,7 +296,12 @@ test("a .chi output counts as the preferred Chinese: Traditional by default, not
 });
 
 test("a queued job written for an older spelling is pointed at the standard name; other paths are kept", async () => {
-  const english = { target_lang: "English", lang_code: "eng", output_pattern: "{{name}}.{{lang_code}}.srt", former_lang_codes: ["en"] };
+  const english = {
+    target_lang: "English",
+    lang_code: "eng",
+    output_pattern: "{{name}}.{{lang_code}}.srt",
+    former_lang_codes: ["en"],
+  };
   assert.equal(standardOutputFor("/m/Show.ko.srt", "/m/Show.en.srt", english), "/m/Show.eng.srt");
   assert.equal(standardOutputFor("/m/Show.ko.srt", "/m/Show.eng.srt", english), "/m/Show.eng.srt");
   // A path the task would never write (an edited pattern, a custom name) is left alone.
@@ -289,7 +319,12 @@ test("folders whose names differ only in case stay apart; only the file name ign
   config.setSetting("scan_mode", "recursive");
   config.setSetting("scan_folders", "");
   for (const task of [...config.getTasks()]) config.deleteTask(task.id);
-  config.createTask({ source_lang: config.AUTO_SOURCE_LANGUAGE, target_lang: "English", output_pattern: "{{name}}.{{lang_code}}.srt", lang_code: "eng" });
+  config.createTask({
+    source_lang: config.AUTO_SOURCE_LANGUAGE,
+    target_lang: "English",
+    output_pattern: "{{name}}.{{lang_code}}.srt",
+    lang_code: "eng",
+  });
   const upper = library("CaseShow", ["Ep.mkv", "Ep.kor.srt", "Ep.ENG.srt"]);
   const lower = path.join(mediaDir, "caseshow");
   let caseSensitive = true;
@@ -312,8 +347,19 @@ test("a disabled task's existing translation is still an output, never a second 
   config.setSetting("scan_mode", "recursive");
   config.setSetting("scan_folders", "");
   for (const task of [...config.getTasks()]) config.deleteTask(task.id);
-  config.createTask({ source_lang: config.AUTO_SOURCE_LANGUAGE, target_lang: "English", output_pattern: "{{name}}.{{lang_code}}.srt", lang_code: "eng", enabled: 0 });
-  config.createTask({ source_lang: config.AUTO_SOURCE_LANGUAGE, target_lang: "Traditional Chinese (Taiwan)", output_pattern: "{{name}}.{{lang_code}}.srt", lang_code: "zh-TW" });
+  config.createTask({
+    source_lang: config.AUTO_SOURCE_LANGUAGE,
+    target_lang: "English",
+    output_pattern: "{{name}}.{{lang_code}}.srt",
+    lang_code: "eng",
+    enabled: 0,
+  });
+  config.createTask({
+    source_lang: config.AUTO_SOURCE_LANGUAGE,
+    target_lang: "Traditional Chinese (Taiwan)",
+    output_pattern: "{{name}}.{{lang_code}}.srt",
+    lang_code: "zh-TW",
+  });
 
   // The library from the bug report: the Korean source, its English and Chinese translations.
   const dir = library("disabled-output", ["Hack.mp4", "Hack.ko.srt", "Hack.eng.srt", "Hack.chi.srt"]);
@@ -328,8 +374,8 @@ function touch(dir: string, name: string, seconds: number): void {
 
 /** The status each language shows on `srtName` in the last scan of `dir`. */
 async function statusesOf(dir: string, srtName: string): Promise<Record<string, string>> {
-  const sub = (await scanFolder(false))
-    .files.flatMap((file) => file.subtitles)
+  const sub = (await scanFolder(false)).files
+    .flatMap((file) => file.subtitles)
     .find((s) => s.srtPath === path.join(dir, srtName));
   return Object.fromEntries((sub?.tasks ?? []).map((task) => [task.langCode, task.status]));
 }
@@ -339,7 +385,12 @@ function useLanguages(...languages: [string, string][]): void {
   config.setSetting("scan_folders", "");
   for (const task of [...config.getTasks()]) config.deleteTask(task.id);
   for (const [target_lang, lang_code] of languages)
-    config.createTask({ source_lang: config.AUTO_SOURCE_LANGUAGE, target_lang, output_pattern: "{{name}}.{{lang_code}}.srt", lang_code });
+    config.createTask({
+      source_lang: config.AUTO_SOURCE_LANGUAGE,
+      target_lang,
+      output_pattern: "{{name}}.{{lang_code}}.srt",
+      lang_code,
+    });
 }
 
 test("a source and its translation that could each be the other's output: the older file stays the source", async () => {
@@ -380,28 +431,60 @@ test("a video whose extension is upper case still gets its subtitles", async () 
   useLanguages(["Traditional Chinese", "zh-TW"]);
   const dir = library("upper-ext", ["Movie.MKV", "Movie.eng.srt", "Clip.Mp4", "Clip.srt"]);
   assert.deepEqual(await scan(dir), { "Clip.Mp4": ["Clip.srt"], "Movie.MKV": ["Movie.eng.srt"] });
-  const videos = db.getJobs().filter((job) => path.dirname(job.srt_path) === dir).map((job) => path.basename(job.video_path ?? "")).sort();
+  const videos = db
+    .getJobs()
+    .filter((job) => path.dirname(job.srt_path) === dir)
+    .map((job) => path.basename(job.video_path ?? ""))
+    .sort();
   assert.deepEqual(videos, ["Clip.Mp4", "Movie.MKV"]);
 });
 
 test("dollar signs in a file name are kept in the output name", async () => {
   useLanguages(["Traditional Chinese", "zh-TW"]);
-  const dir = library("dollars", ["Ca$$h.2010.mkv", "Ca$$h.2010.eng.srt", "Pay$&Go.mkv", "Pay$&Go.srt", "Tip$'.mkv", "Tip$'.srt"]);
+  const dir = library("dollars", [
+    "Ca$$h.2010.mkv",
+    "Ca$$h.2010.eng.srt",
+    "Pay$&Go.mkv",
+    "Pay$&Go.srt",
+    "Tip$'.mkv",
+    "Tip$'.srt",
+  ]);
   await scan(dir);
   assert.deepEqual(jobsIn(dir), [
     ["Ca$$h.2010.eng.srt", "Ca$$h.2010.chi.srt"],
     ["Pay$&Go.srt", "Pay$&Go.chi.srt"],
     ["Tip$'.srt", "Tip$'.chi.srt"],
   ]);
-  assert.equal(outputNameFor("A$1$$", { output_pattern: "{{name}}.{{lang_code}}.{{ext}}", lang_code: "chi" }, "srt"), "A$1$$.chi.srt");
+  assert.equal(
+    outputNameFor("A$1$$", { output_pattern: "{{name}}.{{lang_code}}.{{ext}}", lang_code: "chi" }, "srt"),
+    "A$1$$.chi.srt",
+  );
 });
 
 test("a finished job whose output was deleted is queued again; one whose output is still there stays done", async () => {
   useLanguages(["Traditional Chinese", "zh-TW"]);
   const [chinese] = config.getTasks();
-  const dir = library("stale-jobs", ["Gone.mkv", "Gone.eng.srt", "Kept.mkv", "Kept.eng.srt", "Kept.chi.srt", "Moved.mkv", "Moved.eng.srt", "Moved.custom.srt", "Skip.mkv", "Skip.eng.srt"]);
+  const dir = library("stale-jobs", [
+    "Gone.mkv",
+    "Gone.eng.srt",
+    "Kept.mkv",
+    "Kept.eng.srt",
+    "Kept.chi.srt",
+    "Moved.mkv",
+    "Moved.eng.srt",
+    "Moved.custom.srt",
+    "Skip.mkv",
+    "Skip.eng.srt",
+  ]);
   const job = (name: string, output: string, status: string) => {
-    const id = Number(db.createJob({ task_id: chinese.id, srt_path: path.join(dir, name), output_path: path.join(dir, output), video_path: null }).lastInsertRowid);
+    const id = Number(
+      db.createJob({
+        task_id: chinese.id,
+        srt_path: path.join(dir, name),
+        output_path: path.join(dir, output),
+        video_path: null,
+      }).lastInsertRowid,
+    );
     db.updateJob(id, { status });
     return id;
   };
@@ -460,15 +543,30 @@ test("script and numeric region subtags and Bazarr's zt are read as languages", 
 test("a queued Traditional job for .chi moves to .cht once Simplified is preferred, so it never writes Simplified's name", async (t) => {
   t.after(() => config.setSetting("preferred_chinese", "zh-TW"));
   config.setSetting("preferred_chinese", "zh-CN");
-  const traditional = { target_lang: "Traditional Chinese", lang_code: "cht", output_pattern: "{{name}}.{{lang_code}}.srt", former_lang_codes: ["chi"] };
+  const traditional = {
+    target_lang: "Traditional Chinese",
+    lang_code: "cht",
+    output_pattern: "{{name}}.{{lang_code}}.srt",
+    former_lang_codes: ["chi"],
+  };
   assert.equal(standardOutputFor("/m/Show.en.srt", "/m/Show.chi.srt", traditional), "/m/Show.cht.srt");
 });
 
 test("a scan tells a translation already on disk from an output another subtitle owns", async () => {
   useLanguages(["Traditional Chinese", "zh-TW"]);
-  const dir = library("exists-or-owned", ["Done.mkv", "Done.en.srt", "Done.chi.srt", "Pair.mkv", "Pair.srt", "Pair.en.srt"]);
+  const dir = library("exists-or-owned", [
+    "Done.mkv",
+    "Done.en.srt",
+    "Done.chi.srt",
+    "Pair.mkv",
+    "Pair.srt",
+    "Pair.en.srt",
+  ]);
   const tasksOf = async (name: string) =>
-    (await scanFolder(false)).files.flatMap((file) => file.subtitles).find((s) => s.srtPath === path.join(dir, name))?.tasks.map((t) => [t.status, t.outputExists]);
+    (await scanFolder(false)).files
+      .flatMap((file) => file.subtitles)
+      .find((s) => s.srtPath === path.join(dir, name))
+      ?.tasks.map((t) => [t.status, t.outputExists]);
   assert.deepEqual(await tasksOf("Done.en.srt"), [["skipped", true]]);
   // Pair.srt owns Pair.chi.srt, so Pair.en.srt is skipped with nothing on disk.
   assert.deepEqual(await tasksOf("Pair.en.srt"), [["skipped", false]]);

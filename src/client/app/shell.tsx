@@ -4,12 +4,7 @@ import { useTranslation } from "react-i18next";
 import { isNavActive, NAV_GROUPS, NAV_ITEMS, navItemsInGroup } from "./constants";
 import { Icon, type IconName } from "../ui/Icon";
 import { LlmStatusPopover } from "./LlmStatusPopover";
-import {
-  getThemePref,
-  setThemePref,
-  THEME_PREFS,
-  type ThemePref,
-} from "../lib/theme";
+import { getThemePref, setThemePref, THEME_PREFS, type ThemePref } from "../lib/theme";
 
 const THEME_ICON: Record<ThemePref, IconName> = {
   system: "theme-system",
@@ -25,10 +20,7 @@ function ThemeToggle() {
   const cycle = () => {
     // Read fresh from storage, not the closed-over state: the Settings → Interface
     // control writes the same key without notifying us, so `pref` can be stale.
-    const next =
-      THEME_PREFS[
-        (THEME_PREFS.indexOf(getThemePref()) + 1) % THEME_PREFS.length
-      ];
+    const next = THEME_PREFS[(THEME_PREFS.indexOf(getThemePref()) + 1) % THEME_PREFS.length];
     setPref(next);
     setThemePref(next);
   };
@@ -54,12 +46,7 @@ interface DesktopSidebarProps {
   currentPath: string;
 }
 
-export function DesktopSidebar({
-  queueRunning,
-  errorCount,
-  watcherRunning,
-  currentPath,
-}: DesktopSidebarProps) {
+export function DesktopSidebar({ queueRunning, errorCount, watcherRunning, currentPath }: DesktopSidebarProps) {
   const { t } = useTranslation();
   return (
     // Phase 5: auto-compact at small desktop widths (w-20 compact, lg:w-52 full)
@@ -74,9 +61,7 @@ export function DesktopSidebar({
         </div>
         {/* hidden at compact width, shown at lg */}
         <div className="hidden min-w-0 lg:block">
-          <h1 className="text-sm font-semibold leading-tight tracking-[-0.3px] text-text">
-            SubSmelt
-          </h1>
+          <h1 className="text-sm font-semibold leading-tight tracking-[-0.3px] text-text">SubSmelt</h1>
           {/* Version line hidden — promoted to logo tooltip */}
         </div>
       </div>
@@ -90,23 +75,14 @@ export function DesktopSidebar({
           const items = navItemsInGroup(group.id);
           if (items.length === 0) return null;
           return (
-            <div
-              key={group.id}
-              className={
-                index > 0 ? "mt-2 border-t border-border-subtle pt-2" : ""
-              }
-            >
+            <div key={group.id} className={index > 0 ? "mt-2 border-t border-border-subtle pt-2" : ""}>
               <div
                 aria-hidden="true"
                 className="hidden px-2 pb-1 text-xs font-semibold uppercase tracking-[0.08em] text-faint lg:block"
               >
                 {t(group.labelKey)}
               </div>
-              <ul
-                role="list"
-                aria-label={t(group.labelKey)}
-                className="space-y-1"
-              >
+              <ul role="list" aria-label={t(group.labelKey)} className="space-y-1">
                 {items.map((item) => {
                   const isActive = isNavActive(item, currentPath);
                   const showBadge = item.path === "/activity" && errorCount > 0;
@@ -121,9 +97,7 @@ export function DesktopSidebar({
                       >
                         <Icon name={item.icon} />
                         {/* Label hidden at compact width, shown at lg */}
-                        <span className="hidden flex-1 lg:inline">
-                          {t(item.labelKey)}
-                        </span>
+                        <span className="hidden flex-1 lg:inline">{t(item.labelKey)}</span>
                         {showBadge && (
                           <span className="absolute right-1 top-0 min-w-4 rounded-full lg:static lg:ml-auto bg-danger px-2 py-px text-center text-xs font-semibold text-accent-text">
                             {errorCount}
@@ -153,24 +127,18 @@ export function DesktopSidebar({
               aria-hidden="true"
               className={`h-2 w-2 shrink-0 rounded-full ${queueRunning ? "bg-success ring-[3px] ring-success-soft animate-pulse" : "bg-faint"}`}
             />
-            <span className="sr-only lg:not-sr-only">
-              {t(queueRunning ? "app.queueRunning" : "app.queueIdle")}
-            </span>
+            <span className="sr-only lg:not-sr-only">{t(queueRunning ? "app.queueRunning" : "app.queueIdle")}</span>
           </div>
           {/* Watcher status */}
           <div
             className="flex items-center gap-2 px-1 py-1 text-xs"
-            title={t(
-              watcherRunning ? "app.watcherActive" : "app.watcherInactive",
-            )}
+            title={t(watcherRunning ? "app.watcherActive" : "app.watcherInactive")}
           >
             <span
               aria-hidden="true"
               className={`h-2 w-2 shrink-0 rounded-full ${watcherRunning ? "bg-success" : "bg-faint"}`}
             />
-            <span
-              className={`sr-only lg:not-sr-only ${watcherRunning ? "text-muted" : "text-faint"}`}
-            >
+            <span className={`sr-only lg:not-sr-only ${watcherRunning ? "text-muted" : "text-faint"}`}>
               {t(watcherRunning ? "app.watcherActive" : "app.watcherInactive")}
             </span>
           </div>
@@ -187,12 +155,7 @@ export function DesktopSidebar({
 /** Non-color cue for the active mobile cell: a top indicator bar + bolder
  *  weight, so selection isn't signalled by accent tint alone. */
 function MobileTabIndicator() {
-  return (
-    <span
-      aria-hidden="true"
-      className="absolute inset-x-4 top-0 rounded-full border-t-2 border-accent"
-    />
-  );
+  return <span aria-hidden="true" className="absolute inset-x-4 top-0 rounded-full border-t-2 border-accent" />;
 }
 
 export function MobileBottomNav({ currentPath }: { currentPath: string }) {

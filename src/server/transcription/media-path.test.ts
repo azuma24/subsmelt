@@ -50,10 +50,7 @@ test("a symlinked media dir still accepts its own contents", () => {
   const file = path.join(real, "Episode 02.mkv");
   fs.writeFileSync(file, "", "utf8");
 
-  assert.equal(
-    assertMediaPathAllowed(path.join(linkRoot, "Episode 02.mkv"), linkRoot),
-    fs.realpathSync(file),
-  );
+  assert.equal(assertMediaPathAllowed(path.join(linkRoot, "Episode 02.mkv"), linkRoot), fs.realpathSync(file));
 });
 
 test("a not-yet-created output path under the media dir is still allowed", () => {

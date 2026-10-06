@@ -11,7 +11,15 @@ interface ActionButtonProps {
   busy?: boolean;
 }
 
-export function ActionButton({ children, onClick, className = "", variant = "primary", size = "md", disabled = false, busy = false }: ActionButtonProps) {
+export function ActionButton({
+  children,
+  onClick,
+  className = "",
+  variant = "primary",
+  size = "md",
+  disabled = false,
+  busy = false,
+}: ActionButtonProps) {
   const cls = {
     primary: "bg-accent hover:brightness-110 text-accent-text",
     success: "bg-success hover:brightness-110 text-accent-text font-semibold",
@@ -20,19 +28,39 @@ export function ActionButton({ children, onClick, className = "", variant = "pri
     warning: "bg-warning-soft hover:brightness-110 text-warning border border-warning-line",
   }[variant];
   const sizeCls = size === "sm" ? "px-3 py-2 text-xs" : "px-4 py-3 text-sm";
-  return <button onClick={onClick} disabled={disabled || busy} className={`inline-flex min-h-touch items-center justify-center gap-2 rounded-sm text-center font-medium leading-6 transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${sizeCls} ${cls} ${className}`}>{children}</button>;
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled || busy}
+      className={`inline-flex min-h-touch items-center justify-center gap-2 rounded-sm text-center font-medium leading-6 transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${sizeCls} ${cls} ${className}`}
+    >
+      {children}
+    </button>
+  );
 }
 
 export type MiniBtnTone = "default" | "warning";
 
 /** A compact secondary action inside a row or a card. */
-export function MiniBtn({ children, onClick, tone = "default" }: { children: ReactNode; onClick: () => void; tone?: MiniBtnTone }) {
+export function MiniBtn({
+  children,
+  onClick,
+  tone = "default",
+}: {
+  children: ReactNode;
+  onClick: () => void;
+  tone?: MiniBtnTone;
+}) {
   const cls =
     tone === "warning"
       ? "bg-warning-soft hover:brightness-110 text-warning border border-warning-line"
       : "bg-surface-raised hover:bg-surface-highlight text-muted hover:text-text border border-border";
   return (
-    <button type="button" onClick={onClick} className={`rounded-sm px-3 py-1 text-xs leading-6 transition-colors min-h-touch md:min-h-0 ${cls}`}>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-sm px-3 py-1 text-xs leading-6 transition-colors min-h-touch md:min-h-0 ${cls}`}
+    >
       {children}
     </button>
   );
@@ -60,7 +88,16 @@ interface IconButtonProps {
 }
 
 /** A square, touch-sized button that is only an icon, with its name for assistive tech. */
-export function IconButton({ icon, label, onClick, variant = "ghost", disabled = false, pressed, className = "", type = "button" }: IconButtonProps) {
+export function IconButton({
+  icon,
+  label,
+  onClick,
+  variant = "ghost",
+  disabled = false,
+  pressed,
+  className = "",
+  type = "button",
+}: IconButtonProps) {
   return (
     <button
       type={type}

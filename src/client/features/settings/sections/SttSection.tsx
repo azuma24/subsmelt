@@ -88,7 +88,11 @@ export function SttSection({
           onChange={(v) => update("transcription_backend_url", v)}
           placeholder="http://whisper-backend:8001"
           readOnly={isEnvPinned(settings, "transcription_backend_url")}
-          help={isEnvPinned(settings, "transcription_backend_url") ? t("settings.envPinnedNote", { name: "WHISPER_BACKEND_URL" }) : t("settings.transcription.backendUrlHelp")}
+          help={
+            isEnvPinned(settings, "transcription_backend_url")
+              ? t("settings.envPinnedNote", { name: "WHISPER_BACKEND_URL" })
+              : t("settings.transcription.backendUrlHelp")
+          }
         />
       </div>
       <div className="md:max-w-[340px]">
@@ -99,13 +103,21 @@ export function SttSection({
           type="password"
           placeholder="••••••••"
           readOnly={isEnvPinned(settings, "transcription_backend_token")}
-          help={isEnvPinned(settings, "transcription_backend_token") ? t("settings.envPinnedNote", { name: "WHISPER_BACKEND_TOKEN" }) : t("settings.transcription.backendTokenHelp")}
+          help={
+            isEnvPinned(settings, "transcription_backend_token")
+              ? t("settings.envPinnedNote", { name: "WHISPER_BACKEND_TOKEN" })
+              : t("settings.transcription.backendTokenHelp")
+          }
         />
       </div>
       <div className={`flex ${isMobile ? "flex-col" : "items-center"} gap-3`}>
-        <ActionButton variant="ghost" size="sm" onClick={onTest}>{testing ? t("app.testing") : t("settings.transcription.testButton")}</ActionButton>
+        <ActionButton variant="ghost" size="sm" onClick={onTest}>
+          {testing ? t("app.testing") : t("settings.transcription.testButton")}
+        </ActionButton>
         {testResult && (
-          <span className={`text-sm ${testResult.ok ? "text-success" : "text-danger"}`}><Icon name={testResult.ok ? "done" : "error"} /> {testResult.message}</span>
+          <span className={`text-sm ${testResult.ok ? "text-success" : "text-danger"}`}>
+            <Icon name={testResult.ok ? "done" : "error"} /> {testResult.message}
+          </span>
         )}
       </div>
       <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
@@ -121,16 +133,26 @@ export function SttSection({
         </div>
         <div>
           <label className={labelCls}>{t("settings.transcription.language")}</label>
-          <Select ariaLabel={t("settings.transcription.language")} value={selectedLanguage} onChange={(value) => update("transcription_language", value)}>
+          <Select
+            ariaLabel={t("settings.transcription.language")}
+            value={selectedLanguage}
+            onChange={(value) => update("transcription_language", value)}
+          >
             {languageOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.labelKey ? t(opt.labelKey) : opt.value}</option>
+              <option key={opt.value} value={opt.value}>
+                {opt.labelKey ? t(opt.labelKey) : opt.value}
+              </option>
             ))}
           </Select>
           <LanguageSupportWarning model={selectedDescriptor} language={selectedLanguage} />
         </div>
         <div>
           <label className={labelCls}>{t("settings.transcription.output")}</label>
-          <Select ariaLabel={t("settings.transcription.output")} value={str(settings.transcription_output_format, "srt")} onChange={(value) => update("transcription_output_format", value)}>
+          <Select
+            ariaLabel={t("settings.transcription.output")}
+            value={str(settings.transcription_output_format, "srt")}
+            onChange={(value) => update("transcription_output_format", value)}
+          >
             <option value="srt">SRT</option>
             <option value="vtt">VTT</option>
             <option value="txt">TXT</option>

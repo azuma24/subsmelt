@@ -8,7 +8,10 @@ export const NOTIFY_EVENTS = [
 ] as const;
 
 export function parseNotifyEvents(raw: string): string[] {
-  return raw.split(",").map((e) => e.trim()).filter(Boolean);
+  return raw
+    .split(",")
+    .map((e) => e.trim())
+    .filter(Boolean);
 }
 
 /** Turns one event on or off in the comma list, keeping every other entry, unknown ones included. */

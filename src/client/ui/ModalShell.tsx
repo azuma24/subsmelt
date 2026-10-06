@@ -82,7 +82,9 @@ export function ModalShell({
   return (
     <div
       className={overlayClassName}
-      onMouseDown={(event) => { pressStartedOnBackdrop.current = event.target === event.currentTarget; }}
+      onMouseDown={(event) => {
+        pressStartedOnBackdrop.current = event.target === event.currentTarget;
+      }}
       onClick={(event) => {
         if (pressStartedOnBackdrop.current && event.target === event.currentTarget) onClose();
       }}
@@ -96,7 +98,11 @@ export function ModalShell({
         className={panelClassName}
         onKeyDown={handleKeyDown}
       >
-        {title && <h3 id={resolvedTitleId} className="text-base font-semibold text-text">{title}</h3>}
+        {title && (
+          <h3 id={resolvedTitleId} className="text-base font-semibold text-text">
+            {title}
+          </h3>
+        )}
         {children}
       </div>
     </div>

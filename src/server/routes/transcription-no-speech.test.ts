@@ -65,7 +65,9 @@ function video(name: string): string {
 
 async function noSpeechRun(videoPath: string, settings: Record<string, string>) {
   let caught: unknown;
-  await runTranscriptionAttempt({ videoPath, postAction: "transcribe_and_translate", settings }).catch((error) => { caught = error; });
+  await runTranscriptionAttempt({ videoPath, postAction: "transcribe_and_translate", settings }).catch((error) => {
+    caught = error;
+  });
   assert.ok(caught instanceof Error, "the run must fail");
   assert.equal(caught.message, "No speech found");
   assert.equal(transcriptionErrorStatus(caught), 422);
@@ -90,7 +92,10 @@ test("shared mode: zero segments with no file written is no speech too", async (
 test("upload mode: empty content writes no file", async () => {
   const videoPath = video("Quiet");
   await noSpeechRun(videoPath, settingsFor(await backend(() => ({ content: "", segments: 0 })), "upload"));
-  assert.deepEqual(fs.readdirSync(path.join(mediaDir, "show")).filter((name) => name.startsWith("Quiet.") && name !== "Quiet.mkv"), []);
+  assert.deepEqual(
+    fs.readdirSync(path.join(mediaDir, "show")).filter((name) => name.startsWith("Quiet.") && name !== "Quiet.mkv"),
+    [],
+  );
 });
 
 test("a later run that finds speech takes the video off the no-speech list", async () => {

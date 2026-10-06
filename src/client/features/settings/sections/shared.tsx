@@ -12,7 +12,17 @@ export const labelCls = FORM_LABEL_CLS;
 /** Coerce a settings value to boolean — `settings` is a Record<string, unknown> on the wire. */
 export const bool = (v: unknown): boolean => Boolean(v);
 
-export function ToggleRow({ title, description, checked, onChange }: { title: string; description?: string; checked: boolean; onChange: (checked: boolean) => void }) {
+export function ToggleRow({
+  title,
+  description,
+  checked,
+  onChange,
+}: {
+  title: string;
+  description?: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
   return (
     <label className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-sm border border-border bg-surface-raised px-3 py-3">
       <div>

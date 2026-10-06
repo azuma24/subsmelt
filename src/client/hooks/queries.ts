@@ -20,7 +20,11 @@ export function useSettingsQuery() {
 }
 
 export function useTasksQuery() {
-  return useQuery<Task[]>({ queryKey: ["tasks"], queryFn: ({ signal }) => api.getTasks({ signal }), staleTime: 10_000 });
+  return useQuery<Task[]>({
+    queryKey: ["tasks"],
+    queryFn: ({ signal }) => api.getTasks({ signal }),
+    staleTime: 10_000,
+  });
 }
 
 /** Every video and subtitle under the media root with per-task status: the
@@ -36,7 +40,6 @@ export function useLibraryQuery(enabled = true) {
   });
 }
 
-
 export function useJobsQuery() {
   return useQuery({
     queryKey: ["jobs"],
@@ -51,7 +54,16 @@ export function useJobsQuery() {
 export function useLogsQuery(level?: string, category?: string, jobId?: number | null) {
   return useQuery<LogEntry[]>({
     queryKey: ["logs", level, category, jobId ?? null],
-    queryFn: ({ signal }) => api.getLogs({ level: level || undefined, category: category || undefined, jobId: typeof jobId === "number" ? jobId : undefined, limit: 300 }, { signal }),
+    queryFn: ({ signal }) =>
+      api.getLogs(
+        {
+          level: level || undefined,
+          category: category || undefined,
+          jobId: typeof jobId === "number" ? jobId : undefined,
+          limit: 300,
+        },
+        { signal },
+      ),
     // Logs are written (warn/error) WITHOUT a lifecycle SSE event during long
     // jobs, so this timer is the only way fresh diagnostics appear while tailing.
     // Keep it short (relaxed 3s → 8s, not 30s) so users don't miss warnings.
@@ -159,7 +171,11 @@ export function useYoutubePipelineQuery() {
 }
 
 export function useYoutubeStatusQuery() {
-  return useQuery({ queryKey: ["youtube", "status"], queryFn: ({ signal }) => api.getYoutubeStatus({ signal }), staleTime: 5_000 });
+  return useQuery({
+    queryKey: ["youtube", "status"],
+    queryFn: ({ signal }) => api.getYoutubeStatus({ signal }),
+    staleTime: 5_000,
+  });
 }
 
 export function useYoutubeNotesFolderQuery(path: string) {

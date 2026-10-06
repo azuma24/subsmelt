@@ -34,12 +34,7 @@ const MODELS_FETCH_TIMEOUT_MS = 10_000;
 // fetch() with an AbortController timeout. On timeout, surfaces a clear
 // "<label> timed out after Ns" error (mirrors fetchWithTimeout in
 // transcription-client.ts / the /api/llm-health AbortController pattern).
-async function fetchWithTimeout(
-  url: string,
-  init: RequestInit,
-  timeoutMs: number,
-  label: string,
-): Promise<Response> {
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number, label: string): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -59,14 +54,23 @@ async function fetchWithTimeout(
  * expects. Also the cheapest call that proves a key still works, which is how
  * the sidebar status probes cloud connections. null for anything else.
  */
-export function cloudModelsRequest(provider: string, apiKey: string): { url: string; headers: Record<string, string> } | null {
+export function cloudModelsRequest(
+  provider: string,
+  apiKey: string,
+): { url: string; headers: Record<string, string> } | null {
   switch (provider) {
     case "openai":
       return { url: "https://api.openai.com/v1/models", headers: { Authorization: `Bearer ${apiKey}` } };
     case "anthropic":
-      return { url: "https://api.anthropic.com/v1/models", headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" } };
+      return {
+        url: "https://api.anthropic.com/v1/models",
+        headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+      };
     case "gemini":
-      return { url: `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}&pageSize=100`, headers: {} };
+      return {
+        url: `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}&pageSize=100`,
+        headers: {},
+      };
     default:
       return null;
   }
@@ -84,7 +88,7 @@ export async function listModels(
   provider: string,
   keyOverride: string,
   endpointOverride: string,
-  connectionId = ""
+  connectionId = "",
 ): Promise<ModelsResult> {
   const settings = getAllSettings();
   const connections = parseConnections(settings);
@@ -96,7 +100,12 @@ export async function listModels(
       const apiKey = requestKey("openai", "") || settings.cloud_api_key_openai || "";
       if (!apiKey) return { status: 400, body: { error: "No OpenAI API key configured" } };
       const request = cloudModelsRequest("openai", apiKey)!;
-      const resp = await fetchWithTimeout(request.url, { headers: request.headers }, MODELS_FETCH_TIMEOUT_MS, "OpenAI model list");
+      const resp = await fetchWithTimeout(
+        request.url,
+        { headers: request.headers },
+        MODELS_FETCH_TIMEOUT_MS,
+        "OpenAI model list",
+      );
       if (!resp.ok) return { status: resp.status, body: { error: `OpenAI returned ${resp.status}` } };
       const models = modelIds((await resp.json()) as ModelListResponse)
         .filter((id) => id.startsWith("gpt-") || id.startsWith("o1") || id.startsWith("o3") || id.startsWith("o4"))
@@ -108,7 +117,12 @@ export async function listModels(
       const apiKey = requestKey("anthropic", "") || settings.cloud_api_key_anthropic || "";
       if (!apiKey) return { status: 400, body: { error: "No Anthropic API key configured" } };
       const request = cloudModelsRequest("anthropic", apiKey)!;
-      const resp = await fetchWithTimeout(request.url, { headers: request.headers }, MODELS_FETCH_TIMEOUT_MS, "Anthropic model list");
+      const resp = await fetchWithTimeout(
+        request.url,
+        { headers: request.headers },
+        MODELS_FETCH_TIMEOUT_MS,
+        "Anthropic model list",
+      );
       if (!resp.ok) return { status: resp.status, body: { error: `Anthropic returned ${resp.status}` } };
       const models = modelIds((await resp.json()) as ModelListResponse).sort();
       return { status: 200, body: { models, provider } };
@@ -118,7 +132,12 @@ export async function listModels(
       const apiKey = requestKey("gemini", "") || settings.cloud_api_key_gemini || "";
       if (!apiKey) return { status: 400, body: { error: "No Gemini API key configured" } };
       const request = cloudModelsRequest("gemini", apiKey)!;
-      const resp = await fetchWithTimeout(request.url, { headers: request.headers }, MODELS_FETCH_TIMEOUT_MS, "Gemini model list");
+      const resp = await fetchWithTimeout(
+        request.url,
+        { headers: request.headers },
+        MODELS_FETCH_TIMEOUT_MS,
+        "Gemini model list",
+      );
       if (!resp.ok) return { status: resp.status, body: { error: `Gemini returned ${resp.status}` } };
       const models = modelIds((await resp.json()) as ModelListResponse)
         .map((name) => name.replace(/^models\//, ""))
@@ -139,9 +158,14 @@ export async function listModels(
     // only the request's key or the key of the saved connection it names.
     const apiKey = requestKey("local", endpoint) || (endpoint === savedEndpoint ? settings.api_key || "" : "");
     const url = endpoint + "/models";
-    const resp = await fetchWithTimeout(url, {
-      headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
-    }, MODELS_FETCH_TIMEOUT_MS, "LLM model list");
+    const resp = await fetchWithTimeout(
+      url,
+      {
+        headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
+      },
+      MODELS_FETCH_TIMEOUT_MS,
+      "LLM model list",
+    );
     if (!resp.ok) return { status: resp.status, body: { error: `LLM returned ${resp.status}` } };
     const models = modelIds((await resp.json()) as ModelListResponse);
     return { status: 200, body: { models, provider: "local" } };
@@ -244,7 +268,12 @@ export function registerModelsRoutes(app: Express): void {
   // the URL/query string (which can leak via logs, proxies, Referer headers).
   app.post("/api/models", async (req, res) => {
     const body = (req.body || {}) as { provider?: string; key?: string; endpoint?: string; connectionId?: string };
-    const result = await listModels(body.provider || "local", body.key || "", body.endpoint || "", body.connectionId || "");
+    const result = await listModels(
+      body.provider || "local",
+      body.key || "",
+      body.endpoint || "",
+      body.connectionId || "",
+    );
     res.status(result.status).json(result.body);
   });
 
@@ -255,7 +284,7 @@ export function registerModelsRoutes(app: Express): void {
       (req.query.provider as string) || "local",
       (req.query.key as string) || "",
       (req.query.endpoint as string) || "",
-      (req.query.connectionId as string) || ""
+      (req.query.connectionId as string) || "",
     );
     res.status(result.status).json(result.body);
   });
@@ -287,7 +316,11 @@ export function registerModelsRoutes(app: Express): void {
       const primary = pool[0];
       conn = primary
         ? { apiKey: primary.apiKey, apiHost: primary.apiHost, model: primary.model, provider: primary.provider }
-        : { apiKey: settings.api_key || "", apiHost: settings.llm_endpoint || "http://localhost:8000/v1", model: settings.model || "" };
+        : {
+            apiKey: settings.api_key || "",
+            apiHost: settings.llm_endpoint || "http://localhost:8000/v1",
+            model: settings.model || "",
+          };
     }
 
     const result = await testConnection(conn);

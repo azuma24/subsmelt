@@ -59,7 +59,9 @@ export const JobCardMobile = memo(function JobCardMobile({
   const isActive = currentJobId === job.id;
 
   return (
-    <div className={`rounded-md border p-3 ${isActive ? "border-accent-line bg-accent-soft" : hasError ? "border-danger-line bg-surface" : selected ? "border-accent-line bg-accent-soft" : "border-border bg-surface"}`}>
+    <div
+      className={`rounded-md border p-3 ${isActive ? "border-accent-line bg-accent-soft" : hasError ? "border-danger-line bg-surface" : selected ? "border-accent-line bg-accent-soft" : "border-border bg-surface"}`}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-start gap-3">
           {isPending && (
@@ -73,8 +75,14 @@ export const JobCardMobile = memo(function JobCardMobile({
           )}
           <div className="min-w-0">
             <div className="truncate text-sm font-medium text-text">{srtName}</div>
-            <div className="mt-1 text-xs text-muted">{job.target_lang} · {job.lang_code}</div>
-            {reason && <div className="mt-1 inline-flex rounded-full bg-danger-soft px-2 py-1 text-xs text-danger">{t(`dashboard.errorReason.${reason}`)}</div>}
+            <div className="mt-1 text-xs text-muted">
+              {job.target_lang} · {job.lang_code}
+            </div>
+            {reason && (
+              <div className="mt-1 inline-flex rounded-full bg-danger-soft px-2 py-1 text-xs text-danger">
+                {t(`dashboard.errorReason.${reason}`)}
+              </div>
+            )}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -84,15 +92,32 @@ export const JobCardMobile = memo(function JobCardMobile({
           <RowActionsMenu
             items={[
               ...(isPending
-                ? [job.priority > 0
-                    ? { label: t("dashboard.action.unpin"), onClick: () => jobActions.unpin(job.id), disabled: jobActions.isUnpinning }
-                    : { label: t("dashboard.action.pin"), onClick: () => jobActions.pin(job.id), disabled: jobActions.isPinning }]
+                ? [
+                    job.priority > 0
+                      ? {
+                          label: t("dashboard.action.unpin"),
+                          onClick: () => jobActions.unpin(job.id),
+                          disabled: jobActions.isUnpinning,
+                        }
+                      : {
+                          label: t("dashboard.action.pin"),
+                          onClick: () => jobActions.pin(job.id),
+                          disabled: jobActions.isPinning,
+                        },
+                  ]
                 : []),
               ...(job.status === "error"
                 ? [{ label: t("dashboard.action.logs"), onClick: () => onOpenLogs(job.id) }]
                 : []),
               { label: t("dashboard.action.details"), onClick: () => onOpenDetails(job) },
-              { label: t("dashboard.action.delete"), onClick: () => { void jobActions.remove(job.id); }, danger: true, disabled: jobActions.isDeleting },
+              {
+                label: t("dashboard.action.delete"),
+                onClick: () => {
+                  void jobActions.remove(job.id);
+                },
+                danger: true,
+                disabled: jobActions.isDeleting,
+              },
             ]}
           />
         </div>
@@ -108,33 +133,67 @@ export const JobCardMobile = memo(function JobCardMobile({
         </div>
       )}
       <div className="mt-3 grid grid-cols-2 gap-2">
-        {(job.status === "done" || job.status === "translating") ? (
-          <ActionButton size="sm" onClick={() => onPreview(job.id)}>{t("dashboard.action.preview")}</ActionButton>
+        {job.status === "done" || job.status === "translating" ? (
+          <ActionButton size="sm" onClick={() => onPreview(job.id)}>
+            {t("dashboard.action.preview")}
+          </ActionButton>
         ) : (
           <button
             type="button"
             onClick={() => onOpenDetails(job)}
             className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-center text-xs font-medium text-text"
-          >{t("dashboard.action.details")}</button>
+          >
+            {t("dashboard.action.details")}
+          </button>
         )}
         {job.status === "error" ? (
-          <ActionButton size="sm" variant="warning" busy={jobActions.isRetrying} onClick={() => jobActions.retry(job.id)}>{t("dashboard.action.retry")}</ActionButton>
+          <ActionButton
+            size="sm"
+            variant="warning"
+            busy={jobActions.isRetrying}
+            onClick={() => jobActions.retry(job.id)}
+          >
+            {t("dashboard.action.retry")}
+          </ActionButton>
         ) : job.status === "translating" ? (
           // Cancelling one translating job aborts its LLM work and ends it as a
           // cancelled error; the queue keeps running with the next pending job.
-          <ActionButton size="sm" variant="danger" busy={jobActions.isCancelling} onClick={() => jobActions.cancel(job.id)}>{t("dashboard.action.cancel")}</ActionButton>
+          <ActionButton
+            size="sm"
+            variant="danger"
+            busy={jobActions.isCancelling}
+            onClick={() => jobActions.cancel(job.id)}
+          >
+            {t("dashboard.action.cancel")}
+          </ActionButton>
         ) : job.status === "skipped" ? (
           // Never translated (an existing target subtitle was found), so this is
           // an opt-in "do it anyway", not a re-run of previous work.
-          <ActionButton size="sm" variant="warning" busy={jobActions.isRetranslating} onClick={() => jobActions.retranslate(job.id)}>{t("dashboard.action.translateAnyway")}</ActionButton>
+          <ActionButton
+            size="sm"
+            variant="warning"
+            busy={jobActions.isRetranslating}
+            onClick={() => jobActions.retranslate(job.id)}
+          >
+            {t("dashboard.action.translateAnyway")}
+          </ActionButton>
         ) : job.status === "done" ? (
-          <ActionButton size="sm" variant="ghost" busy={jobActions.isRetranslating} onClick={() => jobActions.retranslate(job.id)}>{t("dashboard.action.retranslate")}</ActionButton>
+          <ActionButton
+            size="sm"
+            variant="ghost"
+            busy={jobActions.isRetranslating}
+            onClick={() => jobActions.retranslate(job.id)}
+          >
+            {t("dashboard.action.retranslate")}
+          </ActionButton>
         ) : (
           <button
             type="button"
             onClick={() => onOpenDetails(job)}
             className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-center text-xs font-medium text-text"
-          >{t("dashboard.action.open")}</button>
+          >
+            {t("dashboard.action.open")}
+          </button>
         )}
       </div>
     </div>

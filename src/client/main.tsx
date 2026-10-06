@@ -25,5 +25,5 @@ ReactDOM.createRoot(rootEl).render(
         </AppErrorBoundary>
       </BrowserRouter>
     </QueryClientProvider>
-  </React.StrictMode>
+  </React.StrictMode>,
 );

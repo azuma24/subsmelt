@@ -75,9 +75,7 @@ export function estimateQueueEta(pendingCount: number, recentDurationsSeconds: n
   if (usable.length === 0) return null;
 
   const middle = Math.floor(usable.length / 2);
-  const medianSeconds = usable.length % 2 === 0
-    ? (usable[middle - 1] + usable[middle]) / 2
-    : usable[middle];
+  const medianSeconds = usable.length % 2 === 0 ? (usable[middle - 1] + usable[middle]) / 2 : usable[middle];
 
   return medianSeconds * 1000 * pendingCount;
 }

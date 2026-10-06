@@ -22,13 +22,22 @@ function lowRamBehavior(raw: string | undefined): LowRamBehavior {
   return raw === "downgrade" || raw === "skip" || raw === "run_anyway" ? raw : "ask";
 }
 
-export async function fetchTranscriptionHealth(backendUrl: string, model?: string, token?: string): Promise<BackendHealthResponse> {
+export async function fetchTranscriptionHealth(
+  backendUrl: string,
+  model?: string,
+  token?: string,
+): Promise<BackendHealthResponse> {
   const url = normalizeTranscriptionBackendUrl(backendUrl);
   if (!url) throw new Error("Transcription backend URL is not configured");
   const qs = model ? `?${new URLSearchParams({ model }).toString()}` : "";
-  const response = await fetchWithTimeout(`${url}/health${qs}`, {
-    headers: { ...transcriptionAuthHeaders(token) },
-  }, SHORT_REQUEST_TIMEOUT_MS, "Transcription backend health check");
+  const response = await fetchWithTimeout(
+    `${url}/health${qs}`,
+    {
+      headers: { ...transcriptionAuthHeaders(token) },
+    },
+    SHORT_REQUEST_TIMEOUT_MS,
+    "Transcription backend health check",
+  );
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throwBackendError(body, response.status);
   return body as BackendHealthResponse;
@@ -40,30 +49,40 @@ export async function fetchTranscriptionHealth(backendUrl: string, model?: strin
  * GUI's console-less child process is otherwise unreachable — you had to be at
  * the machine to read it. Authenticated on the backend side (log lines carry
  * media paths), so the token is required like the other gated routes. */
-export async function fetchTranscriptionLogs(
-  backendUrl: string,
-  lines: number,
-  token?: string,
-): Promise<unknown> {
+export async function fetchTranscriptionLogs(backendUrl: string, lines: number, token?: string): Promise<unknown> {
   const url = normalizeTranscriptionBackendUrl(backendUrl);
   if (!url) throw new Error("Transcription backend URL is not configured");
   const qs = `?${new URLSearchParams({ lines: String(lines) }).toString()}`;
-  const response = await fetchWithTimeout(`${url}/logs${qs}`, {
-    headers: { ...transcriptionAuthHeaders(token) },
-  }, SHORT_REQUEST_TIMEOUT_MS, "Transcription backend log fetch");
+  const response = await fetchWithTimeout(
+    `${url}/logs${qs}`,
+    {
+      headers: { ...transcriptionAuthHeaders(token) },
+    },
+    SHORT_REQUEST_TIMEOUT_MS,
+    "Transcription backend log fetch",
+  );
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throwBackendError(body, response.status);
   return body;
 }
 
-export async function preflightTranscription(backendUrl: string, request: BackendTranscriptionRequest, token?: string): Promise<BackendPreflightResponse> {
+export async function preflightTranscription(
+  backendUrl: string,
+  request: BackendTranscriptionRequest,
+  token?: string,
+): Promise<BackendPreflightResponse> {
   const url = normalizeTranscriptionBackendUrl(backendUrl);
   if (!url) throw new Error("Transcription backend URL is not configured");
-  const response = await fetchWithTimeout(`${url}/preflight`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...transcriptionAuthHeaders(token) },
-    body: JSON.stringify(request),
-  }, SHORT_REQUEST_TIMEOUT_MS, "Transcription backend preflight");
+  const response = await fetchWithTimeout(
+    `${url}/preflight`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...transcriptionAuthHeaders(token) },
+      body: JSON.stringify(request),
+    },
+    SHORT_REQUEST_TIMEOUT_MS,
+    "Transcription backend preflight",
+  );
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throwBackendError(body, response.status);
   return body as BackendPreflightResponse;
@@ -91,13 +110,19 @@ export async function applyPreflightPolicy(
     }
     if (behavior === "run_anyway") return { ...request, allow_unsafe: true };
     if (behavior === "skip") {
-      throw new Error(`Transcription skipped: insufficient RAM (${preflight.availableRamMb ?? "unknown"} MB available, ${preflight.requiredRamMb ?? "unknown"} MB required)`);
+      throw new Error(
+        `Transcription skipped: insufficient RAM (${preflight.availableRamMb ?? "unknown"} MB available, ${preflight.requiredRamMb ?? "unknown"} MB required)`,
+      );
     }
-    throw new Error(`Not enough RAM for ${request.model}; available ${preflight.availableRamMb ?? "unknown"} MB, required ${preflight.requiredRamMb ?? "unknown"} MB`);
+    throw new Error(
+      `Not enough RAM for ${request.model}; available ${preflight.availableRamMb ?? "unknown"} MB, required ${preflight.requiredRamMb ?? "unknown"} MB`,
+    );
   }
 
   if (preflight.code === "insufficient_disk") {
-    throw new Error(`Not enough disk space for transcription; available ${preflight.diskAvailableMb ?? "unknown"} MB, required ${preflight.requiredDiskMb ?? "unknown"} MB`);
+    throw new Error(
+      `Not enough disk space for transcription; available ${preflight.diskAvailableMb ?? "unknown"} MB, required ${preflight.requiredDiskMb ?? "unknown"} MB`,
+    );
   }
 
   throw new Error(`Transcription preflight failed: ${preflight.code || "unsafe"}`);

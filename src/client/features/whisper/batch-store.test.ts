@@ -1,6 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { IDLE, applyProgressEvent, applyTranscriptionProgress, beginFile, cancelBatch, endBatch, fileFinished, getBatchState, hasLiveTranscriptions, runBatch, startBatch } from "./batch-store.js";
+import {
+  IDLE,
+  applyProgressEvent,
+  applyTranscriptionProgress,
+  beginFile,
+  cancelBatch,
+  endBatch,
+  fileFinished,
+  getBatchState,
+  hasLiveTranscriptions,
+  runBatch,
+  startBatch,
+} from "./batch-store.js";
 import type { TranscribeRequest, TranscribeResponse } from "../../types.js";
 
 const request = (videoPath: string): TranscribeRequest => ({ videoPath, postAction: "transcribe_only" });
@@ -8,7 +20,12 @@ const response = { ok: true } as TranscribeResponse;
 
 test("a batch starts with a fresh progress counter and no badges", () => {
   const dirty = { ...IDLE, fileProgress: { "/a.mkv": { done: true } } };
-  assert.deepEqual(startBatch(dirty, 3), { running: true, progress: { done: 0, total: 3 }, activePath: null, fileProgress: {} });
+  assert.deepEqual(startBatch(dirty, 3), {
+    running: true,
+    progress: { done: 0, total: 3 },
+    activePath: null,
+    fileProgress: {},
+  });
 });
 
 test("a finished file records its outcome and advances the counter", () => {
@@ -19,7 +36,12 @@ test("a finished file records its outcome and advances the counter", () => {
   assert.deepEqual(afterDone.progress, { done: 1, total: 2 });
   const afterError = fileFinished(afterDone, "/b.mkv", "error", 2);
   assert.deepEqual(afterError.fileProgress["/b.mkv"], { error: true });
-  assert.deepEqual(endBatch(afterError), { running: false, progress: null, activePath: null, fileProgress: afterError.fileProgress });
+  assert.deepEqual(endBatch(afterError), {
+    running: false,
+    progress: null,
+    activePath: null,
+    fileProgress: afterError.fileProgress,
+  });
 });
 
 test("a phase-only progress event keeps the last percentage", () => {
@@ -42,7 +64,9 @@ test("runBatch runs the files in order, reports failures, and ends idle with bad
       return response;
     },
     onFileError: (path, message) => errors.push([path, message]),
-    onFinished: (ok, total) => { finished = [ok, total]; },
+    onFinished: (ok, total) => {
+      finished = [ok, total];
+    },
   });
   assert.deepEqual(sent, ["/a.mkv", "/b.mkv"]);
   assert.deepEqual(errors, [["/b.mkv", "boom"]]);
@@ -57,12 +81,17 @@ test("runBatch runs the files in order, reports failures, and ends idle with bad
 
 test("a second batch cannot start while one is running, and cancel stops after the current file", async () => {
   let release: () => void = () => {};
-  const gate = new Promise<TranscribeResponse>((resolve) => { release = () => resolve(response); });
+  const gate = new Promise<TranscribeResponse>((resolve) => {
+    release = () => resolve(response);
+  });
   const sent: string[] = [];
   const first = runBatch({
     paths: ["/a.mkv", "/b.mkv", "/c.mkv"],
     request,
-    transcribe: (req) => { sent.push(req.videoPath); return gate; },
+    transcribe: (req) => {
+      sent.push(req.videoPath);
+      return gate;
+    },
     onFileError: () => {},
     onFinished: () => {},
   });
@@ -71,7 +100,15 @@ test("a second batch cannot start while one is running, and cancel stops after t
   assert.equal(getBatchState().activePath, "/a.mkv");
 
   let secondFinished = false;
-  await runBatch({ paths: ["/z.mkv"], request, transcribe: async () => response, onFileError: () => {}, onFinished: () => { secondFinished = true; } });
+  await runBatch({
+    paths: ["/z.mkv"],
+    request,
+    transcribe: async () => response,
+    onFileError: () => {},
+    onFinished: () => {
+      secondFinished = true;
+    },
+  });
   assert.equal(secondFinished, false);
   assert.equal(getBatchState().progress?.total, 3);
 
@@ -85,7 +122,9 @@ test("a second batch cannot start while one is running, and cancel stops after t
 
 test("cancelBatch cancels the active file and everything else in flight", async () => {
   let release: () => void = () => {};
-  const gate = new Promise<TranscribeResponse>((resolve) => { release = () => resolve(response); });
+  const gate = new Promise<TranscribeResponse>((resolve) => {
+    release = () => resolve(response);
+  });
   const run = runBatch({
     paths: ["/a.mkv"],
     request,
@@ -97,8 +136,12 @@ test("cancelBatch cancels the active file and everything else in flight", async 
   const cancelledPaths: string[] = [];
   let allCount = 0;
   await cancelBatch({
-    cancelOne: async (path) => { cancelledPaths.push(path); },
-    cancelAll: async () => { allCount += 1; },
+    cancelOne: async (path) => {
+      cancelledPaths.push(path);
+    },
+    cancelAll: async () => {
+      allCount += 1;
+    },
   });
   release();
   await run;
@@ -108,7 +151,11 @@ test("cancelBatch cancels the active file and everything else in flight", async 
 
 test("cancelBatch with no owned batch still stops the server-side runs", async () => {
   let allCount = 0;
-  await cancelBatch({ cancelAll: async () => { allCount += 1; } });
+  await cancelBatch({
+    cancelAll: async () => {
+      allCount += 1;
+    },
+  });
   assert.equal(allCount, 1);
 });
 
@@ -140,5 +187,8 @@ test("progress events coalesce into one render per window; terminal events flush
 test("a no-speech outcome keeps its own badge through the file's error", () => {
   const running = beginFile(startBatch(IDLE, 1), "/a.mkv");
   const reported = applyProgressEvent(running, { path: "/a.mkv", error: true, noSpeech: true });
-  assert.deepEqual(fileFinished(reported, "/a.mkv", "error", 1).fileProgress["/a.mkv"], { error: true, noSpeech: true });
+  assert.deepEqual(fileFinished(reported, "/a.mkv", "error", 1).fileProgress["/a.mkv"], {
+    error: true,
+    noSpeech: true,
+  });
 });

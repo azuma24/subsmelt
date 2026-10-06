@@ -33,7 +33,7 @@ function originHost(origin: string): string | null {
 }
 
 function firstHeader(value: string | string[] | undefined): string {
-  return (Array.isArray(value) ? value[0] : value ?? "").split(",")[0].trim().toLowerCase();
+  return (Array.isArray(value) ? value[0] : (value ?? "")).split(",")[0].trim().toLowerCase();
 }
 
 export function isCrossSiteRequest(req: Pick<Request, "method" | "headers">): boolean {
@@ -50,5 +50,7 @@ export function isCrossSiteRequest(req: Pick<Request, "method" | "headers">): bo
 
 export function crossSiteGuard(req: Request, res: Response, next: NextFunction): void {
   if (!isCrossSiteRequest(req)) return next();
-  res.status(403).json({ error: "Cross-site request blocked: change settings and start work from the SubSmelt page itself" });
+  res
+    .status(403)
+    .json({ error: "Cross-site request blocked: change settings and start work from the SubSmelt page itself" });
 }

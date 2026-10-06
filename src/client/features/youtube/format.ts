@@ -46,7 +46,9 @@ export function formatDuration(seconds: number | null): string {
 /** "2026-08" or "2026-08-01" → "August 2026" in the UI language. */
 export function monthLabel(date: string, lang: string): string {
   const [year, month] = date.split("-").map(Number);
-  return new Intl.DateTimeFormat(lang, { month: "long", year: "numeric", timeZone: "UTC" }).format(Date.UTC(year, month - 1, 1));
+  return new Intl.DateTimeFormat(lang, { month: "long", year: "numeric", timeZone: "UTC" }).format(
+    Date.UTC(year, month - 1, 1),
+  );
 }
 
 /** "2026-09-26" → "Sep 26", with the year when it is not this year. */

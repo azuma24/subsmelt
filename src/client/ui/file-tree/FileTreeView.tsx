@@ -78,7 +78,9 @@ export function FileTreeView<F, N extends TreeViewNode<F> & { children: N[] }>(p
         <FolderBlock key={node.path} {...props} node={node} depth={0} />
       ))}
       {files.map((f) => (
-        <div key={fileKey(f)} className={FILE_ROW_VISIBILITY}>{renderFile(f, { depth: 0, padLeftPx: ROW_BASE_PADDING_PX })}</div>
+        <div key={fileKey(f)} className={FILE_ROW_VISIBILITY}>
+          {renderFile(f, { depth: 0, padLeftPx: ROW_BASE_PADDING_PX })}
+        </div>
       ))}
     </div>
   );
@@ -92,7 +94,9 @@ function ancestorHint(nodePath: string, drillRoot: string): string | null {
   return parents.length > ANCESTOR_HINT_SEGMENTS ? `… / ${shown}` : shown;
 }
 
-function FolderBlock<F, N extends TreeViewNode<F> & { children: N[] }>(props: FileTreeViewProps<F, N> & { node: N; depth: number }) {
+function FolderBlock<F, N extends TreeViewNode<F> & { children: N[] }>(
+  props: FileTreeViewProps<F, N> & { node: N; depth: number },
+) {
   const isMobile = useIsMobile();
   const { node, depth, expansion, drill, sticky = true } = props;
   const mode = folderRowMode(depth, isMobile);
@@ -140,7 +144,9 @@ function FolderBlock<F, N extends TreeViewNode<F> & { children: N[] }>(props: Fi
             <FolderBlock key={child.path} {...props} node={child} depth={depth + 1} />
           ))}
           {node.files.map((f) => (
-            <div key={props.fileKey(f)} className={FILE_ROW_VISIBILITY}>{props.renderFile(f, { depth: depth + 1, padLeftPx: childPad })}</div>
+            <div key={props.fileKey(f)} className={FILE_ROW_VISIBILITY}>
+              {props.renderFile(f, { depth: depth + 1, padLeftPx: childPad })}
+            </div>
           ))}
         </div>
       )}

@@ -43,17 +43,43 @@ export function RawConfigDrawer({ settings, update, onSave, dirty, saving }: Raw
         <div className="space-y-6">
           <div>
             <label className={labelCls}>{t("settings.transcription.folderDefaults")}</label>
-            <TextArea ariaLabel={t("settings.transcription.folderDefaults")} value={str(settings.transcription_folder_defaults, "[]")} onChange={(value) => update("transcription_folder_defaults", value)} rows={8} placeholder={'[{"path":"/media/anime","language":"ja","model":"small"}]'} className="text-xs" mono />
+            <TextArea
+              ariaLabel={t("settings.transcription.folderDefaults")}
+              value={str(settings.transcription_folder_defaults, "[]")}
+              onChange={(value) => update("transcription_folder_defaults", value)}
+              rows={8}
+              placeholder={'[{"path":"/media/anime","language":"ja","model":"small"}]'}
+              className="text-xs"
+              mono
+            />
             <p className="mt-1 text-xs leading-relaxed text-faint">{t("settings.transcription.folderDefaultsHelp")}</p>
           </div>
           <div>
             <label className={labelCls}>{t("settings.transcription.advancedOptions")}</label>
-            <TextArea ariaLabel={t("settings.transcription.advancedOptions")} value={str(settings.transcription_advanced_stt, "{}")} onChange={(value) => update("transcription_advanced_stt", value)} rows={8} placeholder={'{"beam_size":5,"word_timestamps":true,"initial_prompt":"Lecture audio"}'} className="text-xs" mono />
+            <TextArea
+              ariaLabel={t("settings.transcription.advancedOptions")}
+              value={str(settings.transcription_advanced_stt, "{}")}
+              onChange={(value) => update("transcription_advanced_stt", value)}
+              rows={8}
+              placeholder={'{"beam_size":5,"word_timestamps":true,"initial_prompt":"Lecture audio"}'}
+              className="text-xs"
+              mono
+            />
             <p className="mt-1 text-xs leading-relaxed text-faint">{t("settings.transcription.advancedOptionsHelp")}</p>
           </div>
           <div className="flex justify-end gap-2">
-            <ActionButton variant="ghost" size="sm" onClick={() => setOpen(false)}>{t("common.close")}</ActionButton>
-            <ActionButton size="sm" onClick={async () => { if (await onSave()) setOpen(false); }} disabled={!dirty || saving}>{saving ? t("app.saving") : t("app.save")}</ActionButton>
+            <ActionButton variant="ghost" size="sm" onClick={() => setOpen(false)}>
+              {t("common.close")}
+            </ActionButton>
+            <ActionButton
+              size="sm"
+              onClick={async () => {
+                if (await onSave()) setOpen(false);
+              }}
+              disabled={!dirty || saving}
+            >
+              {saving ? t("app.saving") : t("app.save")}
+            </ActionButton>
           </div>
         </div>
       </Drawer>

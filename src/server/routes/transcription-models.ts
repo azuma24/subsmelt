@@ -1,10 +1,6 @@
 import type { Express } from "express";
 import { getAllSettings } from "../config.js";
-import {
-  listBackendModels,
-  downloadBackendModel,
-  deleteBackendModel,
-} from "../transcription-client.js";
+import { listBackendModels, downloadBackendModel, deleteBackendModel } from "../transcription-client.js";
 import { logger } from "../logger.js";
 import { broadcast } from "../sse.js";
 import { getTranscriptionBackendUrl } from "./transcription-runtime.js";
@@ -72,7 +68,10 @@ export function registerTranscriptionModelsRoutes(app: Express): void {
     }
     try {
       const result = await deleteBackendModel(backendUrl, model, settings.transcription_backend_token);
-      logger.info("system", `Deleted whisper model ${model}${typeof result.freedMb === "number" ? ` (freed ${result.freedMb} MB)` : ""}`);
+      logger.info(
+        "system",
+        `Deleted whisper model ${model}${typeof result.freedMb === "number" ? ` (freed ${result.freedMb} MB)` : ""}`,
+      );
       return res.json(result);
     } catch (error) {
       return res.status(502).json({ error: errorMessage(error) || "Failed to delete whisper model" });

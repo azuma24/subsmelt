@@ -4,14 +4,7 @@ import type { FolderNode, Task } from "../../../types";
 import { FileTreeView, type FolderRowContext } from "../../../ui/file-tree/FileTreeView";
 import type { TreeExpansion } from "../../../ui/file-tree/use-persisted-expansion";
 import type { DrillDownState } from "../../../ui/file-tree/use-drill-down";
-import {
-  TRI_STATES,
-  hasDescendant,
-  pathMatchesScope,
-  type DirectoryRule,
-  type ScanMode,
-  type TriState,
-} from "./model";
+import { TRI_STATES, hasDescendant, pathMatchesScope, type DirectoryRule, type ScanMode, type TriState } from "./model";
 import { useIsMobile } from "../../../hooks";
 import { Icon } from "../../../ui/Icon";
 
@@ -211,7 +204,11 @@ function FolderTreeRow({
     if (!hasRule) return null;
     const parts: string[] = [];
     if (rule.translateWithoutVideo !== "inherit") {
-      parts.push(t("settings.sources.dirRules.chipNoVideo", { state: t(`settings.sources.dirRules.tri_${rule.translateWithoutVideo}`) }));
+      parts.push(
+        t("settings.sources.dirRules.chipNoVideo", {
+          state: t(`settings.sources.dirRules.tri_${rule.translateWithoutVideo}`),
+        }),
+      );
     }
     if (rule.taskIds.length > 0) {
       parts.push(t("settings.sources.dirRules.chipLangs", { count: rule.taskIds.length }));
@@ -225,13 +222,31 @@ function FolderTreeRow({
         {ctx.ancestorHint && <span className="text-xs font-normal text-faint">{ctx.ancestorHint} / </span>}
         {node.name}
       </div>
-      <div className="truncate font-mono text-xs text-faint">{mediaDir}/{node.path}</div>
+      <div className="truncate font-mono text-xs text-faint">
+        {mediaDir}/{node.path}
+      </div>
       <div className="mt-1 flex flex-wrap gap-1 whitespace-nowrap text-xs text-muted">
-        <span className="rounded-full border border-border bg-surface px-2 py-1">{t("settings.sources.folderCountVideos", { count: node.counts.videos })}</span>
-        <span className="rounded-full border border-border bg-surface px-2 py-1">{t("settings.sources.folderCountSubtitles", { count: node.counts.subtitles })}</span>
-        {node.counts.pendingJobs > 0 && <span className="rounded-full border border-warning-line bg-warning-soft px-2 py-1 text-warning">{t("settings.sources.folderCountPending", { count: node.counts.pendingJobs })}</span>}
-        {node.counts.completeJobs > 0 && <span className="rounded-full border border-success-line bg-success-soft px-2 py-1 text-success">{t("settings.sources.folderCountComplete", { count: node.counts.completeJobs })}</span>}
-        {node.counts.errorJobs > 0 && <span className="rounded-full border border-danger-line bg-danger-soft px-2 py-1 text-danger">{t("settings.sources.folderCountErrors", { count: node.counts.errorJobs })}</span>}
+        <span className="rounded-full border border-border bg-surface px-2 py-1">
+          {t("settings.sources.folderCountVideos", { count: node.counts.videos })}
+        </span>
+        <span className="rounded-full border border-border bg-surface px-2 py-1">
+          {t("settings.sources.folderCountSubtitles", { count: node.counts.subtitles })}
+        </span>
+        {node.counts.pendingJobs > 0 && (
+          <span className="rounded-full border border-warning-line bg-warning-soft px-2 py-1 text-warning">
+            {t("settings.sources.folderCountPending", { count: node.counts.pendingJobs })}
+          </span>
+        )}
+        {node.counts.completeJobs > 0 && (
+          <span className="rounded-full border border-success-line bg-success-soft px-2 py-1 text-success">
+            {t("settings.sources.folderCountComplete", { count: node.counts.completeJobs })}
+          </span>
+        )}
+        {node.counts.errorJobs > 0 && (
+          <span className="rounded-full border border-danger-line bg-danger-soft px-2 py-1 text-danger">
+            {t("settings.sources.folderCountErrors", { count: node.counts.errorJobs })}
+          </span>
+        )}
       </div>
     </>
   );
@@ -285,17 +300,29 @@ function FolderTreeRow({
         ) : (
           <div className="min-w-0 flex-1">{body}</div>
         )}
-        <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${
-          excludedHere ? "bg-danger-soft text-danger" : checked ? "bg-accent-soft text-accent" : "bg-surface text-faint"
-        }`}>
-          {excludedHere ? t("settings.sources.excludedBadge") : checked ? t("settings.sources.includedBadge") : t("settings.sources.notIncludedBadge")}
+        <span
+          className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${
+            excludedHere
+              ? "bg-danger-soft text-danger"
+              : checked
+                ? "bg-accent-soft text-accent"
+                : "bg-surface text-faint"
+          }`}
+        >
+          {excludedHere
+            ? t("settings.sources.excludedBadge")
+            : checked
+              ? t("settings.sources.includedBadge")
+              : t("settings.sources.notIncludedBadge")}
         </span>
         {interactive && (checked || excludedHere) && (
           <button
             type="button"
             onClick={() => onToggleExcluded(node.path)}
             className={`rounded-sm px-2 py-1 text-xs font-medium ${
-              excludedHere ? "bg-surface-highlight text-muted hover:text-text" : "bg-danger-soft text-danger hover:brightness-110"
+              excludedHere
+                ? "bg-surface-highlight text-muted hover:text-text"
+                : "bg-danger-soft text-danger hover:brightness-110"
             }`}
           >
             {excludedHere ? t("settings.sources.allowFolder") : t("settings.sources.excludeFolder")}
@@ -312,11 +339,13 @@ function FolderTreeRow({
           aria-expanded={rulesOpen}
         >
           {t("settings.sources.dirRules.rulesButton")}
-          {hasRule && ruleSummaryChip !== null && (
-            <span className="ml-1 opacity-75">{ruleSummaryChip}</span>
-          )}
+          {hasRule && ruleSummaryChip !== null && <span className="ml-1 opacity-75">{ruleSummaryChip}</span>}
         </button>
-        {isDrill && hasChildren && <span aria-hidden="true" className="shrink-0 text-faint">›</span>}
+        {isDrill && hasChildren && (
+          <span aria-hidden="true" className="shrink-0 text-faint">
+            ›
+          </span>
+        )}
       </div>
       {rulesOpen && (
         <FolderRulesEditor

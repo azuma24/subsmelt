@@ -19,7 +19,10 @@ export function RefreshButton({ busy, onClick, className = "" }: RefreshButtonPr
     <ActionButton variant="ghost" size="sm" onClick={onClick} disabled={busy} className={className}>
       {busy ? (
         <>
-          <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-border border-t-accent" aria-hidden="true" />
+          <span
+            className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-border border-t-accent"
+            aria-hidden="true"
+          />
           {t("whisper.scanning")}
         </>
       ) : (

@@ -3,14 +3,30 @@ import path from "node:path";
 import { copyCookiesInto } from "./cookies.js";
 import type { MediaProfile } from "./playlists.js";
 import type { VideoMetadata } from "./store.js";
-import { classifyYtdlpError, downloadArgs, errorSummary, PROGRESS_PREFIX, runYtdlp, type YtdlpErrorClass } from "./ytdlp.js";
+import {
+  classifyYtdlpError,
+  downloadArgs,
+  errorSummary,
+  PROGRESS_PREFIX,
+  runYtdlp,
+  type YtdlpErrorClass,
+} from "./ytdlp.js";
 import { mkdirShared, shareFile } from "../shared-files.js";
 
 const MIN_TIMEOUT_MS = 60 * 60_000;
 const MEDIA_EXTENSIONS = new Set([".mp4", ".mkv", ".webm", ".m4a", ".opus", ".ogg", ".mka"]);
 // The info JSON of one video is about 700 KB, nearly all of it format lists and expiring URLs.
 // `cookies` holds the session cookie header whenever cookies were used, and must never reach the media folder.
-const INFO_KEYS_DROPPED = ["formats", "requested_formats", "requested_downloads", "automatic_captions", "thumbnails", "http_headers", "url", "cookies"];
+const INFO_KEYS_DROPPED = [
+  "formats",
+  "requested_formats",
+  "requested_downloads",
+  "automatic_captions",
+  "thumbnails",
+  "http_headers",
+  "url",
+  "cookies",
+];
 const UPCOMING_RE = /(?:premieres|begin|starts?) in (\d+) (minute|hour|day|week)s?/i;
 const UNIT_MS: Record<string, number> = { minute: 60_000, hour: 3_600_000, day: 86_400_000, week: 604_800_000 };
 const DEFAULT_UPCOMING_MS = 3_600_000;
@@ -62,9 +78,14 @@ export function createProgressTracker(expectedFiles: number): (line: string) => 
     if (!files.includes(file)) files.push(file);
     const done = Number(p.downloaded_bytes);
     const total = Number(p.total_bytes) || Number(p.total_bytes_estimate);
-    const fraction = p.status === "finished" ? 1
-      : total > 0 && done >= 0 ? Math.min(1, done / total)
-        : Number(p.fragment_count) > 0 ? Math.min(1, Number(p.fragment_index) / Number(p.fragment_count)) : 0;
+    const fraction =
+      p.status === "finished"
+        ? 1
+        : total > 0 && done >= 0
+          ? Math.min(1, done / total)
+          : Number(p.fragment_count) > 0
+            ? Math.min(1, Number(p.fragment_index) / Number(p.fragment_count))
+            : 0;
     const share = Math.max(expectedFiles, files.length);
     return Math.min(99, Math.floor(((files.indexOf(file) + fraction) / share) * 100));
   };
@@ -143,7 +164,11 @@ function slimInfo(file: string): VideoMetadata {
   };
 }
 
-async function runOnce(req: DownloadRequest, cookies: string | null, codecPreference: boolean): Promise<DownloadResult> {
+async function runOnce(
+  req: DownloadRequest,
+  cookies: string | null,
+  codecPreference: boolean,
+): Promise<DownloadResult> {
   const partDir = path.join(req.tmpDir, "part");
   const outDir = path.join(req.tmpDir, "out");
   for (const dir of [partDir, outDir]) {
@@ -151,7 +176,14 @@ async function runOnce(req: DownloadRequest, cookies: string | null, codecPrefer
     fs.mkdirSync(dir, { recursive: true });
   }
   const track = createProgressTracker(req.profile.type === "video" ? 2 : 1);
-  const args = downloadArgs({ videoId: req.videoId, profile: req.profile, codecPreference, tmpDir: partDir, homeDir: outDir, cookiesPath: cookies ?? undefined });
+  const args = downloadArgs({
+    videoId: req.videoId,
+    profile: req.profile,
+    codecPreference,
+    tmpDir: partDir,
+    homeDir: outDir,
+    cookiesPath: cookies ?? undefined,
+  });
   const timeoutMs = downloadTimeoutMs(req.durationS);
   const result = await runYtdlp(args, {
     timeoutMs,
@@ -161,8 +193,18 @@ async function runOnce(req: DownloadRequest, cookies: string | null, codecPrefer
       if (pct !== null) req.onProgress(pct);
     },
   });
-  if (result.timedOut) return { ok: false, errorClass: "other", message: `Download timed out after ${Math.round(timeoutMs / 60_000)} minutes` };
-  if (result.code !== 0) return { ok: false, errorClass: classifyYtdlpError(result.stderr), message: errorSummary(result.stderr, result.code) };
+  if (result.timedOut)
+    return {
+      ok: false,
+      errorClass: "other",
+      message: `Download timed out after ${Math.round(timeoutMs / 60_000)} minutes`,
+    };
+  if (result.code !== 0)
+    return {
+      ok: false,
+      errorClass: classifyYtdlpError(result.stderr),
+      message: errorSummary(result.stderr, result.code),
+    };
 
   const mediaFile = findDownloadedMedia(outDir, req.videoId);
   if (!mediaFile) return { ok: false, errorClass: "other", message: "yt-dlp finished without writing a media file" };

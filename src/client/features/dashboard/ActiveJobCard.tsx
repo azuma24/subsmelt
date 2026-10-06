@@ -26,9 +26,8 @@ export function ActiveJobCard({ job, pendingCount, recentDurationsSeconds = [] }
   }, []);
 
   const elapsedMs = elapsedSince(job.started_at, now);
-  const eta = elapsedMs === null
-    ? null
-    : estimateJobEta({ completed: job.completed_cues, total: job.total_cues, elapsedMs });
+  const eta =
+    elapsedMs === null ? null : estimateJobEta({ completed: job.completed_cues, total: job.total_cues, elapsedMs });
   const queueEtaMs = estimateQueueEta(pendingCount, recentDurationsSeconds);
   const connection = job.connection;
   const { connectionTitle } = jobDerived(job);
@@ -37,10 +36,15 @@ export function ActiveJobCard({ job, pendingCount, recentDurationsSeconds = [] }
     <section className="flex flex-col gap-3 rounded-md border border-accent-line bg-surface px-4 py-3 sm:flex-row sm:items-center sm:gap-4">
       <div className="min-w-0 flex-1">
         <p className="text-xs font-semibold uppercase tracking-[0.7px] text-accent">{t("app.currentlyTranslating")}</p>
-        <h2 className="mt-1 truncate text-sm font-semibold text-text">{job.srt_path.split("/").pop()} → {job.lang_code}</h2>
+        <h2 className="mt-1 truncate text-sm font-semibold text-text">
+          {job.srt_path.split("/").pop()} → {job.lang_code}
+        </h2>
         {connection && (
           <div className="mt-1 flex min-w-0 items-baseline gap-1 text-xs" title={connectionTitle ?? undefined}>
-            <span className="max-w-[40%] shrink-0 truncate text-faint">{connection.label}{connection.model ? " ·" : ""}</span>
+            <span className="max-w-[40%] shrink-0 truncate text-faint">
+              {connection.label}
+              {connection.model ? " ·" : ""}
+            </span>
             {connection.model && <span className="truncate font-mono text-muted">{connection.model}</span>}
           </div>
         )}

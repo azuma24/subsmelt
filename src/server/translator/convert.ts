@@ -92,7 +92,7 @@ function parseAssTimestampToMs(value: string): number {
   const sec = Number(m[3] || 0);
   const frac = m[4] || "0";
   const ms = frac.length === 1 ? Number(frac) * 100 : frac.length === 2 ? Number(frac) * 10 : Number(frac.slice(0, 3));
-  return (((h * 60 + min) * 60) + sec) * 1000 + ms;
+  return ((h * 60 + min) * 60 + sec) * 1000 + ms;
 }
 
 export function normalizeTimeToMs(value: number | string | undefined): number {
@@ -105,7 +105,7 @@ export function normalizeTimeToMs(value: number | string | undefined): number {
     const normalized = trimmed.replace(",", ".");
     const [hh, mm, ssMs] = normalized.split(":");
     const [ss, ms] = ssMs.split(".");
-    return (((Number(hh) * 60 + Number(mm)) * 60) + Number(ss)) * 1000 + Number(ms);
+    return ((Number(hh) * 60 + Number(mm)) * 60 + Number(ss)) * 1000 + Number(ms);
   }
   return parseAssTimestampToMs(trimmed);
 }
@@ -225,18 +225,7 @@ export function buildAssDocumentFromCues(cues: SubtitleCue[]): AssSection[] {
       body: [
         {
           key: "Format",
-          value: [
-            "Layer",
-            "Start",
-            "End",
-            "Style",
-            "Name",
-            "MarginL",
-            "MarginR",
-            "MarginV",
-            "Effect",
-            "Text",
-          ],
+          value: ["Layer", "Start", "End", "Style", "Name", "MarginL", "MarginR", "MarginV", "Effect", "Text"],
         },
         ...dialogues,
       ],

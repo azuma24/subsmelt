@@ -13,7 +13,14 @@ const configFile = path.join(root, "config", "config.json");
 process.env.CONFIG_DIR = path.dirname(configFile);
 process.env.DATA_DIR = path.join(root, "data");
 process.env.MEDIA_DIR = path.join(root, "media");
-for (const name of ["LLM_ENDPOINT", "API_KEY", "MODEL", "WHISPER_BACKEND_URL", "WHISPER_BACKEND_TOKEN", "WHISPER_TRANSPORT"]) {
+for (const name of [
+  "LLM_ENDPOINT",
+  "API_KEY",
+  "MODEL",
+  "WHISPER_BACKEND_URL",
+  "WHISPER_BACKEND_TOKEN",
+  "WHISPER_TRANSPORT",
+]) {
   delete process.env[name];
 }
 process.env.LLM_ENDPOINT = "http://env-llm:1/v1";

@@ -2,7 +2,14 @@ import type Database from "better-sqlite3";
 import { isChannelUploads } from "./urls.js";
 import { isSoftRateLimit } from "./ytdlp.js";
 import { canTransition, USER_ACTIONS, type SkipKind, type UserAction, type VideoStatus } from "./video-status.js";
-import type { ContentKind, Cooldown, CooldownCause, PlaylistCounts, PlaylistSyncState, SubtitlePlan } from "../../shared/youtube.js";
+import type {
+  ContentKind,
+  Cooldown,
+  CooldownCause,
+  PlaylistCounts,
+  PlaylistSyncState,
+  SubtitlePlan,
+} from "../../shared/youtube.js";
 
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS youtube_videos (
@@ -143,7 +150,13 @@ export class IllegalTransitionError extends Error {
   }
 }
 
-const EMPTY_SYNC_STATE: PlaylistSyncState = { lastCheckedAt: null, lastError: null, count: null, availability: null, firstSyncAt: null };
+const EMPTY_SYNC_STATE: PlaylistSyncState = {
+  lastCheckedAt: null,
+  lastError: null,
+  count: null,
+  availability: null,
+  firstSyncAt: null,
+};
 
 const syncKey = (playlistId: string) => `playlist:${playlistId}`;
 
@@ -189,11 +202,19 @@ function listedState(
   { resetUntouched, ownerFollowed }: { resetUntouched: boolean; ownerFollowed: boolean },
 ): ListedState {
   const orphaned = !ownerFollowed && existing.playlist_id !== playlistId;
-  const keep = { playlistId: orphaned ? playlistId : existing.playlist_id, status: existing.status, skipKind: existing.skip_kind };
-  const untouched = existing.user_queued_at === null
-    && (existing.status === "new" || existing.status === "queued" || (existing.status === "skipped" && (existing.skip_kind === "before_start" || existing.skip_kind === "content")));
+  const keep = {
+    playlistId: orphaned ? playlistId : existing.playlist_id,
+    status: existing.status,
+    skipKind: existing.skip_kind,
+  };
+  const untouched =
+    existing.user_queued_at === null &&
+    (existing.status === "new" ||
+      existing.status === "queued" ||
+      (existing.status === "skipped" && (existing.skip_kind === "before_start" || existing.skip_kind === "content")));
   const listed = { playlistId, status: initial.status, skipKind: initial.skipKind ?? null };
-  if (isRecoverable(existing) && initial.status !== "unavailable" && (orphaned || existing.playlist_id === playlistId)) return listed;
+  if (isRecoverable(existing) && initial.status !== "unavailable" && (orphaned || existing.playlist_id === playlistId))
+    return listed;
   if (!untouched) return keep;
   if (orphaned) return listed;
   if (existing.playlist_id === playlistId) return resetUntouched ? listed : keep;
@@ -205,7 +226,8 @@ export class YoutubeStore {
   constructor(private readonly db: Database.Database) {
     db.exec(SCHEMA);
     const columns = db.prepare("PRAGMA table_info(youtube_videos)").all() as { name: string }[];
-    if (!columns.some((c) => c.name === "user_queued_at")) db.exec("ALTER TABLE youtube_videos ADD COLUMN user_queued_at TEXT");
+    if (!columns.some((c) => c.name === "user_queued_at"))
+      db.exec("ALTER TABLE youtube_videos ADD COLUMN user_queued_at TEXT");
     for (const column of ["subtitle_plan", "transcript_source", "content_kind"]) {
       if (!columns.some((c) => c.name === column)) db.exec(`ALTER TABLE youtube_videos ADD COLUMN ${column} TEXT`);
     }
@@ -224,7 +246,9 @@ export class YoutubeStore {
     opts: { complete: boolean; now: string; resetUntouched?: boolean; isFollowed?: (playlistId: string) => boolean },
   ): ApplyListingResult {
     const isFollowed = opts.isFollowed ?? (() => true);
-    const existingVideo = this.db.prepare("SELECT playlist_id, status, skip_kind, reason, user_queued_at FROM youtube_videos WHERE video_id = ?");
+    const existingVideo = this.db.prepare(
+      "SELECT playlist_id, status, skip_kind, reason, user_queued_at FROM youtube_videos WHERE video_id = ?",
+    );
     const insertVideo = this.db.prepare(`
       INSERT INTO youtube_videos (video_id, playlist_id, title, channel, duration_s, published_at, added_at, status, skip_kind, reason, content_kind, created_at, updated_at)
       VALUES (@videoId, @playlistId, @title, @channel, @durationS, @publishedAt, @addedAt, @status, @skipKind, @reason, @contentKind, @now, @now)
@@ -266,7 +290,10 @@ export class YoutubeStore {
         else if (item.removed_at) restored += 1;
         const existing = existingVideo.get(video.videoId) as ExistingVideo | undefined;
         const state = existing
-          ? listedState(existing, playlistId, video.initial, { resetUntouched: opts.resetUntouched ?? false, ownerFollowed: isFollowed(existing.playlist_id) })
+          ? listedState(existing, playlistId, video.initial, {
+              resetUntouched: opts.resetUntouched ?? false,
+              ownerFollowed: isFollowed(existing.playlist_id),
+            })
           : { playlistId, status: video.initial.status, skipKind: video.initial.skipKind ?? null };
         insertVideo.run({
           videoId: video.videoId,
@@ -303,13 +330,17 @@ export class YoutubeStore {
 
   /** An exact upload date (YYYY-MM-DD) looked up before, if any. */
   exactDate(videoId: string): string | undefined {
-    const row = this.db.prepare("SELECT upload_date FROM youtube_exact_dates WHERE video_id = ?").get(videoId) as { upload_date: string } | undefined;
+    const row = this.db.prepare("SELECT upload_date FROM youtube_exact_dates WHERE video_id = ?").get(videoId) as
+      | { upload_date: string }
+      | undefined;
     return row?.upload_date;
   }
 
   saveExactDate(videoId: string, date: string): void {
     this.db
-      .prepare("INSERT INTO youtube_exact_dates (video_id, upload_date) VALUES (?, ?) ON CONFLICT(video_id) DO UPDATE SET upload_date = excluded.upload_date")
+      .prepare(
+        "INSERT INTO youtube_exact_dates (video_id, upload_date) VALUES (?, ?) ON CONFLICT(video_id) DO UPDATE SET upload_date = excluded.upload_date",
+      )
       .run(videoId, date);
   }
 
@@ -319,7 +350,9 @@ export class YoutubeStore {
 
   /** Changes why a skipped video is skipped; it stays skipped. */
   setSkipKind(videoId: string, skipKind: SkipKind, now: string): void {
-    this.db.prepare("UPDATE youtube_videos SET skip_kind = ?, updated_at = ? WHERE video_id = ? AND status = 'skipped'").run(skipKind, now, videoId);
+    this.db
+      .prepare("UPDATE youtube_videos SET skip_kind = ?, updated_at = ? WHERE video_id = ? AND status = 'skipped'")
+      .run(skipKind, now, videoId);
   }
 
   /** Moves a video to `to`, refusing any move the status table does not allow. */
@@ -336,14 +369,17 @@ export class YoutubeStore {
       .run({
         videoId,
         to,
-        skipKind: to === "skipped" ? fields.skipKind ?? "user" : null,
+        skipKind: to === "skipped" ? (fields.skipKind ?? "user") : null,
         reason: fields.reason ?? null,
         retryAfter: fields.retryAfter ?? null,
         attempts: fields.attempts ?? current.attempts,
         mediaPath: fields.mediaPath === undefined ? current.media_path : fields.mediaPath,
         subtitlePath: fields.subtitlePath === undefined ? current.subtitle_path : fields.subtitlePath,
         transcriptSource: fields.transcriptSource === undefined ? current.transcript_source : fields.transcriptSource,
-        subtitlePlan: fields.subtitlePlan === undefined ? current.subtitle_plan : fields.subtitlePlan && JSON.stringify(fields.subtitlePlan),
+        subtitlePlan:
+          fields.subtitlePlan === undefined
+            ? current.subtitle_plan
+            : fields.subtitlePlan && JSON.stringify(fields.subtitlePlan),
         userQueuedAt: fields.userQueuedAt === undefined ? current.user_queued_at : fields.userQueuedAt,
         now: fields.now,
       });
@@ -359,7 +395,9 @@ export class YoutubeStore {
     if (to === "skipped") return this.setStatus(videoId, "skipped", { skipKind: "user", now });
     if (current.status === "queued") {
       this.db
-        .prepare("UPDATE youtube_videos SET user_queued_at = ?, retry_after = NULL, attempts = 0, updated_at = ? WHERE video_id = ?")
+        .prepare(
+          "UPDATE youtube_videos SET user_queued_at = ?, retry_after = NULL, attempts = 0, updated_at = ? WHERE video_id = ?",
+        )
         .run(now, now, videoId);
       return this.getVideo(videoId)!;
     }
@@ -375,22 +413,36 @@ export class YoutubeStore {
           duration_s = COALESCE(@durationS, duration_s), published_at = COALESCE(@publishedAt, published_at), updated_at = @now
         WHERE video_id = @videoId
       `)
-      .run({ videoId, title: meta.title ?? null, channel: meta.channel ?? null, durationS: meta.durationS ?? null, publishedAt: meta.publishedAt ?? null, now });
+      .run({
+        videoId,
+        title: meta.title ?? null,
+        channel: meta.channel ?? null,
+        durationS: meta.durationS ?? null,
+        publishedAt: meta.publishedAt ?? null,
+        now,
+      });
   }
 
   setNotePath(videoId: string, notePath: string, now: string): void {
-    this.db.prepare("UPDATE youtube_videos SET note_path = ?, updated_at = ? WHERE video_id = ?").run(notePath, now, videoId);
+    this.db
+      .prepare("UPDATE youtube_videos SET note_path = ?, updated_at = ? WHERE video_id = ?")
+      .run(notePath, now, videoId);
   }
 
   /** How many videos, across every playlist, sit in each status. */
   statusTotals(): Partial<Record<VideoStatus, number>> {
-    const rows = this.db.prepare("SELECT status, COUNT(*) AS n FROM youtube_videos GROUP BY status").all() as { status: VideoStatus; n: number }[];
+    const rows = this.db.prepare("SELECT status, COUNT(*) AS n FROM youtube_videos GROUP BY status").all() as {
+      status: VideoStatus;
+      n: number;
+    }[];
     return Object.fromEntries(rows.map((r) => [r.status, r.n]));
   }
 
   /** Says why a video waits without moving it, as when its note cannot be written yet. */
   setReason(videoId: string, reason: string | null, now: string): void {
-    this.db.prepare("UPDATE youtube_videos SET reason = ?, updated_at = ? WHERE video_id = ?").run(reason, now, videoId);
+    this.db
+      .prepare("UPDATE youtube_videos SET reason = ?, updated_at = ? WHERE video_id = ?")
+      .run(reason, now, videoId);
   }
 
   videosInStatus(status: VideoStatus): VideoRow[] {
@@ -421,12 +473,16 @@ export class YoutubeStore {
   /** Waiting videos whose retry time has come. */
   dueWaiting(now: string): VideoRow[] {
     return this.db
-      .prepare("SELECT * FROM youtube_videos WHERE status = 'waiting' AND (retry_after IS NULL OR retry_after <= ?) ORDER BY video_id")
+      .prepare(
+        "SELECT * FROM youtube_videos WHERE status = 'waiting' AND (retry_after IS NULL OR retry_after <= ?) ORDER BY video_id",
+      )
       .all(now) as VideoRow[];
   }
 
   getCooldown(): Cooldown | null {
-    const row = this.db.prepare("SELECT value FROM youtube_sync_state WHERE key = ?").get(COOLDOWN_KEY) as { value: string } | undefined;
+    const row = this.db.prepare("SELECT value FROM youtube_sync_state WHERE key = ?").get(COOLDOWN_KEY) as
+      | { value: string }
+      | undefined;
     return row ? (JSON.parse(row.value) as Cooldown) : null;
   }
 
@@ -442,7 +498,9 @@ export class YoutubeStore {
     const ms = Math.min(COOLDOWN_MAX_MS, COOLDOWN_BASE_MS * 2 ** (strikes - 1));
     const cooldown: Cooldown = { until: new Date(now.getTime() + ms).toISOString(), cause, strikes };
     this.db
-      .prepare("INSERT INTO youtube_sync_state (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+      .prepare(
+        "INSERT INTO youtube_sync_state (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+      )
       .run(COOLDOWN_KEY, JSON.stringify(cooldown));
     return cooldown;
   }
@@ -479,15 +537,22 @@ export class YoutubeStore {
         GROUP BY v.status, removed
       `)
       .all(playlistId) as { status: VideoStatus; removed: number; n: number }[];
-    const kinds = !isChannelUploads(playlistId) ? [] : this.db
-      .prepare(`
+    const kinds = !isChannelUploads(playlistId)
+      ? []
+      : (this.db
+          .prepare(`
         SELECT v.content_kind AS kind, COUNT(*) AS n
         FROM youtube_playlist_items i JOIN youtube_videos v ON v.video_id = i.video_id
         WHERE i.playlist_id = ? AND i.removed_at IS NULL AND v.content_kind IS NOT NULL
         GROUP BY v.content_kind
       `)
-      .all(playlistId) as { kind: ContentKind; n: number }[];
-    const result: PlaylistCounts = { total: 0, removed: 0, byStatus: {}, byKind: Object.fromEntries(kinds.map((k) => [k.kind, k.n])) };
+          .all(playlistId) as { kind: ContentKind; n: number }[]);
+    const result: PlaylistCounts = {
+      total: 0,
+      removed: 0,
+      byStatus: {},
+      byKind: Object.fromEntries(kinds.map((k) => [k.kind, k.n])),
+    };
     for (const row of rows) {
       if (row.removed) result.removed += row.n;
       else result.total += row.n;
@@ -500,13 +565,17 @@ export class YoutubeStore {
     const row = this.db.prepare("SELECT value FROM youtube_sync_state WHERE key = ?").get(syncKey(playlistId)) as
       | { value: string }
       | undefined;
-    return row ? { ...EMPTY_SYNC_STATE, ...(JSON.parse(row.value) as Partial<PlaylistSyncState>) } : { ...EMPTY_SYNC_STATE };
+    return row
+      ? { ...EMPTY_SYNC_STATE, ...(JSON.parse(row.value) as Partial<PlaylistSyncState>) }
+      : { ...EMPTY_SYNC_STATE };
   }
 
   updateSyncState(playlistId: string, patch: Partial<PlaylistSyncState>): PlaylistSyncState {
     const next = { ...this.getSyncState(playlistId), ...patch };
     this.db
-      .prepare("INSERT INTO youtube_sync_state (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+      .prepare(
+        "INSERT INTO youtube_sync_state (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+      )
       .run(syncKey(playlistId), JSON.stringify(next));
     return next;
   }

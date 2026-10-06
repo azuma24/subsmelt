@@ -52,8 +52,11 @@ export function YoutubeSection({ settings, update, updateAndSaveDebounced }: You
   const [updating, setUpdating] = useState(false);
   const [updateResult, setUpdateResult] = useState<KeyState | null>(null);
 
-  const keyState: KeyState = tested
-    ?? (apiKey ? { tone: "off", text: t("settings.youtube.keySaved") } : { tone: "off", text: t("settings.youtube.keyNotSet") });
+  const keyState: KeyState =
+    tested ??
+    (apiKey
+      ? { tone: "off", text: t("settings.youtube.keySaved") }
+      : { tone: "off", text: t("settings.youtube.keyNotSet") });
 
   const testKey = async () => {
     if (!apiKey) {
@@ -91,7 +94,8 @@ export function YoutubeSection({ settings, update, updateAndSaveDebounced }: You
     <div className="space-y-6">
       <div className="space-y-2">
         <label htmlFor={ids.key} className={FORM_LABEL_CLS}>
-          {t("settings.youtube.apiKey")} <span className="font-normal text-faint">{t("settings.youtube.optional")}</span>
+          {t("settings.youtube.apiKey")}{" "}
+          <span className="font-normal text-faint">{t("settings.youtube.optional")}</span>
         </label>
         <div className="flex flex-wrap gap-2">
           <input
@@ -117,17 +121,30 @@ export function YoutubeSection({ settings, update, updateAndSaveDebounced }: You
         <StatusLine state={keyState} />
         <p className="text-xs leading-5 text-faint">{t("settings.youtube.keyHint")}</p>
         <details className="text-xs leading-5 text-muted">
-          <summary className="flex min-h-touch cursor-pointer items-center font-medium text-text">{t("settings.youtube.howTo")}</summary>
+          <summary className="flex min-h-touch cursor-pointer items-center font-medium text-text">
+            {t("settings.youtube.howTo")}
+          </summary>
           <ol className="list-decimal space-y-1 pb-1 pl-6">
-            {(["step1", "step2", "step3", "step4"] as const).map((step) => <li key={step}>{t(`settings.youtube.${step}`)}</li>)}
+            {(["step1", "step2", "step3", "step4"] as const).map((step) => (
+              <li key={step}>{t(`settings.youtube.${step}`)}</li>
+            ))}
           </ol>
         </details>
       </div>
 
       <div className="space-y-2 md:max-w-[420px]">
-        <label htmlFor={ids.download} className={FORM_LABEL_CLS}>{t("settings.youtube.downloadFolder")}</label>
+        <label htmlFor={ids.download} className={FORM_LABEL_CLS}>
+          {t("settings.youtube.downloadFolder")}
+        </label>
         <div className="flex items-center gap-2">
-          <span className="min-w-0 max-w-[45%] shrink truncate font-mono text-xs text-faint" dir="rtl" title={str(settings._media_dir, "/media").replace(/\/+$/, "")}><bdi>{str(settings._media_dir, "/media").replace(/\/+$/, "")}</bdi></span><span className="-ml-1 font-mono text-xs text-faint">/</span>
+          <span
+            className="min-w-0 max-w-[45%] shrink truncate font-mono text-xs text-faint"
+            dir="rtl"
+            title={str(settings._media_dir, "/media").replace(/\/+$/, "")}
+          >
+            <bdi>{str(settings._media_dir, "/media").replace(/\/+$/, "")}</bdi>
+          </span>
+          <span className="-ml-1 font-mono text-xs text-faint">/</span>
           <input
             id={ids.download}
             value={str(settings.youtube_download_dir, "YouTube")}
@@ -139,7 +156,9 @@ export function YoutubeSection({ settings, update, updateAndSaveDebounced }: You
       </div>
 
       <div className="space-y-2 md:max-w-[420px]">
-        <label htmlFor={ids.notes} className={FORM_LABEL_CLS}>{t("settings.youtube.notesFolder")}</label>
+        <label htmlFor={ids.notes} className={FORM_LABEL_CLS}>
+          {t("settings.youtube.notesFolder")}
+        </label>
         <input
           id={ids.notes}
           value={str(settings.youtube_notes_dir, "/notes")}
@@ -151,7 +170,10 @@ export function YoutubeSection({ settings, update, updateAndSaveDebounced }: You
             state={
               notes.writable
                 ? { tone: "ok", text: t("settings.youtube.notesWritable") }
-                : { tone: "warn", text: t(notes.exists ? "settings.youtube.notesReadOnly" : "settings.youtube.notesMissing") }
+                : {
+                    tone: "warn",
+                    text: t(notes.exists ? "settings.youtube.notesReadOnly" : "settings.youtube.notesMissing"),
+                  }
             }
           />
         )}
@@ -165,7 +187,13 @@ export function YoutubeSection({ settings, update, updateAndSaveDebounced }: You
           <span className="font-mono text-sm text-text">
             {ytdlp ? (ytdlp.available ? `yt-dlp ${ytdlp.version}` : t("settings.youtube.notInstalled")) : "…"}
           </span>
-          <ActionButton variant="ghost" size="sm" onClick={() => void updateDownloader()} busy={updating} disabled={ytdlp?.available === false}>
+          <ActionButton
+            variant="ghost"
+            size="sm"
+            onClick={() => void updateDownloader()}
+            busy={updating}
+            disabled={ytdlp?.available === false}
+          >
             {updating ? t("settings.youtube.updating") : t("settings.youtube.updateNow")}
           </ActionButton>
         </div>
@@ -214,7 +242,12 @@ function CookiesRow({ present, updatedAt }: { present: boolean | undefined; upda
   };
 
   const state: KeyState = present
-    ? { tone: "ok", text: t("settings.youtube.cookiesPresent", { date: updatedAt ? new Date(updatedAt).toLocaleDateString(i18n.language, { dateStyle: "medium" }) : "" }) }
+    ? {
+        tone: "ok",
+        text: t("settings.youtube.cookiesPresent", {
+          date: updatedAt ? new Date(updatedAt).toLocaleDateString(i18n.language, { dateStyle: "medium" }) : "",
+        }),
+      }
     : { tone: "off", text: t("settings.youtube.cookiesAbsent") };
 
   return (
@@ -224,11 +257,22 @@ function CookiesRow({ present, updatedAt }: { present: boolean | undefined; upda
       </span>
       <div className="flex flex-wrap items-center gap-2">
         <input ref={fileRef} type="file" accept=".txt,text/plain" className="hidden" onChange={upload} />
-        <ActionButton variant="ghost" size="sm" onClick={() => fileRef.current?.click()} busy={busy} disabled={present === undefined}>
+        <ActionButton
+          variant="ghost"
+          size="sm"
+          onClick={() => fileRef.current?.click()}
+          busy={busy}
+          disabled={present === undefined}
+        >
           {present ? t("settings.youtube.cookiesReplace") : t("settings.youtube.cookiesUpload")}
         </ActionButton>
         {present && (
-          <button type="button" onClick={() => void remove()} disabled={busy} className="min-h-touch rounded-sm px-3 text-xs font-medium text-danger hover:bg-danger-soft disabled:opacity-50">
+          <button
+            type="button"
+            onClick={() => void remove()}
+            disabled={busy}
+            className="min-h-touch rounded-sm px-3 text-xs font-medium text-danger hover:bg-danger-soft disabled:opacity-50"
+          >
             {t("settings.youtube.cookiesRemove")}
           </button>
         )}

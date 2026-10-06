@@ -22,9 +22,7 @@ export interface TreeExpansion {
  */
 export function usePersistedExpansion(treeId: string, livePaths: readonly string[]): TreeExpansion {
   const storage = useMemo(getBrowserStorage, []);
-  const [expanded, setExpanded] = useState<Set<string>>(() =>
-    storage ? loadExpanded(storage, treeId) : new Set(),
-  );
+  const [expanded, setExpanded] = useState<Set<string>>(() => (storage ? loadExpanded(storage, treeId) : new Set()));
 
   useEffect(() => {
     if (livePaths.length === 0) return;
@@ -35,15 +33,18 @@ export function usePersistedExpansion(treeId: string, livePaths: readonly string
     });
   }, [livePaths, storage, treeId]);
 
-  const toggleExpand = useCallback((path: string) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(path)) next.delete(path);
-      else next.add(path);
-      if (storage) saveExpanded(storage, treeId, next);
-      return next;
-    });
-  }, [storage, treeId]);
+  const toggleExpand = useCallback(
+    (path: string) => {
+      setExpanded((prev) => {
+        const next = new Set(prev);
+        if (next.has(path)) next.delete(path);
+        else next.add(path);
+        if (storage) saveExpanded(storage, treeId, next);
+        return next;
+      });
+    },
+    [storage, treeId],
+  );
 
   return { expanded, toggleExpand };
 }

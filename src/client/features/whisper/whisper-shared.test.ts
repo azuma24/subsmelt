@@ -8,7 +8,15 @@ const nemotron: WhisperModelDescriptor = {
   engine: "nemotron",
   label: "Nemotron 3.5 ASR",
   languages: ["en", "ja", "zh", "pt-BR"],
-  supports: { prompt: false, beamSize: false, conditionOnPreviousText: false, vad: false, computeType: false, wordTimestamps: true, translateTask: false },
+  supports: {
+    prompt: false,
+    beamSize: false,
+    conditionOnPreviousText: false,
+    vad: false,
+    computeType: false,
+    wordTimestamps: true,
+    translateTask: false,
+  },
   available: false,
   unavailableReason: "nemo-speech runtime not found",
 };
@@ -24,7 +32,15 @@ test("descriptorsFrom synthesizes descriptors from a plain id list", () => {
     engine: "whisper",
     label: "small",
     languages: "all",
-    supports: { prompt: true, beamSize: true, conditionOnPreviousText: true, vad: true, computeType: true, wordTimestamps: true, translateTask: true },
+    supports: {
+      prompt: true,
+      beamSize: true,
+      conditionOnPreviousText: true,
+      vad: true,
+      computeType: true,
+      wordTimestamps: true,
+      translateTask: true,
+    },
     available: true,
     unavailableReason: null,
   });
@@ -38,9 +54,21 @@ test("findDescriptor synthesizes a saved model the backend does not list", () =>
 });
 
 test("groupByEngine orders Whisper first and drops empty engines", () => {
-  const groups = groupByEngine([{ id: "nemotron-3.5-asr", engine: "nemotron" as const }, { id: "small", engine: "whisper" as const }]);
-  assert.deepEqual(groups.map((g) => [g.engine, g.items.map((i) => i.id)]), [["whisper", ["small"]], ["nemotron", ["nemotron-3.5-asr"]]]);
-  assert.deepEqual(groupByEngine([{ id: "small", engine: "whisper" as const }]).map((g) => g.engine), ["whisper"]);
+  const groups = groupByEngine([
+    { id: "nemotron-3.5-asr", engine: "nemotron" as const },
+    { id: "small", engine: "whisper" as const },
+  ]);
+  assert.deepEqual(
+    groups.map((g) => [g.engine, g.items.map((i) => i.id)]),
+    [
+      ["whisper", ["small"]],
+      ["nemotron", ["nemotron-3.5-asr"]],
+    ],
+  );
+  assert.deepEqual(
+    groupByEngine([{ id: "small", engine: "whisper" as const }]).map((g) => g.engine),
+    ["whisper"],
+  );
 });
 
 test("supportsLanguage checks the model's language list, case-insensitively, and always allows auto", () => {

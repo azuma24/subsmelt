@@ -11,8 +11,7 @@ interface TargetLanguageFieldProps {
   onPick: (entry: LanguageEntry) => void;
 }
 
-const inputCls =
-  "w-full rounded-sm border bg-surface-raised px-3 py-2 text-sm text-text placeholder:text-faint";
+const inputCls = "w-full rounded-sm border bg-surface-raised px-3 py-2 text-sm text-text placeholder:text-faint";
 
 /**
  * Free-text target-language input: autocomplete while typing, canonical
@@ -60,7 +59,11 @@ export function TargetLanguageField({ value, onChange, resolution, recents, onPi
           className={`${inputCls} ${borderCls}`}
         />
         {focused && completions.length > 0 && (
-          <ul id={listboxId} className="absolute z-40 mt-1 w-full overflow-hidden rounded-sm border border-border bg-surface shadow-2" role="listbox">
+          <ul
+            id={listboxId}
+            className="absolute z-40 mt-1 w-full overflow-hidden rounded-sm border border-border bg-surface shadow-2"
+            role="listbox"
+          >
             {completions.map((entry) => (
               <li key={entry.code} role="option" aria-selected={false}>
                 <button

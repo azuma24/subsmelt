@@ -19,7 +19,11 @@ function job(id: number, name: string, status: string): Job {
   });
 }
 
-const jobs = [job(1, "Episode 01.en.srt", "done"), job(2, "Episode 02.en.srt", "translating"), job(3, "Episode 03.en.srt", "pending")];
+const jobs = [
+  job(1, "Episode 01.en.srt", "done"),
+  job(2, "Episode 02.en.srt", "translating"),
+  job(3, "Episode 03.en.srt", "pending"),
+];
 const seed: QuerySeed = [[["jobs"], { jobs, queueRunning: true, currentJobId: 2 }]];
 
 /** Splits the rendered table into its grid rows: header first, then one per job. */
@@ -30,7 +34,15 @@ function gridRows(html: string): string[] {
 
 function renderTable() {
   return renderPage(
-    <JobsTableDesktop jobs={jobs} currentJobId={2} selectedIds={new Set()} setSelectedIds={() => {}} onPreview={() => {}} onOpenLogs={() => {}} onOpenDetails={() => {}} />,
+    <JobsTableDesktop
+      jobs={jobs}
+      currentJobId={2}
+      selectedIds={new Set()}
+      setSelectedIds={() => {}}
+      onPreview={() => {}}
+      onOpenLogs={() => {}}
+      onOpenDetails={() => {}}
+    />,
     seed,
   );
 }

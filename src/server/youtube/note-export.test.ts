@@ -41,7 +41,12 @@ hook.listen(0, "127.0.0.1");
 await once(hook, "listening");
 after(() => hook.close());
 
-const { lastInsertRowid: chineseTask } = createTask({ source_lang: "Automatic", target_lang: "繁體中文", output_pattern: "{{name}}.{{lang_code}}.srt", lang_code: "zh-TW" });
+const { lastInsertRowid: chineseTask } = createTask({
+  source_lang: "Automatic",
+  target_lang: "繁體中文",
+  output_pattern: "{{name}}.{{lang_code}}.srt",
+  lang_code: "zh-TW",
+});
 savePlaylist({ id: PL, title: "AI | Talks", ...defaultPlaylistFields(FOLDER), subtitleTaskIds: [chineseTask] });
 setSetting("youtube_notes_dir", NOTES);
 setSetting("notify_webhook_url", `http://127.0.0.1:${(hook.address() as AddressInfo).port}/hook`);
@@ -97,7 +102,21 @@ function seedDownloadedVideo() {
   fs.writeFileSync(path.join(MEDIA_FOLDER, `${BASE}.en.srt`), ENGLISH);
   fs.writeFileSync(path.join(MEDIA_FOLDER, `${BASE}.zh-TW.srt`), CHINESE);
   const now = "2026-10-01T00:00:00.000Z";
-  store.applyListing(PL, [{ videoId: VIDEO, title: "Short talk", channel: "Richard", durationS: 45, publishedAt: null, position: 1, initial: { status: "queued" } }], { complete: false, now });
+  store.applyListing(
+    PL,
+    [
+      {
+        videoId: VIDEO,
+        title: "Short talk",
+        channel: "Richard",
+        durationS: 45,
+        publishedAt: null,
+        position: 1,
+        initial: { status: "queued" },
+      },
+    ],
+    { complete: false, now },
+  );
   const video = store.getVideo(VIDEO)!;
   if (video.status === "queued") {
     store.setStatus(VIDEO, "downloading", { now });
@@ -215,7 +234,10 @@ test("a missing notes folder is reported and never created", async () => {
 test("a video with no subtitle beside its media is refused", async () => {
   fs.rmSync(path.join(MEDIA_FOLDER, `${BASE}.en.srt`));
   fs.rmSync(path.join(MEDIA_FOLDER, `${BASE}.zh-TW.srt`));
-  await assert.rejects(exportNoteForVideo(deps, VIDEO), { name: "NoteExportError", message: `No subtitle found beside YouTube/${FOLDER}/${BASE}.m4a` });
+  await assert.rejects(exportNoteForVideo(deps, VIDEO), {
+    name: "NoteExportError",
+    message: `No subtitle found beside YouTube/${FOLDER}/${BASE}.m4a`,
+  });
 });
 
 test("an atomic write replaces the file whole and cleans up when the rename fails", () => {
@@ -271,26 +293,44 @@ Dialogue: 0,0:00:50.00,0:00:55.00,Default,,0,0,0,,ご視聴ありがとう。
 `;
 
 test("an ASS translation is read by its format and gets its own section", async (t) => {
-  const { lastInsertRowid: japaneseTask } = createTask({ source_lang: "Automatic", target_lang: "日本語", output_pattern: "{{name}}.ja.ass", lang_code: "ja" });
-  savePlaylist({ id: PL, title: "AI | Talks", ...defaultPlaylistFields(FOLDER), subtitleTaskIds: [chineseTask, japaneseTask] });
-  t.after(() => savePlaylist({ id: PL, title: "AI | Talks", ...defaultPlaylistFields(FOLDER), subtitleTaskIds: [chineseTask] }));
+  const { lastInsertRowid: japaneseTask } = createTask({
+    source_lang: "Automatic",
+    target_lang: "日本語",
+    output_pattern: "{{name}}.ja.ass",
+    lang_code: "ja",
+  });
+  savePlaylist({
+    id: PL,
+    title: "AI | Talks",
+    ...defaultPlaylistFields(FOLDER),
+    subtitleTaskIds: [chineseTask, japaneseTask],
+  });
+  t.after(() =>
+    savePlaylist({ id: PL, title: "AI | Talks", ...defaultPlaylistFields(FOLDER), subtitleTaskIds: [chineseTask] }),
+  );
   fs.writeFileSync(path.join(MEDIA_FOLDER, `${BASE}.ja.ass`), JAPANESE_ASS);
 
   const result = await exportNoteForVideo(deps, VIDEO);
 
   assert.deepEqual(result.translations, ["chi", "jpn"]);
   const note = fs.readFileSync(NOTE_FILE, "utf8");
-  assert.equal(note.slice(note.indexOf("## Transcript (日本語)")), `## Transcript (日本語)
+  assert.equal(
+    note.slice(note.indexOf("## Transcript (日本語)")),
+    `## Transcript (日本語)
 
 [00:00](https://youtu.be/${VIDEO}?t=0) こんにちは、ようこそ。この講演はノートの話です。
 
 [00:50](https://youtu.be/${VIDEO}?t=50) ご視聴ありがとう。
-`);
+`,
+  );
 });
 
 function planRoutesTo(t: { after: (fn: () => void) => void }, taskIds: number[]) {
   const now = "2026-10-01T00:00:00.000Z";
-  store.setStatus(VIDEO, "transcribing", { now, subtitlePlan: { spoken: "en", routes: taskIds.map((taskId) => ({ taskId, kind: "translate" as const })) } });
+  store.setStatus(VIDEO, "transcribing", {
+    now,
+    subtitlePlan: { spoken: "en", routes: taskIds.map((taskId) => ({ taskId, kind: "translate" as const })) },
+  });
   t.after(() => {
     store.setStatus(VIDEO, "transcribing", { now, subtitlePlan: null });
     savePlaylist({ id: PL, title: "AI | Talks", ...defaultPlaylistFields(FOLDER), subtitleTaskIds: [chineseTask] });

@@ -10,7 +10,15 @@ import { ActionButton, RowActionsMenu, StatusBadge, Tabs } from "../../ui/primit
 import { InlineError } from "../../ui/QueryState";
 import { FORM_CONTROL_CLS } from "../../ui/form-classes";
 import { Banner, Tag } from "./parts";
-import { availabilityLabel, followKind, formatDuration, keepLabel, profileLabel, relativeFromNow, shortDate } from "./format";
+import {
+  availabilityLabel,
+  followKind,
+  formatDuration,
+  keepLabel,
+  profileLabel,
+  relativeFromNow,
+  shortDate,
+} from "./format";
 import {
   ALL_GROUPS,
   VIDEO_FILTERS,
@@ -51,7 +59,10 @@ export function PlaylistDetail({ playlist, folderRoot }: { playlist: YoutubePlay
   const pipelineQuery = useYoutubePipelineQuery();
   const tasksQuery = useTasksQuery();
   const hold = gpuHold(pipelineQuery.data);
-  const langCodes = useMemo(() => new Map((tasksQuery.data ?? []).map((task) => [task.id, task.lang_code])), [tasksQuery.data]);
+  const langCodes = useMemo(
+    () => new Map((tasksQuery.data ?? []).map((task) => [task.id, task.lang_code])),
+    [tasksQuery.data],
+  );
   const context: RowContext = { hold, langCodes };
   const [filter, setFilter] = useState<VideoFilter | "all">("all");
   const [query, setQuery] = useState("");
@@ -68,11 +79,12 @@ export function PlaylistDetail({ playlist, folderRoot }: { playlist: YoutubePlay
   const shown = visible.slice(0, limit);
   const picking = filter === "off";
   const pickable = useMemo(() => pickableVideos(shown), [shown]);
-  const togglePick = (videoId: string) => setPicked((prev) => {
-    const next = new Set(prev);
-    if (!next.delete(videoId)) next.add(videoId);
-    return next;
-  });
+  const togglePick = (videoId: string) =>
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(videoId)) next.add(videoId);
+      return next;
+    });
   const availability = availabilityLabel(playlist.sync.availability, t);
   const listed = playlist.sync.count ?? playlist.counts.total;
 
@@ -106,7 +118,11 @@ export function PlaylistDetail({ playlist, folderRoot }: { playlist: YoutubePlay
             <Tag>{playlist.mode === "auto" ? t("youtube.modeAuto") : t("youtube.modeManual")}</Tag>
           </h2>
           <p className="break-words text-xs leading-5 text-faint">
-            {[t("youtube.summary.inPlaylist", { count: listed }), keepLabel(playlist.backfill, t, i18n.language), `${folderRoot}/${playlist.folder}`].join(" · ")}
+            {[
+              t("youtube.summary.inPlaylist", { count: listed }),
+              keepLabel(playlist.backfill, t, i18n.language),
+              `${folderRoot}/${playlist.folder}`,
+            ].join(" · ")}
           </p>
           {counts.all > 0 && (
             <>
@@ -134,7 +150,9 @@ export function PlaylistDetail({ playlist, folderRoot }: { playlist: YoutubePlay
           <div>
             <dt className="text-xs text-faint">{t("youtube.summary.nextCheck")}</dt>
             <dd className="text-lg font-semibold text-text">
-              {playlist.sync.lastCheckedAt && playlist.sync.nextCheckAt ? relativeFromNow(playlist.sync.nextCheckAt, i18n.language) : "–"}
+              {playlist.sync.lastCheckedAt && playlist.sync.nextCheckAt
+                ? relativeFromNow(playlist.sync.nextCheckAt, i18n.language)
+                : "–"}
             </dd>
           </div>
         </dl>
@@ -168,21 +186,29 @@ export function PlaylistDetail({ playlist, folderRoot }: { playlist: YoutubePlay
       ) : visible.length === 0 && filter === "all" && !query && counts.off > 0 ? (
         <div className="rounded-md border border-dashed border-border px-4 py-12 text-center text-sm leading-6 text-muted">
           <p>{t("youtube.allFiltered")}</p>
-          <button type="button" onClick={() => selectTab("off")} className="mt-1 min-h-touch px-2 font-medium text-accent hover:underline">
+          <button
+            type="button"
+            onClick={() => selectTab("off")}
+            className="mt-1 min-h-touch px-2 font-medium text-accent hover:underline"
+          >
             {t("youtube.tabs.off")} ({counts.off})
           </button>
         </div>
       ) : visible.length === 0 ? (
         <div className="rounded-md border border-dashed border-border px-4 py-12 text-center text-sm text-muted">
           {t("youtube.noMatch")}{" "}
-          <button type="button" onClick={clearFilters} className="min-h-touch px-2 font-medium text-accent hover:underline">
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="min-h-touch px-2 font-medium text-accent hover:underline"
+          >
             {t("youtube.clearFilters")}
           </button>
         </div>
       ) : (
         <div className="overflow-hidden rounded-md border border-border bg-surface">
-          {filter === "all"
-            ? ALL_GROUPS.map((group) => {
+          {filter === "all" ? (
+            ALL_GROUPS.map((group) => {
               const rows = shown.filter((v) => videoFilterOf(v.status) === group);
               if (rows.length === 0) return null;
               return (
@@ -195,18 +221,27 @@ export function PlaylistDetail({ playlist, folderRoot }: { playlist: YoutubePlay
                 </section>
               );
             })
-            : (
-              <>
-                {picking && pickable.length > 0 && (
-                  <PickBar playlistId={playlist.id} pickable={pickable} picked={picked} onChange={setPicked} />
-                )}
-                <VideoRows videos={shown} context={context} picked={picking ? picked : undefined} onTogglePick={togglePick} />
-              </>
-            )}
+          ) : (
+            <>
+              {picking && pickable.length > 0 && (
+                <PickBar playlistId={playlist.id} pickable={pickable} picked={picked} onChange={setPicked} />
+              )}
+              <VideoRows
+                videos={shown}
+                context={context}
+                picked={picking ? picked : undefined}
+                onTogglePick={togglePick}
+              />
+            </>
+          )}
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-2 text-xs text-faint">
             <span>{t("youtube.showing", { shown: shown.length, total: visible.length })}</span>
             {shown.length < visible.length && (
-              <button type="button" onClick={() => setLimit((n) => n + PAGE_SIZE)} className="min-h-touch px-2 font-medium text-accent hover:underline">
+              <button
+                type="button"
+                onClick={() => setLimit((n) => n + PAGE_SIZE)}
+                className="min-h-touch px-2 font-medium text-accent hover:underline"
+              >
                 +{Math.min(PAGE_SIZE, visible.length - shown.length)}
               </button>
             )}
@@ -262,7 +297,11 @@ function PickBar({ playlistId, pickable, picked, onChange }: PickBarProps) {
         {picked.size > 0 ? t("youtube.pick.selected", { count: picked.size }) : null}
       </span>
       {picked.size > 0 && (
-        <button type="button" onClick={() => onChange(new Set())} className="min-h-touch rounded-sm px-3 text-xs font-medium text-muted hover:bg-surface-highlight hover:text-text">
+        <button
+          type="button"
+          onClick={() => onChange(new Set())}
+          className="min-h-touch rounded-sm px-3 text-xs font-medium text-muted hover:bg-surface-highlight hover:text-text"
+        >
           {t("youtube.pick.clear")}
         </button>
       )}
@@ -273,7 +312,17 @@ function PickBar({ playlistId, pickable, picked, onChange }: PickBarProps) {
   );
 }
 
-function VideoRows({ videos, context, picked, onTogglePick }: { videos: YoutubeVideo[]; context: RowContext; picked?: ReadonlySet<string>; onTogglePick?: (videoId: string) => void }) {
+function VideoRows({
+  videos,
+  context,
+  picked,
+  onTogglePick,
+}: {
+  videos: YoutubeVideo[];
+  context: RowContext;
+  picked?: ReadonlySet<string>;
+  onTogglePick?: (videoId: string) => void;
+}) {
   const { t } = useTranslation();
   const { addToast } = useToast();
   const queryClient = useQueryClient();
@@ -293,7 +342,11 @@ function VideoRows({ videos, context, picked, onTogglePick }: { videos: YoutubeV
           video={video}
           context={context}
           onAction={(action) => void runAction(video, action)}
-          pick={picked && video.status === "skipped" ? { checked: picked.has(video.video_id), onToggle: () => onTogglePick?.(video.video_id) } : undefined}
+          pick={
+            picked && video.status === "skipped"
+              ? { checked: picked.has(video.video_id), onToggle: () => onTogglePick?.(video.video_id) }
+              : undefined
+          }
         />
       ))}
     </ul>
@@ -315,8 +368,17 @@ function Pipeline({ steps, pct }: { steps: readonly PipeStep[]; pct: number | un
   return (
     <span className="flex gap-1" aria-hidden="true">
       {steps.map((step, i) => (
-        <span key={PIPE_STEP_KEYS[i]} title={t(`youtube.empty.${PIPE_STEP_KEYS[i]}`)} className={`relative h-1 w-8 overflow-hidden rounded-full ${PIPE_STEP_CLS[step]}`}>
-          {step === "now" && <span className="absolute inset-y-0 left-0 bg-accent transition-[width]" style={{ width: `${pct ?? 100}%` }} />}
+        <span
+          key={PIPE_STEP_KEYS[i]}
+          title={t(`youtube.empty.${PIPE_STEP_KEYS[i]}`)}
+          className={`relative h-1 w-8 overflow-hidden rounded-full ${PIPE_STEP_CLS[step]}`}
+        >
+          {step === "now" && (
+            <span
+              className="absolute inset-y-0 left-0 bg-accent transition-[width]"
+              style={{ width: `${pct ?? 100}%` }}
+            />
+          )}
         </span>
       ))}
     </span>
@@ -335,26 +397,41 @@ function VideoRow({ video, context, onAction, pick }: VideoRowProps) {
   const { t, i18n } = useTranslation();
   const dim = video.status === "skipped" || video.status === "unavailable";
   const title = video.title || t("youtube.privateOrDeleted");
-  const note = video.status === "unavailable"
-    ? video.title ? t("youtube.privateOrDeleted") : null
-    : video.status === "skipped" && video.skip_kind === "content" && video.content_kind
-      ? t(`youtube.contentOff.${video.content_kind}`)
-      : video.status === "skipped" && video.skip_kind
-        ? t(`youtube.skipKind.${video.skip_kind}`)
-        : video.reason;
-  const retry = video.retry_after && (video.status === "queued" || video.status === "waiting")
-    ? t("youtube.retryAt", { time: relativeFromNow(video.retry_after, i18n.language) })
+  const note =
+    video.status === "unavailable"
+      ? video.title
+        ? t("youtube.privateOrDeleted")
+        : null
+      : video.status === "skipped" && video.skip_kind === "content" && video.content_kind
+        ? t(`youtube.contentOff.${video.content_kind}`)
+        : video.status === "skipped" && video.skip_kind
+          ? t(`youtube.skipKind.${video.skip_kind}`)
+          : video.reason;
+  const retry =
+    video.retry_after && (video.status === "queued" || video.status === "waiting")
+      ? t("youtube.retryAt", { time: relativeFromNow(video.retry_after, i18n.language) })
+      : null;
+  const meta = [
+    video.channel,
+    formatDuration(video.duration_s),
+    video.published_at ? t("youtube.posted", { date: shortDate(video.published_at, i18n.language) }) : null,
+  ].filter(Boolean);
+  const subtitles = video.subtitles
+    ? subtitleSummary({ ...video, subtitles: video.subtitles }, context.langCodes, context.hold, t)
     : null;
-  const meta = [video.channel, formatDuration(video.duration_s), video.published_at ? t("youtube.posted", { date: shortDate(video.published_at, i18n.language) }) : null].filter(Boolean);
-  const subtitles = video.subtitles ? subtitleSummary({ ...video, subtitles: video.subtitles }, context.langCodes, context.hold, t) : null;
   const url = `https://www.youtube.com/watch?v=${video.video_id}`;
   const menu = [
-    ...videoActions(video.status).map((action) => ({ label: t(videoActionLabelKey(video.status, action)), onClick: () => onAction(action) })),
+    ...videoActions(video.status).map((action) => ({
+      label: t(videoActionLabelKey(video.status, action)),
+      onClick: () => onAction(action),
+    })),
     { label: t("youtube.openOnYoutube"), onClick: () => window.open(url, "_blank", "noopener,noreferrer") },
   ];
 
   return (
-    <li className={`grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2 px-4 py-3 md:grid-cols-[1fr_210px_auto] ${dim ? "opacity-70" : ""}`}>
+    <li
+      className={`grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2 px-4 py-3 md:grid-cols-[1fr_210px_auto] ${dim ? "opacity-70" : ""}`}
+    >
       <div className="flex min-w-0 gap-3">
         {pick && (
           <label className="-my-3 -ml-3 flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center">
@@ -372,11 +449,18 @@ function VideoRow({ video, context, onAction, pick }: VideoRowProps) {
           <p className="mt-1 text-xs leading-5 text-faint">
             <span className="block truncate">
               {meta.join(" · ")}
-              {video.removed_at && <> · <span className="text-warning">{t("youtube.removedTag")}</span></>}
+              {video.removed_at && (
+                <>
+                  {" "}
+                  · <span className="text-warning">{t("youtube.removedTag")}</span>
+                </>
+              )}
             </span>
             {subtitles && <span className="block break-words text-muted">{subtitles}</span>}
             {(note || retry) && (
-              <span className={`line-clamp-2 break-words ${video.status === "failed" ? "text-danger" : ""}`}>{[note, retry].filter(Boolean).join(" · ")}</span>
+              <span className={`line-clamp-2 break-words ${video.status === "failed" ? "text-danger" : ""}`}>
+                {[note, retry].filter(Boolean).join(" · ")}
+              </span>
             )}
           </p>
         </div>

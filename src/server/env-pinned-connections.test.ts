@@ -13,7 +13,14 @@ const configFile = path.join(root, "config", "config.json");
 process.env.CONFIG_DIR = path.dirname(configFile);
 process.env.DATA_DIR = path.join(root, "data");
 process.env.MEDIA_DIR = path.join(root, "media");
-for (const name of ["LLM_ENDPOINT", "API_KEY", "MODEL", "WHISPER_BACKEND_URL", "WHISPER_BACKEND_TOKEN", "WHISPER_TRANSPORT"]) {
+for (const name of [
+  "LLM_ENDPOINT",
+  "API_KEY",
+  "MODEL",
+  "WHISPER_BACKEND_URL",
+  "WHISPER_BACKEND_TOKEN",
+  "WHISPER_TRANSPORT",
+]) {
   delete process.env[name];
 }
 process.env.LLM_ENDPOINT = "http://env-llm:1/v1";
@@ -33,11 +40,17 @@ const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 
 test("saving the whole settings form does not copy env-set connection values into config.json", async () => {
   const current = await (await fetch(`${base}/api/settings`)).json();
-  const body = Object.fromEntries(Object.entries(current).filter(([key, value]) => !key.startsWith("_") && typeof value === "string"));
+  const body = Object.fromEntries(
+    Object.entries(current).filter(([key, value]) => !key.startsWith("_") && typeof value === "string"),
+  );
   body.model = "ui-model";
 
   const result = await (
-    await fetch(`${base}/api/settings`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
+    await fetch(`${base}/api/settings`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    })
   ).json();
 
   assert.equal(result.ok, true);
@@ -53,7 +66,16 @@ test("editing the connections keeps the env key out of config.json and env value
   const connections = JSON.parse(current.llm_connections);
   assert.equal(connections[0].id, "local");
   assert.equal(connections[0].apiKey, "__SUBSMELT_SECRET_REDACTED__");
-  connections.push({ id: "openai", label: "OpenAI", provider: "openai", apiKey: "sk-cloud-typed", model: "gpt-4o", endpoint: "", enabled: true, order: 1 });
+  connections.push({
+    id: "openai",
+    label: "OpenAI",
+    provider: "openai",
+    apiKey: "sk-cloud-typed",
+    model: "gpt-4o",
+    endpoint: "",
+    enabled: true,
+    order: 1,
+  });
 
   const result = await (
     await fetch(`${base}/api/settings`, {
@@ -67,7 +89,13 @@ test("editing the connections keeps the env key out of config.json and env value
   const file = fs.readFileSync(configFile, "utf8");
   assert.doesNotMatch(file, /sk-from-env/);
   const saved = JSON.parse(JSON.parse(file).settings.llm_connections);
-  assert.deepEqual(saved.map((c: { id: string; apiKey: string }) => [c.id, c.apiKey]), [["local", ""], ["openai", "sk-cloud-typed"]]);
+  assert.deepEqual(
+    saved.map((c: { id: string; apiKey: string }) => [c.id, c.apiKey]),
+    [
+      ["local", ""],
+      ["openai", "sk-cloud-typed"],
+    ],
+  );
 
   // The running app still uses the env values for the local connection.
   const effective = JSON.parse(getAllSettings().llm_connections);

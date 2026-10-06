@@ -42,10 +42,7 @@ export function DirectoryRulesSection({
     const taken = new Set(rules.map((r) => r.path));
     const path = ["", ...folders].find((p) => !taken.has(p));
     if (path === undefined) return;
-    commit([
-      ...rules,
-      { id: createRuleId(), path, enabled: true, translateWithoutVideo: "on", taskIds: [] },
-    ]);
+    commit([...rules, { id: createRuleId(), path, enabled: true, translateWithoutVideo: "on", taskIds: [] }]);
   };
 
   const updateRule = (id: string, patch: Partial<DirectoryRule>) => {
@@ -68,7 +65,11 @@ export function DirectoryRulesSection({
       <div className="space-y-3">
         <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
           <p className="text-xs text-faint">{t("settings.sources.dirRules.hint")}</p>
-          <button type="button" onClick={addRule} className="shrink-0 rounded-sm bg-accent px-3 py-2 text-xs font-medium text-accent-text min-h-touch md:min-h-0">
+          <button
+            type="button"
+            onClick={addRule}
+            className="shrink-0 rounded-sm bg-accent px-3 py-2 text-xs font-medium text-accent-text min-h-touch md:min-h-0"
+          >
             {t("settings.sources.dirRules.addRule")}
           </button>
         </div>
@@ -97,16 +98,24 @@ export function DirectoryRulesSection({
                   >
                     <option value="">{t("settings.sources.dirRules.allFolders")}</option>
                     {folders.map((folder) => (
-                      <option key={folder} value={folder}>{folder}</option>
+                      <option key={folder} value={folder}>
+                        {folder}
+                      </option>
                     ))}
                   </select>
-                  <button type="button" onClick={() => removeRule(rule.id)} className="rounded-sm px-2 py-1 text-xs text-faint hover:text-danger">
+                  <button
+                    type="button"
+                    onClick={() => removeRule(rule.id)}
+                    className="rounded-sm px-2 py-1 text-xs text-faint hover:text-danger"
+                  >
                     {t("common.delete")}
                   </button>
                 </div>
 
                 <div className="mb-2">
-                  <div className="mb-1 text-xs uppercase tracking-wide text-faint">{t("settings.sources.dirRules.videolessLabel")}</div>
+                  <div className="mb-1 text-xs uppercase tracking-wide text-faint">
+                    {t("settings.sources.dirRules.videolessLabel")}
+                  </div>
                   <div className="inline-flex overflow-hidden rounded-sm border border-border">
                     {TRI_STATES.map((state) => (
                       <button
@@ -123,7 +132,9 @@ export function DirectoryRulesSection({
                 </div>
 
                 <div>
-                  <div className="mb-1 text-xs uppercase tracking-wide text-faint">{t("settings.sources.dirRules.languagesLabel")}</div>
+                  <div className="mb-1 text-xs uppercase tracking-wide text-faint">
+                    {t("settings.sources.dirRules.languagesLabel")}
+                  </div>
                   {tasks.length === 0 ? (
                     <p className="text-xs text-faint">{t("settings.sources.dirRules.noTasks")}</p>
                   ) : (

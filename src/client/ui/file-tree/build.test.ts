@@ -2,7 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildPathTree, relativeDisplayPath } from "./build";
 
-interface Item { p: string; name: string }
+interface Item {
+  p: string;
+  name: string;
+}
 const item = (p: string): Item => ({ p, name: p.split("/").pop() ?? p });
 
 const byName = (a: Item, b: Item) => a.name.localeCompare(b.name);
@@ -31,10 +34,12 @@ test("buildPathTree honors a custom marker", () => {
 });
 
 test("buildPathTree collects allFiles and allPaths recursively", () => {
-  const root = buildPathTree(
-    [item("/media/a/b/deep.mkv"), item("/media/a/mid.mkv")],
-    { pathOf: (f) => f.p, marker: "/media/", compareFiles: byName, compareFolders: (a, b) => a.localeCompare(b) },
-  );
+  const root = buildPathTree([item("/media/a/b/deep.mkv"), item("/media/a/mid.mkv")], {
+    pathOf: (f) => f.p,
+    marker: "/media/",
+    compareFiles: byName,
+    compareFolders: (a, b) => a.localeCompare(b),
+  });
   const a = root.children[0];
   assert.equal(a.allFiles.length, 2);
   assert.deepEqual(a.allPaths, ["/media/a/mid.mkv", "/media/a/b/deep.mkv"]);

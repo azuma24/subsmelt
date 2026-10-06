@@ -37,7 +37,10 @@ export function ScanProfilesSection({
             />
             <button
               type="button"
-              onClick={() => { onSave(profileName); setProfileName(""); }}
+              onClick={() => {
+                onSave(profileName);
+                setProfileName("");
+              }}
               className="shrink-0 rounded-sm bg-accent px-3 py-2 text-xs font-medium text-accent-text min-h-touch md:min-h-0"
             >
               {t("settings.sources.saveScanProfile")}
@@ -49,15 +52,26 @@ export function ScanProfilesSection({
         ) : (
           <div className="flex flex-wrap gap-2">
             {profiles.map((profile) => (
-              <div key={profile.id} className="flex items-center gap-2 rounded-sm border border-border bg-surface-raised px-2 py-1">
+              <div
+                key={profile.id}
+                className="flex items-center gap-2 rounded-sm border border-border bg-surface-raised px-2 py-1"
+              >
                 <div className="min-w-0">
                   <div className="truncate text-xs font-medium text-text">{profile.name}</div>
                   <div className="text-xs text-faint">{t(`settings.sources.profileMode.${profile.scanMode}`)}</div>
                 </div>
-                <button type="button" onClick={() => onLoad(profile)} className="rounded-sm border border-border bg-surface-highlight px-2 py-1 text-xs text-muted hover:text-text">
+                <button
+                  type="button"
+                  onClick={() => onLoad(profile)}
+                  className="rounded-sm border border-border bg-surface-highlight px-2 py-1 text-xs text-muted hover:text-text"
+                >
                   {t("settings.sources.loadScanProfile")}
                 </button>
-                <button type="button" onClick={() => onDelete(profile.id)} className="rounded-sm px-2 py-1 text-xs text-faint hover:text-danger">
+                <button
+                  type="button"
+                  onClick={() => onDelete(profile.id)}
+                  className="rounded-sm px-2 py-1 text-xs text-faint hover:text-danger"
+                >
                   {t("common.delete")}
                 </button>
               </div>

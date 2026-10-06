@@ -18,7 +18,8 @@ export function cookiesPath(): string {
 }
 
 export function parseCookies(content: unknown): Parsed<string> {
-  if (typeof content !== "string" || !content.trim()) return { ok: false, error: "Paste the contents of a cookies.txt file" };
+  if (typeof content !== "string" || !content.trim())
+    return { ok: false, error: "Paste the contents of a cookies.txt file" };
   if (Buffer.byteLength(content) > MAX_COOKIES_BYTES) return { ok: false, error: "cookies.txt is larger than 1 MB" };
   const text = content.replace(/\r\n/g, "\n");
   if (!text.split("\n").some((line) => COOKIE_LINE_RE.test(line.trim()))) {

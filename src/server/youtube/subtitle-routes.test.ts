@@ -1,21 +1,36 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { languageFileCode, languageKey, planSubtitles, spokenCaption, taskLanguageKey, whisperLanguage } from "./subtitle-routes.js";
+import {
+  languageFileCode,
+  languageKey,
+  planSubtitles,
+  spokenCaption,
+  taskLanguageKey,
+  whisperLanguage,
+} from "./subtitle-routes.js";
 
 test("a video already in the picked language uses its transcript", () => {
   assert.deepEqual(planSubtitles("en", [{ taskId: 1, lang: "eng" }], []), [{ taskId: 1, kind: "same" }]);
 });
 
 test("creator captions in the picked language are downloaded under YouTube's own key", () => {
-  assert.deepEqual(planSubtitles("en", [{ taskId: 2, lang: "zh-TW" }], ["en", "zh-Hant"]), [{ taskId: 2, kind: "captions", captionLang: "zh-Hant" }]);
+  assert.deepEqual(planSubtitles("en", [{ taskId: 2, lang: "zh-TW" }], ["en", "zh-Hant"]), [
+    { taskId: 2, kind: "captions", captionLang: "zh-Hant" },
+  ]);
 });
 
 test("without the language or its captions the transcript is translated", () => {
-  assert.deepEqual(planSubtitles("en", [{ taskId: 3, lang: "Japanese" }], ["en", "zh-Hant"]), [{ taskId: 3, kind: "translate" }]);
+  assert.deepEqual(planSubtitles("en", [{ taskId: 3, lang: "Japanese" }], ["en", "zh-Hant"]), [
+    { taskId: 3, kind: "translate" },
+  ]);
 });
 
 test("one plan mixes the three routes, in the order the tasks were picked", () => {
-  const targets = [{ taskId: 1, lang: "en" }, { taskId: 2, lang: "zh-Hant" }, { taskId: 3, lang: "ja" }];
+  const targets = [
+    { taskId: 1, lang: "en" },
+    { taskId: 2, lang: "zh-Hant" },
+    { taskId: 3, lang: "ja" },
+  ];
   assert.deepEqual(planSubtitles("en-US", targets, ["en-US", "zh-TW", "live_chat"]), [
     { taskId: 1, kind: "same" },
     { taskId: 2, kind: "captions", captionLang: "zh-TW" },
@@ -28,7 +43,9 @@ test("an unknown spoken language never counts as the same language", () => {
 });
 
 test("live chat replays are not captions", () => {
-  assert.deepEqual(planSubtitles("ja", [{ taskId: 1, lang: "live_chat" }], ["live_chat"]), [{ taskId: 1, kind: "translate" }]);
+  assert.deepEqual(planSubtitles("ja", [{ taskId: 1, lang: "live_chat" }], ["live_chat"]), [
+    { taskId: 1, kind: "translate" },
+  ]);
 });
 
 test("code pairs that name one language resolve to one key", () => {
@@ -55,7 +72,9 @@ test("Traditional, Simplified and unspecified Chinese stay apart", () => {
 });
 
 test("a plain Portuguese task takes Brazilian or European captions; a regional one only its own", () => {
-  assert.deepEqual(planSubtitles(null, [{ taskId: 1, lang: "pt" }], ["pt-BR"]), [{ taskId: 1, kind: "captions", captionLang: "pt-BR" }]);
+  assert.deepEqual(planSubtitles(null, [{ taskId: 1, lang: "pt" }], ["pt-BR"]), [
+    { taskId: 1, kind: "captions", captionLang: "pt-BR" },
+  ]);
   assert.deepEqual(planSubtitles(null, [{ taskId: 1, lang: "pt-PT" }], ["pt-BR"]), [{ taskId: 1, kind: "translate" }]);
   assert.equal(taskLanguageKey({ target_lang: "Portuguese", lang_code: "pt-BR" }), "pt-BR");
 });
@@ -78,9 +97,15 @@ test("parenthetical qualifiers never break the name lookup", () => {
 });
 
 test("transcripts are named with a suffix the scanner strips, and Whisper gets the base language", () => {
-  assert.deepEqual([languageFileCode("zh-Hant"), languageFileCode("zh-Hans"), languageFileCode("en"), languageFileCode("tlh")], ["chi", "chs", "eng", "tlh"]);
+  assert.deepEqual(
+    [languageFileCode("zh-Hant"), languageFileCode("zh-Hans"), languageFileCode("en"), languageFileCode("tlh")],
+    ["chi", "chs", "eng", "tlh"],
+  );
   assert.deepEqual([languageFileCode("zh-Hant", "zh-CN"), languageFileCode("zh-Hans", "zh-CN")], ["cht", "chi"]);
-  assert.deepEqual([whisperLanguage("zh-Hant"), whisperLanguage("pt"), whisperLanguage("fil"), whisperLanguage("sw")], ["zh", "pt", null, "sw"]);
+  assert.deepEqual(
+    [whisperLanguage("zh-Hant"), whisperLanguage("pt"), whisperLanguage("fil"), whisperLanguage("sw")],
+    ["zh", "pt", null, "sw"],
+  );
 });
 
 test("the spoken-language caption is found under any spelling", () => {

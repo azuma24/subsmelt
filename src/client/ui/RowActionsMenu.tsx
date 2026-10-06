@@ -75,14 +75,31 @@ export function RowActionsMenu({ items }: RowActionsMenuProps) {
 
   const handleMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     switch (event.key) {
-      case "ArrowDown": event.preventDefault(); moveFocus(1); break;
-      case "ArrowUp": event.preventDefault(); moveFocus(-1); break;
-      case "Home": event.preventDefault(); menuItems()[0]?.focus(); break;
-      case "End": event.preventDefault(); menuItems().at(-1)?.focus(); break;
-      case "Escape": event.preventDefault(); close(); break;
+      case "ArrowDown":
+        event.preventDefault();
+        moveFocus(1);
+        break;
+      case "ArrowUp":
+        event.preventDefault();
+        moveFocus(-1);
+        break;
+      case "Home":
+        event.preventDefault();
+        menuItems()[0]?.focus();
+        break;
+      case "End":
+        event.preventDefault();
+        menuItems().at(-1)?.focus();
+        break;
+      case "Escape":
+        event.preventDefault();
+        close();
+        break;
       // Tab leaves the menu: focus returns to the trigger first so the
       // browser's default Tab then lands on the control after it.
-      case "Tab": close(); break;
+      case "Tab":
+        close();
+        break;
     }
   };
 
@@ -93,8 +110,14 @@ export function RowActionsMenu({ items }: RowActionsMenuProps) {
         type="button"
         onClick={() => (open ? close() : openMenu("first"))}
         onKeyDown={(event) => {
-          if (event.key === "ArrowDown") { event.preventDefault(); openMenu("first"); }
-          if (event.key === "ArrowUp") { event.preventDefault(); openMenu("last"); }
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            openMenu("first");
+          }
+          if (event.key === "ArrowUp") {
+            event.preventDefault();
+            openMenu("last");
+          }
         }}
         aria-label={t("common.rowActions")}
         aria-haspopup="menu"
@@ -104,35 +127,39 @@ export function RowActionsMenu({ items }: RowActionsMenuProps) {
       >
         <Icon name="more" />
       </button>
-      {open && createPortal(
-        <>
-          <div className="fixed inset-0 z-40" onClick={close} aria-hidden="true" />
-          <div
-            ref={menuRef}
-            id={menuId}
-            role="menu"
-            aria-label={t("common.rowActions")}
-            style={{ top: pos.top, left: pos.left }}
-            className="fixed z-50 min-w-[160px] rounded-md border border-border bg-surface py-1 shadow-2"
-            onKeyDown={handleMenuKeyDown}
-          >
-            {items.map((item) => (
-              <button
-                key={item.label}
-                type="button"
-                role="menuitem"
-                tabIndex={-1}
-                disabled={item.disabled}
-                onClick={() => { item.onClick(); close(); }}
-                className={`w-full px-3 py-2 text-left text-sm leading-6 min-h-touch md:min-h-0 hover:bg-surface-raised focus:bg-surface-raised disabled:opacity-40 ${item.danger ? "text-danger" : "text-text"}`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </>,
-        document.body,
-      )}
+      {open &&
+        createPortal(
+          <>
+            <div className="fixed inset-0 z-40" onClick={close} aria-hidden="true" />
+            <div
+              ref={menuRef}
+              id={menuId}
+              role="menu"
+              aria-label={t("common.rowActions")}
+              style={{ top: pos.top, left: pos.left }}
+              className="fixed z-50 min-w-[160px] rounded-md border border-border bg-surface py-1 shadow-2"
+              onKeyDown={handleMenuKeyDown}
+            >
+              {items.map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  role="menuitem"
+                  tabIndex={-1}
+                  disabled={item.disabled}
+                  onClick={() => {
+                    item.onClick();
+                    close();
+                  }}
+                  className={`w-full px-3 py-2 text-left text-sm leading-6 min-h-touch md:min-h-0 hover:bg-surface-raised focus:bg-surface-raised disabled:opacity-40 ${item.danger ? "text-danger" : "text-text"}`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </>,
+          document.body,
+        )}
     </div>
   );
 }

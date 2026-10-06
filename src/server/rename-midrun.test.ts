@@ -12,7 +12,9 @@ process.env.MEDIA_DIR = path.join(scratch, "media");
 fs.mkdirSync(process.env.MEDIA_DIR);
 const db = await import("./db.js");
 const config = await import("./config.js");
-const { restoreRedactedApiKeys, parseConnections, resolveConnectionPool, REDACTED_SECRET } = await import("./connections.js");
+const { restoreRedactedApiKeys, parseConnections, resolveConnectionPool, REDACTED_SECRET } = await import(
+  "./connections.js"
+);
 type LlmConnection = Awaited<ReturnType<typeof import("./connections.js").parseConnections>>[number];
 const queue = await import("./queue.js");
 
@@ -39,11 +41,9 @@ globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) =>
   if (url.endsWith("/v1/models")) return new Response('{"data":[]}', { status: 200 });
   if (!url.endsWith("/chat/completions")) return new Response("{}", { status: 404 });
   return new Promise<Response>((resolve, reject) => {
-    init?.signal?.addEventListener(
-      "abort",
-      () => reject(Object.assign(new Error("aborted"), { name: "AbortError" })),
-      { once: true },
-    );
+    init?.signal?.addEventListener("abort", () => reject(Object.assign(new Error("aborted"), { name: "AbortError" })), {
+      once: true,
+    });
     release.push(() => resolve(chatCompletion('["translated"]')));
   });
 }) as typeof fetch;
@@ -57,8 +57,14 @@ async function waitFor(condition: () => boolean, what: string) {
 }
 
 const conn = (label: string, apiKey: string): LlmConnection => ({
-  id: "conn-a", label, provider: "local", apiKey, model: "test-model",
-  endpoint: "http://fake.test/v1", enabled: true, order: 0,
+  id: "conn-a",
+  label,
+  provider: "local",
+  apiKey,
+  model: "test-model",
+  endpoint: "http://fake.test/v1",
+  enabled: true,
+  order: 0,
 });
 
 const taskId = config.createTask({
@@ -155,7 +161,18 @@ async function postSettings(body: Record<string, unknown>) {
 test("the real POST /api/settings rename keeps the key and the job pool", async () => {
   // Stored: a connection with a real key, active in single mode. Local provider
   // so the stubbed endpoint serves the post-rename job.
-  const stored = [{ id: "conn-a", label: "Original", provider: "local", apiKey: "sk-real", model: "test-model", endpoint: "http://fake.test/v1", enabled: true, order: 0 }];
+  const stored = [
+    {
+      id: "conn-a",
+      label: "Original",
+      provider: "local",
+      apiKey: "sk-real",
+      model: "test-model",
+      endpoint: "http://fake.test/v1",
+      enabled: true,
+      order: 0,
+    },
+  ];
   config.setSetting("llm_connections", JSON.stringify(stored));
   config.setSetting("active_connection_id", "conn-a");
   config.setSetting("llm_mode", "single");

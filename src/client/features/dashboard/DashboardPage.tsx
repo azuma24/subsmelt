@@ -3,7 +3,15 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
-import { useJobsQuery, useMutationWithInvalidation, useQueueStatusQuery, useSettingsQuery, useTasksQuery, useTranscriptionHistoryQuery, useIsMobile } from "../../hooks";
+import {
+  useJobsQuery,
+  useMutationWithInvalidation,
+  useQueueStatusQuery,
+  useSettingsQuery,
+  useTasksQuery,
+  useTranscriptionHistoryQuery,
+  useIsMobile,
+} from "../../hooks";
 import { useToast } from "../../ui/Toast";
 import { useConfirm } from "../../ui/ConfirmModal";
 import type { Job } from "../../types";
@@ -24,7 +32,6 @@ import { LlmStatusPopover } from "../../app/LlmStatusPopover";
 import { Icon } from "../../ui/Icon";
 
 const SETUP_DISMISSED_KEY = "subsmelt_setup_dismissed";
-
 
 export function DashboardPage() {
   const isMobile = useIsMobile();
@@ -47,7 +54,11 @@ export function DashboardPage() {
   const [activeTab, setActiveTab] = useState<DashboardTab>("queue");
   // Auto-hide onboarding: read from localStorage
   const [setupDismissed, setSetupDismissed] = useState(() => {
-    try { return localStorage.getItem(SETUP_DISMISSED_KEY) === "1"; } catch { return false; }
+    try {
+      return localStorage.getItem(SETUP_DISMISSED_KEY) === "1";
+    } catch {
+      return false;
+    }
   });
 
   const startQueueMutation = useMutationWithInvalidation(() => api.startQueue());
@@ -121,7 +132,11 @@ export function DashboardPage() {
   // Auto-dismiss onboarding after first successful job
   useEffect(() => {
     if (!setupDismissed && doneJobs.length > 0) {
-      try { localStorage.setItem(SETUP_DISMISSED_KEY, "1"); } catch { /* ignore */ }
+      try {
+        localStorage.setItem(SETUP_DISMISSED_KEY, "1");
+      } catch {
+        /* ignore */
+      }
       setSetupDismissed(true);
     }
   }, [doneJobs.length, setupDismissed]);
@@ -235,14 +250,17 @@ export function DashboardPage() {
     }
   };
 
-  const toggleSelectedJob = useCallback((id: number) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, [setSelectedIds]);
+  const toggleSelectedJob = useCallback(
+    (id: number) => {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+    },
+    [setSelectedIds],
+  );
 
   const quickChecks = [
     {
@@ -264,16 +282,10 @@ export function DashboardPage() {
       // then creates no jobs (outputs exist). Media discovered at least once
       // is a sticky server fact, so the step cannot regress into a dead end.
       done:
-        pendingJobs.length > 0 ||
-        doneJobs.length > 0 ||
-        activeJobs.length > 0 ||
-        str(settings.media_scanned) === "1",
+        pendingJobs.length > 0 || doneJobs.length > 0 || activeJobs.length > 0 || str(settings.media_scanned) === "1",
       title: t("dashboard.quickStart.mediaTitle"),
       hint:
-        pendingJobs.length > 0 ||
-        doneJobs.length > 0 ||
-        activeJobs.length > 0 ||
-        str(settings.media_scanned) === "1"
+        pendingJobs.length > 0 || doneJobs.length > 0 || activeJobs.length > 0 || str(settings.media_scanned) === "1"
           ? t("dashboard.quickStart.done")
           : t("dashboard.quickStart.mediaHint"),
       action: t("dashboard.quickStart.scanNow"),
@@ -292,13 +304,24 @@ export function DashboardPage() {
 
   const dashboardTabs = [
     { key: "queue" as DashboardTab, label: t("dashboard.tab.queue"), count: jobs.length },
-    ...(transcriptionEnabled ? [{ key: "transcription" as DashboardTab, label: t("dashboard.tab.transcription"), count: transcriptionAttempts.length }] : []),
+    ...(transcriptionEnabled
+      ? [
+          {
+            key: "transcription" as DashboardTab,
+            label: t("dashboard.tab.transcription"),
+            count: transcriptionAttempts.length,
+          },
+        ]
+      : []),
   ];
 
-  const selectStatus = (key: string) => { setStatusFilter(key); setActiveTab("queue"); };
+  const selectStatus = (key: string) => {
+    setStatusFilter(key);
+    setActiveTab("queue");
+  };
   // Read live so the drawer follows progress and status instead of showing the
   // row as it was when opened; it closes on its own if the job is deleted.
-  const detailsJob = detailsJobId === null ? null : jobsById.get(detailsJobId) ?? null;
+  const detailsJob = detailsJobId === null ? null : (jobsById.get(detailsJobId) ?? null);
   const openLogs = useCallback((jobId: number) => navigate(`/settings/logs?job=${jobId}`), [navigate]);
   const openDetails = useCallback((job: Job) => setDetailsJobId(job.id), []);
 
@@ -313,17 +336,19 @@ export function DashboardPage() {
         middle={isMobile ? <LlmStatusPopover placement="below" /> : undefined}
         actions={
           queueRunning ? (
-            <ActionButton variant="danger" size="sm" onClick={handleStop}>{t("dashboard.stop")}</ActionButton>
+            <ActionButton variant="danger" size="sm" onClick={handleStop}>
+              {t("dashboard.stop")}
+            </ActionButton>
           ) : (
-            <ActionButton variant="success" size="sm" onClick={handleRunAll} disabled={pendingJobs.length === 0}>{t("dashboard.runAll")}</ActionButton>
+            <ActionButton variant="success" size="sm" onClick={handleRunAll} disabled={pendingJobs.length === 0}>
+              {t("dashboard.runAll")}
+            </ActionButton>
           )
         }
       />
 
       {/* ── Content ── */}
       <div className="flex-1 space-y-4 p-4 md:p-4">
-
-
         {/* L1: Cockpit metric band — status filters + token usage in one row */}
         <DashboardHero
           statusSegments={statusSegments}
@@ -345,7 +370,11 @@ export function DashboardPage() {
               <button
                 type="button"
                 onClick={() => {
-                  try { localStorage.setItem(SETUP_DISMISSED_KEY, "1"); } catch { /* ignore */ }
+                  try {
+                    localStorage.setItem(SETUP_DISMISSED_KEY, "1");
+                  } catch {
+                    /* ignore */
+                  }
                   setSetupDismissed(true);
                 }}
                 className="text-xs text-faint hover:text-text"
@@ -355,14 +384,22 @@ export function DashboardPage() {
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {quickChecks.map((step) => (
-                <div key={step.title} className={`rounded-md border p-3 ${step.done ? "border-success-line bg-success-soft" : "border-border bg-surface"}`}>
+                <div
+                  key={step.title}
+                  className={`rounded-md border p-3 ${step.done ? "border-success-line bg-success-soft" : "border-border bg-surface"}`}
+                >
                   <div className="flex items-center justify-between gap-2">
                     <div className="text-xs font-semibold text-text">{step.title}</div>
-                    <Icon name={step.done ? "done" : "pending"} className={step.done ? "text-success" : "text-warning"} />
+                    <Icon
+                      name={step.done ? "done" : "pending"}
+                      className={step.done ? "text-success" : "text-warning"}
+                    />
                   </div>
                   <div className="mt-1 text-xs text-muted">{step.hint}</div>
                   {!step.done && (
-                    <button onClick={step.onClick} className="mt-2 text-xs text-accent">{step.action}</button>
+                    <button onClick={step.onClick} className="mt-2 text-xs text-accent">
+                      {step.action}
+                    </button>
                   )}
                 </div>
               ))}
@@ -371,11 +408,7 @@ export function DashboardPage() {
         )}
 
         {/* Auto-translate notice (L2) — shown only when off */}
-        {!autoTranslate && (
-          <p className="text-xs text-muted">
-            {t("dashboard.scanAutoTranslateOff")}
-          </p>
-        )}
+        {!autoTranslate && <p className="text-xs text-muted">{t("dashboard.scanAutoTranslateOff")}</p>}
 
         {/* ── Main content area with Tabs: Queue / Transcription ── */}
         <section className="overflow-hidden rounded-md border border-border bg-surface">
@@ -392,7 +425,11 @@ export function DashboardPage() {
             targetOptions={targetOptions}
             onFolderFilterChange={setFolderFilter}
             onTargetFilterChange={setTargetFilter}
-            onClearFilters={() => { setStatusFilter("all"); setFolderFilter("all"); setTargetFilter("all"); }}
+            onClearFilters={() => {
+              setStatusFilter("all");
+              setFolderFilter("all");
+              setTargetFilter("all");
+            }}
             visiblePendingIds={visiblePendingIds}
             visibleErrorIds={visibleErrorIds}
             visibleRetranslatableIds={visibleRetranslatableIds}
@@ -415,11 +452,21 @@ export function DashboardPage() {
             clearLabel={t("dashboard.clearSelection")}
           >
             {!queueRunning && (
-              <ActionButton size="sm" variant="success" onClick={handleRunSelected} busy={startSelectedMutation.isPending}>
+              <ActionButton
+                size="sm"
+                variant="success"
+                onClick={handleRunSelected}
+                busy={startSelectedMutation.isPending}
+              >
                 {t("dashboard.runSelected", { count: selectedPendingCount })}
               </ActionButton>
             )}
-            <ActionButton size="sm" variant="danger" onClick={handleDeleteSelected} busy={deleteSelectedMutation.isPending}>
+            <ActionButton
+              size="sm"
+              variant="danger"
+              onClick={handleDeleteSelected}
+              busy={deleteSelectedMutation.isPending}
+            >
               {t("dashboard.deleteSelected")}
             </ActionButton>
           </SelectionBar>
@@ -435,13 +482,23 @@ export function DashboardPage() {
               />
             </div>
           )}
-          {activeTab === "queue" && jobsQuery.data === undefined && !jobsQuery.isError && (
-            isMobile ? <div className="p-4"><JobCardSkeleton /></div> : <JobsTableSkeleton />
-          )}
-          {activeTab === "queue" && jobsQuery.data !== undefined && (
-            isMobile ? (
+          {activeTab === "queue" &&
+            jobsQuery.data === undefined &&
+            !jobsQuery.isError &&
+            (isMobile ? (
+              <div className="p-4">
+                <JobCardSkeleton />
+              </div>
+            ) : (
+              <JobsTableSkeleton />
+            ))}
+          {activeTab === "queue" &&
+            jobsQuery.data !== undefined &&
+            (isMobile ? (
               <div className="space-y-2 p-4">
-                {filteredJobs.length === 0 && <EmptyHint text={t("dashboard.noJobsMatchFilter")} subtext={t("dashboard.emptyJobsHint")} />}
+                {filteredJobs.length === 0 && (
+                  <EmptyHint text={t("dashboard.noJobsMatchFilter")} subtext={t("dashboard.emptyJobsHint")} />
+                )}
                 {filteredJobs.map((job) => (
                   <JobCardMobile
                     key={job.id}
@@ -456,9 +513,16 @@ export function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <JobsTableDesktop jobs={filteredJobs} currentJobId={currentJobId} selectedIds={selectedIds} setSelectedIds={setSelectedIds} onPreview={setPreviewJobId} onOpenLogs={openLogs} onOpenDetails={openDetails} />
-            )
-          )}
+              <JobsTableDesktop
+                jobs={filteredJobs}
+                currentJobId={currentJobId}
+                selectedIds={selectedIds}
+                setSelectedIds={setSelectedIds}
+                onPreview={setPreviewJobId}
+                onOpenLogs={openLogs}
+                onOpenDetails={openDetails}
+              />
+            ))}
 
           {activeTab === "transcription" && transcriptionEnabled && (
             <TranscriptionHistoryPanel
@@ -469,7 +533,6 @@ export function DashboardPage() {
               onRetry={handleRetryTranscription}
             />
           )}
-
         </section>
       </div>
 
@@ -485,10 +548,12 @@ export function DashboardPage() {
           jobId={previewJobId}
           previewSearch={previewSearch}
           setPreviewSearch={setPreviewSearch}
-          onClose={() => { setPreviewJobId(null); setPreviewSearch(""); }}
+          onClose={() => {
+            setPreviewJobId(null);
+            setPreviewSearch("");
+          }}
         />
       )}
-
     </div>
   );
 }

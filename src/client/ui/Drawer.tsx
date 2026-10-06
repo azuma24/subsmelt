@@ -45,7 +45,10 @@ export function Drawer({ open, onClose, title, children, width = "max-w-md" }: D
       const items = panel.querySelectorAll<HTMLElement>(
         'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
       );
-      if (items.length === 0) { event.preventDefault(); return; }
+      if (items.length === 0) {
+        event.preventDefault();
+        return;
+      }
       const first = items[0];
       const last = items[items.length - 1];
       const active = document.activeElement;
@@ -72,7 +75,9 @@ export function Drawer({ open, onClose, title, children, width = "max-w-md" }: D
         className={`relative flex w-full ${width} flex-col border-l border-border bg-surface shadow-2 outline-hidden`}
       >
         <div className="flex min-h-12 shrink-0 items-center justify-between border-b border-border px-4">
-          <span id={titleId} className="text-sm font-semibold text-text leading-6">{title}</span>
+          <span id={titleId} className="text-sm font-semibold text-text leading-6">
+            {title}
+          </span>
           <IconButton icon="close" label={t("common.close")} onClick={onClose} />
         </div>
         <div className="flex-1 overflow-y-auto p-4">{children}</div>

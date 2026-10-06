@@ -4,7 +4,12 @@ import { renderPage } from "../../test-render";
 import type { TranscriptionHistoryEntry } from "../../types";
 import { TranscriptionHistoryPanel } from "./TranscriptionHistoryPanel";
 
-function attempt(id: string, inputPath: string, status: TranscriptionHistoryEntry["status"], finishedAt: string | null): TranscriptionHistoryEntry {
+function attempt(
+  id: string,
+  inputPath: string,
+  status: TranscriptionHistoryEntry["status"],
+  finishedAt: string | null,
+): TranscriptionHistoryEntry {
   return {
     id,
     inputPath,
@@ -29,7 +34,13 @@ const attempts = [
 
 test("history rows show translated statuses and a relative time with the full stamp as a tooltip", () => {
   const page = renderPage(
-    <TranscriptionHistoryPanel attempts={attempts} transcribingPath={null} isRetryPending={false} isTranscribePending={false} onRetry={() => {}} />,
+    <TranscriptionHistoryPanel
+      attempts={attempts}
+      transcribingPath={null}
+      isRetryPending={false}
+      isTranscribePending={false}
+      onRetry={() => {}}
+    />,
   );
 
   assert.ok(page.text.includes("Lecture.mkv large-v3 • en • SRT • transcribe only"));

@@ -18,9 +18,17 @@ const noLookups = async () => {
 };
 
 test("All keeps every entry and None keeps nothing", async () => {
-  const all = await selectBackfill({ kind: "all" }, ENTRIES, { exactUploadDate: noLookups, addedDates: null, today: TODAY });
+  const all = await selectBackfill({ kind: "all" }, ENTRIES, {
+    exactUploadDate: noLookups,
+    addedDates: null,
+    today: TODAY,
+  });
   assert.deepEqual([...all.selected], ["uXspbC2srEQ", "BHPDsGVciDk", "HiT2MyR-ZYk", "72Im-Mm5JKs", "qN6OM1IzjIE"]);
-  const none = await selectBackfill({ kind: "none" }, ENTRIES, { exactUploadDate: noLookups, addedDates: null, today: TODAY });
+  const none = await selectBackfill({ kind: "none" }, ENTRIES, {
+    exactUploadDate: noLookups,
+    addedDates: null,
+    today: TODAY,
+  });
   assert.deepEqual([...none.selected], []);
 });
 
@@ -42,11 +50,15 @@ test("Posted since looks up exact dates only for entries inside the rounding win
 });
 
 test("Posted since keeps the rounded date when the exact lookup fails", async () => {
-  const result = await selectBackfill({ kind: "posted_since", date: "2026-08-01" }, [{ videoId: "HiT2MyR-ZYk", publishedAt: "2026-08-30" }], {
-    exactUploadDate: async () => null,
-    addedDates: null,
-    today: TODAY,
-  });
+  const result = await selectBackfill(
+    { kind: "posted_since", date: "2026-08-01" },
+    [{ videoId: "HiT2MyR-ZYk", publishedAt: "2026-08-30" }],
+    {
+      exactUploadDate: async () => null,
+      addedDates: null,
+      today: TODAY,
+    },
+  );
   assert.deepEqual([...result.selected], ["HiT2MyR-ZYk"]);
 });
 
@@ -56,11 +68,19 @@ test("Added since compares the playlist added dates and needs them", async () =>
     ["qN6OM1IzjIE", "2026-09-02"],
     ["HiT2MyR-ZYk", "2026-06-01"],
   ]);
-  const result = await selectBackfill({ kind: "added_since", date: "2026-09-01" }, ENTRIES, { exactUploadDate: noLookups, addedDates, today: TODAY });
+  const result = await selectBackfill({ kind: "added_since", date: "2026-09-01" }, ENTRIES, {
+    exactUploadDate: noLookups,
+    addedDates,
+    today: TODAY,
+  });
   assert.deepEqual([...result.selected], ["uXspbC2srEQ", "qN6OM1IzjIE"]);
 
   await assert.rejects(
-    selectBackfill({ kind: "added_since", date: "2026-09-01" }, ENTRIES, { exactUploadDate: noLookups, addedDates: null, today: TODAY }),
+    selectBackfill({ kind: "added_since", date: "2026-09-01" }, ENTRIES, {
+      exactUploadDate: noLookups,
+      addedDates: null,
+      today: TODAY,
+    }),
     /Added since needs a working YouTube Data API key/,
   );
 });

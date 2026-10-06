@@ -27,9 +27,18 @@ const STATUS_TONE_CLS: Record<StatusTone, string> = {
 
 export function StatusBadge({ status }: { status: StatusDescriptor }) {
   return (
-    <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium leading-6 ${STATUS_TONE_CLS[status.tone]}`}>
-      {typeof status.glyph === "string" ? <span aria-hidden="true">{status.glyph}</span> : <Icon name={status.glyph.icon} />} {status.label}
-      {status.flags?.map((flag) => <Icon key={flag.icon} name={flag.icon} label={flag.label} />)}
+    <span
+      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium leading-6 ${STATUS_TONE_CLS[status.tone]}`}
+    >
+      {typeof status.glyph === "string" ? (
+        <span aria-hidden="true">{status.glyph}</span>
+      ) : (
+        <Icon name={status.glyph.icon} />
+      )}{" "}
+      {status.label}
+      {status.flags?.map((flag) => (
+        <Icon key={flag.icon} name={flag.icon} label={flag.label} />
+      ))}
     </span>
   );
 }

@@ -6,7 +6,10 @@ const toast = (id: number, persistent = false) => ({ id, persistent });
 
 test("only the newest four toasts are visible", () => {
   const all = [1, 2, 3, 4, 5, 6].map((id) => toast(id));
-  assert.deepEqual(visibleToasts(all).map((t) => t.id), [3, 4, 5, 6]);
+  assert.deepEqual(
+    visibleToasts(all).map((t) => t.id),
+    [3, 4, 5, 6],
+  );
 });
 
 test("a queued toast gets no dismiss timer until it becomes visible", () => {

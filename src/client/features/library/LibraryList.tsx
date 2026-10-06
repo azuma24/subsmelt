@@ -34,7 +34,18 @@ interface LibraryListProps {
 }
 
 export function LibraryList(props: LibraryListProps) {
-  const { rows, jobsById, checked, openKey, focusKey, focusRequest, onToggleChecked, onToggleSection, onToggleCollapsed, onOpen } = props;
+  const {
+    rows,
+    jobsById,
+    checked,
+    openKey,
+    focusKey,
+    focusRequest,
+    onToggleChecked,
+    onToggleSection,
+    onToggleCollapsed,
+    onOpen,
+  } = props;
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualize = rows.length >= VIRTUALIZE_THRESHOLD;
   const virtualizer = useVirtualizer({
@@ -44,18 +55,19 @@ export function LibraryList(props: LibraryListProps) {
     getItemKey: (index) => rowKey(rows[index]),
     overscan: 12,
   });
-  const itemRowIndexes = useMemo(
-    () => rows.flatMap((row, index) => (row.type === "item" ? [index] : [])),
-    [rows],
-  );
+  const itemRowIndexes = useMemo(() => rows.flatMap((row, index) => (row.type === "item" ? [index] : [])), [rows]);
 
   // Roving tabindex: one row takes Tab. When virtualized and that row is out of
   // the rendered window, the first rendered row stands in so Tab still reaches the list.
   const virtualItems = virtualize ? virtualizer.getVirtualItems() : [];
   const renderedKeys = virtualize
-    ? virtualItems.flatMap((v) => { const row = rows[v.index]; return row?.type === "item" ? [row.entry.item.key] : []; })
+    ? virtualItems.flatMap((v) => {
+        const row = rows[v.index];
+        return row?.type === "item" ? [row.entry.item.key] : [];
+      })
     : null;
-  const tabKey = renderedKeys && focusKey !== null && !renderedKeys.includes(focusKey) ? renderedKeys[0] ?? null : focusKey;
+  const tabKey =
+    renderedKeys && focusKey !== null && !renderedKeys.includes(focusKey) ? (renderedKeys[0] ?? null) : focusKey;
 
   const renderRow = (row: LibraryRow): ReactNode => {
     if (row.type === "section") {
@@ -88,7 +100,8 @@ export function LibraryList(props: LibraryListProps) {
   const focusRow = (rowIndex: number) => {
     const row = rows[rowIndex];
     if (row?.type !== "item") return;
-    const find = () => scrollRef.current?.querySelector<HTMLButtonElement>(`[data-row-key="${CSS.escape(row.entry.item.key)}"]`);
+    const find = () =>
+      scrollRef.current?.querySelector<HTMLButtonElement>(`[data-row-key="${CSS.escape(row.entry.item.key)}"]`);
     const element = find();
     if (element) {
       element.focus();

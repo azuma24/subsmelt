@@ -49,10 +49,7 @@ export interface LineFallbackOptions {
  * fails the chunk rather than grinding through every remaining line at one full
  * timeout each — which is exactly what made jobs look hung.
  */
-export async function runLineFallback(
-  lines: string[],
-  options: LineFallbackOptions,
-): Promise<LineFallbackResult> {
+export async function runLineFallback(lines: string[], options: LineFallbackOptions): Promise<LineFallbackResult> {
   const limit = options.failureLimit ?? SINGLE_LINE_FAILURE_LIMIT;
   const translations: (string | null)[] = new Array(lines.length).fill(null);
   let consecutiveFailures = 0;

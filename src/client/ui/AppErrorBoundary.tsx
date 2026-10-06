@@ -21,10 +21,7 @@ function ErrorFallback({ error }: { error: Error | null }) {
   const { t } = useTranslation();
   return (
     <div className="flex h-dvh min-h-dvh w-full items-center justify-center bg-canvas text-text">
-      <PageError
-        message={error?.message || t("errors.boundaryMessage")}
-        onRetry={() => window.location.reload()}
-      />
+      <PageError message={error?.message || t("errors.boundaryMessage")} onRetry={() => window.location.reload()} />
     </div>
   );
 }

@@ -27,15 +27,50 @@ export function SttAdvancedFields({ settings, update, model }: SttAdvancedFields
       <div className="space-y-4">
         {hidesOptions(model) && <OptionsDecidedNote model={model} />}
         <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
-          <Field label={t("settings.transcription.device")} value={str(settings.transcription_device, "cpu")} onChange={(v) => update("transcription_device", v)} help={t("settings.transcription.deviceHelp")} />
+          <Field
+            label={t("settings.transcription.device")}
+            value={str(settings.transcription_device, "cpu")}
+            onChange={(v) => update("transcription_device", v)}
+            help={t("settings.transcription.deviceHelp")}
+          />
           {model.supports.computeType && (
-            <Field label={t("settings.transcription.computeType")} value={str(settings.transcription_compute_type, "int8")} onChange={(v) => update("transcription_compute_type", v)} help={t("settings.transcription.computeTypeHelp")} />
+            <Field
+              label={t("settings.transcription.computeType")}
+              value={str(settings.transcription_compute_type, "int8")}
+              onChange={(v) => update("transcription_compute_type", v)}
+              help={t("settings.transcription.computeTypeHelp")}
+            />
           )}
-          <Field label={t("settings.transcription.maxConcurrent")} value={str(settings.transcription_max_concurrent, "1")} onChange={(v) => update("transcription_max_concurrent", v)} type="number" min={1} max={4} help={t("settings.transcription.maxConcurrentHelp")} />
+          <Field
+            label={t("settings.transcription.maxConcurrent")}
+            value={str(settings.transcription_max_concurrent, "1")}
+            onChange={(v) => update("transcription_max_concurrent", v)}
+            type="number"
+            min={1}
+            max={4}
+            help={t("settings.transcription.maxConcurrentHelp")}
+          />
         </div>
         <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
-          <Field label={t("settings.transcription.maxLineLength")} value={str(settings.transcription_max_line_length, "42")} onChange={(v) => update("transcription_max_line_length", v)} type="number" min={0} max={200} help={t("settings.transcription.maxLineLengthHelp")} />
-          <Field label={t("settings.transcription.maxSubtitleDuration")} value={str(settings.transcription_max_subtitle_duration, "6")} onChange={(v) => update("transcription_max_subtitle_duration", v)} type="number" min={0} max={60} step="any" help={t("settings.transcription.maxSubtitleDurationHelp")} />
+          <Field
+            label={t("settings.transcription.maxLineLength")}
+            value={str(settings.transcription_max_line_length, "42")}
+            onChange={(v) => update("transcription_max_line_length", v)}
+            type="number"
+            min={0}
+            max={200}
+            help={t("settings.transcription.maxLineLengthHelp")}
+          />
+          <Field
+            label={t("settings.transcription.maxSubtitleDuration")}
+            value={str(settings.transcription_max_subtitle_duration, "6")}
+            onChange={(v) => update("transcription_max_subtitle_duration", v)}
+            type="number"
+            min={0}
+            max={60}
+            step="any"
+            help={t("settings.transcription.maxSubtitleDurationHelp")}
+          />
           <div className="flex items-end">
             <ToggleRow
               title={t("settings.transcription.mergeShortSegments")}
@@ -56,15 +91,25 @@ export function SttAdvancedFields({ settings, update, model }: SttAdvancedFields
         <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-2"} md:max-w-[480px]`}>
           <div>
             <label className={labelCls}>{t("settings.transcription.missingSubtitleBehavior")}</label>
-            <Select ariaLabel={t("settings.transcription.missingSubtitleBehavior")} value={str(settings.transcription_missing_subtitle_behavior, "ask")} onChange={(value) => update("transcription_missing_subtitle_behavior", value)}>
+            <Select
+              ariaLabel={t("settings.transcription.missingSubtitleBehavior")}
+              value={str(settings.transcription_missing_subtitle_behavior, "ask")}
+              onChange={(value) => update("transcription_missing_subtitle_behavior", value)}
+            >
               <option value="ask">{t("settings.transcription.missingAsk")}</option>
               <option value="auto_transcribe">{t("settings.transcription.missingAutoTranscribe")}</option>
-              <option value="auto_transcribe_and_translate">{t("settings.transcription.missingAutoTranscribeTranslate")}</option>
+              <option value="auto_transcribe_and_translate">
+                {t("settings.transcription.missingAutoTranscribeTranslate")}
+              </option>
             </Select>
           </div>
           <div>
             <label className={labelCls}>{t("settings.transcription.lowRamBehavior")}</label>
-            <Select ariaLabel={t("settings.transcription.lowRamBehavior")} value={str(settings.transcription_low_ram_behavior, "ask")} onChange={(value) => update("transcription_low_ram_behavior", value)}>
+            <Select
+              ariaLabel={t("settings.transcription.lowRamBehavior")}
+              value={str(settings.transcription_low_ram_behavior, "ask")}
+              onChange={(value) => update("transcription_low_ram_behavior", value)}
+            >
               <option value="ask">{t("settings.transcription.lowRamAsk")}</option>
               <option value="downgrade">{t("settings.transcription.lowRamDowngrade")}</option>
               <option value="skip">{t("settings.transcription.lowRamSkip")}</option>

@@ -36,7 +36,7 @@ export function summarizeTranslationError(error: unknown): TranslationErrorDiagn
     err?.responseBody ?? err?.response?.body ?? err?.body ?? err?.data ?? err?.cause?.responseBody;
 
   const parsed =
-    typeof responseBodyRaw === "string" ? tryJsonParse(responseBodyRaw) ?? responseBodyRaw : responseBodyRaw;
+    typeof responseBodyRaw === "string" ? (tryJsonParse(responseBodyRaw) ?? responseBodyRaw) : responseBodyRaw;
   const responseSnippet = toSnippet(parsed);
 
   // Build the most informative message possible — AI SDK APICallError often has
@@ -68,11 +68,7 @@ export function summarizeTranslationError(error: unknown): TranslationErrorDiagn
     }
   }
 
-  const parts = [
-    status ? `HTTP ${status}` : null,
-    code ? `code=${code}` : null,
-    baseMessage,
-  ].filter(Boolean);
+  const parts = [status ? `HTTP ${status}` : null, code ? `code=${code}` : null, baseMessage].filter(Boolean);
 
   return {
     message: parts.join(" | "),
@@ -93,16 +89,12 @@ function extractErrorMessageFromBody(parsed: unknown): string | null {
   // OpenAI-style: { error: { message: "..." } }
   if (obj.error && typeof obj.error === "object") {
     const errObj = obj.error as Record<string, unknown>;
-    if (typeof errObj.message === "string" && errObj.message.trim())
-      return errObj.message.trim().slice(0, 300);
-    if (typeof errObj.type === "string" && errObj.type.trim())
-      return `error type: ${errObj.type.trim()}`;
+    if (typeof errObj.message === "string" && errObj.message.trim()) return errObj.message.trim().slice(0, 300);
+    if (typeof errObj.type === "string" && errObj.type.trim()) return `error type: ${errObj.type.trim()}`;
   }
   // Flat: { message: "..." }
-  if (typeof obj.message === "string" && obj.message.trim())
-    return obj.message.trim().slice(0, 300);
+  if (typeof obj.message === "string" && obj.message.trim()) return obj.message.trim().slice(0, 300);
   // FastAPI-style: { detail: "..." }
-  if (typeof obj.detail === "string" && obj.detail.trim())
-    return obj.detail.trim().slice(0, 300);
+  if (typeof obj.detail === "string" && obj.detail.trim()) return obj.detail.trim().slice(0, 300);
   return null;
 }

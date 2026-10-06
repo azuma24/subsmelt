@@ -67,7 +67,9 @@ export function ConvertPage() {
         setStaged((prev) => prev.map((s) => (s.id === item.id ? { ...s, detected: code } : s)));
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [translate, staged]);
 
   const pickTarget = useCallback((entry: { code: string; englishName: string }) => {
@@ -152,12 +154,14 @@ export function ConvertPage() {
         const content = await readSubtitleFile(item.file);
         const source = effectiveSource(item, fromCode);
         const res = await api.convertSubtitles({
-          files: [{
-            name: item.file.name,
-            content,
-            sourceLang: source ? findLanguage(source)?.promptName ?? AUTO_SOURCE_LANG : AUTO_SOURCE_LANG,
-            skip: skipTranslation(item, fromCode, translate, resolvedTarget?.code ?? null),
-          }],
+          files: [
+            {
+              name: item.file.name,
+              content,
+              sourceLang: source ? (findLanguage(source)?.promptName ?? AUTO_SOURCE_LANG) : AUTO_SOURCE_LANG,
+              skip: skipTranslation(item, fromCode, translate, resolvedTarget?.code ?? null),
+            },
+          ],
           targetFormat,
           translate,
           sourceLang: AUTO_SOURCE_LANG,
@@ -186,7 +190,10 @@ export function ConvertPage() {
     setLastOutputs(outputs);
     await downloadOutputs(outputs);
     addToast(
-      t(translate ? "convert.translateDownloadReady" : "convert.downloadReady", { count: outputs.length, format: targetFormat.toUpperCase() }),
+      t(translate ? "convert.translateDownloadReady" : "convert.downloadReady", {
+        count: outputs.length,
+        format: targetFormat.toUpperCase(),
+      }),
       "success",
     );
   };
@@ -227,7 +234,11 @@ export function ConvertPage() {
           <div className="rounded-md border border-border bg-surface p-4">
             <h2 className="text-sm font-semibold text-text">{t("convert.outputSettings")}</h2>
 
-            <div className="mt-3 inline-flex rounded-sm border border-border bg-surface-raised p-1" role="tablist" aria-label={t("convert.outputSettings")}>
+            <div
+              className="mt-3 inline-flex rounded-sm border border-border bg-surface-raised p-1"
+              role="tablist"
+              aria-label={t("convert.outputSettings")}
+            >
               <button
                 type="button"
                 role="tab"
@@ -256,7 +267,9 @@ export function ConvertPage() {
                     <Select value={fromCode} onChange={(value) => setFromCode(value)}>
                       <option value="">{t("convert.sourceAuto")}</option>
                       {LANGUAGES.map((l) => (
-                        <option key={l.code} value={l.code}>{l.englishName}</option>
+                        <option key={l.code} value={l.code}>
+                          {l.englishName}
+                        </option>
                       ))}
                     </Select>
                   </label>
@@ -273,7 +286,9 @@ export function ConvertPage() {
               {translate && llmHealth.isSuccess && !llmReady && (
                 <p className="text-xs text-warning">
                   {t("convert.needLlm")}{" "}
-                  <Link to="/settings" className="underline">{t("whisper.openSettings")}</Link>
+                  <Link to="/settings" className="underline">
+                    {t("whisper.openSettings")}
+                  </Link>
                 </p>
               )}
 
@@ -292,17 +307,19 @@ export function ConvertPage() {
 
           {/* Action — the CTA stands alone so it isn't mistaken for another setting */}
           <div className={`flex items-center gap-3 ${isMobile ? "flex-col items-stretch" : "justify-end"}`}>
-            {staged.length === 0 && (
-              <span className="text-xs text-faint">{t("convert.addFilesToStart")}</span>
-            )}
+            {staged.length === 0 && <span className="text-xs text-faint">{t("convert.addFilesToStart")}</span>}
             <ActionButton
               variant="primary"
               onClick={handleConvert}
-              disabled={staged.length === 0 || (translate && !resolvedTarget) || (translate && llmHealth.isSuccess && !llmReady)}
+              disabled={
+                staged.length === 0 || (translate && !resolvedTarget) || (translate && llmHealth.isSuccess && !llmReady)
+              }
               busy={converting}
               className={isMobile ? "w-full" : ""}
             >
-              {converting ? t(translate ? "convert.translating" : "convert.converting") : t(translate ? "convert.modeTranslate" : "convert.convert")}
+              {converting
+                ? t(translate ? "convert.translating" : "convert.converting")
+                : t(translate ? "convert.modeTranslate" : "convert.convert")}
             </ActionButton>
           </div>
 
@@ -310,10 +327,17 @@ export function ConvertPage() {
             <div className="rounded-md border border-success-line bg-success-soft p-4" role="status" aria-live="polite">
               <div className={`flex gap-3 ${isMobile ? "flex-col items-stretch" : "items-center justify-between"}`}>
                 <div>
-                  <p className="text-sm font-semibold text-success">{t("convert.downloadsReady", { count: lastOutputs.length })}</p>
+                  <p className="text-sm font-semibold text-success">
+                    {t("convert.downloadsReady", { count: lastOutputs.length })}
+                  </p>
                   <p className="mt-1 text-xs leading-6 text-muted">{t("convert.downloadsReadyHelp")}</p>
                 </div>
-                <ActionButton variant="success" size="sm" onClick={() => void downloadOutputs()} className={isMobile ? "w-full" : ""}>
+                <ActionButton
+                  variant="success"
+                  size="sm"
+                  onClick={() => void downloadOutputs()}
+                  className={isMobile ? "w-full" : ""}
+                >
                   {lastOutputs.length === 1 ? t("convert.downloadFile") : t("convert.downloadZip")}
                 </ActionButton>
               </div>
@@ -323,7 +347,9 @@ export function ConvertPage() {
                     <button
                       key={out.name}
                       type="button"
-                      onClick={() => triggerDownload(new Blob([out.content], { type: "text/plain;charset=utf-8" }), out.name)}
+                      onClick={() =>
+                        triggerDownload(new Blob([out.content], { type: "text/plain;charset=utf-8" }), out.name)
+                      }
                       className="rounded-sm border border-success-line bg-surface px-3 py-1 text-xs text-muted hover:text-text"
                     >
                       {out.name}

@@ -1,11 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Readable } from "node:stream";
-import {
-  listBackendModels,
-  deleteBackendModel,
-  downloadBackendModel,
-} from "./transcription-client.js";
+import { listBackendModels, deleteBackendModel, downloadBackendModel } from "./transcription-client.js";
 
 // Minimal fetch stub helpers. We swap the global fetch per test and restore it.
 type FetchFn = typeof fetch;
@@ -124,8 +120,7 @@ test("downloadBackendModel throws when the stream emits an error line", async ()
 });
 
 test("downloadBackendModel throws when the stream ends without a result", async () => {
-  globalThis.fetch = (async () =>
-    ndjsonResponse([JSON.stringify({ type: "progress", pct: 50 })])) as FetchFn;
+  globalThis.fetch = (async () => ndjsonResponse([JSON.stringify({ type: "progress", pct: 50 })])) as FetchFn;
   try {
     await assert.rejects(() => downloadBackendModel("http://backend:8001", "tiny"), /without a result/);
   } finally {

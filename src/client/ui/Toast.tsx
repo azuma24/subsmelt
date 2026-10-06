@@ -50,7 +50,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const clearTimer = (id: number) => {
     const timer = timersRef.current.get(id);
-    if (timer) { clearTimeout(timer); timersRef.current.delete(id); }
+    if (timer) {
+      clearTimeout(timer);
+      timersRef.current.delete(id);
+    }
   };
 
   const removeToast = useCallback((id: number) => {
@@ -65,29 +68,32 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     toastsRef.current.forEach((toast) => removeToast(toast.id));
   };
 
-  const addToast = useCallback(
-    (message: string, type: ToastType = "info", opts: ToastOptions = {}) => {
-      const existing = opts.key ? toastsRef.current.find((toast) => toast.key === opts.key) : undefined;
-      const id = existing?.id ?? ++idRef.current;
-      const next: Toast = { ...opts, id, message, type };
-      setToasts((prev) => (existing ? prev.map((toast) => (toast.id === id ? next : toast)) : [...prev, next]));
-      // An update restarts the toast's timer once the effect below sees it.
-      clearTimer(id);
-    },
-    []
-  );
+  const addToast = useCallback((message: string, type: ToastType = "info", opts: ToastOptions = {}) => {
+    const existing = opts.key ? toastsRef.current.find((toast) => toast.key === opts.key) : undefined;
+    const id = existing?.id ?? ++idRef.current;
+    const next: Toast = { ...opts, id, message, type };
+    setToasts((prev) => (existing ? prev.map((toast) => (toast.id === id ? next : toast)) : [...prev, next]));
+    // An update restarts the toast's timer once the effect below sees it.
+    clearTimer(id);
+  }, []);
 
   useEffect(() => {
     for (const id of toastsAwaitingTimer(toasts, new Set(timersRef.current.keys()))) {
       const type = toasts.find((toast) => toast.id === id)?.type ?? "info";
-      timersRef.current.set(id, setTimeout(() => removeToast(id), AUTO_DISMISS_MS[type]));
+      timersRef.current.set(
+        id,
+        setTimeout(() => removeToast(id), AUTO_DISMISS_MS[type]),
+      );
     }
   }, [toasts, removeToast]);
 
   // Clear any pending auto-dismiss timers on unmount.
   useEffect(() => {
     const timers = timersRef.current;
-    return () => { timers.forEach((timer) => clearTimeout(timer)); timers.clear(); };
+    return () => {
+      timers.forEach((timer) => clearTimeout(timer));
+      timers.clear();
+    };
   }, []);
 
   const visible = visibleToasts(toasts);
@@ -121,24 +127,35 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               toast.type === "success"
                 ? "border-success-line text-success"
                 : toast.type === "error"
-                ? "border-danger-line text-danger"
-                : "border-accent-line text-accent"
+                  ? "border-danger-line text-danger"
+                  : "border-accent-line text-accent"
             }`}
           >
-            <Icon name={toast.type === "success" ? "done" : toast.type === "error" ? "error" : "info"} className="mt-1" />
+            <Icon
+              name={toast.type === "success" ? "done" : toast.type === "error" ? "error" : "info"}
+              className="mt-1"
+            />
             <span className="min-w-0 flex-1 break-words">
               {toast.message}
               {toast.action && (
                 <button
                   type="button"
-                  onClick={() => { toast.action?.onClick(); removeToast(toast.id); }}
+                  onClick={() => {
+                    toast.action?.onClick();
+                    removeToast(toast.id);
+                  }}
                   className="mt-1 block min-h-touch text-sm font-medium text-text underline underline-offset-2"
                 >
                   {toast.action.label}
                 </button>
               )}
             </span>
-            <IconButton icon="close" label={t("common.dismiss")} onClick={() => removeToast(toast.id)} className="-m-2 opacity-60 hover:opacity-100" />
+            <IconButton
+              icon="close"
+              label={t("common.dismiss")}
+              onClick={() => removeToast(toast.id)}
+              className="-m-2 opacity-60 hover:opacity-100"
+            />
           </div>
         ))}
       </div>

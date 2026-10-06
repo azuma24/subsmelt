@@ -60,13 +60,15 @@ export function toLibraryItems(files: ScannedFile[], mediaDir: string): LibraryI
   return files.flatMap((file): LibraryItem[] => {
     const key = file.videoPath ?? file.subtitles[0]?.srtPath;
     if (!key) return [];
-    return [{
-      key,
-      kind: file.videoPath ? "video" : "subtitle",
-      name: file.videoName ?? file.subtitles[0].srtName,
-      folder: relativeFolder(key, mediaDir),
-      file,
-    }];
+    return [
+      {
+        key,
+        kind: file.videoPath ? "video" : "subtitle",
+        name: file.videoName ?? file.subtitles[0].srtName,
+        folder: relativeFolder(key, mediaDir),
+        file,
+      },
+    ];
   });
 }
 
@@ -86,7 +88,10 @@ const chipRank = (status: string) => {
  * same output, so a language listed once per source only repeats itself; the
  * chip shows its most pressing state across them.
  */
-export function itemLanguageChips(item: LibraryItem, jobsById: Map<number, Job>): { task: TaskStatus; status: string }[] {
+export function itemLanguageChips(
+  item: LibraryItem,
+  jobsById: Map<number, Job>,
+): { task: TaskStatus; status: string }[] {
   const byTask = new Map<number, { task: TaskStatus; status: string }>();
   for (const task of itemTasks(item)) {
     const status = getTaskStatus(task, jobsById);
@@ -183,7 +188,10 @@ export function buildLibraryView(
     .map((item) => ({ item, status: itemStatus(item, jobsById) }))
     .sort((a, b) => itemOrder(a, b, dir));
 
-  const counts = Object.fromEntries([["all", searched.length], ...LIBRARY_STATUSES.map((s) => [s, 0])]) as Record<LibraryFilter, number>;
+  const counts = Object.fromEntries([["all", searched.length], ...LIBRARY_STATUSES.map((s) => [s, 0])]) as Record<
+    LibraryFilter,
+    number
+  >;
   for (const entry of searched) counts[entry.status] += 1;
 
   if (filter !== "all") {

@@ -1,10 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  acquireConnectionLock,
-  resetConnectionLocks,
-  tryAcquireConnectionLock,
-} from "./connection-lock.js";
+import { acquireConnectionLock, resetConnectionLocks, tryAcquireConnectionLock } from "./connection-lock.js";
 import type { LockableConnection } from "./connection-lock.js";
 
 function conn(id: string): LockableConnection {
@@ -44,10 +40,7 @@ test("waiting is bounded so cross-worker cascades cannot deadlock", async () => 
   const releaseB = await acquireConnectionLock(conn2);
 
   const started = Date.now();
-  const [cascadeA, cascadeB] = await Promise.all([
-    acquireConnectionLock(conn2, 50),
-    acquireConnectionLock(conn1, 50),
-  ]);
+  const [cascadeA, cascadeB] = await Promise.all([acquireConnectionLock(conn2, 50), acquireConnectionLock(conn1, 50)]);
   const elapsed = Date.now() - started;
 
   assert.ok(elapsed < 2000, `both cascades should return promptly, took ${elapsed}ms`);

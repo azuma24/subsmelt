@@ -25,16 +25,27 @@ test("enabled without a backend URL warns instead of hiding the picker silently"
 
 test("a configured backend shows run options and the library grouped by folder", () => {
   const page = renderPage(<WhisperPage />, [
-    [["settings"], { transcription_enabled: "1", transcription_backend_url: "http://whisper:8000", _media_dir: "/media" }],
+    [
+      ["settings"],
+      { transcription_enabled: "1", transcription_backend_url: "http://whisper:8000", _media_dir: "/media" },
+    ],
     [["whisper-models"], { models: [{ id: "small", downloaded: true }] }],
-    [["library"], {
-      files: [
-        { videoPath: "/media/Movies/Arrival (2016).mkv", videoName: "Arrival (2016).mkv", videoMtime: 1, subtitles: [] },
-        { videoPath: "/media/Movies/Dune.mkv", videoName: "Dune.mkv", videoMtime: 2, subtitles: [] },
-      ],
-      newJobs: 0,
-      totalSubtitles: 0,
-    }],
+    [
+      ["library"],
+      {
+        files: [
+          {
+            videoPath: "/media/Movies/Arrival (2016).mkv",
+            videoName: "Arrival (2016).mkv",
+            videoMtime: 1,
+            subtitles: [],
+          },
+          { videoPath: "/media/Movies/Dune.mkv", videoName: "Dune.mkv", videoMtime: 2, subtitles: [] },
+        ],
+        newJobs: 0,
+        totalSubtitles: 0,
+      },
+    ],
     emptyHistory,
   ]);
 

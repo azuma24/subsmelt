@@ -1,11 +1,7 @@
 export const MAX_LOG_LIMIT = 500;
 export const MAX_LOG_OFFSET = 1_000_000;
 
-export function parseBoundedNonNegativeInt(
-  value: unknown,
-  fallback: number,
-  max: number,
-): number {
+export function parseBoundedNonNegativeInt(value: unknown, fallback: number, max: number): number {
   if (typeof value !== "string" && typeof value !== "number") return fallback;
   const parsed = typeof value === "number" ? value : Number(value);
   if (!Number.isInteger(parsed) || parsed < 0) return fallback;
@@ -31,7 +27,11 @@ export function parsePositiveIntegerArray(value: unknown): number[] | null {
  * restructure the prompt.
  */
 export function sanitizeLanguageName(value: string): string {
-  return value.replace(/[\r\n\t]+/g, " ").replace(/[{}<>]/g, "").trim().slice(0, 60);
+  return value
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/[{}<>]/g, "")
+    .trim()
+    .slice(0, 60);
 }
 
 export type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -112,9 +112,7 @@ export function parseLogsQuery(query: Record<string, unknown>): Parsed<LogsQuery
       return { ok: false, error: `${key} must be a single value` };
     }
   }
-  const { level, category, job_id, limit, offset } = query as Partial<
-    Record<(typeof LOGS_QUERY_KEYS)[number], string>
-  >;
+  const { level, category, job_id, limit, offset } = query as Partial<Record<(typeof LOGS_QUERY_KEYS)[number], string>>;
   const parsedJobId = job_id === undefined ? NaN : parseInt(job_id, 10);
   return {
     ok: true,

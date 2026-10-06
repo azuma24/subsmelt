@@ -93,8 +93,17 @@ export function MediaSourcesPanel({
 
   useEffect(() => {
     let active = true;
-    api.getTasks().then((data) => { if (active) setTasks(data); }).catch(() => { if (active) setTasks([]); });
-    return () => { active = false; };
+    api
+      .getTasks()
+      .then((data) => {
+        if (active) setTasks(data);
+      })
+      .catch(() => {
+        if (active) setTasks([]);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const rules = useMemo(() => parseDirectoryRules(directoryRules), [directoryRules]);
@@ -103,7 +112,7 @@ export function MediaSourcesPanel({
     const existing = rules.find((r) => r.path === path);
     let next: DirectoryRule[];
     if (existing) {
-      next = rules.map((r) => r.path === path ? { ...r, ...patch } : r);
+      next = rules.map((r) => (r.path === path ? { ...r, ...patch } : r));
     } else {
       const newRule: DirectoryRule = {
         id: createRuleId(),
@@ -125,7 +134,7 @@ export function MediaSourcesPanel({
   const selected = useMemo(() => parseFolders(scanFolders), [scanFolders]);
   const excluded = useMemo(() => parseFolders(scanExcludeFolders), [scanExcludeFolders]);
   const profiles = useMemo(() => parseProfiles(scanProfiles), [scanProfiles]);
-  const allSubfolders = useMemo(() => folderRoot ? flattenFolderTree(folderRoot.children) : [], [folderRoot]);
+  const allSubfolders = useMemo(() => (folderRoot ? flattenFolderTree(folderRoot.children) : []), [folderRoot]);
   const visibleTree = useMemo(() => filterTree(folderRoot?.children || [], folderSearch), [folderRoot, folderSearch]);
   const visibleFolders = useMemo(() => collectNodePaths(visibleTree), [visibleTree]);
 
@@ -178,7 +187,10 @@ export function MediaSourcesPanel({
       scanFolders,
       scanExcludeFolders,
     };
-    const nextProfiles = [...profiles.filter((profile) => profile.name.toLowerCase() !== name.toLowerCase()), nextProfile];
+    const nextProfiles = [
+      ...profiles.filter((profile) => profile.name.toLowerCase() !== name.toLowerCase()),
+      nextProfile,
+    ];
     onScanProfilesChange(serializeProfiles(nextProfiles));
   };
 
@@ -198,12 +210,19 @@ export function MediaSourcesPanel({
     if (allSubfolders.length === 0) return t("settings.sources.summaryNoneDetected", { path: mediaDir });
     if (mode === "recursive") {
       return excluded.length > 0
-        ? t("settings.sources.summaryRecursiveWithExclusions", { count: allSubfolders.length, excluded: excluded.length })
+        ? t("settings.sources.summaryRecursiveWithExclusions", {
+            count: allSubfolders.length,
+            excluded: excluded.length,
+          })
         : t("settings.sources.summaryRecursive", { count: allSubfolders.length });
     }
     if (mode === "root_only") return t("settings.sources.summaryRootOnly", { path: mediaDir });
     if (selected.length === 0) return t("settings.sources.summaryNoneSelected");
-    return t("settings.sources.summaryCustom", { selected: selected.length, excluded: excluded.length, total: allSubfolders.length });
+    return t("settings.sources.summaryCustom", {
+      selected: selected.length,
+      excluded: excluded.length,
+      total: allSubfolders.length,
+    });
   })();
 
   const scanModeOptions = [
@@ -249,14 +268,26 @@ export function MediaSourcesPanel({
           />
           {mode === "selected" && allSubfolders.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={selectVisibleFolders} className="rounded-sm border border-border bg-surface-highlight px-3 py-2 text-xs text-muted hover:text-text">
+              <button
+                type="button"
+                onClick={selectVisibleFolders}
+                className="rounded-sm border border-border bg-surface-highlight px-3 py-2 text-xs text-muted hover:text-text"
+              >
                 {t("settings.sources.selectVisibleFolders")}
               </button>
-              <button type="button" onClick={() => onScanFoldersChange("")} className="rounded-sm border border-border bg-surface-highlight px-3 py-2 text-xs text-muted hover:text-text">
+              <button
+                type="button"
+                onClick={() => onScanFoldersChange("")}
+                className="rounded-sm border border-border bg-surface-highlight px-3 py-2 text-xs text-muted hover:text-text"
+              >
                 {t("settings.sources.clearSelectedFolders")}
               </button>
               {excluded.length > 0 && (
-                <button type="button" onClick={() => onScanExcludeFoldersChange("")} className="rounded-sm border border-border bg-surface-highlight px-3 py-2 text-xs text-muted hover:text-text">
+                <button
+                  type="button"
+                  onClick={() => onScanExcludeFoldersChange("")}
+                  className="rounded-sm border border-border bg-surface-highlight px-3 py-2 text-xs text-muted hover:text-text"
+                >
                   {t("settings.sources.clearExcludedFolders")}
                 </button>
               )}
@@ -271,7 +302,9 @@ export function MediaSourcesPanel({
         ) : visibleTree.length === 0 ? (
           <p className="text-xs text-faint">{t("settings.sources.noFoldersMatch")}</p>
         ) : (
-          <div className={`${isMobile ? "max-h-80" : "max-h-96"} overflow-y-auto rounded-sm border border-border bg-surface p-2`}>
+          <div
+            className={`${isMobile ? "max-h-80" : "max-h-96"} overflow-y-auto rounded-sm border border-border bg-surface p-2`}
+          >
             <FolderTree
               nodes={adaptedRoots}
               mediaDir={mediaDir}
@@ -321,12 +354,7 @@ export function MediaSourcesPanel({
         <div className="mt-1 text-sm text-muted">{summary}</div>
       </div>
 
-      <ScanProfilesSection
-        profiles={profiles}
-        onSave={saveProfile}
-        onLoad={loadProfile}
-        onDelete={deleteProfile}
-      />
+      <ScanProfilesSection profiles={profiles} onSave={saveProfile} onLoad={loadProfile} onDelete={deleteProfile} />
 
       <DirectoryRulesSection
         folders={allSubfolders}

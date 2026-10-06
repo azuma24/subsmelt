@@ -96,7 +96,7 @@ function writeToDB(entry: DbEntry) {
     _db
       .prepare(
         `INSERT INTO logs (timestamp, level, category, message, job_id, meta)
-         VALUES (?, ?, ?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?, ?, ?)`,
       )
       .run(
         entry.timestamp,
@@ -104,7 +104,7 @@ function writeToDB(entry: DbEntry) {
         entry.category,
         entry.message,
         entry.job_id ?? null,
-        entry.meta ? JSON.stringify(entry.meta) : null
+        entry.meta ? JSON.stringify(entry.meta) : null,
       );
   } catch {}
 }
@@ -112,13 +112,7 @@ function writeToDB(entry: DbEntry) {
 type LogLevel = "info" | "warn" | "error";
 type LogCategory = "scan" | "translate" | "queue" | "system" | "youtube";
 
-function log(
-  level: LogLevel,
-  category: LogCategory,
-  message: string,
-  jobId?: number | null,
-  meta?: LogMeta
-) {
+function log(level: LogLevel, category: LogCategory, message: string, jobId?: number | null, meta?: LogMeta) {
   const isoTimestamp = nowISO();
   const localTimestamp = nowLocal();
 

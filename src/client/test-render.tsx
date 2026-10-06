@@ -46,7 +46,14 @@ export interface RenderedPage {
   links: string[];
 }
 
-const ENTITIES: Record<string, string> = { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#x27;": "'", "&nbsp;": " " };
+const ENTITIES: Record<string, string> = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#x27;": "'",
+  "&nbsp;": " ",
+};
 
 function toText(html: string): string {
   return html
@@ -70,14 +77,23 @@ export interface RenderOptions {
   isMobile?: boolean;
 }
 
-export function renderPage(page: ReactElement, seed: QuerySeed = [], { isMobile = false }: RenderOptions = {}): RenderedPage {
+export function renderPage(
+  page: ReactElement,
+  seed: QuerySeed = [],
+  { isMobile = false }: RenderOptions = {},
+): RenderedPage {
   // retryOnMount: false keeps a seeded error from being reported optimistically
   // as "pending" (the observer would otherwise plan a refetch on mount).
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false, staleTime: Infinity } } });
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, retryOnMount: false, staleTime: Infinity } },
+  });
   for (const [key, data] of seed) {
     if (data instanceof SeededError) {
       const error = new Error(data.message);
-      queryClient.getQueryCache().build(queryClient, { queryKey: key }).setState({ status: "error", error, fetchStatus: "idle", errorUpdateCount: 1 });
+      queryClient
+        .getQueryCache()
+        .build(queryClient, { queryKey: key })
+        .setState({ status: "error", error, fetchStatus: "idle", errorUpdateCount: 1 });
     } else {
       queryClient.setQueryData(key, data);
     }

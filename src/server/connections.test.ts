@@ -22,9 +22,7 @@ test("a legacy flat-key install keeps its api_key when the redacted connections 
   });
   const posted = JSON.stringify([{ ...LEGACY_LOCAL, apiKey: REDACTED_SECRET }]);
 
-  assert.deepEqual(JSON.parse(restoreRedactedApiKeys(posted, stored)), [
-    { ...LEGACY_LOCAL, apiKey: "sk-secret-123" },
-  ]);
+  assert.deepEqual(JSON.parse(restoreRedactedApiKeys(posted, stored)), [{ ...LEGACY_LOCAL, apiKey: "sk-secret-123" }]);
 });
 
 test("a redacted connection with no stored key is saved with an empty key, never the marker", () => {
@@ -78,7 +76,10 @@ test("a request about a saved connection gets its key when provider and endpoint
 test("a saved local key is not lent to a different endpoint", () => {
   const request = { connectionId: "local", provider: "local", apiKey: REDACTED_SECRET };
 
-  assert.equal(resolveRequestApiKey({ ...request, endpoint: "http://attacker.example/v1" }, LEGACY_CONNECTIONS), undefined);
+  assert.equal(
+    resolveRequestApiKey({ ...request, endpoint: "http://attacker.example/v1" }, LEGACY_CONNECTIONS),
+    undefined,
+  );
   assert.equal(resolveRequestApiKey({ ...request, endpoint: "http://lm:1234/v1" }, LEGACY_CONNECTIONS), "sk-local");
 });
 

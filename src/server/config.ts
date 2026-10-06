@@ -280,9 +280,8 @@ export function setSetting(key: string, value: string): void {
 // the concurrent-request clobber window of calling setSetting in a loop.
 export function setSettings(patch: Record<string, string>): void {
   const before = preferredChinese();
-  const persistable = "llm_connections" in patch
-    ? { ...patch, llm_connections: persistableConnections(patch.llm_connections) }
-    : patch;
+  const persistable =
+    "llm_connections" in patch ? { ...patch, llm_connections: persistableConnections(patch.llm_connections) } : patch;
   _config.settings = { ..._config.settings, ...persistable };
   // .chi is the preferred script: a switch moves the Chinese tasks now, not at the next start.
   if (preferredChinese() !== before) _config.tasks = standardizeTasks(_config.tasks, preferredChinese());
@@ -322,7 +321,10 @@ const ENV_LOCAL_CONNECTION_FIELDS: Record<string, "endpoint" | "apiKey" | "model
   model: "model",
 };
 
-function mapLocalConnection(json: string, fn: (connection: Record<string, unknown>) => Record<string, unknown>): string {
+function mapLocalConnection(
+  json: string,
+  fn: (connection: Record<string, unknown>) => Record<string, unknown>,
+): string {
   let connections: unknown;
   try {
     connections = JSON.parse(json);
@@ -362,7 +364,10 @@ export function persistableConnections(json: string): string {
   return mapLocalConnection(json, (c) => ({
     ...c,
     ...Object.fromEntries(
-      pinned.map(([key, field]) => [field, storedLocal ? storedLocal[field] : (_config.settings[key] ?? DEFAULT_SETTINGS[key] ?? "")]),
+      pinned.map(([key, field]) => [
+        field,
+        storedLocal ? storedLocal[field] : (_config.settings[key] ?? DEFAULT_SETTINGS[key] ?? ""),
+      ]),
     ),
   }));
 }
@@ -405,7 +410,8 @@ const LANG_CODE_RE = /^[A-Za-z0-9_-]+$/;
 export function validateTaskLangCode(langCode: string, excludeTaskId?: number): string | null {
   if (!LANG_CODE_RE.test(langCode)) return "lang_code must contain only letters, digits, dashes and underscores";
   const duplicate = _config.tasks.some((t) => t.lang_code === langCode && t.id !== excludeTaskId);
-  if (duplicate) return `A task with language code "${langCode}" already exists — two tasks sharing it would write the same output files`;
+  if (duplicate)
+    return `A task with language code "${langCode}" already exists — two tasks sharing it would write the same output files`;
   return null;
 }
 
@@ -441,7 +447,7 @@ export function updateTask(
     lang_code: string;
     enabled: number;
     prompt_override: string;
-  }>
+  }>,
 ): void {
   const task = _config.tasks.find((t) => t.id === id);
   if (!task) return;
@@ -495,9 +501,7 @@ export const ENV_SETTING_OVERRIDES: Record<string, string> = {
 };
 
 /** Settings to seed from `env`, skipping unset and empty values. */
-export function envSettingOverrides(
-  env: Record<string, string | undefined> = process.env,
-): Record<string, string> {
+export function envSettingOverrides(env: Record<string, string | undefined> = process.env): Record<string, string> {
   const overrides: Record<string, string> = {};
   for (const [envKey, settingKey] of Object.entries(ENV_SETTING_OVERRIDES)) {
     const value = env[envKey];
@@ -517,4 +521,3 @@ const envPinnedSettings = envSettingOverrides();
 export function envPinnedSettingKeys(): string[] {
   return Object.keys(envPinnedSettings);
 }
-

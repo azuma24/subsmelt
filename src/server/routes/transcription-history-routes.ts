@@ -56,7 +56,10 @@ export function registerTranscriptionHistoryRoutes(app: Express): void {
         },
         overwrite: attempt.overwrite === true,
       });
-      logger.info("system", `Retried transcription ${path.basename(attempt.inputPath)} → ${result.subtitle_path || "subtitle output"}`);
+      logger.info(
+        "system",
+        `Retried transcription ${path.basename(attempt.inputPath)} → ${result.subtitle_path || "subtitle output"}`,
+      );
 
       let scanResult: Awaited<ReturnType<typeof scanFolder>> | null = null;
       if (attempt.postAction === "transcribe_and_translate") {
@@ -69,7 +72,9 @@ export function registerTranscriptionHistoryRoutes(app: Express): void {
     } catch (error) {
       logger.error("system", `Transcription retry failed: ${errorMessage(error) || error}`);
       // 502 when the backend itself failed/was unreachable; 400 for client errors.
-      return res.status(transcriptionErrorStatus(error)).json({ error: errorMessage(error) || "Transcription retry failed" });
+      return res
+        .status(transcriptionErrorStatus(error))
+        .json({ error: errorMessage(error) || "Transcription retry failed" });
     }
   });
 }

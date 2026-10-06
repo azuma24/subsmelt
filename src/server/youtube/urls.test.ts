@@ -1,6 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isChannelUploads, isPlaylistId, isVideoId, parseChannelInput, parsePlaylistInput, playlistUrl, uploadsPlaylistId, videoUrl } from "./urls.js";
+import {
+  isChannelUploads,
+  isPlaylistId,
+  isVideoId,
+  parseChannelInput,
+  parsePlaylistInput,
+  playlistUrl,
+  uploadsPlaylistId,
+  videoUrl,
+} from "./urls.js";
 
 const LIST = "PL-Smx9IA029hG4XKsjwo6psQhtDfsosa8";
 
@@ -54,11 +63,19 @@ test("parseChannelInput reads a channel id straight from /channel/ links and bar
 });
 
 test("parseChannelInput turns handles and legacy names into a canonical URL to resolve", () => {
-  assert.deepEqual(parseChannelInput("https://www.youtube.com/@LinusTechTips"), { url: "https://www.youtube.com/@LinusTechTips" });
-  assert.deepEqual(parseChannelInput("m.youtube.com/@LinusTechTips/videos"), { url: "https://www.youtube.com/@LinusTechTips" });
+  assert.deepEqual(parseChannelInput("https://www.youtube.com/@LinusTechTips"), {
+    url: "https://www.youtube.com/@LinusTechTips",
+  });
+  assert.deepEqual(parseChannelInput("m.youtube.com/@LinusTechTips/videos"), {
+    url: "https://www.youtube.com/@LinusTechTips",
+  });
   assert.deepEqual(parseChannelInput("@LinusTechTips"), { url: "https://www.youtube.com/@LinusTechTips" });
-  assert.deepEqual(parseChannelInput("https://www.youtube.com/c/LinusTechTips"), { url: "https://www.youtube.com/c/LinusTechTips" });
-  assert.deepEqual(parseChannelInput("https://www.youtube.com/user/LinusTechTips/featured"), { url: "https://www.youtube.com/user/LinusTechTips" });
+  assert.deepEqual(parseChannelInput("https://www.youtube.com/c/LinusTechTips"), {
+    url: "https://www.youtube.com/c/LinusTechTips",
+  });
+  assert.deepEqual(parseChannelInput("https://www.youtube.com/user/LinusTechTips/featured"), {
+    url: "https://www.youtube.com/user/LinusTechTips",
+  });
 });
 
 test("parseChannelInput returns null for anything that is not a YouTube channel", () => {
@@ -78,8 +95,12 @@ test("a channel's uploads playlist is its id with UU for UC", () => {
 });
 
 test("parseChannelInput accepts handles in any script, as typed or percent-encoded", () => {
-  assert.deepEqual(parseChannelInput("https://www.youtube.com/@한국어채널"), { url: "https://www.youtube.com/@%ED%95%9C%EA%B5%AD%EC%96%B4%EC%B1%84%EB%84%90" });
-  assert.deepEqual(parseChannelInput("https://www.youtube.com/@%ED%95%9C%EA%B5%AD%EC%96%B4%EC%B1%84%EB%84%90/videos"), { url: "https://www.youtube.com/@%ED%95%9C%EA%B5%AD%EC%96%B4%EC%B1%84%EB%84%90" });
+  assert.deepEqual(parseChannelInput("https://www.youtube.com/@한국어채널"), {
+    url: "https://www.youtube.com/@%ED%95%9C%EA%B5%AD%EC%96%B4%EC%B1%84%EB%84%90",
+  });
+  assert.deepEqual(parseChannelInput("https://www.youtube.com/@%ED%95%9C%EA%B5%AD%EC%96%B4%EC%B1%84%EB%84%90/videos"), {
+    url: "https://www.youtube.com/@%ED%95%9C%EA%B5%AD%EC%96%B4%EC%B1%84%EB%84%90",
+  });
   assert.deepEqual(parseChannelInput("@李"), { url: "https://www.youtube.com/@%E6%9D%8E" });
   assert.equal(parseChannelInput("https://www.youtube.com/@a b"), null);
 });

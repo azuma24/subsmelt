@@ -1,13 +1,27 @@
 import { generateText } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
-import { getAi, normalizeResult, withAbortTimeout, REQUEST_TIMEOUT_MS, extractUsage, type CloudProvider, type TokenUsage } from "./ai-client.js";
+import {
+  getAi,
+  normalizeResult,
+  withAbortTimeout,
+  REQUEST_TIMEOUT_MS,
+  extractUsage,
+  type CloudProvider,
+  type TokenUsage,
+} from "./ai-client.js";
 import { coerceTranslatedArray, extractJsonFromText } from "./utils.js";
 import { errorMessage } from "../errors.js";
 
 export function isAutomaticSourceLanguage(sourceLang?: string): boolean {
   const normalized = (sourceLang || "").trim().toLowerCase();
-  return !normalized || normalized === "automatic" || normalized === "auto" || normalized === "auto-detect" || normalized === "detect";
+  return (
+    !normalized ||
+    normalized === "automatic" ||
+    normalized === "auto" ||
+    normalized === "auto-detect" ||
+    normalized === "detect"
+  );
 }
 
 // Subtitle text lines can carry inline markup (HTML-like tags in SRT/VTT, ASS
@@ -23,13 +37,23 @@ function targetConventionInstruction(lang: string): string {
     : "";
 }
 
-export function buildTranslationSystemPrompt(opts: { prompt: string; lang: string; sourceLang?: string; additional: string }): string {
+export function buildTranslationSystemPrompt(opts: {
+  prompt: string;
+  lang: string;
+  sourceLang?: string;
+  additional: string;
+}): string {
   const sourceInstruction = isAutomaticSourceLanguage(opts.sourceLang)
     ? "Source subtitle language: detect automatically from the input cues. Translate every subtitle into the target language."
     : `Source subtitle language: ${opts.sourceLang}. Translate every subtitle into the target language.`;
 
   const renderedPrompt = opts.prompt
-    .replaceAll("{{source_lang}}", isAutomaticSourceLanguage(opts.sourceLang) ? "automatically detected" : opts.sourceLang || "automatically detected")
+    .replaceAll(
+      "{{source_lang}}",
+      isAutomaticSourceLanguage(opts.sourceLang)
+        ? "automatically detected"
+        : opts.sourceLang || "automatically detected",
+    )
     .replaceAll("{{lang}}", opts.lang)
     .replaceAll("{{additional}}", opts.additional);
 
@@ -79,7 +103,7 @@ export async function refineChunk(
     requestTimeoutMs?: number;
     /** Fired after each successful generateText with that call's token usage. */
     onUsage?: (u: TokenUsage) => void;
-  }
+  },
 ): Promise<string[] | null> {
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost, provider: opts.provider });
   const timeoutMs = opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
@@ -117,20 +141,23 @@ export async function refineChunk(
         }),
       } as const;
 
-      const result = normalizeResult(await withAbortTimeout((abortSignal) =>
-        generateText({
-          model: ai(opts.model),
-          temperature: opts.temperature,
-          tools,
-          toolChoice: "required",
-          system: systemPrompt + "\nReturn ONLY using the tool, do not include any extra text.",
-          prompt: userPrompt,
-          maxRetries: 0,
-          abortSignal,
-        }),
-        timeoutMs,
-        opts.abortSignal
-      ));
+      const result = normalizeResult(
+        await withAbortTimeout(
+          (abortSignal) =>
+            generateText({
+              model: ai(opts.model),
+              temperature: opts.temperature,
+              tools,
+              toolChoice: "required",
+              system: systemPrompt + "\nReturn ONLY using the tool, do not include any extra text.",
+              prompt: userPrompt,
+              maxRetries: 0,
+              abortSignal,
+            }),
+          timeoutMs,
+          opts.abortSignal,
+        ),
+      );
       reportUsage(result);
 
       const fromTool = accept(toolResult);
@@ -139,18 +166,21 @@ export async function refineChunk(
       if (fromText) return fromText;
     }
 
-    const textResult = normalizeResult(await withAbortTimeout((abortSignal) =>
-      generateText({
-        model: ai(opts.model),
-        temperature: opts.temperature,
-        system: systemPrompt + "\nReturn only a JSON array of strings. No markdown, no prose.",
-        prompt: userPrompt + "\n\nReturn ONLY a JSON array of refined strings, same length and order.",
-        maxRetries: 0,
-        abortSignal,
-      }),
-      timeoutMs,
-      opts.abortSignal
-    ));
+    const textResult = normalizeResult(
+      await withAbortTimeout(
+        (abortSignal) =>
+          generateText({
+            model: ai(opts.model),
+            temperature: opts.temperature,
+            system: systemPrompt + "\nReturn only a JSON array of strings. No markdown, no prose.",
+            prompt: userPrompt + "\n\nReturn ONLY a JSON array of refined strings, same length and order.",
+            maxRetries: 0,
+            abortSignal,
+          }),
+        timeoutMs,
+        opts.abortSignal,
+      ),
+    );
     reportUsage(textResult);
     return accept(coerceTranslatedArray(extractJsonFromText(textResult.text || "")));
   } catch (e) {

@@ -21,7 +21,15 @@ interface PageHeaderProps {
  * an optional second row. Sticky so the actions stay reachable while the
  * body scrolls.
  */
-export function PageHeader({ title, subtitle, actions, middle, children, titleHiddenBelowMd = false, className = "" }: PageHeaderProps) {
+export function PageHeader({
+  title,
+  subtitle,
+  actions,
+  middle,
+  children,
+  titleHiddenBelowMd = false,
+  className = "",
+}: PageHeaderProps) {
   return (
     <header className={`sticky top-0 z-30 shrink-0 border-b border-border bg-surface px-4 py-2 ${className}`}>
       {/* flex-auto, not flex-1: the title keeps its own width, so on a phone
@@ -40,15 +48,41 @@ export function PageHeader({ title, subtitle, actions, middle, children, titleHi
 }
 
 export function EmptyHint({ text, subtext }: { text: string; subtext?: string }) {
-  return <div className="rounded-md border border-dashed border-border bg-surface-raised px-4 py-12 text-center text-sm leading-6 text-muted"><p>{text}</p>{subtext && <p className="mt-2 text-xs leading-6 text-faint">{subtext}</p>}</div>;
+  return (
+    <div className="rounded-md border border-dashed border-border bg-surface-raised px-4 py-12 text-center text-sm leading-6 text-muted">
+      <p>{text}</p>
+      {subtext && <p className="mt-2 text-xs leading-6 text-faint">{subtext}</p>}
+    </div>
+  );
 }
 
 export function DetailCard({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
-  return <div className="rounded-md border border-border bg-surface-raised p-4"><div className="text-xs text-muted">{label}</div><div className={`mt-1 break-all text-sm leading-6 text-text ${mono ? "font-mono" : ""}`}>{value}</div></div>;
+  return (
+    <div className="rounded-md border border-border bg-surface-raised p-4">
+      <div className="text-xs text-muted">{label}</div>
+      <div className={`mt-1 break-all text-sm leading-6 text-text ${mono ? "font-mono" : ""}`}>{value}</div>
+    </div>
+  );
 }
 
-export function SettingsSection({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
-  return <section className="space-y-4 rounded-md border border-border bg-surface p-4"><div><h2 className="text-sm font-semibold text-text">{title}</h2>{description && <p className="mt-1 text-xs leading-6 text-muted">{description}</p>}</div>{children}</section>;
+export function SettingsSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-4 rounded-md border border-border bg-surface p-4">
+      <div>
+        <h2 className="text-sm font-semibold text-text">{title}</h2>
+        {description && <p className="mt-1 text-xs leading-6 text-muted">{description}</p>}
+      </div>
+      {children}
+    </section>
+  );
 }
 
 interface SelectionBarProps {
@@ -64,7 +98,9 @@ export function SelectionBar({ count, children, onClear, clearLabel, summaryLabe
   const isMobile = useIsMobile();
   if (count === 0) return null;
   return (
-    <div className={`border-b border-accent-line bg-accent-soft px-4 py-3 ${isMobile ? "space-y-3" : "flex items-center justify-between gap-3"}`}>
+    <div
+      className={`border-b border-accent-line bg-accent-soft px-4 py-3 ${isMobile ? "space-y-3" : "flex items-center justify-between gap-3"}`}
+    >
       <div>
         <div className="text-sm font-medium text-text leading-6">{summaryLabel}</div>
         {hintLabel && <div className="text-xs text-muted leading-6">{hintLabel}</div>}
@@ -98,7 +134,10 @@ interface TabsProps {
 
 export function Tabs({ tabs, activeKey, onSelect, className = "" }: TabsProps) {
   return (
-    <div role="tablist" className={`inline-flex gap-px overflow-x-auto rounded-sm border border-border bg-surface-raised p-1 ${className}`}>
+    <div
+      role="tablist"
+      className={`inline-flex gap-px overflow-x-auto rounded-sm border border-border bg-surface-raised p-1 ${className}`}
+    >
       {tabs.map((tab) => (
         <button
           key={tab.key}
@@ -108,9 +147,7 @@ export function Tabs({ tabs, activeKey, onSelect, className = "" }: TabsProps) {
           className={`whitespace-nowrap rounded-sm px-3 py-1 min-h-touch text-xs leading-6 transition-colors ${activeKey === tab.key ? "bg-surface-highlight font-medium text-text" : "text-muted hover:text-text"}`}
         >
           {tab.label}
-          {tab.count !== undefined && tab.count > 0 && (
-            <span className="ml-1 text-xs text-faint">{tab.count}</span>
-          )}
+          {tab.count !== undefined && tab.count > 0 && <span className="ml-1 text-xs text-faint">{tab.count}</span>}
         </button>
       ))}
     </div>

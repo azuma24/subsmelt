@@ -26,7 +26,9 @@ export function StatusChips({ counts, active, onSelect }: StatusChipsProps) {
           >
             {filter !== "all" && <span aria-hidden="true" className={`h-2 w-2 rounded-full ${STATUS_DOT[filter]}`} />}
             {t(`library.filter.${filter}`)}
-            <span className={`font-mono text-xs tabular-nums ${selected ? "text-surface" : "text-muted"}`}>{counts[filter]}</span>
+            <span className={`font-mono text-xs tabular-nums ${selected ? "text-surface" : "text-muted"}`}>
+              {counts[filter]}
+            </span>
           </button>
         );
       })}

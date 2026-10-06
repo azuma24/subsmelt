@@ -21,36 +21,43 @@ const videoPath = path.join(mediaDir, "show", "Episode 01.mkv");
 fs.writeFileSync(videoPath, "video", "utf8");
 const secondVideoPath = path.join(mediaDir, "show", "Episode 02.mkv");
 fs.writeFileSync(secondVideoPath, "video", "utf8");
-fs.writeFileSync(path.join(dataDir, "transcription-history.json"), JSON.stringify([{
-  id: "failed-nemotron-run",
-  inputPath: videoPath,
-  outputPath: path.join(mediaDir, "show", "Episode 01.ja.srt"),
-  model: "nemotron-3.5-asr",
-  language: "ja",
-  outputFormat: "srt",
-  postAction: "transcribe_only",
-  status: "failed",
-  startedAt: "2026-09-01T10:00:00.000Z",
-  finishedAt: "2026-09-01T10:00:05.000Z",
-  durationSeconds: null,
-  errorSummary: "Backend unreachable",
-}, {
-  id: "failed-gpu-run",
-  inputPath: secondVideoPath,
-  outputPath: path.join(mediaDir, "show", "Episode 02.srt"),
-  model: "large-v3",
-  language: "auto",
-  outputFormat: "vtt",
-  postAction: "transcribe_only",
-  status: "failed",
-  startedAt: "2026-09-01T11:00:00.000Z",
-  finishedAt: "2026-09-01T11:00:05.000Z",
-  durationSeconds: null,
-  errorSummary: "Backend unreachable",
-  advancedOptions: { beam_size: 8, speaker_diarization: true },
-  device: "cuda",
-  computeType: "float16",
-}]), "utf8");
+fs.writeFileSync(
+  path.join(dataDir, "transcription-history.json"),
+  JSON.stringify([
+    {
+      id: "failed-nemotron-run",
+      inputPath: videoPath,
+      outputPath: path.join(mediaDir, "show", "Episode 01.ja.srt"),
+      model: "nemotron-3.5-asr",
+      language: "ja",
+      outputFormat: "srt",
+      postAction: "transcribe_only",
+      status: "failed",
+      startedAt: "2026-09-01T10:00:00.000Z",
+      finishedAt: "2026-09-01T10:00:05.000Z",
+      durationSeconds: null,
+      errorSummary: "Backend unreachable",
+    },
+    {
+      id: "failed-gpu-run",
+      inputPath: secondVideoPath,
+      outputPath: path.join(mediaDir, "show", "Episode 02.srt"),
+      model: "large-v3",
+      language: "auto",
+      outputFormat: "vtt",
+      postAction: "transcribe_only",
+      status: "failed",
+      startedAt: "2026-09-01T11:00:00.000Z",
+      finishedAt: "2026-09-01T11:00:05.000Z",
+      durationSeconds: null,
+      errorSummary: "Backend unreachable",
+      advancedOptions: { beam_size: 8, speaker_diarization: true },
+      device: "cuda",
+      computeType: "float16",
+    },
+  ]),
+  "utf8",
+);
 
 const { default: express } = await import("express");
 const { setSettings } = await import("../config.js");
@@ -77,7 +84,13 @@ test("retrying a history attempt reuses its model and language, not the current 
       return;
     }
     transcribeBodies.push(JSON.parse(raw));
-    const result = { type: "result", ok: true, subtitle_path: "/srv/show/Episode 01.ja.srt", language: "ja", segments: 3 };
+    const result = {
+      type: "result",
+      ok: true,
+      subtitle_path: "/srv/show/Episode 01.ja.srt",
+      language: "ja",
+      segments: 3,
+    };
     res.writeHead(200, { "Content-Type": "application/x-ndjson" }).end(`${JSON.stringify(result)}\n`);
   });
   backend.listen(0, "127.0.0.1");
@@ -129,8 +142,22 @@ test("retrying replays the attempt's device, compute type, format and advanced o
     const res = await fetch(`${appUrl}/api/transcribe/history/failed-gpu-run/retry`, { method: "POST" });
     assert.equal(res.status, 200);
     assert.deepEqual(
-      transcribeBodies.map(({ model, device, compute_type, output_format, advanced_options }) => ({ model, device, compute_type, output_format, advanced_options })),
-      [{ model: "large-v3", device: "cuda", compute_type: "float16", output_format: "vtt", advanced_options: { beam_size: 8, speaker_diarization: true } }],
+      transcribeBodies.map(({ model, device, compute_type, output_format, advanced_options }) => ({
+        model,
+        device,
+        compute_type,
+        output_format,
+        advanced_options,
+      })),
+      [
+        {
+          model: "large-v3",
+          device: "cuda",
+          compute_type: "float16",
+          output_format: "vtt",
+          advanced_options: { beam_size: 8, speaker_diarization: true },
+        },
+      ],
     );
   } finally {
     backend.closeAllConnections();

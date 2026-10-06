@@ -3,7 +3,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { logger } from "./logger.js";
 import type { TranscriptionAttemptStatus, TranscriptionHistoryEntry } from "../shared/transcription.js";
-import type { TranscribePostAction, TranscriptionAdvancedOptions, TranscriptionOutputFormat, TranscriptionSubtitleQualityOptions } from "./transcription-client.js";
+import type {
+  TranscribePostAction,
+  TranscriptionAdvancedOptions,
+  TranscriptionOutputFormat,
+  TranscriptionSubtitleQualityOptions,
+} from "./transcription-client.js";
 import { errorMessage } from "./errors.js";
 
 const DATA_DIR = process.env.DATA_DIR || "./data";
@@ -50,18 +55,21 @@ function safeJsonParse(raw: string): TranscriptionHistoryEntry[] {
 }
 
 export function summarizeTranscriptionError(error: unknown): string {
-  const raw = typeof error === "string"
-    ? error
-    : error instanceof Error
-      ? errorMessage(error)
-      : String(error ?? "Transcription failed");
+  const raw =
+    typeof error === "string"
+      ? error
+      : error instanceof Error
+        ? errorMessage(error)
+        : String(error ?? "Transcription failed");
 
-  return raw
-    .replace(/[A-Za-z]:\\[^\s"'()]+/g, "[path]")
-    .replace(/(?:\/[^/\s"'()]+)+/g, "[path]")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 240) || "Transcription failed";
+  return (
+    raw
+      .replace(/[A-Za-z]:\\[^\s"'()]+/g, "[path]")
+      .replace(/(?:\/[^/\s"'()]+)+/g, "[path]")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 240) || "Transcription failed"
+  );
 }
 
 export class TranscriptionHistoryStore {
@@ -83,9 +91,7 @@ export class TranscriptionHistoryStore {
 
   private read(): TranscriptionHistoryEntry[] {
     if (this.cache === null) {
-      this.cache = fs.existsSync(this.filePath)
-        ? safeJsonParse(fs.readFileSync(this.filePath, "utf8"))
-        : [];
+      this.cache = fs.existsSync(this.filePath) ? safeJsonParse(fs.readFileSync(this.filePath, "utf8")) : [];
     }
     return this.cache;
   }
@@ -104,9 +110,7 @@ export class TranscriptionHistoryStore {
     // never flush again.
     this.writeChain = this.writeChain
       .then(() => this.flush(json))
-      .catch((error) =>
-        logger.error("system", `History flush failed: ${errorMessage(error) || error}`),
-      );
+      .catch((error) => logger.error("system", `History flush failed: ${errorMessage(error) || error}`));
   }
 
   private flush(json: string): void {
@@ -116,7 +120,9 @@ export class TranscriptionHistoryStore {
       fs.renameSync(tmpPath, this.filePath);
     } catch {
       fs.writeFileSync(this.filePath, json, "utf8");
-      try { fs.unlinkSync(tmpPath); } catch {}
+      try {
+        fs.unlinkSync(tmpPath);
+      } catch {}
     }
   }
 
@@ -259,7 +265,8 @@ export class NoSpeechRegistry {
     if (this.entries === null) {
       try {
         const parsed = JSON.parse(fs.readFileSync(this.filePath, "utf8")) as unknown;
-        this.entries = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, number> : {};
+        this.entries =
+          parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, number>) : {};
       } catch {
         this.entries = {};
       }

@@ -70,7 +70,9 @@ export function TranscriptionHistoryPanel({
           <p className="text-xs text-faint">{t("transcriptionHistory.description")}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <span className="whitespace-nowrap text-xs text-faint">{t("transcriptionHistory.shown", { count: groups.length })}</span>
+          <span className="whitespace-nowrap text-xs text-faint">
+            {t("transcriptionHistory.shown", { count: groups.length })}
+          </span>
           {onRetryAllFailed && failed.length > 0 && (
             <button
               type="button"
@@ -108,7 +110,10 @@ export function TranscriptionHistoryPanel({
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium text-text">{group.title}</div>
                     <div className="mt-1 text-xs text-faint">
-                      {latest.model} • {latest.language} • {latest.outputFormat.toUpperCase()} • {latest.postAction === "transcribe_and_translate" ? t("transcriptionHistory.postQueueTranslate") : t("transcriptionHistory.postTranscribeOnly")}
+                      {latest.model} • {latest.language} • {latest.outputFormat.toUpperCase()} •{" "}
+                      {latest.postAction === "transcribe_and_translate"
+                        ? t("transcriptionHistory.postQueueTranslate")
+                        : t("transcriptionHistory.postTranscribeOnly")}
                     </div>
                     {latest.status === "failed" ? (
                       (() => {
@@ -165,7 +170,9 @@ export function TranscriptionHistoryPanel({
                         // Removing the group clears every attempt for this file —
                         // leaving the older ones would rebuild the pile it replaced.
                         onClick={() => group.attempts.forEach((entry) => onRemove(entry))}
-                        disabled={group.attempts.some((entry) => entry.id === removingId) || latest.status === "running"}
+                        disabled={
+                          group.attempts.some((entry) => entry.id === removingId) || latest.status === "running"
+                        }
                         title={t("transcriptionHistory.remove")}
                         aria-label={t("transcriptionHistory.remove")}
                         className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-xs font-medium text-faint disabled:opacity-40"
@@ -183,7 +190,9 @@ export function TranscriptionHistoryPanel({
                           {relativeTime(entry.finishedAt || entry.startedAt)}
                           {entry.errorSummary ? ` — ${entry.errorSummary}` : ""}
                         </span>
-                        <span className={`shrink-0 rounded-full border px-2 py-1 ${statusClasses(entry.status)}`}>{statusLabel(entry.status)}</span>
+                        <span className={`shrink-0 rounded-full border px-2 py-1 ${statusClasses(entry.status)}`}>
+                          {statusLabel(entry.status)}
+                        </span>
                       </li>
                     ))}
                   </ul>

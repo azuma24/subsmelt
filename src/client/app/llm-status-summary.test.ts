@@ -24,10 +24,13 @@ const summary = (status: LlmStatus | undefined, failed = false) => {
 };
 
 test("idle pools name the mode and count, or the one connection's label and model", () => {
-  assert.deepEqual(summary({ mode: "fallback", connections: [conn("a", "idle"), conn("b", "idle"), conn("c", "idle")] }), {
-    tone: "ok",
-    text: "LLM · Fallback · 3\u00a0connections",
-  });
+  assert.deepEqual(
+    summary({ mode: "fallback", connections: [conn("a", "idle"), conn("b", "idle"), conn("c", "idle")] }),
+    {
+      tone: "ok",
+      text: "LLM · Fallback · 3\u00a0connections",
+    },
+  );
   assert.deepEqual(summary({ mode: "single", connections: [conn("a", "idle")] }), {
     tone: "ok",
     text: "LLM · Box a · model-a",
@@ -35,15 +38,22 @@ test("idle pools name the mode and count, or the one connection's label and mode
 });
 
 test("a busy pool names the connection translating, or how many are busy", () => {
-  assert.equal(summary({ mode: "fallback", connections: [conn("a", "offline"), conn("b", "in_use", [7])] }).text, "Translating on Box b");
   assert.equal(
-    summary({ mode: "parallel", connections: [conn("a", "in_use", [1]), conn("b", "in_use", [2]), conn("c", "idle")] }).text,
+    summary({ mode: "fallback", connections: [conn("a", "offline"), conn("b", "in_use", [7])] }).text,
+    "Translating on Box b",
+  );
+  assert.equal(
+    summary({ mode: "parallel", connections: [conn("a", "in_use", [1]), conn("b", "in_use", [2]), conn("c", "idle")] })
+      .text,
     "2 of 3 busy",
   );
 });
 
 test("the dot turns yellow when some connections are offline and red when all are", () => {
-  assert.equal(summary({ mode: "fallback", connections: [conn("a", "in_use", [1]), conn("b", "offline")] }).tone, "warn");
+  assert.equal(
+    summary({ mode: "fallback", connections: [conn("a", "in_use", [1]), conn("b", "offline")] }).tone,
+    "warn",
+  );
   assert.equal(summary({ mode: "fallback", connections: [conn("a", "offline"), conn("b", "offline")] }).tone, "down");
   // An unchecked connection neither confirms nor contradicts the rest.
   assert.equal(summary({ mode: "fallback", connections: [conn("a", "idle"), conn("b", "unknown")] }).tone, "ok");
@@ -51,7 +61,11 @@ test("the dot turns yellow when some connections are offline and red when all ar
 });
 
 test("offline connections are spelled out, so the state is not color alone", () => {
-  const { detail } = summarizeLlmStatus({ mode: "fallback", connections: [conn("a", "idle"), conn("b", "offline")] }, false, t);
+  const { detail } = summarizeLlmStatus(
+    { mode: "fallback", connections: [conn("a", "idle"), conn("b", "offline")] },
+    false,
+    t,
+  );
   assert.equal(detail, "1 offline");
   assert.equal(summarizeLlmStatus({ mode: "single", connections: [conn("a", "idle")] }, false, t).detail, "");
 });

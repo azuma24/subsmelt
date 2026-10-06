@@ -59,8 +59,7 @@ export function readSubtitleFileText(filePath: string): string {
   try {
     const detected = jschardet.detect(buffer);
     const encoding = (detected?.encoding || "").toLowerCase();
-    const isUtf8OrAscii =
-      encoding === "" || encoding === "utf-8" || encoding === "utf8" || encoding === "ascii";
+    const isUtf8OrAscii = encoding === "" || encoding === "utf-8" || encoding === "utf8" || encoding === "ascii";
     if (!isUtf8OrAscii && iconv.encodingExists(encoding)) {
       return iconv.decode(buffer, encoding);
     }

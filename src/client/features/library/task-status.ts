@@ -16,7 +16,10 @@ export function getTaskStatus(task: TaskStatus, jobsById: Map<number, Job>): str
  * another subtitle of the video owns the output. The first is a finished
  * language and reads "Already translated"; only the second is a real skip.
  */
-export function languageStatusDisplay(task: TaskStatus, status: string): { labelKey: string | undefined; icon: IconName | undefined } {
+export function languageStatusDisplay(
+  task: TaskStatus,
+  status: string,
+): { labelKey: string | undefined; icon: IconName | undefined } {
   if (status === "skipped" && (task.jobId !== null || task.outputExists === true))
     return { labelKey: "library.panel.alreadyTranslated", icon: STATUS_ICON.done };
   return { labelKey: STATUS_LABEL_KEY[status], icon: STATUS_ICON[status] };
@@ -74,9 +77,7 @@ export function withQueuedTask(files: ScannedFile[], srtPath: string, task: Task
     return {
       ...file,
       subtitles: file.subtitles.map((sub) =>
-        sub.srtPath === srtPath
-          ? { ...sub, tasks: [...sub.tasks.filter((t) => t.taskId !== task.taskId), task] }
-          : sub,
+        sub.srtPath === srtPath ? { ...sub, tasks: [...sub.tasks.filter((t) => t.taskId !== task.taskId), task] } : sub,
       ),
     };
   });

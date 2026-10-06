@@ -15,19 +15,26 @@ export function InterfaceSection() {
   const { t, i18n } = useTranslation();
   const [themePref, setThemePrefState] = useState<ThemePref>(getThemePref());
   const [fontScale, setFontScaleState] = useState<number>(getFontScale());
-  const currentLanguage = LANGUAGES.find((lang) => i18n.language === lang.code || i18n.language.startsWith(`${lang.code}-`))?.code || "en";
+  const currentLanguage =
+    LANGUAGES.find((lang) => i18n.language === lang.code || i18n.language.startsWith(`${lang.code}-`))?.code || "en";
 
   return (
     <div className="space-y-4">
       <div className="md:max-w-[240px]">
         <label className={labelCls}>{t("settings.interface.theme")}</label>
-        <Select ariaLabel={t("settings.interface.theme")} value={themePref} onChange={(value) => {
+        <Select
+          ariaLabel={t("settings.interface.theme")}
+          value={themePref}
+          onChange={(value) => {
             const next = value as ThemePref;
             setThemePrefState(next);
             setThemePref(next);
-          }}>
+          }}
+        >
           {THEME_PREFS.map((pref) => (
-            <option key={pref} value={pref}>{t(`settings.interface.theme_${pref}`)}</option>
+            <option key={pref} value={pref}>
+              {t(`settings.interface.theme_${pref}`)}
+            </option>
           ))}
         </Select>
         <p className="mt-1 text-xs text-faint">{t("settings.interface.themeHint")}</p>
@@ -68,9 +75,15 @@ export function InterfaceSection() {
       </div>
       <div className="md:max-w-[240px]">
         <label className={labelCls}>{t("settings.interface.language")}</label>
-        <Select ariaLabel={t("settings.interface.language")} value={currentLanguage} onChange={(value) => i18n.changeLanguage(value)}>
+        <Select
+          ariaLabel={t("settings.interface.language")}
+          value={currentLanguage}
+          onChange={(value) => i18n.changeLanguage(value)}
+        >
           {LANGUAGES.map((lang) => (
-            <option key={lang.code} value={lang.code}>{lang.label}</option>
+            <option key={lang.code} value={lang.code}>
+              {lang.label}
+            </option>
           ))}
         </Select>
         <p className="mt-1 text-xs text-faint">{t("settings.interface.languageHint")}</p>

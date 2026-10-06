@@ -128,7 +128,10 @@ export function coerceSingleTranslation(parsed: unknown, rawText: string): strin
 export function extractFinalAnswerFromReasoning(reasoning: string): string | null {
   if (!reasoning || reasoning.length < 2) return null;
 
-  const lines = reasoning.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = reasoning
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
   // A leading "-" is also the subtitle dialogue dash, so on its own it is no
   // evidence of a trace; it only counts as a meta line once a trace is detected.
   if (!lines.some((line) => isReasoningMetaLine(line) && !line.startsWith("-"))) return null;

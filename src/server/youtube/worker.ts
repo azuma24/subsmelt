@@ -10,12 +10,24 @@ import { getTranscriptionBackendUrl, runTranscriptionAttempt } from "../routes/t
 import { MEDIA_DIR } from "../scanner.js";
 import { broadcast } from "../sse.js";
 import { fetchAddedDates } from "./data-api.js";
-import { downloadVideo, findDownloadedMedia, tidyPlaylistFolder, upcomingRetryAt, type DownloadResult } from "./download.js";
+import {
+  downloadVideo,
+  findDownloadedMedia,
+  tidyPlaylistFolder,
+  upcomingRetryAt,
+  type DownloadResult,
+} from "./download.js";
 import { findPlaylist, readPlaylists, savePlaylist, type YoutubePlaylist } from "./playlists.js";
 import type { Cooldown, CooldownCause, VideoRow, YoutubeStore } from "./store.js";
 import { fetchCaptionWithYtdlp, produceSubtitles, type TranscribeRequest, type TranscribeResult } from "./subtitles.js";
 import { exportNoteForVideo } from "./note-export.js";
-import { exactUploadDateWithYtdlp, listFollowedWithYtdlp, syncPlaylist, type SyncDeps, type SyncResult } from "./sync.js";
+import {
+  exactUploadDateWithYtdlp,
+  listFollowedWithYtdlp,
+  syncPlaylist,
+  type SyncDeps,
+  type SyncResult,
+} from "./sync.js";
 import type { VideoStatus } from "./video-status.js";
 import { classifyYtdlpError, youtubeTmpRoot, type YtdlpErrorClass } from "./ytdlp.js";
 import { errorMessage } from "../errors.js";
@@ -139,7 +151,10 @@ export function transcriptionReady(settings = getAllSettings()): boolean {
 }
 
 /** Whisper through the app's own transcription path, with at least the video's length as its timeout. */
-export async function transcribeWithWhisper(req: TranscribeRequest, onProgress: (pct: number) => void): Promise<TranscribeResult> {
+export async function transcribeWithWhisper(
+  req: TranscribeRequest,
+  onProgress: (pct: number) => void,
+): Promise<TranscribeResult> {
   const settings = getAllSettings();
   if (!transcriptionReady(settings)) throw new NotYetError("Transcription waits for a backend");
   const timeoutS = Math.max(Number.parseInt(settings.transcription_request_timeout_s, 10) || 1800, req.durationS ?? 0);
@@ -151,7 +166,11 @@ export async function transcribeWithWhisper(req: TranscribeRequest, onProgress: 
     settings: { ...settings, transcription_request_timeout_s: String(timeoutS) },
     onProgress,
   });
-  return { outputPath, model, language: typeof result.language === "string" && result.language ? result.language : null };
+  return {
+    outputPath,
+    model,
+    language: typeof result.language === "string" && result.language ? result.language : null,
+  };
 }
 
 export interface ReconcileResult {
@@ -180,7 +199,10 @@ export class YoutubeWorker {
   private stopped = false;
   private timer: ReturnType<typeof setInterval> | null = null;
 
-  constructor(private readonly store: YoutubeStore, options: WorkerOptions = {}) {
+  constructor(
+    private readonly store: YoutubeStore,
+    options: WorkerOptions = {},
+  ) {
     this.now = options.now ?? (() => new Date());
     this.announce = options.announce ?? broadcast;
     this.transcribe = options.transcribe ?? transcribeWithWhisper;
@@ -189,7 +211,8 @@ export class YoutubeWorker {
 
   start(): void {
     const { requeued, adopted } = this.reconcile();
-    if (requeued || adopted) logger.info("youtube", `Boot: ${requeued} interrupted download(s) queued again, ${adopted} already on disk`);
+    if (requeued || adopted)
+      logger.info("youtube", `Boot: ${requeued} interrupted download(s) queued again, ${adopted} already on disk`);
     setYoutubeBacklogSource(() => this.whisperBacklog());
     this.tick();
     this.timer = setInterval(() => this.tick(), TICK_MS);
@@ -260,11 +283,12 @@ export class YoutubeWorker {
     const live = liveSyncDeps();
     return {
       ...live,
-      listPlaylist: (id) => this.metadataCall(() => {
-        // Re-read when the lane reaches us: the playlist may have been unfollowed while queued.
-        if (!findPlaylist(id)) throw new PlaylistGoneError(id);
-        return live.listPlaylist(id);
-      }),
+      listPlaylist: (id) =>
+        this.metadataCall(() => {
+          // Re-read when the lane reaches us: the playlist may have been unfollowed while queued.
+          if (!findPlaylist(id)) throw new PlaylistGoneError(id);
+          return live.listPlaylist(id);
+        }),
       exactUploadDate: (videoId) => this.metadataCall(() => live.exactUploadDate(videoId)),
     };
   }
@@ -378,8 +402,8 @@ export class YoutubeWorker {
   /** Videos that will still need Whisper. Queued ones wait out a cooldown and do not count during it. */
   whisperBacklog(): number {
     const totals = this.store.statusTotals();
-    const queued = this.activeCooldown() ? 0 : totals.queued ?? 0;
-    const transcribing = transcriptionReady() ? totals.transcribing ?? 0 : 0;
+    const queued = this.activeCooldown() ? 0 : (totals.queued ?? 0);
+    const transcribing = transcriptionReady() ? (totals.transcribing ?? 0) : 0;
     return queued + (totals.downloading ?? 0) + transcribing;
   }
 
@@ -393,38 +417,49 @@ export class YoutubeWorker {
   private async subtitleNext(): Promise<boolean> {
     if (this.stopped) return false;
     const nowIso = this.now().toISOString();
-    const video = this.store.videosInStatus("transcribing").find((v) => v.media_path && (!v.retry_after || v.retry_after <= nowIso));
+    const video = this.store
+      .videosInStatus("transcribing")
+      .find((v) => v.media_path && (!v.retry_after || v.retry_after <= nowIso));
     if (!video) return false;
     const playlist = findPlaylist(video.playlist_id);
     const mediaPath = path.join(MEDIA_DIR, video.media_path!);
     const report = this.progressReporter(video, "transcribing");
     let askedYoutube = false;
     try {
-      const result = await produceSubtitles({
-        videoId: video.video_id,
-        mediaPath,
-        durationS: video.duration_s,
-        knownTranscript: video.subtitle_path ? path.join(MEDIA_DIR, video.subtitle_path) : null,
-        playlist,
-      }, {
-        fetchCaption: (videoId, lang, dest) => {
-          askedYoutube = true;
-          return this.videoCall(() => fetchCaptionWithYtdlp(videoId, lang, dest, path.join(youtubeTmpRoot(), `${videoId}-captions`)));
+      const result = await produceSubtitles(
+        {
+          videoId: video.video_id,
+          mediaPath,
+          durationS: video.duration_s,
+          knownTranscript: video.subtitle_path ? path.join(MEDIA_DIR, video.subtitle_path) : null,
+          playlist,
         },
-        onCaptionError: (lang, error) => {
-          // YouTube pushed back, now or on an earlier call: the captions are still worth waiting for.
-          const cooldown = this.activeCooldown();
-          if (cooldown) throw new NotYetError(new CooldownError(cooldown).message);
-          logger.warn("youtube", `Captions ${lang} of ${video.video_id} could not be fetched: ${message(error)}`);
+        {
+          fetchCaption: (videoId, lang, dest) => {
+            askedYoutube = true;
+            return this.videoCall(() =>
+              fetchCaptionWithYtdlp(videoId, lang, dest, path.join(youtubeTmpRoot(), `${videoId}-captions`)),
+            );
+          },
+          onCaptionError: (lang, error) => {
+            // YouTube pushed back, now or on an earlier call: the captions are still worth waiting for.
+            const cooldown = this.activeCooldown();
+            if (cooldown) throw new NotYetError(new CooldownError(cooldown).message);
+            logger.warn("youtube", `Captions ${lang} of ${video.video_id} could not be fetched: ${message(error)}`);
+          },
+          transcribe: (req) => {
+            if (!transcriptionMayStart(gpuShared(), this.queue.running()))
+              throw new NotYetError("Transcription waits for the translation batch to finish");
+            return this.transcribe(req, report);
+          },
         },
-        transcribe: (req) => {
-          if (!transcriptionMayStart(gpuShared(), this.queue.running())) throw new NotYetError("Transcription waits for the translation batch to finish");
-          return this.transcribe(req, report);
-        },
-      });
+      );
       this.progress.delete(video.video_id);
       const subtitlePath = path.relative(MEDIA_DIR, result.transcriptPath).split(path.sep).join("/");
-      const subtitlePlan = { spoken: result.spoken, routes: result.routes.map(({ taskId, kind }) => ({ taskId, kind })) };
+      const subtitlePlan = {
+        spoken: result.spoken,
+        routes: result.routes.map(({ taskId, kind }) => ({ taskId, kind })),
+      };
       this.move(video, "translating", {
         now: this.now().toISOString(),
         attempts: 0,
@@ -432,7 +467,10 @@ export class YoutubeWorker {
         subtitlePlan,
         ...(result.transcriptSource ? { transcriptSource: result.transcriptSource } : {}),
       });
-      logger.info("youtube", `Subtitles of ${video.title}: transcript from ${result.transcriptSource ?? "an earlier run"}, ${result.routes.map((r) => r.kind).join(", ") || "no other languages"}`);
+      logger.info(
+        "youtube",
+        `Subtitles of ${video.title}: transcript from ${result.transcriptSource ?? "an earlier run"}, ${result.routes.map((r) => r.kind).join(", ") || "no other languages"}`,
+      );
       if (result.jobsCreated > 0) this.queue.start();
       await this.finishTranslated();
       this.queue.startHeld();
@@ -455,10 +493,12 @@ export class YoutubeWorker {
   private notYet(video: VideoRow, reason: string, askedYoutube: boolean): void {
     const now = this.now();
     const cooldown = this.activeCooldown();
-    const retryAfter = cooldown?.until ?? new Date(now.getTime() + (askedYoutube ? NOT_YET_AFTER_YOUTUBE_MS : NOT_YET_MS)).toISOString();
+    const retryAfter =
+      cooldown?.until ?? new Date(now.getTime() + (askedYoutube ? NOT_YET_AFTER_YOUTUBE_MS : NOT_YET_MS)).toISOString();
     const row = this.store.setStatus(video.video_id, "transcribing", { now: now.toISOString(), reason, retryAfter });
     // Every waiting video comes round every two minutes; only a new reason is news.
-    if (video.reason !== reason) this.announce("youtube:video", { videoId: row.video_id, playlistId: row.playlist_id, status: row.status });
+    if (video.reason !== reason)
+      this.announce("youtube:video", { videoId: row.video_id, playlistId: row.playlist_id, status: row.status });
   }
 
   private async syncAndAnnounce(playlist: YoutubePlaylist, firstSync: boolean): Promise<SyncResult> {
@@ -475,7 +515,10 @@ export class YoutubeWorker {
       if (!current) this.store.deleteSyncState(playlist.id);
       else if (result.title && current.title !== result.title) savePlaylist({ ...current, title: result.title });
       const { lastCheckedAt } = this.store.getSyncState(playlist.id);
-      logger.info("youtube", `Checked playlist ${result.title}: ${result.total} listed, ${result.added} new, ${result.removed} removed`);
+      logger.info(
+        "youtube",
+        `Checked playlist ${result.title}: ${result.total} listed, ${result.added} new, ${result.removed} removed`,
+      );
       this.announce("youtube:playlist", { playlistId: playlist.id, lastCheckedAt });
       this.kick();
       return result;
@@ -485,7 +528,11 @@ export class YoutubeWorker {
         throw error;
       }
       logger.error("youtube", `Checking playlist ${playlist.title} failed: ${message(error)}`);
-      this.announce("youtube:playlist", { playlistId: playlist.id, lastCheckedAt: this.store.getSyncState(playlist.id).lastCheckedAt, error: message(error) });
+      this.announce("youtube:playlist", {
+        playlistId: playlist.id,
+        lastCheckedAt: this.store.getSyncState(playlist.id).lastCheckedAt,
+        error: message(error),
+      });
       throw error;
     }
   }
@@ -546,7 +593,10 @@ export class YoutubeWorker {
     if (this.activeCooldown()) return false;
 
     const playlists = readPlaylists();
-    const video = this.store.nextQueued(playlists.map((p) => p.id), nowIso);
+    const video = this.store.nextQueued(
+      playlists.map((p) => p.id),
+      nowIso,
+    );
     if (!video) return false;
     const playlist = playlists.find((p) => p.id === video.playlist_id)!;
     const folder = playlistFolder(playlist);
@@ -590,7 +640,12 @@ export class YoutubeWorker {
     };
   }
 
-  private settle(video: VideoRow, folder: PlaylistFolder, result: DownloadResult, cooldownBefore: Cooldown | null): void {
+  private settle(
+    video: VideoRow,
+    folder: PlaylistFolder,
+    result: DownloadResult,
+    cooldownBefore: Cooldown | null,
+  ): void {
     const nowIso = this.now().toISOString();
     if (result.ok) {
       this.store.updateMetadata(video.video_id, result.meta, nowIso);

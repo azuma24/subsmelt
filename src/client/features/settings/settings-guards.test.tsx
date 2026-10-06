@@ -9,7 +9,11 @@ const noop = () => {};
 
 test("an unreadable config.json shows what happened, where the copy is, and how to replace it", () => {
   const failure = configLoadFailureOf({
-    _config_load_error: { file: "/config/config.json", backup: "/config/config.json.broken-2026", message: "Unexpected end of JSON input" },
+    _config_load_error: {
+      file: "/config/config.json",
+      backup: "/config/config.json.broken-2026",
+      message: "Unexpected end of JSON input",
+    },
   });
   assert.ok(failure);
   const page = renderPage(<ConfigLoadErrorBanner failure={failure} />);
@@ -25,7 +29,16 @@ test("connection fields an environment variable sets are read-only and say which
   const settings = {
     _env_pinned: ["llm_endpoint", "api_key"],
     llm_connections: JSON.stringify([
-      { id: "local", label: "Local", provider: "local", apiKey: REDACTED_SECRET, model: "qwen", endpoint: "http://env-llm:1/v1", enabled: true, order: 0 },
+      {
+        id: "local",
+        label: "Local",
+        provider: "local",
+        apiKey: REDACTED_SECRET,
+        model: "qwen",
+        endpoint: "http://env-llm:1/v1",
+        enabled: true,
+        order: 0,
+      },
     ]),
   };
   const page = renderPage(<ConnectionsPanel settings={settings} update={noop} addToast={noop} />);

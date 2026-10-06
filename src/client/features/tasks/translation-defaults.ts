@@ -47,7 +47,7 @@ export function applyOutputFormat(pattern: string | undefined, format: OutputFor
   return `${base}.${format}`;
 }
 
-export function createDefaultTranslationDraft(preset?: typeof PRESETS[number]): Partial<Task> {
+export function createDefaultTranslationDraft(preset?: (typeof PRESETS)[number]): Partial<Task> {
   const output_pattern = preset?.output_pattern || DEFAULT_OUTPUT_PATTERN;
   return {
     source_lang: AUTO_SOURCE_LANG,
