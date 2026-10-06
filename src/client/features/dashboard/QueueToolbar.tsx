@@ -64,7 +64,7 @@ export function QueueToolbar({
   if (!showTabs && !showQueueControls) return null;
 
   return (
-    <div className="space-y-3 border-b border-[var(--border)] px-4 py-3">
+    <div className="space-y-3 border-b border-border px-4 py-3">
       {/* One tab row only. The page heading in the topbar already names this
           screen, so the section title/subtitle that used to sit here was pure
           repetition and pushed the table further down. */}
@@ -117,22 +117,22 @@ export function QueueToolbar({
           <Accordion title={t("dashboard.filtersLabel")} defaultOpen={hasQueueFilters}>
             <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
               <label className="min-w-0">
-                <span className="mb-1 block text-xs uppercase tracking-wide text-[var(--text-3)]">{t("dashboard.queueFilterFolder")}</span>
+                <span className="mb-1 block text-xs uppercase tracking-wide text-faint">{t("dashboard.queueFilterFolder")}</span>
                 <select
                   value={folderFilter}
                   onChange={(e) => onFolderFilterChange(e.target.value)}
-                  className="w-full rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text)]"
+                  className="w-full rounded-sm border border-border bg-surface-raised px-3 py-2 text-xs text-text"
                 >
                   <option value="all">{t("dashboard.queueFilterAllFolders")}</option>
                   {folderOptions.map((folder) => <option key={folder} value={folder}>{folder}</option>)}
                 </select>
               </label>
               <label className="min-w-0">
-                <span className="mb-1 block text-xs uppercase tracking-wide text-[var(--text-3)]">{t("dashboard.queueFilterTarget")}</span>
+                <span className="mb-1 block text-xs uppercase tracking-wide text-faint">{t("dashboard.queueFilterTarget")}</span>
                 <select
                   value={targetFilter}
                   onChange={(e) => onTargetFilterChange(e.target.value)}
-                  className="w-full rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text)]"
+                  className="w-full rounded-sm border border-border bg-surface-raised px-3 py-2 text-xs text-text"
                 >
                   <option value="all">{t("dashboard.queueFilterAllTargets")}</option>
                   {targetOptions.map((target) => <option key={target} value={target}>{target}</option>)}

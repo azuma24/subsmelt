@@ -59,7 +59,7 @@ function Field({ label, htmlFor, children, className = "" }: { label: string; ht
   );
 }
 
-const hintCls = "text-xs leading-5 text-[var(--text-3)]";
+const hintCls = "text-xs leading-5 text-faint";
 const selectCls = `${FORM_CONTROL_CLS} min-h-touch`;
 
 export function FollowPlaylistDialog({ playlist, kind: newKind = "playlist", tasks, hasApiKey, folderRoot, onClose, onOpenSettings, onSaved }: FollowPlaylistDialogProps) {
@@ -198,13 +198,13 @@ export function FollowPlaylistDialog({ playlist, kind: newKind = "playlist", tas
       onClose={onClose}
       labelledBy={ids.title}
       overlayClassName="fixed inset-0 z-50 flex items-stretch justify-center bg-scrim md:items-center md:p-6"
-      panelClassName="flex w-full flex-col overflow-hidden bg-[var(--surface)] outline-none md:max-h-[90dvh] md:max-w-[640px] md:rounded-md md:border md:border-[var(--border)]"
+      panelClassName="flex w-full flex-col overflow-hidden bg-surface outline-hidden md:max-h-[90dvh] md:max-w-[640px] md:rounded-md md:border md:border-border"
     >
-      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-[var(--border)] px-4">
-        <h3 id={ids.title} className="text-base font-semibold text-[var(--text)]">
+      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-border px-4">
+        <h3 id={ids.title} className="text-base font-semibold text-text">
           {playlist ? t("youtube.dialog.editTitle", { title: playlist.title }) : say("title")}
         </h3>
-        <button type="button" onClick={onClose} aria-label={t("common.close")} className="flex h-11 w-11 items-center justify-center rounded-sm text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]">✕</button>
+        <button type="button" onClick={onClose} aria-label={t("common.close")} className="flex h-11 w-11 items-center justify-center rounded-sm text-muted hover:bg-surface-raised hover:text-text">✕</button>
       </div>
 
       <form id={`${ids.title}-form`} onSubmit={submit} className="flex-1 space-y-6 overflow-y-auto px-4 py-4">
@@ -228,7 +228,7 @@ export function FollowPlaylistDialog({ playlist, kind: newKind = "playlist", tas
                 }
               }}
               placeholder={isChannel ? "https://www.youtube.com/@…" : "https://www.youtube.com/playlist?list=…"}
-              className={`${FORM_CONTROL_CLS} min-h-touch min-w-0 flex-1 ${editing ? "text-[var(--text-2)]" : ""}`}
+              className={`${FORM_CONTROL_CLS} min-h-touch min-w-0 flex-1 ${editing ? "text-muted" : ""}`}
             />
             {!editing && (
               <ActionButton variant="ghost" onClick={() => void lookUp()} disabled={!url.trim()} busy={lookingUp}>
@@ -237,13 +237,13 @@ export function FollowPlaylistDialog({ playlist, kind: newKind = "playlist", tas
             )}
           </div>
           {!editing && <p className={`mt-1 ${hintCls}`}>{say("linkHint")}</p>}
-          {lookupError && <p role="alert" className="mt-1 text-xs leading-5 text-[var(--red)]"><span aria-hidden="true">✕ </span>{lookupError}</p>}
+          {lookupError && <p role="alert" className="mt-1 text-xs leading-5 text-danger"><span aria-hidden="true">✕ </span>{lookupError}</p>}
         </div>
 
         {preview && (
-          <div className={`flex gap-3 rounded-md border px-4 py-3 ${preview.followed ? "border-[var(--yellow-border)] bg-[var(--yellow-dim)]" : "border-[var(--green-border)] bg-[var(--green-dim)]"}`}>
-            <span aria-hidden="true" className={preview.followed ? "text-[var(--yellow)]" : "text-[var(--green)]"}>{preview.followed ? "!" : "✓"}</span>
-            <div className="min-w-0 text-sm leading-6 text-[var(--text)]">
+          <div className={`flex gap-3 rounded-md border px-4 py-3 ${preview.followed ? "border-warning-line bg-warning-soft" : "border-success-line bg-success-soft"}`}>
+            <span aria-hidden="true" className={preview.followed ? "text-warning" : "text-success"}>{preview.followed ? "!" : "✓"}</span>
+            <div className="min-w-0 text-sm leading-6 text-text">
               <b className="font-semibold">{preview.title}</b>
               {[availabilityLabel(preview.availability, t), preview.channel && preview.channel !== preview.title ? t("youtube.dialog.by", { channel: preview.channel }) : null].filter(Boolean).map((part) => ` · ${part}`)}
               <p className={hintCls}>
@@ -301,10 +301,10 @@ export function FollowPlaylistDialog({ playlist, kind: newKind = "playlist", tas
             <span id={ids.include} className={FORM_LABEL_CLS}>{t("youtube.dialog.channel.include")}</span>
             <div role="group" aria-labelledby={ids.include} className="flex flex-wrap gap-2">
               {INCLUDE_KINDS.map(([key, kind]) => (
-                <label key={key} className="flex min-h-touch cursor-pointer items-center gap-2 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text)] has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent-dim)]">
-                  <input type="checkbox" checked={include[key]} onChange={(e) => setInclude({ ...include, [key]: e.target.checked })} className="accent-[var(--accent)]" />
+                <label key={key} className="flex min-h-touch cursor-pointer items-center gap-2 rounded-sm border border-border bg-surface-raised px-3 text-sm text-text has-[:checked]:border-accent has-[:checked]:bg-accent-soft">
+                  <input type="checkbox" checked={include[key]} onChange={(e) => setInclude({ ...include, [key]: e.target.checked })} className="accent-accent" />
                   {t(`youtube.dialog.channel.${key}`)}
-                  {(preview || editing) && <span className="tabular-nums text-[var(--text-3)]">{kindCount(kind)}</span>}
+                  {(preview || editing) && <span className="tabular-nums text-faint">{kindCount(kind)}</span>}
                 </label>
               ))}
             </div>
@@ -341,25 +341,25 @@ export function FollowPlaylistDialog({ playlist, kind: newKind = "playlist", tas
           {!hasApiKey && offerAdded && (
             <p className={hintCls}>
               {t("youtube.dialog.addedHint")}{" "}
-              <button type="button" onClick={onOpenSettings} className="min-h-touch font-medium text-[var(--accent)] hover:underline">{t("youtube.dialog.openSettings")}</button>
+              <button type="button" onClick={onOpenSettings} className="min-h-touch font-medium text-accent hover:underline">{t("youtube.dialog.openSettings")}</button>
             </p>
           )}
-          {preview?.addedDatesError && <p className="text-xs leading-5 text-[var(--yellow)]">{t("youtube.dialog.addedUnavailable", { error: preview.addedDatesError })}</p>}
+          {preview?.addedDatesError && <p className="text-xs leading-5 text-warning">{t("youtube.dialog.addedUnavailable", { error: preview.addedDatesError })}</p>}
           {estimateText && (
-            <div aria-live="polite" className="rounded-sm bg-[var(--surface-2)] px-3 py-2 text-sm leading-6 text-[var(--text)]">
+            <div aria-live="polite" className="rounded-sm bg-surface-raised px-3 py-2 text-sm leading-6 text-text">
               {estimateText}
               {estimate?.approximate && estimate.videos > 0 && <p className={hintCls}>{t("youtube.dialog.estimateAboutNote")}</p>}
             </div>
           )}
           {backfillKind === "none" && <p className={hintCls}>{t("youtube.dialog.pickLater")}</p>}
           {needsConfirm && (
-            <label htmlFor={ids.confirm} className="flex min-h-touch cursor-pointer items-center gap-3 rounded-sm border border-[var(--yellow-border)] bg-[var(--yellow-dim)] px-3 text-sm text-[var(--text)]">
+            <label htmlFor={ids.confirm} className="flex min-h-touch cursor-pointer items-center gap-3 rounded-sm border border-warning-line bg-warning-soft px-3 text-sm text-text">
               <input
                 id={ids.confirm}
                 type="checkbox"
                 checked={confirmedCount === atStake}
                 onChange={(e) => setConfirmedCount(e.target.checked ? atStake : null)}
-                className="accent-[var(--accent)]"
+                className="accent-accent"
               />
               {t(editing ? "youtube.dialog.confirmLargeEdit" : "youtube.dialog.confirmLarge", { count: atStake })}
             </label>
@@ -374,17 +374,17 @@ export function FollowPlaylistDialog({ playlist, kind: newKind = "playlist", tas
           ) : (
             <div role="group" aria-labelledby={ids.langs} className="flex flex-wrap gap-2">
               {enabledTasks.map((task) => (
-                <label key={task.id} className="flex min-h-touch cursor-pointer items-center gap-2 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text)] has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent-dim)]">
-                  <input type="checkbox" checked={taskIds.includes(task.id)} onChange={() => toggleTask(task.id)} className="accent-[var(--accent)]" />
+                <label key={task.id} className="flex min-h-touch cursor-pointer items-center gap-2 rounded-sm border border-border bg-surface-raised px-3 text-sm text-text has-[:checked]:border-accent has-[:checked]:bg-accent-soft">
+                  <input type="checkbox" checked={taskIds.includes(task.id)} onChange={() => toggleTask(task.id)} className="accent-accent" />
                   {task.target_lang}
                 </label>
               ))}
             </div>
           )}
-          <ul aria-label={t("youtube.dialog.routesLabel")} className="space-y-1 rounded-sm border border-[var(--border)] px-3 py-2">
+          <ul aria-label={t("youtube.dialog.routesLabel")} className="space-y-1 rounded-sm border border-border px-3 py-2">
             {([["=", "routeSame"], ["cc", "routeCaptions"], ["→", "routeTranslate"]] as const).map(([glyph, key]) => (
-              <li key={key} className="flex gap-3 text-xs leading-5 text-[var(--text-2)]">
-                <span aria-hidden="true" className="w-5 shrink-0 text-center font-mono text-[var(--text-3)]">{glyph}</span>
+              <li key={key} className="flex gap-3 text-xs leading-5 text-muted">
+                <span aria-hidden="true" className="w-5 shrink-0 text-center font-mono text-faint">{glyph}</span>
                 {t(`youtube.dialog.${key}`)}
               </li>
             ))}
@@ -392,8 +392,8 @@ export function FollowPlaylistDialog({ playlist, kind: newKind = "playlist", tas
           <p className={hintCls}>{t("youtube.dialog.languagesHint")}</p>
         </div>
 
-        <details className="rounded-sm border border-[var(--border)] px-3">
-          <summary className="flex min-h-touch cursor-pointer items-center text-sm font-medium text-[var(--text)]">{t("youtube.dialog.more")}</summary>
+        <details className="rounded-sm border border-border px-3">
+          <summary className="flex min-h-touch cursor-pointer items-center text-sm font-medium text-text">{t("youtube.dialog.more")}</summary>
           <div className="grid grid-cols-1 gap-3 pb-3 md:grid-cols-2">
             <Field label={t("youtube.dialog.modeLabel")} htmlFor={ids.mode}>
               <select id={ids.mode} className={selectCls} value={mode} onChange={(e) => setMode(e.target.value as "auto" | "manual")}>
@@ -416,24 +416,24 @@ export function FollowPlaylistDialog({ playlist, kind: newKind = "playlist", tas
             </Field>
             <Field label={t("youtube.dialog.folder")} htmlFor={ids.folder}>
               <div className="flex items-center gap-2">
-                <span className="min-w-0 max-w-[45%] shrink truncate font-mono text-xs text-[var(--text-3)]" dir="rtl" title={folderRoot}><bdi>{folderRoot}</bdi></span><span className="-ml-1 font-mono text-xs text-[var(--text-3)]">/</span>
+                <span className="min-w-0 max-w-[45%] shrink truncate font-mono text-xs text-faint" dir="rtl" title={folderRoot}><bdi>{folderRoot}</bdi></span><span className="-ml-1 font-mono text-xs text-faint">/</span>
                 <input id={ids.folder} className={`${FORM_CONTROL_CLS} min-h-touch min-w-0`} value={folder} onChange={(e) => setFolder(e.target.value)} />
               </div>
             </Field>
           </div>
         </details>
-        {saveError && <p role="alert" className="text-xs leading-5 text-[var(--red)]"><span aria-hidden="true">✕ </span>{saveError}</p>}
+        {saveError && <p role="alert" className="text-xs leading-5 text-danger"><span aria-hidden="true">✕ </span>{saveError}</p>}
       </form>
 
-      <div className="flex shrink-0 items-center justify-end gap-2 border-t border-[var(--border)] px-4 py-3">
-        <button type="button" onClick={onClose} className="min-h-touch rounded-sm px-4 text-sm font-medium text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]">
+      <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border px-4 py-3">
+        <button type="button" onClick={onClose} className="min-h-touch rounded-sm px-4 text-sm font-medium text-muted hover:bg-surface-raised hover:text-text">
           {t("common.cancel")}
         </button>
         <button
           type="submit"
           form={`${ids.title}-form`}
           disabled={!canSubmit || saving}
-          className="inline-flex min-h-touch items-center justify-center rounded-sm bg-[var(--accent)] px-4 text-sm font-medium text-[var(--on-accent)] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
+          className="inline-flex min-h-touch items-center justify-center rounded-sm bg-accent px-4 text-sm font-medium text-accent-text hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
         >
           {saving ? t("common.saving") : editing ? t("common.save") : say("submit")}
         </button>

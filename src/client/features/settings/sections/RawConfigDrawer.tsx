@@ -29,10 +29,10 @@ export function RawConfigDrawer({ settings, update, onSave, dirty, saving }: Raw
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-3">
+      <div className="flex items-center justify-between gap-3 rounded-sm border border-border bg-surface-raised px-3 py-3">
         <div>
-          <p className="text-sm font-medium text-[var(--text)]">{t("settings.rawConfig")}</p>
-          <p className="mt-1 text-xs text-[var(--text-2)]">{t("settings.rawConfigHint")}</p>
+          <p className="text-sm font-medium text-text">{t("settings.rawConfig")}</p>
+          <p className="mt-1 text-xs text-muted">{t("settings.rawConfigHint")}</p>
         </div>
         <ActionButton variant="ghost" size="sm" onClick={() => setOpen(true)}>
           {t("settings.rawConfigOpen")}
@@ -51,7 +51,7 @@ export function RawConfigDrawer({ settings, update, onSave, dirty, saving }: Raw
               placeholder={'[{"path":"/media/anime","language":"ja","model":"small"}]'}
               className={`${textareaCls} font-mono text-xs`}
             />
-            <p className="mt-1 text-xs leading-relaxed text-[var(--text-3)]">{t("settings.transcription.folderDefaultsHelp")}</p>
+            <p className="mt-1 text-xs leading-relaxed text-faint">{t("settings.transcription.folderDefaultsHelp")}</p>
           </div>
           <div>
             <label className={labelCls}>{t("settings.transcription.advancedOptions")}</label>
@@ -63,7 +63,7 @@ export function RawConfigDrawer({ settings, update, onSave, dirty, saving }: Raw
               placeholder={'{"beam_size":5,"word_timestamps":true,"initial_prompt":"Lecture audio"}'}
               className={`${textareaCls} font-mono text-xs`}
             />
-            <p className="mt-1 text-xs leading-relaxed text-[var(--text-3)]">{t("settings.transcription.advancedOptionsHelp")}</p>
+            <p className="mt-1 text-xs leading-relaxed text-faint">{t("settings.transcription.advancedOptionsHelp")}</p>
           </div>
           <div className="flex justify-end gap-2">
             <ActionButton variant="ghost" size="sm" onClick={() => setOpen(false)}>{t("common.close")}</ActionButton>

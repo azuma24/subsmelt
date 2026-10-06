@@ -12,7 +12,7 @@ interface TargetLanguageFieldProps {
 }
 
 const inputCls =
-  "w-full rounded-sm border bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text)] placeholder:text-[var(--text-3)]";
+  "w-full rounded-sm border bg-surface-raised px-3 py-2 text-sm text-text placeholder:text-faint";
 
 /**
  * Free-text target-language input: autocomplete while typing, canonical
@@ -35,14 +35,14 @@ export function TargetLanguageField({ value, onChange, resolution, recents, onPi
 
   const borderCls =
     resolution.status === "resolved"
-      ? "border-[var(--green-border)] focus:border-[var(--green)]"
+      ? "border-success-line focus:border-success"
       : value.trim()
-        ? "border-[var(--yellow-border)] focus:border-[var(--yellow)]"
-        : "border-[var(--border)] focus:border-[var(--accent)]";
+        ? "border-warning-line focus:border-warning"
+        : "border-border focus:border-accent";
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-xs font-medium text-[var(--text-2)]">{t("convert.targetLanguage")}</span>
+      <span className="text-xs font-medium text-muted">{t("convert.targetLanguage")}</span>
       <div className="relative">
         <input
           type="text"
@@ -60,18 +60,18 @@ export function TargetLanguageField({ value, onChange, resolution, recents, onPi
           className={`${inputCls} ${borderCls}`}
         />
         {focused && completions.length > 0 && (
-          <ul id={listboxId} className="absolute z-40 mt-1 w-full overflow-hidden rounded-sm border border-[var(--border)] bg-[var(--surface)] shadow-2" role="listbox">
+          <ul id={listboxId} className="absolute z-40 mt-1 w-full overflow-hidden rounded-sm border border-border bg-surface shadow-2" role="listbox">
             {completions.map((entry) => (
               <li key={entry.code} role="option" aria-selected={false}>
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => onPick(entry)}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-[var(--text)] hover:bg-[var(--surface-2)]"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-text hover:bg-surface-raised"
                 >
                   <span>{entry.englishName}</span>
-                  <span className="text-[var(--text-3)]">{entry.nativeName}</span>
-                  <span className="ml-auto font-mono text-xs text-[var(--text-3)]">{entry.code}</span>
+                  <span className="text-faint">{entry.nativeName}</span>
+                  <span className="ml-auto font-mono text-xs text-faint">{entry.code}</span>
                 </button>
               </li>
             ))}
@@ -80,21 +80,21 @@ export function TargetLanguageField({ value, onChange, resolution, recents, onPi
       </div>
 
       {resolution.status === "resolved" && (
-        <span className="text-xs text-[var(--green)]">
+        <span className="text-xs text-success">
           {t("convert.targetResolved", { name: resolution.language.englishName, code: resolution.language.code })}
         </span>
       )}
 
       {resolution.status === "ambiguous" && (
-        <div className="rounded-sm border border-[var(--yellow-border)] bg-[var(--yellow-dim)] px-3 py-2">
-          <span className="text-xs text-[var(--yellow)]">{t("convert.ambiguousPick", { input: value.trim() })}</span>
+        <div className="rounded-sm border border-warning-line bg-warning-soft px-3 py-2">
+          <span className="text-xs text-warning">{t("convert.ambiguousPick", { input: value.trim() })}</span>
           <div className="mt-2 flex flex-wrap gap-2">
             {resolution.options.map((entry) => (
               <button
                 key={entry.code}
                 type="button"
                 onClick={() => onPick(entry)}
-                className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs text-[var(--text)] hover:border-[var(--accent-border)]"
+                className="rounded-full border border-border bg-surface px-3 py-1 text-xs text-text hover:border-accent-line"
               >
                 {entry.englishName} ({entry.code})
               </button>
@@ -105,13 +105,13 @@ export function TargetLanguageField({ value, onChange, resolution, recents, onPi
 
       {resolution.status === "unknown" && value.trim() !== "" && resolution.suggestions.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-[var(--yellow)]">{t("convert.didYouMean")}</span>
+          <span className="text-xs text-warning">{t("convert.didYouMean")}</span>
           {resolution.suggestions.map((entry) => (
             <button
               key={entry.code}
               type="button"
               onClick={() => onPick(entry)}
-              className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1 text-xs text-[var(--text)] hover:border-[var(--accent-border)]"
+              className="rounded-full border border-border bg-surface-raised px-3 py-1 text-xs text-text hover:border-accent-line"
             >
               {entry.englishName} ({entry.code})
             </button>
@@ -121,13 +121,13 @@ export function TargetLanguageField({ value, onChange, resolution, recents, onPi
 
       {recentEntries.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-[var(--text-3)]">{t("convert.recentLabel")}</span>
+          <span className="text-xs text-faint">{t("convert.recentLabel")}</span>
           {recentEntries.map((entry) => (
             <button
               key={entry.code}
               type="button"
               onClick={() => onPick(entry)}
-              className="rounded-full bg-[var(--surface-2)] px-3 py-1 text-xs text-[var(--text-2)] hover:text-[var(--text)]"
+              className="rounded-full bg-surface-raised px-3 py-1 text-xs text-muted hover:text-text"
             >
               {entry.nativeName} · {entry.code}
             </button>

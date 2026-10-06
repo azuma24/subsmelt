@@ -140,7 +140,7 @@ function AppInner() {
   }, []);
 
   return (
-    <div className="flex h-dvh min-h-dvh bg-[var(--bg)] text-[var(--text)]">
+    <div className="flex h-dvh min-h-dvh bg-canvas text-text">
       {!isMobile && (
         <DesktopSidebar
           queueRunning={queueRunning}
@@ -153,7 +153,7 @@ function AppInner() {
         <main className={`flex-1 overflow-auto ${isMobile ? "pb-[58px]" : ""}`}>
           <Suspense
             fallback={
-              <div className="p-8 text-[var(--text-3)]">
+              <div className="p-8 text-faint">
                 {t("common.loading")}
               </div>
             }

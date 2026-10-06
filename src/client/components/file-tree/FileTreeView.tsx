@@ -130,7 +130,7 @@ function FolderBlock<F, N extends TreeViewNode<F> & { children: N[] }>(props: Fi
         <div className="relative">
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute bottom-0 top-0 w-px bg-[var(--border-sub)]"
+            className="pointer-events-none absolute bottom-0 top-0 w-px bg-border-subtle"
             style={{ left: pad + RAIL_CHEVRON_CENTER_PX }}
           />
           {/* The constraint guarantees children: N[]; TS resolves the

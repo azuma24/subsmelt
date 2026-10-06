@@ -29,7 +29,7 @@ export interface RunOptionsSectionProps {
   hasCaps: boolean;
 }
 
-const optionLabelCls = "flex flex-col gap-1 text-xs text-[var(--text-2)]";
+const optionLabelCls = "flex flex-col gap-1 text-xs text-muted";
 
 /**
  * "Run options" settings section. Everyday knobs (model/language/format) stay
@@ -58,7 +58,7 @@ export function RunOptionsSection({
           />
           {/* Not-downloaded badge for the currently-selected model */}
           {isModelDownloaded(effModel) === false && modelDownloads[effModel]?.active !== true && (
-            <span className="text-xs text-[var(--yellow)]"><span aria-hidden="true">⚠ </span>{t("settings.models.notDownloaded")}</span>
+            <span className="text-xs text-warning"><span aria-hidden="true">⚠ </span>{t("settings.models.notDownloaded")}</span>
           )}
         </label>
         <label className={optionLabelCls}>{t("whisper.language")}
@@ -90,15 +90,15 @@ export function RunOptionsSection({
             </label>
           )}
           {canDiarize ? (
-            <label className="flex items-center gap-2 self-end pb-2 text-xs text-[var(--text-2)]">
-              <input type="checkbox" checked={effDiarize} onChange={(e) => onDiarizeChange(e.target.checked)} className="h-4 w-4 accent-[var(--accent)]" />
+            <label className="flex items-center gap-2 self-end pb-2 text-xs text-muted">
+              <input type="checkbox" checked={effDiarize} onChange={(e) => onDiarizeChange(e.target.checked)} className="h-4 w-4 accent-accent" />
               {t("whisper.diarize")}
             </label>
           ) : (
             // Render the disabled row even while capabilities are still
             // loading, so the control doesn't flicker into existence.
             <label
-              className="flex items-center gap-2 self-end pb-2 text-xs text-[var(--text-3)] opacity-60"
+              className="flex items-center gap-2 self-end pb-2 text-xs text-faint opacity-60"
               title={hasCaps ? t("whisper.diarizeUnavailable") : t("common.loading")}
             >
               <input type="checkbox" disabled className="h-4 w-4" />
@@ -110,8 +110,8 @@ export function RunOptionsSection({
 
       {/* Model download progress — shown when a model is being downloaded */}
       {Object.entries(modelDownloads).filter(([, dl]) => dl.active).map(([modelId, dl]) => (
-        <div key={modelId} className="flex items-center gap-3 rounded-sm border border-[var(--yellow-border)] bg-[var(--yellow-dim)] px-3 py-2">
-          <span className="text-xs text-[var(--yellow)] shrink-0">{t("whisper.modelDownloading", { model: modelId })}</span>
+        <div key={modelId} className="flex items-center gap-3 rounded-sm border border-warning-line bg-warning-soft px-3 py-2">
+          <span className="text-xs text-warning shrink-0">{t("whisper.modelDownloading", { model: modelId })}</span>
           <div className="flex-1"><ProgressSmall pct={dl.pct} large /></div>
         </div>
       ))}

@@ -12,8 +12,8 @@ import { LanguageChip } from "./LanguageChip";
 
 const SECONDARY = "inline-flex min-h-touch items-center justify-center gap-2 rounded-sm border border-border bg-surface px-3 text-sm font-medium text-text transition-colors duration-fast hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-45";
 // Scan in the page header is the screen's one filled button; panel actions stay outlined.
-const EMPHASIS = "inline-flex min-h-touch items-center justify-center gap-2 rounded-sm border border-[var(--accent-border)] bg-[var(--accent-dim)] px-3 text-sm font-medium text-accent transition-colors duration-fast hover:border-accent disabled:cursor-not-allowed disabled:opacity-45";
-const DANGER = "inline-flex min-h-touch items-center justify-center gap-2 rounded-sm border border-[var(--red-border)] bg-surface px-3 text-sm font-medium text-danger transition-colors duration-fast hover:bg-[var(--red-dim)] disabled:cursor-not-allowed disabled:opacity-45";
+const EMPHASIS = "inline-flex min-h-touch items-center justify-center gap-2 rounded-sm border border-accent-line bg-accent-soft px-3 text-sm font-medium text-accent transition-colors duration-fast hover:border-accent disabled:cursor-not-allowed disabled:opacity-45";
+const DANGER = "inline-flex min-h-touch items-center justify-center gap-2 rounded-sm border border-danger-line bg-surface px-3 text-sm font-medium text-danger transition-colors duration-fast hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-45";
 const HEADING = "text-xs font-semibold uppercase tracking-wide text-muted";
 
 export interface FailedTask {
@@ -25,7 +25,7 @@ export interface FailedTask {
 export function ErrorBlock({ failed, busy, onRetry }: { failed: FailedTask[]; busy: boolean; onRetry: () => void }) {
   const { t } = useTranslation();
   return (
-    <section role="alert" className="space-y-3 rounded-md border border-[var(--red-border)] bg-[var(--red-dim)] p-4">
+    <section role="alert" className="space-y-3 rounded-md border border-danger-line bg-danger-soft p-4">
       <h3 className="text-sm font-semibold text-danger">{t("library.panel.failed", { count: failed.length })}</h3>
       <ul className="space-y-1">
         {failed.map(({ task, job }) => (
@@ -111,7 +111,7 @@ export function SubtitleLanguages({ subtitle, jobsById, showName, onPreview, onQ
           <Link to="/settings/languages" className="font-medium text-accent underline">{t("library.panel.openLanguageSettings")}</Link>
         </p>
       ) : (
-        <ul className="divide-y divide-[var(--border)] rounded-md border border-border">
+        <ul className="divide-y divide-border rounded-md border border-border">
           {subtitle.tasks.map((task) => {
             const status = getTaskStatus(task, jobsById);
             const state = languageState(status);

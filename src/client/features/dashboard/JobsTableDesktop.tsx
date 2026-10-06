@@ -19,8 +19,8 @@ interface JobsTableDesktopProps {
   onOpenDetails: (job: Job) => void;
 }
 
-const TH = "px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.4px] text-[var(--text-3)] border-b border-[var(--border)]";
-const TD = "px-3 py-2 align-middle border-b border-[var(--border-sub)]";
+const TH = "px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.4px] text-faint border-b border-border";
+const TD = "px-3 py-2 align-middle border-b border-border-subtle";
 
 // Shared column template so the header row and the virtualized body rows stay
 // pixel-aligned. Column order: select | file | target | status | progress |
@@ -97,7 +97,7 @@ export function JobsTableDesktop({
           <div className={TH} role="columnheader">
             <input
               type="checkbox"
-              className="accent-[var(--accent)]"
+              className="accent-accent"
               disabled={pendingIds.length === 0}
               checked={allPendingSelected}
               ref={(el) => {
@@ -117,7 +117,7 @@ export function JobsTableDesktop({
 
         {jobs.length === 0 && (
           <div role="row">
-            <div role="cell" className="px-4 py-8 text-center text-xs text-[var(--text-3)]">{t("dashboard.noJobsMatchFilter")}</div>
+            <div role="cell" className="px-4 py-8 text-center text-xs text-faint">{t("dashboard.noJobsMatchFilter")}</div>
           </div>
         )}
 
@@ -164,12 +164,12 @@ export function JobsTableSkeleton() {
         {Array.from({ length: SKELETON_ROWS }, (_, i) => (
           <div key={i} className="grid items-center" style={{ gridTemplateColumns: GRID_COLS }}>
             <div className={TD} />
-            <div className={TD}><div className="h-4 w-3/4 rounded-sm bg-[var(--surface-3)]" /></div>
-            <div className={TD}><div className="h-3 w-24 rounded-sm bg-[var(--surface-2)]" /></div>
-            <div className={TD}><div className="h-6 w-20 rounded-full bg-[var(--surface-2)]" /></div>
-            <div className={TD}><div className="h-3 w-16 rounded-sm bg-[var(--surface-2)]" /></div>
-            <div className={TD}><div className="h-3 w-10 rounded-sm bg-[var(--surface-2)]" /></div>
-            <div className={TD}><div className="h-7 w-24 rounded-sm bg-[var(--surface-2)]" /></div>
+            <div className={TD}><div className="h-4 w-3/4 rounded-sm bg-surface-highlight" /></div>
+            <div className={TD}><div className="h-3 w-24 rounded-sm bg-surface-raised" /></div>
+            <div className={TD}><div className="h-6 w-20 rounded-full bg-surface-raised" /></div>
+            <div className={TD}><div className="h-3 w-16 rounded-sm bg-surface-raised" /></div>
+            <div className={TD}><div className="h-3 w-10 rounded-sm bg-surface-raised" /></div>
+            <div className={TD}><div className="h-7 w-24 rounded-sm bg-surface-raised" /></div>
           </div>
         ))}
       </div>
@@ -205,14 +205,14 @@ const JobsTableRow = memo(function JobsTableRow({
 }: JobsTableRowProps) {
   const { t } = useTranslation();
   const { srtName, pct, hasError, isPending, isSkipped, reason, connectionText, connectionTitle } = jobDerived(job);
-  const highlight = isActive || isSelected ? "bg-[var(--accent-dim)]" : "hover:bg-[var(--surface-2)]";
+  const highlight = isActive || isSelected ? "bg-accent-soft" : "hover:bg-surface-raised";
   return (
       <div role="row" className={`grid items-stretch ${highlight}`} style={{ gridTemplateColumns: GRID_COLS }}>
         <div className={`${TD} flex items-center`} role="cell">
           {isPending && (
             <input
               type="checkbox"
-              className="accent-[var(--accent)]"
+              className="accent-accent"
               checked={isSelected}
               onChange={() => onToggle(job.id)}
               aria-label={t("dashboard.col.select")}
@@ -221,9 +221,9 @@ const JobsTableRow = memo(function JobsTableRow({
         </div>
         <div className={`${TD} min-w-0`} role="cell">
           <div className="flex min-w-0 items-center gap-2">
-            <Icon name="subtitle" className="text-[var(--text-3)]" />
+            <Icon name="subtitle" className="text-faint" />
             <div className="min-w-0">
-              <div className="truncate text-sm font-medium text-[var(--text)]" title={job.srt_path}>{srtName}</div>
+              <div className="truncate text-sm font-medium text-text" title={job.srt_path}>{srtName}</div>
             </div>
           </div>
         </div>
@@ -231,12 +231,12 @@ const JobsTableRow = memo(function JobsTableRow({
             names ("Traditional Chinese (Taiwan)") take a second line. One muted
             line — the queue mostly shares a single target, so this column is
             context, not content. */}
-        <div className={`${TD} text-xs text-[var(--text-3)]`} role="cell">{job.target_lang} · {job.lang_code}</div>
+        <div className={`${TD} text-xs text-faint`} role="cell">{job.target_lang} · {job.lang_code}</div>
         <div className={TD} role="cell">
           <div className="flex flex-wrap items-center gap-2">
             <JobStatusBadge job={job} />
             {reason && (
-              <span className="rounded-full bg-[var(--red-dim)] px-2 py-1 text-xs text-[var(--red)]">{t(`dashboard.errorReason.${reason}`)}</span>
+              <span className="rounded-full bg-danger-soft px-2 py-1 text-xs text-danger">{t(`dashboard.errorReason.${reason}`)}</span>
             )}
           </div>
         </div>
@@ -246,14 +246,14 @@ const JobsTableRow = memo(function JobsTableRow({
               <ProgressSmall pct={pct} />
               {/* Parallel mode runs jobs on different connections; name the machine. */}
               {job.connection && (
-                <span className="max-w-[140px] truncate text-xs leading-4 text-[var(--text-3)]" title={connectionTitle ?? undefined}>
+                <span className="max-w-[140px] truncate text-xs leading-4 text-faint" title={connectionTitle ?? undefined}>
                   {connectionText}
                 </span>
               )}
             </>
-          ) : job.status === "done" ? <span className="text-xs text-[var(--text-3)]">{t("dashboard.cues", { completed: job.completed_cues, total: job.total_cues })}</span> : null}
+          ) : job.status === "done" ? <span className="text-xs text-faint">{t("dashboard.cues", { completed: job.completed_cues, total: job.total_cues })}</span> : null}
         </div>
-        <div className={`${TD} font-mono text-xs text-[var(--text-2)] whitespace-nowrap`} role="cell">{job.duration_seconds ? formatDur(job.duration_seconds) : ""}</div>
+        <div className={`${TD} font-mono text-xs text-muted whitespace-nowrap`} role="cell">{job.duration_seconds ? formatDur(job.duration_seconds) : ""}</div>
         <div className={TD} role="cell">
           {/* One primary action per status; everything else lives behind the ⋯
               menu. 46 rows of Preview/Re-translate/Details/× was visual noise,

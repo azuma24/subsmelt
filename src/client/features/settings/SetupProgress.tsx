@@ -32,14 +32,14 @@ export function SetupProgress({ steps }: { steps: SetupStep[] }) {
   return (
     <section
       aria-labelledby="setup-progress-title"
-      className="mb-4 rounded-md border border-[var(--accent-border)] bg-[var(--accent-dim)] p-4"
+      className="mb-4 rounded-md border border-accent-line bg-accent-soft p-4"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="setup-progress-title" className="text-sm font-semibold text-[var(--text)]">
+        <h2 id="setup-progress-title" className="text-sm font-semibold text-text">
           {t("dashboard.quickStart.title")}
         </h2>
         {/* Progress as text, not just a bar — it has to survive being read aloud. */}
-        <span className="text-xs text-[var(--text-2)]">
+        <span className="text-xs text-muted">
           {t("settings.setup.progress", { done: doneCount, total: steps.length })}
         </span>
       </div>
@@ -48,12 +48,12 @@ export function SetupProgress({ steps }: { steps: SetupStep[] }) {
         {remaining.map((step) => (
           <li
             key={step.key}
-            className="flex flex-wrap items-center gap-3 rounded-sm border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
+            className="flex flex-wrap items-center gap-3 rounded-sm border border-border bg-surface px-3 py-2"
           >
-            <span aria-hidden="true" className="text-sm text-[var(--text-3)]">○</span>
+            <span aria-hidden="true" className="text-sm text-faint">○</span>
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-medium text-[var(--text)]">{step.title}</div>
-              <div className="text-xs leading-6 text-[var(--text-2)]">{step.hint}</div>
+              <div className="text-xs font-medium text-text">{step.title}</div>
+              <div className="text-xs leading-6 text-muted">{step.hint}</div>
             </div>
             <ActionButton variant="ghost" size="sm" onClick={step.onAction}>
               {step.actionLabel}

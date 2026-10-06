@@ -36,13 +36,13 @@ function PlaylistRow({ playlist, folderRoot, actions, onOpen, onEdit }: { playli
   ].filter(Boolean);
 
   return (
-    <li className="flex flex-col gap-3 rounded-md border border-[var(--border)] bg-[var(--surface)] p-4 md:flex-row md:items-start md:justify-between md:p-4">
+    <li className="flex flex-col gap-3 rounded-md border border-border bg-surface p-4 md:flex-row md:items-start md:justify-between md:p-4">
       <div className="min-w-0 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => onOpen(playlist)}
-            className="min-h-touch text-left text-base font-semibold text-[var(--text)] underline-offset-4 hover:text-[var(--accent)] hover:underline"
+            className="min-h-touch text-left text-base font-semibold text-text underline-offset-4 hover:text-accent hover:underline"
           >
             {playlist.title}
           </button>
@@ -51,9 +51,9 @@ function PlaylistRow({ playlist, folderRoot, actions, onOpen, onEdit }: { playli
           <Tag>{profileLabel(playlist.media, t)}</Tag>
           <Tag>{playlist.mode === "auto" ? t("youtube.modeAuto") : t("youtube.modeManual")}</Tag>
         </div>
-        <p className="break-words text-xs leading-5 text-[var(--text-3)]">{meta.join(" · ")}</p>
+        <p className="break-words text-xs leading-5 text-faint">{meta.join(" · ")}</p>
         {playlist.sync.lastError && (
-          <p className="break-words text-xs leading-5 text-[var(--red)]">
+          <p className="break-words text-xs leading-5 text-danger">
             <span aria-hidden="true">✕ </span>
             {t("youtube.toast.checkFailed", { error: playlist.sync.lastError })}
           </p>

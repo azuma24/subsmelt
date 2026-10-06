@@ -57,7 +57,7 @@ export function ConfigLoadErrorBanner({ failure }: { failure: ConfigLoadFailure 
   return (
     <Banner tone="bad" title={t("settings.configLoadError.title", { file: failure.file })}>
       {t("settings.configLoadError.body", { backup: failure.backup })}
-      {failure.message && <span className="mt-1 block break-all font-mono text-xs text-[var(--text-2)]">{failure.message}</span>}
+      {failure.message && <span className="mt-1 block break-all font-mono text-xs text-muted">{failure.message}</span>}
       {/* Below the text rather than beside it, so a long path never squeezes the copy on a phone. */}
       <span className="mt-2 block">
         <ActionButton variant="ghost" size="sm" onClick={replace} busy={replacing}>

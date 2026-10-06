@@ -61,13 +61,13 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           title={state.opts.title}
           onClose={() => handleClose(false)}
           overlayClassName="fixed inset-0 bg-scrim flex items-end justify-center z-[90] p-0 md:items-center md:p-4"
-          panelClassName="bg-[var(--surface)] border border-[var(--border)] rounded-t-md md:rounded-md p-6 w-full max-w-sm space-y-4"
+          panelClassName="bg-surface border border-border rounded-t-md md:rounded-md p-6 w-full max-w-sm space-y-4"
         >
-          <p className="text-sm text-[var(--text-2)]">{state.opts.message}</p>
-          <div className="flex gap-3 justify-end pt-2 sticky bottom-0 bg-[var(--surface)]">
+          <p className="text-sm text-muted">{state.opts.message}</p>
+          <div className="flex gap-3 justify-end pt-2 sticky bottom-0 bg-surface">
             <button
               onClick={() => handleClose(false)}
-              className="px-4 py-3 text-sm text-[var(--text-2)] hover:text-[var(--text)] rounded-md"
+              className="px-4 py-3 text-sm text-muted hover:text-text rounded-md"
             >
               {state.opts.cancelLabel || t("common.cancel")}
             </button>
@@ -77,8 +77,8 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
               onClick={() => handleClose(true)}
               className={`px-4 py-3 text-sm font-medium rounded-md transition-colors ${
                 state.opts.danger
-                  ? "bg-transparent text-[var(--red)] border border-[var(--red-border)] hover:bg-[var(--red-dim)]"
-                  : "bg-[var(--accent)] text-[var(--on-accent)] hover:brightness-110"
+                  ? "bg-transparent text-danger border border-danger-line hover:bg-danger-soft"
+                  : "bg-accent text-accent-text hover:brightness-110"
               }`}
             >
               {state.opts.confirmLabel || t("common.confirm")}

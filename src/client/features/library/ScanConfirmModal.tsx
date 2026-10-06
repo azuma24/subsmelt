@@ -57,8 +57,8 @@ interface ScanConfirmModalProps {
   t: TFunction;
 }
 
-const SECONDARY_BUTTON = "rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-2)] sm:col-span-1";
-const PRIMARY_BUTTON = "rounded-sm bg-[var(--accent)] px-3 py-2 text-sm font-medium text-[var(--on-accent)] sm:col-span-1";
+const SECONDARY_BUTTON = "rounded-sm border border-border bg-surface-raised px-3 py-2 text-sm text-muted sm:col-span-1";
+const PRIMARY_BUTTON = "rounded-sm bg-accent px-3 py-2 text-sm font-medium text-accent-text sm:col-span-1";
 
 export function ScanConfirmModal({ scanPlan, onClose, onConfirm, t }: ScanConfirmModalProps) {
   const nothingNew = scanPlan.newJobs === 0;
@@ -72,30 +72,30 @@ export function ScanConfirmModal({ scanPlan, onClose, onConfirm, t }: ScanConfir
       labelledBy={titleId}
       onClose={onClose}
       overlayClassName="fixed inset-0 z-50 bg-scrim p-4"
-      panelClassName="mx-auto mt-16 w-full max-w-xl rounded-md border border-[var(--border)] bg-[var(--surface)] p-6"
+      panelClassName="mx-auto mt-16 w-full max-w-xl rounded-md border border-border bg-surface p-6"
     >
       <div className="flex items-start justify-between gap-3">
-        <h3 id={titleId} className="pt-2 text-base font-semibold text-[var(--text)]">{t("dashboard.scanConfirm.title")}</h3>
+        <h3 id={titleId} className="pt-2 text-base font-semibold text-text">{t("dashboard.scanConfirm.title")}</h3>
         <button
           type="button"
           onClick={onClose}
-          className="inline-flex min-h-touch min-w-touch shrink-0 items-center justify-center rounded-sm text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+          className="inline-flex min-h-touch min-w-touch shrink-0 items-center justify-center rounded-sm text-muted hover:bg-surface-raised hover:text-text"
           aria-label={t("common.close")}
           title={t("common.close")}
         >
           <Icon name="close" size={20} />
         </button>
       </div>
-      <p className="mt-2 text-sm text-[var(--text-2)]">
+      <p className="mt-2 text-sm text-muted">
         {noTargetApplies
           ? t("dashboard.scanConfirm.summaryNoTarget", { subtitles: untargetedSubtitles })
           : nothingNew
           ? t("dashboard.scanConfirm.summaryNothingNew", { subtitles })
           : t("dashboard.scanConfirm.summary", { subtitles, jobs: scanPlan.newJobs })}
       </p>
-      <div className="mt-3 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-3">
-        <div className="text-xs text-[var(--text-3)]">{t("dashboard.scanConfirm.topFolders")}</div>
-        <div className="mt-1 text-sm text-[var(--text)]">{folders.length > 0 ? folders.join(", ") : t("dashboard.scanConfirm.none")}</div>
+      <div className="mt-3 rounded-sm border border-border bg-surface-raised p-3">
+        <div className="text-xs text-faint">{t("dashboard.scanConfirm.topFolders")}</div>
+        <div className="mt-1 text-sm text-text">{folders.length > 0 ? folders.join(", ") : t("dashboard.scanConfirm.none")}</div>
       </div>
       {/* With nothing to queue, closing is the primary action; a scan still
           refreshes the scan-results tab, so it stays reachable as secondary. */}

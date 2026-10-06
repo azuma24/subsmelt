@@ -166,8 +166,8 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
   return (
     <div className="flex min-h-full flex-col">
       {/* Topbar */}
-      <div className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b border-[var(--border)] bg-[var(--surface)] px-4 md:px-4">
-        <span className="flex-1 text-sm font-semibold text-[var(--text)]">{t("translation_languages.title")}</span>
+      <div className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 md:px-4">
+        <span className="flex-1 text-sm font-semibold text-text">{t("translation_languages.title")}</span>
         <ActionButton size="sm" onClick={() => openNew()}>{t("translation_languages.addLanguage")}</ActionButton>
       </div>
 
@@ -182,7 +182,7 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
                   key={p.lang_code}
                   onClick={() => !exists && openNew(p)}
                   disabled={exists}
-                  className={`rounded-full px-3 py-2 text-xs font-medium ${exists ? "bg-[var(--surface-2)] text-[var(--text-3)]" : "bg-[var(--surface-2)] text-[var(--text-2)] hover:bg-[var(--surface-3)] hover:text-[var(--text)]"}`}
+                  className={`rounded-full px-3 py-2 text-xs font-medium ${exists ? "bg-surface-raised text-faint" : "bg-surface-raised text-muted hover:bg-surface-highlight hover:text-text"}`}
                 >
                   {p.label} {exists && "✓"}
                 </button>
@@ -199,30 +199,30 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
           clearLabel={t("translation_languages.bulk.clearSelection")}
           isMobile={isMobile}
         >
-          <button onClick={() => applyBulk({ enabled: 1 })} disabled={bulkCounts.disabled === 0} className="rounded-sm bg-[var(--green)] px-3 py-2 text-xs font-semibold text-[var(--on-accent)] disabled:opacity-40">{t("translation_languages.bulk.enable")}</button>
-          <button onClick={() => applyBulk({ enabled: 0 })} disabled={bulkCounts.enabled === 0} className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text)] disabled:opacity-40">{t("translation_languages.bulk.disable")}</button>
+          <button onClick={() => applyBulk({ enabled: 1 })} disabled={bulkCounts.disabled === 0} className="rounded-sm bg-success px-3 py-2 text-xs font-semibold text-accent-text disabled:opacity-40">{t("translation_languages.bulk.enable")}</button>
+          <button onClick={() => applyBulk({ enabled: 0 })} disabled={bulkCounts.enabled === 0} className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-xs text-text disabled:opacity-40">{t("translation_languages.bulk.disable")}</button>
           {OUTPUT_FORMATS.map((format) => (
-            <button key={format} onClick={() => applyBulkFormat(format)} className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs uppercase text-[var(--text-2)] hover:text-[var(--text)]">{t("translation_languages.bulk.setFormat", { format })}</button>
+            <button key={format} onClick={() => applyBulkFormat(format)} className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-xs uppercase text-muted hover:text-text">{t("translation_languages.bulk.setFormat", { format })}</button>
           ))}
         </SelectionBar>
 
         {/* Task grid — cards show Source→Target + enabled toggle + custom-prompt chip */}
         <section className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
           {tasks.map((task) => (
-            <div key={task.id} className={`rounded-md border px-3 py-4 ${task.enabled ? "border-[var(--border)] bg-[var(--surface)]" : "border-[var(--border)] bg-[var(--surface)] opacity-60"}`}>
+            <div key={task.id} className={`rounded-md border px-3 py-4 ${task.enabled ? "border-border bg-surface" : "border-border bg-surface opacity-60"}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 flex-1 items-start gap-2">
-                  <input type="checkbox" aria-label={task.target_lang} checked={selectedTaskIds.has(task.id)} onChange={() => toggleTaskSelected(task.id)} className="mt-1 h-4 w-4 accent-[var(--accent)]" />
+                  <input type="checkbox" aria-label={task.target_lang} checked={selectedTaskIds.has(task.id)} onChange={() => toggleTaskSelected(task.id)} className="mt-1 h-4 w-4 accent-accent" />
                   <div className="min-w-0 flex-1">
                     {/* L1: Source → Target */}
-                    <div className="flex items-center gap-2 text-sm font-medium text-[var(--text)]">
+                    <div className="flex items-center gap-2 text-sm font-medium text-text">
                       <span>{task.source_lang}</span>
-                      <span className="text-[var(--text-3)]">→</span>
+                      <span className="text-faint">→</span>
                       <span>{task.target_lang}</span>
                     </div>
                     {/* L2: custom-prompt chip */}
                     {task.prompt_override && (
-                      <div className="mt-2 text-xs text-[var(--accent)]">{t("translation_languages.customPrompt")}</div>
+                      <div className="mt-2 text-xs text-accent">{t("translation_languages.customPrompt")}</div>
                     )}
                     {/* L3: output pattern hidden by default — visible in edit modal */}
                     {/* L4: lang code hidden — visible in edit modal */}
@@ -232,7 +232,7 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
                   {/* Enabled toggle */}
                   <button
                     onClick={() => updateMutation.mutate({ id: task.id, payload: { enabled: task.enabled ? 0 : 1 } })}
-                    className={`rounded-full border px-3 py-1 text-xs font-medium ${task.enabled ? "border-[var(--green-border)] bg-[var(--green-dim)] text-[var(--green)]" : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-3)]"}`}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium ${task.enabled ? "border-success-line bg-success-soft text-success" : "border-border bg-surface-raised text-faint"}`}
                   >
                     {task.enabled ? t("translation_languages.enabled") : t("translation_languages.disabled")}
                   </button>
@@ -262,13 +262,13 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
           title={isNew ? t("translation_languages.addModal") : t("translation_languages.editModal")}
           onClose={() => { setEditing(null); setIsNew(false); }}
           overlayClassName="fixed inset-0 z-50 bg-scrim p-0 md:p-4"
-          panelClassName={`mx-auto flex w-full flex-col border border-[var(--border)] bg-[var(--surface)] ${isMobile ? "h-full overflow-y-auto rounded-none p-4" : "mt-8 max-w-xl rounded-md p-6"}`}
+          panelClassName={`mx-auto flex w-full flex-col border border-border bg-surface ${isMobile ? "h-full overflow-y-auto rounded-none p-4" : "mt-8 max-w-xl rounded-md p-6"}`}
         >
           <div className="mt-4 space-y-4">
-                <div className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-3">
-                  <div className="mb-1 text-sm font-medium text-[var(--text-2)]">{t("translation_languages.sourceLang")}</div>
-                  <div className="inline-flex rounded-full border border-[var(--accent-border)] bg-[var(--accent-dim)] px-3 py-1 text-sm font-semibold text-[var(--accent)]">{t("translation_languages.sourceAutoBadge")}</div>
-                  <p className="mt-2 text-xs text-[var(--text-3)]">{t("translation_languages.sourceAutoHelp")}</p>
+                <div className="rounded-sm border border-border bg-surface-raised p-3">
+                  <div className="mb-1 text-sm font-medium text-muted">{t("translation_languages.sourceLang")}</div>
+                  <div className="inline-flex rounded-full border border-accent-line bg-accent-soft px-3 py-1 text-sm font-semibold text-accent">{t("translation_languages.sourceAutoBadge")}</div>
+                  <p className="mt-2 text-xs text-faint">{t("translation_languages.sourceAutoHelp")}</p>
                 </div>
                 <SelectField
                   label={t("translation_languages.targetLang")}
@@ -294,7 +294,7 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
                   required
                 />
                 <div>
-                  <div className="mb-2 text-sm font-medium text-[var(--text-2)]">{t("translation_languages.outputFormat")}</div>
+                  <div className="mb-2 text-sm font-medium text-muted">{t("translation_languages.outputFormat")}</div>
                   <div className="flex flex-wrap gap-2">
                     {OUTPUT_FORMATS.map((format) => {
                       const active = selectedOutputFormat === format;
@@ -305,20 +305,20 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
                             setSelectedOutputFormat(format);
                             setEditing({ ...editing, output_pattern: applyOutputFormat(editing.output_pattern, format) });
                           }}
-                          className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-wide ${active ? "bg-[var(--accent)] text-[var(--on-accent)]" : "bg-[var(--surface-2)] text-[var(--text-2)] hover:bg-[var(--surface-3)] hover:text-[var(--text)]"}`}
+                          className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-wide ${active ? "bg-accent text-accent-text" : "bg-surface-raised text-muted hover:bg-surface-highlight hover:text-text"}`}
                         >
                           {format}
                         </button>
                       );
                     })}
                   </div>
-                  <p className="mt-1 text-xs text-[var(--text-3)]">{t("translation_languages.outputFormatHelp")}</p>
+                  <p className="mt-1 text-xs text-faint">{t("translation_languages.outputFormatHelp")}</p>
                 </div>
                 {hasMismatch && (
-                  <div className="rounded-sm border border-[var(--yellow-border)] bg-[var(--yellow-dim)] p-3 text-xs text-[var(--yellow)]">
+                  <div className="rounded-sm border border-warning-line bg-warning-soft p-3 text-xs text-warning">
                     {t("translation_languages.formatMismatch", { selected: selectedOutputFormat, detected: patternFormat })}
                     <div>
-                      <button onClick={() => setEditing({ ...editing, output_pattern: applyOutputFormat(editing.output_pattern, selectedOutputFormat) })} className="mt-2 rounded-sm bg-[var(--yellow)] px-2 py-1 font-medium text-[var(--on-accent)]">
+                      <button onClick={() => setEditing({ ...editing, output_pattern: applyOutputFormat(editing.output_pattern, selectedOutputFormat) })} className="mt-2 rounded-sm bg-warning px-2 py-1 font-medium text-accent-text">
                         {t("translation_languages.fixPattern")}
                       </button>
                     </div>
@@ -326,16 +326,16 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
                 )}
                 <Field label={t("translation_languages.outputPattern")} value={editing.output_pattern || ""} onChange={(v) => setEditing({ ...editing, output_pattern: v })} placeholder="{{name}}.{{lang_code}}.srt" error={patternError} help={t("translation_languages.patternHelp")} />
                 <div>
-                  <button onClick={() => setEditing({ ...editing, output_pattern: `{{name}}.{{lang_code}}.${selectedOutputFormat}` })} className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-xs text-[var(--text-2)]">
+                  <button onClick={() => setEditing({ ...editing, output_pattern: `{{name}}.{{lang_code}}.${selectedOutputFormat}` })} className="rounded-sm border border-border bg-surface-raised px-2 py-1 text-xs text-muted">
                     {t("translation_languages.resetRecommended")}
                   </button>
                 </div>
-                {previewExample && <div className="rounded-sm bg-[var(--surface-2)] p-3 text-xs font-mono"><div className="text-[var(--text-3)]">{t("translation_languages.previewSource")} <span className="text-[var(--text-2)]">The.Matrix.1999.srt</span></div><div className="mt-1 text-[var(--text-3)]">{t("translation_languages.previewOutput")} <span className="text-[var(--green)]">{previewExample}</span></div></div>}
-                {!showPromptOverride ? <button onClick={() => setShowPromptOverride(true)} className="text-xs text-[var(--accent)]">{t("translation_languages.addPromptOverride")}</button> : <div><div className="mb-1 flex items-center justify-between"><label className="text-sm font-medium text-[var(--text-2)]">{t("translation_languages.promptOverride")}</label><button onClick={() => { setShowPromptOverride(false); setEditing({ ...editing, prompt_override: "" }); }} className="text-xs text-[var(--text-3)]">{t("translation_languages.removePromptOverride")}</button></div><textarea value={editing.prompt_override || ""} onChange={(e) => setEditing({ ...editing, prompt_override: e.target.value })} rows={5} placeholder={t("translation_languages.promptOverridePlaceholder")} className="w-full rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs font-mono text-[var(--text)] focus:border-[var(--accent)]" /><p className="mt-1 text-xs text-[var(--text-3)]">{t("translation_languages.promptOverrideHint")}</p></div>}
+                {previewExample && <div className="rounded-sm bg-surface-raised p-3 text-xs font-mono"><div className="text-faint">{t("translation_languages.previewSource")} <span className="text-muted">The.Matrix.1999.srt</span></div><div className="mt-1 text-faint">{t("translation_languages.previewOutput")} <span className="text-success">{previewExample}</span></div></div>}
+                {!showPromptOverride ? <button onClick={() => setShowPromptOverride(true)} className="text-xs text-accent">{t("translation_languages.addPromptOverride")}</button> : <div><div className="mb-1 flex items-center justify-between"><label className="text-sm font-medium text-muted">{t("translation_languages.promptOverride")}</label><button onClick={() => { setShowPromptOverride(false); setEditing({ ...editing, prompt_override: "" }); }} className="text-xs text-faint">{t("translation_languages.removePromptOverride")}</button></div><textarea value={editing.prompt_override || ""} onChange={(e) => setEditing({ ...editing, prompt_override: e.target.value })} rows={5} placeholder={t("translation_languages.promptOverridePlaceholder")} className="w-full rounded-sm border border-border bg-surface-raised px-3 py-2 text-xs font-mono text-text focus:border-accent" /><p className="mt-1 text-xs text-faint">{t("translation_languages.promptOverrideHint")}</p></div>}
           </div>
-          <div className={`mt-6 flex gap-3 ${isMobile ? "sticky bottom-0 bg-[var(--surface)] pt-4" : "justify-end"}`}>
-            <button onClick={() => { setEditing(null); setIsNew(false); }} className="flex-1 px-4 py-3 text-sm text-[var(--text-2)] md:flex-none">{t("common.cancel")}</button>
-            <button onClick={handleSave} disabled={!canSave} className="flex-1 rounded-sm bg-[var(--accent)] px-4 py-3 text-sm font-medium text-[var(--on-accent)] disabled:opacity-50 md:flex-none">{isNew ? t("translation_languages.create") : t("common.save")}</button>
+          <div className={`mt-6 flex gap-3 ${isMobile ? "sticky bottom-0 bg-surface pt-4" : "justify-end"}`}>
+            <button onClick={() => { setEditing(null); setIsNew(false); }} className="flex-1 px-4 py-3 text-sm text-muted md:flex-none">{t("common.cancel")}</button>
+            <button onClick={handleSave} disabled={!canSave} className="flex-1 rounded-sm bg-accent px-4 py-3 text-sm font-medium text-accent-text disabled:opacity-50 md:flex-none">{isNew ? t("translation_languages.create") : t("common.save")}</button>
           </div>
         </ModalShell>
       )}
@@ -354,8 +354,8 @@ function SelectField({ label, value, onChange, options, help, required }: { labe
 
   return (
     <div>
-      <label htmlFor={selectId} className="mb-2 block text-xs font-medium text-[var(--text-2)]">
-        {label} {required && <span className="text-[var(--red)]">*</span>}
+      <label htmlFor={selectId} className="mb-2 block text-xs font-medium text-muted">
+        {label} {required && <span className="text-danger">*</span>}
       </label>
       <select
         id={selectId}
@@ -363,13 +363,13 @@ function SelectField({ label, value, onChange, options, help, required }: { labe
         onChange={(e) => onChange(e.target.value)}
         aria-describedby={help ? helpId : undefined}
         required={required}
-        className="w-full rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm leading-6 text-[var(--text)] focus:border-[var(--accent)]"
+        className="w-full rounded-sm border border-border bg-surface-raised px-3 py-2 text-sm leading-6 text-text focus:border-accent"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>{option.label}</option>
         ))}
       </select>
-      {help && <p id={helpId} className="mt-1 text-xs leading-6 text-[var(--text-3)]">{help}</p>}
+      {help && <p id={helpId} className="mt-1 text-xs leading-6 text-faint">{help}</p>}
     </div>
   );
 }

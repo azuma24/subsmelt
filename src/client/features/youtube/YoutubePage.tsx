@@ -17,7 +17,7 @@ import { usePlaylistActions } from "./usePlaylistActions";
 
 type DialogState = { kind: "follow"; follow: FollowKind } | { kind: "edit"; playlist: YoutubePlaylist } | null;
 
-const TOPBAR_CLS = "sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b border-[var(--border)] bg-[var(--surface)] px-4 md:px-4";
+const TOPBAR_CLS = "sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 md:px-4";
 
 export function YoutubePage({ isMobile }: { isMobile: boolean }) {
   const { t } = useTranslation();
@@ -57,11 +57,11 @@ export function YoutubePage({ isMobile }: { isMobile: boolean }) {
 
   const topbar = selectedId ? (
     <div className={TOPBAR_CLS}>
-      <h1 className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-[var(--text)]">
-        <button type="button" onClick={() => openPlaylist(null)} className="min-h-touch shrink-0 text-[var(--text-2)] hover:text-[var(--accent)]">
+      <h1 className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-text">
+        <button type="button" onClick={() => openPlaylist(null)} className="min-h-touch shrink-0 text-muted hover:text-accent">
           {t("youtube.title")}
         </button>
-        <span aria-hidden="true" className="text-[var(--text-3)]">/</span>
+        <span aria-hidden="true" className="text-faint">/</span>
         <span className="truncate">{selected?.title ?? ""}</span>
       </h1>
       {selected && (
@@ -69,7 +69,7 @@ export function YoutubePage({ isMobile }: { isMobile: boolean }) {
           <ActionButton variant="ghost" size="sm" onClick={() => void actions.checkNow(selected)} busy={actions.isChecking(selected)}>
             {actions.isChecking(selected) ? t("youtube.checking") : t("youtube.checkNow")}
           </ActionButton>
-          <button type="button" onClick={() => setDialog({ kind: "edit", playlist: selected })} className="min-h-touch rounded-sm px-3 text-xs font-medium text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]">
+          <button type="button" onClick={() => setDialog({ kind: "edit", playlist: selected })} className="min-h-touch rounded-sm px-3 text-xs font-medium text-muted hover:bg-surface-raised hover:text-text">
             {t("common.edit")}
           </button>
         </>
@@ -77,7 +77,7 @@ export function YoutubePage({ isMobile }: { isMobile: boolean }) {
     </div>
   ) : (
     <div className={TOPBAR_CLS}>
-      <h1 className="flex-1 text-sm font-semibold text-[var(--text)]">{t("youtube.title")}</h1>
+      <h1 className="flex-1 text-sm font-semibold text-text">{t("youtube.title")}</h1>
       {playlists.length > 0 && (
         <>
           <ActionButton variant="ghost" size="sm" onClick={() => setDialog({ kind: "follow", follow: "channel" })} disabled={ytdlpMissing}>
@@ -96,9 +96,9 @@ export function YoutubePage({ isMobile }: { isMobile: boolean }) {
     if (playlistsQuery.isLoading) return <ListSkeleton />;
     if (selectedId && !selected) {
       return (
-        <div className="rounded-md border border-dashed border-[var(--border)] px-4 py-12 text-center text-sm text-[var(--text-2)]">
+        <div className="rounded-md border border-dashed border-border px-4 py-12 text-center text-sm text-muted">
           <p>{t("youtube.notFollowed")}</p>
-          <button type="button" onClick={() => openPlaylist(null)} className="mt-2 min-h-touch px-2 font-medium text-[var(--accent)] hover:underline">
+          <button type="button" onClick={() => openPlaylist(null)} className="mt-2 min-h-touch px-2 font-medium text-accent hover:underline">
             {t("youtube.back")}
           </button>
         </div>
@@ -152,7 +152,7 @@ function CooldownBanner({ cooldown, onExpired, onAddCookies }: { cooldown: Youtu
       tone="warn"
       title={t(bot ? "youtube.banner.botCheckTitle" : "youtube.banner.cooldownTitle")}
       action={(
-        <button type="button" onClick={onAddCookies} className="-my-3 min-h-touch shrink-0 self-center rounded-sm px-2 text-xs font-medium text-[var(--accent)] hover:underline">
+        <button type="button" onClick={onAddCookies} className="-my-3 min-h-touch shrink-0 self-center rounded-sm px-2 text-xs font-medium text-accent hover:underline">
           {t("youtube.banner.addCookies")}
         </button>
       )}
@@ -173,7 +173,7 @@ function PipelineBanners({ pipeline, onOpenSettings }: { pipeline: YoutubePipeli
           tone="warn"
           title={t("youtube.banner.noBackendTitle")}
           action={(
-            <button type="button" onClick={onOpenSettings} className="-my-3 min-h-touch shrink-0 self-center rounded-sm px-2 text-xs font-medium text-[var(--accent)] hover:underline">
+            <button type="button" onClick={onOpenSettings} className="-my-3 min-h-touch shrink-0 self-center rounded-sm px-2 text-xs font-medium text-accent hover:underline">
               {t("youtube.dialog.openSettings")}
             </button>
           )}
@@ -194,15 +194,15 @@ function EmptyState({ onFollow, disabled }: { onFollow: (kind: FollowKind) => vo
   const { t } = useTranslation();
   const steps = ["stepDownload", "stepSubtitles", "stepTranslate", "stepNote"] as const;
   return (
-    <section className="mx-auto flex max-w-[560px] flex-col items-center gap-4 rounded-md border border-[var(--border)] bg-[var(--surface)] px-6 py-12 text-center md:px-12 md:py-12">
-      <div aria-hidden="true" className="flex h-12 w-12 items-center justify-center rounded-md bg-[var(--accent-dim)] text-lg text-[var(--accent)]">▶</div>
-      <h2 className="text-lg font-semibold leading-7 text-[var(--text)]">{t("youtube.empty.title")}</h2>
-      <p className="text-sm leading-6 text-[var(--text-2)]">{t("youtube.empty.body")}</p>
-      <ol aria-label={t("youtube.empty.flowLabel")} className="flex flex-wrap items-center justify-center gap-2 text-xs text-[var(--text-2)]">
+    <section className="mx-auto flex max-w-[560px] flex-col items-center gap-4 rounded-md border border-border bg-surface px-6 py-12 text-center md:px-12 md:py-12">
+      <div aria-hidden="true" className="flex h-12 w-12 items-center justify-center rounded-md bg-accent-soft text-lg text-accent">▶</div>
+      <h2 className="text-lg font-semibold leading-7 text-text">{t("youtube.empty.title")}</h2>
+      <p className="text-sm leading-6 text-muted">{t("youtube.empty.body")}</p>
+      <ol aria-label={t("youtube.empty.flowLabel")} className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted">
         {steps.map((step, i) => (
           <li key={step} className="flex items-center gap-2">
-            <span className="rounded-full border border-[var(--border)] px-3 leading-6">{t(`youtube.empty.${step}`)}</span>
-            {i < steps.length - 1 && <span aria-hidden="true" className="text-[var(--text-3)]">→</span>}
+            <span className="rounded-full border border-border px-3 leading-6">{t(`youtube.empty.${step}`)}</span>
+            {i < steps.length - 1 && <span aria-hidden="true" className="text-faint">→</span>}
           </li>
         ))}
       </ol>
@@ -214,7 +214,7 @@ function EmptyState({ onFollow, disabled }: { onFollow: (kind: FollowKind) => vo
           <span aria-hidden="true">＋</span> {t("youtube.empty.actionChannel")}
         </ActionButton>
       </div>
-      <p className="text-xs leading-5 text-[var(--text-3)]">{t("youtube.empty.tip")}</p>
+      <p className="text-xs leading-5 text-faint">{t("youtube.empty.tip")}</p>
     </section>
   );
 }
@@ -223,12 +223,12 @@ function ListSkeleton() {
   return (
     <div className="space-y-3" aria-hidden="true">
       {[0, 1].map((i) => (
-        <div key={i} className="space-y-3 rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
-          <div className="h-4 w-1/3 rounded-sm bg-[var(--surface-3)]" />
-          <div className="h-3 w-1/2 rounded-sm bg-[var(--surface-2)]" />
+        <div key={i} className="space-y-3 rounded-md border border-border bg-surface p-4">
+          <div className="h-4 w-1/3 rounded-sm bg-surface-highlight" />
+          <div className="h-3 w-1/2 rounded-sm bg-surface-raised" />
           <div className="flex gap-2">
-            <div className="h-6 w-20 rounded-full bg-[var(--surface-2)]" />
-            <div className="h-6 w-24 rounded-full bg-[var(--surface-2)]" />
+            <div className="h-6 w-20 rounded-full bg-surface-raised" />
+            <div className="h-6 w-24 rounded-full bg-surface-raised" />
           </div>
         </div>
       ))}

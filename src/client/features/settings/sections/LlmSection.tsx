@@ -26,9 +26,9 @@ export function LlmSection({ settings, isMobile, updateAndSaveDebounced, addToas
       {/* Temperature moved to Advanced accordion per Phase 3 spec */}
       <Accordion title={t("settings.advanced")}>
         <div className="md:max-w-[320px]">
-          <label className={labelCls}>{t("settings.llmConnection.temperatureLabel")}: <span className="font-mono text-[var(--accent)]">{str(settings.temperature, "0.3")}</span></label>
-          <input type="range" min="0" max="2" step="0.1" aria-label={t("settings.llmConnection.temperatureLabel")} value={str(settings.temperature, "0.3")} onChange={(e) => updateAndSaveDebounced("temperature", e.target.value)} className="w-full accent-[var(--accent)] min-h-touch md:min-h-0" />
-          <p className="mt-2 text-xs leading-relaxed text-[var(--text-3)]">{t("settings.llmConnection.temperatureHelp")}</p>
+          <label className={labelCls}>{t("settings.llmConnection.temperatureLabel")}: <span className="font-mono text-accent">{str(settings.temperature, "0.3")}</span></label>
+          <input type="range" min="0" max="2" step="0.1" aria-label={t("settings.llmConnection.temperatureLabel")} value={str(settings.temperature, "0.3")} onChange={(e) => updateAndSaveDebounced("temperature", e.target.value)} className="w-full accent-accent min-h-touch md:min-h-0" />
+          <p className="mt-2 text-xs leading-relaxed text-faint">{t("settings.llmConnection.temperatureHelp")}</p>
         </div>
       </Accordion>
     </>

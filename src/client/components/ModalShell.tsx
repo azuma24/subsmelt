@@ -24,7 +24,7 @@ export function ModalShell({
   title,
   children,
   onClose,
-  panelClassName = "w-full max-w-lg rounded-md border border-[var(--border)] bg-[var(--surface)] p-6",
+  panelClassName = "w-full max-w-lg rounded-md border border-border bg-surface p-6",
   overlayClassName = "fixed inset-0 z-50 bg-scrim p-4",
   labelledBy,
 }: ModalShellProps) {
@@ -96,7 +96,7 @@ export function ModalShell({
         className={panelClassName}
         onKeyDown={handleKeyDown}
       >
-        {title && <h3 id={resolvedTitleId} className="text-base font-semibold text-[var(--text)]">{title}</h3>}
+        {title && <h3 id={resolvedTitleId} className="text-base font-semibold text-text">{title}</h3>}
         {children}
       </div>
     </div>

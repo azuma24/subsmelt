@@ -104,7 +104,7 @@ export function SttSection({
       <div className={`flex ${isMobile ? "flex-col" : "items-center"} gap-3`}>
         <ActionButton variant="ghost" size="sm" onClick={onTest}>{testing ? t("app.testing") : t("settings.transcription.testButton")}</ActionButton>
         {testResult && (
-          <span className={`text-sm ${testResult.ok ? "text-[var(--green)]" : "text-[var(--red)]"}`}><span aria-hidden="true">{testResult.ok ? "✓ " : "✗ "}</span>{testResult.message}</span>
+          <span className={`text-sm ${testResult.ok ? "text-success" : "text-danger"}`}><span aria-hidden="true">{testResult.ok ? "✓ " : "✗ "}</span>{testResult.message}</span>
         )}
       </div>
       <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>

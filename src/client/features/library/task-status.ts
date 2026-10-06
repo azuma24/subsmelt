@@ -25,17 +25,17 @@ export function languageStatusDisplay(task: TaskStatus, status: string): { label
 export function stageTone(stage: ManualTranscriptionStage): string {
   switch (stage) {
     case "complete":
-      return "text-[var(--green)]";
+      return "text-success";
     case "skipped":
-      return "text-[var(--yellow)]";
+      return "text-warning";
     case "failed":
-      return "text-[var(--red)]";
+      return "text-danger";
     case "cancelled":
-      return "text-[var(--text-2)]";
+      return "text-muted";
     case "cancelling":
-      return "text-[var(--yellow)]";
+      return "text-warning";
     default:
-      return "text-[var(--accent)]";
+      return "text-accent";
   }
 }
 

@@ -22,9 +22,9 @@ interface TranscriptionHistoryPanelProps {
 }
 
 function statusClasses(status: string): string {
-  if (status === "succeeded") return "border-[var(--green-border)] bg-[var(--green-dim)] text-[var(--green)]";
-  if (status === "failed") return "border-[var(--red-border)] bg-[var(--red-dim)] text-[var(--red)]";
-  return "border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]";
+  if (status === "succeeded") return "border-success-line bg-success-soft text-success";
+  if (status === "failed") return "border-danger-line bg-danger-soft text-danger";
+  return "border-accent-line bg-accent-soft text-accent";
 }
 
 export function TranscriptionHistoryPanel({
@@ -66,17 +66,17 @@ export function TranscriptionHistoryPanel({
     <div className="p-4">
       <div className="flex items-center justify-between gap-3 mb-3">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-[var(--text)]">{t("transcriptionHistory.title")}</h2>
-          <p className="text-xs text-[var(--text-3)]">{t("transcriptionHistory.description")}</p>
+          <h2 className="text-sm font-semibold text-text">{t("transcriptionHistory.title")}</h2>
+          <p className="text-xs text-faint">{t("transcriptionHistory.description")}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <span className="whitespace-nowrap text-xs text-[var(--text-3)]">{t("transcriptionHistory.shown", { count: groups.length })}</span>
+          <span className="whitespace-nowrap text-xs text-faint">{t("transcriptionHistory.shown", { count: groups.length })}</span>
           {onRetryAllFailed && failed.length > 0 && (
             <button
               type="button"
               onClick={() => onRetryAllFailed(failed.map((group) => group.latest))}
               disabled={isRetryPending || isTranscribePending}
-              className="rounded-sm border border-[var(--red-border)] bg-[var(--red-dim)] px-3 py-2 text-xs font-medium text-[var(--red)] disabled:opacity-40"
+              className="rounded-sm border border-danger-line bg-danger-soft px-3 py-2 text-xs font-medium text-danger disabled:opacity-40"
             >
               {t("transcriptionHistory.retryAllFailed", { count: failed.length })}
             </button>
@@ -86,7 +86,7 @@ export function TranscriptionHistoryPanel({
               type="button"
               onClick={onClear}
               disabled={isClearPending || clearableCount === 0}
-              className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs font-medium text-[var(--text)] disabled:opacity-40 min-h-touch md:min-h-0"
+              className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-xs font-medium text-text disabled:opacity-40 min-h-touch md:min-h-0"
             >
               {isClearPending ? t("transcriptionHistory.clearing") : t("transcriptionHistory.clear")}
             </button>
@@ -94,7 +94,7 @@ export function TranscriptionHistoryPanel({
         </div>
       </div>
       {groups.length === 0 ? (
-        <div className="text-sm text-[var(--text-3)]">{t("transcriptionHistory.empty")}</div>
+        <div className="text-sm text-faint">{t("transcriptionHistory.empty")}</div>
       ) : (
         <div className="space-y-2">
           {groups.map((group: TranscriptionGroup) => {
@@ -103,11 +103,11 @@ export function TranscriptionHistoryPanel({
             const isExpanded = expanded.has(group.inputPath);
             const hasHistory = group.attempts.length > 1;
             return (
-              <div key={group.inputPath} className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-3">
+              <div key={group.inputPath} className="rounded-sm border border-border bg-surface-raised p-3">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-medium text-[var(--text)]">{group.title}</div>
-                    <div className="mt-1 text-xs text-[var(--text-3)]">
+                    <div className="truncate text-sm font-medium text-text">{group.title}</div>
+                    <div className="mt-1 text-xs text-faint">
                       {latest.model} • {latest.language} • {latest.outputFormat.toUpperCase()} • {latest.postAction === "transcribe_and_translate" ? t("transcriptionHistory.postQueueTranslate") : t("transcriptionHistory.postTranscribeOnly")}
                     </div>
                     {latest.status === "failed" ? (
@@ -115,14 +115,14 @@ export function TranscriptionHistoryPanel({
                         const hint = errorHintKeys(classifyError(latest.errorSummary));
                         return (
                           <>
-                            <div className="mt-1 text-xs text-[var(--text-2)]">
+                            <div className="mt-1 text-xs text-muted">
                               {hint ? t(hint) : latest.errorSummary || t("transcriptionHistory.failedFallback")}
                             </div>
                             {/* The raw text is rendered, not just a title tooltip:
                                 tooltips are unreachable on touch and cannot be
                                 selected, and this is what a bug report needs. */}
                             {hint && latest.errorSummary && (
-                              <div className="mt-1 select-all break-words font-mono text-xs text-[var(--text-3)]">
+                              <div className="mt-1 select-all break-words font-mono text-xs text-faint">
                                 {latest.errorSummary}
                               </div>
                             )}
@@ -130,7 +130,7 @@ export function TranscriptionHistoryPanel({
                         );
                       })()
                     ) : (
-                      <div className="mt-1 text-xs text-[var(--text-3)]" title={fullTime(latest.finishedAt || latest.startedAt)}>
+                      <div className="mt-1 text-xs text-faint" title={fullTime(latest.finishedAt || latest.startedAt)}>
                         {relativeTime(latest.finishedAt || latest.startedAt)}
                       </div>
                     )}
@@ -141,7 +141,7 @@ export function TranscriptionHistoryPanel({
                         type="button"
                         onClick={() => toggle(group.inputPath)}
                         aria-expanded={isExpanded}
-                        className="rounded-full border border-[var(--border)] px-3 py-1 text-xs text-[var(--text-3)] hover:text-[var(--text)]"
+                        className="rounded-full border border-border px-3 py-1 text-xs text-faint hover:text-text"
                       >
                         {t("transcriptionHistory.attempts", { count: group.attempts.length })}
                       </button>
@@ -155,7 +155,7 @@ export function TranscriptionHistoryPanel({
                       // One run per file: no retry while any retry or batch is in
                       // flight, or while the backend still reports this file running.
                       disabled={isRetryPending || isTranscribePending || latest.status === "running"}
-                      className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs font-medium text-[var(--text)] disabled:opacity-40 min-h-touch md:min-h-0"
+                      className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-xs font-medium text-text disabled:opacity-40 min-h-touch md:min-h-0"
                     >
                       {activeRetry ? t("transcriptionHistory.retrying") : t("transcriptionHistory.retry")}
                     </button>
@@ -168,7 +168,7 @@ export function TranscriptionHistoryPanel({
                         disabled={group.attempts.some((entry) => entry.id === removingId) || latest.status === "running"}
                         title={t("transcriptionHistory.remove")}
                         aria-label={t("transcriptionHistory.remove")}
-                        className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs font-medium text-[var(--text-3)] disabled:opacity-40"
+                        className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-xs font-medium text-faint disabled:opacity-40"
                       >
                         {t("transcriptionHistory.remove")}
                       </button>
@@ -176,9 +176,9 @@ export function TranscriptionHistoryPanel({
                   </div>
                 </div>
                 {isExpanded && hasHistory && (
-                  <ul className="mt-3 space-y-1 border-t border-[var(--border)] pt-2">
+                  <ul className="mt-3 space-y-1 border-t border-border pt-2">
                     {group.attempts.map((entry) => (
-                      <li key={entry.id} className="flex items-baseline justify-between gap-3 text-xs text-[var(--text-3)]">
+                      <li key={entry.id} className="flex items-baseline justify-between gap-3 text-xs text-faint">
                         <span className="truncate" title={fullTime(entry.finishedAt || entry.startedAt)}>
                           {relativeTime(entry.finishedAt || entry.startedAt)}
                           {entry.errorSummary ? ` — ${entry.errorSummary}` : ""}

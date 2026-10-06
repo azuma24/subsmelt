@@ -172,23 +172,23 @@ export function ConnectionsPanel({ settings, update, addToast, isMobile }: Conne
       {/* Mode selector */}
       <div>
         <label id={modeLabelId} className={labelCls}>{t("settings.connections.mode")}</label>
-        <div role="group" aria-labelledby={modeLabelId} className="flex overflow-hidden rounded-sm border border-[var(--border)]">
+        <div role="group" aria-labelledby={modeLabelId} className="flex overflow-hidden rounded-sm border border-border">
           {(["single", "fallback", "parallel"] as LlmMode[]).map((m) => (
             <button
               key={m}
               onClick={() => update("llm_mode", m)}
               aria-pressed={mode === m}
-              className={`flex-1 border-r border-[var(--border)] py-2 text-xs font-medium transition-colors last:border-r-0 min-h-touch md:min-h-0 ${
+              className={`flex-1 border-r border-border py-2 text-xs font-medium transition-colors last:border-r-0 min-h-touch md:min-h-0 ${
                 mode === m
-                  ? "bg-[var(--accent-dim)] text-[var(--accent)]"
-                  : "bg-[var(--surface-2)] text-[var(--text-2)] hover:bg-[var(--surface-3)] hover:text-[var(--text)]"
+                  ? "bg-accent-soft text-accent"
+                  : "bg-surface-raised text-muted hover:bg-surface-highlight hover:text-text"
               }`}
             >
               {t(`settings.connections.mode${m.charAt(0).toUpperCase()}${m.slice(1)}`)}
             </button>
           ))}
         </div>
-        <p className="mt-2 text-xs leading-relaxed text-[var(--text-3)]">{t(MODE_HELP_KEY[mode])}</p>
+        <p className="mt-2 text-xs leading-relaxed text-faint">{t(MODE_HELP_KEY[mode])}</p>
       </div>
 
       {/* Connection cards. In `single` mode only the active connection is
@@ -235,7 +235,7 @@ export function ConnectionsPanel({ settings, update, addToast, isMobile }: Conne
 
       <button
         onClick={addConn}
-        className="w-full rounded-sm border border-dashed border-[var(--border)] bg-[var(--surface-2)] py-3 text-sm font-medium text-[var(--accent)] hover:bg-[var(--surface-3)]"
+        className="w-full rounded-sm border border-dashed border-border bg-surface-raised py-3 text-sm font-medium text-accent hover:bg-surface-highlight"
       >
         {t("settings.connections.add")}
       </button>
@@ -310,7 +310,7 @@ function ConnectionCard({
   const summary = `${providerLabel} · ${c.model || t("settings.connections.noModel")}`;
 
   return (
-    <div className="space-y-3 rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-4">
+    <div className="space-y-3 rounded-md border border-border bg-surface-raised p-4">
       {/* Header row: active/enabled control, the disclosure summary, row actions */}
       <div className="flex items-center gap-2">
         {mode === "single" && (
@@ -321,7 +321,7 @@ function ConnectionCard({
             onChange={onSetActive}
             title={t("settings.connections.activeTitle")}
             aria-label={t("settings.connections.activeAria", { label: c.label })}
-            className="h-4 w-4 shrink-0 accent-[var(--accent)]"
+            className="h-4 w-4 shrink-0 accent-accent"
           />
         )}
         <button
@@ -329,21 +329,21 @@ function ConnectionCard({
           onClick={onToggleExpanded}
           aria-expanded={expanded}
           aria-controls={bodyId}
-          className="flex min-h-touch min-w-0 flex-1 items-center gap-2 rounded-sm px-1 text-left hover:bg-[var(--surface-3)]"
+          className="flex min-h-touch min-w-0 flex-1 items-center gap-2 rounded-sm px-1 text-left hover:bg-surface-highlight"
         >
-          <span className={`shrink-0 text-[var(--text-3)] transition-transform duration-fast ${expanded ? "rotate-180" : ""}`} aria-hidden="true">▾</span>
+          <span className={`shrink-0 text-faint transition-transform duration-fast ${expanded ? "rotate-180" : ""}`} aria-hidden="true">▾</span>
           <span className="min-w-0">
-            <span className="block truncate text-sm font-medium text-[var(--text)]">{c.label || t("settings.connections.connectionName")}</span>
-            {!expanded && <span className="block truncate text-xs text-[var(--text-3)]">{summary}</span>}
+            <span className="block truncate text-sm font-medium text-text">{c.label || t("settings.connections.connectionName")}</span>
+            {!expanded && <span className="block truncate text-xs text-faint">{summary}</span>}
           </span>
         </button>
         {mode !== "single" && (
-          <label className="flex shrink-0 items-center gap-2 text-xs text-[var(--text-2)]">
+          <label className="flex shrink-0 items-center gap-2 text-xs text-muted">
             <input
               type="checkbox"
               checked={c.enabled}
               onChange={(e) => onPatch({ enabled: e.target.checked })}
-              className="h-4 w-4 accent-[var(--accent)]"
+              className="h-4 w-4 accent-accent"
             />
             {t("settings.connections.enabled")}
           </label>
@@ -369,16 +369,16 @@ function ConnectionCard({
           {/* Provider */}
           <div>
             <span id={providerGroupId} className={labelCls}>{t("settings.connections.provider")}</span>
-            <div role="group" aria-labelledby={providerGroupId} className="flex overflow-hidden rounded-sm border border-[var(--border)]">
+            <div role="group" aria-labelledby={providerGroupId} className="flex overflow-hidden rounded-sm border border-border">
               {PROVIDERS.map((p) => (
                 <button
                   key={p}
                   onClick={() => onChangeProvider(p)}
                   aria-pressed={c.provider === p}
-                  className={`flex-1 border-r border-[var(--border)] py-2 text-xs font-medium transition-colors last:border-r-0 min-h-touch md:min-h-0 ${
+                  className={`flex-1 border-r border-border py-2 text-xs font-medium transition-colors last:border-r-0 min-h-touch md:min-h-0 ${
                     c.provider === p
-                      ? "bg-[var(--accent-dim)] text-[var(--accent)]"
-                      : "bg-[var(--surface)] text-[var(--text-2)] hover:text-[var(--text)]"
+                      ? "bg-accent-soft text-accent"
+                      : "bg-surface text-muted hover:text-text"
                   }`}
                 >
                   {t(`settings.llmConnection.provider_${p}`)}
@@ -416,7 +416,7 @@ function ConnectionCard({
                 onClick={onToggleShowKey}
                 aria-pressed={showKey}
                 aria-label={showKey ? t("settings.connections.hideApiKey") : t("settings.connections.showApiKey")}
-                className="flex min-h-touch shrink-0 items-center rounded-sm border border-[var(--border)] bg-[var(--surface)] px-3 text-xs text-[var(--text-2)] hover:text-[var(--text)]"
+                className="flex min-h-touch shrink-0 items-center rounded-sm border border-border bg-surface px-3 text-xs text-muted hover:text-text"
               >
                 <Icon name={showKey ? "hide-secret" : "show-secret"} />
               </button>}
@@ -426,13 +426,13 @@ function ConnectionCard({
           {/* Model */}
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <label htmlFor={modelSelectId} className="text-xs font-medium text-[var(--text-2)]">{t("settings.connections.model")}</label>
-              <button onClick={onFetchModels} className="text-xs text-[var(--accent)]">
+              <label htmlFor={modelSelectId} className="text-xs font-medium text-muted">{t("settings.connections.model")}</label>
+              <button onClick={onFetchModels} className="text-xs text-accent">
                 {loadingModels ? t("common.loading") : t("settings.llmConnection.fetchModels")}
               </button>
             </div>
             {models.length > 0 ? (
-              <select id={modelSelectId} value={c.model} onChange={(e) => onPatch({ model: e.target.value })} disabled={Boolean(envPinned.model)} className={`${selectCls} disabled:cursor-not-allowed disabled:text-[var(--text-2)]`}>
+              <select id={modelSelectId} value={c.model} onChange={(e) => onPatch({ model: e.target.value })} disabled={Boolean(envPinned.model)} className={`${selectCls} disabled:cursor-not-allowed disabled:text-muted`}>
                 <option value="">{t("settings.llmConnection.selectModel")}</option>
                 {models.map((m) => (
                   <option key={m} value={m}>{m}</option>
@@ -445,22 +445,22 @@ function ConnectionCard({
                 onChange={(e) => onPatch({ model: e.target.value })}
                 placeholder={t("settings.connections.modelPlaceholder")}
                 readOnly={Boolean(envPinned.model)}
-                className={`${selectCls} read-only:cursor-not-allowed read-only:text-[var(--text-2)]`}
+                className={`${selectCls} read-only:cursor-not-allowed read-only:text-muted`}
               />
             )}
-            {envPinned.model && <p className="mt-1 text-xs leading-6 text-[var(--text-3)]">{t("settings.envPinnedNote", { name: envPinned.model })}</p>}
+            {envPinned.model && <p className="mt-1 text-xs leading-6 text-faint">{t("settings.envPinnedNote", { name: envPinned.model })}</p>}
           </div>
 
           {/* Test */}
           <div className="flex items-center gap-3">
             <button
               onClick={onTest}
-              className="min-h-touch rounded-sm border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-2)] hover:text-[var(--text)]"
+              className="min-h-touch rounded-sm border border-border bg-surface px-3 py-2 text-xs text-muted hover:text-text"
             >
               {testing ? t("settings.connections.testing") : t("settings.connections.test")}
             </button>
             {testResult && (
-              <span className={`text-xs ${testResult.ok ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+              <span className={`text-xs ${testResult.ok ? "text-success" : "text-danger"}`}>
                 <span aria-hidden="true">{testResult.ok ? "✓ " : "✗ "}</span>
                 {testResult.ok ? testResult.message : testResult.message.includes("ECONNREFUSED") ? t("settings.connections.refused") : testResult.message}
               </span>

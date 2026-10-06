@@ -5,11 +5,11 @@ import { languageState, type LanguageState } from "./library-model";
 import { languageStatusDisplay } from "./task-status";
 
 export const LANGUAGE_TONE: Record<LanguageState, string> = {
-  done: "border-transparent bg-[var(--green-dim)] text-success",
+  done: "border-transparent bg-success-soft text-success",
   missing: "border-dashed border-border text-muted",
-  queued: "border-transparent bg-[var(--yellow-dim)] text-warning",
-  translating: "border-transparent bg-[var(--accent-dim)] text-accent",
-  error: "border-transparent bg-[var(--red-dim)] text-danger",
+  queued: "border-transparent bg-warning-soft text-warning",
+  translating: "border-transparent bg-accent-soft text-accent",
+  error: "border-transparent bg-danger-soft text-danger",
 };
 
 /** A target language and its status. The glyph is the only status cue, so it carries the label. */

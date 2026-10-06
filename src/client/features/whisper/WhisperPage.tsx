@@ -366,15 +366,15 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
     // Same page chrome as the Converter: sticky title bar + scrolling body, so
     // switching between sibling pages doesn't change the header pattern.
     <div className="flex h-full flex-col">
-      <div className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b border-[var(--border)] bg-[var(--surface)] px-4 md:px-4">
-        <h1 className="text-sm font-semibold text-[var(--text)]">{t("nav.whisper")}</h1>
+      <div className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 md:px-4">
+        <h1 className="text-sm font-semibold text-text">{t("nav.whisper")}</h1>
       </div>
       <div className="flex-1 overflow-auto">
         <div className={`mx-auto w-full max-w-[1100px] space-y-4 ${isMobile ? "p-3 pb-24" : "p-6"}`}>
-          <p className="text-sm text-[var(--text-2)]">{t("whisper.subtitle")}</p>
+          <p className="text-sm text-muted">{t("whisper.subtitle")}</p>
 
       {!enabled && (
-        <div className="rounded-md border border-[var(--yellow-border)] bg-[var(--yellow-dim)] px-4 py-3 text-sm text-[var(--yellow)]">
+        <div className="rounded-md border border-warning-line bg-warning-soft px-4 py-3 text-sm text-warning">
           <span aria-hidden="true">⚠ </span>{t("whisper.disabledNotice")} <Link to="/settings" className="underline">{t("whisper.openSettings")}</Link>
         </div>
       )}
@@ -382,7 +382,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
       {/* Enabled but no backend URL saved: without this the whole picker is
           hidden with no explanation of why. */}
       {enabled && !backendConfigured && (
-        <div className="rounded-md border border-[var(--yellow-border)] bg-[var(--yellow-dim)] px-4 py-3 text-sm text-[var(--yellow)]">
+        <div className="rounded-md border border-warning-line bg-warning-soft px-4 py-3 text-sm text-warning">
           <span aria-hidden="true">⚠ </span>{t("whisper.backendNotConfigured")} <Link to="/settings" className="underline">{t("whisper.openSettings")}</Link>
         </div>
       )}
@@ -474,7 +474,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
 
       {/* Readiness + Model Manager live in Settings → Speech to Text; the Whisper
           page focuses on picking files and transcribing. */}
-      <section className="rounded-md border border-[var(--border)] bg-[var(--surface-2)]">
+      <section className="rounded-md border border-border bg-surface-raised">
         <TranscriptionHistoryPanel
           attempts={attempts}
           transcribingPath={retryingPath ?? activePath}

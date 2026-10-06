@@ -76,14 +76,14 @@ export function LibraryPicker({
           onChange={(e) => onLibraryQueryChange(e.target.value)}
           placeholder={t("whisper.filterPlaceholder")}
           aria-label={t("whisper.filterPlaceholder")}
-          className="min-w-[180px] flex-1 rounded-sm border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text)] placeholder:text-[var(--text-3)] min-h-touch md:min-h-0"
+          className="min-w-[180px] flex-1 rounded-sm border border-border bg-surface px-3 py-2 text-xs text-text placeholder:text-faint min-h-touch md:min-h-0"
         />
-        <label className="flex min-h-touch items-center gap-2 text-xs text-[var(--text-2)] md:min-h-0">
+        <label className="flex min-h-touch items-center gap-2 text-xs text-muted md:min-h-0">
           <input
             type="checkbox"
             checked={hideWithSubtitles}
             onChange={(e) => onHideWithSubtitlesChange(e.target.checked)}
-            className="h-4 w-4 accent-[var(--accent)]"
+            className="h-4 w-4 accent-accent"
           />
           {t("whisper.hideWithSubtitles")}
         </label>
@@ -95,12 +95,12 @@ export function LibraryPicker({
       </div>
 
       {isFiltered && (
-        <div className="text-xs text-[var(--text-3)]">
+        <div className="text-xs text-faint">
           {t("whisper.filteredCount", { shown: visibleFiles.length, total: videoFiles.length })}
         </div>
       )}
 
-      <div className="overflow-hidden rounded-md border border-[var(--border)] bg-[var(--surface)]">
+      <div className="overflow-hidden rounded-md border border-border bg-surface">
         <SelectionBar
           count={selectedVisibleCount}
           isMobile={isMobile}
@@ -200,23 +200,23 @@ function FileRow({ file, padLeftPx, relPath, selected, toggleFile, fileProgress,
     : fp?.phase === "waiting_for_gpu" && fp.pct === undefined ? t("whisper.waitingForGpu")
     : typeof fp?.pct === "number" ? `${Math.round(fp.pct)}%` : "";
   return (
-    <label className="flex items-center gap-2 px-3 py-2 text-xs text-[var(--text-2)] hover:bg-[var(--surface-2)]"
+    <label className="flex items-center gap-2 px-3 py-2 text-xs text-muted hover:bg-surface-raised"
       style={{ paddingLeft: `${padLeftPx}px` }}>
       {/* Selection is frozen mid-batch: the run works from the list captured at
           start, so letting it change would misrepresent what is queued. */}
-      <input type="checkbox" checked={selected.has(vp)} disabled={running} onChange={() => toggleFile(vp)} className="h-4 w-4 accent-[var(--accent)]" />
+      <input type="checkbox" checked={selected.has(vp)} disabled={running} onChange={() => toggleFile(vp)} className="h-4 w-4 accent-accent" />
       <span className="truncate"><Icon name="video" /> {relPath ?? (file.videoName || baseName(vp))}</span>
       <span className="ml-auto flex shrink-0 items-center gap-2">
         {status && (
           // The running file is marked with a glyph + weight, not accent colour
           // alone, and announced so it isn't a purely visual distinction.
-          <span className={`text-xs ${isActive ? "font-semibold text-[var(--accent)]" : "text-[var(--text-3)]"}`}>
+          <span className={`text-xs ${isActive ? "font-semibold text-accent" : "text-faint"}`}>
             {isActive && <span aria-hidden="true">▶ </span>}
             {isActive && <span className="sr-only">{t("whisper.transcribingNow")} </span>}
             {status}
           </span>
         )}
-        {file.subtitles.length > 0 && <span className="text-xs text-[var(--text-3)]">{t("whisper.hasSubtitle")}</span>}
+        {file.subtitles.length > 0 && <span className="text-xs text-faint">{t("whisper.hasSubtitle")}</span>}
       </span>
     </label>
   );
@@ -242,13 +242,13 @@ function WhisperFolderRow({ node, ctx, selected, running, toggleFolder }: Whispe
   const someSel = !allSel && node.allPaths.some((p) => selected.has(p));
   const isDrill = ctx.mode === "drill";
   return (
-    <div className="flex h-9 items-center gap-2 border-b border-[var(--border)] bg-[var(--surface-2)] px-3 text-xs font-medium text-[var(--text)]"
+    <div className="flex h-9 items-center gap-2 border-b border-border bg-surface-raised px-3 text-xs font-medium text-text"
       style={{ paddingLeft: `${ctx.padLeftPx}px` }}>
       {/* The caret, the checkbox and the name button are three distinct
           controls; each needs a name describing its own action, or a screen
           reader just hears the folder name three times in a row. */}
       {!isDrill && (
-        <button type="button" onClick={ctx.onActivate} className="w-3 shrink-0 text-[var(--text-3)]" aria-label={t("whisper.toggleFolder", { name: node.name })} aria-expanded={ctx.open}>
+        <button type="button" onClick={ctx.onActivate} className="w-3 shrink-0 text-faint" aria-label={t("whisper.toggleFolder", { name: node.name })} aria-expanded={ctx.open}>
           <span aria-hidden="true">{ctx.open ? "▾" : "▸"}</span>
         </button>
       )}
@@ -259,7 +259,7 @@ function WhisperFolderRow({ node, ctx, selected, running, toggleFolder }: Whispe
         disabled={running}
         ref={(el) => { if (el) el.indeterminate = someSel; }}
         onChange={() => toggleFolder(node.allPaths)}
-        className="h-4 w-4 accent-[var(--accent)]"
+        className="h-4 w-4 accent-accent"
       />
       <button
         type="button"
@@ -270,11 +270,11 @@ function WhisperFolderRow({ node, ctx, selected, running, toggleFolder }: Whispe
       >
         {/* From depth 2 the sticky stack stops growing, so pinned deep headers
             carry their ancestor path inline instead. */}
-        {ctx.ancestorHint && <span className="shrink-0 text-xs font-normal text-[var(--text-3)]">{ctx.ancestorHint} /</span>}
+        {ctx.ancestorHint && <span className="shrink-0 text-xs font-normal text-faint">{ctx.ancestorHint} /</span>}
         <span className="truncate"><Icon name="folder" /> {node.name}</span>
-        <span className="shrink-0 text-xs text-[var(--text-3)]">({node.allPaths.length})</span>
+        <span className="shrink-0 text-xs text-faint">({node.allPaths.length})</span>
       </button>
-      {isDrill && <span aria-hidden="true" className="shrink-0 text-[var(--text-3)]">›</span>}
+      {isDrill && <span aria-hidden="true" className="shrink-0 text-faint">›</span>}
     </div>
   );
 }

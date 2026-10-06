@@ -87,10 +87,10 @@ export function TranslateFileForm({ srtPath, existingTasks, onQueued, onCancel }
   };
 
   return (
-    <form onSubmit={submit} className="mt-3 flex flex-col gap-3 rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-3">
+    <form onSubmit={submit} className="mt-3 flex flex-col gap-3 rounded-md border border-border bg-surface-raised p-3">
       {quickPicks.length > 0 && (
         <div className="flex flex-col gap-2">
-          <span className="text-xs font-medium text-[var(--text-2)]">{t("scan.translateFile.yourTasks")}</span>
+          <span className="text-xs font-medium text-muted">{t("scan.translateFile.yourTasks")}</span>
           <div className="flex flex-wrap gap-2">
             {quickPicks.map((task) => {
               const active = pickedTask?.id === task.id;
@@ -103,7 +103,7 @@ export function TranslateFileForm({ srtPath, existingTasks, onQueued, onCancel }
                     setPickedTask(active ? null : task);
                     setLanguageInput("");
                   }}
-                  className={`rounded-full border px-3 py-1 text-xs ${active ? "border-[var(--accent)] bg-[var(--accent-dim)] text-[var(--accent)]" : "border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:border-[var(--accent-border)]"}`}
+                  className={`rounded-full border px-3 py-1 text-xs ${active ? "border-accent bg-accent-soft text-accent" : "border-border bg-surface text-text hover:border-accent-line"}`}
                 >
                   {task.target_lang} · {task.lang_code}
                 </button>
@@ -120,7 +120,7 @@ export function TranslateFileForm({ srtPath, existingTasks, onQueued, onCancel }
         onPick={(entry) => typeLanguage(entry.code)}
       />
       {mutation.error && (
-        <p role="alert" className="text-xs text-[var(--red)]">
+        <p role="alert" className="text-xs text-danger">
           {getErrorMessage(mutation.error)}
         </p>
       )}
@@ -128,14 +128,14 @@ export function TranslateFileForm({ srtPath, existingTasks, onQueued, onCancel }
         <button
           type="button"
           onClick={onCancel}
-          className={`${buttonBase} text-[var(--text-2)] hover:text-[var(--text)]`}
+          className={`${buttonBase} text-muted hover:text-text`}
         >
           {t("common.cancel")}
         </button>
         <button
           type="submit"
           disabled={!request || mutation.isPending}
-          className={`${buttonBase} bg-[var(--accent)] text-[var(--on-accent)] hover:brightness-110`}
+          className={`${buttonBase} bg-accent text-accent-text hover:brightness-110`}
         >
           {mutation.isPending ? t("scan.translateFile.submitting") : t("scan.translateFile.submit")}
         </button>

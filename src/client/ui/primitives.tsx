@@ -5,10 +5,10 @@ import { Icon, type IconName } from "./Icon";
 
 export function StatusPill({ label, tone, truncate = false }: { label: string; tone: "green" | "emerald" | "blue" | "gray"; truncate?: boolean }) {
   const cls = {
-    green: "bg-[var(--green-dim)] text-[var(--green)] border-[var(--green-border)]",
-    emerald: "bg-[var(--green-dim)] text-[var(--green)] border-[var(--green-border)]",
-    blue: "bg-[var(--accent-dim)] text-[var(--accent)] border-[var(--accent-border)]",
-    gray: "bg-[var(--surface-2)] text-[var(--text-2)] border-[var(--border)]",
+    green: "bg-success-soft text-success border-success-line",
+    emerald: "bg-success-soft text-success border-success-line",
+    blue: "bg-accent-soft text-accent border-accent-line",
+    gray: "bg-surface-raised text-muted border-border",
   }[tone];
   return <div className={`rounded-full border px-3 py-1 text-xs leading-6 ${cls} ${truncate ? "max-w-[220px] truncate" : ""}`}>{label}</div>;
 }
@@ -25,11 +25,11 @@ interface ActionButtonProps {
 
 export function ActionButton({ children, onClick, className = "", variant = "primary", size = "md", disabled = false, busy = false }: ActionButtonProps) {
   const cls = {
-    primary: "bg-[var(--accent)] hover:brightness-110 text-[var(--on-accent)]",
-    success: "bg-[var(--green)] hover:brightness-110 text-[var(--on-accent)] font-semibold",
-    danger: "bg-transparent text-[var(--red)] border border-[var(--red-border)] hover:bg-[var(--red-dim)]",
-    ghost: "bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text)] border border-[var(--border)]",
-    warning: "bg-[var(--yellow-dim)] hover:brightness-110 text-[var(--yellow)] border border-[var(--yellow-border)]",
+    primary: "bg-accent hover:brightness-110 text-accent-text",
+    success: "bg-success hover:brightness-110 text-accent-text font-semibold",
+    danger: "bg-transparent text-danger border border-danger-line hover:bg-danger-soft",
+    ghost: "bg-surface-raised hover:bg-surface-highlight text-text border border-border",
+    warning: "bg-warning-soft hover:brightness-110 text-warning border border-warning-line",
   }[variant];
   const sizeCls = size === "sm" ? "px-3 py-2 text-xs" : "px-4 py-3 text-sm";
   return <button onClick={onClick} disabled={disabled || busy} className={`inline-flex min-h-touch items-center justify-center gap-2 rounded-sm text-center font-medium leading-6 transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${sizeCls} ${cls} ${className}`}>{children}</button>;
@@ -53,11 +53,11 @@ export interface StatusFlag {
 }
 
 const STATUS_TONE_CLS: Record<StatusTone, string> = {
-  ok: "bg-[var(--green-dim)] text-[var(--green)] border border-[var(--green-border)]",
-  run: "bg-[var(--accent-dim)] text-[var(--accent)] border border-[var(--accent-border)]",
-  bad: "bg-[var(--red-dim)] text-[var(--red)] border border-[var(--red-border)]",
-  warn: "bg-[var(--yellow-dim)] text-[var(--yellow)] border border-dashed border-[var(--yellow-border)]",
-  neutral: "bg-[var(--surface-2)] text-[var(--text-2)] border border-[var(--border)]",
+  ok: "bg-success-soft text-success border border-success-line",
+  run: "bg-accent-soft text-accent border border-accent-line",
+  bad: "bg-danger-soft text-danger border border-danger-line",
+  warn: "bg-warning-soft text-warning border border-dashed border-warning-line",
+  neutral: "bg-surface-raised text-muted border border-border",
 };
 
 export function StatusBadge({ status }: { status: StatusDescriptor }) {
@@ -74,24 +74,24 @@ export function ProgressSmall({ pct, large = false }: { pct: number; large?: boo
   return (
     <div className="flex items-center gap-2">
       <div
-        className={`overflow-hidden rounded-full bg-[var(--surface-3)] ${large ? "h-2" : "h-1"} flex-1`}
+        className={`overflow-hidden rounded-full bg-surface-highlight ${large ? "h-2" : "h-1"} flex-1`}
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={boundedPct}
         aria-label={`${boundedPct}%`}
       >
-        <div className={`rounded-full bg-[var(--accent)] ${large ? "h-2" : "h-1"}`} style={{ width: `${boundedPct}%` }} />
+        <div className={`rounded-full bg-accent ${large ? "h-2" : "h-1"}`} style={{ width: `${boundedPct}%` }} />
       </div>
-      <span className="font-mono text-xs text-[var(--text-2)]">{boundedPct}%</span>
+      <span className="font-mono text-xs text-muted">{boundedPct}%</span>
     </div>
   );
 }
 
 export function MiniBtn({ children, onClick, color = "default" }: { children: ReactNode; onClick: () => void; color?: string }) {
   const cls = color === "yellow"
-    ? "bg-[var(--yellow-dim)] hover:brightness-110 text-[var(--yellow)] border border-[var(--yellow-border)]"
-    : "bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text-2)] hover:text-[var(--text)] border border-[var(--border)]";
+    ? "bg-warning-soft hover:brightness-110 text-warning border border-warning-line"
+    : "bg-surface-raised hover:bg-surface-highlight text-muted hover:text-text border border-border";
   return <button onClick={onClick} className={`rounded-sm px-3 py-1 text-xs leading-6 transition-colors min-h-touch md:min-h-0 ${cls}`}>{children}</button>;
 }
 
@@ -119,8 +119,8 @@ export function Field({ label, value, onChange, placeholder, help, error, type =
 
   return (
     <div>
-      <label htmlFor={inputId} className="mb-2 block text-xs font-medium text-[var(--text-2)]">
-        {label} {required && <span className="text-[var(--red)]">*</span>}
+      <label htmlFor={inputId} className="mb-2 block text-xs font-medium text-muted">
+        {label} {required && <span className="text-danger">*</span>}
       </label>
       <input
         id={inputId}
@@ -135,31 +135,31 @@ export function Field({ label, value, onChange, placeholder, help, error, type =
         min={min}
         max={max}
         step={step}
-        className={`w-full rounded-sm border bg-[var(--surface-2)] px-3 py-2 text-sm leading-6 transition-colors focus:border-[var(--accent)] min-h-touch md:min-h-0 ${readOnly ? "cursor-not-allowed text-[var(--text-2)]" : "text-[var(--text)]"} ${error ? "border-[var(--red-border)]" : "border-[var(--border)]"}`}
+        className={`w-full rounded-sm border bg-surface-raised px-3 py-2 text-sm leading-6 transition-colors focus:border-accent min-h-touch md:min-h-0 ${readOnly ? "cursor-not-allowed text-muted" : "text-text"} ${error ? "border-danger-line" : "border-border"}`}
       />
-      {error && <p id={errorId} className="mt-1 text-xs leading-6 text-[var(--red)]">{error}</p>}
-      {help && !error && <p id={helpId} className="mt-1 text-xs leading-6 text-[var(--text-3)]">{help}</p>}
+      {error && <p id={errorId} className="mt-1 text-xs leading-6 text-danger">{error}</p>}
+      {help && !error && <p id={helpId} className="mt-1 text-xs leading-6 text-faint">{help}</p>}
     </div>
   );
 }
 
 export function EmptyHint({ text, subtext }: { text: string; subtext?: string }) {
-  return <div className="rounded-md border border-dashed border-[var(--border)] bg-[var(--surface-2)] px-4 py-12 text-center text-sm leading-6 text-[var(--text-2)]"><p>{text}</p>{subtext && <p className="mt-2 text-xs leading-6 text-[var(--text-3)]">{subtext}</p>}</div>;
+  return <div className="rounded-md border border-dashed border-border bg-surface-raised px-4 py-12 text-center text-sm leading-6 text-muted"><p>{text}</p>{subtext && <p className="mt-2 text-xs leading-6 text-faint">{subtext}</p>}</div>;
 }
 
 export function DetailCard({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
-  return <div className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-4"><div className="text-xs text-[var(--text-2)]">{label}</div><div className={`mt-1 break-all text-sm leading-6 text-[var(--text)] ${mono ? "font-mono" : ""}`}>{value}</div></div>;
+  return <div className="rounded-md border border-border bg-surface-raised p-4"><div className="text-xs text-muted">{label}</div><div className={`mt-1 break-all text-sm leading-6 text-text ${mono ? "font-mono" : ""}`}>{value}</div></div>;
 }
 
 export function SettingsSection({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
-  return <section className="space-y-4 rounded-md border border-[var(--border)] bg-[var(--surface)] p-4"><div><h2 className="text-sm font-semibold text-[var(--text)]">{title}</h2>{description && <p className="mt-1 text-xs leading-6 text-[var(--text-2)]">{description}</p>}</div>{children}</section>;
+  return <section className="space-y-4 rounded-md border border-border bg-surface p-4"><div><h2 className="text-sm font-semibold text-text">{title}</h2>{description && <p className="mt-1 text-xs leading-6 text-muted">{description}</p>}</div>{children}</section>;
 }
 
 export function HealthChips({ items }: { items: { label: string; status: "ok" | "fail" | "warn" }[] }) {
   const tone = {
-    ok: "bg-[var(--green-dim)] text-[var(--green)] border-[var(--green-border)]",
-    fail: "bg-[var(--red-dim)] text-[var(--red)] border-[var(--red-border)]",
-    warn: "bg-[var(--yellow-dim)] text-[var(--yellow)] border-[var(--yellow-border)]",
+    ok: "bg-success-soft text-success border-success-line",
+    fail: "bg-danger-soft text-danger border-danger-line",
+    warn: "bg-warning-soft text-warning border-warning-line",
   };
   const icon = { ok: "✓", fail: "✕", warn: "⚠" };
   return (
@@ -198,9 +198,9 @@ interface AccordionProps {
 
 const ACCORDION_VARIANT_CLS: Record<AccordionVariant, { root: string; trigger: string; panel: string }> = {
   card: {
-    root: "rounded-md border border-[var(--border)] bg-[var(--surface)]",
+    root: "rounded-md border border-border bg-surface",
     trigger: "px-4 py-3",
-    panel: "border-t border-[var(--border)] px-4 py-3",
+    panel: "border-t border-border px-4 py-3",
   },
   inline: {
     root: "",
@@ -222,10 +222,10 @@ export function Accordion({ title, defaultOpen = false, children, className = ""
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-controls={panelId}
-        className={`flex min-h-touch w-full items-center justify-between gap-3 text-sm font-medium text-[var(--text)] leading-6 ${styles.trigger}`}
+        className={`flex min-h-touch w-full items-center justify-between gap-3 text-sm font-medium text-text leading-6 ${styles.trigger}`}
       >
         <span>{title}</span>
-        <span className={`text-[var(--text-3)] transition-transform duration-fast ${open ? "rotate-180" : ""}`} aria-hidden="true">▾</span>
+        <span className={`text-faint transition-transform duration-fast ${open ? "rotate-180" : ""}`} aria-hidden="true">▾</span>
       </button>
       {open && (
         <div id={panelId} role="region" aria-labelledby={triggerId} className={styles.panel}>
@@ -303,15 +303,15 @@ export function Drawer({ open, onClose, title, children, width = "max-w-md" }: D
         aria-labelledby={titleId}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
-        className={`relative flex w-full ${width} flex-col border-l border-[var(--border)] bg-[var(--surface)] shadow-2 outline-none`}
+        className={`relative flex w-full ${width} flex-col border-l border-border bg-surface shadow-2 outline-hidden`}
       >
-        <div className="flex min-h-12 shrink-0 items-center justify-between border-b border-[var(--border)] px-4">
-          <span id={titleId} className="text-sm font-semibold text-[var(--text)] leading-6">{title}</span>
+        <div className="flex min-h-12 shrink-0 items-center justify-between border-b border-border px-4">
+          <span id={titleId} className="text-sm font-semibold text-text leading-6">{title}</span>
           <button
             type="button"
             onClick={onClose}
             aria-label={t("common.close")}
-            className="min-h-touch min-w-touch flex items-center justify-center rounded-sm text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"
+            className="min-h-touch min-w-touch flex items-center justify-center rounded-sm text-muted hover:text-text hover:bg-surface-raised"
           >
             ×
           </button>
@@ -419,7 +419,7 @@ export function RowActionsMenu({ items }: RowActionsMenuProps) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
-        className="min-h-touch min-w-touch flex items-center justify-center rounded-sm border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--surface-3)]"
+        className="min-h-touch min-w-touch flex items-center justify-center rounded-sm border border-border bg-surface-raised text-muted hover:text-text hover:bg-surface-highlight"
       >
         ⋯
       </button>
@@ -432,7 +432,7 @@ export function RowActionsMenu({ items }: RowActionsMenuProps) {
             role="menu"
             aria-label={t("common.rowActions")}
             style={{ top: pos.top, left: pos.left }}
-            className="fixed z-50 min-w-[160px] rounded-md border border-[var(--border)] bg-[var(--surface)] py-1 shadow-2"
+            className="fixed z-50 min-w-[160px] rounded-md border border-border bg-surface py-1 shadow-2"
             onKeyDown={handleMenuKeyDown}
           >
             {items.map((item) => (
@@ -443,7 +443,7 @@ export function RowActionsMenu({ items }: RowActionsMenuProps) {
                 tabIndex={-1}
                 disabled={item.disabled}
                 onClick={() => { item.onClick(); close(); }}
-                className={`w-full px-3 py-2 text-left text-sm leading-6 min-h-touch md:min-h-0 hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] disabled:opacity-40 ${item.danger ? "text-[var(--red)]" : "text-[var(--text)]"}`}
+                className={`w-full px-3 py-2 text-left text-sm leading-6 min-h-touch md:min-h-0 hover:bg-surface-raised focus:bg-surface-raised disabled:opacity-40 ${item.danger ? "text-danger" : "text-text"}`}
               >
                 {item.label}
               </button>
@@ -469,17 +469,17 @@ interface SelectionBarProps {
 export function SelectionBar({ count, children, onClear, clearLabel, summaryLabel, hintLabel, isMobile = false }: SelectionBarProps) {
   if (count === 0) return null;
   return (
-    <div className={`border-b border-[var(--accent-border)] bg-[var(--accent-dim)] px-4 py-3 ${isMobile ? "space-y-3" : "flex items-center justify-between gap-3"}`}>
+    <div className={`border-b border-accent-line bg-accent-soft px-4 py-3 ${isMobile ? "space-y-3" : "flex items-center justify-between gap-3"}`}>
       <div>
-        <div className="text-sm font-medium text-[var(--text)] leading-6">{summaryLabel}</div>
-        {hintLabel && <div className="text-xs text-[var(--text-2)] leading-6">{hintLabel}</div>}
+        <div className="text-sm font-medium text-text leading-6">{summaryLabel}</div>
+        {hintLabel && <div className="text-xs text-muted leading-6">{hintLabel}</div>}
       </div>
       <div className="flex flex-wrap gap-2">
         {children}
         <button
           type="button"
           onClick={onClear}
-          className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs font-medium text-[var(--text-2)]"
+          className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-xs font-medium text-muted"
         >
           {clearLabel}
         </button>
@@ -503,18 +503,18 @@ interface TabsProps {
 
 export function Tabs({ tabs, activeKey, onSelect, className = "" }: TabsProps) {
   return (
-    <div role="tablist" className={`inline-flex gap-px overflow-x-auto rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-1 ${className}`}>
+    <div role="tablist" className={`inline-flex gap-px overflow-x-auto rounded-sm border border-border bg-surface-raised p-1 ${className}`}>
       {tabs.map((tab) => (
         <button
           key={tab.key}
           role="tab"
           aria-selected={activeKey === tab.key}
           onClick={() => onSelect(tab.key)}
-          className={`whitespace-nowrap rounded-sm px-3 py-1 min-h-touch text-xs leading-6 transition-colors ${activeKey === tab.key ? "bg-[var(--surface-3)] font-medium text-[var(--text)]" : "text-[var(--text-2)] hover:text-[var(--text)]"}`}
+          className={`whitespace-nowrap rounded-sm px-3 py-1 min-h-touch text-xs leading-6 transition-colors ${activeKey === tab.key ? "bg-surface-highlight font-medium text-text" : "text-muted hover:text-text"}`}
         >
           {tab.label}
           {tab.count !== undefined && tab.count > 0 && (
-            <span className="ml-1 text-xs text-[var(--text-3)]">{tab.count}</span>
+            <span className="ml-1 text-xs text-faint">{tab.count}</span>
           )}
         </button>
       ))}

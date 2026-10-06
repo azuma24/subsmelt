@@ -27,8 +27,8 @@ export function EngineSection({ settings, isMobile, updateAndSaveDebounced }: En
         <div className="space-y-4">
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <label className="text-xs font-medium text-[var(--text-2)]">{t("settings.translationEngine.systemPrompt")}</label>
-              <button onClick={() => updateAndSaveDebounced("prompt", DEFAULT_PROMPT)} className="text-xs text-[var(--text-3)]">{t("common.reset")}</button>
+              <label className="text-xs font-medium text-muted">{t("settings.translationEngine.systemPrompt")}</label>
+              <button onClick={() => updateAndSaveDebounced("prompt", DEFAULT_PROMPT)} className="text-xs text-faint">{t("common.reset")}</button>
             </div>
             <textarea aria-label={t("settings.translationEngine.systemPrompt")} value={str(settings.prompt)} onChange={(e) => updateAndSaveDebounced("prompt", e.target.value)} rows={8} className={`${textareaCls} font-mono leading-relaxed`} />
           </div>

@@ -26,18 +26,18 @@ function ModelStatus({ model }: { model: WhisperModel }) {
   return (
     <div className="flex flex-wrap gap-1">
       {model.available === false && (
-        <span className={`${badgeCls} border-[var(--red-border)] bg-[var(--red-dim)] text-[var(--red)]`} title={model.unavailableReason ?? undefined}>
+        <span className={`${badgeCls} border-danger-line bg-danger-soft text-danger`} title={model.unavailableReason ?? undefined}>
           <span aria-hidden="true">✗</span>
           {t("settings.models.runtimeMissing")}
           {model.unavailableReason && <span className="sr-only">: {model.unavailableReason}</span>}
         </span>
       )}
       {model.downloaded ? (
-        <span className={`${badgeCls} border-[var(--green-border)] bg-[var(--green-dim)] text-[var(--green)]`}>
+        <span className={`${badgeCls} border-success-line bg-success-soft text-success`}>
           ✓ {t("settings.models.downloaded")}
         </span>
       ) : (
-        <span className={`${badgeCls} border-[var(--border)] bg-[var(--surface-3)] text-[var(--text-2)]`}>
+        <span className={`${badgeCls} border-border bg-surface-highlight text-muted`}>
           {t("settings.models.notDownloaded")}
         </span>
       )}
@@ -97,11 +97,11 @@ export function ModelManagerPanel({ enabled }: { enabled: boolean }) {
   const groups = groupByEngine((modelsQuery.data?.models ?? []).map((model) => ({ ...model, engine: model.engine ?? modelEngine(model.id) })));
 
   return (
-    <div className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-4">
+    <div className="rounded-md border border-border bg-surface-raised p-4">
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div>
-          <div className="text-sm font-semibold text-[var(--text)]">{t("settings.models.title")}</div>
-          <p className="mt-1 text-xs leading-relaxed text-[var(--text-2)]">{t("settings.models.description")}</p>
+          <div className="text-sm font-semibold text-text">{t("settings.models.title")}</div>
+          <p className="mt-1 text-xs leading-relaxed text-muted">{t("settings.models.description")}</p>
         </div>
         <ActionButton variant="ghost" size="sm" onClick={() => modelsQuery.refetch()} disabled={!enabled || modelsQuery.isFetching}>
           {modelsQuery.isFetching ? t("settings.models.refreshing") : t("settings.models.refresh")}
@@ -109,20 +109,20 @@ export function ModelManagerPanel({ enabled }: { enabled: boolean }) {
       </div>
 
       {!enabled ? (
-        <p className="mt-3 text-xs text-[var(--text-3)]">{t("settings.models.needsBackend")}</p>
+        <p className="mt-3 text-xs text-faint">{t("settings.models.needsBackend")}</p>
       ) : modelsQuery.isError ? (
         <div className="mt-3">
           <InlineError onRetry={() => void modelsQuery.refetch()} />
         </div>
       ) : modelsQuery.isLoading ? (
-        <p className="mt-3 text-xs text-[var(--text-3)]">{t("settings.models.loading")}</p>
+        <p className="mt-3 text-xs text-faint">{t("settings.models.loading")}</p>
       ) : groups.length === 0 ? (
-        <p className="mt-3 text-xs text-[var(--text-3)]">{t("settings.models.empty")}</p>
+        <p className="mt-3 text-xs text-faint">{t("settings.models.empty")}</p>
       ) : (
         <div className="mt-3 overflow-x-auto">
           <table className="w-full border-collapse text-xs">
             <thead>
-              <tr className="text-left text-xs uppercase tracking-wide text-[var(--text-3)]">
+              <tr className="text-left text-xs uppercase tracking-wide text-faint">
                 <th className="py-2 pr-3 font-medium">{t("settings.models.colModel")}</th>
                 <th className="py-2 pr-3 font-medium">{t("settings.models.size")}</th>
                 <th className="py-2 pr-3 font-medium">{t("settings.models.ram")}</th>
@@ -133,27 +133,27 @@ export function ModelManagerPanel({ enabled }: { enabled: boolean }) {
             </thead>
             {groups.map((group) => (
               <tbody key={group.engine}>
-                <tr className="border-t border-[var(--border)]">
-                  <th colSpan={6} scope="colgroup" className="pb-1 pt-3 text-left text-xs font-semibold text-[var(--text-2)]">{t(`stt.engine.${group.engine}`)}</th>
+                <tr className="border-t border-border">
+                  <th colSpan={6} scope="colgroup" className="pb-1 pt-3 text-left text-xs font-semibold text-muted">{t(`stt.engine.${group.engine}`)}</th>
                 </tr>
                 {group.items.map((model) => {
                   const dl = downloads[model.id];
                   const downloading = Boolean(dl?.active);
                   const deleting = Boolean(busyDelete[model.id]);
                   return (
-                    <tr key={model.id} className="border-t border-[var(--border)] align-middle">
+                    <tr key={model.id} className="border-t border-border align-middle">
                       <td className="py-3 pr-3">
-                        <span className="text-[var(--text)]">{model.label ?? model.id}</span>
+                        <span className="text-text">{model.label ?? model.id}</span>
                         {model.label && model.label !== model.id && (
-                          <div className="mt-1 font-mono text-xs text-[var(--text-3)]">{model.id}</div>
+                          <div className="mt-1 font-mono text-xs text-faint">{model.id}</div>
                         )}
                         {model.cachePath && (
-                          <div className="mt-1 break-all text-xs text-[var(--text-3)]">{model.cachePath}</div>
+                          <div className="mt-1 break-all text-xs text-faint">{model.cachePath}</div>
                         )}
                       </td>
-                      <td className="py-3 pr-3 text-[var(--text-2)]">{formatMb(model.sizeMb)}</td>
-                      <td className="py-3 pr-3 text-[var(--text-2)]">{formatMb(model.requiredRamMb)}</td>
-                      <td className="py-3 pr-3 text-[var(--text-2)]">{formatMb(model.requiredVramMb)}</td>
+                      <td className="py-3 pr-3 text-muted">{formatMb(model.sizeMb)}</td>
+                      <td className="py-3 pr-3 text-muted">{formatMb(model.requiredRamMb)}</td>
+                      <td className="py-3 pr-3 text-muted">{formatMb(model.requiredVramMb)}</td>
                       <td className="py-3 pr-3"><ModelStatus model={model} /></td>
                       <td className="py-3 pr-0">
                         <div className="flex items-center justify-end gap-2">

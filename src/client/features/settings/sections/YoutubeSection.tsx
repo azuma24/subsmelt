@@ -15,10 +15,10 @@ const REDACTED_SECRET = "__SUBSMELT_SECRET_REDACTED__";
 type KeyState = { tone: "off" | "ok" | "warn" | "bad"; text: string };
 
 const TONE_CLS: Record<KeyState["tone"], string> = {
-  off: "text-[var(--text-3)]",
-  ok: "text-[var(--green)]",
-  warn: "text-[var(--yellow)]",
-  bad: "text-[var(--red)]",
+  off: "text-faint",
+  ok: "text-success",
+  warn: "text-warning",
+  bad: "text-danger",
 };
 const TONE_GLYPH: Record<KeyState["tone"], string> = { off: "○", ok: "✓", warn: "!", bad: "✕" };
 
@@ -91,7 +91,7 @@ export function YoutubeSection({ settings, update, updateAndSaveDebounced }: You
     <div className="space-y-6">
       <div className="space-y-2">
         <label htmlFor={ids.key} className={FORM_LABEL_CLS}>
-          {t("settings.youtube.apiKey")} <span className="font-normal text-[var(--text-3)]">{t("settings.youtube.optional")}</span>
+          {t("settings.youtube.apiKey")} <span className="font-normal text-faint">{t("settings.youtube.optional")}</span>
         </label>
         <div className="flex flex-wrap gap-2">
           <input
@@ -115,9 +115,9 @@ export function YoutubeSection({ settings, update, updateAndSaveDebounced }: You
           </ActionButton>
         </div>
         <StatusLine state={keyState} />
-        <p className="text-xs leading-5 text-[var(--text-3)]">{t("settings.youtube.keyHint")}</p>
-        <details className="text-xs leading-5 text-[var(--text-2)]">
-          <summary className="flex min-h-touch cursor-pointer items-center font-medium text-[var(--text)]">{t("settings.youtube.howTo")}</summary>
+        <p className="text-xs leading-5 text-faint">{t("settings.youtube.keyHint")}</p>
+        <details className="text-xs leading-5 text-muted">
+          <summary className="flex min-h-touch cursor-pointer items-center font-medium text-text">{t("settings.youtube.howTo")}</summary>
           <ol className="list-decimal space-y-1 pb-1 pl-6">
             {(["step1", "step2", "step3", "step4"] as const).map((step) => <li key={step}>{t(`settings.youtube.${step}`)}</li>)}
           </ol>
@@ -127,7 +127,7 @@ export function YoutubeSection({ settings, update, updateAndSaveDebounced }: You
       <div className="space-y-2 md:max-w-[420px]">
         <label htmlFor={ids.download} className={FORM_LABEL_CLS}>{t("settings.youtube.downloadFolder")}</label>
         <div className="flex items-center gap-2">
-          <span className="min-w-0 max-w-[45%] shrink truncate font-mono text-xs text-[var(--text-3)]" dir="rtl" title={str(settings._media_dir, "/media").replace(/\/+$/, "")}><bdi>{str(settings._media_dir, "/media").replace(/\/+$/, "")}</bdi></span><span className="-ml-1 font-mono text-xs text-[var(--text-3)]">/</span>
+          <span className="min-w-0 max-w-[45%] shrink truncate font-mono text-xs text-faint" dir="rtl" title={str(settings._media_dir, "/media").replace(/\/+$/, "")}><bdi>{str(settings._media_dir, "/media").replace(/\/+$/, "")}</bdi></span><span className="-ml-1 font-mono text-xs text-faint">/</span>
           <input
             id={ids.download}
             value={str(settings.youtube_download_dir, "YouTube")}
@@ -135,7 +135,7 @@ export function YoutubeSection({ settings, update, updateAndSaveDebounced }: You
             className={`${FORM_CONTROL_CLS} min-h-touch min-w-0`}
           />
         </div>
-        <p className="text-xs leading-5 text-[var(--text-3)]">{t("settings.youtube.downloadFolderHint")}</p>
+        <p className="text-xs leading-5 text-faint">{t("settings.youtube.downloadFolderHint")}</p>
       </div>
 
       <div className="space-y-2 md:max-w-[420px]">
@@ -162,7 +162,7 @@ export function YoutubeSection({ settings, update, updateAndSaveDebounced }: You
       <div className="space-y-2">
         <span className={FORM_LABEL_CLS}>{t("settings.youtube.downloader")}</span>
         <div className="flex flex-wrap items-center gap-3">
-          <span className="font-mono text-sm text-[var(--text)]">
+          <span className="font-mono text-sm text-text">
             {ytdlp ? (ytdlp.available ? `yt-dlp ${ytdlp.version}` : t("settings.youtube.notInstalled")) : "…"}
           </span>
           <ActionButton variant="ghost" size="sm" onClick={() => void updateDownloader()} busy={updating} disabled={ytdlp?.available === false}>
@@ -220,7 +220,7 @@ function CookiesRow({ present, updatedAt }: { present: boolean | undefined; upda
   return (
     <div className="space-y-2" role="group" aria-labelledby={labelId}>
       <span id={labelId} className={FORM_LABEL_CLS}>
-        {t("settings.youtube.cookies")} <span className="font-normal text-[var(--text-3)]">{t("settings.youtube.optional")}</span>
+        {t("settings.youtube.cookies")} <span className="font-normal text-faint">{t("settings.youtube.optional")}</span>
       </span>
       <div className="flex flex-wrap items-center gap-2">
         <input ref={fileRef} type="file" accept=".txt,text/plain" className="hidden" onChange={upload} />
@@ -228,13 +228,13 @@ function CookiesRow({ present, updatedAt }: { present: boolean | undefined; upda
           {present ? t("settings.youtube.cookiesReplace") : t("settings.youtube.cookiesUpload")}
         </ActionButton>
         {present && (
-          <button type="button" onClick={() => void remove()} disabled={busy} className="min-h-touch rounded-sm px-3 text-xs font-medium text-[var(--red)] hover:bg-[var(--red-dim)] disabled:opacity-50">
+          <button type="button" onClick={() => void remove()} disabled={busy} className="min-h-touch rounded-sm px-3 text-xs font-medium text-danger hover:bg-danger-soft disabled:opacity-50">
             {t("settings.youtube.cookiesRemove")}
           </button>
         )}
       </div>
       <StatusLine state={result ?? state} />
-      <p className="text-xs leading-5 text-[var(--text-3)]">{t("settings.youtube.cookiesHint")}</p>
+      <p className="text-xs leading-5 text-faint">{t("settings.youtube.cookiesHint")}</p>
     </div>
   );
 }

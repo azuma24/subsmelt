@@ -35,7 +35,7 @@ export function InterfaceSection() {
             <option key={pref} value={pref}>{t(`settings.interface.theme_${pref}`)}</option>
           ))}
         </select>
-        <p className="mt-1 text-xs text-[var(--text-3)]">{t("settings.interface.themeHint")}</p>
+        <p className="mt-1 text-xs text-faint">{t("settings.interface.themeHint")}</p>
       </div>
       <div className="md:max-w-[240px]">
         <label className={labelCls}>{t("settings.interface.fontSize")}</label>
@@ -50,7 +50,7 @@ export function InterfaceSection() {
             <span aria-hidden="true">A−</span>
             <span className="sr-only">{t("settings.interface.fontSizeDecrease")}</span>
           </ActionButton>
-          <span className="min-w-[3.25rem] text-center font-mono text-xs text-[var(--text-2)]">{fontScale}%</span>
+          <span className="min-w-[3.25rem] text-center font-mono text-xs text-muted">{fontScale}%</span>
           <ActionButton
             variant="ghost"
             size="sm"
@@ -69,7 +69,7 @@ export function InterfaceSection() {
             {t("settings.interface.fontSizeReset")}
           </ActionButton>
         </div>
-        <p className="mt-1 text-xs text-[var(--text-3)]">{t("settings.interface.fontSizeHint")}</p>
+        <p className="mt-1 text-xs text-faint">{t("settings.interface.fontSizeHint")}</p>
       </div>
       <div className="md:max-w-[240px]">
         <label className={labelCls}>{t("settings.interface.language")}</label>
@@ -83,7 +83,7 @@ export function InterfaceSection() {
             <option key={lang.code} value={lang.code}>{lang.label}</option>
           ))}
         </select>
-        <p className="mt-1 text-xs text-[var(--text-3)]">{t("settings.interface.languageHint")}</p>
+        <p className="mt-1 text-xs text-faint">{t("settings.interface.languageHint")}</p>
       </div>
     </div>
   );

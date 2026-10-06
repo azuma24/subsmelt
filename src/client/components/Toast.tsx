@@ -103,7 +103,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <button
             type="button"
             onClick={removeAll}
-            className="min-h-touch self-end rounded-sm border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-medium text-[var(--text-2)] shadow-2 hover:text-[var(--text)]"
+            className="min-h-touch self-end rounded-sm border border-border bg-surface px-3 text-xs font-medium text-muted shadow-2 hover:text-text"
           >
             {t("common.dismissAll")}
           </button>
@@ -115,12 +115,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             // Toasts float over arbitrary content, so the tint tokens (~10-13%
             // alpha) are too sheer to read against. Use the opaque surface for
             // the fill and carry the semantic colour on the border, icon and text.
-            className={`flex items-start gap-2 rounded-md border bg-[var(--surface)] px-4 py-3 shadow-2 text-sm animate-slide-in ${
+            className={`flex items-start gap-2 rounded-md border bg-surface px-4 py-3 shadow-2 text-sm animate-slide-in ${
               toast.type === "success"
-                ? "border-[var(--green-border)] text-[var(--green)]"
+                ? "border-success-line text-success"
                 : toast.type === "error"
-                ? "border-[var(--red-border)] text-[var(--red)]"
-                : "border-[var(--accent-border)] text-[var(--accent)]"
+                ? "border-danger-line text-danger"
+                : "border-accent-line text-accent"
             }`}
           >
             <span className="shrink-0 mt-1">
@@ -132,7 +132,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 <button
                   type="button"
                   onClick={() => { toast.action?.onClick(); removeToast(toast.id); }}
-                  className="mt-1 block min-h-touch text-sm font-medium text-[var(--text)] underline underline-offset-2"
+                  className="mt-1 block min-h-touch text-sm font-medium text-text underline underline-offset-2"
                 >
                   {toast.action.label}
                 </button>

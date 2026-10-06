@@ -214,7 +214,7 @@ export function LibraryPage() {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={t("library.search")}
-                className="min-w-0 flex-1 bg-transparent text-sm text-text outline-none placeholder:text-muted"
+                className="min-w-0 flex-1 bg-transparent text-sm text-text outline-hidden placeholder:text-muted"
               />
               <kbd className="hidden rounded-sm border border-border px-1 font-mono text-xs text-muted sm:inline">/</kbd>
             </label>

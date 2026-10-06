@@ -364,9 +364,9 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   return (
     <div className="flex min-h-full flex-col">
       {/* Topbar */}
-      <div className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b border-[var(--border)] bg-[var(--surface)] px-4 md:px-4">
-        <span className="flex-1 text-sm font-semibold text-[var(--text)]">{t("settings.title")}</span>
-        {dirty && <span className="text-xs text-[var(--yellow)]">{t("common.unsavedChanges")}</span>}
+      <div className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 md:px-4">
+        <span className="flex-1 text-sm font-semibold text-text">{t("settings.title")}</span>
+        {dirty && <span className="text-xs text-warning">{t("common.unsavedChanges")}</span>}
         <ActionButton size="sm" onClick={handleSave} disabled={!dirty || saving}>{saving ? t("app.saving") : t("app.save")}</ActionButton>
       </div>
 
@@ -394,7 +394,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
             {navOrder.map((key) => (
               <Accordion key={key} title={sectionMeta[key].title} defaultOpen={key === activeSection}>
                 <div className="space-y-4">
-                  <p className="text-xs leading-6 text-[var(--text-2)]">{sectionMeta[key].description}</p>
+                  <p className="text-xs leading-6 text-muted">{sectionMeta[key].description}</p>
                   {sectionMeta[key].content}
                 </div>
               </Accordion>
@@ -407,7 +407,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
                 <button
                   key={key}
                   onClick={() => setActiveSection(key)}
-                  className={`rounded-sm border px-2 py-2 text-left text-sm transition-colors ${activeSection === key ? "border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]" : "border-transparent text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"}`}
+                  className={`rounded-sm border px-2 py-2 text-left text-sm transition-colors ${activeSection === key ? "border-accent-line bg-accent-soft text-accent" : "border-transparent text-muted hover:bg-surface-raised hover:text-text"}`}
                 >
                   {sectionMeta[key].navLabel}
                 </button>
@@ -422,7 +422,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
           </div>
         )}
 
-        <p className="pt-4 text-center text-xs text-[var(--text-3)]">
+        <p className="pt-4 text-center text-xs text-faint">
           {t("settings.about.version", { version: __APP_VERSION__ })}
         </p>
       </div>

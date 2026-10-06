@@ -50,7 +50,7 @@ export function NotificationsFields({ settings, isMobile, updateAndSave, updateA
             help={webhookSaved ? t("settings.notifications.webhookSaved") : t("settings.notifications.hint")}
           />
           {webhookSaved && (
-            <button type="button" onClick={removeWebhook} className="mt-1 min-h-touch text-xs text-[var(--red)] hover:underline">
+            <button type="button" onClick={removeWebhook} className="mt-1 min-h-touch text-xs text-danger hover:underline">
               {t("settings.notifications.webhookRemove")}
             </button>
           )}
@@ -72,10 +72,10 @@ export function NotificationsFields({ settings, isMobile, updateAndSave, updateA
           <legend className={labelCls}>{t("settings.notifications.events")}</legend>
           <div className={`grid gap-x-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"} md:max-w-[480px]`}>
             {NOTIFY_EVENTS.map(({ event, labelKey }) => (
-              <label key={event} className="flex min-h-touch cursor-pointer items-center gap-3 text-sm text-[var(--text)]">
+              <label key={event} className="flex min-h-touch cursor-pointer items-center gap-3 text-sm text-text">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 shrink-0 accent-[var(--accent)]"
+                  className="h-4 w-4 shrink-0 accent-accent"
                   checked={chosen.has(event)}
                   onChange={(e) => updateAndSave("notify_events", setNotifyEvent(events, event, e.target.checked))}
                 />
@@ -89,7 +89,7 @@ export function NotificationsFields({ settings, isMobile, updateAndSave, updateA
             {testing ? t("app.testing") : t("settings.notifications.sendTest")}
           </ActionButton>
           {testResult && (
-            <span className={`text-sm ${testResult.ok ? "text-[var(--green)]" : "text-[var(--red)]"}`}><span aria-hidden="true">{testResult.ok ? "✓ " : "✗ "}</span>{testResult.message}</span>
+            <span className={`text-sm ${testResult.ok ? "text-success" : "text-danger"}`}><span aria-hidden="true">{testResult.ok ? "✓ " : "✗ "}</span>{testResult.message}</span>
           )}
         </div>
       </div>

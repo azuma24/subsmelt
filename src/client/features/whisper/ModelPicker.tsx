@@ -47,9 +47,9 @@ export function ModelPicker({ descriptors, value, onChange, className, ariaLabel
           </optgroup>
         ))}
       </select>
-      <p className="mt-1 text-xs leading-snug text-[var(--text-3)]">{t(`stt.engineStrength.${selected.engine}`)}</p>
+      <p className="mt-1 text-xs leading-snug text-faint">{t(`stt.engineStrength.${selected.engine}`)}</p>
       {!selected.available && (
-        <p className="mt-1 text-xs leading-snug text-[var(--red)]">
+        <p className="mt-1 text-xs leading-snug text-danger">
           <span aria-hidden="true">✗ </span>
           {t("stt.modelUnavailable", { model: selected.label, reason: selected.unavailableReason ?? t("settings.models.runtimeMissing") })}
         </p>
@@ -63,7 +63,7 @@ export function LanguageSupportWarning({ model, language }: { model: WhisperMode
   const { t } = useTranslation();
   if (supportsLanguage(model, language)) return null;
   return (
-    <p className="mt-1 text-xs leading-snug text-[var(--yellow)]">
+    <p className="mt-1 text-xs leading-snug text-warning">
       <span aria-hidden="true">⚠ </span>
       {t("stt.languageUnsupported", { model: model.label, language })}
     </p>
@@ -73,5 +73,5 @@ export function LanguageSupportWarning({ model, language }: { model: WhisperMode
 /** Shown where options were hidden because the selected model decides them. */
 export function OptionsDecidedNote({ model }: { model: WhisperModelDescriptor }) {
   const { t } = useTranslation();
-  return <p className="text-xs leading-snug text-[var(--text-3)]">{t("stt.optionsDecidedByModel", { model: model.label })}</p>;
+  return <p className="text-xs leading-snug text-faint">{t("stt.optionsDecidedByModel", { model: model.label })}</p>;
 }

@@ -25,13 +25,13 @@ export function JobCardSkeleton() {
     <div className="space-y-2" role="status" aria-busy="true" aria-label={t("errors.loading")}>
       <span className="sr-only">{t("errors.loading")}</span>
       {Array.from({ length: SKELETON_CARDS }, (_, i) => (
-        <div key={i} className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-3" aria-hidden="true">
+        <div key={i} className="rounded-md border border-border bg-surface p-3" aria-hidden="true">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1 space-y-2">
-              <div className="h-4 w-3/4 rounded-sm bg-[var(--surface-3)]" />
-              <div className="h-3 w-1/2 rounded-sm bg-[var(--surface-2)]" />
+              <div className="h-4 w-3/4 rounded-sm bg-surface-highlight" />
+              <div className="h-3 w-1/2 rounded-sm bg-surface-raised" />
             </div>
-            <div className="h-6 w-16 rounded-full bg-[var(--surface-2)]" />
+            <div className="h-6 w-16 rounded-full bg-surface-raised" />
           </div>
         </div>
       ))}
@@ -59,7 +59,7 @@ export const JobCardMobile = memo(function JobCardMobile({
   const isActive = currentJobId === job.id;
 
   return (
-    <div className={`rounded-md border p-3 ${isActive ? "border-[var(--accent-border)] bg-[var(--accent-dim)]" : hasError ? "border-[var(--red-border)] bg-[var(--surface)]" : selected ? "border-[var(--accent-border)] bg-[var(--accent-dim)]" : "border-[var(--border)] bg-[var(--surface)]"}`}>
+    <div className={`rounded-md border p-3 ${isActive ? "border-accent-line bg-accent-soft" : hasError ? "border-danger-line bg-surface" : selected ? "border-accent-line bg-accent-soft" : "border-border bg-surface"}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-start gap-3">
           {isPending && (
@@ -67,14 +67,14 @@ export const JobCardMobile = memo(function JobCardMobile({
               type="checkbox"
               checked={selected}
               onChange={() => onToggleSelected(job.id)}
-              className="mt-1 h-5 w-5 shrink-0 accent-[var(--accent)]"
+              className="mt-1 h-5 w-5 shrink-0 accent-accent"
               aria-label={t("dashboard.col.select")}
             />
           )}
           <div className="min-w-0">
-            <div className="truncate text-sm font-medium text-[var(--text)]">{srtName}</div>
-            <div className="mt-1 text-xs text-[var(--text-2)]">{job.target_lang} · {job.lang_code}</div>
-            {reason && <div className="mt-1 inline-flex rounded-full bg-[var(--red-dim)] px-2 py-1 text-xs text-[var(--red)]">{t(`dashboard.errorReason.${reason}`)}</div>}
+            <div className="truncate text-sm font-medium text-text">{srtName}</div>
+            <div className="mt-1 text-xs text-muted">{job.target_lang} · {job.lang_code}</div>
+            {reason && <div className="mt-1 inline-flex rounded-full bg-danger-soft px-2 py-1 text-xs text-danger">{t(`dashboard.errorReason.${reason}`)}</div>}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -101,7 +101,7 @@ export const JobCardMobile = memo(function JobCardMobile({
         <div className="mt-3">
           <ProgressSmall pct={pct} />
           {job.connection && (
-            <div className="mt-1 truncate text-xs text-[var(--text-3)]" title={connectionTitle ?? undefined}>
+            <div className="mt-1 truncate text-xs text-faint" title={connectionTitle ?? undefined}>
               {connectionText}
             </div>
           )}
@@ -114,7 +114,7 @@ export const JobCardMobile = memo(function JobCardMobile({
           <button
             type="button"
             onClick={() => onOpenDetails(job)}
-            className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-center text-xs font-medium text-[var(--text)]"
+            className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-center text-xs font-medium text-text"
           >{t("dashboard.action.details")}</button>
         )}
         {job.status === "error" ? (
@@ -133,7 +133,7 @@ export const JobCardMobile = memo(function JobCardMobile({
           <button
             type="button"
             onClick={() => onOpenDetails(job)}
-            className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-center text-xs font-medium text-[var(--text)]"
+            className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-center text-xs font-medium text-text"
           >{t("dashboard.action.open")}</button>
         )}
       </div>

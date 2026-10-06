@@ -79,12 +79,12 @@ export function SourcesSection({
           <option value="zh-TW">{t("settings.sources.chineseTraditional")}</option>
           <option value="zh-CN">{t("settings.sources.chineseSimplified")}</option>
         </select>
-        <p className="text-xs leading-5 text-[var(--text-2)]">{t("settings.sources.preferredChineseHint")}</p>
+        <p className="text-xs leading-5 text-muted">{t("settings.sources.preferredChineseHint")}</p>
       </div>
-      <div className="flex items-center justify-between gap-3 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-3">
+      <div className="flex items-center justify-between gap-3 rounded-sm border border-border bg-surface-raised px-3 py-3">
         <div>
-          <p className="text-sm font-medium text-[var(--text)]">{t("settings.sources.fileWatcher")}</p>
-          <p className="mt-1 text-xs text-[var(--text-2)]">{t("settings.sources.fileWatcherDesc")}</p>
+          <p className="text-sm font-medium text-text">{t("settings.sources.fileWatcher")}</p>
+          <p className="mt-1 text-xs text-muted">{t("settings.sources.fileWatcherDesc")}</p>
         </div>
         <ActionButton variant={bool(settings._watcher_running) ? "success" : "ghost"} size="sm" onClick={onToggleWatcher}>{bool(settings._watcher_running) ? t("app.watcherActiveShort") : t("app.watcherInactiveShort")}</ActionButton>
       </div>

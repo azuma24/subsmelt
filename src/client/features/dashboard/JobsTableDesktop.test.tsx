@@ -49,7 +49,7 @@ test("the active job's row is highlighted and the others are not", () => {
   const rowTags = Array.from(html.matchAll(/<div[^>]*role="row"[^>]*grid-template-columns[^>]*>/g), (m) => m[0]);
 
   assert.equal(rowTags.length, 1 + jobs.length);
-  assert.match(rowTags[2], /bg-\[var\(--accent-dim\)\]/, "translating job row");
-  assert.doesNotMatch(rowTags[1], /accent-dim/, "done job row");
-  assert.doesNotMatch(rowTags[3], /accent-dim/, "pending job row");
+  assert.match(rowTags[2], /bg-accent-soft/, "translating job row");
+  assert.doesNotMatch(rowTags[1], /accent-soft/, "done job row");
+  assert.doesNotMatch(rowTags[3], /accent-soft/, "pending job row");
 });

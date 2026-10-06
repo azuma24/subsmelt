@@ -303,11 +303,11 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   return (
     <div className="flex min-h-full flex-col">
       {/* ── Topbar (L1 — Executive Summary) ── */}
-      <div className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b border-[var(--border)] bg-[var(--surface)] px-4 md:px-4">
+      <div className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 md:px-4">
         {/* Title with readable typography */}
         {/* Phones already show "Activity" in the bottom tab bar, so the title is
             screen-reader only there and the header keeps room for all actions. */}
-        <span className="sr-only md:not-sr-only md:flex-1 md:text-sm md:font-semibold md:text-[var(--text)]">{t("nav.activity")}</span>
+        <span className="sr-only md:not-sr-only md:flex-1 md:text-sm md:font-semibold md:text-text">{t("nav.activity")}</span>
         {/* Phones have no sidebar, so the LLM status line lives here, next
             to the queue it serves. */}
         {isMobile && (
@@ -345,28 +345,28 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
         {showQuickStart && (
           <div>
             <div className="mb-1 flex items-center justify-between">
-              <span className="text-xs text-[var(--text-3)]">{t("dashboard.quickStart.title")}</span>
+              <span className="text-xs text-faint">{t("dashboard.quickStart.title")}</span>
               <button
                 type="button"
                 onClick={() => {
                   try { localStorage.setItem(SETUP_DISMISSED_KEY, "1"); } catch { /* ignore */ }
                   setSetupDismissed(true);
                 }}
-                className="text-xs text-[var(--text-3)] hover:text-[var(--text)]"
+                className="text-xs text-faint hover:text-text"
               >
                 {t("dashboard.quickStart.dismiss")}
               </button>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {quickChecks.map((step) => (
-                <div key={step.title} className={`rounded-md border p-3 ${step.done ? "border-[var(--green-border)] bg-[var(--green-dim)]" : "border-[var(--border)] bg-[var(--surface)]"}`}>
+                <div key={step.title} className={`rounded-md border p-3 ${step.done ? "border-success-line bg-success-soft" : "border-border bg-surface"}`}>
                   <div className="flex items-center justify-between gap-2">
-                    <div className="text-xs font-semibold text-[var(--text)]">{step.title}</div>
-                    <span className={`text-xs ${step.done ? "text-[var(--green)]" : "text-[var(--yellow)]"}`}>{step.done ? "✓" : "○"}</span>
+                    <div className="text-xs font-semibold text-text">{step.title}</div>
+                    <span className={`text-xs ${step.done ? "text-success" : "text-warning"}`}>{step.done ? "✓" : "○"}</span>
                   </div>
-                  <div className="mt-1 text-xs text-[var(--text-2)]">{step.hint}</div>
+                  <div className="mt-1 text-xs text-muted">{step.hint}</div>
                   {!step.done && (
-                    <button onClick={step.onClick} className="mt-2 text-xs text-[var(--accent)]">{step.action}</button>
+                    <button onClick={step.onClick} className="mt-2 text-xs text-accent">{step.action}</button>
                   )}
                 </div>
               ))}
@@ -376,13 +376,13 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
 
         {/* Auto-translate notice (L2) — shown only when off */}
         {!autoTranslate && (
-          <p className="text-xs text-[var(--text-2)]">
+          <p className="text-xs text-muted">
             {t("dashboard.scanAutoTranslateOff")}
           </p>
         )}
 
         {/* ── Main content area with Tabs: Queue / Transcription ── */}
-        <section className="overflow-hidden rounded-md border border-[var(--border)] bg-[var(--surface)]">
+        <section className="overflow-hidden rounded-md border border-border bg-surface">
           {/* Tab header + bulk actions + filters. Status filtering is not here —
               it lives in the hero band above, which is the single source. */}
           <QueueToolbar

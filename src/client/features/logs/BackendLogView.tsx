@@ -56,14 +56,14 @@ export function BackendLogView({ query, follow, isMobile }: BackendLogViewProps)
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className={`flex gap-2 border-b border-[var(--border)] px-4 py-2 md:px-4 ${isMobile ? "flex-col" : "flex-wrap items-center"}`}>
+      <div className={`flex gap-2 border-b border-border px-4 py-2 md:px-4 ${isMobile ? "flex-col" : "flex-wrap items-center"}`}>
         <input
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("logs.search")}
           aria-label={t("logs.search")}
-          className="min-w-0 flex-1 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--accent)]"
+          className="min-w-0 flex-1 rounded-sm border border-border bg-surface-raised px-3 py-2 text-sm text-text focus:border-accent"
         />
         <ActionButton variant="ghost" size="sm" onClick={() => void query.refetch()} disabled={query.isFetching}>
           {query.isFetching ? t("common.loading") : t("logs.backend.refresh")}
@@ -73,7 +73,7 @@ export function BackendLogView({ query, follow, isMobile }: BackendLogViewProps)
       {/* Where the file lives, so a reader knows what they're looking at and
           where to find it on the host. */}
       {data?.file && (
-        <div className="px-4 pt-2 text-xs text-[var(--text-3)] md:px-4">
+        <div className="px-4 pt-2 text-xs text-faint md:px-4">
           <span className="font-mono break-all">{data.file}</span>
           {data.truncated && <span> · {t("logs.backend.truncated")}</span>}
         </div>
@@ -87,7 +87,7 @@ export function BackendLogView({ query, follow, isMobile }: BackendLogViewProps)
 
       {unreachable && (
         <div className="px-4 pt-2 md:px-4">
-          <div role="status" className="rounded-md border border-[var(--yellow-border)] bg-[var(--yellow-dim)] px-4 py-3 text-sm text-[var(--yellow)]">
+          <div role="status" className="rounded-md border border-warning-line bg-warning-soft px-4 py-3 text-sm text-warning">
             <span aria-hidden="true">⚠ </span>
             {data?.reason === "endpoint-missing"
               ? t("logs.backend.notConfigured")
@@ -98,7 +98,7 @@ export function BackendLogView({ query, follow, isMobile }: BackendLogViewProps)
 
       {(loggingOff || readProblem) && (
         <div className="px-4 pt-2 md:px-4">
-          <div role="status" className="rounded-md border border-[var(--yellow-border)] bg-[var(--yellow-dim)] px-4 py-3 text-sm text-[var(--yellow)]">
+          <div role="status" className="rounded-md border border-warning-line bg-warning-soft px-4 py-3 text-sm text-warning">
             <span aria-hidden="true">⚠ </span>
             {loggingOff ? t("logs.backend.loggingOff") : t("logs.backend.readFailed")}
             {data?.error && <span className="block font-mono text-xs opacity-90">{data.error}</span>}
@@ -110,9 +110,9 @@ export function BackendLogView({ query, follow, isMobile }: BackendLogViewProps)
         {lines.length === 0 ? (
           <EmptyHint text={search ? t("logs.noLogsSearch") : t("logs.backend.empty")} />
         ) : (
-          <div className="font-mono text-xs leading-relaxed text-[var(--text-2)]">
+          <div className="font-mono text-xs leading-relaxed text-muted">
             {lines.map((line, i) => (
-              <div key={`${i}-${line.slice(0, 24)}`} className="whitespace-pre-wrap break-all border-b border-[var(--border-sub)] py-1">
+              <div key={`${i}-${line.slice(0, 24)}`} className="whitespace-pre-wrap break-all border-b border-border-subtle py-1">
                 {search ? highlightText(line, search) : line}
               </div>
             ))}

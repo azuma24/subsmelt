@@ -19,10 +19,10 @@ const MODE_KEY: Record<LlmMode, string> = {
 };
 
 export const TONE_DOT_CLASS: Record<LlmTone, string> = {
-  ok: "bg-[var(--green)]",
-  warn: "bg-[var(--yellow)]",
-  down: "bg-[var(--red)]",
-  neutral: "bg-[var(--text-3)]",
+  ok: "bg-success",
+  warn: "bg-warning",
+  down: "bg-danger",
+  neutral: "bg-faint",
 };
 
 export function modeLabel(mode: LlmMode, t: TFunction): string {

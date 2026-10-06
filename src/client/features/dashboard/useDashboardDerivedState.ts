@@ -108,13 +108,13 @@ export function useDashboardDerivedState({
   // removed; `skipped` is appended only when such jobs exist, so the band does
   // not grow a permanently-zero cell.
   const statusSegments: StatusSegment[] = useMemo(() => [
-    { key: "all", label: t("dashboard.filter.all"), count: jobs.length, color: "text-[var(--text)]", activeColor: "text-[var(--accent)]" },
-    { key: "pending", label: t("dashboard.stat.pending"), count: pendingJobs.length, color: "text-[var(--yellow)]", activeColor: "text-[var(--yellow)]" },
-    { key: "translating", label: t("dashboard.stat.translating"), count: activeJobs.length, color: "text-[var(--accent)]", activeColor: "text-[var(--accent)]" },
-    { key: "done", label: t("dashboard.stat.done"), count: doneJobs.length, color: "text-[var(--green)]", activeColor: "text-[var(--green)]" },
-    { key: "error", label: t("dashboard.stat.errors"), count: errorJobs.length, color: "text-[var(--red)]", activeColor: "text-[var(--red)]" },
+    { key: "all", label: t("dashboard.filter.all"), count: jobs.length, color: "text-text", activeColor: "text-accent" },
+    { key: "pending", label: t("dashboard.stat.pending"), count: pendingJobs.length, color: "text-warning", activeColor: "text-warning" },
+    { key: "translating", label: t("dashboard.stat.translating"), count: activeJobs.length, color: "text-accent", activeColor: "text-accent" },
+    { key: "done", label: t("dashboard.stat.done"), count: doneJobs.length, color: "text-success", activeColor: "text-success" },
+    { key: "error", label: t("dashboard.stat.errors"), count: errorJobs.length, color: "text-danger", activeColor: "text-danger" },
     ...(skippedJobs.length > 0
-      ? [{ key: "skipped", label: t("dashboard.status.skipped"), count: skippedJobs.length, color: "text-[var(--yellow)]", activeColor: "text-[var(--yellow)]" }]
+      ? [{ key: "skipped", label: t("dashboard.status.skipped"), count: skippedJobs.length, color: "text-warning", activeColor: "text-warning" }]
       : []),
   ], [jobs.length, pendingJobs.length, activeJobs.length, doneJobs.length, errorJobs.length, skippedJobs.length, t]);
 
