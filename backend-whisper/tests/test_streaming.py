@@ -52,9 +52,7 @@ class StreamingTranscriptionTests(unittest.TestCase):
     def test_streaming_cancellation_raises_and_stops_early(self):
         with tempfile.TemporaryDirectory() as tmp:
             request = self._request(tmp)
-            gen = fake_transcribe_streaming_for_tests(
-                Path(request.input_path), request, is_cancelled=lambda: True
-            )
+            gen = fake_transcribe_streaming_for_tests(Path(request.input_path), request, is_cancelled=lambda: True)
             with self.assertRaises(TranscriptionCancelled):
                 list(gen)
 

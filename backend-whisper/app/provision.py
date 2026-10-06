@@ -18,14 +18,14 @@ from __future__ import annotations
 # CLI:
 #   python -m app.provision            -> JSON report (detect())
 #   python -m app.provision --doctor   -> human checklist (doctor())
-
 import json
 import os
 import platform
 import shutil
 import socket
 import sys
-from typing import Any, Callable, Optional, TypedDict
+from collections.abc import Callable
+from typing import TypedDict
 
 try:
     import psutil  # type: ignore
@@ -59,9 +59,9 @@ VCREDIST_URL = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
 
 # Resource floors. Below "warn" we flag a warning; the app still runs.
 MIN_CPU_CORES_WARN = 2
-MIN_RAM_MB_WARN = 4096           # 4 GiB — below this even small models struggle
-MIN_DISK_FREE_MB_WARN = 5120     # 5 GiB free in the model dir before download
-MIN_DISK_FREE_MB_FAIL = 1024     # under 1 GiB → model download will fail
+MIN_RAM_MB_WARN = 4096  # 4 GiB — below this even small models struggle
+MIN_DISK_FREE_MB_WARN = 5120  # 5 GiB free in the model dir before download
+MIN_DISK_FREE_MB_FAIL = 1024  # under 1 GiB → model download will fail
 
 # Windows build requirement (informational on other OSes).
 MIN_WINDOWS_RELEASE = 10  # Win10+ x64
@@ -141,13 +141,11 @@ def _check(
 # Individual checks — each returns a Check; none raise.
 # ---------------------------------------------------------------------------
 
+
 def _check_os() -> Check:
     system = platform.system()
     release = platform.release()
     machine = platform.machine()
-    arch64 = platform.architecture()[0] == "64bit" or machine.lower() in {
-        "x86_64", "amd64", "arm64", "aarch64",
-    }
     detail = f"{system} {release} ({machine})"
 
     if system == "Windows":
@@ -173,7 +171,7 @@ def _check_os() -> Check:
 
 
 def _check_cpu() -> Check:
-    cores: Optional[int] = None
+    cores: int | None = None
     if psutil is not None:
         cores = psutil.cpu_count(logical=True)
     if cores is None:
@@ -208,14 +206,11 @@ def _check_gpu() -> Check:
             "status": "info",
             "detail": "no NVIDIA GPU detected — CPU-only mode",
         }
-    names = ", ".join(
-        f"{g['name']} ({g['total_vram_mb']} MB total, {g['free_vram_mb']} MB free)"
-        for g in gpus
-    )
+    names = ", ".join(f"{g['name']} ({g['total_vram_mb']} MB total, {g['free_vram_mb']} MB free)" for g in gpus)
     return {"status": "ok", "detail": names}
 
 
-def _parse_driver_version() -> Optional[str]:
+def _parse_driver_version() -> str | None:
     """Best-effort NVIDIA driver version via NVML, then nvidia-smi. None if absent."""
     # NVML first.
     try:
@@ -451,11 +446,7 @@ def detect() -> Report:
     """
     checks: list[Check] = [_check(cid, label, fn) for cid, label, fn in _CHECKS]
 
-    failed_blockers = [
-        c["id"]
-        for c in checks
-        if c.get("id") in _READINESS_BLOCKERS and c.get("status") == "fail"
-    ]
+    failed_blockers = [c["id"] for c in checks if c.get("id") in _READINESS_BLOCKERS and c.get("status") == "fail"]
     warns = [c["id"] for c in checks if c.get("status") == "warn"]
     ready = not failed_blockers
 
@@ -470,11 +461,11 @@ def detect() -> Report:
 
 
 _STATUS_GLYPH = {
-    "ok": "✓",       # ✓
-    "warn": "⚠",     # ⚠
-    "fail": "✗",     # ✗
+    "ok": "✓",  # ✓
+    "warn": "⚠",  # ⚠
+    "fail": "✗",  # ✗
     "unknown": "?",
-    "info": "ℹ",     # ℹ
+    "info": "ℹ",  # ℹ
     "na": "-",
 }
 
@@ -504,7 +495,7 @@ def doctor() -> str:
     return "\n".join(lines)
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     args = sys.argv[1:] if argv is None else argv
     if "--doctor" in args:
         print(doctor())

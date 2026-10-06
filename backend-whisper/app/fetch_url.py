@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import os
 import socket
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv6Address, ip_address
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 from urllib.parse import urlparse
 
 # Fetch remote media (YouTube etc.) via yt-dlp, then feed it through the existing
@@ -29,7 +30,7 @@ class UrlFetchError(RuntimeError):
 def url_fetch_available() -> bool:
     try:
         import yt_dlp  # type: ignore  # noqa: F401
-    except Exception:  # noqa: BLE001 - any import failure means unavailable
+    except Exception:
         return False
     return True
 
@@ -56,8 +57,10 @@ _RESERVED_HOSTNAMES = {"localhost", "localhost.localdomain"}
 
 
 def _internal_host_message(host: str) -> str:
-    return f"URL host {host!r} is not a public internet address (SSRF guard). " \
+    return (
+        f"URL host {host!r} is not a public internet address (SSRF guard). "
         f"Set {ALLOW_UNSAFE_ENV}=1 to fetch from local/private hosts."
+    )
 
 
 def _is_public_ip(ip: str) -> bool:
@@ -166,7 +169,7 @@ def _assert_hostname_public(
 
     try:
         ips = resolver(host) if resolver else _resolve_host(host)
-    except Exception:  # noqa: BLE001 - cannot resolve → don't block the fetch
+    except Exception:
         return
 
     # Block when the hostname positively resolves to at least one non-public
@@ -208,9 +211,7 @@ def _assert_within_size_cap(info: dict) -> None:
     formats = info.get("requested_formats") or [info]
     total = sum(int(fmt.get("filesize") or fmt.get("filesize_approx") or 0) for fmt in formats)
     if total > MAX_FETCH_BYTES:
-        raise UrlFetchError(
-            f"Media is about {total >> 20} MB, over the {MAX_FETCH_BYTES >> 20} MB fetch limit"
-        )
+        raise UrlFetchError(f"Media is about {total >> 20} MB, over the {MAX_FETCH_BYTES >> 20} MB fetch limit")
 
 
 def _abort_over_cap(progress: dict) -> None:
@@ -226,9 +227,7 @@ def _assert_single_media(info: Any) -> None:
     if not info:
         raise UrlFetchError("No media found at URL")
     if info.get("_type") in ("playlist", "multi_video"):
-        raise UrlFetchError(
-            "URL points at a playlist or channel; paste the URL of a single video"
-        )
+        raise UrlFetchError("URL points at a playlist or channel; paste the URL of a single video")
 
 
 def download_url(url: str, dest_dir: Path) -> Path:
@@ -246,7 +245,7 @@ def download_url(url: str, dest_dir: Path) -> Path:
 
     try:
         import yt_dlp  # type: ignore
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise UrlFetchUnavailableError("yt-dlp is not installed in this backend") from exc
 
     # Only reachable when yt-dlp is present (a real download is happening).
@@ -275,7 +274,7 @@ def download_url(url: str, dest_dir: Path) -> Path:
             produced = Path(ydl.prepare_filename(info))
     except UrlFetchError:
         raise
-    except Exception as exc:  # noqa: BLE001 - surface a clean message
+    except Exception as exc:
         raise UrlFetchError(f"Failed to fetch media from URL: {exc}") from exc
 
     if produced.exists():
@@ -284,7 +283,5 @@ def download_url(url: str, dest_dir: Path) -> Path:
     files = sorted((p for p in dest_dir.glob("*") if p.is_file()), key=lambda p: p.stat().st_mtime)
     if not files:
         # yt-dlp skips (rather than fails) a file over max_filesize.
-        raise UrlFetchError(
-            f"Download produced no file (media over {MAX_FETCH_BYTES >> 20} MB is refused)"
-        )
+        raise UrlFetchError(f"Download produced no file (media over {MAX_FETCH_BYTES >> 20} MB is refused)")
     return files[-1]

@@ -45,7 +45,9 @@ class NemotronApiTests(unittest.TestCase):
         self.binary = write_fake_binary(self.root)
         self.gguf = seed_gguf(self.root / "hf")
         self.wav = write_silent_wav(self.root / "clip.wav", 3.0)
-        self._env = mock.patch.dict(os.environ, {"HF_HOME": str(self.root / "hf"), "SUBSMELT_NEMO_SPEECH": str(self.binary)})
+        self._env = mock.patch.dict(
+            os.environ, {"HF_HOME": str(self.root / "hf"), "SUBSMELT_NEMO_SPEECH": str(self.binary)}
+        )
         self._env.start()
         os.environ.pop("SUBSMELT_WHISPER_TOKEN", None)
         self._patches = [
@@ -69,7 +71,11 @@ class NemotronApiTests(unittest.TestCase):
 
     def _upload(self, path: str, request: dict):
         with self.wav.open("rb") as fh:
-            return self.client.post(path, files={"file": ("clip.wav", io.BytesIO(fh.read()), "audio/wav")}, data={"request": json.dumps(request)})
+            return self.client.post(
+                path,
+                files={"file": ("clip.wav", io.BytesIO(fh.read()), "audio/wav")},
+                data={"request": json.dumps(request)},
+            )
 
     def test_upload_stream_returns_progress_then_a_literal_srt(self):
         resp = self._upload("/transcribe/upload/stream", {"model": MODEL, "language": "auto", "output_format": "srt"})
@@ -94,14 +100,17 @@ class NemotronApiTests(unittest.TestCase):
     def test_explicit_language_reaches_the_binary_and_comes_back_as_the_short_code(self):
         resp = self._upload("/transcribe/upload", {"model": MODEL, "language": "no", "output_format": "txt"})
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.json(), {
-            "ok": True,
-            "content": "word0 word1 word2 word3 word4 word5\n",
-            "language": "nb",
-            "segments": 1,
-            "duration_seconds": 3.0,
-            "chinese_script": None,
-        })
+        self.assertEqual(
+            resp.json(),
+            {
+                "ok": True,
+                "content": "word0 word1 word2 word3 word4 word5\n",
+                "language": "nb",
+                "segments": 1,
+                "duration_seconds": 3.0,
+                "chinese_script": None,
+            },
+        )
 
     def test_health_reports_the_nemotron_descriptor_and_binary_version(self):
         caps = self.client.get("/health").json()["capabilities"]
@@ -115,7 +124,10 @@ class NemotronApiTests(unittest.TestCase):
     def test_models_endpoint_carries_engine_fields_and_the_gguf_download(self):
         models = {m["id"]: m for m in self.client.get("/models").json()["models"]}
         self.assertEqual(
-            {k: models[MODEL][k] for k in ("engine", "label", "downloaded", "available", "unavailableReason", "cachePath")},
+            {
+                k: models[MODEL][k]
+                for k in ("engine", "label", "downloaded", "available", "unavailableReason", "cachePath")
+            },
             {
                 "engine": "nemotron",
                 "label": "Nemotron 3.5 ASR",
@@ -129,7 +141,9 @@ class NemotronApiTests(unittest.TestCase):
         self.assertEqual(models["small"]["engine"], "whisper")
 
     def test_a_whisper_compute_type_does_not_block_nemotron(self):
-        resp = self._upload("/transcribe/upload", {"model": MODEL, "language": "en", "device": "cpu", "compute_type": "float16"})
+        resp = self._upload(
+            "/transcribe/upload", {"model": MODEL, "language": "en", "device": "cpu", "compute_type": "float16"}
+        )
         self.assertEqual(resp.status_code, 200)
 
     def test_a_binary_that_cannot_run_marks_the_model_unavailable(self):
@@ -196,7 +210,9 @@ class NemotronApiTests(unittest.TestCase):
         tempfile.tempdir = str(self.root / "tmp")
         (self.root / "tmp").mkdir()
         try:
-            with mock.patch.dict(os.environ, {"SUBSMELT_FAKE_NEMO_SLEEP": "30", "SUBSMELT_FAKE_NEMO_PIDFILE": str(pidfile)}):
+            with mock.patch.dict(
+                os.environ, {"SUBSMELT_FAKE_NEMO_SLEEP": "30", "SUBSMELT_FAKE_NEMO_PIDFILE": str(pidfile)}
+            ):
                 events = nemotron.run(request, self.wav, is_cancelled=pidfile.exists, min_progress_interval=1.0)
                 with self.assertRaises(TranscriptionCancelled):
                     list(events)

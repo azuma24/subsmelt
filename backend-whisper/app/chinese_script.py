@@ -7,10 +7,12 @@ Traditional (Taiwan) or Simplified. OpenCC does the conversion:
 leaving text that is already Traditional unchanged, so mixed output comes out
 uniform; ``t2s`` maps Traditional to Simplified.
 """
+
 from __future__ import annotations
 
-from functools import lru_cache
-from typing import Iterable, Literal
+from collections.abc import Iterable
+from functools import cache
+from typing import Literal
 
 from .nemotron_languages import normalize_language
 from .segments import Segment
@@ -25,7 +27,7 @@ def is_chinese(language: str | None) -> bool:
     return normalize_language(language or "").startswith("zh")
 
 
-@lru_cache(maxsize=None)
+@cache
 def _converter(conversion: str):
     # Imported here: loading the dictionaries costs a moment, and only
     # Chinese transcripts need them.
@@ -39,8 +41,8 @@ def convert_segments(segments: Iterable[object], script: ChineseScript) -> list[
     converter = _converter(_OPENCC_CONVERSIONS[script])
     return [
         Segment(
-            start=float(getattr(segment, "start")),
-            end=float(getattr(segment, "end")),
+            start=float(segment.start),
+            end=float(segment.end),
             text=converter.convert(str(getattr(segment, "text", "") or "")),
             speaker=getattr(segment, "speaker", None),
         )

@@ -4,11 +4,13 @@ A cue ends at sentence punctuation, at a pause, or when the next word would
 push it past the duration or length limit. Length is measured in characters,
 which is what matters for CJK text that carries no spaces.
 """
+
 from __future__ import annotations
 
+import itertools
 import unicodedata
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 from .schemas import SubtitleQualityOptions
 from .segments import Segment, has_wide_chars
@@ -40,7 +42,9 @@ class _Limits:
 
 
 def _limits(quality: SubtitleQualityOptions | None) -> _Limits:
-    max_duration = quality.max_subtitle_duration if quality and quality.max_subtitle_duration else DEFAULT_MAX_DURATION_S
+    max_duration = (
+        quality.max_subtitle_duration if quality and quality.max_subtitle_duration else DEFAULT_MAX_DURATION_S
+    )
     return _Limits(max_duration=max_duration, max_line=quality.max_line_length if quality else None)
 
 
@@ -51,7 +55,7 @@ def _wide(char: str) -> bool:
 def join_words(words: Sequence[Word]) -> str:
     """Space-separated, except between two wide (CJK) characters."""
     out = words[0].text
-    for previous, current in zip(words, words[1:]):
+    for previous, current in itertools.pairwise(words):
         glued = previous.text and current.text and _wide(previous.text[-1]) and _wide(current.text[0])
         out += current.text if glued else " " + current.text
     return out
@@ -68,7 +72,7 @@ def _split_run(run: list[Word]) -> tuple[list[Word], list[Word]]:
     count = len(run)
     for index in range(count - 2, count // 2 - 1, -1):
         if run[index].text and run[index].text[-1] in CLAUSE_END:
-            return run[: index + 1], run[index + 1:]
+            return run[: index + 1], run[index + 1 :]
     return run, []
 
 
@@ -81,7 +85,9 @@ def _monotonic(segments: list[Segment]) -> list[Segment]:
     out: list[Segment] = []
     for segment in segments:
         if out and segment.start < out[-1].end:
-            segment = Segment(start=out[-1].end, end=max(segment.end, out[-1].end), text=segment.text, speaker=segment.speaker)
+            segment = Segment(
+                start=out[-1].end, end=max(segment.end, out[-1].end), text=segment.text, speaker=segment.speaker
+            )
         out.append(segment)
     return out
 

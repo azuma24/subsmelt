@@ -136,7 +136,7 @@ class SplitLongSegmentsTests(unittest.TestCase):
         segments = [seg(0.0, 10.0, "one two three four five six seven")]
         result = split_long_segments(segments, 3.0)
         joined = " ".join(s.text for s in result)
-        self.assertEqual(joined.split(), "one two three four five six seven".split())
+        self.assertEqual(joined.split(), ["one", "two", "three", "four", "five", "six", "seven"])
 
 
 class SplitUnspacedTextTests(unittest.TestCase):
@@ -154,7 +154,6 @@ class SplitUnspacedTextTests(unittest.TestCase):
                 seg(25.0, 30.0, "りません"),
             ],
         )
-
 
     def test_single_latin_word_is_left_whole(self):
         for text in ("Applause", "https://example.com/a/very/long/path"):
@@ -224,9 +223,13 @@ class SnapStartToWordsTests(unittest.TestCase):
         # Lead-in silence: the model pinned the opening cue to 0:00, but its
         # first word was measured at 2.1.
         item = SimpleNamespace(
-            start=0.0, end=4.0, text="welcome back to the show",
-            words=[SimpleNamespace(start=2.1, end=2.5, word="welcome"),
-                   SimpleNamespace(start=2.6, end=3.9, word="show")],
+            start=0.0,
+            end=4.0,
+            text="welcome back to the show",
+            words=[
+                SimpleNamespace(start=2.1, end=2.5, word="welcome"),
+                SimpleNamespace(start=2.6, end=3.9, word="show"),
+            ],
         )
         snapped = snap_start_to_words(item)
         self.assertEqual(snapped.start, 2.1)
@@ -239,13 +242,16 @@ class SnapStartToWordsTests(unittest.TestCase):
         self.assertIs(snap_start_to_words(plain), plain)
 
         # The first word already starts at/before the cue start: nothing to fix.
-        at_zero = SimpleNamespace(start=0.0, end=3.0, text="hello",
-                                  words=[SimpleNamespace(start=0.0, end=0.5, word="hello")])
+        at_zero = SimpleNamespace(
+            start=0.0, end=3.0, text="hello", words=[SimpleNamespace(start=0.0, end=0.5, word="hello")]
+        )
         self.assertIs(snap_start_to_words(at_zero), at_zero)
 
     def test_speaker_is_preserved_through_the_snap(self):
         item = SimpleNamespace(
-            start=0.0, end=4.0, text="welcome back",
+            start=0.0,
+            end=4.0,
+            text="welcome back",
             words=[SimpleNamespace(start=1.5, end=2.0, word="welcome")],
             speaker="SPEAKER_00",
         )
@@ -257,7 +263,9 @@ class SnapStartToWordsTests(unittest.TestCase):
         # segment keeps its own timing.
         for word_start in (3.0, 3.4):
             item = SimpleNamespace(
-                start=1.0, end=3.0, text="late",
+                start=1.0,
+                end=3.0,
+                text="late",
                 words=[SimpleNamespace(start=word_start, end=3.8, word="late")],
             )
             snapped = snap_start_to_words(item)

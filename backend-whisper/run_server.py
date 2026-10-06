@@ -48,6 +48,7 @@ Usage:
     python run_server.py --generate-token --save    # ...and store it in config.json
                                                     # (add --force to rotate an existing key)
 """
+
 from __future__ import annotations
 
 import argparse
@@ -79,8 +80,7 @@ DEFAULT_CONFIG_FILE_NAME = "config.json"
 DEFAULT_LOG_FILE_NAME = "whisper-server.log"
 
 
-def default_data_dir(env: dict[str, str] | None = None,
-                     windows: bool | None = None) -> Path | None:
+def default_data_dir(env: dict[str, str] | None = None, windows: bool | None = None) -> Path | None:
     """Data dir the Windows packaging writes to, or None on other platforms."""
     environ = os.environ if env is None else env
     if windows is None:
@@ -91,14 +91,12 @@ def default_data_dir(env: dict[str, str] | None = None,
     return Path(override) if override else Path(DEFAULT_WINDOWS_DATA_DIR)
 
 
-def default_config_path(env: dict[str, str] | None = None,
-                        windows: bool | None = None) -> str | None:
+def default_config_path(env: dict[str, str] | None = None, windows: bool | None = None) -> str | None:
     base = default_data_dir(env, windows)
     return str(base / DEFAULT_CONFIG_FILE_NAME) if base else None
 
 
-def default_log_file(env: dict[str, str] | None = None,
-                     windows: bool | None = None) -> str | None:
+def default_log_file(env: dict[str, str] | None = None, windows: bool | None = None) -> str | None:
     base = default_data_dir(env, windows)
     return str(base / "logs" / DEFAULT_LOG_FILE_NAME) if base else None
 
@@ -148,8 +146,7 @@ def _load_config_file(path: str | None) -> dict:
     except (OSError, json.JSONDecodeError) as exc:
         # Fail loud-but-soft: warn and fall back to env/defaults rather than
         # refusing to start because of a malformed optional file.
-        print(f"[run_server] WARNING: could not read config file {path}: {exc}",
-              file=sys.stderr)
+        print(f"[run_server] WARNING: could not read config file {path}: {exc}", file=sys.stderr)
         return {}
 
 
@@ -213,8 +210,7 @@ def load_config() -> ServerConfig:
     try:
         port = int(port_raw)
     except (TypeError, ValueError):
-        print(f"[run_server] WARNING: invalid port {port_raw!r}, using {DEFAULT_PORT}",
-              file=sys.stderr)
+        print(f"[run_server] WARNING: invalid port {port_raw!r}, using {DEFAULT_PORT}", file=sys.stderr)
         port = DEFAULT_PORT
 
     return ServerConfig(
@@ -224,8 +220,7 @@ def load_config() -> ServerConfig:
         token=token,
         media_root=pick("SUBSMELT_WHISPER_MEDIA_ROOT", "media_root", None),
         ffmpeg=pick("SUBSMELT_FFMPEG", "ffmpeg", None),
-        log_level=pick("SUBSMELT_WHISPER_LOG_LEVEL", "log_level", DEFAULT_LOG_LEVEL)
-        or DEFAULT_LOG_LEVEL,
+        log_level=pick("SUBSMELT_WHISPER_LOG_LEVEL", "log_level", DEFAULT_LOG_LEVEL) or DEFAULT_LOG_LEVEL,
         log_file=pick("SUBSMELT_WHISPER_LOG_FILE", "log_file", default_log_file()),
         nemo_speech=pick("SUBSMELT_NEMO_SPEECH", "nemo_speech", None),
     )
@@ -234,6 +229,7 @@ def load_config() -> ServerConfig:
 # ---------------------------------------------------------------------------
 # Environment wiring (applied before importing the heavy app/transcribe stack)
 # ---------------------------------------------------------------------------
+
 
 def apply_environment(config: ServerConfig) -> None:
     """Export resolved config into the process environment.
@@ -272,8 +268,7 @@ def add_bundled_dll_dir() -> None:
         return
     # When frozen, sys.frozen is set and sys._MEIPASS / the exe dir holds the bundle.
     base = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
-    candidates = [base, base / "nvidia" / "cudnn" / "bin",
-                  base / "nvidia" / "cublas" / "bin"]
+    candidates = [base, base / "nvidia" / "cudnn" / "bin", base / "nvidia" / "cublas" / "bin"]
     for candidate in candidates:
         if candidate.is_dir():
             try:
@@ -321,6 +316,7 @@ def verify_cuda_runtime() -> tuple[bool, str]:
 # Entry point
 # ---------------------------------------------------------------------------
 
+
 def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="run_server",
@@ -354,7 +350,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def exposure_warnings(config: "ServerConfig") -> list[str]:
+def exposure_warnings(config: ServerConfig) -> list[str]:
     """Warn when the server is reachable off-box without a token.
 
     The default bind is 0.0.0.0 so a containerised or remote SubSmelt can reach
@@ -434,8 +430,7 @@ def generate_token_command(save: bool, force: bool) -> int:
     try:
         write_config_token(config_path, token)
     except OSError as exc:
-        print(f"\n[run_server] ERROR: could not write {config_path}: {exc}",
-              file=sys.stderr)
+        print(f"\n[run_server] ERROR: could not write {config_path}: {exc}", file=sys.stderr)
         return 1
 
     print(f"Saved to {config_path}. Restart the backend to apply it.")
@@ -450,7 +445,7 @@ def generate_token_command(save: bool, force: bool) -> int:
     return 0
 
 
-def configure_file_logging(config: "ServerConfig") -> bool:
+def configure_file_logging(config: ServerConfig) -> bool:
     """Attach a rotating file handler when SUBSMELT_WHISPER_LOG_FILE is set.
 
     Windows services have no console, so log to a file (plan Phase 5). The handler
@@ -458,6 +453,7 @@ def configure_file_logging(config: "ServerConfig") -> bool:
     told NOT to reset logging (``log_config=None``) so these handlers survive.
     Rotation: 5 MB × 5 backups. Returns True when file logging was enabled.
     """
+
     # Record the outcome either way so /health (and therefore the control GUI
     # and the SubSmelt app) can say whether logging is actually on. Without this
     # a failure is silent: the warning below goes to a stderr that a Windows
@@ -465,6 +461,7 @@ def configure_file_logging(config: "ServerConfig") -> bool:
     def _record(active: bool, error: str | None = None) -> None:
         try:
             from app.log_state import set_log_state
+
             set_log_state(config.log_file, active, error)
         except Exception:  # pragma: no cover - diagnostics must never be fatal
             pass
@@ -478,12 +475,8 @@ def configure_file_logging(config: "ServerConfig") -> bool:
     try:
         log_path = Path(config.log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
-        handler = RotatingFileHandler(
-            log_path, maxBytes=5 * 1024 * 1024, backupCount=5, encoding="utf-8"
-        )
-        handler.setFormatter(logging.Formatter(
-            "%(asctime)s %(levelname)s %(name)s: %(message)s"
-        ))
+        handler = RotatingFileHandler(log_path, maxBytes=5 * 1024 * 1024, backupCount=5, encoding="utf-8")
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
         level = getattr(logging, config.log_level.upper(), logging.INFO)
         root = logging.getLogger()
         root.setLevel(level)
@@ -497,8 +490,7 @@ def configure_file_logging(config: "ServerConfig") -> bool:
         return True
     except OSError as exc:
         # Never refuse to start over a logging-path problem; warn and use console.
-        print(f"[run_server] WARNING: could not open log file {config.log_file}: {exc}",
-              file=sys.stderr)
+        print(f"[run_server] WARNING: could not open log file {config.log_file}: {exc}", file=sys.stderr)
         _record(False, str(exc))
         return False
 
@@ -520,8 +512,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.generate_token:
         return generate_token_command(save=args.save, force=args.force)
     if args.save or args.force:
-        print("[run_server] --save/--force only apply to --generate-token.",
-              file=sys.stderr)
+        print("[run_server] --save/--force only apply to --generate-token.", file=sys.stderr)
         return 2
 
     config = load_config()
@@ -549,10 +540,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[run_server] FATAL: uvicorn is not installed: {exc}", file=sys.stderr)
         return 1
 
-    print(
-        f"[run_server] starting uvicorn on {config.host}:{config.port} "
-        f"(gpu={'yes' if gpu_ok else 'no'})"
-    )
+    print(f"[run_server] starting uvicorn on {config.host}:{config.port} (gpu={'yes' if gpu_ok else 'no'})")
     for line in exposure_warnings(config):
         print(line, file=sys.stderr)
     # Pass the import string (not the app object) so uvicorn owns the lifecycle;

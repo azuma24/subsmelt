@@ -3,9 +3,10 @@ from __future__ import annotations
 import gc
 import sys
 import threading
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 from .catalog import descriptor_for
 from .gpu import cuda_device_count
@@ -55,8 +56,7 @@ class ModelWeightsMissingError(RuntimeError):
 
     def __init__(self, model: str) -> None:
         super().__init__(
-            f"Model {model!r} weights are not present locally and auto-download is "
-            f"disabled; download the model first"
+            f"Model {model!r} weights are not present locally and auto-download is disabled; download the model first"
         )
         self.model = model
 
@@ -85,11 +85,7 @@ def _is_missing_local_files(exc: Exception) -> bool:
 
 def _is_cuda_oom(exc: Exception) -> bool:
     text = str(exc).lower()
-    return (
-        "out of memory" in text
-        or "cuda_error_out_of_memory" in text
-        or ("cublas" in text and "alloc" in text)
-    )
+    return "out of memory" in text or "cuda_error_out_of_memory" in text or ("cublas" in text and "alloc" in text)
 
 
 def _resolve_snapshot_dir(model: str) -> str | None:
@@ -103,7 +99,7 @@ def _resolve_snapshot_dir(model: str) -> str | None:
     """
     try:
         info = describe_model_cache(model, available_ram_mb())
-    except Exception:  # noqa: BLE001 - never let detection break loading
+    except Exception:
         return None
     path = info.get("cache_path")
     return path if info.get("cached") and path else None
@@ -139,13 +135,11 @@ def validate_device_and_compute_type(device: str, compute_type: str) -> None:
     if normalized_device == "cuda":
         if cuda_device_count() <= 0:
             raise CudaUnavailableError(
-                "CUDA requested but no CUDA device available; install/upgrade the "
-                "NVIDIA driver or use device=cpu"
+                "CUDA requested but no CUDA device available; install/upgrade the NVIDIA driver or use device=cpu"
             )
         if normalized_compute and normalized_compute not in _CUDA_COMPUTE_TYPES:
             raise InvalidComputeTypeError(
-                f"compute_type={compute_type!r} is not valid for device=cuda; "
-                f"use one of {sorted(_CUDA_COMPUTE_TYPES)}"
+                f"compute_type={compute_type!r} is not valid for device=cuda; use one of {sorted(_CUDA_COMPUTE_TYPES)}"
             )
     elif normalized_device == "cpu":
         if normalized_compute and normalized_compute not in _CPU_COMPUTE_TYPES:
@@ -230,7 +224,7 @@ def _load_whisper_model(model: str, device: str, compute_type: str) -> Any:
             download_root=str(cache_root_from_env()),
             local_files_only=True,
         )
-    except Exception as exc:  # noqa: BLE001 - re-raise as typed/clear errors
+    except Exception as exc:
         if _is_cuda_oom(exc):
             raise CudaOutOfMemoryError(
                 f"CUDA ran out of memory loading model {model!r}; try a smaller "

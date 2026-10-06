@@ -102,12 +102,21 @@ class DownloadDeleteTests(unittest.TestCase):
         self.assertFalse(self.mm.is_model_downloaded("nemotron-3.5-asr"))
         with mock.patch.dict(sys.modules, {"huggingface_hub": _hub_writing_weights(calls)}):
             events = list(self.mm.download_model_events("nemotron-3.5-asr"))
-        self.assertEqual(calls, [{
-            "repo_id": "nvidia/nemotron-3.5-asr-streaming-0.6b",
-            "allow_patterns": ["nemotron-3.5-asr-streaming-0.6b.q8_0.gguf"],
-        }])
-        expected_path = str(Path(self._tmp.name) / "models--nvidia--nemotron-3.5-asr-streaming-0.6b" / "snapshots" / "abc")
-        self.assertEqual(events[-1], {"type": "result", "ok": True, "model": "nemotron-3.5-asr", "cachePath": expected_path})
+        self.assertEqual(
+            calls,
+            [
+                {
+                    "repo_id": "nvidia/nemotron-3.5-asr-streaming-0.6b",
+                    "allow_patterns": ["nemotron-3.5-asr-streaming-0.6b.q8_0.gguf"],
+                }
+            ],
+        )
+        expected_path = str(
+            Path(self._tmp.name) / "models--nvidia--nemotron-3.5-asr-streaming-0.6b" / "snapshots" / "abc"
+        )
+        self.assertEqual(
+            events[-1], {"type": "result", "ok": True, "model": "nemotron-3.5-asr", "cachePath": expected_path}
+        )
         self.assertTrue(self.mm.is_model_downloaded("nemotron-3.5-asr"))
         self.assertTrue(self.mm.delete_model("nemotron-3.5-asr")["ok"])
         self.assertFalse(self.mm.is_model_downloaded("nemotron-3.5-asr"))

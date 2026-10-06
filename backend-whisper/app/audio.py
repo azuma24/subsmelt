@@ -3,8 +3,8 @@ from __future__ import annotations
 import os
 import subprocess
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from .engine import TranscriptionCancelled
 
@@ -59,19 +59,13 @@ def extract_audio(
 
     if returncode != 0:
         if _looks_like_no_audio(stderr):
-            raise RuntimeError(
-                f"Input media has no audio track: {input_path}"
-            )
+            raise RuntimeError(f"Input media has no audio track: {input_path}")
         detail = f"\n{stderr}" if stderr else ""
-        raise RuntimeError(
-            f"ffmpeg failed (exit code {returncode}) extracting audio from {input_path}:{detail}"
-        )
+        raise RuntimeError(f"ffmpeg failed (exit code {returncode}) extracting audio from {input_path}:{detail}")
 
     # ffmpeg can succeed (exit 0) yet produce nothing when there is no audio stream.
     if not output_path.exists() or output_path.stat().st_size == 0:
-        raise RuntimeError(
-            f"Input media produced no audio output (likely no audio track): {input_path}"
-        )
+        raise RuntimeError(f"Input media produced no audio output (likely no audio track): {input_path}")
 
     return output_path
 
@@ -96,9 +90,7 @@ def _run_ffmpeg(
             raise TranscriptionCancelled("Transcription cancelled by client")
         if time.monotonic() >= deadline:
             _kill(process)
-            raise RuntimeError(
-                f"ffmpeg timed out after {timeout_seconds}s extracting audio from {input_path}"
-            )
+            raise RuntimeError(f"ffmpeg timed out after {timeout_seconds}s extracting audio from {input_path}")
 
 
 def _kill(process: subprocess.Popen) -> None:

@@ -51,27 +51,38 @@ class PreStreamWorkOffLoopTests(unittest.TestCase):
         def record(*args, **kwargs):
             self.seen[name] = _has_running_loop()
             return wrapped(*args, **kwargs)
+
         return record
 
     def test_path_stream_validates_off_the_loop(self):
-        with mock.patch.object(main_module, "MEDIA_ROOT", str(self.media)), \
-             mock.patch.object(main_module, "validate_transcribe_request",
-                               self._recording("validate", main_module.validate_transcribe_request)), \
-             mock.patch.object(main_module, "available_ram_mb", return_value=64000), \
-             mock.patch.object(main_module, "ffmpeg_available", return_value=True), \
-             mock.patch.object(main_module, "assert_model_downloaded", return_value=None):
-            resp = self.client.post("/transcribe/stream", json={"input_path": str(self.media / "clip.mkv"), "model": "small"})
+        with (
+            mock.patch.object(main_module, "MEDIA_ROOT", str(self.media)),
+            mock.patch.object(
+                main_module,
+                "validate_transcribe_request",
+                self._recording("validate", main_module.validate_transcribe_request),
+            ),
+            mock.patch.object(main_module, "available_ram_mb", return_value=64000),
+            mock.patch.object(main_module, "ffmpeg_available", return_value=True),
+            mock.patch.object(main_module, "assert_model_downloaded", return_value=None),
+        ):
+            resp = self.client.post(
+                "/transcribe/stream", json={"input_path": str(self.media / "clip.mkv"), "model": "small"}
+            )
         self.assertEqual(resp.status_code, 200)
         self.assertIn('"type": "result"', resp.text)
         self.assertEqual(self.seen, {"validate": False})
 
     def test_upload_stream_saves_and_validates_off_the_loop(self):
-        with mock.patch.object(main_module, "_save_upload", self._recording("save", main_module._save_upload)), \
-             mock.patch.object(main_module, "validate_upload_request",
-                               self._recording("validate", main_module.validate_upload_request)), \
-             mock.patch.object(main_module, "available_ram_mb", return_value=64000), \
-             mock.patch.object(main_module, "ffmpeg_available", return_value=True), \
-             mock.patch.object(main_module, "assert_model_downloaded", return_value=None):
+        with (
+            mock.patch.object(main_module, "_save_upload", self._recording("save", main_module._save_upload)),
+            mock.patch.object(
+                main_module, "validate_upload_request", self._recording("validate", main_module.validate_upload_request)
+            ),
+            mock.patch.object(main_module, "available_ram_mb", return_value=64000),
+            mock.patch.object(main_module, "ffmpeg_available", return_value=True),
+            mock.patch.object(main_module, "assert_model_downloaded", return_value=None),
+        ):
             resp = self.client.post(
                 "/transcribe/upload/stream",
                 files={"file": ("clip.wav", io.BytesIO(b"fake"), "audio/wav")},
@@ -87,12 +98,15 @@ class PreStreamWorkOffLoopTests(unittest.TestCase):
             saved.write_bytes(b"fake")
             return saved
 
-        with mock.patch.object(main_module, "download_url", fake_download), \
-             mock.patch.object(main_module, "validate_upload_request",
-                               self._recording("validate", main_module.validate_upload_request)), \
-             mock.patch.object(main_module, "available_ram_mb", return_value=64000), \
-             mock.patch.object(main_module, "ffmpeg_available", return_value=True), \
-             mock.patch.object(main_module, "assert_model_downloaded", return_value=None):
+        with (
+            mock.patch.object(main_module, "download_url", fake_download),
+            mock.patch.object(
+                main_module, "validate_upload_request", self._recording("validate", main_module.validate_upload_request)
+            ),
+            mock.patch.object(main_module, "available_ram_mb", return_value=64000),
+            mock.patch.object(main_module, "ffmpeg_available", return_value=True),
+            mock.patch.object(main_module, "assert_model_downloaded", return_value=None),
+        ):
             resp = self.client.post("/transcribe/url/stream", json={"url": "https://example.com/v1", "model": "small"})
         self.assertEqual(resp.status_code, 200)
         self.assertIn('"type": "result"', resp.text)
@@ -120,9 +134,7 @@ class DisconnectMidStreamTests(unittest.TestCase):
 
         async def client_that_leaves_after_first_line():
             cancel_event = asyncio.Event()
-            stream = main_module._ndjson_stream(
-                slow_generator(cancel_event.is_set), cancel_event, cleanup=cleaned.set
-            )
+            stream = main_module._ndjson_stream(slow_generator(cancel_event.is_set), cancel_event, cleanup=cleaned.set)
             first = await stream.__anext__()
             await stream.aclose()  # the client is gone while a step is executing
             return first

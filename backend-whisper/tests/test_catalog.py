@@ -5,9 +5,38 @@ from app.engine import LanguageNotSupportedError
 from app.preflight import evaluate_gpu_safety, evaluate_model_safety, model_ram_requirements_mb
 
 NEMOTRON_LANGUAGES = [
-    "en", "es", "fr", "it", "pt", "pt-BR", "pt-PT", "nl", "de", "tr", "ru", "ar",
-    "hi", "ja", "ko", "vi", "uk", "pl", "sv", "cs", "nb", "no", "da", "bg",
-    "fi", "hr", "sk", "zh", "zh-CN", "hu", "ro", "et",
+    "en",
+    "es",
+    "fr",
+    "it",
+    "pt",
+    "pt-BR",
+    "pt-PT",
+    "nl",
+    "de",
+    "tr",
+    "ru",
+    "ar",
+    "hi",
+    "ja",
+    "ko",
+    "vi",
+    "uk",
+    "pl",
+    "sv",
+    "cs",
+    "nb",
+    "no",
+    "da",
+    "bg",
+    "fi",
+    "hr",
+    "sk",
+    "zh",
+    "zh-CN",
+    "hu",
+    "ro",
+    "et",
 ]
 
 
@@ -16,8 +45,16 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual(
             ADVERTISED_MODELS,
             (
-                "tiny", "base", "small", "medium", "large-v1", "large-v2", "large-v3",
-                "distil-large-v3", "large-v3-turbo", "nemotron-3.5-asr",
+                "tiny",
+                "base",
+                "small",
+                "medium",
+                "large-v1",
+                "large-v2",
+                "large-v3",
+                "distil-large-v3",
+                "large-v3-turbo",
+                "nemotron-3.5-asr",
             ),
         )
 
@@ -96,7 +133,9 @@ class PreflightCatalogTests(unittest.TestCase):
 
     def test_low_ram_suggests_a_smaller_whisper_model(self):
         result = evaluate_model_safety("large-v3", 4096)
-        self.assertEqual((result["safe"], result["code"], result["suggested_model"]), (False, "insufficient_ram", "small"))
+        self.assertEqual(
+            (result["safe"], result["code"], result["suggested_model"]), (False, "insufficient_ram", "small")
+        )
 
     def test_low_ram_never_suggests_a_whisper_model_for_nemotron(self):
         result = evaluate_model_safety("nemotron-3.5-asr", 2048)
@@ -104,7 +143,9 @@ class PreflightCatalogTests(unittest.TestCase):
 
     def test_low_vram_never_suggests_a_whisper_model_for_nemotron(self):
         result = evaluate_gpu_safety("nemotron-3.5-asr", 1024)
-        self.assertEqual((result["safe"], result["code"], result["suggested_model"]), (False, "insufficient_vram", None))
+        self.assertEqual(
+            (result["safe"], result["code"], result["suggested_model"]), (False, "insufficient_vram", None)
+        )
         self.assertEqual(evaluate_gpu_safety("large-v3", 2048)["suggested_model"], "small")
 
 

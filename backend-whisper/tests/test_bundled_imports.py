@@ -3,7 +3,6 @@ installer locks. Anything else crashes the frozen server at import, before it
 can log, the way the 0.6.0 installer died on a module it never bundled."""
 
 import ast
-import re
 import sys
 import unittest
 from pathlib import Path

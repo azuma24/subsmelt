@@ -39,7 +39,7 @@ def diarize_available() -> bool:
         return False
     try:
         import pyannote.audio  # type: ignore  # noqa: F401
-    except Exception:  # noqa: BLE001 - any import failure means unavailable
+    except Exception:
         return False
     return True
 
@@ -67,12 +67,10 @@ def _get_pipeline(device: str) -> Any:
         if cached is not None:
             return cached
         try:
-            from pyannote.audio import Pipeline  # type: ignore
             import torch  # type: ignore
-        except Exception as exc:  # noqa: BLE001 - re-raise as a typed/clear error
-            raise DiarizationUnavailableError(
-                "pyannote.audio is not installed in this backend"
-            ) from exc
+            from pyannote.audio import Pipeline  # type: ignore
+        except Exception as exc:
+            raise DiarizationUnavailableError("pyannote.audio is not installed in this backend") from exc
         pipeline = Pipeline.from_pretrained(DIARIZATION_MODEL, use_auth_token=token)
         if pipeline is None:
             # from_pretrained returns None when the token cannot access the gated repo.
@@ -145,11 +143,17 @@ def assign_speakers(
         kwargs["max_speakers"] = max_speakers
     annotation = pipeline(str(audio_path), **kwargs)
     turns = _turns_from_annotation(annotation)
-    return [_copy_segment(seg, _label_for(
-        float(getattr(seg, "start", 0.0) or 0.0),
-        float(getattr(seg, "end", 0.0) or 0.0),
-        turns,
-    )) for seg in segments]
+    return [
+        _copy_segment(
+            seg,
+            _label_for(
+                float(getattr(seg, "start", 0.0) or 0.0),
+                float(getattr(seg, "end", 0.0) or 0.0),
+                turns,
+            ),
+        )
+        for seg in segments
+    ]
 
 
 def fake_assign_speakers(segments: list) -> list:

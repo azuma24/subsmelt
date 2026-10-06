@@ -2,6 +2,7 @@ import unittest
 
 try:
     from app.engine import LanguageNotSupportedError
+    from app.nemotron_languages import map_language
     from app.schemas import AdvancedSttOptions, TranscribeRequest
     from app.transcribe import (
         assert_language_supported,
@@ -9,7 +10,6 @@ try:
         unsupported_advanced_features,
     )
     from app.whisper_engine import faster_whisper_transcribe_kwargs
-    from app.nemotron_languages import map_language
 except ModuleNotFoundError as exc:  # pragma: no cover - local host may not have backend deps installed
     AdvancedSttOptions = None
     TranscribeRequest = None
@@ -39,15 +39,18 @@ class AdvancedOptionsTests(unittest.TestCase):
             ),
         )
 
-        self.assertEqual(faster_whisper_transcribe_kwargs(request), {
-            "language": "en",
-            "vad_filter": True,
-            "beam_size": 7,
-            "patience": 1.2,
-            "condition_on_previous_text": False,
-            "word_timestamps": True,
-            "initial_prompt": "Technical lecture.",
-        })
+        self.assertEqual(
+            faster_whisper_transcribe_kwargs(request),
+            {
+                "language": "en",
+                "vad_filter": True,
+                "beam_size": 7,
+                "patience": 1.2,
+                "condition_on_previous_text": False,
+                "word_timestamps": True,
+                "initial_prompt": "Technical lecture.",
+            },
+        )
 
     def test_unsupported_heavy_features_are_explicitly_reported(self):
         # bgm_separation has no implementation, so it is always reported here.
@@ -100,7 +103,9 @@ class AdvancedOptionsTests(unittest.TestCase):
     def test_nemotron_rejects_traditional_chinese_and_accepts_japanese(self):
         assert_language_supported(TranscribeRequest(input_path="/media/a.mkv", model="nemotron-3.5-asr", language="ja"))
         with self.assertRaises(LanguageNotSupportedError) as ctx:
-            assert_language_supported(TranscribeRequest(input_path="/media/a.mkv", model="nemotron-3.5-asr", language="zh-TW"))
+            assert_language_supported(
+                TranscribeRequest(input_path="/media/a.mkv", model="nemotron-3.5-asr", language="zh-TW")
+            )
         self.assertEqual(ctx.exception.language, "zh-TW")
 
     def test_word_timestamps_default_on_without_advanced_options(self):

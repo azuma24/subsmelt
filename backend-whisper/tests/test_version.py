@@ -44,7 +44,9 @@ else:
     ENDPOINT_IMPORT_ERROR = None
 
 
-@unittest.skipIf(ENDPOINT_IMPORT_ERROR is not None, f"backend optional dependencies unavailable: {ENDPOINT_IMPORT_ERROR}")
+@unittest.skipIf(
+    ENDPOINT_IMPORT_ERROR is not None, f"backend optional dependencies unavailable: {ENDPOINT_IMPORT_ERROR}"
+)
 class VersionEndpointTests(unittest.TestCase):
     def test_version_endpoint_is_open_and_reports_transports(self):
         # /version stays open (no token) like /health.

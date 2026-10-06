@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from app.paths import output_path_for
 from app.preflight import (
     DISK_FREE_UNKNOWN,
     disk_free_mb,
@@ -13,7 +14,6 @@ from app.preflight import (
     ffmpeg_available,
     model_ram_requirements_mb,
 )
-from app.paths import output_path_for
 
 
 class PreflightTests(unittest.TestCase):

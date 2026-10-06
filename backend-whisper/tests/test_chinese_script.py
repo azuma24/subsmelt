@@ -40,7 +40,9 @@ class ConvertSegmentsTests(unittest.TestCase):
         self.assertEqual(converted.text, "简体中文与繁体")
 
     def test_speaker_survives_conversion(self):
-        [converted] = convert_segments([SimpleNamespace(start=0.0, end=1.0, text="视频", speaker="SPEAKER_01")], "zh-TW")
+        [converted] = convert_segments(
+            [SimpleNamespace(start=0.0, end=1.0, text="视频", speaker="SPEAKER_01")], "zh-TW"
+        )
         self.assertEqual(converted.speaker, "SPEAKER_01")
 
 

@@ -15,6 +15,7 @@ diagnostics calls the Phase 3a provision doctor. On non-Windows it still imports
 and prints config (useful for local syntax/dry-run testing) but the service
 actions are no-ops with a clear message.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -29,6 +30,7 @@ from pathlib import Path
 try:
     import pystray  # type: ignore
     from PIL import Image, ImageDraw  # type: ignore
+
     _HAS_TRAY = True
 except Exception:  # pragma: no cover - deps absent outside the tray build
     pystray = None  # type: ignore
@@ -54,6 +56,7 @@ DEV_SERVER_SCRIPT = Path(__file__).resolve().parents[3] / "run_server.py"
 # Actions (all guard against non-Windows so the file is runnable for testing)
 # ---------------------------------------------------------------------------
 
+
 def _is_windows() -> bool:
     return os.name == "nt"
 
@@ -61,9 +64,7 @@ def _is_windows() -> bool:
 def _run(cmd: list[str]) -> tuple[int, str]:
     """Run a command, returning (returncode, combined output). Never raises."""
     try:
-        proc = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=60, check=False
-        )
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60, check=False)
         return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
     except Exception as exc:  # pragma: no cover - environment dependent
         return 1, str(exc)
@@ -75,7 +76,7 @@ def _run(cmd: list[str]) -> tuple[int, str]:
 # of installing the service — the tray launches, controls, and closes the server.
 # ---------------------------------------------------------------------------
 
-_server_proc: "subprocess.Popen | None" = None
+_server_proc: subprocess.Popen | None = None
 
 
 def _server_command() -> list[str]:
@@ -238,6 +239,7 @@ def _open_path(path: Path) -> None:
 # Icon + menu
 # ---------------------------------------------------------------------------
 
+
 def _make_icon_image():
     """Build a simple status icon (green dot) with Pillow."""
     img = Image.new("RGB", (64, 64), color=(28, 28, 30))
@@ -249,10 +251,7 @@ def _make_icon_image():
 def build_tray():
     """Construct the pystray.Icon. Requires pystray + pillow."""
     if not _HAS_TRAY:
-        raise RuntimeError(
-            "pystray and pillow are required for the tray app. "
-            "Install with: pip install pystray pillow"
-        )
+        raise RuntimeError("pystray and pillow are required for the tray app. Install with: pip install pystray pillow")
     menu = pystray.Menu(
         pystray.MenuItem(lambda _: f"Status: {service_status()}", None, enabled=False),
         pystray.Menu.SEPARATOR,
@@ -266,27 +265,22 @@ def build_tray():
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Quit", quit_app),
     )
-    return pystray.Icon("subsmelt_whisper", _make_icon_image(),
-                        "SubSmelt Whisper Backend", menu)
+    return pystray.Icon("subsmelt_whisper", _make_icon_image(), "SubSmelt Whisper Backend", menu)
 
 
 def build_standalone_tray():
     """Tray that owns a run_server.exe child process (no Windows Service)."""
     if not _HAS_TRAY:
-        raise RuntimeError(
-            "pystray and pillow are required for the tray app. "
-            "Install with: pip install pystray pillow"
-        )
+        raise RuntimeError("pystray and pillow are required for the tray app. Install with: pip install pystray pillow")
     menu = pystray.Menu(
         pystray.MenuItem(
             lambda _: f"Server: {'running' if server_process_running() else 'stopped'}",
-            None, enabled=False,
+            None,
+            enabled=False,
         ),
         pystray.Menu.SEPARATOR,
-        pystray.MenuItem("Start server", start_server_process,
-                         enabled=lambda _: not server_process_running()),
-        pystray.MenuItem("Stop server", stop_server_process,
-                         enabled=lambda _: server_process_running()),
+        pystray.MenuItem("Start server", start_server_process, enabled=lambda _: not server_process_running()),
+        pystray.MenuItem("Stop server", stop_server_process, enabled=lambda _: server_process_running()),
         pystray.MenuItem("Restart server", restart_server_process),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Open health page", open_health),
@@ -295,8 +289,7 @@ def build_standalone_tray():
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Quit (stops server)", quit_standalone),
     )
-    return pystray.Icon("subsmelt_whisper", _make_icon_image(),
-                        "SubSmelt Whisper Backend (standalone)", menu)
+    return pystray.Icon("subsmelt_whisper", _make_icon_image(), "SubSmelt Whisper Backend (standalone)", menu)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -304,16 +297,18 @@ def main(argv: list[str] | None = None) -> int:
         prog="whisper_tray",
         description="SubSmelt Whisper system-tray controller (Windows tray build).",
     )
-    parser.add_argument("--standalone", action="store_true",
-                        help="Own a run_server.exe child process instead of the "
-                             "Windows Service. Auto-starts the server, then the "
-                             "tray Start/Stop/Quit control it directly.")
-    parser.add_argument("--no-autostart", action="store_true",
-                        help="In --standalone mode, do NOT start the server on launch.")
-    parser.add_argument("--status", action="store_true",
-                        help="Print service status and exit (no tray).")
-    parser.add_argument("--diagnostics", action="store_true",
-                        help="Run the provisioning doctor and exit (no tray).")
+    parser.add_argument(
+        "--standalone",
+        action="store_true",
+        help="Own a run_server.exe child process instead of the "
+        "Windows Service. Auto-starts the server, then the "
+        "tray Start/Stop/Quit control it directly.",
+    )
+    parser.add_argument(
+        "--no-autostart", action="store_true", help="In --standalone mode, do NOT start the server on launch."
+    )
+    parser.add_argument("--status", action="store_true", help="Print service status and exit (no tray).")
+    parser.add_argument("--diagnostics", action="store_true", help="Run the provisioning doctor and exit (no tray).")
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
 
     if args.status:
@@ -324,14 +319,17 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if not _HAS_TRAY:
-        print("[tray] pystray/pillow not installed — cannot show the tray. "
-              "Use --status or --diagnostics, or install with: pip install pystray pillow",
-              file=sys.stderr)
+        print(
+            "[tray] pystray/pillow not installed — cannot show the tray. "
+            "Use --status or --diagnostics, or install with: pip install pystray pillow",
+            file=sys.stderr,
+        )
         return 1
 
     if args.standalone:
         # Make sure the owned server is stopped if the tray dies unexpectedly.
         import atexit
+
         atexit.register(stop_server_process)
         if not args.no_autostart:
             start_server_process()

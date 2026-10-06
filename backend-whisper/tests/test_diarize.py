@@ -26,8 +26,7 @@ class LabelAssignmentTests(unittest.TestCase):
         self.assertIsNone(diarize._label_for(10.0, 11.0, turns))
 
     def test_fake_assign_speakers_alternates_and_copies(self):
-        segs = [SimpleNamespace(start=0.0, end=1.0, text="a"),
-                SimpleNamespace(start=1.0, end=2.0, text="b")]
+        segs = [SimpleNamespace(start=0.0, end=1.0, text="a"), SimpleNamespace(start=1.0, end=2.0, text="b")]
         out = diarize.fake_assign_speakers(segs)
         self.assertEqual([s.speaker for s in out], ["SPEAKER_00", "SPEAKER_01"])
         self.assertEqual(out[0].text, "a")
@@ -96,8 +95,10 @@ class PipelineResidencyTests(unittest.TestCase):
 
 class FormatterSpeakerTests(unittest.TestCase):
     def _segs(self):
-        return [SimpleNamespace(start=0.0, end=1.0, text="hello", speaker="SPEAKER_00"),
-                SimpleNamespace(start=1.0, end=2.0, text="world", speaker="SPEAKER_01")]
+        return [
+            SimpleNamespace(start=0.0, end=1.0, text="hello", speaker="SPEAKER_00"),
+            SimpleNamespace(start=1.0, end=2.0, text="world", speaker="SPEAKER_01"),
+        ]
 
     def test_srt_prefixes_speaker(self):
         with tempfile.TemporaryDirectory() as tmp:

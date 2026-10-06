@@ -11,6 +11,7 @@ specified".
 This module searches the plausible layouts instead, and when nothing matches it
 reports every path it tried plus the env override, so the failure is actionable.
 """
+
 from __future__ import annotations
 
 import os
@@ -50,10 +51,10 @@ def server_exe_candidates(exe_dir: Path, windows: bool | None = None) -> list[Pa
     """Paths to probe, most specific first, for an app living in exe_dir."""
     name = server_exe_name(windows)
     return [
-        exe_dir / name,                          # installed bundle / dist\whisper-server
-        exe_dir / BUNDLE_DIR_NAME / name,        # launched from dist\
-        exe_dir.parent / BUNDLE_DIR_NAME / name, # launched from a sibling folder
-        exe_dir / "_internal" / name,            # PyInstaller >= 6 onedir layout
+        exe_dir / name,  # installed bundle / dist\whisper-server
+        exe_dir / BUNDLE_DIR_NAME / name,  # launched from dist\
+        exe_dir.parent / BUNDLE_DIR_NAME / name,  # launched from a sibling folder
+        exe_dir / "_internal" / name,  # PyInstaller >= 6 onedir layout
     ]
 
 

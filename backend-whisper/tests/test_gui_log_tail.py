@@ -39,9 +39,7 @@ class ReadLogTailTests(unittest.TestCase):
         self.assertIn("empty", note)
 
     def test_returns_the_last_lines(self):
-        self.path.write_text(
-            "\n".join(f"INFO line {i}" for i in range(1, 301)) + "\n", encoding="utf-8"
-        )
+        self.path.write_text("\n".join(f"INFO line {i}" for i in range(1, 301)) + "\n", encoding="utf-8")
         lines, note = whisper_gui.read_log_tail(self.path, 5)
         self.assertEqual(len(lines), 5)
         self.assertTrue(lines[-1].endswith("line 300"))
@@ -93,17 +91,13 @@ class ResolveLogFileTests(unittest.TestCase):
 
     def test_env_wins(self):
         os.environ["SUBSMELT_WHISPER_LOG_FILE"] = r"D:\logs\custom.log"
-        self.assertEqual(
-            whisper_gui.resolve_log_file(), Path(r"D:\logs\custom.log")
-        )
+        self.assertEqual(whisper_gui.resolve_log_file(), Path(r"D:\logs\custom.log"))
 
     def test_config_log_file_is_used_when_env_is_unset(self):
         cfg = Path(self._dir.name) / "config.json"
         cfg.write_text('{"log_file": "/var/log/elsewhere.log"}', encoding="utf-8")
         os.environ["SUBSMELT_WHISPER_CONFIG"] = str(cfg)
-        self.assertEqual(
-            whisper_gui.resolve_log_file(), Path("/var/log/elsewhere.log")
-        )
+        self.assertEqual(whisper_gui.resolve_log_file(), Path("/var/log/elsewhere.log"))
 
     def test_falls_back_to_the_default_path(self):
         cfg = Path(self._dir.name) / "config.json"

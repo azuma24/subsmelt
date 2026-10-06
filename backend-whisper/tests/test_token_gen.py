@@ -5,6 +5,7 @@ rest of the network, so these tests pin the properties that matter: enough
 entropy to be unguessable, a charset that survives copy/paste into a web form
 and a JSON config file, and a fresh value on every call.
 """
+
 import re
 import unittest
 

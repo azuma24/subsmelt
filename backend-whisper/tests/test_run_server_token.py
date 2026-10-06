@@ -6,6 +6,7 @@ cover the two things that make that safe to run on a live install: it must not
 start the server, and it must not silently invalidate a token that clients are
 already using.
 """
+
 import io
 import json
 import os
@@ -26,10 +27,7 @@ class GenerateTokenCliTests(unittest.TestCase):
 
         # run_server resolves config + token from the environment, so pin both
         # rather than inheriting whatever the developer's shell has set.
-        self._saved_env = {
-            key: os.environ.get(key)
-            for key in ("SUBSMELT_WHISPER_CONFIG", "SUBSMELT_WHISPER_TOKEN")
-        }
+        self._saved_env = {key: os.environ.get(key) for key in ("SUBSMELT_WHISPER_CONFIG", "SUBSMELT_WHISPER_TOKEN")}
         os.environ["SUBSMELT_WHISPER_CONFIG"] = str(self.config)
         os.environ.pop("SUBSMELT_WHISPER_TOKEN", None)
         self.addCleanup(self._restore_env)

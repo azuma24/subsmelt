@@ -6,10 +6,12 @@ min_progress_interval)`` that yields progress dicts and returns
 ``language`` and ``duration``. This module holds only what runners and their
 caller both need, so it imports nothing from the rest of the app.
 """
+
 from __future__ import annotations
 
+from collections.abc import Callable, Generator
 from pathlib import Path
-from typing import Callable, Generator, Protocol
+from typing import Protocol
 
 
 class TranscriptionCancelled(RuntimeError):

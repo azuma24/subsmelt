@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import unicodedata
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from types import SimpleNamespace
-from typing import Iterable, Sequence
 
 
 @dataclass(frozen=True)
@@ -38,9 +38,9 @@ def has_wide_chars(text: str) -> bool:
 def _to_segment(item: object) -> Segment:
     """Normalize a whisper segment (or any start/end/text object) to a Segment."""
     return Segment(
-        start=float(getattr(item, "start")),
-        end=float(getattr(item, "end")),
-        text=str(getattr(item, "text")),
+        start=float(item.start),
+        end=float(item.end),
+        text=str(item.text),
         speaker=getattr(item, "speaker", None),
     )
 
@@ -153,11 +153,13 @@ def _same_speaker(first: Segment, second: Segment) -> bool:
 def _join(first: Segment, second: Segment) -> Segment:
     first_text = first.text.strip()
     second_text = second.text.strip()
-    if first_text and second_text:
-        text = f"{first_text} {second_text}"
-    else:
-        text = first_text or second_text
-    return Segment(start=min(first.start, second.start), end=max(first.end, second.end), text=text, speaker=first.speaker or second.speaker)
+    text = f"{first_text} {second_text}" if first_text and second_text else first_text or second_text
+    return Segment(
+        start=min(first.start, second.start),
+        end=max(first.end, second.end),
+        text=text,
+        speaker=first.speaker or second.speaker,
+    )
 
 
 def _join_following(carry: Segment, following: Segment) -> Segment:
@@ -243,7 +245,9 @@ def _split_one(segment: Segment, max_duration: float) -> list[Segment]:
         unit_end = round(len(units) * (index + 1) / chunks)
         if index == chunks - 1:
             unit_end = len(units)
-        pieces.append(Segment(start=start, end=end, text=joiner.join(units[unit_start:unit_end]), speaker=segment.speaker))
+        pieces.append(
+            Segment(start=start, end=end, text=joiner.join(units[unit_start:unit_end]), speaker=segment.speaker)
+        )
     return pieces
 
 

@@ -16,6 +16,7 @@ self-contained with no heavy GUI deps. The server's own console is hidden
 Deps: pystray + pillow (tray) are tray-build-only; tkinter is stdlib. All three
 imports are guarded so this file syntax-checks anywhere.
 """
+
 from __future__ import annotations
 
 import os
@@ -31,6 +32,7 @@ from pathlib import Path
 try:
     import tkinter as tk
     from tkinter import ttk
+
     _HAS_TK = True
 except Exception:  # pragma: no cover - tk absent on some minimal builds
     tk = ttk = None  # type: ignore
@@ -39,6 +41,7 @@ except Exception:  # pragma: no cover - tk absent on some minimal builds
 try:
     import pystray  # type: ignore
     from PIL import Image, ImageDraw  # type: ignore
+
     _HAS_TRAY = True
 except Exception:  # pragma: no cover
     pystray = None  # type: ignore
@@ -46,16 +49,29 @@ except Exception:  # pragma: no cover
     _HAS_TRAY = False
 
 try:
+    from gui_config import (
+        bind_warning,
+        config_path,
+        generate_token,
+        load_config,
+        save_config,
+        shadowed_by_env,
+        shadowed_note,
+    )
     from server_launch import ServerExecutableNotFound, resolve_server_command
-    from gui_config import (bind_warning, config_path, generate_token,
-                            load_config, save_config, shadowed_by_env,
-                            shadowed_note)
 except ImportError:  # pragma: no cover - this file's dir isn't on sys.path yet
     sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from gui_config import (
+        bind_warning,
+        config_path,
+        generate_token,
+        load_config,
+        save_config,
+        shadowed_by_env,
+        shadowed_note,
+    )
     from server_launch import ServerExecutableNotFound, resolve_server_command
-    from gui_config import (bind_warning, config_path, generate_token,
-                            load_config, save_config, shadowed_by_env,
-                            shadowed_note)
+
 
 def _resolve_app_version() -> str:
     """Version of this GUI build.
@@ -75,11 +91,13 @@ def _resolve_app_version() -> str:
         return env
     try:
         from app.version import backend_version  # type: ignore
+
         return backend_version()
     except Exception:
         try:  # source checkout: backend-whisper/ is three levels up from tray/
             sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
             from app.version import backend_version  # type: ignore
+
             return backend_version()
         except Exception:
             return "unknown"
@@ -131,7 +149,7 @@ def resolve_log_file() -> Path:
     return LOG_DIR / DEFAULT_LOG_FILE_NAME
 
 
-def read_log_tail(path: Path, lines: int) -> "tuple[list[str], str]":
+def read_log_tail(path: Path, lines: int) -> tuple[list[str], str]:
     """Last `lines` of `path`, plus a human note about what was read.
 
     Returns ([], reason) rather than raising: "there is no log" is a normal
@@ -156,6 +174,8 @@ def read_log_tail(path: Path, lines: int) -> "tuple[list[str], str]":
         return tail, note
     except OSError as exc:
         return [], f"Could not read {path}: {exc}"
+
+
 CONFIG_PATH = DATA_DIR / "config.json"
 CREATE_NO_WINDOW = 0x08000000  # Windows: don't open a console for the child
 # Unfrozen fallback: the repo's own launcher script.
@@ -165,6 +185,7 @@ DEV_SERVER_SCRIPT = Path(__file__).resolve().parents[3] / "run_server.py"
 # ---------------------------------------------------------------------------
 # Server child-process control
 # ---------------------------------------------------------------------------
+
 
 class ServerController:
     """Owns the run_server.exe child process with the chosen host/port/token."""
@@ -176,7 +197,7 @@ class ServerController:
     STARTUP_GRACE_SECONDS = 2.0
 
     def __init__(self) -> None:
-        self._proc: "subprocess.Popen | None" = None
+        self._proc: subprocess.Popen | None = None
 
     @staticmethod
     def _command() -> list[str]:
@@ -258,7 +279,7 @@ class ThreadMessages:
     """
 
     def __init__(self) -> None:
-        self._queue: "queue.Queue[tuple[int, str]]" = queue.Queue()
+        self._queue: queue.Queue[tuple[int, str]] = queue.Queue()
 
     def post(self, text: str, generation: int = 0) -> None:
         """Called from any thread."""
@@ -301,11 +322,11 @@ def port_conflict_message(host: str, port: str) -> str:
 
 
 def launched_settings(
-    previous: "tuple[str, str, str] | None",
+    previous: tuple[str, str, str] | None,
     was_running: bool,
     is_running: bool,
-    current: "tuple[str, str, str]",
-) -> "tuple[str, str, str] | None":
+    current: tuple[str, str, str],
+) -> tuple[str, str, str] | None:
     """Which settings the running child was actually launched with.
 
     Pulled out of the window because the "already running" case is easy to get
@@ -322,8 +343,8 @@ def launched_settings(
 
 def status_label(
     running: bool,
-    active: "tuple[str, str, str] | None",
-    current: "tuple[str, str, str]",
+    active: tuple[str, str, str] | None,
+    current: tuple[str, str, str],
 ) -> str:
     """The status line for a process state, its launch settings, and the form.
 
@@ -348,6 +369,7 @@ def status_label(
 def fetch_health(host: str, port: str, token: str) -> dict | None:
     """GET /health (open route). Returns parsed JSON or None on failure."""
     import json
+
     url_host = "127.0.0.1" if host == "0.0.0.0" else host
     req = urllib.request.Request(f"http://{url_host}:{port}/health")
     if token.strip():
@@ -362,6 +384,7 @@ def fetch_health(host: str, port: str, token: str) -> dict | None:
 # ---------------------------------------------------------------------------
 # Tkinter window
 # ---------------------------------------------------------------------------
+
 
 def _icon_image(running: bool):
     img = Image.new("RGB", (64, 64), color=(28, 28, 30))
@@ -392,7 +415,7 @@ class WhisperGuiApp:
         # Settings the RUNNING child was launched with. The form fields can be
         # edited while it runs, and the status line must describe the process,
         # not whatever is currently typed.
-        self.active: "tuple[str, str, str] | None" = None
+        self.active: tuple[str, str, str] | None = None
         # Worker threads cannot touch Tk, so they leave text here instead.
         self._messages = ThreadMessages()
         # Bumped on every Start and Stop. A readiness poll runs for up to 45s,
@@ -421,17 +444,20 @@ class WhisperGuiApp:
 
         self.status_var = tk.StringVar(value="○ Stopped")
         ttk.Label(frm, textvariable=self.status_var, font=("Segoe UI", 12, "bold")).grid(
-            row=0, column=0, columnspan=3, sticky="w", **pad)
+            row=0, column=0, columnspan=3, sticky="w", **pad
+        )
 
         # Host
         ttk.Label(frm, text="Bind address:").grid(row=1, column=0, sticky="w", **pad)
         # Prefilled from config.json (which run_server reads on every start), so
         # settings survive a restart of this window.
         self.host_var = tk.StringVar(value=self.saved["host"])
-        ttk.Radiobutton(frm, text="127.0.0.1 (local only)", variable=self.host_var,
-                        value="127.0.0.1").grid(row=1, column=1, sticky="w")
-        ttk.Radiobutton(frm, text="0.0.0.0 (LAN/remote)", variable=self.host_var,
-                        value="0.0.0.0").grid(row=2, column=1, sticky="w")
+        ttk.Radiobutton(frm, text="127.0.0.1 (local only)", variable=self.host_var, value="127.0.0.1").grid(
+            row=1, column=1, sticky="w"
+        )
+        ttk.Radiobutton(frm, text="0.0.0.0 (LAN/remote)", variable=self.host_var, value="0.0.0.0").grid(
+            row=2, column=1, sticky="w"
+        )
 
         # Port
         ttk.Label(frm, text="Port:").grid(row=3, column=0, sticky="w", **pad)
@@ -443,20 +469,16 @@ class WhisperGuiApp:
         self.token_var = tk.StringVar(value=self.saved["token"] or os.environ.get("SUBSMELT_WHISPER_TOKEN", ""))
         # Masked by default: this window is often on screen while screen-sharing
         # a "why won't it connect" call. Reveal is one button away.
-        self.token_entry = ttk.Entry(frm, textvariable=self.token_var, width=28,
-                                     show=TOKEN_MASK_CHAR)
+        self.token_entry = ttk.Entry(frm, textvariable=self.token_var, width=28, show=TOKEN_MASK_CHAR)
         self.token_entry.grid(row=4, column=1, sticky="w")
 
         # Its own row rather than a third column: three buttons beside the entry
         # push past the window width and clip the last one.
         key_btns = ttk.Frame(frm)
         key_btns.grid(row=5, column=1, sticky="w", padx=10)
-        ttk.Button(key_btns, text="Generate", command=self.on_generate_token).pack(
-            side="left", padx=(0, 4))
-        ttk.Button(key_btns, text="Copy", command=self.on_copy_token).pack(
-            side="left", padx=4)
-        self.reveal_btn = ttk.Button(key_btns, text="Show",
-                                     command=self.toggle_token_visibility)
+        ttk.Button(key_btns, text="Generate", command=self.on_generate_token).pack(side="left", padx=(0, 4))
+        ttk.Button(key_btns, text="Copy", command=self.on_copy_token).pack(side="left", padx=4)
+        self.reveal_btn = ttk.Button(key_btns, text="Show", command=self.toggle_token_visibility)
         self.reveal_btn.pack(side="left", padx=4)
 
         # Buttons
@@ -478,14 +500,12 @@ class WhisperGuiApp:
 
         # Version is in the title bar too, but a maximised or screenshotted
         # window often loses that, and this is the line people quote in reports.
-        ttk.Label(frm, text=f"GUI version {APP_VERSION}").grid(
-            row=8, column=0, columnspan=3, sticky="w", **pad)
+        ttk.Label(frm, text=f"GUI version {APP_VERSION}").grid(row=8, column=0, columnspan=3, sticky="w", **pad)
 
         # Info box (health output). Rows 9/10 — the version label above owns
         # row 8; sharing a cell would stack the two labels on top of each other.
         ttk.Label(frm, text="Server info:").grid(row=9, column=0, sticky="nw", **pad)
-        self.info = tk.Text(frm, height=10, width=58, wrap="word", state="disabled",
-                            font=("Consolas", 9))
+        self.info = tk.Text(frm, height=10, width=58, wrap="word", state="disabled", font=("Consolas", 9))
         self.info.grid(row=10, column=0, columnspan=3, sticky="nsew", padx=10, pady=6)
         frm.rowconfigure(10, weight=1)
         frm.columnconfigure(2, weight=1)
@@ -526,9 +546,7 @@ class WhisperGuiApp:
             return
         msg = self.ctl.start(host, port, token)
         launched = self.ctl.running() and not was_running
-        self.active = launched_settings(
-            self.active, was_running, self.ctl.running(), (host, port, token)
-        )
+        self.active = launched_settings(self.active, was_running, self.ctl.running(), (host, port, token))
         if launched:
             self._generation += 1
 
@@ -555,8 +573,7 @@ class WhisperGuiApp:
                 daemon=True,
             ).start()
 
-    def _await_ready(self, host: str, port: str, token: str,
-                     generation: int) -> None:
+    def _await_ready(self, host: str, port: str, token: str, generation: int) -> None:
         """Poll /health until the server answers or the process dies.
 
         `generation` identifies the launch this poll belongs to. Stop and
@@ -568,10 +585,11 @@ class WhisperGuiApp:
             if generation != self._generation:
                 return  # superseded by a Stop or a later Start
             if not self.ctl.running():
-                self._post_info_for(generation, 
+                self._post_info_for(
+                    generation,
                     f"Start failed: the server exited before answering /health.\n"
                     f"Port {port} may already be in use by the installed service — "
-                    "check the log in the data directory."
+                    "check the log in the data directory.",
                 )
                 return
             if fetch_health(host, port, token) is not None:
@@ -581,18 +599,17 @@ class WhisperGuiApp:
                     # Readiness must not read as an all-clear on a backend that
                     # is now genuinely open to the network.
                     ready.append(f"\nWARNING: {warning}")
-                    ready.append(
-                        "\nPress Generate next to the API key field to fix this."
-                    )
+                    ready.append("\nPress Generate next to the API key field to fix this.")
                 self._post_info_for(generation, "".join(ready))
                 return
             time.sleep(self.READY_POLL_SECONDS)
             deadline -= self.READY_POLL_SECONDS
 
-        self._post_info_for(generation, 
+        self._post_info_for(
+            generation,
             f"Started, but /health did not answer within {self.READY_TIMEOUT_SECONDS}s. "
             "The process is alive — it may still be loading, or it may be wedged. "
-            "Open the logs to check."
+            "Open the logs to check.",
         )
 
     def _post_info_for(self, generation: int, text: str) -> None:
@@ -628,16 +645,15 @@ class WhisperGuiApp:
             token = generate_token()
         except Exception as exc:  # pragma: no cover - broken/partial bundle
             self._set_info(
-                f"Could not generate an API key: {exc}\n\n"
-                "Enter one by hand instead — any long random string works."
+                f"Could not generate an API key: {exc}\n\nEnter one by hand instead — any long random string works."
             )
             return
         self.token_var.set(token)
         self._reveal_token(True)  # you cannot copy-check what you cannot see
         copied = self._copy_to_clipboard(token)
         lines = [
-            "New API key generated" + (" and copied to the clipboard." if copied
-                                       else " (clipboard unavailable — copy it above)."),
+            "New API key generated"
+            + (" and copied to the clipboard." if copied else " (clipboard unavailable — copy it above)."),
             "",
             f"1. Paste it into {PASTE_LOCATION}.",
             "2. Press Start (or Restart) here to apply it to the backend.",
@@ -656,9 +672,7 @@ class WhisperGuiApp:
         if self._copy_to_clipboard(token):
             self._set_info(f"API key copied. Paste it into {PASTE_LOCATION}.")
         else:
-            self._set_info(
-                "Could not reach the clipboard. Press Show and copy the key by hand."
-            )
+            self._set_info("Could not reach the clipboard. Press Show and copy the key by hand.")
 
     def toggle_token_visibility(self) -> None:
         self._reveal_token(self.token_entry.cget("show") != "")
@@ -705,15 +719,18 @@ class WhisperGuiApp:
             return
         caps = health.get("capabilities", {})
         gpus = caps.get("gpus") or []
-        gpu_txt = "; ".join(
-            f"{g.get('name','GPU')} ({g.get('free_vram_mb','?')}MB free / {g.get('total_vram_mb','?')}MB)"
-            for g in gpus
-        ) or "none (CPU)"
+        gpu_txt = (
+            "; ".join(
+                f"{g.get('name', 'GPU')} ({g.get('free_vram_mb', '?')}MB free / {g.get('total_vram_mb', '?')}MB)"
+                for g in gpus
+            )
+            or "none (CPU)"
+        )
         lines = [
-            f"version:      {caps.get('version','?')}",
+            f"version:      {caps.get('version', '?')}",
             f"authRequired: {caps.get('authRequired')}",
             f"ffmpeg:       {health.get('ffmpeg')}",
-            f"RAM:          {health.get('availableRamMb','?')} / {health.get('totalRamMb','?')} MB",
+            f"RAM:          {health.get('availableRamMb', '?')} / {health.get('totalRamMb', '?')} MB",
             f"devices:      {', '.join(caps.get('devices', []))}",
             f"computeTypes: {', '.join(caps.get('computeTypes', []))}",
             f"transports:   {', '.join(caps.get('transportModes', []))}",
@@ -837,8 +854,8 @@ class WhisperGuiApp:
             pystray.MenuItem("Quit (stops server)", self.quit_app),
         )
         self._tray_icon = pystray.Icon(
-            "subsmelt_whisper_gui", _icon_image(False),
-            f"SubSmelt Whisper Backend {APP_VERSION}", menu)
+            "subsmelt_whisper_gui", _icon_image(False), f"SubSmelt Whisper Backend {APP_VERSION}", menu
+        )
         threading.Thread(target=self._tray_icon.run, daemon=True).start()
 
     def run(self) -> None:
