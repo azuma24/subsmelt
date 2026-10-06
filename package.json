@@ -8,7 +8,7 @@
     "node": ">=20 <25"
   },
   "scripts": {
-    "dev": "concurrently \"tsx watch src/server/index.ts\" \"vite\"",
+    "dev": "node scripts/dev.mjs",
     "build": "npm run typecheck && vite build && tsc -p tsconfig.server.build.json",
     "start": "node dist/server/index.js",
     "test": "tsx --test \"src/**/*.test.ts\" \"src/**/*.test.tsx\"",
@@ -41,15 +41,11 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
-    "concurrently": "^10.0.5",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.19.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.3"
-  },
-  "overrides": {
-    "shell-quote": "^1.12.0"
   }
 }
