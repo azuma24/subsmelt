@@ -7,6 +7,7 @@ import { scanFolder } from "./scanner.js";
 import { runQueueSafely } from "./queue.js";
 import { broadcast } from "./sse.js";
 import { logger } from "./logger.js";
+import { errorMessage } from "./errors.js";
 
 let watcher: FSWatcher | null = null;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -41,8 +42,8 @@ function handleFileChange(filePath: string) {
           logger.info("scan", `Watcher: ${result.newJobs} new jobs queued`);
           if (getSetting("auto_translate") === "1") runQueueSafely();
         }
-      } catch (e: any) {
-        logger.error("scan", `Watcher scan error: ${e.message}`);
+      } catch (e) {
+        logger.error("scan", `Watcher scan error: ${errorMessage(e)}`);
       }
     })();
   }, DEBOUNCE_MS);
@@ -70,8 +71,8 @@ export function startWatcher() {
   watcher.on("add", handleFileChange);
   watcher.on("change", handleFileChange);
 
-  watcher.on("error", (error: any) => {
-    logger.error("system", `File watcher error: ${error.message}`);
+  watcher.on("error", (error: unknown) => {
+    logger.error("system", `File watcher error: ${errorMessage(error)}`);
   });
 
   logger.info("system", `File watcher started on ${MEDIA_DIR}`);

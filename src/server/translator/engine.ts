@@ -31,6 +31,7 @@ import {
   scanForGlossaryTerms,
   type SeriesGlossary,
 } from "./context.js";
+import { errorMessage } from "../errors.js";
 export { isSafeHttpUrl, type JobContextPlan, type ModelContextInfo, planJobContext, probeModelContext } from "./context-probe.js";
 export {
   type TranslationErrorDiagnostics,
@@ -257,10 +258,10 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       }));
       markUsed(conn);
       break;
-    } catch (e: any) {
-      if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED") throw e;
+    } catch (e) {
+      if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED") throw e;
       analysisErr = e;
-      opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(e?.message || e) });
+      opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(errorMessage(e) || e) });
     }
   }
   // Every connection failed its availability probe — surface the real error
@@ -360,13 +361,13 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
         ));
         markUsed(conn);
         return { result, conn };
-      } catch (e: any) {
-        if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED") throw e;
+      } catch (e) {
+        if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED") throw e;
         // Retried later at lower concurrency (see processChunk).
         if (sharedServer && e instanceof ContextOverflowError) throw e;
         // exhausted retries on this connection — cascade to the next
         noteConnectionFailure(conn, e);
-        opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(e?.message || e) });
+        opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(errorMessage(e) || e) });
       }
     }
     return null;
@@ -405,11 +406,11 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
         ));
         markUsed(conn);
         return r;
-      } catch (e: any) {
-        if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED") throw e;
+      } catch (e) {
+        if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED") throw e;
         lastErr = e;
         noteConnectionFailure(conn, e);
-        opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(e?.message || e) });
+        opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(errorMessage(e) || e) });
       }
     }
     throw lastErr || new Error("All LLM connections failed");
@@ -503,8 +504,8 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       const chunkResult = await translateChunkWithFallback(coreText, connOrder, contextPromptPrefix);
       translatedWindow = chunkResult?.result ?? null;
       pass1Conn = chunkResult?.conn ?? null;
-    } catch (e: any) {
-      if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED") throw e;
+    } catch (e) {
+      if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED") throw e;
       // Only an overflow on a shared server escapes the cascade: requeue it.
       if (e instanceof ContextOverflowError) return "requeue";
       translatedWindow = null;
@@ -548,8 +549,8 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
           onUsage: opts.onUsage,
         }));
         if (refined) translatedWindow = refined;
-      } catch (e: any) {
-        if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED") throw e;
+      } catch (e) {
+        if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED") throw e;
         // Keep the pass-1 translatedWindow untouched (same as the null case).
       }
     }
@@ -578,12 +579,12 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     saveChain = saveChain.then(() => {
       try {
         saveTranslated(partialPath, parsed, outputExt, subtitle);
-      } catch (e: any) {
+      } catch (e) {
         // Best-effort partial save — never throw (the final write at job end is
         // authoritative), but don't swallow silently: surface it for operators.
         logger.warn(
           "translate",
-          `Partial save failed for ${partialPath}: ${e?.message || e}`
+          `Partial save failed for ${partialPath}: ${errorMessage(e) || e}`
         );
       }
     });
@@ -633,14 +634,14 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
         // leftover cue, so an unresponsive backend must not cost a full job
         // timeout (times five retries) per line here either.
         cue.data.translatedText = await translateSingleWithFallback(cue.data.text || "", connections);
-      } catch (e: any) {
-        if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED") throw e;
+      } catch (e) {
+        if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED") throw e;
         // Every cue must end with some text — never drop a line from output.
         // When even the per-line fallback can't translate, pass the source
         // through so the cue still appears (untranslated, but present).
         logger.warn(
           "translate",
-          `Per-line fallback failed for a cue; passing source text through: ${e?.message || e}`
+          `Per-line fallback failed for a cue; passing source text through: ${errorMessage(e) || e}`
         );
         cue.data.translatedText = cue.data.text || "";
       }
@@ -680,7 +681,7 @@ export async function testConnection(opts: {
       temperature: 0.3,
     });
     return { ok: true, message: `Success: "${result}"` };
-  } catch (error: any) {
-    return { ok: false, message: error.message || "Connection failed" };
+  } catch (error) {
+    return { ok: false, message: errorMessage(error) || "Connection failed" };
   }
 }

@@ -4,6 +4,7 @@ import type { Backfill, ChannelInclude, YoutubePlaylist } from "./playlists.js";
 import type { ContentKind, InitialState, ListingEntry, VideoRow, YoutubeStore } from "./store.js";
 import { channelContentLists, isChannelId, isChannelUploads, isVideoId, playlistUrl, uploadsPlaylistId, videoUrl, type ChannelInput } from "./urls.js";
 import { classifyYtdlpError, errorSummary, runYtdlp } from "./ytdlp.js";
+import { errorMessage } from "../errors.js";
 
 const LISTING_TIMEOUT_MS = 10 * 60_000;
 // A flat listing of an 889-video playlist is 1.2 MB of JSON; 5,000 videos (YouTube's playlist cap) stays well
@@ -125,7 +126,7 @@ export async function listChannelUploads(
     try {
       parts.push({ kind, listing: await listOne(ids[kind]) });
     } catch (error) {
-      if (!(error instanceof Error && MISSING_LIST_RE.test(error.message))) throw error;
+      if (!(error instanceof Error && MISSING_LIST_RE.test(errorMessage(error)))) throw error;
       parts.push({ kind, listing: null });
     }
   }
@@ -259,7 +260,7 @@ export async function syncPlaylist(store: YoutubeStore, playlist: YoutubePlaylis
     });
     return { title: listingTitle(listing) || playlist.title, total: listing.entries.length, ...counts };
   } catch (error) {
-    store.updateSyncState(playlist.id, { lastCheckedAt: now, lastError: error instanceof Error ? error.message : String(error) });
+    store.updateSyncState(playlist.id, { lastCheckedAt: now, lastError: error instanceof Error ? errorMessage(error) : String(error) });
     throw error;
   }
 }

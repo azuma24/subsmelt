@@ -1,3 +1,4 @@
+import { errorMessage } from "../errors.js";
 /**
  * Budgets for the cascade-and-fallback path, and the loop that walks a line
  * through it.
@@ -61,14 +62,14 @@ export async function runLineFallback(
     try {
       translations[index] = await options.translateLine(lines[index], index);
       consecutiveFailures = 0;
-    } catch (error: any) {
-      if (error?.message === "STOP_REQUESTED") throw error;
+    } catch (error) {
+      if (errorMessage(error) === "STOP_REQUESTED") throw error;
       consecutiveFailures += 1;
       failures += 1;
       if (consecutiveFailures >= limit) {
         options.onAbort?.(error, consecutiveFailures);
         throw new Error(
-          `Per-line fallback aborted after ${consecutiveFailures} consecutive failures: ${error?.message || error}`,
+          `Per-line fallback aborted after ${consecutiveFailures} consecutive failures: ${errorMessage(error) || error}`,
         );
       }
     }

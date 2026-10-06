@@ -3,7 +3,7 @@ import path from "node:path";
 import { parseSync, stringifySync } from "subtitle";
 import assParser from "ass-parser";
 import assStringify from "ass-stringify";
-import { buildAssDocumentFromCues, normalizeTimeToMs, type SubtitleCue } from "./convert.js";
+import { assField, buildAssDocumentFromCues, isAssDocument, normalizeTimeToMs, withDialogueText, type ParsedSubtitle, type SubtitleCue } from "./convert.js";
 import { mkdirShared, shareFile } from "../shared-files.js";
 
 /** A single manual edit from the preview UI. `index` is the 1-based cue index
@@ -53,8 +53,8 @@ export function applyCueEdits(
   if (["srt", "vtt"].includes(normalizedExt)) {
     const parsed = parseSync(content);
     let cuePosition = 0;
-    const rebuilt = parsed.map((node: any) => {
-      if (node?.type !== "cue") return node;
+    const rebuilt = parsed.map((node) => {
+      if (node.type !== "cue") return node;
       const pos = cuePosition++;
       if (editByPosition.has(pos)) {
         updated++;
@@ -85,17 +85,17 @@ export function applyCueEdits(
   if (["ass", "ssa"].includes(normalizedExt)) {
     const parsedAss = assParser(content);
     let dialogueIndex = 0;
-    const rebuilt = parsedAss.map((section: any) => {
+    const rebuilt = parsedAss.map((section) => {
       if (section.section !== "Events" || !Array.isArray(section.body)) return section;
       return {
         ...section,
-        body: section.body.map((line: any) => {
+        body: section.body.map((line) => {
           if (line.key !== "Dialogue") return line;
           const pos = dialogueIndex++;
           if (editByPosition.has(pos)) {
             updated++;
             const newText = String(editByPosition.get(pos) ?? "").replace(/\r?\n/g, "\\N");
-            return { key: "Dialogue", value: { ...line.value, Text: newText } };
+            return withDialogueText(line, newText);
           }
           return line;
         }),
@@ -129,7 +129,7 @@ export function writeSubtitleFile(outputPath: string, content: string): void {
 
 export function saveTranslated(
   outputPath: string,
-  parsedSubtitle: any,
+  parsedSubtitle: ParsedSubtitle | null | undefined,
   outputExtension: string,
   cues: SubtitleCue[]
 ) {
@@ -151,27 +151,18 @@ export function saveTranslated(
       { format }
     );
   } else if (["ass", "ssa"].includes(ext)) {
-    const hasAssStructure =
-      parsedSubtitle &&
-      typeof parsedSubtitle === "object" &&
-      !Array.isArray(parsedSubtitle) &&
-      Array.isArray(parsedSubtitle.full);
-
-    if (hasAssStructure) {
+    if (parsedSubtitle && isAssDocument(parsedSubtitle) && Array.isArray(parsedSubtitle.full)) {
       let dialogueIndex = 0;
       newSubtitle = assStringify(
-        parsedSubtitle.full.map((section: any) => {
+        parsedSubtitle.full.map((section) => {
           if (section.section !== "Events" || !Array.isArray(section.body)) return section;
           return {
             ...section,
-            body: section.body.map((line: any) => {
+            body: section.body.map((line) => {
               if (line.key !== "Dialogue") return line;
               const cue = cues[dialogueIndex++];
-              const translatedText = cue?.data?.translatedText || cue?.data?.text || line.value?.Text || "";
-              return {
-                key: "Dialogue",
-                value: { ...line.value, Text: translatedText },
-              };
+              const translatedText = cue?.data?.translatedText || cue?.data?.text || assField(line.value, "Text");
+              return withDialogueText(line, translatedText);
             }),
           };
         })

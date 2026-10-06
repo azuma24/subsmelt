@@ -4,6 +4,7 @@ import path from "node:path";
 import { logger } from "./logger.js";
 import type { TranscriptionAttemptStatus, TranscriptionHistoryEntry } from "../shared/transcription.js";
 import type { TranscribePostAction, TranscriptionAdvancedOptions, TranscriptionOutputFormat, TranscriptionSubtitleQualityOptions } from "./transcription-client.js";
+import { errorMessage } from "./errors.js";
 
 const DATA_DIR = process.env.DATA_DIR || "./data";
 const HISTORY_FILE = path.join(DATA_DIR, "transcription-history.json");
@@ -52,7 +53,7 @@ export function summarizeTranscriptionError(error: unknown): string {
   const raw = typeof error === "string"
     ? error
     : error instanceof Error
-      ? error.message
+      ? errorMessage(error)
       : String(error ?? "Transcription failed");
 
   return raw
@@ -103,8 +104,8 @@ export class TranscriptionHistoryStore {
     // never flush again.
     this.writeChain = this.writeChain
       .then(() => this.flush(json))
-      .catch((error: any) =>
-        logger.error("system", `History flush failed: ${error?.message || error}`),
+      .catch((error) =>
+        logger.error("system", `History flush failed: ${errorMessage(error) || error}`),
       );
   }
 
@@ -270,8 +271,8 @@ export class NoSpeechRegistry {
     try {
       fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
       fs.writeFileSync(this.filePath, JSON.stringify(this.read(), null, 2), "utf8");
-    } catch (error: any) {
-      logger.error("system", `Saving the no-speech list failed: ${error?.message || error}`);
+    } catch (error) {
+      logger.error("system", `Saving the no-speech list failed: ${errorMessage(error) || error}`);
     }
   }
 }

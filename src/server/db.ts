@@ -147,7 +147,7 @@ export function updateJob(
   }>,
 ) {
   const sets: string[] = ["updated_at = datetime('now')"];
-  const vals: any[] = [];
+  const vals: (string | number | null)[] = [];
   for (const [k, v] of Object.entries(updates)) {
     if (v !== undefined) {
       sets.push(`${k} = ?`);
@@ -367,7 +367,7 @@ export function forceAllJobs() {
 }
 
 export function pinJob(id: number) {
-  const max = db.prepare("SELECT MAX(priority) as m FROM jobs").get() as any;
+  const max = db.prepare("SELECT MAX(priority) as m FROM jobs").get() as { m: number | null } | undefined;
   const newPriority = (max?.m || 0) + 1;
   db.prepare(
     "UPDATE jobs SET priority = ?, updated_at = datetime('now') WHERE id = ?",
@@ -441,7 +441,7 @@ export function getLogs(opts?: {
   offset?: number;
 }): LogRow[] {
   let sql = "SELECT * FROM logs WHERE 1=1";
-  const vals: any[] = [];
+  const vals: (string | number)[] = [];
 
   if (opts?.level) {
     sql += " AND level = ?";

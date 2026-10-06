@@ -1,3 +1,4 @@
+import { errorMessage } from "../errors.js";
 /**
  * A request the model server rejected because it did not fit the context window.
  *
@@ -44,7 +45,7 @@ const CONTEXT_SIZE_PATTERNS = [
 export function toContextOverflow(error: unknown): ContextOverflowError | null {
   if (error instanceof ContextOverflowError) return error;
   const err = error as { message?: unknown; responseBody?: unknown } | null;
-  const text = `${String(err?.message ?? "")} ${String(err?.responseBody ?? "")}`;
+  const text = `${String(errorMessage(err) ?? "")} ${String(err?.responseBody ?? "")}`;
   const lower = text.toLowerCase();
   const marker = OVERFLOW_MARKERS.find((m) => lower.includes(m));
   if (!marker) return null;

@@ -1,5 +1,6 @@
 import { getSetting } from "./config.js";
 import { logger } from "./logger.js";
+import { errorMessage } from "./errors.js";
 
 // Outbound webhook notifications. Additive + disabled by default (empty
 // notify_webhook_url). A webhook failure must NEVER affect translation or the
@@ -110,7 +111,7 @@ export async function notify(event: string, payload: Record<string, unknown>): P
 
     await postWebhook(webhookUrl, event, payload);
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? errorMessage(error) : String(error);
     logger.warn("system", `Notification webhook failed for ${event}: ${message}`);
   }
 }
@@ -132,7 +133,7 @@ export async function notifyTest(): Promise<{ ok: boolean; error?: string }> {
     logger.info("system", "Notification webhook test sent successfully");
     return { ok: true };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? errorMessage(error) : String(error);
     logger.warn("system", `Notification webhook test failed: ${message}`);
     return { ok: false, error: message };
   }

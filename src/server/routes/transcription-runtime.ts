@@ -39,6 +39,7 @@ import {
   inFlightTranscriptions,
   TranscriptionInFlightError,
 } from "../transcription/in-flight.js";
+import { errorMessage } from "../errors.js";
 
 const MAX_SUBTITLE_BYTES = 50 * 1024 * 1024; // 50 MB cap for written subtitle content
 
@@ -124,7 +125,7 @@ export function settleTranscriptionRun(runId: string, controller: AbortControlle
 
 /** A cancel or a timeout: the app let go of a run the backend may still be working on. */
 export function isAbandonedRun(error: unknown, controller: AbortController): boolean {
-  const message = error instanceof Error ? error.message : String(error ?? "");
+  const message = error instanceof Error ? errorMessage(error) : String(error ?? "");
   return controller.signal.aborted || /timed out/i.test(message);
 }
 
@@ -194,7 +195,7 @@ async function transcribeRelayingProgress(
 }
 
 function isCancellationError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error ?? "");
+  const message = error instanceof Error ? errorMessage(error) : String(error ?? "");
   return /Transcription cancelled/i.test(message);
 }
 
@@ -209,7 +210,7 @@ export function transcriptionErrorStatus(error: unknown): number {
   // a 5xx upstream failure → 502, a 4xx → 400.
   const carried = (error as { backendStatus?: number } | null)?.backendStatus;
   if (typeof carried === "number") return carried >= 500 ? 502 : 400;
-  const message = error instanceof Error ? error.message : String(error ?? "");
+  const message = error instanceof Error ? errorMessage(error) : String(error ?? "");
   // Message heuristic for errors with no carried status (e.g. NDJSON stream error
   // lines): include CUDA/OOM phrasings since those are upstream failures too.
   return /backend|HTTP 5\d\d|unavailable|ECONNREFUSED|timed out|out of memory|cuda/i.test(message) ? 502 : 400;

@@ -18,6 +18,7 @@ import { exportNoteForVideo } from "./note-export.js";
 import { exactUploadDateWithYtdlp, listFollowedWithYtdlp, syncPlaylist, type SyncDeps, type SyncResult } from "./sync.js";
 import type { VideoStatus } from "./video-status.js";
 import { classifyYtdlpError, youtubeTmpRoot, type YtdlpErrorClass } from "./ytdlp.js";
+import { errorMessage } from "../errors.js";
 
 const TICK_MS = 30_000;
 // Waits after the first, second and third ordinary failure; the fourth sets failed.
@@ -96,7 +97,7 @@ export function nextCheckAt(playlist: YoutubePlaylist, lastCheckedAt: string | n
   return new Date(Date.parse(lastCheckedAt) + playlist.checkEveryMinutes * 60_000).toISOString();
 }
 
-const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
+const message = (error: unknown) => (error instanceof Error ? errorMessage(error) : String(error));
 
 const isCooldownCause = (cls: YtdlpErrorClass): cls is CooldownCause => cls === "rate_limited" || cls === "bot_check";
 
@@ -439,7 +440,7 @@ export class YoutubeWorker {
     } catch (error) {
       this.progress.delete(video.video_id);
       // Nothing is wrong with the video: the backend, the GPU or YouTube is not free yet.
-      if (error instanceof NotYetError) this.notYet(video, error.message, askedYoutube);
+      if (error instanceof NotYetError) this.notYet(video, errorMessage(error), askedYoutube);
       else this.retryOrFail(video, "transcribing", message(error));
       return true;
     }

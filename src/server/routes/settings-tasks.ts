@@ -31,6 +31,7 @@ import { logger } from "../logger.js";
 import { normalizeMediaSubfolder } from "../media-paths.js";
 import { isWatcherRunning, restartWatcher } from "../watcher.js";
 import { numericSettingError, parseTaskUpdate, sanitizeLanguageName, validateOutputPattern } from "./validation.js";
+import { errorMessage } from "../errors.js";
 
 // Pure client-driven format conversion (no translation, no DB). The browser
 // uploads file contents; we re-stringify each into the target format and return
@@ -345,7 +346,7 @@ export function registerSettingsTasksRoutes(app: Express): void {
           });
           outputs.push({ name: outName, content: fs.readFileSync(outputPath, "utf8") });
         } catch (error) {
-          errors.push({ name, error: error instanceof Error ? error.message : String(error) });
+          errors.push({ name, error: error instanceof Error ? errorMessage(error) : String(error) });
         }
       }
     } finally {

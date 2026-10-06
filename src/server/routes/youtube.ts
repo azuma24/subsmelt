@@ -27,8 +27,9 @@ import type { YoutubePipeline, YoutubePlaylistSummary, YoutubeStatus } from "../
 import { isQueueRunning } from "../queue.js";
 import { CooldownError, nextCheckAt, transcriptionReady, type YoutubeWorker } from "../youtube/worker.js";
 import { ffmpegVersion, resolveYtdlpBin, updateYtdlp, ytdlpVersion } from "../youtube/ytdlp.js";
+import { errorMessage } from "../errors.js";
 
-const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
+const message = (error: unknown) => (error instanceof Error ? errorMessage(error) : String(error));
 // A day ahead of UTC, so a user east of Greenwich can pick the month that has already started for them.
 const today = () => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
 const NO_KEY_ERROR = "Added since needs a YouTube Data API key in Settings";

@@ -1,5 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+import type Database from "better-sqlite3";
+
+/** Structured context stored beside a log line (a stage name, a status, a snippet). */
+export type LogMeta = Record<string, unknown>;
 
 const DATA_DIR = process.env.DATA_DIR || "./data";
 fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -30,13 +34,13 @@ function nowLocal(): string {
 }
 
 // DB will be injected after db.ts initializes to avoid circular deps
-let _db: any = null;
+let _db: Database.Database | null = null;
 // Entries logged before then (config.json failing to load, say) wait here so
 // the Logs page still shows them.
 const MAX_EARLY_ENTRIES = 100;
 const earlyEntries: DbEntry[] = [];
 
-export function setLogDb(db: any) {
+export function setLogDb(db: Database.Database) {
   _db = db;
   for (const entry of earlyEntries.splice(0)) writeToDB(entry);
 }
@@ -67,7 +71,7 @@ function writeToFile(entry: {
   category: string;
   message: string;
   job_id?: number | null;
-  meta?: any;
+  meta?: LogMeta;
 }) {
   rotateLogFile();
   const line = JSON.stringify(entry) + "\n";
@@ -80,7 +84,7 @@ interface DbEntry {
   category: string;
   message: string;
   job_id?: number | null;
-  meta?: any;
+  meta?: LogMeta;
 }
 
 function writeToDB(entry: DbEntry) {
@@ -113,7 +117,7 @@ function log(
   category: LogCategory,
   message: string,
   jobId?: number | null,
-  meta?: any
+  meta?: LogMeta
 ) {
   const isoTimestamp = nowISO();
   const localTimestamp = nowLocal();
@@ -145,11 +149,11 @@ function log(
 }
 
 export const logger = {
-  info: (category: LogCategory, message: string, jobId?: number | null, meta?: any) =>
+  info: (category: LogCategory, message: string, jobId?: number | null, meta?: LogMeta) =>
     log("info", category, message, jobId, meta),
-  warn: (category: LogCategory, message: string, jobId?: number | null, meta?: any) =>
+  warn: (category: LogCategory, message: string, jobId?: number | null, meta?: LogMeta) =>
     log("warn", category, message, jobId, meta),
-  error: (category: LogCategory, message: string, jobId?: number | null, meta?: any) =>
+  error: (category: LogCategory, message: string, jobId?: number | null, meta?: LogMeta) =>
     log("error", category, message, jobId, meta),
 };
 

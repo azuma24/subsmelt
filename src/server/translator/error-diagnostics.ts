@@ -1,4 +1,5 @@
 import { sanitizeSecrets, toSnippet, tryJsonParse } from "./utils.js";
+import { errorCauseMessage, errorName, errorStatus } from "../errors.js";
 
 // ── Error diagnostics ─────────────────────────────────────────────────────────
 
@@ -10,23 +11,26 @@ export interface TranslationErrorDiagnostics {
   responseSnippet?: string;
 }
 
+/** The fields an SDK or fetch error may carry; every read below checks the type. */
+interface ErrorShape {
+  status?: unknown;
+  statusCode?: unknown;
+  response?: { status?: unknown; body?: unknown } | null;
+  code?: unknown;
+  cause?: { message?: unknown; responseBody?: unknown } | null;
+  responseBody?: unknown;
+  body?: unknown;
+  data?: unknown;
+  message?: unknown;
+  name?: unknown;
+}
+
 export function summarizeTranslationError(error: unknown): TranslationErrorDiagnostics {
-  const err = error as any;
-  const status: number | undefined =
-    typeof err?.status === "number"
-      ? err.status
-      : typeof err?.statusCode === "number"
-      ? err.statusCode
-      : typeof err?.response?.status === "number"
-      ? err.response.status
-      : undefined;
-
+  const err = (error !== null && typeof error === "object" ? error : null) as ErrorShape | null;
+  const status = errorStatus(error);
   const code = typeof err?.code === "string" ? err.code : undefined;
-
-  const causeMessage =
-    typeof err?.cause?.message === "string"
-      ? sanitizeSecrets(err.cause.message)
-      : undefined;
+  const causeMessage = errorCauseMessage(error);
+  const sanitizedCause = causeMessage ? sanitizeSecrets(causeMessage) : undefined;
 
   const responseBodyRaw =
     err?.responseBody ?? err?.response?.body ?? err?.body ?? err?.data ?? err?.cause?.responseBody;
@@ -38,11 +42,13 @@ export function summarizeTranslationError(error: unknown): TranslationErrorDiagn
   // Build the most informative message possible — AI SDK APICallError often has
   // empty .message when LM Studio returns HTTP errors with empty body or
   // {"error":{"message":""}}. Fall through a chain of richer fields.
+  const ownMessage = typeof err?.message === "string" ? err.message.trim() : "";
+  const name = errorName(error);
   let baseMessage: string;
-  if (typeof err?.message === "string" && err.message.trim().length > 0) {
-    baseMessage = sanitizeSecrets(err.message.trim());
-  } else if (causeMessage && causeMessage.trim().length > 0) {
-    baseMessage = `Connection error: ${causeMessage}`;
+  if (ownMessage.length > 0) {
+    baseMessage = sanitizeSecrets(ownMessage);
+  } else if (sanitizedCause && sanitizedCause.trim().length > 0) {
+    baseMessage = `Connection error: ${sanitizedCause}`;
   } else {
     const bodyMsg = extractErrorMessageFromBody(parsed);
     if (bodyMsg) {
@@ -53,10 +59,10 @@ export function summarizeTranslationError(error: unknown): TranslationErrorDiagn
         : "Empty error response from LLM server";
     } else if (status) {
       baseMessage = `HTTP ${status} error from LLM server (no body)`;
-    } else if (typeof err?.name === "string" && err.name !== "Error") {
-      baseMessage = `LLM error: ${err.name}`;
-    } else if (typeof error === "string" && (error as string).trim()) {
-      baseMessage = sanitizeSecrets((error as string).trim());
+    } else if (name && name !== "Error") {
+      baseMessage = `LLM error: ${name}`;
+    } else if (typeof error === "string" && error.trim()) {
+      baseMessage = sanitizeSecrets(error.trim());
     } else {
       baseMessage = "Unknown translation error";
     }
@@ -72,7 +78,7 @@ export function summarizeTranslationError(error: unknown): TranslationErrorDiagn
     message: parts.join(" | "),
     status,
     code,
-    causeMessage,
+    causeMessage: sanitizedCause,
     responseSnippet,
   };
 }

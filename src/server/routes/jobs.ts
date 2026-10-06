@@ -45,13 +45,15 @@ import { assertMediaPathAllowed } from "../transcription-client.js";
 import { isWatcherRunning } from "../watcher.js";
 import { getAllSettings } from "../config.js";
 import { logger } from "../logger.js";
-import type { Job } from "../../shared/jobs.js";
+import type { Job, PreviewLine } from "../../shared/jobs.js";
+import { cuesOf, normalizeTimeToMs, type SubtitleCue } from "../translator/convert.js";
 import { queueFileTranslation, type FileTranslationTarget } from "../file-translation.js";
 import {
   parsePositiveInteger,
   parsePositiveIntegerArray,
   sanitizeLanguageName,
 } from "./validation.js";
+import { errorMessage } from "../errors.js";
 
 // Enrich job rows with task data (since settings/tasks are in config, not SQL JOIN).
 // Also surfaces token usage + an APPROXIMATE est_cost: jobs don't store which
@@ -264,44 +266,29 @@ export function registerJobsRoutes(app: Express): void {
     try {
       assertMediaPathAllowed(job.srt_path, MEDIA_DIR);
       if (job.output_path) assertMediaPathAllowed(job.output_path, MEDIA_DIR);
-    } catch (error: any) {
+    } catch (error) {
       return res
         .status(400)
-        .json({ error: error?.message || "Invalid media path" });
+        .json({ error: errorMessage(error) || "Invalid media path" });
     }
 
     try {
       const srcExt = path.extname(job.srt_path).slice(1).toLowerCase();
-      const srcContent = readSubtitleFileText(job.srt_path);
-      const srcParsed = parseSubtitle(srcContent, srcExt);
-      let srcCues: any[];
-      if (Array.isArray(srcParsed)) {
-        srcCues = srcParsed.filter((l: any) => l.type === "cue");
-      } else if ((srcParsed as any).events) {
-        srcCues = (srcParsed as any).events;
-      } else {
-        srcCues = srcParsed as any;
-      }
+      const srcCues = cuesOf(parseSubtitle(readSubtitleFileText(job.srt_path), srcExt));
 
-      let trgCues: any[] = [];
+      let trgCues: SubtitleCue[] = [];
       const previewTarget = resolveTranslatedOutputPath(job.output_path);
       if (fs.existsSync(previewTarget)) {
         const trgExt = path.extname(job.output_path).slice(1).toLowerCase();
-        const trgContent = readSubtitleFileText(previewTarget);
-        const trgParsed = parseSubtitle(trgContent, trgExt);
-        if (Array.isArray(trgParsed)) {
-          trgCues = trgParsed.filter((l: any) => l.type === "cue");
-        } else if ((trgParsed as any).events) {
-          trgCues = (trgParsed as any).events;
-        } else {
-          trgCues = trgParsed as any;
-        }
+        trgCues = cuesOf(parseSubtitle(readSubtitleFileText(previewTarget), trgExt));
       }
 
-      const lines = srcCues.map((cue: any, i: number) => ({
+      // Times in milliseconds whatever the format: an ASS cue carries them as
+      // "0:00:01.00" strings, which the preview's timecode column cannot read.
+      const lines: PreviewLine[] = srcCues.map((cue, i) => ({
         index: i + 1,
-        start: cue.data?.start,
-        end: cue.data?.end,
+        start: normalizeTimeToMs(cue.data?.start),
+        end: normalizeTimeToMs(cue.data?.end),
         original: cue.data?.text || "",
         translated: trgCues[i]?.data?.text || "",
       }));
@@ -315,8 +302,8 @@ export function registerJobsRoutes(app: Express): void {
         totalLines: lines.length,
         lines,
       });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error) {
+      res.status(500).json({ error: errorMessage(error) });
     }
   });
 
@@ -332,10 +319,10 @@ export function registerJobsRoutes(app: Express): void {
     // before we write to it.
     try {
       assertMediaPathAllowed(job.output_path, MEDIA_DIR);
-    } catch (error: any) {
+    } catch (error) {
       return res
         .status(400)
-        .json({ error: error?.message || "Invalid media path" });
+        .json({ error: errorMessage(error) || "Invalid media path" });
     }
 
     const rawEdits = (req.body as { edits?: unknown })?.edits;
@@ -346,13 +333,10 @@ export function registerJobsRoutes(app: Express): void {
     // Coerce to well-typed edits; malformed entries are dropped here and any
     // out-of-range indices are skipped (and counted) inside applyCueEdits.
     const edits: CueEdit[] = rawEdits
-      .filter(
-        (e): e is CueEdit =>
-          !!e &&
-          typeof (e as any).index === "number" &&
-          Number.isFinite((e as any).index) &&
-          typeof (e as any).text === "string",
-      )
+      .filter((e): e is CueEdit => {
+        const candidate = e as { index?: unknown; text?: unknown } | null;
+        return typeof candidate?.index === "number" && Number.isFinite(candidate.index) && typeof candidate.text === "string";
+      })
       .map((e) => ({ index: Math.trunc(e.index), text: e.text }));
 
     if (!fs.existsSync(job.output_path)) {
@@ -365,11 +349,11 @@ export function registerJobsRoutes(app: Express): void {
       const { output, updated } = applyCueEdits(content, ext, edits);
       writeSubtitleFile(job.output_path, output);
       res.json({ ok: true, updated });
-    } catch (error: any) {
+    } catch (error) {
       res
         .status(500)
         .json({
-          error: `Failed to save edits: ${error?.message || String(error)}`,
+          error: `Failed to save edits: ${errorMessage(error) || String(error)}`,
         });
     }
   });
@@ -383,10 +367,10 @@ export function registerJobsRoutes(app: Express): void {
     // before reading it off disk.
     try {
       assertMediaPathAllowed(job.output_path, MEDIA_DIR);
-    } catch (error: any) {
+    } catch (error) {
       return res
         .status(400)
-        .json({ error: error?.message || "Invalid media path" });
+        .json({ error: errorMessage(error) || "Invalid media path" });
     }
     if (!fs.existsSync(job.output_path)) {
       return res.status(404).json({ error: "Output file not found" });
@@ -407,11 +391,11 @@ export function registerJobsRoutes(app: Express): void {
         `attachment; filename="${safeName}"`,
       );
       res.send(content);
-    } catch (error: any) {
+    } catch (error) {
       res
         .status(500)
         .json({
-          error: `Failed to download: ${error?.message || String(error)}`,
+          error: `Failed to download: ${errorMessage(error) || String(error)}`,
         });
     }
   });

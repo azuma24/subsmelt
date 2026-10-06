@@ -42,6 +42,7 @@ import {
 } from "./auto-transcription.js";
 import { TranscriptionInFlightError } from "./transcription/in-flight.js";
 import { NoSpeechError } from "./routes/transcription-runtime.js";
+import { errorMessage } from "./errors.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -115,8 +116,8 @@ app.post("/api/scan", async (_req, res) => {
     // full-tree walk behind it.
     try {
       return res.json(await scanInFlight);
-    } catch (error: any) {
-      return res.status(400).json({ error: error.message });
+    } catch (error) {
+      return res.status(400).json({ error: errorMessage(error) });
     }
   }
   const run = (async (): ReturnType<typeof scanFolder> => {
@@ -169,8 +170,8 @@ app.post("/api/scan", async (_req, res) => {
               "system",
               `Auto-transcribed ${path.basename(videoPath)} → ${transcribed.subtitle_path || "subtitle output"}`,
             );
-          } catch (error: any) {
-            const message = error?.message || String(error);
+          } catch (error) {
+            const message = errorMessage(error) || String(error);
             if (error instanceof NoSpeechError) {
               logger.info(
                 "system",
@@ -223,8 +224,8 @@ app.post("/api/scan", async (_req, res) => {
   scanInFlight = run;
   try {
     res.json(await run);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error) {
+    res.status(400).json({ error: errorMessage(error) });
   } finally {
     scanInFlight = null;
   }
@@ -233,8 +234,8 @@ app.post("/api/scan", async (_req, res) => {
 app.get("/api/scan/preview", async (_req, res) => {
   try {
     res.json(await scanFolder(false));
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error) {
+    res.status(400).json({ error: errorMessage(error) });
   }
 });
 

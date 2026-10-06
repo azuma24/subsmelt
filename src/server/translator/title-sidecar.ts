@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { logger } from "../logger.js";
+import { errorMessage } from "../errors.js";
 
 // Per-folder sidecar caching translated media titles, mirroring the
 // .subsmelt_glossary.json series-memory sidecar in context.ts: graceful
@@ -101,8 +102,8 @@ export function saveTitleSidecar(dir: string, sidecar: TitleSidecar): void {
     const onDisk = loadTitleSidecar(dir);
     const merged = mergeSidecars(onDisk, sidecar);
     writeJsonAtomic(titleSidecarPath(dir), merged);
-  } catch (e: any) {
-    logger.warn("translate", `Title sidecar write failed: ${titleSidecarPath(dir)} — ${e?.message || e}`);
+  } catch (e) {
+    logger.warn("translate", `Title sidecar write failed: ${titleSidecarPath(dir)} — ${errorMessage(e) || e}`);
   }
 }
 
@@ -128,8 +129,8 @@ export function pruneTitleSidecar(dir: string, validBases: ReadonlySet<string>):
       return;
     }
     writeJsonAtomic(file, { version: 1, titles });
-  } catch (e: any) {
-    logger.warn("translate", `Title sidecar prune failed: ${titleSidecarPath(dir)} — ${e?.message || e}`);
+  } catch (e) {
+    logger.warn("translate", `Title sidecar prune failed: ${titleSidecarPath(dir)} — ${errorMessage(e) || e}`);
   }
 }
 

@@ -37,6 +37,7 @@ import {
   holdQueueStart,
   takeHeldStart,
 } from "./gpu-gate.js";
+import { errorMessage, errorName, errorClassName, errorStatus } from "./errors.js";
 
 let isRunning = false;
 let shouldStop = false;
@@ -187,8 +188,8 @@ export function resumeQueueOnBoot() {
  * call would surface as an unhandled rejection that kills the process.
  */
 export function runQueueSafely(onlyIds?: number[]): void {
-  processQueue(onlyIds).catch((error: any) => {
-    logger.error("queue", `Queue run failed: ${error?.message || error}`);
+  processQueue(onlyIds).catch((error) => {
+    logger.error("queue", `Queue run failed: ${errorMessage(error) || error}`);
   });
 }
 
@@ -389,10 +390,10 @@ async function repairMissingTitles() {
           { stage: "title_sidecar", title, langCode },
         );
       }
-    } catch (error: any) {
+    } catch (error) {
       logger.warn(
         "queue",
-        `Title repair failed (non-fatal): ${error?.message || error}`,
+        `Title repair failed (non-fatal): ${errorMessage(error) || error}`,
         job.id,
         { stage: "title_sidecar" },
       );
@@ -759,21 +760,21 @@ async function runJob(
             { stage: "title_sidecar", title, langCode },
           );
         }
-      } catch (error: any) {
+      } catch (error) {
         logger.warn(
           "queue",
-          `Title sidecar failed (non-fatal): ${error?.message || error}`,
+          `Title sidecar failed (non-fatal): ${errorMessage(error) || error}`,
           job.id,
           { stage: "title_sidecar" },
         );
       }
     }
     return false;
-  } catch (error: any) {
+  } catch (error) {
     const durationSeconds = (Date.now() - startTime) / 1000;
     // A stop wins over a cancel: every interrupted job goes back to pending,
     // none gets picked out as "Cancelled by user".
-    if (!shouldStop && (error.message === "JOB_CANCELLED" || cancelledJobIds.has(job.id))) {
+    if (!shouldStop && (errorMessage(error) === "JOB_CANCELLED" || cancelledJobIds.has(job.id))) {
       cancelledJobIds.delete(job.id);
       // A user cancel is terminal: the job ends as a cancelled error (Retry is
       // offered from there) instead of returning to the queue. The partial
@@ -787,7 +788,7 @@ async function runJob(
       broadcast("job:cancelled", { jobId: job.id, srtName });
       return false;
     }
-    if (error.message === "STOP_REQUESTED" || shouldStop) {
+    if (errorMessage(error) === "STOP_REQUESTED" || shouldStop) {
       // Graceful stop — reset job to pending so it can be picked up later. The
       // next run starts the file over, so the progress count goes back to zero.
       updateJob(job.id, {
@@ -808,7 +809,7 @@ async function runJob(
     // Log raw error shape to help debug "Unknown translation error" cases
     logger.info(
       "translate",
-      `Raw error: name=${error?.name} constructor=${error?.constructor?.name} message=${JSON.stringify(error?.message)} statusCode=${error?.statusCode ?? error?.status}`,
+      `Raw error: name=${errorName(error)} constructor=${errorClassName(error)} message=${JSON.stringify(errorMessage(error))} statusCode=${errorStatus(error)}`,
       job.id,
     );
     const diagnostics = summarizeTranslationError(error);
@@ -924,8 +925,8 @@ export function startAutoScan(
             logger.info("scan", `Auto-scan: ${result.newJobs} new files found`);
             if (getSetting("auto_translate") === "1") runQueueSafely();
           }
-        } catch (e: any) {
-          logger.error("scan", `Auto-scan error: ${e.message}`);
+        } catch (e) {
+          logger.error("scan", `Auto-scan error: ${errorMessage(e)}`);
         } finally {
           autoScanRunning = false;
         }

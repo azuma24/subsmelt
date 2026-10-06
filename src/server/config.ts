@@ -5,6 +5,7 @@ import { standardizeTasks, standardTaskLangCode, type PreferredChinese } from ".
 import { computeLlmConfigured } from "./llm-configured.js";
 import { logger } from "./logger.js";
 import type { TranslationTask } from "../shared/tasks.js";
+import { errorMessage } from "./errors.js";
 
 const CONFIG_DIR = process.env.CONFIG_DIR || "./config";
 const CONFIG_FILE = path.join(CONFIG_DIR, "config.json");
@@ -192,7 +193,7 @@ function loadConfig(): ConfigData {
     // up, leave it in place, and refuse to overwrite it until the user says so.
     const backup = `${CONFIG_FILE}.broken-${new Date().toISOString().replace(/[:.]/g, "-")}`;
     fs.copyFileSync(CONFIG_FILE, backup);
-    const message = e instanceof Error ? e.message : String(e);
+    const message = e instanceof Error ? errorMessage(e) : String(e);
     configLoadFailure = { file: CONFIG_FILE, backup, message };
     logger.error(
       "system",
@@ -443,7 +444,7 @@ export function updateTask(
   const previousLanguage = standardTaskLangCode(task, preferredChinese());
   for (const [k, v] of Object.entries(updates)) {
     if (v !== undefined) {
-      (task as any)[k] = v;
+      (task as unknown as Record<string, unknown>)[k] = v;
     }
   }
   const next = standardTaskLangCode(task, preferredChinese());

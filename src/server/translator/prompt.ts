@@ -3,6 +3,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import { getAi, normalizeResult, withAbortTimeout, REQUEST_TIMEOUT_MS, extractUsage, type CloudProvider, type TokenUsage } from "./ai-client.js";
 import { coerceTranslatedArray, extractJsonFromText } from "./utils.js";
+import { errorMessage } from "../errors.js";
 
 export function isAutomaticSourceLanguage(sourceLang?: string): boolean {
   const normalized = (sourceLang || "").trim().toLowerCase();
@@ -152,8 +153,8 @@ export async function refineChunk(
     ));
     reportUsage(textResult);
     return accept(coerceTranslatedArray(extractJsonFromText(textResult.text || "")));
-  } catch (e: any) {
-    if (e?.message === "STOP_REQUESTED") throw e;
+  } catch (e) {
+    if (errorMessage(e) === "STOP_REQUESTED") throw e;
     return null; // refine is best-effort; caller keeps pass-1 output
   }
 }

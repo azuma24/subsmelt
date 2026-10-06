@@ -15,6 +15,7 @@ import {
 import { ContextOverflowError, toContextOverflow } from "./context-overflow.js";
 
 import type { LlmProvider } from "../../shared/llm.js";
+import { errorMessage, errorName, errorStatus } from "../errors.js";
 
 /** The provider a connection talks to; the API calls this LlmProvider. */
 export type CloudProvider = LlmProvider;
@@ -60,17 +61,12 @@ function reportUsage(result: unknown, onUsage?: (u: TokenUsage) => void): void {
  * `responseHeaders` or `response.headers`.
  */
 export function rateLimitRetryDelayMs(error: unknown, maxMs = 60_000, now = Date.now()): number | null {
-  const err = error as any;
-  const status: number | undefined =
-    typeof err?.statusCode === "number"
-      ? err.statusCode
-      : typeof err?.status === "number"
-      ? err.status
-      : typeof err?.response?.status === "number"
-      ? err.response.status
-      : undefined;
+  const err = (error !== null && typeof error === "object" ? error : null) as
+    | { responseHeaders?: unknown; response?: { headers?: unknown } | null; headers?: unknown }
+    | null;
+  const status = errorStatus(error);
 
-  const msg = (err?.message || "").toLowerCase();
+  const msg = errorMessage(error).toLowerCase();
   const looksRateLimited =
     status === 429 || status === 503 || msg.includes("rate limit") || msg.includes("too many requests");
   if (!looksRateLimited) return null;
@@ -224,15 +220,15 @@ export async function withAbortTimeout<T>(
 
   try {
     return await run(controller.signal);
-  } catch (error: any) {
+  } catch (error) {
     // Distinguish stop/cancel vs timeout: only a deliberate per-job cancel
     // keeps its identity.
     if (externalSignal?.aborted) throw controlledAbortError(externalSignal);
     // fetch rejects with the abort reason ("timeout"), not an AbortError, so
     // our own signal is what marks a timeout — unless the reason came from the
     // external stop/cancel forwarded into it.
-    if (error?.message === "JOB_CANCELLED" || error?.message === "STOP_REQUESTED") throw error;
-    if (controller.signal.aborted || error?.name === "AbortError") {
+    if (errorMessage(error) === "JOB_CANCELLED" || errorMessage(error) === "STOP_REQUESTED") throw error;
+    if (controller.signal.aborted || errorName(error) === "AbortError") {
       throw new RequestTimeoutError(timeoutMs);
     }
     // Wrap non-object throws (plain strings, numbers) so they always have .message
@@ -255,9 +251,9 @@ export async function retryTranslate<T>(
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await fn(attempt);
-    } catch (error: any) {
+    } catch (error) {
       if (attempt === maxRetries) throw error;
-      const msg = (error?.message || "").toLowerCase();
+      const msg = (errorMessage(error) || "").toLowerCase();
       // Never retry a stop request — propagate immediately
       if (msg === "stop_requested") throw error;
       const isRetryable =
@@ -271,8 +267,8 @@ export async function retryTranslate<T>(
         // Only retry rate-limit (429) and transient server errors (5xx).
         // Permanent 4xx like 400 (bad request) / 401 (invalid key) must NOT
         // be retried — they only waste tokens/time and never succeed.
-        error?.status === 429 ||
-        error?.status >= 500;
+        errorStatus(error) === 429 ||
+        (errorStatus(error) ?? 0) >= 500;
       if (!isRetryable) throw error;
       // Rate-limit aware backoff: when the server says 429/503, honor Retry-After
       // (capped) instead of the default exponential schedule. A 429 with no
@@ -360,8 +356,8 @@ export async function translateChunk(
       if (fromText) return fromText;
       const fromNumbered = extractNumberedTranslations(result.text || "", subtitles.length);
       if (fromNumbered) return fromNumbered;
-    } catch (e: any) {
-      if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED" || e instanceof RequestTimeoutError) throw e;
+    } catch (e) {
+      if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED" || e instanceof RequestTimeoutError) throw e;
       // The plain-text prompt is the same size, so it would overflow too.
       if (e instanceof ContextOverflowError) throw e;
       // fall through to plain-text path
@@ -461,8 +457,8 @@ export async function translateSingle(
         const single = coerceSingleTranslation(extractJsonFromText(text), text);
         if (single) return single;
       }
-    } catch (e: any) {
-      if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED" || e instanceof RequestTimeoutError) throw e;
+    } catch (e) {
+      if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED" || e instanceof RequestTimeoutError) throw e;
       // The plain-text prompt is the same size, so it would overflow too.
       if (e instanceof ContextOverflowError) throw e;
       // fall through to plain-text path

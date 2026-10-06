@@ -4,6 +4,7 @@ import { testConnection } from "../translator.js";
 import { parseConnections, resolveConnectionPool, resolveRequestApiKey } from "../connections.js";
 import type { CloudProvider } from "../translator.js";
 import { logger } from "../logger.js";
+import { errorMessage, errorName } from "../errors.js";
 
 // ======== List Models ========
 // Basic SSRF guard for a caller-supplied `endpoint` override. We intentionally
@@ -43,8 +44,8 @@ async function fetchWithTimeout(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(url, { ...init, signal: controller.signal });
-  } catch (error: any) {
-    if (error?.name === "AbortError") {
+  } catch (error) {
+    if (errorName(error) === "AbortError") {
       throw new Error(`${label} timed out after ${Math.round(timeoutMs / 1000)}s`);
     }
     throw error;
@@ -97,12 +98,8 @@ export async function listModels(
       const request = cloudModelsRequest("openai", apiKey)!;
       const resp = await fetchWithTimeout(request.url, { headers: request.headers }, MODELS_FETCH_TIMEOUT_MS, "OpenAI model list");
       if (!resp.ok) return { status: resp.status, body: { error: `OpenAI returned ${resp.status}` } };
-      const data = await resp.json() as any;
-      const models: string[] = (data?.data || [])
-        .map((m: any) => m.id)
-        .filter((id: string) => typeof id === "string" && (
-          id.startsWith("gpt-") || id.startsWith("o1") || id.startsWith("o3") || id.startsWith("o4")
-        ))
+      const models = modelIds((await resp.json()) as ModelListResponse)
+        .filter((id) => id.startsWith("gpt-") || id.startsWith("o1") || id.startsWith("o3") || id.startsWith("o4"))
         .sort();
       return { status: 200, body: { models, provider } };
     }
@@ -113,11 +110,7 @@ export async function listModels(
       const request = cloudModelsRequest("anthropic", apiKey)!;
       const resp = await fetchWithTimeout(request.url, { headers: request.headers }, MODELS_FETCH_TIMEOUT_MS, "Anthropic model list");
       if (!resp.ok) return { status: resp.status, body: { error: `Anthropic returned ${resp.status}` } };
-      const data = await resp.json() as any;
-      const models: string[] = (data?.data || [])
-        .map((m: any) => m.id)
-        .filter((id: string) => typeof id === "string")
-        .sort();
+      const models = modelIds((await resp.json()) as ModelListResponse).sort();
       return { status: 200, body: { models, provider } };
     }
 
@@ -127,10 +120,9 @@ export async function listModels(
       const request = cloudModelsRequest("gemini", apiKey)!;
       const resp = await fetchWithTimeout(request.url, { headers: request.headers }, MODELS_FETCH_TIMEOUT_MS, "Gemini model list");
       if (!resp.ok) return { status: resp.status, body: { error: `Gemini returned ${resp.status}` } };
-      const data = await resp.json() as any;
-      const models: string[] = (data?.models || [])
-        .map((m: any) => (m.name || "").replace(/^models\//, ""))
-        .filter((id: string) => typeof id === "string" && id.startsWith("gemini"))
+      const models = modelIds((await resp.json()) as ModelListResponse)
+        .map((name) => name.replace(/^models\//, ""))
+        .filter((id) => id.startsWith("gemini"))
         .sort();
       return { status: 200, body: { models, provider } };
     }
@@ -151,14 +143,29 @@ export async function listModels(
       headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
     }, MODELS_FETCH_TIMEOUT_MS, "LLM model list");
     if (!resp.ok) return { status: resp.status, body: { error: `LLM returned ${resp.status}` } };
-    const data = await resp.json() as any;
-    const models: string[] = (data?.data || data?.models || [])
-      .map((m: any) => m.id || m.name || m)
-      .filter((m: any) => typeof m === "string");
+    const models = modelIds((await resp.json()) as ModelListResponse);
     return { status: 200, body: { models, provider: "local" } };
-  } catch (e: any) {
-    return { status: 500, body: { error: e?.message || "Failed to list models" } };
+  } catch (e) {
+    return { status: 500, body: { error: errorMessage(e) || "Failed to list models" } };
   }
+}
+
+/** What the model-list endpoints answer: OpenAI's { data: [{ id }] }, Gemini's { models: [{ name }] }, or a bare list. */
+interface ModelListResponse {
+  data?: unknown;
+  models?: unknown;
+}
+
+/** The model ids in a model-list response, whichever of the shapes it uses. */
+function modelIds(data: ModelListResponse | null | undefined): string[] {
+  const list = Array.isArray(data?.data) ? data.data : Array.isArray(data?.models) ? data.models : [];
+  return list
+    .map((entry: unknown) => {
+      if (typeof entry === "string") return entry;
+      const item = entry as { id?: unknown; name?: unknown } | null;
+      return typeof item?.id === "string" ? item.id : typeof item?.name === "string" ? item.name : null;
+    })
+    .filter((id): id is string => typeof id === "string");
 }
 
 export function registerModelsRoutes(app: Express): void {
@@ -201,15 +208,12 @@ export function registerModelsRoutes(app: Express): void {
       // The 5s timeout above only covers the headers; a stalled body would
       // hang this route forever, so deadline the JSON read too.
       const bodyTimer = setTimeout(() => controller.abort(), 5000);
-      let data: any;
+      let models: string[];
       try {
-        data = await resp.json() as any;
+        models = modelIds((await resp.json()) as ModelListResponse);
       } finally {
         clearTimeout(bodyTimer);
       }
-      const models: string[] = (data?.data || data?.models || [])
-        .map((m: any) => m.id || m.name || m)
-        .filter((m: any) => typeof m === "string");
 
       const modelConfigured = Boolean(model);
       const modelAvailable = modelConfigured ? models.includes(model) : false;
@@ -223,15 +227,15 @@ export function registerModelsRoutes(app: Express): void {
         modelCount: models.length,
         reason: modelConfigured ? (modelAvailable ? "ok" : "model-missing") : "model-not-configured",
       });
-    } catch (error: any) {
+    } catch (error) {
       clearTimeout(timeout);
       return res.json({
         ok: false,
         endpointReachable: false,
         modelConfigured: Boolean(model),
         modelAvailable: false,
-        reason: error?.name === "AbortError" ? "timeout" : "network-error",
-        message: error?.message || "unknown",
+        reason: errorName(error) === "AbortError" ? "timeout" : "network-error",
+        message: errorMessage(error) || "unknown",
       });
     }
   });

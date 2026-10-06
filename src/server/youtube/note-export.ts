@@ -6,7 +6,7 @@ import { logger } from "../logger.js";
 import { notify } from "../notify.js";
 import { findAnyCase, MEDIA_DIR } from "../scanner.js";
 import { broadcast } from "../sse.js";
-import { normalizeTimeToMs, parseSubtitle, type SubtitleCue } from "../translator/convert.js";
+import { normalizeTimeToMs, parseSubtitle, type SubtitleCue, cuesOf } from "../translator/convert.js";
 import { readSubtitleFileText } from "../translator/encoding.js";
 import { noteFileName, renderNote, safeNoteName, type Chapter, type Cue, type NoteInfo, type NoteTranslation } from "./note.js";
 import { findPlaylist, type YoutubePlaylist } from "./playlists.js";
@@ -80,7 +80,7 @@ const ASS_BREAK = /\\[Nn]/g;
 function readCues(file: string): Cue[] {
   const ext = path.extname(file).slice(1).toLowerCase();
   const parsed = parseSubtitle(readSubtitleFileText(file), ext);
-  const nodes: SubtitleCue[] = Array.isArray(parsed) ? parsed : parsed.events;
+  const nodes = cuesOf(parsed);
   const isAss = !Array.isArray(parsed);
   return nodes
     .filter((node) => node.type === "cue")

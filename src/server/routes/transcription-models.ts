@@ -8,6 +8,7 @@ import {
 import { logger } from "../logger.js";
 import { broadcast } from "../sse.js";
 import { getTranscriptionBackendUrl } from "./transcription-runtime.js";
+import { errorMessage } from "../errors.js";
 
 // ======== Whisper Model Manager (proxy to whisper backend) ========
 // The browser never talks to the whisper backend directly (it may live on
@@ -23,8 +24,8 @@ export function registerTranscriptionModelsRoutes(app: Express): void {
     try {
       const models = await listBackendModels(backendUrl, settings.transcription_backend_token);
       return res.json({ models });
-    } catch (error: any) {
-      return res.status(502).json({ error: error?.message || "Failed to list whisper models" });
+    } catch (error) {
+      return res.status(502).json({ error: errorMessage(error) || "Failed to list whisper models" });
     }
   });
 
@@ -50,8 +51,8 @@ export function registerTranscriptionModelsRoutes(app: Express): void {
       broadcast("model:download", { model, pct: 100, done: true, cachePath: result.cachePath });
       logger.info("system", `Downloaded whisper model ${model}${result.cachePath ? ` → ${result.cachePath}` : ""}`);
       return res.json(result);
-    } catch (error: any) {
-      const message = error?.message || "Whisper model download failed";
+    } catch (error) {
+      const message = errorMessage(error) || "Whisper model download failed";
       broadcast("model:download", { model, error: true, message });
       logger.error("system", `Whisper model download failed for ${model}: ${message}`);
       return res.status(502).json({ error: message });
@@ -73,8 +74,8 @@ export function registerTranscriptionModelsRoutes(app: Express): void {
       const result = await deleteBackendModel(backendUrl, model, settings.transcription_backend_token);
       logger.info("system", `Deleted whisper model ${model}${typeof result.freedMb === "number" ? ` (freed ${result.freedMb} MB)` : ""}`);
       return res.json(result);
-    } catch (error: any) {
-      return res.status(502).json({ error: error?.message || "Failed to delete whisper model" });
+    } catch (error) {
+      return res.status(502).json({ error: errorMessage(error) || "Failed to delete whisper model" });
     }
   });
 }

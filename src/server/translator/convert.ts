@@ -1,6 +1,7 @@
 import { parseSync, stringifySync } from "subtitle";
 import assParser from "ass-parser";
 import assStringify from "ass-stringify";
+import { errorMessage } from "../errors.js";
 
 /** The parsed shape of a single subtitle cue shared across the translator. */
 export interface SubtitleCue {
@@ -15,6 +16,33 @@ export interface SubtitleCue {
 
 /** Back-compat alias retained for internal call sites. */
 export type CueLike = SubtitleCue;
+
+export type AssSection = assParser.AssSection;
+export type AssLine = assParser.AssLine;
+/** An ASS/SSA file: the whole document, and its Dialogue lines as cues. */
+export interface AssDocument {
+  full: AssSection[];
+  events: SubtitleCue[];
+}
+export type ParsedSubtitle = ReturnType<typeof parseSync> | AssDocument;
+
+export const isAssDocument = (parsed: ParsedSubtitle): parsed is AssDocument => !Array.isArray(parsed);
+
+/** A named field of a Style or Dialogue line; "" when the line is not a field map. */
+export function assField(value: assParser.AssValue, name: string): string {
+  return typeof value === "object" && !Array.isArray(value) ? (value[name] ?? "") : "";
+}
+
+/** The Dialogue line with its Text replaced; a line without a field map is left as it is. */
+export function withDialogueText(line: AssLine, text: string): AssLine {
+  if (typeof line.value !== "object" || Array.isArray(line.value)) return line;
+  return { key: "Dialogue", value: { ...line.value, Text: text } };
+}
+
+/** The cues of any parsed subtitle, whatever its format. */
+export function cuesOf(parsed: ParsedSubtitle): SubtitleCue[] {
+  return isAssDocument(parsed) ? parsed.events : parsed.filter((node) => node.type === "cue");
+}
 
 /**
  * The `subtitle` parser only understands cue blocks. It throws on WebVTT STYLE
@@ -34,21 +62,21 @@ function stripVttNonCueParts(content: string): string {
     .join("\n\n");
 }
 
-export function parseSubtitle(fileContent: string, fileExtension: string) {
+export function parseSubtitle(fileContent: string, fileExtension: string): ParsedSubtitle {
   if (["srt", "vtt"].includes(fileExtension)) {
     return parseSync(fileExtension === "vtt" ? stripVttNonCueParts(fileContent) : fileContent);
   }
   if (["ass", "ssa"].includes(fileExtension)) {
     const parsedAss = assParser(fileContent);
-    const events = parsedAss
-      .filter((x: any) => x.section === "Events")[0]
-      .body.filter(({ key }: any) => key === "Dialogue")
-      .map((line: any) => ({
+    const events: SubtitleCue[] = parsedAss
+      .filter((x) => x.section === "Events")[0]
+      .body.filter(({ key }) => key === "Dialogue")
+      .map((line) => ({
         type: "cue",
         data: {
-          text: line.value.Text,
-          start: line.value.Start,
-          end: line.value.End,
+          text: assField(line.value, "Text"),
+          start: assField(line.value, "Start"),
+          end: assField(line.value, "End"),
         },
       }));
     return { full: parsedAss, events };
@@ -102,7 +130,7 @@ function toAssTimestamp(value: number | string | undefined): string {
   return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}.${String(centis).padStart(2, "0")}`;
 }
 
-export function buildAssDocumentFromCues(cues: SubtitleCue[]): any[] {
+export function buildAssDocumentFromCues(cues: SubtitleCue[]): AssSection[] {
   const dialogues = cues.map((cue) => ({
     key: "Dialogue",
     value: {
@@ -239,20 +267,17 @@ export function convertSubtitle(content: string, fromExt: string, toExt: string)
     throw new Error("Subtitle content is empty");
   }
 
-  let parsed: ReturnType<typeof parseSubtitle>;
+  let parsed: ParsedSubtitle;
   try {
     parsed = parseSubtitle(content, from);
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
+    const reason = error instanceof Error ? errorMessage(error) : String(error);
     throw new Error(`Failed to parse ${from} subtitle: ${reason}`);
   }
 
   // parseSubtitle returns an array of nodes for srt/vtt (which may include a
   // non-cue "header" node for VTT), or { full, events } for ass/ssa.
-  const isAssSource = !Array.isArray(parsed);
-  const cues: SubtitleCue[] = isAssSource
-    ? (parsed as { full: any[]; events: SubtitleCue[] }).events
-    : (parsed as SubtitleCue[]).filter((node) => node?.type === "cue");
+  const cues = cuesOf(parsed);
 
   if (!Array.isArray(cues) || cues.length === 0) {
     throw new Error(`No subtitle cues found in ${from} input`);
@@ -278,19 +303,17 @@ export function convertSubtitle(content: string, fromExt: string, toExt: string)
   // Target is ass/ssa. When the source is already ass/ssa we preserve the full
   // document (styles, script info) and just rewrite Dialogue text from the
   // original cues. Otherwise we build a fresh ASS document from the cues.
-  if (isAssSource) {
-    const full = (parsed as { full: any[] }).full;
+  if (isAssDocument(parsed)) {
     let dialogueIndex = 0;
     return assStringify(
-      full.map((section: any) => {
+      parsed.full.map((section) => {
         if (section.section !== "Events" || !Array.isArray(section.body)) return section;
         return {
           ...section,
-          body: section.body.map((line: any) => {
+          body: section.body.map((line) => {
             if (line.key !== "Dialogue") return line;
             const cue = cues[dialogueIndex++];
-            const text = cue?.data?.text || line.value?.Text || "";
-            return { key: "Dialogue", value: { ...line.value, Text: text } };
+            return withDialogueText(line, cue?.data?.text || assField(line.value, "Text"));
           }),
         };
       }),
