@@ -48,34 +48,40 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const toastsRef = useRef<Toast[]>([]);
   toastsRef.current = toasts;
 
-  const clearTimer = (id: number) => {
+  const clearTimer = useCallback((id: number) => {
     const timer = timersRef.current.get(id);
     if (timer) {
       clearTimeout(timer);
       timersRef.current.delete(id);
     }
-  };
-
-  const removeToast = useCallback((id: number) => {
-    clearTimer(id);
-    setToasts((prev) => {
-      prev.find((toast) => toast.id === id)?.onDismiss?.();
-      return prev.filter((toast) => toast.id !== id);
-    });
   }, []);
+
+  const removeToast = useCallback(
+    (id: number) => {
+      clearTimer(id);
+      setToasts((prev) => {
+        prev.find((toast) => toast.id === id)?.onDismiss?.();
+        return prev.filter((toast) => toast.id !== id);
+      });
+    },
+    [clearTimer],
+  );
 
   const removeAll = () => {
-    toastsRef.current.forEach((toast) => removeToast(toast.id));
+    for (const toast of toastsRef.current) removeToast(toast.id);
   };
 
-  const addToast = useCallback((message: string, type: ToastType = "info", opts: ToastOptions = {}) => {
-    const existing = opts.key ? toastsRef.current.find((toast) => toast.key === opts.key) : undefined;
-    const id = existing?.id ?? ++idRef.current;
-    const next: Toast = { ...opts, id, message, type };
-    setToasts((prev) => (existing ? prev.map((toast) => (toast.id === id ? next : toast)) : [...prev, next]));
-    // An update restarts the toast's timer once the effect below sees it.
-    clearTimer(id);
-  }, []);
+  const addToast = useCallback(
+    (message: string, type: ToastType = "info", opts: ToastOptions = {}) => {
+      const existing = opts.key ? toastsRef.current.find((toast) => toast.key === opts.key) : undefined;
+      const id = existing?.id ?? ++idRef.current;
+      const next: Toast = { ...opts, id, message, type };
+      setToasts((prev) => (existing ? prev.map((toast) => (toast.id === id ? next : toast)) : [...prev, next]));
+      // An update restarts the toast's timer once the effect below sees it.
+      clearTimer(id);
+    },
+    [clearTimer],
+  );
 
   useEffect(() => {
     for (const id of toastsAwaitingTimer(toasts, new Set(timersRef.current.keys()))) {
@@ -91,7 +97,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const timers = timersRef.current;
     return () => {
-      timers.forEach((timer) => clearTimeout(timer));
+      for (const timer of timers.values()) clearTimeout(timer);
       timers.clear();
     };
   }, []);

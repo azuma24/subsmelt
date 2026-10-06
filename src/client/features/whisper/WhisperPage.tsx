@@ -349,8 +349,10 @@ export function WhisperPage() {
     const allSelected = paths.length > 0 && paths.every((p) => selected.has(p));
     setSelected((prev) => {
       const next = new Set(prev);
-      if (allSelected) paths.forEach((p) => next.delete(p));
-      else paths.forEach((p) => next.add(p));
+      for (const p of paths) {
+        if (allSelected) next.delete(p);
+        else next.add(p);
+      }
       return next;
     });
   };

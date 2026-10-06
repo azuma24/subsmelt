@@ -66,6 +66,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           <p className="text-sm text-muted">{state.opts.message}</p>
           <div className="flex gap-3 justify-end pt-2 sticky bottom-0 bg-surface">
             <button
+              type="button"
               onClick={() => handleClose(false)}
               className="px-4 py-3 text-sm text-muted hover:text-text rounded-md"
             >
@@ -74,6 +75,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             {/* Mirrors ActionButton's primary/danger variants so the dialog's
                 confirm reads the same as every other primary/destructive action. */}
             <button
+              type="button"
               onClick={() => handleClose(true)}
               className={`px-4 py-3 text-sm font-medium rounded-md transition-colors ${
                 state.opts.danger

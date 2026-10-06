@@ -96,10 +96,10 @@ export function standardizeTasks<T extends TranslationTask>(
 ): T[] {
   let current = [...tasks];
   for (let pass = 0; pass <= tasks.length; pass++) {
-    const next = current.reduce<T[]>(
-      (done, task, i) => [...done, standardizeTask(task, [...done, ...current.slice(i + 1)], preferred)],
-      [],
-    );
+    const next: T[] = [];
+    for (const [i, task] of current.entries()) {
+      next.push(standardizeTask(task, [...next, ...current.slice(i + 1)], preferred));
+    }
     if (next.every((task, i) => task === current[i])) return next;
     current = next;
   }

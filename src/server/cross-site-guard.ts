@@ -49,7 +49,10 @@ export function isCrossSiteRequest(req: Pick<Request, "method" | "headers">): bo
 }
 
 export function crossSiteGuard(req: Request, res: Response, next: NextFunction): void {
-  if (!isCrossSiteRequest(req)) return next();
+  if (!isCrossSiteRequest(req)) {
+    next();
+    return;
+  }
   res
     .status(403)
     .json({ error: "Cross-site request blocked: change settings and start work from the SubSmelt page itself" });

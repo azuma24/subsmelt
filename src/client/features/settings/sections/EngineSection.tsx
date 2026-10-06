@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Accordion, Field, TextArea } from "../../../ui/primitives";
 import { DEFAULT_PROMPT } from "../../../app/constants";
 import { str } from "../../../lib/settings-value";
-import { ToggleRow, labelCls, textareaCls } from "./shared";
+import { ToggleRow, labelCls } from "./shared";
 import { useIsMobile } from "../../../hooks";
 
 interface EngineSectionProps {
@@ -29,7 +29,11 @@ export function EngineSection({ settings, updateAndSaveDebounced }: EngineSectio
           <div>
             <div className="mb-2 flex items-center justify-between">
               <label className="text-xs font-medium text-muted">{t("settings.translationEngine.systemPrompt")}</label>
-              <button onClick={() => updateAndSaveDebounced("prompt", DEFAULT_PROMPT)} className="text-xs text-faint">
+              <button
+                type="button"
+                onClick={() => updateAndSaveDebounced("prompt", DEFAULT_PROMPT)}
+                className="text-xs text-faint"
+              >
                 {t("common.reset")}
               </button>
             </div>

@@ -87,7 +87,7 @@ let cancelRequested = false;
 
 function setState(next: BatchState): void {
   state = next;
-  listeners.forEach((listener) => listener());
+  for (const listener of listeners) listener();
 }
 
 function subscribe(listener: () => void): () => void {

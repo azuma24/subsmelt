@@ -302,7 +302,9 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   });
 
   const indexMap = new Map<SubtitleCue, number>();
-  subtitle.forEach((cue, idx) => indexMap.set(cue, idx));
+  subtitle.forEach((cue, idx) => {
+    indexMap.set(cue, idx);
+  });
 
   // ── Multi-connection helpers ────────────────────────────────────────────
   // In parallel mode each worker is assigned a primary connection (round-robin
@@ -544,7 +546,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     // Refinement Pass (Pass 2) — optional editor pass over the pass-1 output.
     // Additive only: accepted solely when it returns the exact same line count;
     // any failure/mismatch keeps the pass-1 translation untouched.
-    if (opts.refinePass && translatedWindow && translatedWindow.every((t) => typeof t === "string")) {
+    if (opts.refinePass && translatedWindow?.every((t) => typeof t === "string")) {
       // Reuse the connection that produced pass-1 (falls back to the primary
       // only when pass-1 came from the single-line fallback path).
       const refineConn = pass1Conn ?? connOrder[0];

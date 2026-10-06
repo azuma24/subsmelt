@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Accordion, Field, Select } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
 import { isEnvPinned } from "../settings-model";
-import { labelCls, selectCls } from "./shared";
+import { labelCls } from "./shared";
 import { useIsMobile } from "../../../hooks";
 
 interface PathMappingFieldsProps {

@@ -44,6 +44,7 @@ export function SetupProgress({ steps }: { steps: SetupStep[] }) {
         </span>
       </div>
 
+      {/* biome-ignore lint/a11y/noRedundantRoles: Safari drops list semantics from a list without bullets; the role restores them */}
       <ul role="list" className="mt-3 space-y-2">
         {remaining.map((step) => (
           <li

@@ -260,7 +260,7 @@ export function mergeSeriesGlossary(srtPath: string, newEntries: GlossaryEntry[]
     let changed = false;
     for (const entry of newEntries) {
       const existing = terms[entry.term];
-      if (!existing || !existing.trim()) {
+      if (!existing?.trim()) {
         if (terms[entry.term] !== entry.translation) {
           terms[entry.term] = entry.translation;
           changed = true;

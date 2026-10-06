@@ -149,7 +149,9 @@ async function statMtimes(files: string[], concurrency = 16): Promise<Map<string
         ),
       ),
     );
-    batch.forEach((file, j) => mtimes.set(file, stats[j]));
+    batch.forEach((file, j) => {
+      mtimes.set(file, stats[j]);
+    });
   }
   return mtimes;
 }

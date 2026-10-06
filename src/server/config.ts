@@ -247,7 +247,7 @@ function saveConfig(config: ConfigData): void {
 }
 
 // In-memory cache — loaded once, written on every mutation
-let _config: ConfigData = loadConfig();
+const _config: ConfigData = loadConfig();
 
 export function getConfigLoadFailure(): ConfigLoadFailure | null {
   return configLoadFailure;
@@ -302,7 +302,7 @@ export function getAllSettings(): Record<string, string> {
   const merged = { ...DEFAULT_SETTINGS, ..._config.settings, ...envPinnedSettings };
   // Backfill the connections array from legacy flat keys so the client and the
   // queue always see a populated list, even before the first multi-connection save.
-  if (!merged.llm_connections || !merged.llm_connections.trim()) {
+  if (!merged.llm_connections?.trim()) {
     merged.llm_connections = JSON.stringify(migrateConnectionsFromFlat(merged));
   } else {
     merged.llm_connections = withEnvLocalConnection(merged.llm_connections);

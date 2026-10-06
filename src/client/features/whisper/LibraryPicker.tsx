@@ -11,7 +11,6 @@ import { hasLiveTranscriptions } from "./batch-store";
 import { Icon } from "../../ui/Icon";
 import { SortControls } from "../../ui/SortControls";
 import { RefreshButton } from "../../ui/RefreshButton";
-import { useIsMobile } from "../../hooks";
 
 export interface LibraryPickerProps {
   libraryQuery: string;
@@ -88,7 +87,6 @@ export function LibraryPicker({
   expansion,
   drill,
 }: LibraryPickerProps) {
-  const isMobile = useIsMobile();
   const { t } = useTranslation();
   // Progress events land here for every server-side run, batch-owned or not:
   // show Cancel while any run is live, or an orphan run (another tab, a

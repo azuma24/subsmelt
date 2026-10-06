@@ -140,6 +140,7 @@ export function Tabs({ tabs, activeKey, onSelect, className = "" }: TabsProps) {
     >
       {tabs.map((tab) => (
         <button
+          type="button"
           key={tab.key}
           role="tab"
           aria-selected={activeKey === tab.key}

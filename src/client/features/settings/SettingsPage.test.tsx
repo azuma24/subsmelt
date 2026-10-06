@@ -30,7 +30,7 @@ test("Settings opens on the LLM connection section with every section in the nav
 test("Save stays disabled until something is edited", () => {
   const page = renderPage(<SettingsPage />, freshInstall);
 
-  assert.match(page.html, /<button disabled=""[^>]*>Save<\/button>/);
+  assert.match(page.html, /<button\b[^>]*\bdisabled=""[^>]*>Save<\/button>/);
 });
 
 test("a fresh install lists what is left to set up", () => {

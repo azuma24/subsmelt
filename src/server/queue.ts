@@ -14,7 +14,6 @@ import {
   abortAllJobs,
   activeJobCount,
   cancelJob,
-  getCurrentJobId,
   isConnectionOffline,
   isStopRequested,
   registerActiveJob,

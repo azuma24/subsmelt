@@ -3,7 +3,6 @@ import { Accordion } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
 import { ConnectionsPanel } from "../ConnectionsPanel";
 import { labelCls } from "./shared";
-import { useIsMobile } from "../../../hooks";
 
 type ToastFn = (message: string, type: "success" | "error" | "info") => void;
 
@@ -19,7 +18,6 @@ interface LlmSectionProps {
  * `updateAndSaveDebounced` — nothing in this section waits for the topbar Save.
  */
 export function LlmSection({ settings, updateAndSaveDebounced, addToast }: LlmSectionProps) {
-  const isMobile = useIsMobile();
   const { t } = useTranslation();
   return (
     <>

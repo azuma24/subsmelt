@@ -157,6 +157,7 @@ export function LlmStatusPopover({ placement, compactBelowLg = false }: LlmStatu
   const summary = summarizeLlmStatus(status, query.isError, t);
   const tooltip = summary.detail ? `${summary.text} · ${summary.detail}` : summary.text;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the panel is re-placed when its content (status, error) changes height
   useLayoutEffect(() => {
     if (!open) {
       setPos(null);

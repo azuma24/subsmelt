@@ -40,6 +40,7 @@ test("Windows-1252 accented Latin text is sniffed and decoded", async () => {
 
 test("invalid UTF-8 never throws and keeps the surrounding ASCII intact", async () => {
   const decoded = await decodeSubtitleBytes(new Uint8Array([0x31, 0x0a, 0xff, 0x0a]));
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: the class is "every non-ASCII byte", NUL included
   assert.equal(decoded.replace(/[^\x00-\x7f]/g, "?"), "1\n?\n");
 });
 

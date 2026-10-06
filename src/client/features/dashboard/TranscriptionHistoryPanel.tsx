@@ -169,7 +169,9 @@ export function TranscriptionHistoryPanel({
                         type="button"
                         // Removing the group clears every attempt for this file —
                         // leaving the older ones would rebuild the pile it replaced.
-                        onClick={() => group.attempts.forEach((entry) => onRemove(entry))}
+                        onClick={() => {
+                          for (const entry of group.attempts) onRemove(entry);
+                        }}
                         disabled={
                           group.attempts.some((entry) => entry.id === removingId) || latest.status === "running"
                         }

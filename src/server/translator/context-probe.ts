@@ -157,7 +157,7 @@ export async function probeModelContext(
     if (!maxCtx) return UNKNOWN_CONTEXT;
 
     return deriveContextInfo(maxCtx, chunkSize);
-  } catch (error) {
+  } catch {
     // A stop/cancel aborting the probe is not a probe failure — surface it so
     // the job's own handling applies instead of silently translating on.
     if (abortSignal?.aborted) throw controlledAbortError(abortSignal);

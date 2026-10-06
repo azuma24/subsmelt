@@ -9,7 +9,7 @@ test("an empty Convert page asks for files and holds the Translate action", () =
   assert.deepEqual(page.headings, ["Convert / Translate", "Output settings"]);
   assert.ok(page.text.includes("Drag & drop subtitle files here or click to browse"));
   assert.ok(page.text.includes("Add subtitle files above to start."));
-  assert.match(page.html, /<button disabled=""[^>]*>Translate<\/button>/);
+  assert.match(page.html, /<button\b[^>]*\bdisabled=""[^>]*>Translate<\/button>/);
 });
 
 test("Translate mode offers From and To language pickers", () => {

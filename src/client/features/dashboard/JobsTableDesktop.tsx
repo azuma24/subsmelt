@@ -82,9 +82,9 @@ export function JobsTableDesktop({
     setSelectedIds((s) => {
       const n = new Set(s);
       if (allPendingSelected) {
-        pendingIds.forEach((id) => n.delete(id));
+        for (const id of pendingIds) n.delete(id);
       } else {
-        pendingIds.forEach((id) => n.add(id));
+        for (const id of pendingIds) n.add(id);
       }
       return n;
     });
@@ -235,7 +235,7 @@ const JobsTableRow = memo(function JobsTableRow({
   jobActions,
 }: JobsTableRowProps) {
   const { t } = useTranslation();
-  const { srtName, pct, hasError, isPending, isSkipped, reason, connectionText, connectionTitle } = jobDerived(job);
+  const { srtName, pct, isPending, isSkipped, reason, connectionText, connectionTitle } = jobDerived(job);
   const highlight = isActive || isSelected ? "bg-accent-soft" : "hover:bg-surface-raised";
   return (
     <div role="row" className={`grid items-stretch ${highlight}`} style={{ gridTemplateColumns: GRID_COLS }}>

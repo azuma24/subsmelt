@@ -78,6 +78,7 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
   }, [previewData?.lines]);
 
   // Reset edit buffer when switching jobs or when fresh data arrives.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the buffer resets when the job changes, not when its own state does
   useEffect(() => {
     setEdits(new Map());
   }, [jobId]);
@@ -262,18 +263,24 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
         <div className="border-b border-border px-4 py-2">
           <div className="flex flex-wrap gap-2 text-xs">
             <button
+              type="button"
               onClick={() => setShowOnlyChanged((v) => !v)}
               className={`rounded-sm px-2 py-1 ${showOnlyChanged ? "bg-accent text-accent-text" : "bg-surface-raised text-muted"}`}
             >
               {t("dashboard.preview.showOnlyChanged")}
             </button>
             <button
+              type="button"
               onClick={() => setShowOnlyIssues((v) => !v)}
               className={`rounded-sm px-2 py-1 ${showOnlyIssues ? "bg-warning text-canvas" : "bg-surface-raised text-muted"}`}
             >
               {t("dashboard.preview.showOnlyIssues")}
             </button>
-            <button onClick={jumpToNextIssue} className="rounded-sm bg-surface-raised px-2 py-1 text-muted">
+            <button
+              type="button"
+              onClick={jumpToNextIssue}
+              className="rounded-sm bg-surface-raised px-2 py-1 text-muted"
+            >
               {t("dashboard.preview.nextIssue")}
             </button>
           </div>
@@ -310,18 +317,21 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
                   </pre>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
                     <button
+                      type="button"
                       onClick={() => handleCopy(previewData.analysis || "", t("dashboard.preview.copiedContext"))}
                       className="rounded-sm bg-surface-raised px-2 py-1 text-text"
                     >
                       {t("dashboard.preview.copyContext")}
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleCopy(plot || "", t("dashboard.preview.copiedPlot"))}
                       className="rounded-sm bg-surface-raised px-2 py-1 text-text"
                     >
                       {t("dashboard.preview.copyPlot")}
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleCopy(glossary || "", t("dashboard.preview.copiedGlossary"))}
                       className="rounded-sm bg-surface-raised px-2 py-1 text-text"
                     >
@@ -364,6 +374,7 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
         {previewData && filteredLines.length > 0 && (
           <div className="border-t border-border px-6 py-3 flex flex-wrap items-center justify-end gap-2">
             <button
+              type="button"
               onClick={() => {
                 const tsv = filteredLines.map((l) => `${l.index}\t${l.original}\t${effectiveTranslated(l)}`).join("\n");
                 void handleCopy(tsv, t("dashboard.toast.copiedTSV"));
@@ -380,6 +391,7 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
               {t("dashboard.preview.download")}
             </a>
             <button
+              type="button"
               onClick={() => void handleSave()}
               disabled={dirtyCount === 0 || isSaving}
               className={`rounded-md px-3 py-2 text-xs font-medium ${

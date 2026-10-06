@@ -106,7 +106,6 @@ export function DashboardPage() {
     pendingJobs,
     activeJobs,
     doneJobs,
-    errorJobs,
     finishedJobCount,
     jobsById,
     selectedPendingCount,
@@ -210,7 +209,7 @@ export function DashboardPage() {
       const result = await deleteSelectedMutation.mutateAsync(selectedPendingIds);
       setSelectedIds((prev) => {
         const next = new Set(prev);
-        selectedPendingIds.forEach((id) => next.delete(id));
+        for (const id of selectedPendingIds) next.delete(id);
         return next;
       });
       addToast(t("dashboard.toast.selectedDeleted", { count: result.deleted }), "info");
@@ -250,17 +249,14 @@ export function DashboardPage() {
     }
   };
 
-  const toggleSelectedJob = useCallback(
-    (id: number) => {
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        return next;
-      });
-    },
-    [setSelectedIds],
-  );
+  const toggleSelectedJob = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   const quickChecks = [
     {
@@ -397,7 +393,7 @@ export function DashboardPage() {
                   </div>
                   <div className="mt-1 text-xs text-muted">{step.hint}</div>
                   {!step.done && (
-                    <button onClick={step.onClick} className="mt-2 text-xs text-accent">
+                    <button type="button" onClick={step.onClick} className="mt-2 text-xs text-accent">
                       {step.action}
                     </button>
                   )}

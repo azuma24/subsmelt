@@ -51,6 +51,7 @@ export function MonthPicker({
   };
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: the wrapper only closes the popover on Escape; the button and the month grid are the interactive elements
     <div
       ref={rootRef}
       className="relative"

@@ -4,7 +4,7 @@ import { Accordion, ActionButton, Field, Select } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
 import { NOTIFY_EVENTS, parseNotifyEvents, setNotifyEvent } from "../notify-events";
 import { REDACTED_SECRET } from "../settings-model";
-import { labelCls, selectCls } from "./shared";
+import { labelCls } from "./shared";
 import { useIsMobile } from "../../../hooks";
 import { Icon } from "../../../ui/Icon";
 

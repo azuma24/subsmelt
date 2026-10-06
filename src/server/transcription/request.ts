@@ -225,7 +225,7 @@ function subtitleQualitySettings(
 }
 
 function parseJsonObject<T>(raw: string | undefined, fallback: T, label = "JSON setting"): T {
-  if (!raw || !raw.trim()) return fallback;
+  if (!raw?.trim()) return fallback;
   try {
     const parsed = JSON.parse(raw) as unknown;
     return parsed && typeof parsed === "object" ? (parsed as T) : fallback;

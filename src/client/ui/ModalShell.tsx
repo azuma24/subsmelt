@@ -80,7 +80,9 @@ export function ModalShell({
   };
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: a click on the backdrop dismisses, as a convenience beside the close button and Escape
     <div
+      role="presentation"
       className={overlayClassName}
       onMouseDown={(event) => {
         pressStartedOnBackdrop.current = event.target === event.currentTarget;

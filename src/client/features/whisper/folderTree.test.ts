@@ -78,8 +78,8 @@ test("date asc: null videoMtime entries sort after all dated entries", () => {
   // Dated entries come first (in ascending order), then the two nulls at the end.
   assert.equal(names[0], "early.mp4");
   assert.equal(names[1], "late.mp4");
-  assert.ok(names[2] !== null && names[2].startsWith("null"));
-  assert.ok(names[3] !== null && names[3].startsWith("null"));
+  assert.ok(names[2]?.startsWith("null"));
+  assert.ok(names[3]?.startsWith("null"));
 });
 
 test("date desc: null videoMtime entries sort after all dated entries even when direction is desc", () => {
@@ -94,8 +94,8 @@ test("date desc: null videoMtime entries sort after all dated entries even when 
   // Dated entries come first (in descending order), then the two nulls.
   assert.equal(names[0], "late.mp4");
   assert.equal(names[1], "early.mp4");
-  assert.ok(names[2] !== null && names[2].startsWith("null"));
-  assert.ok(names[3] !== null && names[3].startsWith("null"));
+  assert.ok(names[2]?.startsWith("null"));
+  assert.ok(names[3]?.startsWith("null"));
 });
 
 test("date asc: all-null mtime list is stable (no crash)", () => {

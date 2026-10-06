@@ -30,6 +30,7 @@ export function ActionButton({
   const sizeCls = size === "sm" ? "px-3 py-2 text-xs" : "px-4 py-3 text-sm";
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={disabled || busy}
       className={`inline-flex min-h-touch items-center justify-center gap-2 rounded-sm text-center font-medium leading-6 transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${sizeCls} ${cls} ${className}`}

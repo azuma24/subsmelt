@@ -14,6 +14,10 @@ interface RowActionsMenuProps {
   items: RowActionsMenuItem[];
 }
 
+/** The enabled items of a menu, in DOM order. */
+const menuItemsIn = (menu: HTMLElement | null) =>
+  Array.from(menu?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not([disabled])') ?? []);
+
 export function RowActionsMenu({ items }: RowActionsMenuProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -25,12 +29,9 @@ export function RowActionsMenu({ items }: RowActionsMenuProps) {
   // last for ArrowUp, per the WAI-ARIA menu button pattern.
   const [initialFocus, setInitialFocus] = useState<"first" | "last">("first");
 
-  const menuItems = () =>
-    Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not([disabled])') ?? []);
-
   useEffect(() => {
     if (!open) return;
-    const focusable = menuItems();
+    const focusable = menuItemsIn(menuRef.current);
     focusable[initialFocus === "first" ? 0 : focusable.length - 1]?.focus();
   }, [open, initialFocus]);
 
@@ -40,7 +41,7 @@ export function RowActionsMenu({ items }: RowActionsMenuProps) {
   };
 
   const moveFocus = (step: number) => {
-    const focusable = menuItems();
+    const focusable = menuItemsIn(menuRef.current);
     if (focusable.length === 0) return;
     const current = focusable.indexOf(document.activeElement as HTMLButtonElement);
     const next = current < 0 ? 0 : (current + step + focusable.length) % focusable.length;
@@ -85,11 +86,11 @@ export function RowActionsMenu({ items }: RowActionsMenuProps) {
         break;
       case "Home":
         event.preventDefault();
-        menuItems()[0]?.focus();
+        menuItemsIn(menuRef.current)[0]?.focus();
         break;
       case "End":
         event.preventDefault();
-        menuItems().at(-1)?.focus();
+        menuItemsIn(menuRef.current).at(-1)?.focus();
         break;
       case "Escape":
         event.preventDefault();

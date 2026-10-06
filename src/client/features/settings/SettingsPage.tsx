@@ -76,6 +76,7 @@ export function SettingsPage() {
 
   // A refetch (scan:complete invalidation, window focus) only replaces the
   // server snapshot; keys the user is still editing keep their local value.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the server snapshot changes; applyForm only writes refs and state
   useEffect(() => {
     if (settingsQuery.data) applyForm(receiveServer(formRef.current, settingsQuery.data));
   }, [settingsQuery.data]);
@@ -164,11 +165,11 @@ export function SettingsPage() {
 
   // Leaving the page flushes whatever is still unsaved: a pending debounced
   // autosave, and the deferred fields that normally wait for the topbar Save.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: flushes on unmount only, reading the latest form through refs
   useEffect(
     () => () => {
       clearSaveTimer();
       if (isDirty(formRef.current) && validateJsonBlobs()) void persist(view(formRef.current));
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
     [],
   );
@@ -429,6 +430,7 @@ export function SettingsPage() {
             <nav className="flex flex-col gap-px">
               {navOrder.map((key) => (
                 <button
+                  type="button"
                   key={key}
                   onClick={() => setActiveSection(key)}
                   className={`rounded-sm border px-2 py-2 text-left text-sm transition-colors ${activeSection === key ? "border-accent-line bg-accent-soft text-accent" : "border-transparent text-muted hover:bg-surface-raised hover:text-text"}`}

@@ -74,7 +74,7 @@ const RULES: Rule[] = [
 ];
 
 export function classifyError(raw: string | null | undefined): ErrorCode {
-  if (!raw || !raw.trim()) return "unknown";
+  if (!raw?.trim()) return "unknown";
   const text = raw.toLowerCase();
   for (const rule of RULES) {
     if (rule.patterns.some((pattern) => (typeof pattern === "string" ? text.includes(pattern) : pattern.test(text))))

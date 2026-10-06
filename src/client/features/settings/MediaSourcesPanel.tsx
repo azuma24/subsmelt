@@ -87,6 +87,7 @@ export function MediaSourcesPanel({
     setLoading(false);
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: loads once on mount
   useEffect(() => {
     fetchSources();
   }, []);

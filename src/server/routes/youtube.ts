@@ -206,7 +206,7 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore, worker:
     if (isChannel && !channel) return res.status(400).json({ error: "Paste a link to a YouTube channel" });
     if (!isChannel && !playlistId) return res.status(400).json({ error: "Paste a link to a YouTube playlist" });
     let id: string;
-    let listing;
+    let listing: Awaited<ReturnType<typeof listFollowedWithYtdlp>>;
     try {
       id = channel ? await worker.metadataCall(() => resolveChannelWithYtdlp(channel)) : playlistId!;
       listing = await worker.metadataCall(() => listFollowedWithYtdlp(id));

@@ -108,19 +108,19 @@ export function ScanConfirmModal({ scanPlan, onClose, onConfirm, t }: ScanConfir
       <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
         {nothingNew ? (
           <>
-            <button onClick={onConfirm} className={SECONDARY_BUTTON}>
+            <button type="button" onClick={onConfirm} className={SECONDARY_BUTTON}>
               {t("dashboard.scanConfirm.scanAnyway")}
             </button>
-            <button onClick={onClose} className={PRIMARY_BUTTON}>
+            <button type="button" onClick={onClose} className={PRIMARY_BUTTON}>
               {t("common.close")}
             </button>
           </>
         ) : (
           <>
-            <button onClick={onClose} className={SECONDARY_BUTTON}>
+            <button type="button" onClick={onClose} className={SECONDARY_BUTTON}>
               {t("common.cancel")}
             </button>
-            <button onClick={onConfirm} className={PRIMARY_BUTTON}>
+            <button type="button" onClick={onConfirm} className={PRIMARY_BUTTON}>
               {t("dashboard.scanConfirm.proceed")}
             </button>
           </>

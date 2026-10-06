@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActionButton, Drawer, TextArea } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
-import { labelCls, textareaCls } from "./shared";
+import { labelCls } from "./shared";
 
 interface RawConfigDrawerProps {
   settings: Record<string, unknown>;

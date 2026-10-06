@@ -122,7 +122,7 @@ export type JsonValidation = { ok: true } | { ok: false; error: string };
 
 /** Type guard for the two JSON-blob setting keys. */
 export function isJsonBlobSetting(key: string): key is JsonBlobSettingKey {
-  return Object.prototype.hasOwnProperty.call(JSON_BLOB_SETTINGS, key);
+  return Object.hasOwn(JSON_BLOB_SETTINGS, key);
 }
 
 /**

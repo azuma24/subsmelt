@@ -46,7 +46,7 @@ export function LogsPage() {
           ? logs.filter(
               (entry) =>
                 entry.message.toLowerCase().includes(search.toLowerCase()) ||
-                (entry.meta && entry.meta.toLowerCase().includes(search.toLowerCase())),
+                entry.meta?.toLowerCase().includes(search.toLowerCase()),
             )
           : logs),
       ].reverse(),
@@ -200,6 +200,7 @@ export function LogsPage() {
               />
               {typeof jobIdFilter === "number" && jobIdFilter > 0 && (
                 <button
+                  type="button"
                   onClick={() => setJobIdFilter(null)}
                   className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-xs text-muted"
                 >
@@ -272,6 +273,7 @@ function PlainLogList({ logs, search, follow }: { logs: LogEntry[]; search: stri
 
   // Newest entries are at the end (chronological order). Re-run when new entries
   // arrive (length changes) or follow toggles on, matching the original.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-scrolls when entries arrive
   useEffect(() => {
     if (!follow) return;
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -305,10 +307,10 @@ function VirtualLogList({ logs, search, follow }: { logs: LogEntry[]; search: st
 
   // Auto-scroll-to-latest (follow mode). Re-run when new entries arrive (length
   // changes) or follow toggles on.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-scrolls when entries arrive; the virtualizer is stable
   useEffect(() => {
     if (!follow) return;
     if (logs.length > 0) virtualizer.scrollToIndex(logs.length - 1, { align: "end" });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logs.length, follow]);
 
   return (

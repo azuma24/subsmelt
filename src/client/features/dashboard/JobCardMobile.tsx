@@ -55,7 +55,7 @@ export const JobCardMobile = memo(function JobCardMobile({
 }: JobCardMobileProps) {
   const { t } = useTranslation();
   const jobActions = useJobActions();
-  const { srtName, pct, hasError, isPending, isSkipped, reason, connectionText, connectionTitle } = jobDerived(job);
+  const { srtName, pct, hasError, isPending, reason, connectionText, connectionTitle } = jobDerived(job);
   const isActive = currentJobId === job.id;
 
   return (

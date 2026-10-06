@@ -6,7 +6,7 @@ import { logger } from "../logger.js";
 import { notify } from "../notify.js";
 import { findAnyCase, MEDIA_DIR } from "../scanner.js";
 import { broadcast } from "../sse.js";
-import { normalizeTimeToMs, parseSubtitle, type SubtitleCue, cuesOf } from "../translator/convert.js";
+import { normalizeTimeToMs, parseSubtitle, cuesOf } from "../translator/convert.js";
 import { readSubtitleFileText } from "../translator/encoding.js";
 import {
   noteFileName,

@@ -82,6 +82,7 @@ export function DesktopSidebar({ queueRunning, errorCount, watcherRunning, curre
               >
                 {t(group.labelKey)}
               </div>
+              {/* biome-ignore lint/a11y/noRedundantRoles: Safari drops list semantics from a list without bullets; the role restores them */}
               <ul role="list" aria-label={t(group.labelKey)} className="space-y-1">
                 {items.map((item) => {
                   const isActive = isNavActive(item, currentPath);

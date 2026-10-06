@@ -7,7 +7,6 @@ import { getErrorMessage } from "../../lib";
 import { str } from "../../lib/settings-value";
 import {
   LIBRARY_QUERY_KEY,
-  useIsMobile,
   useJobsQuery,
   useLibraryQuery,
   useMutationWithInvalidation,
@@ -53,7 +52,6 @@ const validSortDir = (value: unknown): SortDir => (value === "asc" || value === 
 export function LibraryPage() {
   const { t } = useTranslation();
   const { addToast } = useToast();
-  const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const libraryQuery = useLibraryQuery();
   const jobsQuery = useJobsQuery();
@@ -150,7 +148,10 @@ export function LibraryPage() {
       const keys = section.items.map((entry) => entry.item.key);
       const next = new Set(prev);
       const all = keys.every((key) => next.has(key));
-      keys.forEach((key) => (all ? next.delete(key) : next.add(key)));
+      for (const key of keys) {
+        if (all) next.delete(key);
+        else next.add(key);
+      }
       return next;
     });
   }, []);

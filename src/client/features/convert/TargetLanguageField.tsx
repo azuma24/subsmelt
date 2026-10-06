@@ -1,7 +1,7 @@
 import { useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { findLanguage, type LanguageEntry } from "./language-table";
-import { resolveTargetLanguage, suggestLanguages, type LanguageResolution } from "./resolve-language";
+import { suggestLanguages, type LanguageResolution } from "./resolve-language";
 
 interface TargetLanguageFieldProps {
   value: string;
@@ -59,13 +59,13 @@ export function TargetLanguageField({ value, onChange, resolution, recents, onPi
           className={`${inputCls} ${borderCls}`}
         />
         {focused && completions.length > 0 && (
-          <ul
+          <div
             id={listboxId}
             className="absolute z-40 mt-1 w-full overflow-hidden rounded-sm border border-border bg-surface shadow-2"
             role="listbox"
           >
             {completions.map((entry) => (
-              <li key={entry.code} role="option" aria-selected={false}>
+              <div key={entry.code} role="option" aria-selected={false}>
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
@@ -76,9 +76,9 @@ export function TargetLanguageField({ value, onChange, resolution, recents, onPi
                   <span className="text-faint">{entry.nativeName}</span>
                   <span className="ml-auto font-mono text-xs text-faint">{entry.code}</span>
                 </button>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
       </div>
 

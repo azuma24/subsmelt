@@ -160,7 +160,7 @@ export function useModelGate({
       }
       saveSetting("transcription_model", newModelId);
     },
-    [model, isModelDownloaded, modelDownloads, confirmAndDownload, saveSetting],
+    [model, setModel, isModelDownloaded, modelDownloads, confirmAndDownload, saveSetting],
   );
 
   return { isModelDownloaded, confirmAndDownload, ensureModelDownloaded, handleModelChange };

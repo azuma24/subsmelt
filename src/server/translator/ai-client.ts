@@ -276,7 +276,7 @@ export async function retryTranslate<T>(
       // (capped) instead of the default exponential schedule. A 429 with no
       // Retry-After falls back to exponential too.
       const rateLimitMs = rateLimitRetryDelayMs(error);
-      const exponential = delay * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 250);
+      const exponential = delay * 2 ** (attempt - 1) + Math.floor(Math.random() * 250);
       const backoff = rateLimitMs && rateLimitMs > 0 ? rateLimitMs : exponential;
       // maxRetries is threaded through so callers can log a truthful "n/N".
       onRetry?.(attempt, error, backoff, maxRetries);

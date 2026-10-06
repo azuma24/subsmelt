@@ -5,7 +5,6 @@ import { FileTreeView, type FolderRowContext } from "../../../ui/file-tree/FileT
 import type { TreeExpansion } from "../../../ui/file-tree/use-persisted-expansion";
 import type { DrillDownState } from "../../../ui/file-tree/use-drill-down";
 import { TRI_STATES, hasDescendant, pathMatchesScope, type DirectoryRule, type ScanMode, type TriState } from "./model";
-import { useIsMobile } from "../../../hooks";
 import { Icon } from "../../../ui/Icon";
 
 /**
@@ -52,7 +51,6 @@ export interface FolderTreeProps extends FolderTreeRowSharedProps {
  * button), hence `sticky={false}` — the view's sticky offsets assume 36px.
  */
 export function FolderTree({ nodes, expansion, drill, ...rowProps }: FolderTreeProps) {
-  const isMobile = useIsMobile();
   const { t } = useTranslation();
   return (
     <FileTreeView

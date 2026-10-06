@@ -254,8 +254,8 @@ test("cookies are stored with mode 0600 and only their presence is ever reported
 });
 
 test("the download folder setting must stay inside the media folder", async () => {
-  const escape = await call("POST", "/api/settings", { youtube_download_dir: "../outside" });
-  assert.deepEqual(escape, {
+  const outside = await call("POST", "/api/settings", { youtube_download_dir: "../outside" });
+  assert.deepEqual(outside, {
     status: 400,
     body: { error: "The YouTube download folder must be a folder inside the media folder" },
   });

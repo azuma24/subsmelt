@@ -83,7 +83,6 @@ function Field({
 }
 
 const hintCls = "text-xs leading-5 text-faint";
-const selectCls = `${FORM_CONTROL_CLS} min-h-touch`;
 
 export function FollowPlaylistDialog({
   playlist,

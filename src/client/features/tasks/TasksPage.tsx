@@ -57,7 +57,7 @@ export function TranslationLanguagesPage() {
   const selectedTasks = tasks.filter((task) => selectedTaskIds.has(task.id));
 
   const handleSave = async () => {
-    if (!editing || !editing.target_lang || !editing.lang_code) return;
+    if (!editing?.target_lang || !editing.lang_code) return;
     const normalizedOutputPattern = applyOutputFormat(editing.output_pattern, selectedOutputFormat);
     const sourceLang = editing.source_lang || AUTO_SOURCE_LANG;
     try {
@@ -221,6 +221,7 @@ export function TranslationLanguagesPage() {
               const exists = tasks.some((task) => task.lang_code === p.lang_code);
               return (
                 <button
+                  type="button"
                   key={p.lang_code}
                   onClick={() => !exists && openNew(p)}
                   disabled={exists}
@@ -241,6 +242,7 @@ export function TranslationLanguagesPage() {
           clearLabel={t("translation_languages.bulk.clearSelection")}
         >
           <button
+            type="button"
             onClick={() => applyBulk({ enabled: 1 })}
             disabled={bulkCounts.disabled === 0}
             className="rounded-sm bg-success px-3 py-2 text-xs font-semibold text-accent-text disabled:opacity-40"
@@ -248,6 +250,7 @@ export function TranslationLanguagesPage() {
             {t("translation_languages.bulk.enable")}
           </button>
           <button
+            type="button"
             onClick={() => applyBulk({ enabled: 0 })}
             disabled={bulkCounts.enabled === 0}
             className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-xs text-text disabled:opacity-40"
@@ -256,6 +259,7 @@ export function TranslationLanguagesPage() {
           </button>
           {OUTPUT_FORMATS.map((format) => (
             <button
+              type="button"
               key={format}
               onClick={() => applyBulkFormat(format)}
               className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-xs uppercase text-muted hover:text-text"
@@ -299,6 +303,7 @@ export function TranslationLanguagesPage() {
                 <div className="flex flex-col items-end gap-2">
                   {/* Enabled toggle */}
                   <button
+                    type="button"
                     onClick={() => updateMutation.mutate({ id: task.id, payload: { enabled: task.enabled ? 0 : 1 } })}
                     className={`rounded-full border px-3 py-1 text-xs font-medium ${task.enabled ? "border-success-line bg-success-soft text-success" : "border-border bg-surface-raised text-faint"}`}
                   >
@@ -379,6 +384,7 @@ export function TranslationLanguagesPage() {
                   const active = selectedOutputFormat === format;
                   return (
                     <button
+                      type="button"
                       key={format}
                       onClick={() => {
                         setSelectedOutputFormat(format);
@@ -398,6 +404,7 @@ export function TranslationLanguagesPage() {
                 {t("translation_languages.formatMismatch", { selected: selectedOutputFormat, detected: patternFormat })}
                 <div>
                   <button
+                    type="button"
                     onClick={() =>
                       setEditing({
                         ...editing,
@@ -421,6 +428,7 @@ export function TranslationLanguagesPage() {
             />
             <div>
               <button
+                type="button"
                 onClick={() =>
                   setEditing({ ...editing, output_pattern: `{{name}}.{{lang_code}}.${selectedOutputFormat}` })
                 }
@@ -440,7 +448,7 @@ export function TranslationLanguagesPage() {
               </div>
             )}
             {!showPromptOverride ? (
-              <button onClick={() => setShowPromptOverride(true)} className="text-xs text-accent">
+              <button type="button" onClick={() => setShowPromptOverride(true)} className="text-xs text-accent">
                 {t("translation_languages.addPromptOverride")}
               </button>
             ) : (
@@ -448,6 +456,7 @@ export function TranslationLanguagesPage() {
                 <div className="mb-1 flex items-center justify-between">
                   <label className="text-sm font-medium text-muted">{t("translation_languages.promptOverride")}</label>
                   <button
+                    type="button"
                     onClick={() => {
                       setShowPromptOverride(false);
                       setEditing({ ...editing, prompt_override: "" });
@@ -470,6 +479,7 @@ export function TranslationLanguagesPage() {
           </div>
           <div className={`mt-6 flex gap-3 ${isMobile ? "sticky bottom-0 bg-surface pt-4" : "justify-end"}`}>
             <button
+              type="button"
               onClick={() => {
                 setEditing(null);
                 setIsNew(false);
@@ -479,6 +489,7 @@ export function TranslationLanguagesPage() {
               {t("common.cancel")}
             </button>
             <button
+              type="button"
               onClick={handleSave}
               disabled={!canSave}
               className="flex-1 rounded-sm bg-accent px-4 py-3 text-sm font-medium text-accent-text disabled:opacity-50 md:flex-none"

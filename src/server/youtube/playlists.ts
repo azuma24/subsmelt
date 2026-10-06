@@ -155,6 +155,7 @@ export function defaultPlaylistFields(folder: string): PlaylistFields {
 /** A folder name made from a playlist title: path separators and characters Windows refuses become spaces. */
 export function folderFromTitle(title: string, id: string): string {
   const cleaned = title
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are exactly what a folder name must not contain
     .replace(/[\\/:*?"<>|\u0000-\u001f]+/g, " ")
     .replace(/\s+/g, " ")
     .replace(/^[.\s]+|[.\s]+$/g, "");

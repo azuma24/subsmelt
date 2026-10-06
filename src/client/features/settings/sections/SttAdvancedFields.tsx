@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Accordion, Field, Select } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
-import { ToggleRow, labelCls, selectCls } from "./shared";
+import { ToggleRow, labelCls } from "./shared";
 import type { WhisperModelDescriptor } from "../../../types";
 import { hidesOptions } from "../../whisper/whisper-shared";
 import { OptionsDecidedNote } from "../../whisper/ModelPicker";

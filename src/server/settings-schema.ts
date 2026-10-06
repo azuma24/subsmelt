@@ -11,7 +11,7 @@ export type { SettingKey, TypedSettings } from "../shared/settings.js";
  * config.json, a hand edit), falls back to the shipped default instead of
  * failing, which is what the string-parsing readers it replaces did.
  */
-function fieldSchema(key: SettingKey, spec: SettingSpec, fallback: string): z.ZodType<unknown> {
+function fieldSchema(spec: SettingSpec, fallback: string): z.ZodType<unknown> {
   switch (spec.kind) {
     case "flag":
       return z.string().transform((v) => v === "1");
@@ -42,7 +42,7 @@ function settingsSchema(): z.ZodType<TypedSettings> {
   if (schema) return schema;
   const shape: Record<string, z.ZodType<unknown>> = {};
   for (const [key, spec] of Object.entries(SETTINGS) as [SettingKey, SettingSpec][]) {
-    shape[key] = fieldSchema(key, spec, defaultSetting(key));
+    shape[key] = fieldSchema(spec, defaultSetting(key));
   }
   schema = z.object(shape) as unknown as z.ZodType<TypedSettings>;
   return schema;

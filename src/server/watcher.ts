@@ -61,7 +61,7 @@ export function startWatcher() {
     ignoreInitial: true,
     persistent: true,
     depth: 10,
-    ignored: /(^|[\/\\])\../, // ignore dotfiles
+    ignored: /(^|[/\\])\../, // ignore dotfiles
     awaitWriteFinish: {
       stabilityThreshold: 2000,
       pollInterval: 500,

@@ -111,11 +111,11 @@ export function LibraryList(props: LibraryListProps) {
     requestAnimationFrame(() => find()?.focus());
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only a new request moves focus, not every rows update
   useEffect(() => {
     if (!focusRequest) return;
     const index = rows.findIndex((row) => row.type === "item" && row.entry.item.key === focusRequest.key);
     if (index >= 0) focusRow(index);
-    // Only a new request should move focus, not every rows update.
   }, [focusRequest]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -133,6 +133,7 @@ export function LibraryList(props: LibraryListProps) {
   };
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: the wrapper only relays j/k and arrow keys to the focused row, which is the interactive element
     <div ref={scrollRef} onKeyDown={handleKeyDown} className="min-h-0 flex-1 overflow-y-auto">
       {virtualize ? (
         <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>

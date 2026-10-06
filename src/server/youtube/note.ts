@@ -43,6 +43,7 @@ const PARAGRAPH_MAX_S = 90;
 const FILE_TITLE_MAX_BYTES = 180;
 const SENTENCE_END_RE = /[.!?。！？…](?:["'”’)\]」』）]*)$/u;
 // Obsidian breaks links on [ ] # ^ |; the rest are refused by some filesystem or read as a path.
+// biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are exactly what a file name must not contain
 const UNSAFE_NAME_RE = /[[\]#^|\\/:*?"<>\u0000-\u001f]/g;
 const CJK_RE = /[　-鿿가-힯豈-﫿＀-￯]/u;
 

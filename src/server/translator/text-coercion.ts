@@ -157,7 +157,7 @@ export function extractFinalAnswerFromReasoning(reasoning: string): string | nul
 
 function isReasoningMetaLine(line: string): boolean {
   return (
-    /^[\*\-#>]/.test(line) ||
+    /^[*\-#>]/.test(line) ||
     /^(let'?s|wait|note:|option \d|actually|final|refin|translat|source|input|context|glossary|target)/i.test(line)
   );
 }
@@ -182,7 +182,7 @@ export function extractNumberedTranslations(text: string, expectedCount: number)
       continue;
     }
     // Pattern: N. translation (no arrow, no source quoted)
-    const simpleMatch = line.match(/^\s*(\d+)\.\s+([^"*\-].+)$/);
+    const simpleMatch = line.match(/^\s*(\d+)\.\s+([^"*-].+)$/);
     if (simpleMatch) {
       const idx = parseInt(simpleMatch[1], 10);
       const val = simpleMatch[2].replace(/^\s*["「]|["」]\s*$/g, "").trim();

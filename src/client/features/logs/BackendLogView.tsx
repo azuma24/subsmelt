@@ -41,6 +41,7 @@ export function BackendLogView({ query, follow }: BackendLogViewProps) {
   }, [data?.lines, search]);
 
   // Tail behaviour: stick to the bottom while following, matching the app log.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-scrolls when the lines change
   useEffect(() => {
     if (!follow) return;
     const el = scrollRef.current;

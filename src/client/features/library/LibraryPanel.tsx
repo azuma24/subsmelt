@@ -54,6 +54,7 @@ export function LibraryPanel({
 
   // Overlaying (drawer or sheet), the panel is modal, so focus moves into it.
   // Beside the list it is not, and focus stays on the row so j/k keep working.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: focus moves into the panel for each new item
   useEffect(() => {
     if (!inline) closeRef.current?.focus();
   }, [item.key, inline]);
@@ -102,8 +103,7 @@ export function LibraryPanel({
     <>
       <div aria-hidden="true" onClick={onClose} className="fixed inset-0 z-40 bg-scrim lg:hidden" />
       <aside
-        role={inline ? "complementary" : "dialog"}
-        aria-modal={inline ? undefined : true}
+        {...(inline ? { role: "complementary" } : { role: "dialog", "aria-modal": true })}
         aria-labelledby="library-panel-title"
         onKeyDown={trapTab}
         className="fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col rounded-t-md border-t border-border bg-surface shadow-2 animate-slide-up md:animate-slide-in md:inset-y-0 md:left-auto md:w-[400px] md:max-h-none md:rounded-none md:border-l md:border-t-0 lg:static lg:z-auto lg:shrink-0 lg:shadow-none lg:animate-none"

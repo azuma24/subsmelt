@@ -216,7 +216,7 @@ export function createDebouncedInvalidator(invalidate: (queryKey: QueryKey) => v
 
   return {
     schedule(queryKeys: QueryKey[]) {
-      queryKeys.forEach((queryKey) => pending.set(stringifyQueryKey(queryKey), queryKey));
+      for (const queryKey of queryKeys) pending.set(stringifyQueryKey(queryKey), queryKey);
       if (timer) return;
       timer = setTimeout(flush, delayMs);
     },
@@ -237,7 +237,7 @@ const connection = { open: false, listeners: new Set<() => void>() };
 function setConnectionOpen(open: boolean): void {
   if (connection.open === open) return;
   connection.open = open;
-  connection.listeners.forEach((listener) => listener());
+  for (const listener of connection.listeners) listener();
 }
 
 const subscribeConnection = (listener: () => void) => {

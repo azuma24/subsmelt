@@ -103,7 +103,7 @@ function normalizeConnection(c: unknown, index: number): LlmConnection {
  */
 export function parseConnections(s: Record<string, string>): LlmConnection[] {
   const raw = s.llm_connections;
-  if (raw && raw.trim()) {
+  if (raw?.trim()) {
     try {
       const arr = JSON.parse(raw);
       if (Array.isArray(arr) && arr.length > 0) {

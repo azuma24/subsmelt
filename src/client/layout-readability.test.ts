@@ -35,7 +35,10 @@ function lightToken(name: string): string {
 
 function contrastRatio(a: string, b: string): number {
   const luminance = (hex: string) => {
-    const channel = (c: number) => ((c /= 255) <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+    const channel = (raw: number) => {
+      const c = raw / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    };
     const n = parseInt(hex.slice(1), 16);
     return 0.2126 * channel(n >> 16) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255);
   };

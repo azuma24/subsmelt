@@ -234,7 +234,7 @@ test("a scan that finds videos sets the sticky media_scanned flag; an empty scan
   // is sticky by design, so this test controls its own starting state.
   config.setSetting("media_scanned", "");
   t.after(() => config.setSetting("media_scanned", "1"));
-  const dir = library("Flagged", ["Show.mkv", "Show.srt"]);
+  library("Flagged", ["Show.mkv", "Show.srt"]);
 
   await scanFolder(true);
   assert.equal(config.getSetting("media_scanned"), "1");

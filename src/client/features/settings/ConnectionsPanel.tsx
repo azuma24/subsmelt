@@ -59,7 +59,6 @@ function parseConnections(raw: unknown): LlmConnection[] {
 }
 
 export function ConnectionsPanel({ settings, update, addToast }: ConnectionsPanelProps) {
-  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const modeLabelId = useId();
   const [modelsByConn, setModelsByConn] = useState<Record<string, string[]>>({});
@@ -184,6 +183,7 @@ export function ConnectionsPanel({ settings, update, addToast }: ConnectionsPane
         >
           {(["single", "fallback", "parallel"] as LlmMode[]).map((m) => (
             <button
+              type="button"
               key={m}
               onClick={() => update("llm_mode", m)}
               aria-pressed={mode === m}
@@ -247,6 +247,7 @@ export function ConnectionsPanel({ settings, update, addToast }: ConnectionsPane
       </div>
 
       <button
+        type="button"
         onClick={addConn}
         className="w-full rounded-sm border border-dashed border-border bg-surface-raised py-3 text-sm font-medium text-accent hover:bg-surface-highlight"
       >
@@ -395,6 +396,7 @@ function ConnectionCard({
             >
               {PROVIDERS.map((p) => (
                 <button
+                  type="button"
                   key={p}
                   onClick={() => onChangeProvider(p)}
                   aria-pressed={c.provider === p}
@@ -460,7 +462,7 @@ function ConnectionCard({
               <label htmlFor={modelSelectId} className="text-xs font-medium text-muted">
                 {t("settings.connections.model")}
               </label>
-              <button onClick={onFetchModels} className="text-xs text-accent">
+              <button type="button" onClick={onFetchModels} className="text-xs text-accent">
                 {loadingModels ? t("common.loading") : t("settings.llmConnection.fetchModels")}
               </button>
             </div>
@@ -499,6 +501,7 @@ function ConnectionCard({
           {/* Test */}
           <div className="flex items-center gap-3">
             <button
+              type="button"
               onClick={onTest}
               className="min-h-touch rounded-sm border border-border bg-surface px-3 py-2 text-xs text-muted hover:text-text"
             >

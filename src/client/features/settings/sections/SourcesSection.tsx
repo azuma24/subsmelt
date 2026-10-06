@@ -3,7 +3,7 @@ import { Accordion, ActionButton, Field, Select } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
 import { MediaSourcesPanel } from "../MediaSourcesPanel";
 import { NotificationsFields } from "./NotificationsFields";
-import { ToggleRow, bool, labelCls, selectCls } from "./shared";
+import { ToggleRow, bool, labelCls } from "./shared";
 import { useIsMobile } from "../../../hooks";
 
 interface SourcesSectionProps {

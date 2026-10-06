@@ -4,7 +4,7 @@ import { ActionButton, Select } from "../../../ui/primitives";
 import { LANGUAGES } from "../../../app/constants";
 import { getThemePref, setThemePref, THEME_PREFS, type ThemePref } from "../../../lib/theme";
 import { getFontScale, setFontScale, DEFAULT_SCALE, MIN_SCALE, MAX_SCALE, SCALE_STEP } from "../../../lib/font-scale";
-import { labelCls, selectCls } from "./shared";
+import { labelCls } from "./shared";
 
 /**
  * Interface preferences. Nothing here touches the server settings blob — theme

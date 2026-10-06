@@ -58,7 +58,7 @@ export function useJobActions(options: UseJobActionsOptions = {}): JobActions {
         onError: () => showError("dashboard.toast.actionFailed"),
       });
     },
-    [retryMutation.mutate, retryMutation.isPending, addToast, t, showError],
+    [retryMutation.mutate, addToast, t, showError],
   );
 
   const retranslate = useCallback(
@@ -68,7 +68,7 @@ export function useJobActions(options: UseJobActionsOptions = {}): JobActions {
         onError: () => showError("dashboard.toast.actionFailed"),
       });
     },
-    [forceMutation.mutate, forceMutation.isPending, addToast, t, showError],
+    [forceMutation.mutate, addToast, t, showError],
   );
 
   const cancel = useCallback(
@@ -78,21 +78,21 @@ export function useJobActions(options: UseJobActionsOptions = {}): JobActions {
         onError: () => showError("dashboard.toast.actionFailed"),
       });
     },
-    [cancelMutation.mutate, cancelMutation.isPending, addToast, t, showError],
+    [cancelMutation.mutate, addToast, t, showError],
   );
 
   const pin = useCallback(
     (id: number) => {
       pinMutation.mutate(id, { onError: () => showError("dashboard.toast.actionFailed") });
     },
-    [pinMutation.mutate, pinMutation.isPending, showError],
+    [pinMutation.mutate, showError],
   );
 
   const unpin = useCallback(
     (id: number) => {
       unpinMutation.mutate(id, { onError: () => showError("dashboard.toast.actionFailed") });
     },
-    [unpinMutation.mutate, unpinMutation.isPending, showError],
+    [unpinMutation.mutate, showError],
   );
 
   const remove = useCallback(
@@ -112,7 +112,7 @@ export function useJobActions(options: UseJobActionsOptions = {}): JobActions {
         showError("dashboard.toast.deleteFailed");
       }
     },
-    [confirm, deleteMutation.mutate, deleteMutation.isPending, onDeleted, addToast, t, showError],
+    [confirm, deleteMutation.mutateAsync, onDeleted, addToast, t, showError],
   );
 
   // A stable identity between renders: memoized job rows compare this object,
