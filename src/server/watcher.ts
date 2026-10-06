@@ -31,18 +31,20 @@ function handleFileChange(filePath: string) {
   // Debounce — wait for batch of files to settle before scanning
   if (debounceTimer) clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
-    try {
-      const result = scanFolder(true);
-      // Same announcement as an HTTP scan, so the UI's caches (including the
-      // sticky media_scanned flag the checklists read) stay current.
-      broadcast("scan:complete", { newJobs: result.newJobs, total: result.totalSubtitles });
-      if (result.newJobs > 0) {
-        logger.info("scan", `Watcher: ${result.newJobs} new jobs queued`);
-        if (getSetting("auto_translate") === "1") runQueueSafely();
+    void (async () => {
+      try {
+        const result = await scanFolder(true);
+        // Same announcement as an HTTP scan, so the UI's caches (including the
+        // sticky media_scanned flag the checklists read) stay current.
+        broadcast("scan:complete", { newJobs: result.newJobs, total: result.totalSubtitles });
+        if (result.newJobs > 0) {
+          logger.info("scan", `Watcher: ${result.newJobs} new jobs queued`);
+          if (getSetting("auto_translate") === "1") runQueueSafely();
+        }
+      } catch (e: any) {
+        logger.error("scan", `Watcher scan error: ${e.message}`);
       }
-    } catch (e: any) {
-      logger.error("scan", `Watcher scan error: ${e.message}`);
-    }
+    })();
   }, DEBOUNCE_MS);
 }
 

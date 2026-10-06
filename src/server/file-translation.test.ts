@@ -122,7 +122,7 @@ test("a failed job is reset to pending; a finished one is refused", () => {
   });
 });
 
-test("a scan shows the one-off task on its subtitle, never lists its output as a source, and applies it nowhere else", () => {
+test("a scan shows the one-off task on its subtitle, never lists its output as a source, and applies it nowhere else", async () => {
   const dir = library("scan", ["Ep1.mkv", "Ep1.srt", "Ep2.mkv", "Ep2.srt"]);
   const queued = queueFileTranslation(path.join(dir, "Ep1.srt"), { langCode: "it", targetLang: "Italian" });
   assert.ok(queued.kind === "queued");
@@ -130,7 +130,7 @@ test("a scan shows the one-off task on its subtitle, never lists its output as a
   fs.writeFileSync(path.join(dir, "Ep1.ita.srt"), "");
   db.updateJob(queued.jobId, { status: "done" });
 
-  const { files } = scanFolder(true);
+  const { files } = await scanFolder(true);
 
   const inDir = files.filter((file) => file.videoPath?.startsWith(`${dir}${path.sep}`));
   assert.deepEqual(

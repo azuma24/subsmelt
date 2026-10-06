@@ -125,41 +125,57 @@ function getJobCountsByFolder(): Map<string, FolderCounts> {
   return map;
 }
 
-function walkDir(dir: string, results: string[] = [], depth = 999): string[] {
+/**
+ * Every file under `dir`, in directory order. Asynchronous and sequential:
+ * one readdir at a time keeps the walk off the event loop (a large NAS used
+ * to freeze every request and SSE heartbeat for the whole scan) while keeping
+ * the order a synchronous walk produced, which the tie-breaks below rely on.
+ */
+async function walkDir(dir: string, results: string[] = [], depth = 999): Promise<string[]> {
+  let entries: fs.Dirent[];
   try {
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (entry.name.startsWith(".")) continue; // skip hidden
-      if (entry.isSymbolicLink()) continue; // skip symlinks to avoid cycles
-      const fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (depth > 0) walkDir(fullPath, results, depth - 1);
-      } else {
-        results.push(fullPath);
-      }
-    }
+    entries = await fs.promises.readdir(dir, { withFileTypes: true });
   } catch {
-    // skip inaccessible directories
+    return results; // skip inaccessible directories
+  }
+  for (const entry of entries) {
+    if (entry.name.startsWith(".")) continue; // skip hidden
+    if (entry.isSymbolicLink()) continue; // skip symlinks to avoid cycles
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (depth > 0) await walkDir(fullPath, results, depth - 1);
+    } else {
+      results.push(fullPath);
+    }
   }
   return results;
 }
 
-function buildFolderNode(
+/** Modification times for many files at once, a few stats in flight; unreadable files map to null. */
+async function statMtimes(files: string[], concurrency = 16): Promise<Map<string, number | null>> {
+  const mtimes = new Map<string, number | null>();
+  for (let i = 0; i < files.length; i += concurrency) {
+    const batch = files.slice(i, i + concurrency);
+    const stats = await Promise.all(batch.map((file) => fs.promises.stat(file).then((s) => s.mtimeMs, () => null)));
+    batch.forEach((file, j) => mtimes.set(file, stats[j]));
+  }
+  return mtimes;
+}
+
+async function buildFolderNode(
   dir: string,
   root: string,
   videoExts: Set<string>,
   subtitleExts: Set<string>,
   jobCountsByFolder: Map<string, FolderCounts>,
-): FolderNode {
+): Promise<FolderNode> {
   const relativePath = path.relative(root, dir).split(path.sep).join("/");
   const normalizedPath = relativePath === "." ? "" : relativePath;
   let directCounts = createEmptyCounts();
-  let children: FolderNode[] = [];
+  const children: FolderNode[] = [];
 
   try {
-    const entries = fs
-      .readdirSync(dir, { withFileTypes: true })
-      .filter((entry) => !entry.name.startsWith("."));
+    const entries = (await fs.promises.readdir(dir, { withFileTypes: true })).filter((entry) => !entry.name.startsWith("."));
     for (const entry of entries) {
       if (!entry.isFile()) continue;
       const ext = path.extname(entry.name).toLowerCase();
@@ -167,18 +183,10 @@ function buildFolderNode(
       if (subtitleExts.has(ext)) directCounts.subtitles += 1;
     }
 
-    children = entries
-      .filter((entry) => entry.isDirectory())
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((entry) =>
-        buildFolderNode(
-          path.join(dir, entry.name),
-          root,
-          videoExts,
-          subtitleExts,
-          jobCountsByFolder,
-        ),
-      );
+    const folders = entries.filter((entry) => entry.isDirectory()).sort((a, b) => a.name.localeCompare(b.name));
+    for (const entry of folders) {
+      children.push(await buildFolderNode(path.join(dir, entry.name), root, videoExts, subtitleExts, jobCountsByFolder));
+    }
   } catch {
     // skip inaccessible directories
   }
@@ -200,39 +208,12 @@ function buildFolderNode(
   };
 }
 
-function buildFolderTree(
-  dir: string,
-  root: string,
-  videoExts: Set<string>,
-  subtitleExts: Set<string>,
-  jobCountsByFolder: Map<string, FolderCounts>,
-): FolderNode[] {
-  try {
-    return fs
-      .readdirSync(dir, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((entry) =>
-        buildFolderNode(
-          path.join(dir, entry.name),
-          root,
-          videoExts,
-          subtitleExts,
-          jobCountsByFolder,
-        ),
-      );
-  } catch {
-    // skip inaccessible directories
-    return [];
-  }
-}
-
-export function listFolderTree(): FolderNode {
+export async function listFolderTree(): Promise<FolderNode> {
   const mediaRoot = path.resolve(MEDIA_DIR);
   const videoExts = parseExtensionSetting(getSetting("video_extensions"));
   const subtitleExts = parseExtensionSetting(getSetting("subtitle_extensions"));
   const jobCountsByFolder = getJobCountsByFolder();
-  const root = buildFolderNode(
+  const root = await buildFolderNode(
     mediaRoot,
     mediaRoot,
     videoExts,
@@ -442,7 +423,7 @@ function youtubeFolder(): string | null {
   return normalizeMediaSubfolder(getSetting("youtube_download_dir"));
 }
 
-export function scanFolder(createJobs = true): ScanResult {
+export async function scanFolder(createJobs = true): Promise<ScanResult> {
   const videoExts = getSetting("video_extensions")
     .split(",")
     .map((e) => e.trim().toLowerCase());
@@ -492,18 +473,18 @@ export function scanFolder(createJobs = true): ScanResult {
   let allFiles: string[];
   if (scanMode === "root_only") {
     // Only files directly in MEDIA_DIR, no subdirectories
-    allFiles = walkDir(MEDIA_DIR, [], 0);
+    allFiles = await walkDir(MEDIA_DIR, [], 0);
   } else if (scanMode === "selected") {
     // Scan only selected subdirectories. Root files are covered by root_only mode.
     allFiles = [];
     for (const folder of selectedFolders) {
       const folderPath = resolveMediaSubfolder(folder, MEDIA_DIR);
       if (folderPath && fs.existsSync(folderPath))
-        walkDir(folderPath, allFiles);
+        await walkDir(folderPath, allFiles);
     }
   } else {
     // Default: full recursive scan
-    allFiles = walkDir(MEDIA_DIR);
+    allFiles = await walkDir(MEDIA_DIR);
   }
   const skippedFolders = [...excludedFolders, youtubeFolder()].filter(
     (folder): folder is string => Boolean(folder),
@@ -572,18 +553,14 @@ export function scanFolder(createJobs = true): ScanResult {
   // Key: videoPath or "orphan:{srtPath}"
   const grouped = new Map<string, ScannedFile>();
 
-  // Pre-populate video entries (even those without subtitles)
+  // Pre-populate video entries (even those without subtitles). One stat per
+  // video, a few at a time, instead of a blocking stat each.
+  const videoMtimes = await statMtimes(videoFiles);
   for (const vf of videoFiles) {
-    let videoMtime: number | null = null;
-    try {
-      videoMtime = fs.statSync(vf).mtimeMs;
-    } catch {
-      /* skip on stat error */
-    }
     grouped.set(vf, {
       videoPath: vf,
       videoName: path.basename(vf),
-      videoMtime,
+      videoMtime: videoMtimes.get(vf) ?? null,
       subtitles: [],
     });
   }
@@ -655,18 +632,10 @@ export function scanFolder(createJobs = true): ScanResult {
 
     const groupKey = videoPath || `orphan:${srtPath}`;
     if (!grouped.has(groupKey)) {
-      let videoMtime: number | null = null;
-      if (videoPath) {
-        try {
-          videoMtime = fs.statSync(videoPath).mtimeMs;
-        } catch {
-          /* skip on stat error */
-        }
-      }
       grouped.set(groupKey, {
         videoPath,
         videoName: videoPath ? path.basename(videoPath) : null,
-        videoMtime,
+        videoMtime: videoPath ? (videoMtimes.get(videoPath) ?? null) : null,
         subtitles: [],
       });
     }

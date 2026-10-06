@@ -142,9 +142,9 @@ export function registerTranscriptionRoutes(app: Express): void {
       });
       logger.info("system", `Transcribed ${path.basename(videoPath)} → ${result.subtitle_path || "subtitle output"}`);
 
-      let scanResult: ReturnType<typeof scanFolder> | null = null;
+      let scanResult: Awaited<ReturnType<typeof scanFolder>> | null = null;
       if (postAction === "transcribe_and_translate") {
-        scanResult = scanFolder(true);
+        scanResult = await scanFolder(true);
         if (scanResult.newJobs > 0) setTimeout(() => runQueueSafely(), 100);
       }
 

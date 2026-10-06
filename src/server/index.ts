@@ -100,15 +100,14 @@ app.get("/api/events", (_req, res) => {
 
 registerSettingsTasksRoutes(app);
 
-app.get("/api/folders/tree", (_req, res) => {
-  res.json({ root: listFolderTree() });
+app.get("/api/folders/tree", async (_req, res) => {
+  res.json({ root: await listFolderTree() });
 });
 
 // ======== Scanner ========
-// A scan walks the whole media tree synchronously on the event loop; overlapping
-// requests would queue up back-to-back walks and freeze the server. Concurrent
-// callers share the run already in flight and receive its result.
-let scanInFlight: Promise<ReturnType<typeof scanFolder>> | null = null;
+// One walk of the media tree at a time: concurrent callers share the run
+// already in flight and receive its result instead of starting another.
+let scanInFlight: ReturnType<typeof scanFolder> | null = null;
 
 app.post("/api/scan", async (_req, res) => {
   if (scanInFlight) {
@@ -120,8 +119,8 @@ app.post("/api/scan", async (_req, res) => {
       return res.status(400).json({ error: error.message });
     }
   }
-  const run = (async (): Promise<ReturnType<typeof scanFolder>> => {
-    let result = scanFolder(true);
+  const run = (async (): ReturnType<typeof scanFolder> => {
+    let result = await scanFolder(true);
     const settings = getAllSettings();
     const behavior = settings.transcription_missing_subtitle_behavior || "ask";
     const backendUrl = getTranscriptionBackendUrl(settings);
@@ -209,7 +208,7 @@ app.post("/api/scan", async (_req, res) => {
         // Drain the concurrency pool; per-file errors are handled in the iterator.
       }
       if (missingVideos.length > 0) {
-        result = scanFolder(postAction === "transcribe_and_translate");
+        result = await scanFolder(postAction === "transcribe_and_translate");
       }
     }
     if (result.newJobs > 0 && getSetting("auto_translate") === "1") {
@@ -231,9 +230,9 @@ app.post("/api/scan", async (_req, res) => {
   }
 });
 
-app.get("/api/scan/preview", (_req, res) => {
+app.get("/api/scan/preview", async (_req, res) => {
   try {
-    res.json(scanFolder(false));
+    res.json(await scanFolder(false));
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }

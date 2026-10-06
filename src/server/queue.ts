@@ -899,27 +899,37 @@ function summarizeJobErrorForStorage(
 // Auto-scan timer
 let scanTimer: ReturnType<typeof setInterval> | null = null;
 
+// A tick that arrives while the previous scan is still walking is skipped: two
+// walks at once would double the load for the same answer.
+let autoScanRunning = false;
+
 export function startAutoScan(
   intervalMinutes: number,
-  scanFn: () => { newJobs: number; totalSubtitles: number },
+  scanFn: () => Promise<{ newJobs: number; totalSubtitles: number }>,
 ) {
   stopAutoScan();
   if (intervalMinutes <= 0) return;
 
   scanTimer = setInterval(
     () => {
-      try {
-        const result = scanFn();
-        // Same announcement as an HTTP scan, so the UI's caches (including
-        // the sticky media_scanned flag the checklists read) stay current.
-        broadcast("scan:complete", { newJobs: result.newJobs, total: result.totalSubtitles });
-        if (result.newJobs > 0) {
-          logger.info("scan", `Auto-scan: ${result.newJobs} new files found`);
-          if (getSetting("auto_translate") === "1") runQueueSafely();
+      if (autoScanRunning) return;
+      autoScanRunning = true;
+      void (async () => {
+        try {
+          const result = await scanFn();
+          // Same announcement as an HTTP scan, so the UI's caches (including
+          // the sticky media_scanned flag the checklists read) stay current.
+          broadcast("scan:complete", { newJobs: result.newJobs, total: result.totalSubtitles });
+          if (result.newJobs > 0) {
+            logger.info("scan", `Auto-scan: ${result.newJobs} new files found`);
+            if (getSetting("auto_translate") === "1") runQueueSafely();
+          }
+        } catch (e: any) {
+          logger.error("scan", `Auto-scan error: ${e.message}`);
+        } finally {
+          autoScanRunning = false;
         }
-      } catch (e: any) {
-        logger.error("scan", `Auto-scan error: ${e.message}`);
-      }
+      })();
     },
     intervalMinutes * 60 * 1000,
   );
