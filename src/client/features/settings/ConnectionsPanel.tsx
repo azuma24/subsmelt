@@ -6,6 +6,7 @@ import { Field, RowActionsMenu } from "../../ui/primitives";
 import { FORM_CONTROL_CLS, FORM_LABEL_CLS } from "../../ui/form-classes";
 import { Icon } from "../../ui/Icon";
 import { isEnvPinned } from "./settings-model";
+import { useIsMobile } from "../../hooks";
 
 const PROVIDERS: LlmProvider[] = ["local", "openai", "anthropic", "gemini"];
 const DEFAULT_LOCAL_ENDPOINT = "http://localhost:8000/v1";
@@ -35,7 +36,6 @@ interface ConnectionsPanelProps {
   settings: Record<string, unknown>;
   update: (key: string, value: unknown) => void;
   addToast: ToastFn;
-  isMobile: boolean;
 }
 
 function genId(): string {
@@ -58,7 +58,8 @@ function parseConnections(raw: unknown): LlmConnection[] {
   return [];
 }
 
-export function ConnectionsPanel({ settings, update, addToast, isMobile }: ConnectionsPanelProps) {
+export function ConnectionsPanel({ settings, update, addToast }: ConnectionsPanelProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const modeLabelId = useId();
   const [modelsByConn, setModelsByConn] = useState<Record<string, string[]>>({});
@@ -158,7 +159,7 @@ export function ConnectionsPanel({ settings, update, addToast, isMobile }: Conne
         endpoint: c.endpoint,
       });
       setTestResultByConn((s) => ({ ...s, [c.id]: result }));
-      addToast(result.ok ? `✓ ${c.label}: ${result.message}` : `✗ ${c.label}: ${result.message}`, result.ok ? "success" : "error");
+      addToast(`${c.label}: ${result.message}`, result.ok ? "success" : "error");
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
       setTestResultByConn((s) => ({ ...s, [c.id]: { ok: false, message } }));
@@ -207,7 +208,6 @@ export function ConnectionsPanel({ settings, update, addToast, isMobile }: Conne
               total={conns.length}
               mode={mode}
               isActive={isActive}
-              isMobile={isMobile}
               expanded={expandedByConn[c.id] ?? defaultExpanded}
               onToggleExpanded={() => setExpandedByConn((s) => ({ ...s, [c.id]: !(s[c.id] ?? defaultExpanded) }))}
               models={modelsByConn[c.id] || []}
@@ -249,7 +249,6 @@ interface ConnectionCardProps {
   total: number;
   mode: LlmMode;
   isActive: boolean;
-  isMobile: boolean;
   expanded: boolean;
   onToggleExpanded: () => void;
   models: string[];
@@ -283,7 +282,6 @@ function ConnectionCard({
   total,
   mode,
   isActive,
-  isMobile,
   expanded,
   onToggleExpanded,
   models,
@@ -301,6 +299,7 @@ function ConnectionCard({
   onTest,
   envPinned,
 }: ConnectionCardProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const bodyId = useId();
   const providerGroupId = useId();
@@ -331,7 +330,7 @@ function ConnectionCard({
           aria-controls={bodyId}
           className="flex min-h-touch min-w-0 flex-1 items-center gap-2 rounded-sm px-1 text-left hover:bg-surface-highlight"
         >
-          <span className={`shrink-0 text-faint transition-transform duration-fast ${expanded ? "rotate-180" : ""}`} aria-hidden="true">▾</span>
+          <Icon name="chevron-down" className={`shrink-0 text-faint transition-transform duration-fast ${expanded ? "rotate-180" : ""}`} />
           <span className="min-w-0">
             <span className="block truncate text-sm font-medium text-text">{c.label || t("settings.connections.connectionName")}</span>
             {!expanded && <span className="block truncate text-xs text-faint">{summary}</span>}
@@ -461,7 +460,7 @@ function ConnectionCard({
             </button>
             {testResult && (
               <span className={`text-xs ${testResult.ok ? "text-success" : "text-danger"}`}>
-                <span aria-hidden="true">{testResult.ok ? "✓ " : "✗ "}</span>
+                <Icon name={testResult.ok ? "done" : "error"} /> 
                 {testResult.ok ? testResult.message : testResult.message.includes("ECONNREFUSED") ? t("settings.connections.refused") : testResult.message}
               </span>
             )}

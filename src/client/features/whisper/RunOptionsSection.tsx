@@ -4,9 +4,10 @@ import type { WhisperModelDescriptor } from "../../types";
 import type { ModelDownloadProgress } from "../../hooks";
 import { COMMON_LANGS, findDescriptor, FORMATS, hidesOptions, selectCls, type OutputFormat } from "./whisper-shared";
 import { LanguageSupportWarning, ModelPicker, OptionsDecidedNote } from "./ModelPicker";
+import { useIsMobile } from "../../hooks";
+import { Icon } from "../../ui/Icon";
 
 export interface RunOptionsSectionProps {
-  isMobile: boolean;
   modelDescriptors: WhisperModelDescriptor[];
   effModel: string;
   onModelChange: (modelId: string) => Promise<void>;
@@ -37,10 +38,11 @@ const optionLabelCls = "flex flex-col gap-1 text-xs text-muted";
  * Advanced disclosure. Also renders model-download progress rows.
  */
 export function RunOptionsSection({
-  isMobile, modelDescriptors, effModel, onModelChange, isModelDownloaded, modelDownloads,
+  modelDescriptors, effModel, onModelChange, isModelDownloaded, modelDownloads,
   effLang, onLanguageChange, effFormat, onFormatChange, effDevice, onDeviceChange, deviceOptions,
   effCompute, onComputeChange, computeOptions, canDiarize, effDiarize, onDiarizeChange, hasCaps,
 }: RunOptionsSectionProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const selectedModel = findDescriptor(modelDescriptors, effModel);
   const languages = COMMON_LANGS.includes(effLang) ? COMMON_LANGS : [...COMMON_LANGS, effLang];
@@ -58,7 +60,7 @@ export function RunOptionsSection({
           />
           {/* Not-downloaded badge for the currently-selected model */}
           {isModelDownloaded(effModel) === false && modelDownloads[effModel]?.active !== true && (
-            <span className="text-xs text-warning"><span aria-hidden="true">⚠ </span>{t("settings.models.notDownloaded")}</span>
+            <span className="inline-flex items-center gap-1 text-xs text-warning"><Icon name="warning" />{t("settings.models.notDownloaded")}</span>
           )}
         </label>
         <label className={optionLabelCls}>{t("whisper.language")}

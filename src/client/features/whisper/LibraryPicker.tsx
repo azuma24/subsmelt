@@ -11,9 +11,9 @@ import { hasLiveTranscriptions } from "./batch-store";
 import { Icon } from "../../ui/Icon";
 import { SortControls } from "../../ui/SortControls";
 import { RefreshButton } from "../../ui/RefreshButton";
+import { useIsMobile } from "../../hooks";
 
 export interface LibraryPickerProps {
-  isMobile: boolean;
   libraryQuery: string;
   onLibraryQueryChange: (value: string) => void;
   hideWithSubtitles: boolean;
@@ -55,12 +55,13 @@ export interface LibraryPickerProps {
  * a text filter is active, and the folder-tree view otherwise.
  */
 export function LibraryPicker({
-  isMobile, libraryQuery, onLibraryQueryChange, hideWithSubtitles, onHideWithSubtitlesChange,
+  libraryQuery, onLibraryQueryChange, hideWithSubtitles, onHideWithSubtitlesChange,
   sortBy, onSortByChange, sortDir, onToggleSortDir, onSelectAll, running, mediaDir, visibleFiles, videoFiles,
   isFiltered, isScanFetching, isScanLoading, onRefreshScan, selectedVisibleCount, onClearSelection,
   onTranscribeSelected, downloadsActive, progress, onCancelBatch, filterActive, tree, selected,
   toggleFile, toggleFolder, fileProgress, activePath, expansion, drill,
 }: LibraryPickerProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   // Progress events land here for every server-side run, batch-owned or not:
   // show Cancel while any run is live, or an orphan run (another tab, a
@@ -103,7 +104,6 @@ export function LibraryPicker({
       <div className="overflow-hidden rounded-md border border-border bg-surface">
         <SelectionBar
           count={selectedVisibleCount}
-          isMobile={isMobile}
           summaryLabel={t("whisper.selectedSummary", { count: selectedVisibleCount })}
           hintLabel={t("whisper.overwriteHint")}
           clearLabel={t("whisper.clear")}
@@ -152,7 +152,6 @@ export function LibraryPicker({
             <FileTreeView
               roots={tree.children}
               rootFiles={tree.files}
-              isMobile={isMobile}
               expansion={expansion}
               drill={drill}
               homeLabel={t("common.home")}
@@ -249,7 +248,7 @@ function WhisperFolderRow({ node, ctx, selected, running, toggleFolder }: Whispe
           reader just hears the folder name three times in a row. */}
       {!isDrill && (
         <button type="button" onClick={ctx.onActivate} className="w-3 shrink-0 text-faint" aria-label={t("whisper.toggleFolder", { name: node.name })} aria-expanded={ctx.open}>
-          <span aria-hidden="true">{ctx.open ? "▾" : "▸"}</span>
+          <Icon name={ctx.open ? "chevron-down" : "chevron-right"} />
         </button>
       )}
       <input

@@ -28,7 +28,7 @@ test("connection fields an environment variable sets are read-only and say which
       { id: "local", label: "Local", provider: "local", apiKey: REDACTED_SECRET, model: "qwen", endpoint: "http://env-llm:1/v1", enabled: true, order: 0 },
     ]),
   };
-  const page = renderPage(<ConnectionsPanel settings={settings} update={noop} addToast={noop} isMobile={false} />);
+  const page = renderPage(<ConnectionsPanel settings={settings} update={noop} addToast={noop} />);
 
   assert.match(page.html, /<input[^>]*readonly=""[^>]*value="http:\/\/env-llm:1\/v1"/i);
   assert.match(page.text, /Set by the LLM_ENDPOINT environment variable\. Change it there\./);

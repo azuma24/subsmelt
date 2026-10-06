@@ -5,6 +5,7 @@ import { CountChip, Tag } from "./parts";
 import { availabilityLabel, followKind, profileLabel, relativeFromNow } from "./format";
 import { countByFilter } from "./video-status";
 import type { usePlaylistActions } from "./usePlaylistActions";
+import { Icon } from "../../ui/Icon";
 
 interface PlaylistListProps {
   playlists: YoutubePlaylist[];
@@ -54,7 +55,7 @@ function PlaylistRow({ playlist, folderRoot, actions, onOpen, onEdit }: { playli
         <p className="break-words text-xs leading-5 text-faint">{meta.join(" · ")}</p>
         {playlist.sync.lastError && (
           <p className="break-words text-xs leading-5 text-danger">
-            <span aria-hidden="true">✕ </span>
+            <Icon name="error" /> 
             {t("youtube.toast.checkFailed", { error: playlist.sync.lastError })}
           </p>
         )}

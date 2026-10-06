@@ -4,9 +4,9 @@ import * as api from "../../api";
 import { useToast } from "../../ui/Toast";
 import { ActionButton, SettingsSection } from "../../ui/primitives";
 import { FORMATS, selectCls, type OutputFormat } from "./whisper-shared";
+import { useIsMobile } from "../../hooks";
 
 export interface UrlTranscribeSectionProps {
-  isMobile: boolean;
   effFormat: OutputFormat;
   effModel: string;
   effLang: string;
@@ -22,8 +22,9 @@ export interface UrlTranscribeSectionProps {
  * the browser since there's no local media file for a URL.
  */
 export function UrlTranscribeSection({
-  isMobile, effFormat, effModel, effLang, effDevice, effCompute, canDiarize, effDiarize,
+  effFormat, effModel, effLang, effDevice, effCompute, canDiarize, effDiarize,
 }: UrlTranscribeSectionProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const { addToast } = useToast();
   const [urlValue, setUrlValue] = useState("");

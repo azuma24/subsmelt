@@ -28,7 +28,7 @@ const configured: QuerySeed = [
 ];
 
 test("a fresh install shows the setup checklist and an empty queue", () => {
-  const page = renderPage(<DashboardPage isMobile={false} />, [
+  const page = renderPage(<DashboardPage />, [
     [["jobs"], { jobs: [], queueRunning: false, currentJobId: null }],
     [["tasks"], []],
     [["settings"], {}],
@@ -36,20 +36,20 @@ test("a fresh install shows the setup checklist and an empty queue", () => {
 
   assert.match(page.text, /^Activity /);
   assert.ok(page.text.includes("Setup checklist"));
-  assert.ok(page.text.includes("LLM connection ○ Configure endpoint and model."));
-  assert.ok(page.text.includes("Translation targets ○ Add at least one enabled translation target."));
+  assert.ok(page.text.includes("LLM connection Configure endpoint and model."));
+  assert.ok(page.text.includes("Translation targets Add at least one enabled translation target."));
   assert.ok(page.text.includes("No jobs matching filter"));
-  assert.ok(page.text.includes("Media discovered ○ Run scan to discover subtitle files. Scan now"));
+  assert.ok(page.text.includes("Media discovered Run scan to discover subtitle files. Scan now"));
   assert.ok(page.buttons.includes("All 0"));
 });
 
 test("queued jobs render one row each with a status glyph and label", () => {
-  const page = renderPage(<DashboardPage isMobile={false} />, configured);
+  const page = renderPage(<DashboardPage />, configured);
 
   assert.ok(page.text.includes("Episode 01.en.srt Traditional Chinese · zh-TW Done 100/100 cues"));
   assert.ok(page.text.includes("Episode 02.en.srt Traditional Chinese · zh-TW Error"));
   assert.ok(page.text.includes("Episode 03.en.srt Traditional Chinese · zh-TW Pending"));
-  assert.ok(page.text.includes("LLM connection ✓ Ready"));
+  assert.ok(page.text.includes("LLM connection Ready"));
   assert.ok(!page.text.includes("No jobs matching filter"));
   for (const label of ["All 3", "Pending 1", "Done 1", "Errors 1", "Retry visible errors (1)", "Clear finished"]) {
     assert.ok(page.buttons.includes(label), `missing button ${label}`);
@@ -58,8 +58,8 @@ test("queued jobs render one row each with a status glyph and label", () => {
 
 test("the queue shows a loading skeleton, not the empty hint, before the first jobs response", () => {
   const seed: QuerySeed = [[["tasks"], [zhTask]], [["settings"], { _llm_configured: true }]];
-  const desktop = renderPage(<DashboardPage isMobile={false} />, seed);
-  const phone = renderPage(<DashboardPage isMobile />, seed);
+  const desktop = renderPage(<DashboardPage />, seed);
+  const phone = renderPage(<DashboardPage />, seed, { isMobile: true });
 
   for (const page of [desktop, phone]) {
     assert.ok(page.text.includes("Loading…"));
@@ -69,7 +69,7 @@ test("the queue shows a loading skeleton, not the empty hint, before the first j
 });
 
 test("a failed jobs request shows what failed with a retry, not the empty hint", () => {
-  const page = renderPage(<DashboardPage isMobile={false} />, [
+  const page = renderPage(<DashboardPage />, [
     [["jobs"], new SeededError("database is locked")],
     [["tasks"], [zhTask]],
     [["settings"], { _llm_configured: true }],
@@ -89,7 +89,7 @@ test("the phone header carries the LLM status and the queue action; scanning liv
       { id: "spare", label: "Spare box", model: "gemma", host: "10.0.0.6:1234", state: "offline", jobIds: [] },
     ],
   };
-  const page = renderPage(<DashboardPage isMobile />, [...configured, [["llm-status"], llmStatus]]);
+  const page = renderPage(<DashboardPage />, [...configured, [["llm-status"], llmStatus]], { isMobile: true });
 
   assert.deepEqual(page.buttons.slice(0, 2), ["Translating on Desk GPU 1 offline", "▶ Run All"]);
   assert.ok(!page.buttons.includes("Scan Folders"));

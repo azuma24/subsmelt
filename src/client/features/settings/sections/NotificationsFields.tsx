@@ -5,10 +5,11 @@ import { str } from "../../../lib/settings-value";
 import { NOTIFY_EVENTS, parseNotifyEvents, setNotifyEvent } from "../notify-events";
 import { REDACTED_SECRET } from "../settings-model";
 import { labelCls, selectCls } from "./shared";
+import { useIsMobile } from "../../../hooks";
+import { Icon } from "../../../ui/Icon";
 
 interface NotificationsFieldsProps {
   settings: Record<string, unknown>;
-  isMobile: boolean;
   /** Immediate save, used by the format select and the event choices. */
   updateAndSave: (key: string, value: unknown) => void;
   /** Debounced autosave, used by the webhook URL. */
@@ -24,7 +25,8 @@ interface NotificationsFieldsProps {
  * The webhook URL autosaves on a debounce; the format select and the event
  * choices save immediately. Nothing here waits on the topbar Save button.
  */
-export function NotificationsFields({ settings, isMobile, updateAndSave, updateAndSaveDebounced, onTest, testing, testResult }: NotificationsFieldsProps) {
+export function NotificationsFields({ settings, updateAndSave, updateAndSaveDebounced, onTest, testing, testResult }: NotificationsFieldsProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const events = str(settings.notify_events, "job:error,queue:finished");
   const chosen = new Set(parseNotifyEvents(events));
@@ -89,7 +91,7 @@ export function NotificationsFields({ settings, isMobile, updateAndSave, updateA
             {testing ? t("app.testing") : t("settings.notifications.sendTest")}
           </ActionButton>
           {testResult && (
-            <span className={`text-sm ${testResult.ok ? "text-success" : "text-danger"}`}><span aria-hidden="true">{testResult.ok ? "✓ " : "✗ "}</span>{testResult.message}</span>
+            <span className={`text-sm ${testResult.ok ? "text-success" : "text-danger"}`}><Icon name={testResult.ok ? "done" : "error"} /> {testResult.message}</span>
           )}
         </div>
       </div>

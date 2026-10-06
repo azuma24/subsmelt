@@ -1,14 +1,14 @@
 import { useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
-import { useTasksQuery, useMutationWithInvalidation } from "../../hooks";
+import { useTasksQuery, useMutationWithInvalidation, useIsMobile } from "../../hooks";
 import { getErrorMessage } from "../../lib";
 import type { Task } from "../../types";
 import { useToast } from "../../ui/Toast";
 import { useConfirm } from "../../ui/ConfirmModal";
 import { ModalShell } from "../../ui/ModalShell";
 import { PRESETS } from "../../app/constants";
-import { Accordion, ActionButton, EmptyHint, Field, RowActionsMenu, SelectionBar } from "../../ui/primitives";
+import { Accordion, ActionButton, EmptyHint, Field, RowActionsMenu, SelectionBar, PageHeader } from "../../ui/primitives";
 import {
   AUTO_SOURCE_LANG,
   DEFAULT_OUTPUT_PATTERN,
@@ -20,13 +20,15 @@ import {
   inferOutputFormat,
   type OutputFormat,
 } from "./translation-defaults";
+import { Icon } from "../../ui/Icon";
 
 interface UpdateTaskVars {
   id: number;
   payload: Partial<Task>;
 }
 
-export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
+export function TranslationLanguagesPage() {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const { addToast } = useToast();
   const { confirm } = useConfirm();
@@ -165,11 +167,10 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
 
   return (
     <div className="flex min-h-full flex-col">
-      {/* Topbar */}
-      <div className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 md:px-4">
-        <span className="flex-1 text-sm font-semibold text-text">{t("translation_languages.title")}</span>
-        <ActionButton size="sm" onClick={() => openNew()}>{t("translation_languages.addLanguage")}</ActionButton>
-      </div>
+      <PageHeader
+        title={t("translation_languages.title")}
+        actions={<ActionButton size="sm" onClick={() => openNew()}>{t("translation_languages.addLanguage")}</ActionButton>}
+      />
 
       <div className="flex-1 space-y-4 p-4 md:p-4">
         {/* Presets → "Quick add" collapsed accordion (L3) */}
@@ -184,7 +185,7 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
                   disabled={exists}
                   className={`rounded-full px-3 py-2 text-xs font-medium ${exists ? "bg-surface-raised text-faint" : "bg-surface-raised text-muted hover:bg-surface-highlight hover:text-text"}`}
                 >
-                  {p.label} {exists && "✓"}
+                  {p.label} {exists && <Icon name="done" />}
                 </button>
               );
             })}
@@ -197,7 +198,6 @@ export function TranslationLanguagesPage({ isMobile }: { isMobile: boolean }) {
           summaryLabel={t("translation_languages.bulk.title", { count: selectedTasks.length })}
           onClear={clearSelection}
           clearLabel={t("translation_languages.bulk.clearSelection")}
-          isMobile={isMobile}
         >
           <button onClick={() => applyBulk({ enabled: 1 })} disabled={bulkCounts.disabled === 0} className="rounded-sm bg-success px-3 py-2 text-xs font-semibold text-accent-text disabled:opacity-40">{t("translation_languages.bulk.enable")}</button>
           <button onClick={() => applyBulk({ enabled: 0 })} disabled={bulkCounts.enabled === 0} className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-xs text-text disabled:opacity-40">{t("translation_languages.bulk.disable")}</button>

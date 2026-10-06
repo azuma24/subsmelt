@@ -3,6 +3,7 @@ import { Breadcrumbs } from "./Breadcrumbs";
 import { folderRowMode, indentPx, type FolderRowMode } from "./responsive";
 import type { TreeExpansion } from "./use-persisted-expansion";
 import type { DrillDownState } from "./use-drill-down";
+import { useIsMobile } from "../../hooks";
 
 /** Uniform folder-header height; the depth-1 sticky slot pins below depth 0. */
 export const STICKY_HEADER_PX = 36;
@@ -48,7 +49,6 @@ interface FileTreeViewProps<F, N extends TreeViewNode<F> & { children: N[] }> {
   roots: readonly N[];
   /** Files living directly at the library root. */
   rootFiles: readonly F[];
-  isMobile: boolean;
   expansion: TreeExpansion;
   drill: DrillDownState<N>;
   homeLabel: string;
@@ -93,7 +93,8 @@ function ancestorHint(nodePath: string, drillRoot: string): string | null {
 }
 
 function FolderBlock<F, N extends TreeViewNode<F> & { children: N[] }>(props: FileTreeViewProps<F, N> & { node: N; depth: number }) {
-  const { node, depth, isMobile, expansion, drill, sticky = true } = props;
+  const isMobile = useIsMobile();
+  const { node, depth, expansion, drill, sticky = true } = props;
   const mode = folderRowMode(depth, isMobile);
   const open = mode === "inline" && expansion.expanded.has(node.path);
   const pad = ROW_BASE_PADDING_PX + indentPx(depth, isMobile);

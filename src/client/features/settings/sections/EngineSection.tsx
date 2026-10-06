@@ -3,10 +3,10 @@ import { Accordion, Field } from "../../../ui/primitives";
 import { DEFAULT_PROMPT } from "../../../app/constants";
 import { str } from "../../../lib/settings-value";
 import { ToggleRow, labelCls, textareaCls } from "./shared";
+import { useIsMobile } from "../../../hooks";
 
 interface EngineSectionProps {
   settings: Record<string, unknown>;
-  isMobile: boolean;
   /** Autosaving writer (debounced) — every field in this section autosaves. */
   updateAndSaveDebounced: (key: string, value: unknown) => void;
 }
@@ -18,7 +18,8 @@ interface EngineSectionProps {
  * The "Prompt" accordion is the section's primary content and stays open by
  * default; "Advanced" is collapsed, matching Sources and Speech-to-Text.
  */
-export function EngineSection({ settings, isMobile, updateAndSaveDebounced }: EngineSectionProps) {
+export function EngineSection({ settings, updateAndSaveDebounced }: EngineSectionProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   return (
     <>

@@ -8,7 +8,7 @@ import { str } from "../../lib/settings-value";
 import { LIBRARY_QUERY_KEY, useIsMobile, useJobsQuery, useLibraryQuery, useMutationWithInvalidation, useSettingsQuery } from "../../hooks";
 import { useToast } from "../../ui/Toast";
 import type { Job, ScanResult, TaskStatus } from "../../types";
-import { ActionButton, SelectionBar } from "../../ui/primitives";
+import { ActionButton, SelectionBar, PageHeader } from "../../ui/primitives";
 import { Icon } from "../../ui/Icon";
 import { InlineError } from "../../ui/QueryState";
 import { PreviewOverlay } from "../dashboard/PreviewOverlay";
@@ -185,26 +185,27 @@ export function LibraryPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="shrink-0 space-y-3 border-b border-border bg-surface px-4 pt-4 pb-3">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-semibold text-text">{t("nav.library")}</h1>
-            {files && files.length > 0 && <p className="text-sm text-muted">{t("library.summary.files", { count: items.length })}</p>}
-          </div>
-          <RefreshButton busy={libraryQuery.isFetching} onClick={() => void libraryQuery.refetch()} />
-          <Link
-            to="/convert"
-            className="inline-flex min-h-touch items-center gap-2 rounded-sm border border-border bg-surface px-3 text-sm font-medium text-text transition-colors duration-fast hover:bg-surface-raised"
-          >
-            <Icon name="upload" />
-            {t("library.upload")}
-          </Link>
-          <ActionButton size="md" onClick={() => void scan.start()} busy={scan.busy}>
-            {scan.busy ? t("library.scanning") : t("library.scan")}
-          </ActionButton>
-        </div>
-        {files && files.length > 0 && (
+      <PageHeader
+        title={t("nav.library")}
+        subtitle={files && files.length > 0 ? t("library.summary.files", { count: items.length }) : undefined}
+        actions={
           <>
+            <RefreshButton busy={libraryQuery.isFetching} onClick={() => void libraryQuery.refetch()} />
+            <Link
+              to="/convert"
+              className="inline-flex min-h-touch items-center gap-2 rounded-sm border border-border bg-surface px-3 text-sm font-medium text-text transition-colors duration-fast hover:bg-surface-raised"
+            >
+              <Icon name="upload" />
+              {t("library.upload")}
+            </Link>
+            <ActionButton size="md" onClick={() => void scan.start()} busy={scan.busy}>
+              {scan.busy ? t("library.scanning") : t("library.scan")}
+            </ActionButton>
+          </>
+        }
+      >
+        {files && files.length > 0 && (
+          <div className="mt-3 space-y-3">
             <label className="flex min-h-touch items-center gap-2 rounded-sm border border-border bg-surface-raised px-3 focus-within:border-accent">
               <Icon name="search" className="text-muted" />
               <span className="sr-only">{t("library.searchLabel")}</span>
@@ -225,9 +226,9 @@ export function LibraryPage() {
               </ActionButton>
             </div>
             <StatusChips counts={view.counts} active={filter} onSelect={setFilter} />
-          </>
+          </div>
         )}
-      </header>
+      </PageHeader>
 
       <div className="flex min-h-0 flex-1">
         <section aria-label={t("nav.library")} className="flex min-w-0 flex-1 flex-col">
@@ -241,7 +242,6 @@ export function LibraryPage() {
             summaryLabel={t("library.bulk.summary", { count: selected.length })}
             onClear={() => setChecked(new Set())}
             clearLabel={t("library.bulk.clear")}
-            isMobile={isMobile}
           >
             {transcribablePaths.length > 0 && (
               <ActionButton size="sm" variant="ghost" onClick={transcribeSelected}>{t("library.bulk.transcribe", { count: transcribablePaths.length })}</ActionButton>
@@ -269,7 +269,6 @@ export function LibraryPage() {
       {scan.plan && <ScanConfirmModal scanPlan={scan.plan} onClose={scan.cancel} onConfirm={() => void scan.confirm()} t={t} />}
       {previewJobId !== null && (
         <PreviewOverlay
-          isMobile={isMobile}
           jobId={previewJobId}
           previewSearch={previewSearch}
           setPreviewSearch={setPreviewSearch}

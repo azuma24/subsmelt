@@ -4,10 +4,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
-import { LLM_STATUS_QUERY_KEY, useJobsQuery, useSettingsQuery, useTasksQuery, useTranscriptionHealthQuery } from "../../hooks";
+import { LLM_STATUS_QUERY_KEY, useJobsQuery, useSettingsQuery, useTasksQuery, useTranscriptionHealthQuery, useIsMobile } from "../../hooks";
 import { SetupProgress, type SetupStep } from "./SetupProgress";
 import { useToast } from "../../ui/Toast";
-import { Accordion, ActionButton, SettingsSection } from "../../ui/primitives";
+import { Accordion, ActionButton, SettingsSection, PageHeader } from "../../ui/primitives";
 import { InlineError } from "../../ui/QueryState";
 import { JSON_BLOB_SETTINGS, getStr, validateJsonSetting, type JsonBlobSettingKey } from "./settings-model";
 import { str } from "../../lib/settings-value";
@@ -27,7 +27,8 @@ const isSectionKey = (value: string | null): value is SectionKey => SECTION_KEYS
 /** saved: written as sent. rejected: written, minus keys the server refused. failed: nothing written. */
 type SaveOutcome = "saved" | "rejected" | "failed";
 
-export function SettingsPage({ isMobile }: { isMobile: boolean }) {
+export function SettingsPage() {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const { addToast } = useToast();
   const navigate = useNavigate();
@@ -261,13 +262,13 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
       navLabel: t("settings.llmConnection.title"),
       title: t("settings.llmConnection.title"),
       description: t("settings.llmConnection.description"),
-      content: <LlmSection settings={settings} isMobile={isMobile} updateAndSaveDebounced={updateAndSaveDebounced} addToast={addToast} />,
+      content: <LlmSection settings={settings} updateAndSaveDebounced={updateAndSaveDebounced} addToast={addToast} />,
     },
     engine: {
       navLabel: t("settings.translationEngine.title"),
       title: t("settings.translationEngine.title"),
       description: t("settings.translationEngine.description"),
-      content: <EngineSection settings={settings} isMobile={isMobile} updateAndSaveDebounced={updateAndSaveDebounced} />,
+      content: <EngineSection settings={settings} updateAndSaveDebounced={updateAndSaveDebounced} />,
     },
     sources: {
       navLabel: t("settings.sources.title"),
@@ -276,7 +277,6 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
       content: (
         <SourcesSection
           settings={settings}
-          isMobile={isMobile}
           update={update}
           updateAndSave={updateAndSave}
           updateManyAndSave={updateManyAndSave}
@@ -295,7 +295,6 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
       content: (
         <SttSection
           settings={settings}
-          isMobile={isMobile}
           update={update}
           updateAndSaveDebounced={updateAndSaveDebounced}
           healthQuery={transcriptionHealthQuery}
@@ -363,12 +362,15 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
 
   return (
     <div className="flex min-h-full flex-col">
-      {/* Topbar */}
-      <div className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 md:px-4">
-        <span className="flex-1 text-sm font-semibold text-text">{t("settings.title")}</span>
-        {dirty && <span className="text-xs text-warning">{t("common.unsavedChanges")}</span>}
-        <ActionButton size="sm" onClick={handleSave} disabled={!dirty || saving}>{saving ? t("app.saving") : t("app.save")}</ActionButton>
-      </div>
+      <PageHeader
+        title={t("settings.title")}
+        actions={
+          <>
+            {dirty && <span className="text-xs text-warning">{t("common.unsavedChanges")}</span>}
+            <ActionButton size="sm" onClick={handleSave} disabled={!dirty || saving}>{saving ? t("app.saving") : t("app.save")}</ActionButton>
+          </>
+        }
+      />
 
       {/* One max width for the checklist and the nav + panel grid, so the
           checklist does not run past the column it introduces. */}

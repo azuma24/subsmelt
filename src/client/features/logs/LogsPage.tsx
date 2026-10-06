@@ -3,18 +3,19 @@ import { NavLink, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import * as api from "../../api";
-import { useLogsQuery, useTranscriptionLogsQuery } from "../../hooks";
+import { useLogsQuery, useTranscriptionLogsQuery, useIsMobile } from "../../hooks";
 import { fullTime, getErrorMessage, highlightText, relativeTime } from "../../lib";
 import type { LogEntry } from "../../types";
 import { useToast } from "../../ui/Toast";
 import { useConfirm } from "../../ui/ConfirmModal";
-import { Accordion, RowActionsMenu, Tabs } from "../../ui/primitives";
+import { Accordion, RowActionsMenu, Tabs, PageHeader } from "../../ui/primitives";
 import { InlineError } from "../../ui/QueryState";
 import { BackendLogView } from "./BackendLogView";
 
 type LogSource = "app" | "backend";
 
-export function LogsPage({ isMobile }: { isMobile: boolean }) {
+export function LogsPage() {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const { addToast } = useToast();
   const { confirm } = useConfirm();
@@ -76,21 +77,25 @@ export function LogsPage({ isMobile }: { isMobile: boolean }) {
 
   return (
     <div className="flex h-full flex-col">
-      {/* L1 Topbar: title + search + follow + level quick-pills + overflow menu */}
-      <div className={`sticky top-0 z-30 shrink-0 border-b border-border bg-surface px-4 py-2 md:px-4 ${isMobile ? "space-y-2" : ""}`}>
-        {/* Row 1: title + follow + overflow menu */}
-        <div className="flex min-h-touch items-center gap-3">
-          <span className="text-sm font-semibold text-text">{t("logs.title")}</span>
-          <Tabs
-            tabs={[
-              { key: "app", label: t("logs.source.app") },
-              { key: "backend", label: t("logs.source.backend") },
-            ]}
-            activeKey={source}
-            onSelect={(key) => setSource(key as LogSource)}
-          />
-          {source === "app" && jobIdFilter && <span className="text-xs text-accent">{t("logs.filteredByJob", { id: jobIdFilter })}</span>}
-          <div className="ml-auto flex items-center gap-3">
+      {/* Title, source tabs, follow and the overflow menu on the first row;
+          search, level pills and the filters accordion below. */}
+      <PageHeader
+        title={t("logs.title")}
+        middle={
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <Tabs
+              tabs={[
+                { key: "app", label: t("logs.source.app") },
+                { key: "backend", label: t("logs.source.backend") },
+              ]}
+              activeKey={source}
+              onSelect={(key) => setSource(key as LogSource)}
+            />
+            {source === "app" && jobIdFilter && <span className="text-xs text-accent">{t("logs.filteredByJob", { id: jobIdFilter })}</span>}
+          </div>
+        }
+        actions={
+          <>
             <label className="flex items-center gap-2 text-xs text-muted">
               <input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} className="accent-accent" />
               {t("logs.follow")}
@@ -104,13 +109,14 @@ export function LogsPage({ isMobile }: { isMobile: boolean }) {
                 ]}
               />
             )}
-          </div>
-        </div>
+          </>
+        }
+      >
         {/* Row 2: search + level quick-pills. Level and category are the app
             store's own fields — the backend tail is plain text, so it carries
             only the search box (rendered by BackendLogView). */}
         {source === "app" && (
-        <div className={`flex gap-2 ${isMobile ? "flex-col" : "flex-wrap items-center"}`}>
+        <div className={`mt-2 flex gap-2 ${isMobile ? "flex-col" : "flex-wrap items-center"}`}>
           <input
             type="search"
             value={search}
@@ -189,13 +195,12 @@ export function LogsPage({ isMobile }: { isMobile: boolean }) {
             {search ? t("logs.entriesFiltered", { filtered: chronologicalLogs.length, total: logs.length }) : t("logs.entries", { count: chronologicalLogs.length })}
           </div>
         )}
-      </div>
+      </PageHeader>
 
       {source === "backend" && (
         <BackendLogView
           query={backendLogsQuery}
           follow={follow}
-          isMobile={isMobile}
         />
       )}
 

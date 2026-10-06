@@ -3,6 +3,7 @@ import { LANGUAGES, findLanguage, type LanguageEntry } from "./language-table";
 import { extOf, formatBytes } from "./download-outputs";
 
 import { effectiveSource, isSameAsTarget, type StagedFile } from "./staged-file";
+import { IconButton } from "../../ui/primitives";
 
 export type FileRunStatus = "working" | "done" | "error";
 
@@ -73,15 +74,7 @@ export function StagedFileList({
                   </span>
                 )}
                 <span className="shrink-0 text-xs tabular-nums text-faint">{formatBytes(file.size)}</span>
-                <button
-                  type="button"
-                  onClick={() => removeFile(id)}
-                  aria-label={t("convert.remove")}
-                  title={t("convert.remove")}
-                  className="shrink-0 rounded-sm px-2 py-1 text-xs text-faint transition-colors hover:bg-danger-soft hover:text-danger"
-                >
-                  ✕
-                </button>
+                <IconButton icon="close" label={t("convert.remove")} variant="danger" onClick={() => removeFile(id)} className="text-faint" />
               </div>
               {translate && (
                 <div className="flex flex-wrap items-center gap-2">

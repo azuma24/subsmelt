@@ -26,9 +26,9 @@ import {
   type ScanMode,
   type ScanProfile,
 } from "./media-sources/model";
+import { useIsMobile } from "../../hooks";
 
 interface MediaSourcesPanelProps {
-  isMobile: boolean;
   mediaDir: string;
   scanMode: string;
   scanFolders: string;
@@ -53,7 +53,6 @@ interface MediaSourcesPanelProps {
  * — this panel does not decide when settings are saved.
  */
 export function MediaSourcesPanel({
-  isMobile,
   mediaDir,
   scanMode,
   scanFolders,
@@ -67,6 +66,7 @@ export function MediaSourcesPanel({
   onScanProfilesChange,
   onDirectoryRulesChange,
 }: MediaSourcesPanelProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const [folderRoot, setFolderRoot] = useState<FolderNode | null>(null);
   const [folderSearch, setFolderSearch] = useState("");
@@ -278,7 +278,6 @@ export function MediaSourcesPanel({
               mode={mode}
               selected={selected}
               excluded={excluded}
-              isMobile={isMobile}
               expansion={expansion}
               drill={drill}
               onToggleIncluded={toggleIncludedFolder}

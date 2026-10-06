@@ -5,11 +5,12 @@ import type { TranscriptionLogs } from "../../api";
 import { highlightText } from "../../lib";
 import { ActionButton, EmptyHint } from "../../ui/primitives";
 import { InlineError } from "../../ui/QueryState";
+import { useIsMobile } from "../../hooks";
+import { Icon } from "../../ui/Icon";
 
 interface BackendLogViewProps {
   query: UseQueryResult<TranscriptionLogs>;
   follow: boolean;
-  isMobile: boolean;
 }
 
 /**
@@ -25,7 +26,8 @@ interface BackendLogViewProps {
  * startup over a log path it cannot open, so the honest thing to show is the
  * reason it reports rather than an empty pane.
  */
-export function BackendLogView({ query, follow, isMobile }: BackendLogViewProps) {
+export function BackendLogView({ query, follow }: BackendLogViewProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -88,7 +90,7 @@ export function BackendLogView({ query, follow, isMobile }: BackendLogViewProps)
       {unreachable && (
         <div className="px-4 pt-2 md:px-4">
           <div role="status" className="rounded-md border border-warning-line bg-warning-soft px-4 py-3 text-sm text-warning">
-            <span aria-hidden="true">⚠ </span>
+            <Icon name="warning" /> 
             {data?.reason === "endpoint-missing"
               ? t("logs.backend.notConfigured")
               : t("logs.backend.unreachable", { message: data?.message || "" })}
@@ -99,7 +101,7 @@ export function BackendLogView({ query, follow, isMobile }: BackendLogViewProps)
       {(loggingOff || readProblem) && (
         <div className="px-4 pt-2 md:px-4">
           <div role="status" className="rounded-md border border-warning-line bg-warning-soft px-4 py-3 text-sm text-warning">
-            <span aria-hidden="true">⚠ </span>
+            <Icon name="warning" /> 
             {loggingOff ? t("logs.backend.loggingOff") : t("logs.backend.readFailed")}
             {data?.error && <span className="block font-mono text-xs opacity-90">{data.error}</span>}
           </div>

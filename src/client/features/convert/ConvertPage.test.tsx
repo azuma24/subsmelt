@@ -4,7 +4,7 @@ import { renderPage } from "../../test-render";
 import { ConvertPage } from "./ConvertPage";
 
 test("an empty Convert page asks for files and holds the Translate action", () => {
-  const page = renderPage(<ConvertPage isMobile={false} />, [[["settings"], {}]]);
+  const page = renderPage(<ConvertPage />, [[["settings"], {}]]);
 
   assert.deepEqual(page.headings, ["Convert / Translate", "Output settings"]);
   assert.ok(page.text.includes("Drag & drop subtitle files here or click to browse"));
@@ -13,7 +13,7 @@ test("an empty Convert page asks for files and holds the Translate action", () =
 });
 
 test("Translate mode offers From and To language pickers", () => {
-  const page = renderPage(<ConvertPage isMobile={false} />, [[["settings"], {}]]);
+  const page = renderPage(<ConvertPage />, [[["settings"], {}]]);
 
   assert.ok(page.text.includes("From language Auto-detect English Japanese"));
   assert.ok(page.text.includes("To language"));

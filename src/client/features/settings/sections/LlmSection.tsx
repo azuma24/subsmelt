@@ -3,12 +3,12 @@ import { Accordion } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
 import { ConnectionsPanel } from "../ConnectionsPanel";
 import { labelCls } from "./shared";
+import { useIsMobile } from "../../../hooks";
 
 type ToastFn = (message: string, type: "success" | "error" | "info") => void;
 
 interface LlmSectionProps {
   settings: Record<string, unknown>;
-  isMobile: boolean;
   /** Autosaving writer (debounced) — every field in this section autosaves. */
   updateAndSaveDebounced: (key: string, value: unknown) => void;
   addToast: ToastFn;
@@ -18,11 +18,12 @@ interface LlmSectionProps {
  * LLM Connections. Every control here autosaves through
  * `updateAndSaveDebounced` — nothing in this section waits for the topbar Save.
  */
-export function LlmSection({ settings, isMobile, updateAndSaveDebounced, addToast }: LlmSectionProps) {
+export function LlmSection({ settings, updateAndSaveDebounced, addToast }: LlmSectionProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   return (
     <>
-      <ConnectionsPanel settings={settings} update={updateAndSaveDebounced} addToast={addToast} isMobile={isMobile} />
+      <ConnectionsPanel settings={settings} update={updateAndSaveDebounced} addToast={addToast} />
       {/* Temperature moved to Advanced accordion per Phase 3 spec */}
       <Accordion title={t("settings.advanced")}>
         <div className="md:max-w-[320px]">

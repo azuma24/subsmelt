@@ -7,6 +7,7 @@ import { I18nextProvider, initReactI18next } from "react-i18next";
 import en from "./locales/en/translation.json";
 import { ToastProvider } from "./ui/Toast";
 import { ConfirmProvider } from "./ui/ConfirmModal";
+import { IsMobileContext } from "./hooks/media";
 
 export const TEST_APP_VERSION = "0.0.0-test";
 
@@ -64,7 +65,12 @@ function innerTexts(html: string, pattern: RegExp): string[] {
  * App.tsx. Seeded query data stands in for the API: effects never run in the
  * server renderer, so nothing is fetched.
  */
-export function renderPage(page: ReactElement, seed: QuerySeed = []): RenderedPage {
+export interface RenderOptions {
+  /** Render the phone layout, as App does below the md breakpoint. */
+  isMobile?: boolean;
+}
+
+export function renderPage(page: ReactElement, seed: QuerySeed = [], { isMobile = false }: RenderOptions = {}): RenderedPage {
   // retryOnMount: false keeps a seeded error from being reported optimistically
   // as "pending" (the observer would otherwise plan a refetch on mount).
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false, staleTime: Infinity } } });
@@ -80,9 +86,11 @@ export function renderPage(page: ReactElement, seed: QuerySeed = []): RenderedPa
     <I18nextProvider i18n={i18nInstance}>
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
-          <ToastProvider>
-            <ConfirmProvider>{page}</ConfirmProvider>
-          </ToastProvider>
+          <IsMobileContext.Provider value={isMobile}>
+            <ToastProvider>
+              <ConfirmProvider>{page}</ConfirmProvider>
+            </ToastProvider>
+          </IsMobileContext.Provider>
         </MemoryRouter>
       </QueryClientProvider>
     </I18nextProvider>,

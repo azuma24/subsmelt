@@ -3,10 +3,10 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "../../ui/Toast";
-import { useSettingsQuery, useTasksQuery, useYoutubePipelineQuery, useYoutubePlaylistsQuery, useYoutubeStatusQuery } from "../../hooks";
+import { useSettingsQuery, useTasksQuery, useYoutubePipelineQuery, useYoutubePlaylistsQuery, useYoutubeStatusQuery, useIsMobile } from "../../hooks";
 import { str } from "../../lib/settings-value";
 import type { YoutubeCooldown, YoutubePipeline, YoutubePlaylist } from "../../types";
-import { ActionButton } from "../../ui/primitives";
+import { ActionButton, PageHeader } from "../../ui/primitives";
 import { PageError } from "../../ui/QueryState";
 import { Banner } from "./parts";
 import { FollowPlaylistDialog } from "./FollowPlaylistDialog";
@@ -14,12 +14,12 @@ import type { FollowKind } from "./format";
 import { PlaylistDetail } from "./PlaylistDetail";
 import { PlaylistList } from "./PlaylistList";
 import { usePlaylistActions } from "./usePlaylistActions";
+import { Icon } from "../../ui/Icon";
 
 type DialogState = { kind: "follow"; follow: FollowKind } | { kind: "edit"; playlist: YoutubePlaylist } | null;
 
-const TOPBAR_CLS = "sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 md:px-4";
-
-export function YoutubePage({ isMobile }: { isMobile: boolean }) {
+export function YoutubePage() {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const { addToast } = useToast();
   const navigate = useNavigate();
@@ -56,39 +56,45 @@ export function YoutubePage({ isMobile }: { isMobile: boolean }) {
   };
 
   const topbar = selectedId ? (
-    <div className={TOPBAR_CLS}>
-      <h1 className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-text">
-        <button type="button" onClick={() => openPlaylist(null)} className="min-h-touch shrink-0 text-muted hover:text-accent">
-          {t("youtube.title")}
-        </button>
-        <span aria-hidden="true" className="text-faint">/</span>
-        <span className="truncate">{selected?.title ?? ""}</span>
-      </h1>
-      {selected && (
-        <>
-          <ActionButton variant="ghost" size="sm" onClick={() => void actions.checkNow(selected)} busy={actions.isChecking(selected)}>
-            {actions.isChecking(selected) ? t("youtube.checking") : t("youtube.checkNow")}
-          </ActionButton>
-          <button type="button" onClick={() => setDialog({ kind: "edit", playlist: selected })} className="min-h-touch rounded-sm px-3 text-xs font-medium text-muted hover:bg-surface-raised hover:text-text">
-            {t("common.edit")}
+    <PageHeader
+      title={
+        <span className="flex min-w-0 items-center gap-2">
+          <button type="button" onClick={() => openPlaylist(null)} className="min-h-touch shrink-0 text-muted hover:text-accent">
+            {t("youtube.title")}
           </button>
-        </>
-      )}
-    </div>
+          <span aria-hidden="true" className="text-faint">/</span>
+          <span className="truncate">{selected?.title ?? ""}</span>
+        </span>
+      }
+      actions={
+        selected && (
+          <>
+            <ActionButton variant="ghost" size="sm" onClick={() => void actions.checkNow(selected)} busy={actions.isChecking(selected)}>
+              {actions.isChecking(selected) ? t("youtube.checking") : t("youtube.checkNow")}
+            </ActionButton>
+            <button type="button" onClick={() => setDialog({ kind: "edit", playlist: selected })} className="min-h-touch rounded-sm px-3 text-xs font-medium text-muted hover:bg-surface-raised hover:text-text">
+              {t("common.edit")}
+            </button>
+          </>
+        )
+      }
+    />
   ) : (
-    <div className={TOPBAR_CLS}>
-      <h1 className="flex-1 text-sm font-semibold text-text">{t("youtube.title")}</h1>
-      {playlists.length > 0 && (
-        <>
-          <ActionButton variant="ghost" size="sm" onClick={() => setDialog({ kind: "follow", follow: "channel" })} disabled={ytdlpMissing}>
-            <span aria-hidden="true">＋</span> {t("youtube.followChannel")}
-          </ActionButton>
-          <ActionButton size="sm" onClick={() => setDialog({ kind: "follow", follow: "playlist" })} disabled={ytdlpMissing}>
-            <span aria-hidden="true">＋</span> {t("youtube.follow")}
-          </ActionButton>
-        </>
-      )}
-    </div>
+    <PageHeader
+      title={t("youtube.title")}
+      actions={
+        playlists.length > 0 && (
+          <>
+            <ActionButton variant="ghost" size="sm" onClick={() => setDialog({ kind: "follow", follow: "channel" })} disabled={ytdlpMissing}>
+              <Icon name="new" /> {t("youtube.followChannel")}
+            </ActionButton>
+            <ActionButton size="sm" onClick={() => setDialog({ kind: "follow", follow: "playlist" })} disabled={ytdlpMissing}>
+              <Icon name="new" /> {t("youtube.follow")}
+            </ActionButton>
+          </>
+        )
+      }
+    />
   );
 
   const body = (() => {
@@ -208,10 +214,10 @@ function EmptyState({ onFollow, disabled }: { onFollow: (kind: FollowKind) => vo
       </ol>
       <div className="flex flex-wrap justify-center gap-2">
         <ActionButton onClick={() => onFollow("playlist")} disabled={disabled}>
-          <span aria-hidden="true">＋</span> {t("youtube.empty.action")}
+          <Icon name="new" /> {t("youtube.empty.action")}
         </ActionButton>
         <ActionButton variant="ghost" onClick={() => onFollow("channel")} disabled={disabled}>
-          <span aria-hidden="true">＋</span> {t("youtube.empty.actionChannel")}
+          <Icon name="new" /> {t("youtube.empty.actionChannel")}
         </ActionButton>
       </div>
       <p className="text-xs leading-5 text-faint">{t("youtube.empty.tip")}</p>

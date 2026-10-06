@@ -9,7 +9,7 @@ test("with speech-to-text off the page explains why and links to Settings", () =
   const page = renderPage(<WhisperPage />, [[["settings"], {}], emptyHistory]);
 
   assert.equal(page.headings[0], "Transcribe");
-  assert.ok(page.text.includes("⚠ Speech-to-text is disabled."));
+  assert.ok(page.text.includes("Speech-to-text is disabled."));
   assert.ok(page.links.includes("Open Settings"));
   assert.ok(page.text.includes("No transcription attempts yet."));
   assert.ok(!page.headings.includes("Transcribe library files"));
@@ -18,7 +18,7 @@ test("with speech-to-text off the page explains why and links to Settings", () =
 test("enabled without a backend URL warns instead of hiding the picker silently", () => {
   const page = renderPage(<WhisperPage />, [[["settings"], { transcription_enabled: "1" }], emptyHistory]);
 
-  assert.ok(page.text.includes("⚠ Speech-to-text is on, but no backend URL is set."));
+  assert.ok(page.text.includes("Speech-to-text is on, but no backend URL is set."));
   assert.ok(page.links.includes("Open Settings"));
   assert.ok(!page.headings.includes("Run options"));
 });

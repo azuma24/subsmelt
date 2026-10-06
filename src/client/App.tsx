@@ -7,11 +7,12 @@ import { formatDur } from "./lib";
 import { applyTheme, getThemePref, watchSystemTheme } from "./lib/theme";
 import { applyFontScale, getFontScale } from "./lib/font-scale";
 import {
-  useIsMobile,
+  IsMobileContext,
   useJobsQuery,
   useQueueStatusQuery,
   useSSE,
   useSettingsQuery,
+  useViewportIsMobile,
 } from "./hooks";
 import type { Job } from "./types";
 import { DesktopSidebar, MobileBottomNav } from "./app/shell";
@@ -67,7 +68,7 @@ export default function App() {
 function AppInner() {
   const { addToast } = useToast();
   const { t, i18n } = useTranslation();
-  const isMobile = useIsMobile();
+  const isMobile = useViewportIsMobile();
   const jobsQuery = useJobsQuery();
   const settingsQuery = useSettingsQuery();
   const queueQuery = useQueueStatusQuery();
@@ -140,6 +141,7 @@ function AppInner() {
   }, []);
 
   return (
+    <IsMobileContext.Provider value={isMobile}>
     <div className="flex h-dvh min-h-dvh bg-canvas text-text">
       {!isMobile && (
         <DesktopSidebar
@@ -160,28 +162,28 @@ function AppInner() {
           >
             <Routes>
               <Route path="/" element={<LibraryPage />} />
-              <Route path="/activity" element={<DashboardPage isMobile={isMobile} />} />
+              <Route path="/activity" element={<DashboardPage />} />
               <Route
                 path="/whisper"
-                element={<WhisperPage isMobile={isMobile} />}
+                element={<WhisperPage />}
               />
               <Route
                 path="/youtube"
-                element={<YoutubePage isMobile={isMobile} />}
+                element={<YoutubePage />}
               />
               <Route
                 path="/convert"
-                element={<ConvertPage isMobile={isMobile} />}
+                element={<ConvertPage />}
               />
               <Route
                 path="/settings"
-                element={<SettingsPage isMobile={isMobile} />}
+                element={<SettingsPage />}
               />
               <Route
                 path="/settings/languages"
-                element={<TranslationLanguagesPage isMobile={isMobile} />}
+                element={<TranslationLanguagesPage />}
               />
-              <Route path="/settings/logs" element={<LogsPage isMobile={isMobile} />} />
+              <Route path="/settings/logs" element={<LogsPage />} />
               {Object.keys(LEGACY_REDIRECTS).map((from) => (
                 <Route key={from} path={from} element={<LegacyRedirect />} />
               ))}
@@ -192,5 +194,6 @@ function AppInner() {
         {isMobile && <MobileBottomNav currentPath={location.pathname} />}
       </div>
     </div>
+    </IsMobileContext.Provider>
   );
 }

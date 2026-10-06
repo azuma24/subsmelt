@@ -4,6 +4,7 @@ import type { TranscriptionHealth } from "../../types";
 import { ActionButton } from "../../ui/primitives";
 import { str } from "../../lib/settings-value";
 import { descriptorsFrom, findDescriptor, groupByEngine } from "../whisper/whisper-shared";
+import { Icon } from "../../ui/Icon";
 
 const MODEL_RAM_MB: Record<string, { required: number; recommended: number }> = {
   tiny: { required: 2048, recommended: 4096 },
@@ -175,7 +176,7 @@ export function TranscriptionReadinessPanel({
             {selectedModelAdvertised === false && <div className="text-warning">{t("settings.transcription.readiness.modelNotAdvertised")}</div>}
             {!selectedDescriptor.available && (
               <div className="text-danger">
-                <span aria-hidden="true">✗ </span>
+                <Icon name="error" /> 
                 {t("stt.modelUnavailable", { model: selectedDescriptor.label, reason: selectedDescriptor.unavailableReason ?? t("settings.models.runtimeMissing") })}
               </div>
             )}

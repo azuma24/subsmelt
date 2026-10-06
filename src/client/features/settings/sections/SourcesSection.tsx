@@ -4,10 +4,10 @@ import { str } from "../../../lib/settings-value";
 import { MediaSourcesPanel } from "../MediaSourcesPanel";
 import { NotificationsFields } from "./NotificationsFields";
 import { ToggleRow, bool, labelCls, selectCls } from "./shared";
+import { useIsMobile } from "../../../hooks";
 
 interface SourcesSectionProps {
   settings: Record<string, unknown>;
-  isMobile: boolean;
   /** Deferred writer — the Advanced fields here still wait for the topbar Save. */
   update: (key: string, value: unknown) => void;
   updateAndSave: (key: string, value: unknown) => void;
@@ -30,7 +30,6 @@ interface SourcesSectionProps {
  */
 export function SourcesSection({
   settings,
-  isMobile,
   update,
   updateAndSave,
   updateManyAndSave,
@@ -40,11 +39,11 @@ export function SourcesSection({
   testingNotification,
   notificationTestResult,
 }: SourcesSectionProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   return (
     <>
       <MediaSourcesPanel
-        isMobile={isMobile}
         mediaDir={str(settings._media_dir, "/media")}
         scanMode={str(settings.scan_mode, "recursive")}
         scanFolders={str(settings.scan_folders)}
@@ -103,7 +102,6 @@ export function SourcesSection({
       </Accordion>
       <NotificationsFields
         settings={settings}
-        isMobile={isMobile}
         updateAndSave={updateAndSave}
         updateAndSaveDebounced={updateAndSaveDebounced}
         onTest={onNotificationTest}

@@ -10,6 +10,7 @@ import { ActionButton, ProgressSmall } from "../../ui/primitives";
 import { InlineError } from "../../ui/QueryState";
 import type { WhisperModel } from "../../types";
 import { groupByEngine, modelEngine } from "../whisper/whisper-shared";
+import { Icon } from "../../ui/Icon";
 
 function formatMb(value?: number, unknownLabel = "—"): string {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return unknownLabel;
@@ -27,14 +28,14 @@ function ModelStatus({ model }: { model: WhisperModel }) {
     <div className="flex flex-wrap gap-1">
       {model.available === false && (
         <span className={`${badgeCls} border-danger-line bg-danger-soft text-danger`} title={model.unavailableReason ?? undefined}>
-          <span aria-hidden="true">✗</span>
+          <Icon name="error" />
           {t("settings.models.runtimeMissing")}
           {model.unavailableReason && <span className="sr-only">: {model.unavailableReason}</span>}
         </span>
       )}
       {model.downloaded ? (
         <span className={`${badgeCls} border-success-line bg-success-soft text-success`}>
-          ✓ {t("settings.models.downloaded")}
+          <Icon name="done" /> {t("settings.models.downloaded")}
         </span>
       ) : (
         <span className={`${badgeCls} border-border bg-surface-highlight text-muted`}>

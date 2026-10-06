@@ -3,10 +3,10 @@ import { Accordion, Field } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
 import { isEnvPinned } from "../settings-model";
 import { labelCls, selectCls } from "./shared";
+import { useIsMobile } from "../../../hooks";
 
 interface PathMappingFieldsProps {
   settings: Record<string, unknown>;
-  isMobile: boolean;
   /** Deferred writer — every control here is persisted by the topbar Save. */
   update: (key: string, value: unknown) => void;
 }
@@ -15,7 +15,8 @@ interface PathMappingFieldsProps {
  * Transport + host/container path translation for the Whisper backend.
  * All three controls use the deferred `update` writer, unchanged.
  */
-export function PathMappingFields({ settings, isMobile, update }: PathMappingFieldsProps) {
+export function PathMappingFields({ settings, update }: PathMappingFieldsProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const transportPinned = isEnvPinned(settings, "transcription_transport");
   return (

@@ -3,6 +3,7 @@ import type { Job } from "../../types";
 import { ActiveJobCard } from "./ActiveJobCard";
 import { formatTokens, formatCost } from "../../lib";
 import { recentDurationsSeconds } from "./eta";
+import { Icon } from "../../ui/Icon";
 
 interface StatusSegment {
   key: string;
@@ -90,7 +91,7 @@ export function DashboardHero({
             and type, so it read as clickable. A recessed fill plus a heavier
             leading rule marks it as a readout instead. */}
         <div className={`border-l-2 border-border bg-surface-raised px-4 py-3 ${tokensSpanClass}`}>
-          <div className={`${cellLabel} truncate ${overBudget ? "text-danger" : "text-faint"}`}>{overBudget && <span aria-hidden="true">⚠ </span>}{t("dashboard.stat.tokens")} · {budgetStr}</div>
+          <div className={`${cellLabel} truncate ${overBudget ? "text-danger" : "text-faint"}`}>{overBudget && <Icon name="warning" />}{t("dashboard.stat.tokens")} · {budgetStr}</div>
           <div className={`${cellValue} ${overBudget ? "text-danger" : "text-text"}`}>{formatTokens(totalTokens)}</div>
         </div>
       </div>

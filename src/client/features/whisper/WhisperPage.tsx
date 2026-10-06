@@ -6,17 +6,7 @@ import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
 import { useToast } from "../../ui/Toast";
 import { useConfirm } from "../../ui/ConfirmModal";
-import {
-  LIBRARY_QUERY_KEY,
-  useLibraryQuery,
-  useMutationWithInvalidation,
-  useModelDownload,
-  useSettingsQuery,
-  useSSE,
-  useTranscriptionHealthQuery,
-  useTranscriptionHistoryQuery,
-  useWhisperModelsQuery,
-} from "../../hooks";
+import { LIBRARY_QUERY_KEY, useLibraryQuery, useMutationWithInvalidation, useModelDownload, useSettingsQuery, useSSE, useTranscriptionHealthQuery, useTranscriptionHistoryQuery, useWhisperModelsQuery, useIsMobile } from "../../hooks";
 import type { ScannedFile, TranscriptionHistoryEntry, WhisperModel } from "../../types";
 import { buildFolderTree } from "./folderTree";
 import { filterLibraryFiles } from "./libraryFilter";
@@ -33,11 +23,14 @@ import { LibraryPicker } from "./LibraryPicker";
 import { InlineError } from "../../ui/QueryState";
 import { applyTranscriptionProgress, cancelBatch, runBatch, useBatchState } from "./batch-store";
 import { baseName, COMPUTE_BY_DEVICE, descriptorsFrom, FORMATS, type OutputFormat } from "./whisper-shared";
+import { PageHeader } from "../../ui/primitives";
+import { Icon } from "../../ui/Icon";
 
 const validSortBy = (value: unknown): SortBy => (value === "name" || value === "date" ? value : "date");
 const validSortDir = (value: unknown): SortDir => (value === "asc" || value === "desc" ? value : "desc");
 
-export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
+export function WhisperPage() {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const { addToast } = useToast();
   const { confirm } = useConfirm();
@@ -363,19 +356,15 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
   const downloadsActive = Object.values(modelDownloads).some((dl) => dl.active);
 
   return (
-    // Same page chrome as the Converter: sticky title bar + scrolling body, so
-    // switching between sibling pages doesn't change the header pattern.
     <div className="flex h-full flex-col">
-      <div className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 md:px-4">
-        <h1 className="text-sm font-semibold text-text">{t("nav.whisper")}</h1>
-      </div>
+      <PageHeader title={t("nav.whisper")} />
       <div className="flex-1 overflow-auto">
         <div className={`mx-auto w-full max-w-[1100px] space-y-4 ${isMobile ? "p-3 pb-24" : "p-6"}`}>
           <p className="text-sm text-muted">{t("whisper.subtitle")}</p>
 
       {!enabled && (
         <div className="rounded-md border border-warning-line bg-warning-soft px-4 py-3 text-sm text-warning">
-          <span aria-hidden="true">⚠ </span>{t("whisper.disabledNotice")} <Link to="/settings" className="underline">{t("whisper.openSettings")}</Link>
+          <Icon name="warning" /> {t("whisper.disabledNotice")} <Link to="/settings" className="underline">{t("whisper.openSettings")}</Link>
         </div>
       )}
 
@@ -383,7 +372,7 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
           hidden with no explanation of why. */}
       {enabled && !backendConfigured && (
         <div className="rounded-md border border-warning-line bg-warning-soft px-4 py-3 text-sm text-warning">
-          <span aria-hidden="true">⚠ </span>{t("whisper.backendNotConfigured")} <Link to="/settings" className="underline">{t("whisper.openSettings")}</Link>
+          <Icon name="warning" /> {t("whisper.backendNotConfigured")} <Link to="/settings" className="underline">{t("whisper.openSettings")}</Link>
         </div>
       )}
 
@@ -397,7 +386,6 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
               Everyday knobs stay visible; device/compute/diarize are expert
               settings and live behind the Advanced disclosure. */}
           <RunOptionsSection
-            isMobile={isMobile}
             modelDescriptors={modelDescriptors}
             effModel={effModel}
             onModelChange={handleModelChange}
@@ -422,7 +410,6 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
           {/* ── 2. Transcribe from URL (only when backend has yt-dlp) ────── */}
           {canUrl && (
             <UrlTranscribeSection
-              isMobile={isMobile}
               effFormat={effFormat}
               effModel={effModel}
               effLang={effLang}
@@ -435,7 +422,6 @@ export function WhisperPage({ isMobile = false }: { isMobile?: boolean }) {
 
           {/* ── 3. Library — the primary working surface ─────────────────── */}
           <LibraryPicker
-            isMobile={isMobile}
             libraryQuery={libraryQuery}
             onLibraryQueryChange={setLibraryQuery}
             hideWithSubtitles={hideWithSubtitles}

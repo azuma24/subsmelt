@@ -12,6 +12,8 @@ import {
   type ScanMode,
   type TriState,
 } from "./model";
+import { useIsMobile } from "../../../hooks";
+import { Icon } from "../../../ui/Icon";
 
 /**
  * FolderNode carries no `files` field (Settings folders have no per-file
@@ -46,7 +48,6 @@ interface FolderTreeRowSharedProps extends FolderTreeSharedProps {
 
 export interface FolderTreeProps extends FolderTreeRowSharedProps {
   nodes: SettingsTreeNode[];
-  isMobile: boolean;
   expansion: TreeExpansion;
   drill: DrillDownState<SettingsTreeNode>;
 }
@@ -57,14 +58,14 @@ export interface FolderTreeProps extends FolderTreeRowSharedProps {
  * content via FolderTreeRow. Rows are tall (checkbox + counts + rules
  * button), hence `sticky={false}` — the view's sticky offsets assume 36px.
  */
-export function FolderTree({ nodes, isMobile, expansion, drill, ...rowProps }: FolderTreeProps) {
+export function FolderTree({ nodes, expansion, drill, ...rowProps }: FolderTreeProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   return (
     <FileTreeView
       sticky={false}
       roots={nodes}
       rootFiles={[]}
-      isMobile={isMobile}
       expansion={expansion}
       drill={drill}
       homeLabel={t("common.home")}
@@ -255,7 +256,7 @@ function FolderTreeRow({
             className="h-6 min-h-touch w-6 shrink-0 rounded-sm text-xs text-faint hover:bg-surface-raised disabled:opacity-20 md:min-h-0"
             aria-label={ctx.open ? t("settings.sources.collapseFolder") : t("settings.sources.expandFolder")}
           >
-            {hasChildren ? (ctx.open ? "▾" : "▸") : ""}
+            {hasChildren && <Icon name={ctx.open ? "chevron-down" : "chevron-right"} />}
           </button>
         )}
         {interactive && (

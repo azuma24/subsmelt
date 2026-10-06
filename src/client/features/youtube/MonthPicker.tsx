@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { monthLabel } from "./format";
+import { Icon } from "../../ui/Icon";
 
 export interface YearMonth {
   year: number;
@@ -60,7 +61,7 @@ export function MonthPicker({ value, onChange, counts, today }: { value: YearMon
         className="flex min-h-touch items-center gap-2 rounded-sm border border-border bg-surface-raised px-3 text-sm text-text hover:border-accent-line"
       >
         {monthLabel(monthKey(value), i18n.language)}
-        <span aria-hidden="true" className="text-faint">▾</span>
+        <Icon name="chevron-down" className="text-faint" />
       </button>
       {open && (
         <div role="dialog" aria-label={t("youtube.dialog.chooseMonth")} className="absolute left-0 top-[calc(100%+4px)] z-20 w-[288px] rounded-md border border-border bg-surface p-3 shadow-2">

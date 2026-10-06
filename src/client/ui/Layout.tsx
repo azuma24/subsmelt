@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useIsMobile } from "../hooks";
 
 interface PageHeaderProps {
   /** The page title. A string becomes the h1; a node can carry a breadcrumb. */
@@ -23,12 +24,14 @@ interface PageHeaderProps {
 export function PageHeader({ title, subtitle, actions, middle, children, titleHiddenBelowMd = false, className = "" }: PageHeaderProps) {
   return (
     <header className={`sticky top-0 z-30 shrink-0 border-b border-border bg-surface px-4 py-2 ${className}`}>
+      {/* flex-auto, not flex-1: the title keeps its own width, so on a phone
+          the actions wrap under it instead of squeezing it to a letter. */}
       <div className="flex min-h-touch flex-wrap items-center gap-x-4 gap-y-2">
-        <div className={`min-w-0 ${middle ? "" : "flex-1"} ${titleHiddenBelowMd ? "sr-only md:not-sr-only" : ""}`}>
+        <div className={`min-w-0 ${middle ? "" : "flex-auto"} ${titleHiddenBelowMd ? "sr-only md:not-sr-only" : ""}`}>
           <h1 className="truncate text-lg font-semibold text-text">{title}</h1>
           {subtitle && <p className="text-sm text-muted">{subtitle}</p>}
         </div>
-        {middle && <div className="min-w-0 flex-1">{middle}</div>}
+        {middle && <div className="min-w-0 flex-auto">{middle}</div>}
         {actions && <div className="ml-auto flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
       {children}
@@ -55,10 +58,10 @@ interface SelectionBarProps {
   clearLabel: string;
   summaryLabel: string;
   hintLabel?: string;
-  isMobile?: boolean;
 }
 
-export function SelectionBar({ count, children, onClear, clearLabel, summaryLabel, hintLabel, isMobile = false }: SelectionBarProps) {
+export function SelectionBar({ count, children, onClear, clearLabel, summaryLabel, hintLabel }: SelectionBarProps) {
+  const isMobile = useIsMobile();
   if (count === 0) return null;
   return (
     <div className={`border-b border-accent-line bg-accent-soft px-4 py-3 ${isMobile ? "space-y-3" : "flex items-center justify-between gap-3"}`}>

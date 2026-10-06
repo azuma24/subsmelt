@@ -6,11 +6,12 @@ import { ModalShell } from "../../ui/ModalShell";
 import { getErrorMessage } from "../../lib";
 import type { Task, YoutubeBackfill, YoutubeMedia, YoutubePlaylist, YoutubePlaylistFields, YoutubePreview } from "../../types";
 import { FORM_CONTROL_CLS, FORM_LABEL_CLS } from "../../ui/form-classes";
-import { ActionButton } from "../../ui/primitives";
+import { ActionButton, IconButton } from "../../ui/primitives";
 import { Segmented } from "./parts";
 import { availabilityLabel, followKind, followUrl, type FollowKind } from "./format";
 import { estimateSelection, formatGigabytes, includedEntries, postedPerMonth } from "./estimate";
 import { MonthPicker, monthKey, type YearMonth } from "./MonthPicker";
+import { Icon } from "../../ui/Icon";
 
 type BackfillKind = YoutubeBackfill["kind"];
 type VideoMedia = Extract<YoutubeMedia, { type: "video" }>;
@@ -204,7 +205,7 @@ export function FollowPlaylistDialog({ playlist, kind: newKind = "playlist", tas
         <h3 id={ids.title} className="text-base font-semibold text-text">
           {playlist ? t("youtube.dialog.editTitle", { title: playlist.title }) : say("title")}
         </h3>
-        <button type="button" onClick={onClose} aria-label={t("common.close")} className="flex h-11 w-11 items-center justify-center rounded-sm text-muted hover:bg-surface-raised hover:text-text">✕</button>
+        <IconButton icon="close" label={t("common.close")} onClick={onClose} />
       </div>
 
       <form id={`${ids.title}-form`} onSubmit={submit} className="flex-1 space-y-6 overflow-y-auto px-4 py-4">
@@ -237,12 +238,12 @@ export function FollowPlaylistDialog({ playlist, kind: newKind = "playlist", tas
             )}
           </div>
           {!editing && <p className={`mt-1 ${hintCls}`}>{say("linkHint")}</p>}
-          {lookupError && <p role="alert" className="mt-1 text-xs leading-5 text-danger"><span aria-hidden="true">✕ </span>{lookupError}</p>}
+          {lookupError && <p role="alert" className="mt-1 flex items-center gap-1 text-xs leading-5 text-danger"><Icon name="error" />{lookupError}</p>}
         </div>
 
         {preview && (
           <div className={`flex gap-3 rounded-md border px-4 py-3 ${preview.followed ? "border-warning-line bg-warning-soft" : "border-success-line bg-success-soft"}`}>
-            <span aria-hidden="true" className={preview.followed ? "text-warning" : "text-success"}>{preview.followed ? "!" : "✓"}</span>
+            <Icon name={preview.followed ? "warning" : "done"} className={preview.followed ? "text-warning" : "text-success"} />
             <div className="min-w-0 text-sm leading-6 text-text">
               <b className="font-semibold">{preview.title}</b>
               {[availabilityLabel(preview.availability, t), preview.channel && preview.channel !== preview.title ? t("youtube.dialog.by", { channel: preview.channel }) : null].filter(Boolean).map((part) => ` · ${part}`)}
@@ -422,7 +423,7 @@ export function FollowPlaylistDialog({ playlist, kind: newKind = "playlist", tas
             </Field>
           </div>
         </details>
-        {saveError && <p role="alert" className="text-xs leading-5 text-danger"><span aria-hidden="true">✕ </span>{saveError}</p>}
+        {saveError && <p role="alert" className="flex items-center gap-1 text-xs leading-5 text-danger"><Icon name="error" />{saveError}</p>}
       </form>
 
       <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border px-4 py-3">

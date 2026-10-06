@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useJobPreview } from "../../hooks";
+import { useJobPreview, useIsMobile } from "../../hooks";
 import { formatTimecode } from "../../lib";
 import { copyText } from "../../lib/clipboard";
 import { ModalShell } from "../../ui/ModalShell";
@@ -9,9 +9,10 @@ import { PageError, PageLoading } from "../../ui/QueryState";
 import { useToast } from "../../ui/Toast";
 import { ApiError, jobDownloadUrl, saveJobCues } from "../../api";
 import type { PreviewLine } from "../../types";
+import { Icon } from "../../ui/Icon";
+import { IconButton } from "../../ui/primitives";
 
 interface PreviewOverlayProps {
-  isMobile: boolean;
   jobId: number;
   previewSearch: string;
   setPreviewSearch: (v: string) => void;
@@ -53,7 +54,8 @@ interface EditCtx {
   editedLabel: string;
 }
 
-export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearch, onClose }: PreviewOverlayProps) {
+export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose }: PreviewOverlayProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const titleId = useId();
   const { addToast } = useToast();
@@ -248,7 +250,7 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
             aria-label={t("dashboard.preview.search")}
             className="w-40 rounded-md border border-border bg-surface-raised px-3 py-2 text-xs text-text focus:border-accent md:w-56"
           />
-          <button onClick={onClose} aria-label={t("common.close")} className="text-base text-muted hover:text-text">×</button>
+          <IconButton icon="close" label={t("common.close")} onClick={onClose} />
         </div>
           <div className="border-b border-border px-4 py-2">
             <div className="flex flex-wrap gap-2 text-xs">
@@ -549,7 +551,7 @@ function PreviewLineRow({
         <td className="px-3 py-2 text-xs text-faint font-mono align-top whitespace-nowrap">{formatTimecode(line.start)}</td>
         <td className="px-3 py-2 text-muted align-top text-xs">{line.original}</td>
         <td className="px-3 py-2 align-top text-xs"><TranslatedEditor line={line} editCtx={editCtx} /></td>
-        <td className="px-3 py-2 align-top">{issue && <span className="text-warning text-xs">⚠</span>}</td>
+        <td className="px-3 py-2 align-top">{issue && <Icon name="warning" className="text-warning" />}</td>
       </tr>
     );
   }
@@ -613,7 +615,7 @@ function PreviewLineGridRow({
       <div className="px-3 py-2 text-xs text-faint font-mono whitespace-nowrap">{formatTimecode(line.start)}</div>
       <div className="px-3 py-2 text-muted text-xs">{line.original}</div>
       <div className="px-3 py-2 text-xs"><TranslatedEditor line={line} editCtx={editCtx} /></div>
-      <div className="px-3 py-2">{issue && <span className="text-warning text-xs">⚠</span>}</div>
+      <div className="px-3 py-2">{issue && <Icon name="warning" className="text-warning" />}</div>
     </div>
   );
 }

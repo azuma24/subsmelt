@@ -5,8 +5,8 @@ import * as api from "../../api";
 import type { ConvertTargetFormat } from "../../api";
 import { ApiError } from "../../api";
 import { useToast } from "../../ui/Toast";
-import { useLlmHealthQuery } from "../../hooks";
-import { ActionButton } from "../../ui/primitives";
+import { useLlmHealthQuery, useIsMobile } from "../../hooks";
+import { ActionButton, PageHeader } from "../../ui/primitives";
 import { InlineError } from "../../ui/QueryState";
 import { AUTO_SOURCE_LANG } from "../tasks/translation-defaults";
 import type { KeyValueStorage } from "../../ui/file-tree/expansion-store";
@@ -31,7 +31,8 @@ function getBrowserStorage(): KeyValueStorage | null {
   }
 }
 
-export function ConvertPage({ isMobile }: { isMobile: boolean }) {
+export function ConvertPage() {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const { addToast } = useToast();
   const [staged, setStaged] = useState<StagedFile[]>([]);
@@ -192,9 +193,7 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 md:px-4">
-        <h1 className="text-sm font-semibold text-text">{t("nav.convert")}</h1>
-      </div>
+      <PageHeader title={t("nav.convert")} />
 
       <div className="flex-1 overflow-auto p-4 md:p-4">
         <div className="mx-auto flex max-w-[680px] flex-col gap-4">

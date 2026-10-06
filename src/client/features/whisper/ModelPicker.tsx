@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import type { WhisperModelDescriptor } from "../../types";
 import { findDescriptor, groupByEngine, MODEL_LABEL_KEYS, supportsLanguage } from "./whisper-shared";
+import { Icon } from "../../ui/Icon";
 
 export function modelLabel(t: TFunction, model: WhisperModelDescriptor): string {
   const key = MODEL_LABEL_KEYS[model.id];
@@ -50,7 +51,7 @@ export function ModelPicker({ descriptors, value, onChange, className, ariaLabel
       <p className="mt-1 text-xs leading-snug text-faint">{t(`stt.engineStrength.${selected.engine}`)}</p>
       {!selected.available && (
         <p className="mt-1 text-xs leading-snug text-danger">
-          <span aria-hidden="true">✗ </span>
+          <Icon name="error" /> 
           {t("stt.modelUnavailable", { model: selected.label, reason: selected.unavailableReason ?? t("settings.models.runtimeMissing") })}
         </p>
       )}
@@ -64,7 +65,7 @@ export function LanguageSupportWarning({ model, language }: { model: WhisperMode
   if (supportsLanguage(model, language)) return null;
   return (
     <p className="mt-1 text-xs leading-snug text-warning">
-      <span aria-hidden="true">⚠ </span>
+      <Icon name="warning" /> 
       {t("stt.languageUnsupported", { model: model.label, language })}
     </p>
   );

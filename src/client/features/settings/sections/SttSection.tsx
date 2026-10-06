@@ -12,6 +12,8 @@ import { SttAdvancedFields } from "./SttAdvancedFields";
 import { descriptorsFrom, findDescriptor } from "../../whisper/whisper-shared";
 import { LanguageSupportWarning, ModelPicker } from "../../whisper/ModelPicker";
 import { ToggleRow, labelCls, selectCls } from "./shared";
+import { useIsMobile } from "../../../hooks";
+import { Icon } from "../../../ui/Icon";
 
 /** Whisper's source-language shortlist. `auto` plus the four bundled hints. */
 const STT_LANGUAGE_OPTIONS: { value: string; labelKey: string }[] = [
@@ -24,7 +26,6 @@ const STT_LANGUAGE_OPTIONS: { value: string; labelKey: string }[] = [
 
 interface SttSectionProps {
   settings: Record<string, unknown>;
-  isMobile: boolean;
   /** Deferred writer — most of this section waits for the topbar Save. */
   update: (key: string, value: unknown) => void;
   /** Debounced autosave — used only by the backend token, as before. */
@@ -49,7 +50,6 @@ interface SttSectionProps {
  */
 export function SttSection({
   settings,
-  isMobile,
   update,
   updateAndSaveDebounced,
   healthQuery,
@@ -60,6 +60,7 @@ export function SttSection({
   testing,
   testResult,
 }: SttSectionProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
 
   // Before health loads this falls back to the known Whisper sizes; the picker
@@ -104,7 +105,7 @@ export function SttSection({
       <div className={`flex ${isMobile ? "flex-col" : "items-center"} gap-3`}>
         <ActionButton variant="ghost" size="sm" onClick={onTest}>{testing ? t("app.testing") : t("settings.transcription.testButton")}</ActionButton>
         {testResult && (
-          <span className={`text-sm ${testResult.ok ? "text-success" : "text-danger"}`}><span aria-hidden="true">{testResult.ok ? "✓ " : "✗ "}</span>{testResult.message}</span>
+          <span className={`text-sm ${testResult.ok ? "text-success" : "text-danger"}`}><Icon name={testResult.ok ? "done" : "error"} /> {testResult.message}</span>
         )}
       </div>
       <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
@@ -148,9 +149,9 @@ export function SttSection({
           backend URL to be set; download progress streams over SSE. */}
       <ModelManagerPanel enabled={Boolean(str(settings.transcription_backend_url))} />
 
-      <PathMappingFields settings={settings} isMobile={isMobile} update={update} />
+      <PathMappingFields settings={settings} update={update} />
 
-      <SttAdvancedFields settings={settings} isMobile={isMobile} update={update} model={selectedDescriptor} />
+      <SttAdvancedFields settings={settings} update={update} model={selectedDescriptor} />
 
       {/* Raw config (L4) — the two STT JSON blobs, behind an explicit Save. */}
       <RawConfigDrawer settings={settings} update={update} onSave={onSave} dirty={dirty} saving={saving} />

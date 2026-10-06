@@ -77,7 +77,8 @@ test("dashboard hero metric band stays a responsive hairline grid", () => {
 test("dashboard keeps small desktop layouts readable before switching to mobile", () => {
   // Phones rely on the bottom tab bar for the page name, so the topbar title
   // is screen-reader only there and visible from md up.
-  assert.match(dashboard, /sr-only md:not-sr-only md:flex-1 md:text-sm/);
+  assert.match(dashboard, /titleHiddenBelowMd/);
+  assert.match(primitives, /sr-only md:not-sr-only/);
   assert.match(dashboard, /sm:grid-cols-2 xl:grid-cols-4/);
   assert.match(dashboard, /lg:grid-cols-\[minmax\(0,1fr\)_minmax\(0,1fr\)_auto\]/);
 });

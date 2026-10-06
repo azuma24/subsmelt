@@ -5,10 +5,10 @@ import { ToggleRow, labelCls, selectCls } from "./shared";
 import type { WhisperModelDescriptor } from "../../../types";
 import { hidesOptions } from "../../whisper/whisper-shared";
 import { OptionsDecidedNote } from "../../whisper/ModelPicker";
+import { useIsMobile } from "../../../hooks";
 
 interface SttAdvancedFieldsProps {
   settings: Record<string, unknown>;
-  isMobile: boolean;
   /** Deferred writer — every control here is persisted by the topbar Save. */
   update: (key: string, value: unknown) => void;
   /** The default model; options it decides itself are hidden. */
@@ -19,7 +19,8 @@ interface SttAdvancedFieldsProps {
  * Device/compute/concurrency, line shaping, VAD and the two fallback
  * behaviours. Collapsed by default, like every other "Advanced" accordion.
  */
-export function SttAdvancedFields({ settings, isMobile, update, model }: SttAdvancedFieldsProps) {
+export function SttAdvancedFields({ settings, update, model }: SttAdvancedFieldsProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   return (
     <Accordion title={t("settings.advanced")}>
