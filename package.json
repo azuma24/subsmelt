@@ -28,7 +28,7 @@
     "better-sqlite3": "13.0.3",
     "chokidar": "^4.0.0",
     "cors": "^2.8.5",
-    "express": "^4.22.2",
+    "express": "^5.2.1",
     "franc-min": "^6.2.0",
     "i18next": "^26.0.3",
     "i18next-browser-languagedetector": "^8.2.1",
@@ -44,7 +44,7 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
     "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.0.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

@@ -63,6 +63,13 @@ app.use(cors({ origin: false }));
 // refuses those before any route acts on them.
 app.use(crossSiteGuard);
 app.use(express.json({ limit: "25mb" }));
+// Express 5 leaves req.body undefined when no parser matched the request (a
+// bodyless POST, a non-JSON content type); the routes destructure it, so keep
+// Express 4's empty object.
+app.use((req, _res, next) => {
+  if (req.body === undefined) req.body = {};
+  next();
+});
 
 const staticDir = path.join(__dirname, "../../dist/client");
 app.use(express.static(staticDir));
@@ -273,7 +280,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 // ======== SPA Fallback ========
-app.get("*", (_req, res) => {
+app.get("/{*splat}", (_req, res) => {
   res.sendFile(path.join(staticDir, "index.html"));
 });
 

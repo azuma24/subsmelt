@@ -30,7 +30,7 @@ test("connection fields an environment variable sets are read-only and say which
   };
   const page = renderPage(<ConnectionsPanel settings={settings} update={noop} addToast={noop} isMobile={false} />);
 
-  assert.match(page.html, /<input[^>]*readonly=""[^>]*value="http:\/\/env-llm:1\/v1"/);
+  assert.match(page.html, /<input[^>]*readonly=""[^>]*value="http:\/\/env-llm:1\/v1"/i);
   assert.match(page.text, /Set by the LLM_ENDPOINT environment variable\. Change it there\./);
   assert.match(page.text, /Set by the API_KEY environment variable\./);
   assert.doesNotMatch(page.text, /MODEL environment variable/);
