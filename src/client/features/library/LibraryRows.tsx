@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
-import type { JobRow } from "../../types";
+import type { Job } from "../../types";
 import { Icon } from "../../ui/Icon";
 import { itemLanguageChips, type ClassifiedItem, type LibrarySection, type LibraryStatus } from "./library-model";
 import { LanguageChip } from "./LanguageChip";
@@ -63,7 +63,7 @@ export const SectionHeader = memo(function SectionHeader({ section, collapsed, c
 interface ItemRowProps {
   entry: ClassifiedItem;
   mode: LibrarySection["mode"];
-  jobsById: Map<number, JobRow>;
+  jobsById: Map<number, Job>;
   checked: boolean;
   open: boolean;
   focusable: boolean;

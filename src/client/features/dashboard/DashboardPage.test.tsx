@@ -1,27 +1,25 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { renderPage, SeededError, type QuerySeed } from "../../test-render";
-import type { JobRow, Task } from "../../types";
+import type { Job, Task } from "../../types";
+import { makeJob, makeTask } from "../../test-fixtures";
 import { DashboardPage } from "./DashboardPage";
 
-function job(id: number, name: string, status: string): JobRow {
-  return {
+function job(id: number, name: string, status: string): Job {
+  return makeJob({
     id,
     srt_path: `/media/Show/${name}`,
     output_path: `/media/Show/${name.replace(".en.srt", ".zh-TW.srt")}`,
     status,
-    priority: 0,
     total_cues: 100,
     completed_cues: status === "done" ? 100 : 0,
     error: status === "error" ? "boom" : null,
-    duration_seconds: null,
     target_lang: "Traditional Chinese",
     lang_code: "zh-TW",
-    force: 0,
-  };
+  });
 }
 
-const zhTask: Task = { id: 1, source_lang: "English", target_lang: "Traditional Chinese", output_pattern: "", lang_code: "zh-TW", enabled: 1, prompt_override: "" };
+const zhTask: Task = makeTask({ id: 1, source_lang: "English", target_lang: "Traditional Chinese", output_pattern: "", lang_code: "zh-TW" });
 
 const configured: QuerySeed = [
   [["jobs"], { jobs: [job(1, "Episode 01.en.srt", "done"), job(2, "Episode 02.en.srt", "error"), job(3, "Episode 03.en.srt", "pending")], queueRunning: false, currentJobId: null }],

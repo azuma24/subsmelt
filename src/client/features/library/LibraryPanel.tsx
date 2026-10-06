@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { useMutationWithInvalidation } from "../../hooks";
 import { useToast } from "../../components/Toast";
-import type { JobRow, TaskStatus } from "../../types";
+import type { Job, TaskStatus } from "../../types";
 import { Icon } from "../../ui/Icon";
 import type { UseManualTranscriptionResult } from "../dashboard/useManualTranscription";
 import { itemTasks, type LibraryItem } from "./library-model";
@@ -28,7 +28,7 @@ function useInlinePanel(): boolean {
 
 interface LibraryPanelProps {
   item: LibraryItem;
-  jobsById: Map<number, JobRow>;
+  jobsById: Map<number, Job>;
   transcriptionEnabled: boolean;
   transcription: UseManualTranscriptionResult;
   onClose: () => void;

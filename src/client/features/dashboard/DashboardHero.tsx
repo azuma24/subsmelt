@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import type { JobRow } from "../../types";
+import type { Job } from "../../types";
 import { ActiveJobCard } from "./ActiveJobCard";
 import { formatTokens, formatCost } from "../../lib";
 import { recentDurationsSeconds } from "./eta";
@@ -15,10 +15,10 @@ interface StatusSegment {
 interface DashboardHeroProps {
   statusSegments: StatusSegment[];
   statusFilter: string;
-  activeJobs: JobRow[];
-  pendingJobs: JobRow[];
+  activeJobs: Job[];
+  pendingJobs: Job[];
   /** Recently completed jobs — their durations drive the queue-time projection. */
-  completedJobs?: JobRow[];
+  completedJobs?: Job[];
   /** Summed token usage + approximate cost across all visible jobs. */
   usageTotals: { inputTokens: number; outputTokens: number; cost: number; hasCost: boolean };
   /** Soft monthly token budget (0 = unlimited) — display-only indicator. */

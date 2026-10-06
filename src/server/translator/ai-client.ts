@@ -14,7 +14,10 @@ import {
 } from "./utils.js";
 import { ContextOverflowError, toContextOverflow } from "./context-overflow.js";
 
-export type CloudProvider = "local" | "openai" | "anthropic" | "gemini";
+import type { LlmProvider } from "../../shared/llm.js";
+
+/** The provider a connection talks to; the API calls this LlmProvider. */
+export type CloudProvider = LlmProvider;
 
 /**
  * Token usage captured from a single generateText call. Normalised across AI SDK

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { TFunction } from "i18next";
-import type { JobRow } from "../../types";
+import type { Job } from "../../types";
 
 export function parentFolderLabel(filePath: string, mediaDir: string, rootLabel: string, externalLabel: string): string {
   const normalizedPath = filePath.replace(/\\/g, "/");
@@ -25,7 +25,7 @@ interface StatusSegment {
 }
 
 interface DashboardDerivedStateInput {
-  jobs: JobRow[];
+  jobs: Job[];
   mediaDir: string;
   statusFilter: string;
   folderFilter: string;
@@ -35,17 +35,17 @@ interface DashboardDerivedStateInput {
 }
 
 export interface DashboardDerivedState {
-  pendingJobs: JobRow[];
-  activeJobs: JobRow[];
-  doneJobs: JobRow[];
-  errorJobs: JobRow[];
+  pendingJobs: Job[];
+  activeJobs: Job[];
+  doneJobs: Job[];
+  errorJobs: Job[];
   finishedJobCount: number;
-  jobsById: Map<number, JobRow>;
+  jobsById: Map<number, Job>;
   selectedPendingCount: number;
   selectedPendingIds: number[];
   folderOptions: string[];
   targetOptions: string[];
-  filteredJobs: JobRow[];
+  filteredJobs: Job[];
   visiblePendingIds: number[];
   visibleErrorIds: number[];
   visibleDoneIds: number[];

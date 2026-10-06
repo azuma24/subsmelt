@@ -1,17 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import type { JobRow, ScannedFile, TaskStatus } from "../../types";
+import type { Job, ScannedFile, TaskStatus } from "../../types";
+import { makeJob, makeTaskStatus } from "../../test-fixtures";
 import { buildLibraryView, flattenRows, itemLanguageChips, itemStatus, relativeFolder, toLibraryItems, type LibraryRow } from "./library-model";
 import { languageStatusDisplay } from "./task-status";
 
-const task = (langCode: string, status: string, jobId: number | null = null): TaskStatus => ({
-  taskId: langCode === "chi" ? 1 : 2,
-  targetLang: langCode === "chi" ? "Traditional Chinese" : "Japanese",
-  langCode,
-  outputName: "",
-  status,
-  jobId,
-});
+const task = (langCode: string, status: TaskStatus["status"], jobId: number | null = null): TaskStatus =>
+  makeTaskStatus({
+    taskId: langCode === "chi" ? 1 : 2,
+    targetLang: langCode === "chi" ? "Traditional Chinese" : "Japanese",
+    langCode,
+    status,
+    jobId,
+  });
 
 const video = (path: string, tasks: TaskStatus[] | null): ScannedFile => ({
   videoPath: path,
@@ -20,20 +21,8 @@ const video = (path: string, tasks: TaskStatus[] | null): ScannedFile => ({
   subtitles: tasks === null ? [] : [{ srtPath: path.replace(/\.mkv$/, ".en.srt"), srtName: "x.en.srt", tasks }],
 });
 
-const job = (id: number, status: string): JobRow => ({
-  id,
-  srt_path: "",
-  output_path: "",
-  status,
-  priority: 0,
-  total_cues: 10,
-  completed_cues: 0,
-  error: status === "error" ? "timeout" : null,
-  duration_seconds: null,
-  target_lang: "",
-  lang_code: "",
-  force: 0,
-});
+const job = (id: number, status: string): Job =>
+  makeJob({ id, status, total_cues: 10, error: status === "error" ? "timeout" : null });
 
 const jobs = new Map([
   [1, job(1, "error")],

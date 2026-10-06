@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { JobRow } from "../../types";
+import type { Job } from "../../types";
 import { elapsedSince, estimateJobEta, estimateQueueEta, formatEta } from "./eta";
 import { jobDerived } from "./job-derived";
 
 interface ActiveJobCardProps {
-  job: JobRow;
+  job: Job;
   pendingCount: number;
   /** duration_seconds of recently completed jobs, for the queue projection. */
   recentDurationsSeconds?: number[];

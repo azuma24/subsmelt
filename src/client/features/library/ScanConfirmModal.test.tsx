@@ -3,9 +3,10 @@ import assert from "node:assert/strict";
 import { useTranslation } from "react-i18next";
 import { renderPage } from "../../test-render";
 import type { ScannedFile, TaskStatus } from "../../types";
+import { makeTaskStatus } from "../../test-fixtures";
 import { ScanConfirmModal, countScanSubtitles, countUntargetedSubtitles, summarizeScanFolders, type ScanPlan } from "./ScanConfirmModal";
 
-const target: TaskStatus = { taskId: 1, targetLang: "Traditional Chinese", langCode: "chi", outputName: "", status: "new", jobId: null };
+const target: TaskStatus = makeTaskStatus({ taskId: 1, targetLang: "Traditional Chinese", langCode: "chi", status: "new" });
 
 function subtitle(srtPath: string, tasks: TaskStatus[] = [target]): ScannedFile["subtitles"][number] {
   return { srtPath, srtName: srtPath.split("/").pop() || "", tasks };

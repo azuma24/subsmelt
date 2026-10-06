@@ -7,7 +7,7 @@ import { getErrorMessage } from "../../lib";
 import { str } from "../../lib/settings-value";
 import { LIBRARY_QUERY_KEY, useIsMobile, useJobsQuery, useLibraryQuery, useMutationWithInvalidation, useSettingsQuery } from "../../hooks";
 import { useToast } from "../../components/Toast";
-import type { JobRow, ScanResult, TaskStatus } from "../../types";
+import type { Job, ScanResult, TaskStatus } from "../../types";
 import { ActionButton, SelectionBar } from "../../ui/primitives";
 import { Icon } from "../../ui/Icon";
 import { InlineError } from "../../ui/QueryState";
@@ -82,7 +82,7 @@ export function LibraryPage() {
   }, [persistSetting]);
   const mediaDir = str(settings._media_dir, "/media");
   const transcriptionEnabled = str(settings.transcription_enabled, "0") === "1";
-  const jobsById = useMemo(() => new Map((jobsQuery.data?.jobs ?? []).map((job: JobRow) => [job.id, job])), [jobsQuery.data]);
+  const jobsById = useMemo(() => new Map((jobsQuery.data?.jobs ?? []).map((job: Job) => [job.id, job])), [jobsQuery.data]);
   const items = useMemo(() => toLibraryItems(libraryQuery.data?.files ?? [], mediaDir), [libraryQuery.data, mediaDir]);
   const view = useMemo(() => buildLibraryView(items, jobsById, filter, query, sortBy, sortDir), [items, jobsById, filter, query, sortBy, sortDir]);
   const rows = useMemo(() => flattenRows(view.sections, collapsed), [view.sections, collapsed]);

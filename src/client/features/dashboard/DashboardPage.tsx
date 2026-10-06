@@ -6,7 +6,7 @@ import { getErrorMessage } from "../../lib";
 import { useJobsQuery, useMutationWithInvalidation, useQueueStatusQuery, useSettingsQuery, useTasksQuery, useTranscriptionHistoryQuery } from "../../hooks";
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmModal";
-import type { JobRow } from "../../types";
+import type { Job } from "../../types";
 import { ActionButton, EmptyHint, SelectionBar } from "../../ui/primitives";
 import { InlineError } from "../../ui/QueryState";
 import { JobsTableDesktop, JobsTableSkeleton } from "./JobsTableDesktop";
@@ -58,7 +58,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
 
   const { transcribingPath, isTranscribePending, isRetryPending, handleRetryTranscription } = useManualTranscription();
 
-  const jobs: JobRow[] = jobsQuery.data?.jobs || [];
+  const jobs: Job[] = jobsQuery.data?.jobs || [];
   const queueRunning = Boolean(queueStatusQuery.data?.running ?? jobsQuery.data?.queueRunning ?? false);
   const currentJobId = queueStatusQuery.data?.currentJobId ?? jobsQuery.data?.currentJobId ?? null;
   const settings = settingsQuery.data || {};
@@ -298,7 +298,7 @@ export function DashboardPage({ isMobile }: { isMobile: boolean }) {
   // row as it was when opened; it closes on its own if the job is deleted.
   const detailsJob = detailsJobId === null ? null : jobsById.get(detailsJobId) ?? null;
   const openLogs = useCallback((jobId: number) => navigate(`/settings/logs?job=${jobId}`), [navigate]);
-  const openDetails = useCallback((job: JobRow) => setDetailsJobId(job.id), []);
+  const openDetails = useCallback((job: Job) => setDetailsJobId(job.id), []);
 
   return (
     <div className="flex min-h-full flex-col">

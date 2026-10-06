@@ -5,54 +5,27 @@ import { isPlaylistId } from "./urls.js";
 
 export const PLAYLISTS_SETTING = "youtube_playlists";
 
-export type Backfill =
-  | { kind: "all" }
-  | { kind: "none" }
-  | { kind: "posted_since"; date: string }
-  | { kind: "added_since"; date: string };
+import {
+  AUDIO_FORMATS,
+  CAPTION_SOURCES,
+  PLAYLIST_MODES as MODES,
+  VIDEO_CODECS,
+  VIDEO_CONTAINERS,
+  VIDEO_HEIGHTS,
+  type Backfill,
+  type ChannelInclude,
+  type MediaProfile,
+  type PlaylistFields,
+  type YoutubePlaylist,
+} from "../../shared/youtube.js";
 
-export type MediaProfile =
-  | { type: "video"; maxHeight: VideoHeight; codec: VideoCodec; container: VideoContainer }
-  | { type: "audio"; format: AudioFormat };
+export type { Backfill, ChannelInclude, MediaProfile, PlaylistFields, YoutubePlaylist };
 
-const VIDEO_HEIGHTS = [480, 720, 1080, 1440, 2160] as const;
-const VIDEO_CODECS = ["h264", "vp9", "av1", "any"] as const;
-const VIDEO_CONTAINERS = ["mp4", "mkv"] as const;
-const AUDIO_FORMATS = ["m4a", "opus"] as const;
-const MODES = ["auto", "manual"] as const;
-const CAPTION_SOURCES = ["prefer_youtube", "whisper_only"] as const;
 export const MIN_CHECK_MINUTES = 15;
 const DEFAULT_CHECK_MINUTES = 60;
 const MAX_CHECK_MINUTES = 7 * 24 * 60;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-type VideoHeight = (typeof VIDEO_HEIGHTS)[number];
-type VideoCodec = (typeof VIDEO_CODECS)[number];
-type VideoContainer = (typeof VIDEO_CONTAINERS)[number];
-type AudioFormat = (typeof AUDIO_FORMATS)[number];
-
-export interface YoutubePlaylist {
-  id: string;
-  title: string;
-  folder: string;
-  enabled: boolean;
-  mode: (typeof MODES)[number];
-  backfill: Backfill;
-  media: MediaProfile;
-  captions: (typeof CAPTION_SOURCES)[number];
-  subtitleTaskIds: number[];
-  checkEveryMinutes: number;
-  /** For a channel: whether its Shorts and live streams are followed too. Ignored for a playlist. */
-  include: ChannelInclude;
-}
-
-export interface ChannelInclude {
-  shorts: boolean;
-  live: boolean;
-}
-
-/** The fields a user sets when following or editing. id and title come from YouTube. */
-export type PlaylistFields = Omit<YoutubePlaylist, "id" | "title">;
 
 type Obj = Record<string, unknown>;
 

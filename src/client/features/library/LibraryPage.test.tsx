@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { renderPage, SeededError, type QuerySeed } from "../../test-render";
 import type { ScannedFile } from "../../types";
+import { makeTaskStatus } from "../../test-fixtures";
 import { LibraryPage } from "./LibraryPage";
 
 const noJobs = [["jobs"], { jobs: [], queueRunning: false, currentJobId: null }] as const;
@@ -16,8 +17,8 @@ const episode: ScannedFile = {
     srtPath: "/media/TV/Severance/Season 02/Severance.S02E08.Sweet.Vitriol.1080p.ATVP.WEB-DL.en.srt",
     srtName: "Severance.S02E08.Sweet.Vitriol.1080p.ATVP.WEB-DL.en.srt",
     tasks: [
-      { taskId: 1, targetLang: "Traditional Chinese", langCode: "chi", outputName: "", status: "new", jobId: null },
-      { taskId: 2, targetLang: "Japanese", langCode: "jpn", outputName: "", status: "skipped", jobId: null },
+      makeTaskStatus({ taskId: 1, targetLang: "Traditional Chinese", langCode: "chi", status: "new" }),
+      makeTaskStatus({ taskId: 2, targetLang: "Japanese", langCode: "jpn", status: "skipped" }),
     ],
   }],
 };

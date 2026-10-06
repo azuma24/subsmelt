@@ -1,5 +1,6 @@
 import { logger } from "./logger.js";
 import type { CloudProvider } from "./translator.js";
+import type { LlmConnection, LlmMode } from "../shared/llm.js";
 
 // ── Multi-connection model ────────────────────────────────────────────────
 //
@@ -12,22 +13,7 @@ import type { CloudProvider } from "./translator.js";
 // For backward compatibility, when that setting is empty we synthesize the
 // array from the legacy flat keys (cloud_provider / cloud_api_key_* / etc.).
 
-export type LlmMode = "single" | "fallback" | "parallel";
-
-export interface LlmConnection {
-  /** Stable identifier (e.g. "local", "openai", or a generated slug). */
-  id: string;
-  /** User-facing name. */
-  label: string;
-  provider: CloudProvider; // "local" | "openai" | "anthropic" | "gemini"
-  apiKey: string;
-  model: string;
-  /** Only meaningful for local / OpenAI-compatible providers. */
-  endpoint: string;
-  enabled: boolean;
-  /** Priority for fallback; tie-break for parallel. Lower runs first. */
-  order: number;
-}
+export type { LlmConnection, LlmMode };
 
 /** A connection resolved into the shape the translator consumes. */
 export interface ResolvedConnection {

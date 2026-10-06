@@ -1,4 +1,5 @@
-import type { LlmMode, ResolvedConnection } from "./connections.js";
+import type { ResolvedConnection } from "./connections.js";
+import type { LlmConnectionState, LlmConnectionStatus, LlmMode, LlmStatus } from "../shared/llm.js";
 import { connectionModelsUrl } from "./translator/connection-health.js";
 import { cloudModelsRequest } from "./routes/models.js";
 
@@ -12,21 +13,7 @@ import { cloudModelsRequest } from "./routes/models.js";
  * short timeout and a cache so a polling client never hammers a backend.
  */
 
-export type LlmConnectionState = "in_use" | "idle" | "offline" | "unknown";
-
-export interface LlmConnectionStatus {
-  id: string;
-  label: string;
-  model: string;
-  host: string;
-  state: LlmConnectionState;
-  jobIds: number[];
-}
-
-export interface LlmStatus {
-  mode: LlmMode;
-  connections: LlmConnectionStatus[];
-}
+export type { LlmConnectionState, LlmConnectionStatus, LlmStatus };
 
 export type Reachability = "reachable" | "offline" | "unknown";
 export type ReachabilityProbe = (conn: ResolvedConnection) => Promise<Reachability>;

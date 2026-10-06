@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import path from "node:path";
 import fs from "node:fs";
 import { setLogDb } from "./logger.js";
+import type { JobRow, LogRow } from "../shared/jobs.js";
 
 const DATA_DIR = process.env.DATA_DIR || "./data";
 fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -102,41 +103,9 @@ export function resetInterruptedJobs(): number {
 }
 resetInterruptedJobs();
 
-// --- Row types ---
+// --- Row types (src/shared/jobs.ts: the client reads the same shapes) ---
 
-/** Shape of a `jobs` row as stored in SQLite. */
-export interface JobRow {
-  id: number;
-  task_id: number;
-  srt_path: string;
-  output_path: string;
-  video_path: string | null;
-  status: string;
-  priority: number;
-  force: number;
-  total_cues: number | null;
-  completed_cues: number | null;
-  error: string | null;
-  analysis_context: string | null;
-  used_connections: string | null;
-  duration_seconds: number | null;
-  input_tokens: number | null;
-  output_tokens: number | null;
-  started_at: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-}
-
-/** Shape of a `logs` row as stored in SQLite. */
-export interface LogRow {
-  id: number;
-  timestamp: string;
-  level: string;
-  category: string;
-  message: string;
-  job_id: number | null;
-  meta: string | null;
-}
+export type { JobRow, LogRow };
 
 // --- Jobs ---
 

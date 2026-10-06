@@ -22,6 +22,7 @@ import {
   normalizeMediaSubfolder,
   resolveMediaSubfolder,
 } from "./media-paths.js";
+import type { FolderCounts, FolderNode, ScannedFile, ScanResult, ScanTaskState } from "../shared/scan.js";
 
 export const MEDIA_DIR = process.env.MEDIA_DIR || "/media";
 
@@ -77,20 +78,7 @@ const LANG_SUFFIXES = new Set([
 for (const alias of allLanguageFileAliases()) LANG_SUFFIXES.add(alias.toLowerCase());
 const FLAG_SUFFIXES = new Set(["sdh", "forced", "cc", "hi"]);
 
-export interface FolderNode {
-  name: string;
-  path: string;
-  counts: FolderCounts;
-  children: FolderNode[];
-}
-
-export interface FolderCounts {
-  videos: number;
-  subtitles: number;
-  pendingJobs: number;
-  completeJobs: number;
-  errorJobs: number;
-}
+export type { FolderCounts, FolderNode, ScannedFile, ScanResult };
 
 function createEmptyCounts(): FolderCounts {
   return {
@@ -454,34 +442,6 @@ function youtubeFolder(): string | null {
   return normalizeMediaSubfolder(getSetting("youtube_download_dir"));
 }
 
-export interface ScannedFile {
-  videoPath: string | null;
-  videoName: string | null;
-  videoMtime: number | null;
-  subtitles: {
-    srtPath: string;
-    srtName: string;
-    tasks: {
-      taskId: number;
-      targetLang: string;
-      langCode: string;
-      outputPath: string;
-      outputName: string;
-      status: "done" | "pending" | "translating" | "error" | "skipped" | "new";
-      jobId: number | null;
-      translatedTitle: string | null;
-      /** The translation is on disk, in any spelling: a "skipped" without it means another subtitle owns the output. */
-      outputExists: boolean;
-    }[];
-  }[];
-}
-
-export interface ScanResult {
-  files: ScannedFile[];
-  newJobs: number;
-  totalSubtitles: number;
-}
-
 export function scanFolder(createJobs = true): ScanResult {
   const videoExts = getSetting("video_extensions")
     .split(",")
@@ -748,13 +708,7 @@ export function scanFolder(createJobs = true): ScanResult {
         effectiveTasks.some((t: TranslationTask) => t.id === task.id) &&
         (scannedPath(existingJob.output_path) ?? findAnyCase(existingJob.output_path)) === null;
 
-      let status:
-        | "done"
-        | "pending"
-        | "translating"
-        | "error"
-        | "skipped"
-        | "new";
+      let status: ScanTaskState;
       let jobId: number | null = null;
 
       if (existingJob && !outputDeleted) {

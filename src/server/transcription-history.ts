@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { logger } from "./logger.js";
+import type { TranscriptionAttemptStatus, TranscriptionHistoryEntry } from "../shared/transcription.js";
 import type { TranscribePostAction, TranscriptionAdvancedOptions, TranscriptionOutputFormat, TranscriptionSubtitleQualityOptions } from "./transcription-client.js";
 
 const DATA_DIR = process.env.DATA_DIR || "./data";
@@ -12,28 +13,7 @@ const NO_SPEECH_FILE = path.join(DATA_DIR, "transcription-no-speech.json");
 /** The errorSummary of a run that found nothing to transcribe. */
 export const NO_SPEECH_SUMMARY = "No speech found";
 
-export type TranscriptionAttemptStatus = "running" | "succeeded" | "failed" | "cancelled";
-
-export interface TranscriptionHistoryEntry {
-  id: string;
-  inputPath: string;
-  outputPath: string;
-  model: string;
-  language: string;
-  outputFormat: TranscriptionOutputFormat;
-  postAction: TranscribePostAction;
-  status: TranscriptionAttemptStatus;
-  startedAt: string;
-  finishedAt: string | null;
-  durationSeconds: number | null;
-  errorSummary: string | null;
-  subtitleQuality?: TranscriptionSubtitleQualityOptions | null;
-  advancedOptions?: TranscriptionAdvancedOptions | null;
-  // Absent on attempts recorded before retries replayed them.
-  device?: string;
-  computeType?: string;
-  overwrite?: boolean;
-}
+export type { TranscriptionAttemptStatus, TranscriptionHistoryEntry };
 
 interface StartAttemptInput {
   inputPath: string;

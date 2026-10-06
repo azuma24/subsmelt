@@ -45,6 +45,7 @@ import { assertMediaPathAllowed } from "../transcription-client.js";
 import { isWatcherRunning } from "../watcher.js";
 import { getAllSettings } from "../config.js";
 import { logger } from "../logger.js";
+import type { Job } from "../../shared/jobs.js";
 import { queueFileTranslation, type FileTranslationTarget } from "../file-translation.js";
 import {
   parsePositiveInteger,
@@ -56,7 +57,7 @@ import {
 // Also surfaces token usage + an APPROXIMATE est_cost: jobs don't store which
 // model ran, so we derive the model from the current connection pool primary
 // (best-effort) and price the accumulated tokens. Unknown/local models → null.
-function enrichJobs(jobs: any[]): any[] {
+function enrichJobs(jobs: JobRow[]): Job[] {
   const tasks = getTasks();
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
   const { pool } = resolveConnectionPool(getAllSettings());

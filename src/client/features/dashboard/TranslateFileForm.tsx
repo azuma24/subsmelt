@@ -67,7 +67,16 @@ export function TranslateFileForm({ srtPath, existingTasks, onQueued, onCancel }
     if (!request || !language) return;
     try {
       const result = await mutation.mutateAsync(request);
-      onQueued({ taskId: result.taskId, ...language, outputName: "", status: "pending", jobId: result.jobId });
+      onQueued({
+        taskId: result.taskId,
+        ...language,
+        outputName: "",
+        outputPath: "",
+        status: "pending",
+        jobId: result.jobId,
+        translatedTitle: null,
+        outputExists: false,
+      });
       addToast(
         t(result.created ? "scan.translateFile.queued" : "scan.translateFile.alreadyQueued", { lang: language.targetLang }),
         result.created ? "success" : "info",

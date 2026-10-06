@@ -1,4 +1,4 @@
-import type { JobRow, ScannedFile, TaskStatus } from "../../types";
+import type { Job, ScannedFile, TaskStatus } from "../../types";
 import type { SortBy, SortDir } from "../whisper/folderTree";
 import { getTaskStatus } from "./task-status";
 
@@ -86,7 +86,7 @@ const chipRank = (status: string) => {
  * same output, so a language listed once per source only repeats itself; the
  * chip shows its most pressing state across them.
  */
-export function itemLanguageChips(item: LibraryItem, jobsById: Map<number, JobRow>): { task: TaskStatus; status: string }[] {
+export function itemLanguageChips(item: LibraryItem, jobsById: Map<number, Job>): { task: TaskStatus; status: string }[] {
   const byTask = new Map<number, { task: TaskStatus; status: string }>();
   for (const task of itemTasks(item)) {
     const status = getTaskStatus(task, jobsById);
@@ -97,7 +97,7 @@ export function itemLanguageChips(item: LibraryItem, jobsById: Map<number, JobRo
 }
 
 /** The one status group an item belongs to. Chips, counts, sections and rows all read this. */
-export function itemStatus(item: LibraryItem, jobsById: Map<number, JobRow>): LibraryStatus {
+export function itemStatus(item: LibraryItem, jobsById: Map<number, Job>): LibraryStatus {
   if (item.kind === "video" && item.file.subtitles.length === 0) return "needsTranscription";
   // The same per-language state the chips show, so the row's group, its dot and its chips agree.
   const states = new Set(itemLanguageChips(item, jobsById).map(({ status }) => languageState(status)));
@@ -108,7 +108,7 @@ export function itemStatus(item: LibraryItem, jobsById: Map<number, JobRow>): Li
 }
 
 /** Job ids of this item's tasks whose live job is in `status`. */
-export function itemJobIds(item: LibraryItem, jobsById: Map<number, JobRow>, status: string): number[] {
+export function itemJobIds(item: LibraryItem, jobsById: Map<number, Job>, status: string): number[] {
   return itemTasks(item)
     .filter((task) => task.jobId !== null && jobsById.get(task.jobId)?.status === status)
     .map((task) => task.jobId as number);
@@ -170,7 +170,7 @@ const latestMtime = (entries: ClassifiedItem[]): number | null =>
  *  the same key — alphabetical, or by their newest file in date order. */
 export function buildLibraryView(
   items: LibraryItem[],
-  jobsById: Map<number, JobRow>,
+  jobsById: Map<number, Job>,
   filter: LibraryFilter,
   query: string,
   sortBy: SortBy,

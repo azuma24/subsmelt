@@ -1,9 +1,9 @@
-import type { JobRow, ManualTranscriptionStage, ScannedFile, TaskStatus } from "../../types";
+import type { Job, ManualTranscriptionStage, ScannedFile, TaskStatus } from "../../types";
 import type { ManualTranscriptionProgress } from "../dashboard/transcription-progress";
 import { STATUS_ICON, STATUS_LABEL_KEY } from "../../app/constants";
 import type { IconName } from "../../ui/Icon";
 
-export function getTaskStatus(task: TaskStatus, jobsById: Map<number, JobRow>): string {
+export function getTaskStatus(task: TaskStatus, jobsById: Map<number, Job>): string {
   const liveJob = task.jobId === null ? null : jobsById.get(task.jobId);
   if (liveJob) return liveJob.status;
   if (task.jobId !== null && ["pending", "translating", "error"].includes(task.status)) return "new";

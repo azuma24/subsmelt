@@ -9,7 +9,7 @@ import {
   withVideoProgress,
   type JobsResponse,
 } from "./hooks.js";
-import type { JobRow, YoutubeVideo } from "./types.js";
+import type { Job, YoutubeVideo } from "./types.js";
 
 test("parseSSEData returns parsed object payloads and ignores invalid JSON", () => {
   assert.deepEqual(parseSSEData('{"jobId":123,"status":"done"}'), { jobId: 123, status: "done" });
@@ -55,8 +55,8 @@ test("createDebouncedInvalidator batches duplicate keys until flushed", () => {
   assert.deepEqual(invalidated, [["jobs"], ["queue-status"], ["logs"]]);
 });
 
-const job = (id: number, status: string): JobRow => ({ id, status, completed_cues: 0, total_cues: 0, error: null, connection: null }) as JobRow;
-const jobs = (...rows: JobRow[]): JobsResponse => ({ jobs: rows, queueRunning: true, currentJobId: null });
+const job = (id: number, status: string): Job => ({ id, status, completed_cues: 0, total_cues: 0, error: null, connection: null }) as Job;
+const jobs = (...rows: Job[]): JobsResponse => ({ jobs: rows, queueRunning: true, currentJobId: null });
 
 test("job events patch only their job in the cached list", () => {
   const list = jobs(job(1, "translating"), job(2, "pending"));

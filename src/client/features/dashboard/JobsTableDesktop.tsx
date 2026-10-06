@@ -3,20 +3,20 @@ import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { formatDur } from "../../lib";
 import { useJobActions, type JobActions } from "../../hooks/useJobActions";
-import type { JobRow } from "../../types";
+import type { Job } from "../../types";
 import { MiniBtn, ProgressSmall, RowActionsMenu } from "../../ui/primitives";
 import { JobStatusBadge } from "../jobs/JobStatusBadge";
 import { jobDerived } from "./job-derived";
 import { Icon } from "../../ui/Icon";
 
 interface JobsTableDesktopProps {
-  jobs: JobRow[];
+  jobs: Job[];
   currentJobId: number | null;
   selectedIds: Set<number>;
   setSelectedIds: Dispatch<SetStateAction<Set<number>>>;
   onPreview: (jobId: number) => void;
   onOpenLogs: (jobId: number) => void;
-  onOpenDetails: (job: JobRow) => void;
+  onOpenDetails: (job: Job) => void;
 }
 
 const TH = "px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.4px] text-[var(--text-3)] border-b border-[var(--border)]";
@@ -178,13 +178,13 @@ export function JobsTableSkeleton() {
 }
 
 interface JobsTableRowProps {
-  job: JobRow;
+  job: Job;
   isActive: boolean;
   isSelected: boolean;
   onToggle: (id: number) => void;
   onPreview: (jobId: number) => void;
   onOpenLogs: (jobId: number) => void;
-  onOpenDetails: (job: JobRow) => void;
+  onOpenDetails: (job: Job) => void;
   jobActions: JobActions;
 }
 
@@ -293,13 +293,13 @@ const JobsTableRow = memo(function JobsTableRow({
   });
 
 interface VirtualJobRowsProps {
-  jobs: JobRow[];
+  jobs: Job[];
   currentJobId: number | null;
   selectedIds: Set<number>;
   onToggle: (id: number) => void;
   onPreview: (jobId: number) => void;
   onOpenLogs: (jobId: number) => void;
-  onOpenDetails: (job: JobRow) => void;
+  onOpenDetails: (job: Job) => void;
   jobActions: JobActions;
 }
 

@@ -2,6 +2,7 @@ import type Database from "better-sqlite3";
 import { isChannelUploads } from "./urls.js";
 import { isSoftRateLimit } from "./ytdlp.js";
 import { canTransition, USER_ACTIONS, type SkipKind, type UserAction, type VideoStatus } from "./video-status.js";
+import type { ContentKind, Cooldown, CooldownCause, PlaylistCounts, PlaylistSyncState, SubtitlePlan } from "../../shared/youtube.js";
 
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS youtube_videos (
@@ -45,8 +46,7 @@ const SCHEMA = `
 `;
 
 /** One entry of a flat playlist listing. Missing fields stay null. */
-/** What a channel upload is; null for a playlist entry. */
-export type ContentKind = "video" | "short" | "live";
+export type { ContentKind, Cooldown, CooldownCause, PlaylistCounts, PlaylistSyncState, SubtitlePlan };
 
 export interface ListingEntry {
   videoId: string;
@@ -104,41 +104,10 @@ export interface PlaylistVideoRow extends VideoRow {
   removed_at: string | null;
 }
 
-export interface PlaylistSyncState {
-  lastCheckedAt: string | null;
-  lastError: string | null;
-  /** YouTube's reported playlist_count at the last successful listing. */
-  count: number | null;
-  /** "public", "unlisted" or "private" as yt-dlp reports it. */
-  availability: string | null;
-  /** When the first listing was stored. Entries first seen then are the backfill set. */
-  firstSyncAt: string | null;
-}
-
 export interface ApplyListingResult {
   added: number;
   removed: number;
   restored: number;
-}
-
-export interface PlaylistCounts {
-  /** Videos in the playlist now. */
-  total: number;
-  /** Videos on record that the playlist no longer lists. */
-  removed: number;
-  /** Every video on the playlist's page by status, removed ones included, as its tabs list them. */
-  byStatus: Partial<Record<VideoStatus, number>>;
-  /** A channel's listed uploads by kind; empty for a playlist. */
-  byKind: Partial<Record<ContentKind, number>>;
-}
-
-export type CooldownCause = "rate_limited" | "bot_check";
-
-export interface Cooldown {
-  until: string;
-  cause: CooldownCause;
-  /** Cooldowns since the last successful download; each one doubles the pause. */
-  strikes: number;
 }
 
 const COOLDOWN_BASE_MS = 60 * 60_000;
@@ -158,13 +127,6 @@ export interface StatusFields {
   transcriptSource?: string | null;
   subtitlePlan?: SubtitlePlan | null;
   userQueuedAt?: string | null;
-}
-
-/** How a video's picked languages were made, kept for the row's summary. */
-export interface SubtitlePlan {
-  /** The spoken language's key, when known. */
-  spoken: string | null;
-  routes: { taskId: number; kind: "same" | "captions" | "translate" }[];
 }
 
 export interface VideoMetadata {

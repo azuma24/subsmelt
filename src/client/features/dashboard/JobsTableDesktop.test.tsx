@@ -1,24 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { renderPage, type QuerySeed } from "../../test-render";
-import type { JobRow } from "../../types";
+import type { Job } from "../../types";
+import { makeJob } from "../../test-fixtures";
 import { JobsTableDesktop } from "./JobsTableDesktop";
 
-function job(id: number, name: string, status: string): JobRow {
-  return {
+function job(id: number, name: string, status: string): Job {
+  return makeJob({
     id,
     srt_path: `/media/Show/${name}`,
     output_path: `/media/Show/${name.replace(".en.srt", ".zh-TW.srt")}`,
     status,
-    priority: 0,
     total_cues: 100,
     completed_cues: status === "done" ? 100 : 40,
     error: status === "error" ? "boom" : null,
-    duration_seconds: null,
     target_lang: "Traditional Chinese",
     lang_code: "zh-TW",
-    force: 0,
-  };
+  });
 }
 
 const jobs = [job(1, "Episode 01.en.srt", "done"), job(2, "Episode 02.en.srt", "translating"), job(3, "Episode 03.en.srt", "pending")];

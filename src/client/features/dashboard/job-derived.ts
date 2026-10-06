@@ -1,4 +1,4 @@
-import type { JobRow } from "../../types";
+import type { Job } from "../../types";
 import { classifyErrorReason } from "./job-actions";
 
 export interface JobDerived {
@@ -20,7 +20,7 @@ export interface JobDerived {
 /** Row/card display state derived from a job. Shared by the desktop table and
  *  the mobile card so the two surfaces cannot drift apart — a new status means
  *  editing this one function, not both renderers. */
-export function jobDerived(job: JobRow): JobDerived {
+export function jobDerived(job: Job): JobDerived {
   const hasError = job.status === "error" && Boolean(job.error);
   const connection = job.connection;
   return {

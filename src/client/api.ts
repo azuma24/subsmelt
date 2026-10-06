@@ -1,7 +1,7 @@
 import type {
   FolderNode,
   JobPreview,
-  JobRow,
+  Job,
   LlmHealth,
   LlmStatus,
   LogEntry,
@@ -112,7 +112,7 @@ export const getFolderTree = (opts?: FetchOpts) =>
 // Jobs
 export const getJobs = (opts?: FetchOpts) =>
   fetchJSON<{
-    jobs: JobRow[];
+    jobs: Job[];
     queueRunning: boolean;
     currentJobId: number | null;
   }>("/jobs", opts);

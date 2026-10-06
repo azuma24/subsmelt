@@ -1,13 +1,13 @@
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { classifyError, errorHintKeys } from "../../lib/errorTaxonomy";
-import type { JobRow } from "../../types";
+import type { Job } from "../../types";
 import { Drawer } from "../../ui/primitives";
 import { JobStatusBadge } from "../jobs/JobStatusBadge";
 import { formatDur, formatTokens, formatCost } from "../../lib";
 
 interface JobDetailsDrawerProps {
-  job: JobRow | null;
+  job: Job | null;
   open: boolean;
   onClose: () => void;
   onOpenLogs: (jobId: number) => void;

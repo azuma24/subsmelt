@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useJobPreview, useJobsQuery } from "../../hooks";
 import { formatDur } from "../../lib";
-import type { JobRow } from "../../types";
+import type { Job } from "../../types";
 import { DetailCard, EmptyHint, ProgressSmall } from "../../ui/primitives";
 import { JobStatusBadge } from "./JobStatusBadge";
 
@@ -12,7 +12,7 @@ export function JobDetailPage() {
   const jobId = Number(id);
   const jobsQuery = useJobsQuery();
   const previewQuery = useJobPreview(Number.isFinite(jobId) ? jobId : null);
-  const job = (jobsQuery.data?.jobs || []).find((j: JobRow) => j.id === jobId);
+  const job = (jobsQuery.data?.jobs || []).find((j: Job) => j.id === jobId);
 
   // Don't flash "not found" while the jobs list is still loading (deep-link nav).
   if (jobsQuery.isLoading && !jobsQuery.data) {

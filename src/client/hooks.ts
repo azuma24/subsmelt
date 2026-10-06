@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "./api";
-import type { JobPreview, JobRow, LlmHealth, LlmStatus, LogEntry, QueueStatus, Task, TranscriptionHealth, TranscriptionHistoryEntry, YoutubeVideo } from "./types";
+import type { JobPreview, Job, JobsResponse, LlmHealth, LlmStatus, LogEntry, QueueStatus, Task, TranscriptionHealth, TranscriptionHistoryEntry, YoutubeVideo } from "./types";
 
 export type SSEEventName =
   | "job:progress"
@@ -64,11 +64,7 @@ export function useLibraryQuery(enabled = true) {
   });
 }
 
-export interface JobsResponse {
-  jobs: JobRow[];
-  queueRunning: boolean;
-  currentJobId: number | null;
-}
+export type { JobsResponse };
 
 export function useJobsQuery() {
   return useQuery({
@@ -305,7 +301,7 @@ export function withVideoProgress(
 }
 
 /** Fields a job event changes on its row; the refetch that may follow fills in the rest. */
-function jobEventPatch(name: SSEEventName, data: Record<string, unknown>): Partial<JobRow> | null {
+function jobEventPatch(name: SSEEventName, data: Record<string, unknown>): Partial<Job> | null {
   switch (name) {
     case "job:progress":
       return typeof data.completed === "number" && typeof data.total === "number"

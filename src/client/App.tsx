@@ -13,7 +13,7 @@ import {
   useSSE,
   useSettingsQuery,
 } from "./hooks";
-import type { JobRow } from "./types";
+import type { Job } from "./types";
 import { DesktopSidebar, MobileBottomNav } from "./app/shell";
 import { LANGUAGES } from "./app/constants";
 import { DashboardPage } from "./features/dashboard";
@@ -114,7 +114,7 @@ function AppInner() {
     queueQuery.data?.running ?? jobsQuery.data?.queueRunning ?? false,
   );
   const errorCount =
-    jobsQuery.data?.jobs?.filter((j: JobRow) => j.status === "error").length ||
+    jobsQuery.data?.jobs?.filter((j: Job) => j.status === "error").length ||
     0;
   const watcherRunning =
     Boolean(queueQuery.data?.watcherRunning) ||

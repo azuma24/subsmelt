@@ -1,19 +1,19 @@
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { useJobActions } from "../../hooks/useJobActions";
-import type { JobRow } from "../../types";
+import type { Job } from "../../types";
 import { ActionButton, ProgressSmall, RowActionsMenu } from "../../ui/primitives";
 import { JobStatusBadge } from "../jobs/JobStatusBadge";
 import { jobDerived } from "./job-derived";
 
 interface JobCardMobileProps {
-  job: JobRow;
+  job: Job;
   currentJobId: number | null;
   selected: boolean;
   onToggleSelected: (jobId: number) => void;
   onPreview: (jobId: number) => void;
   onOpenLogs: (jobId: number) => void;
-  onOpenDetails: (job: JobRow) => void;
+  onOpenDetails: (job: Job) => void;
 }
 
 const SKELETON_CARDS = 3;

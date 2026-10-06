@@ -23,6 +23,7 @@ import { IllegalTransitionError, type YoutubeStore } from "../youtube/store.js";
 import { changeBackfill, changeChannelContent, isUnavailableEntry, listFollowedWithYtdlp, listingTitle, resolveChannelWithYtdlp } from "../youtube/sync.js";
 import { isChannelUploads, isPlaylistId, isVideoId, parseChannelInput, parsePlaylistInput } from "../youtube/urls.js";
 import type { UserAction } from "../youtube/video-status.js";
+import type { YoutubePipeline, YoutubePlaylistSummary, YoutubeStatus } from "../../shared/youtube.js";
 import { isQueueRunning } from "../queue.js";
 import { CooldownError, nextCheckAt, transcriptionReady, type YoutubeWorker } from "../youtube/worker.js";
 import { ffmpegVersion, resolveYtdlpBin, updateYtdlp, ytdlpVersion } from "../youtube/ytdlp.js";
@@ -34,7 +35,7 @@ const NO_KEY_ERROR = "Added since needs a YouTube Data API key in Settings";
 
 const NOTE_ERROR_STATUS: Record<NoteExportFailure, number> = { unknown_video: 404, no_media: 409, no_transcript: 409, notes_folder: 503 };
 
-export async function youtubeStatus(worker?: YoutubeWorker) {
+export async function youtubeStatus(worker?: YoutubeWorker): Promise<YoutubeStatus> {
   const [ytdlp, ffmpeg] = await Promise.all([ytdlpVersion(), ffmpegVersion()]);
   const cooldown = worker?.activeCooldown() ?? null;
   return {
@@ -48,7 +49,7 @@ export async function youtubeStatus(worker?: YoutubeWorker) {
 }
 
 /** What holds the subtitle and translation steps back: the shared GPU, or no transcription backend. */
-export function pipelineStatus(store: YoutubeStore) {
+export function pipelineStatus(store: YoutubeStore): YoutubePipeline {
   const gate = currentTranslationGate();
   const ready = transcriptionReady();
   return {
@@ -62,7 +63,7 @@ export function pipelineStatus(store: YoutubeStore) {
   };
 }
 
-function playlistSummary(store: YoutubeStore, worker: YoutubeWorker, playlist: YoutubePlaylist) {
+function playlistSummary(store: YoutubeStore, worker: YoutubeWorker, playlist: YoutubePlaylist): YoutubePlaylistSummary {
   const { firstSyncAt: _firstSyncAt, ...sync } = store.getSyncState(playlist.id);
   return {
     ...playlist,

@@ -18,6 +18,7 @@
     "noEmit": true
   },
   "include": [
-    "src/client"
+    "src/client",
+    "src/shared"
   ]
 }

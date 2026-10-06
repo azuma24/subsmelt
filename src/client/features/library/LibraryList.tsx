@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, type KeyboardEvent, type ReactNode } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import type { JobRow } from "../../types";
+import type { Job } from "../../types";
 import type { LibraryRow, LibrarySection } from "./library-model";
 import { ItemRow, SectionHeader } from "./LibraryRows";
 
@@ -21,7 +21,7 @@ export interface FocusRequest {
 
 interface LibraryListProps {
   rows: LibraryRow[];
-  jobsById: Map<number, JobRow>;
+  jobsById: Map<number, Job>;
   checked: ReadonlySet<string>;
   openKey: string | null;
   /** The row that takes Tab focus: the open one, else the first. */

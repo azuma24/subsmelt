@@ -1,10 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { recentDurationsSeconds } from "./eta.js";
-import type { JobRow } from "../../types.js";
+import type { Job } from "../../types.js";
+import { makeJob } from "../../test-fixtures.js";
 
-const done = (id: number, duration_seconds: number | null, started_at: string | null = null): JobRow =>
-  ({ id, srt_path: "", output_path: "", status: "done", priority: 0, total_cues: 1, completed_cues: 1, error: null, duration_seconds, target_lang: "", lang_code: "", force: 0, started_at });
+const done = (id: number, duration_seconds: number | null, started_at: string | null = null): Job =>
+  makeJob({ id, status: "done", total_cues: 1, completed_cues: 1, duration_seconds, started_at });
 
 test("takes the most recent finished jobs from a newest-first list, not the oldest", () => {
   const jobs = Array.from({ length: 25 }, (_, i) => done(100 - i, i + 1));

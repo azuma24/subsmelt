@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import type { JobRow, SubtitleEntry, TaskStatus } from "../../types";
+import type { Job, SubtitleEntry, TaskStatus } from "../../types";
 import { useJobActions } from "../../hooks/useJobActions";
 import { Icon } from "../../ui/Icon";
 import { TranslateFileForm } from "../dashboard/TranslateFileForm";
@@ -18,7 +18,7 @@ const HEADING = "text-xs font-semibold uppercase tracking-wide text-muted";
 
 export interface FailedTask {
   task: TaskStatus;
-  job: JobRow;
+  job: Job;
 }
 
 /** The one place a failure is retried; language rows only point here. */
@@ -91,7 +91,7 @@ export function TranscribeBlock({ enabled, progress, onTranscribe, onCancel }: T
 
 interface SubtitleLanguagesProps {
   subtitle: SubtitleEntry;
-  jobsById: Map<number, JobRow>;
+  jobsById: Map<number, Job>;
   showName: boolean;
   onPreview: (jobId: number) => void;
   onQueued: (srtPath: string, task: TaskStatus) => void;

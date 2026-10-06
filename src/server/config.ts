@@ -4,6 +4,7 @@ import { migrateConnectionsFromFlat, parseConnections } from "./connections.js";
 import { standardizeTasks, standardTaskLangCode, type PreferredChinese } from "./language-codes.js";
 import { computeLlmConfigured } from "./llm-configured.js";
 import { logger } from "./logger.js";
+import type { TranslationTask } from "../shared/tasks.js";
 
 const CONFIG_DIR = process.env.CONFIG_DIR || "./config";
 const CONFIG_FILE = path.join(CONFIG_DIR, "config.json");
@@ -12,18 +13,7 @@ fs.mkdirSync(CONFIG_DIR, { recursive: true });
 
 // --- Schema ---
 
-export interface TranslationTask {
-  id: number;
-  source_lang: string;
-  target_lang: string;
-  output_pattern: string;
-  lang_code: string;
-  /** Codes this task wrote before it moved to the standard one; outputs named with them still count. */
-  former_lang_codes?: string[];
-  enabled: number;
-  prompt_override: string;
-  created_at: string;
-}
+export type { TranslationTask };
 
 interface ConfigData {
   settings: Record<string, string>;
