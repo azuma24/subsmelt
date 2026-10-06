@@ -1,15 +1,14 @@
-import jschardet from "jschardet";
-
 /**
  * Decode a dropped subtitle file's bytes into text, handling BOMs and the
  * legacy single- and multi-byte encodings older subtitle files still use
  * (Big5, Shift_JIS, GBK, Windows-1252...). Mirrors the server's
  * readSubtitleFileText: BOM first, then a strict UTF-8 attempt, then charset
  * sniffing, and UTF-8 with replacement characters as the last resort.
+ *
+ * The sniffer (jschardet) is a megabyte of detection model, so it loads only
+ * when a file turns out not to be UTF-8, which is the rare case.
  */
 
-/** Below this jschardet confidence a guess is not trusted over UTF-8. */
-const MIN_CONFIDENCE = 0.6;
 /** Sniffing more than this many bytes adds nothing for subtitle files. */
 const SNIFF_BYTES = 256 * 1024;
 
@@ -51,33 +50,56 @@ export function decodeWindows1252(bytes: Uint8Array): string {
   return out;
 }
 
+/**
+ * jschardet names encodings the way Python's chardet does; TextDecoder knows
+ * only the WHATWG labels, so the spellings that differ are mapped here.
+ */
+const TEXT_DECODER_LABELS: Record<string, string> = {
+  cp932: "shift_jis",
+  shift_jis_2004: "shift_jis",
+  cp949: "euc-kr",
+  "euc-jis-2004": "euc-jp",
+  big5hkscs: "big5",
+  cp874: "windows-874",
+  "tis-620": "windows-874",
+  macroman: "macintosh",
+  "mac-roman": "macintosh",
+  "iso2022-jp-2": "iso-2022-jp",
+  "iso2022-jp-2004": "iso-2022-jp",
+  "iso2022-jp-ext": "iso-2022-jp",
+  "iso-2022-kr": "euc-kr",
+  "hz-gb-2312": "gb18030",
+  "utf-8-sig": "utf-8",
+  "utf-16-le": "utf-16le",
+  "utf-16-be": "utf-16be",
+};
+
 function tryDecode(bytes: Uint8Array, encoding: string, fatal: boolean): string | null {
-  if (WINDOWS_1252_LABELS.has(encoding.toLowerCase())) return decodeWindows1252(bytes);
+  const lower = encoding.toLowerCase();
+  if (WINDOWS_1252_LABELS.has(lower)) return decodeWindows1252(bytes);
   try {
-    return new TextDecoder(encoding, { fatal }).decode(bytes);
+    return new TextDecoder(TEXT_DECODER_LABELS[lower] ?? lower, { fatal }).decode(bytes);
   } catch {
     return null;
   }
 }
 
-/** jschardet wants a "binary string": one char per byte. */
-function binaryString(bytes: Uint8Array): string {
-  const sample = bytes.subarray(0, SNIFF_BYTES);
-  let out = "";
-  for (let i = 0; i < sample.length; i += 8192) {
-    out += String.fromCharCode(...sample.subarray(i, i + 8192));
-  }
-  return out;
-}
-
-export function sniffEncoding(bytes: Uint8Array): string | null {
-  const guess = jschardet.detect(binaryString(bytes));
+/**
+ * The charset jschardet thinks `bytes` are in, lower-cased, or null for
+ * UTF-8/ASCII or no guess. Only meaningful for bytes that are not valid
+ * UTF-8: the caller has already ruled that out, so the best guess is taken
+ * as it is rather than filtered by a confidence score, whose scale changed
+ * between jschardet 3 and 4.
+ */
+export async function sniffEncoding(bytes: Uint8Array): Promise<string | null> {
+  const { detect } = await import("jschardet");
+  const guess = detect(bytes.subarray(0, SNIFF_BYTES));
   const encoding = (guess?.encoding ?? "").toLowerCase();
   if (!encoding || encoding === "ascii" || encoding === "utf-8" || encoding === "utf8") return null;
-  return (guess.confidence ?? 0) >= MIN_CONFIDENCE ? encoding : null;
+  return encoding;
 }
 
-export function decodeSubtitleBytes(bytes: Uint8Array): string {
+export async function decodeSubtitleBytes(bytes: Uint8Array): Promise<string> {
   if (hasPrefix(bytes, UTF8_BOM)) return new TextDecoder("utf-8").decode(bytes);
   if (hasPrefix(bytes, [0xff, 0xfe])) return new TextDecoder("utf-16le").decode(bytes);
   if (hasPrefix(bytes, [0xfe, 0xff])) return new TextDecoder("utf-16be").decode(bytes);
@@ -85,7 +107,7 @@ export function decodeSubtitleBytes(bytes: Uint8Array): string {
   const utf8 = tryDecode(bytes, "utf-8", true);
   if (utf8 !== null) return utf8;
 
-  const sniffed = sniffEncoding(bytes);
+  const sniffed = await sniffEncoding(bytes);
   const legacy = sniffed ? tryDecode(bytes, sniffed, false) : null;
   return legacy ?? new TextDecoder("utf-8").decode(bytes);
 }
