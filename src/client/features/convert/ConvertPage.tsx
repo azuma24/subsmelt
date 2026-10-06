@@ -13,13 +13,12 @@ import type { KeyValueStorage } from "../../components/file-tree/expansion-store
 import { LANGUAGES, findLanguage } from "./language-table";
 import { resolveTargetLanguage } from "./resolve-language";
 import { sampleCueText } from "./cue-sample";
-import { detectSampleLanguage } from "./detect-language";
 import { loadRecentTargets, pushRecentTarget } from "./recent-targets";
 import { TargetLanguageField } from "./TargetLanguageField";
 import { DropZone } from "./DropZone";
 import { StagedFileList, type FileRunStatus } from "./StagedFileList";
 import { effectiveSource, skipTranslation, type StagedFile } from "./staged-file";
-import { readSubtitleFile } from "./decode-text";
+import { detectSampleLanguage, readSubtitleFile } from "./lazy-analysis";
 import { isSupported, triggerDownload, buildZipBlob, type OutputFile } from "./download-outputs";
 
 const TARGET_FORMATS: ConvertTargetFormat[] = ["srt", "vtt", "ass", "ssa"];
@@ -62,7 +61,7 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
     void (async () => {
       for (const item of todo) {
         const text = await readSubtitleFile(item.file).catch(() => "");
-        const code = detectSampleLanguage(sampleCueText(text));
+        const code = await detectSampleLanguage(sampleCueText(text));
         if (cancelled) return;
         setStaged((prev) => prev.map((s) => (s.id === item.id ? { ...s, detected: code } : s)));
       }
