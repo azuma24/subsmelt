@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Accordion, ActionButton, Field } from "../../../ui/primitives";
+import { Accordion, ActionButton, Field, Select } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
 import { MediaSourcesPanel } from "../MediaSourcesPanel";
 import { NotificationsFields } from "./NotificationsFields";
@@ -69,15 +69,10 @@ export function SourcesSection({
       />
       <div className="space-y-2">
         <label htmlFor="preferred-chinese" className={labelCls}>{t("settings.sources.preferredChinese")}</label>
-        <select
-          id="preferred-chinese"
-          value={str(settings.preferred_chinese, "zh-TW")}
-          onChange={(e) => updateAndSave("preferred_chinese", e.target.value)}
-          className={`${selectCls} min-h-touch md:max-w-[320px]`}
-        >
+        <Select id="preferred-chinese" value={str(settings.preferred_chinese, "zh-TW")} onChange={(value) => updateAndSave("preferred_chinese", value)} className="min-h-touch md:max-w-[320px]">
           <option value="zh-TW">{t("settings.sources.chineseTraditional")}</option>
           <option value="zh-CN">{t("settings.sources.chineseSimplified")}</option>
-        </select>
+        </Select>
         <p className="text-xs leading-5 text-muted">{t("settings.sources.preferredChineseHint")}</p>
       </div>
       <div className="flex items-center justify-between gap-3 rounded-sm border border-border bg-surface-raised px-3 py-3">

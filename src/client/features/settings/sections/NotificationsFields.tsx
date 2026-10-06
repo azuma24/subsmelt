@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Accordion, ActionButton, Field } from "../../../ui/primitives";
+import { Accordion, ActionButton, Field, Select } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
 import { NOTIFY_EVENTS, parseNotifyEvents, setNotifyEvent } from "../notify-events";
 import { REDACTED_SECRET } from "../settings-model";
@@ -59,16 +59,11 @@ export function NotificationsFields({ settings, updateAndSave, updateAndSaveDebo
         </div>
         <div className="md:max-w-[240px]">
           <label className={labelCls}>{t("settings.notifications.format")}</label>
-          <select
-            aria-label={t("settings.notifications.format")}
-            value={str(settings.notify_format, "json")}
-            onChange={(e) => updateAndSave("notify_format", e.target.value)}
-            className={selectCls}
-          >
+          <Select ariaLabel={t("settings.notifications.format")} value={str(settings.notify_format, "json")} onChange={(value) => updateAndSave("notify_format", value)}>
             <option value="json">JSON</option>
             <option value="discord">Discord</option>
             <option value="slack">Slack</option>
-          </select>
+          </Select>
         </div>
         <fieldset>
           <legend className={labelCls}>{t("settings.notifications.events")}</legend>

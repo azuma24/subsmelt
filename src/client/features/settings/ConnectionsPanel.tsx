@@ -2,7 +2,7 @@ import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import type { LlmConnection, LlmMode, LlmProvider } from "../../types";
-import { Field, RowActionsMenu } from "../../ui/primitives";
+import { Field, RowActionsMenu, Select } from "../../ui/primitives";
 import { FORM_CONTROL_CLS, FORM_LABEL_CLS } from "../../ui/form-classes";
 import { Icon } from "../../ui/Icon";
 import { isEnvPinned } from "./settings-model";
@@ -431,12 +431,12 @@ function ConnectionCard({
               </button>
             </div>
             {models.length > 0 ? (
-              <select id={modelSelectId} value={c.model} onChange={(e) => onPatch({ model: e.target.value })} disabled={Boolean(envPinned.model)} className={`${selectCls} disabled:cursor-not-allowed disabled:text-muted`}>
+              <Select id={modelSelectId} value={c.model} onChange={(value) => onPatch({ model: value })} disabled={Boolean(envPinned.model)} className="disabled:cursor-not-allowed disabled:text-muted">
                 <option value="">{t("settings.llmConnection.selectModel")}</option>
                 {models.map((m) => (
                   <option key={m} value={m}>{m}</option>
                 ))}
-              </select>
+              </Select>
             ) : (
               <input
                 id={modelSelectId}

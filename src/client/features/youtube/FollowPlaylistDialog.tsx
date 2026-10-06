@@ -6,7 +6,7 @@ import { ModalShell } from "../../ui/ModalShell";
 import { getErrorMessage } from "../../lib";
 import type { Task, YoutubeBackfill, YoutubeMedia, YoutubePlaylist, YoutubePlaylistFields, YoutubePreview } from "../../types";
 import { FORM_CONTROL_CLS, FORM_LABEL_CLS } from "../../ui/form-classes";
-import { ActionButton, IconButton } from "../../ui/primitives";
+import { ActionButton, IconButton, Select } from "../../ui/primitives";
 import { Segmented } from "./parts";
 import { availabilityLabel, followKind, followUrl, type FollowKind } from "./format";
 import { estimateSelection, formatGigabytes, includedEntries, postedPerMonth } from "./estimate";
@@ -267,31 +267,31 @@ export function FollowPlaylistDialog({ playlist, kind: newKind = "playlist", tas
           />
           {media.type === "audio" ? (
             <Field label={t("youtube.dialog.format")} htmlFor={ids.fmt} className="md:max-w-[200px]">
-              <select id={ids.fmt} className={selectCls} value={media.format} onChange={(e) => setMedia({ type: "audio", format: e.target.value as "m4a" | "opus" })}>
+              <Select id={ids.fmt} value={media.format} onChange={(value) => setMedia({ type: "audio", format: value as "m4a" | "opus" })}>
                 <option value="m4a">m4a (AAC)</option>
                 <option value="opus">opus</option>
-              </select>
+              </Select>
             </Field>
           ) : (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1fr)]">
               <Field label={t("youtube.dialog.quality")} htmlFor={ids.height}>
-                <select id={ids.height} className={selectCls} value={media.maxHeight} onChange={(e) => setVideo({ maxHeight: Number(e.target.value) as VideoMedia["maxHeight"] })}>
+                <Select id={ids.height} value={String(media.maxHeight)} onChange={(value) => setVideo({ maxHeight: Number(value) as VideoMedia["maxHeight"] })}>
                   {HEIGHTS.map((h) => <option key={h} value={h}>{h}p</option>)}
-                </select>
+                </Select>
               </Field>
               <Field label={t("youtube.dialog.codec")} htmlFor={ids.codec}>
-                <select id={ids.codec} className={selectCls} value={media.codec} onChange={(e) => setVideo({ codec: e.target.value as VideoMedia["codec"] })}>
+                <Select id={ids.codec} value={media.codec} onChange={(value) => setVideo({ codec: value as VideoMedia["codec"] })}>
                   <option value="h264">{t("youtube.dialog.codecH264")}</option>
                   <option value="vp9">VP9</option>
                   <option value="av1">AV1</option>
                   <option value="any">{t("youtube.dialog.codecAny")}</option>
-                </select>
+                </Select>
               </Field>
               <Field label={t("youtube.dialog.file")} htmlFor={ids.file}>
-                <select id={ids.file} className={selectCls} value={media.container} onChange={(e) => setVideo({ container: e.target.value as VideoMedia["container"] })}>
+                <Select id={ids.file} value={media.container} onChange={(value) => setVideo({ container: value as VideoMedia["container"] })}>
                   <option value="mp4">mp4</option>
                   <option value="mkv">mkv</option>
-                </select>
+                </Select>
               </Field>
             </div>
           )}
@@ -397,23 +397,23 @@ export function FollowPlaylistDialog({ playlist, kind: newKind = "playlist", tas
           <summary className="flex min-h-touch cursor-pointer items-center text-sm font-medium text-text">{t("youtube.dialog.more")}</summary>
           <div className="grid grid-cols-1 gap-3 pb-3 md:grid-cols-2">
             <Field label={t("youtube.dialog.modeLabel")} htmlFor={ids.mode}>
-              <select id={ids.mode} className={selectCls} value={mode} onChange={(e) => setMode(e.target.value as "auto" | "manual")}>
+              <Select id={ids.mode} value={mode} onChange={(value) => setMode(value as "auto" | "manual")}>
                 <option value="auto">{t("youtube.dialog.modeAuto")}</option>
                 <option value="manual">{t("youtube.dialog.modeManual")}</option>
-              </select>
+              </Select>
             </Field>
             <Field label={t("youtube.dialog.captionsLabel")} htmlFor={ids.subs}>
-              <select id={ids.subs} className={selectCls} value={captions} onChange={(e) => setCaptions(e.target.value as "prefer_youtube" | "whisper_only")}>
+              <Select id={ids.subs} value={captions} onChange={(value) => setCaptions(value as "prefer_youtube" | "whisper_only")}>
                 <option value="prefer_youtube">{t("youtube.dialog.captionsPrefer")}</option>
                 <option value="whisper_only">{t("youtube.dialog.captionsWhisper")}</option>
-              </select>
+              </Select>
             </Field>
             <Field label={t("youtube.dialog.everyLabel")} htmlFor={ids.every}>
-              <select id={ids.every} className={selectCls} value={every} onChange={(e) => setEvery(Number(e.target.value))}>
+              <Select id={ids.every} value={String(every)} onChange={(value) => setEvery(Number(value))}>
                 {[...new Set([...CHECK_INTERVALS, every])].map((minutes) => (
                   <option key={minutes} value={minutes}>{t(`youtube.dialog.every${minutes}`, { defaultValue: `${minutes} min` })}</option>
                 ))}
-              </select>
+              </Select>
             </Field>
             <Field label={t("youtube.dialog.folder")} htmlFor={ids.folder}>
               <div className="flex items-center gap-2">

@@ -8,7 +8,7 @@ import { fullTime, getErrorMessage, highlightText, relativeTime } from "../../li
 import type { LogEntry } from "../../types";
 import { useToast } from "../../ui/Toast";
 import { useConfirm } from "../../ui/ConfirmModal";
-import { Accordion, RowActionsMenu, Tabs, PageHeader } from "../../ui/primitives";
+import { Accordion, RowActionsMenu, Tabs, PageHeader, Select } from "../../ui/primitives";
 import { InlineError } from "../../ui/QueryState";
 import { BackendLogView } from "./BackendLogView";
 
@@ -154,19 +154,14 @@ export function LogsPage() {
         {source === "app" && (
         <Accordion title={t("logs.filters")} defaultOpen={hasFilters} variant="inline" className="mt-2">
           <div className={`flex gap-2 pt-1 ${isMobile ? "flex-col" : "flex-wrap items-center"}`}>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              aria-label={t("logs.category.all")}
-              className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-sm text-muted focus:border-accent"
-            >
+            <Select value={category} onChange={(value) => setCategory(value)} ariaLabel={t("logs.category.all")}>
               <option value="">{t("logs.category.all")}</option>
               <option value="scan">{t("logs.category.scan")}</option>
               <option value="translate">{t("logs.category.translate")}</option>
               <option value="queue">{t("logs.category.queue")}</option>
               <option value="system">{t("logs.category.system")}</option>
               <option value="youtube">{t("logs.category.youtube")}</option>
-            </select>
+            </Select>
             <input
               type="number"
               value={jobIdFilter ?? ""}

@@ -8,7 +8,7 @@ import { useToast } from "../../ui/Toast";
 import { useConfirm } from "../../ui/ConfirmModal";
 import { ModalShell } from "../../ui/ModalShell";
 import { PRESETS } from "../../app/constants";
-import { Accordion, ActionButton, EmptyHint, Field, RowActionsMenu, SelectionBar, PageHeader } from "../../ui/primitives";
+import { Accordion, ActionButton, EmptyHint, Field, RowActionsMenu, SelectionBar, PageHeader, TextArea } from "../../ui/primitives";
 import {
   AUTO_SOURCE_LANG,
   DEFAULT_OUTPUT_PATTERN,
@@ -331,7 +331,7 @@ export function TranslationLanguagesPage() {
                   </button>
                 </div>
                 {previewExample && <div className="rounded-sm bg-surface-raised p-3 text-xs font-mono"><div className="text-faint">{t("translation_languages.previewSource")} <span className="text-muted">The.Matrix.1999.srt</span></div><div className="mt-1 text-faint">{t("translation_languages.previewOutput")} <span className="text-success">{previewExample}</span></div></div>}
-                {!showPromptOverride ? <button onClick={() => setShowPromptOverride(true)} className="text-xs text-accent">{t("translation_languages.addPromptOverride")}</button> : <div><div className="mb-1 flex items-center justify-between"><label className="text-sm font-medium text-muted">{t("translation_languages.promptOverride")}</label><button onClick={() => { setShowPromptOverride(false); setEditing({ ...editing, prompt_override: "" }); }} className="text-xs text-faint">{t("translation_languages.removePromptOverride")}</button></div><textarea value={editing.prompt_override || ""} onChange={(e) => setEditing({ ...editing, prompt_override: e.target.value })} rows={5} placeholder={t("translation_languages.promptOverridePlaceholder")} className="w-full rounded-sm border border-border bg-surface-raised px-3 py-2 text-xs font-mono text-text focus:border-accent" /><p className="mt-1 text-xs text-faint">{t("translation_languages.promptOverrideHint")}</p></div>}
+                {!showPromptOverride ? <button onClick={() => setShowPromptOverride(true)} className="text-xs text-accent">{t("translation_languages.addPromptOverride")}</button> : <div><div className="mb-1 flex items-center justify-between"><label className="text-sm font-medium text-muted">{t("translation_languages.promptOverride")}</label><button onClick={() => { setShowPromptOverride(false); setEditing({ ...editing, prompt_override: "" }); }} className="text-xs text-faint">{t("translation_languages.removePromptOverride")}</button></div><TextArea value={editing.prompt_override || ""} onChange={(value) => setEditing({ ...editing, prompt_override: value })} rows={5} placeholder={t("translation_languages.promptOverridePlaceholder")} mono /><p className="mt-1 text-xs text-faint">{t("translation_languages.promptOverrideHint")}</p></div>}
           </div>
           <div className={`mt-6 flex gap-3 ${isMobile ? "sticky bottom-0 bg-surface pt-4" : "justify-end"}`}>
             <button onClick={() => { setEditing(null); setIsNew(false); }} className="flex-1 px-4 py-3 text-sm text-muted md:flex-none">{t("common.cancel")}</button>

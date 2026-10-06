@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Accordion, Field } from "../../../ui/primitives";
+import { Accordion, Field, Select } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
 import { ToggleRow, labelCls, selectCls } from "./shared";
 import type { WhisperModelDescriptor } from "../../../types";
@@ -56,20 +56,20 @@ export function SttAdvancedFields({ settings, update, model }: SttAdvancedFields
         <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-2"} md:max-w-[480px]`}>
           <div>
             <label className={labelCls}>{t("settings.transcription.missingSubtitleBehavior")}</label>
-            <select aria-label={t("settings.transcription.missingSubtitleBehavior")} value={str(settings.transcription_missing_subtitle_behavior, "ask")} onChange={(e) => update("transcription_missing_subtitle_behavior", e.target.value)} className={selectCls}>
+            <Select ariaLabel={t("settings.transcription.missingSubtitleBehavior")} value={str(settings.transcription_missing_subtitle_behavior, "ask")} onChange={(value) => update("transcription_missing_subtitle_behavior", value)}>
               <option value="ask">{t("settings.transcription.missingAsk")}</option>
               <option value="auto_transcribe">{t("settings.transcription.missingAutoTranscribe")}</option>
               <option value="auto_transcribe_and_translate">{t("settings.transcription.missingAutoTranscribeTranslate")}</option>
-            </select>
+            </Select>
           </div>
           <div>
             <label className={labelCls}>{t("settings.transcription.lowRamBehavior")}</label>
-            <select aria-label={t("settings.transcription.lowRamBehavior")} value={str(settings.transcription_low_ram_behavior, "ask")} onChange={(e) => update("transcription_low_ram_behavior", e.target.value)} className={selectCls}>
+            <Select ariaLabel={t("settings.transcription.lowRamBehavior")} value={str(settings.transcription_low_ram_behavior, "ask")} onChange={(value) => update("transcription_low_ram_behavior", value)}>
               <option value="ask">{t("settings.transcription.lowRamAsk")}</option>
               <option value="downgrade">{t("settings.transcription.lowRamDowngrade")}</option>
               <option value="skip">{t("settings.transcription.lowRamSkip")}</option>
               <option value="run_anyway">{t("settings.transcription.lowRamRunAnyway")}</option>
-            </select>
+            </Select>
           </div>
         </div>
       </div>

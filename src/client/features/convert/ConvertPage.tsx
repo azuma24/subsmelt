@@ -6,7 +6,7 @@ import type { ConvertTargetFormat } from "../../api";
 import { ApiError } from "../../api";
 import { useToast } from "../../ui/Toast";
 import { useLlmHealthQuery, useIsMobile } from "../../hooks";
-import { ActionButton, PageHeader } from "../../ui/primitives";
+import { ActionButton, PageHeader, Select } from "../../ui/primitives";
 import { InlineError } from "../../ui/QueryState";
 import { AUTO_SOURCE_LANG } from "../tasks/translation-defaults";
 import type { KeyValueStorage } from "../../ui/file-tree/expansion-store";
@@ -253,16 +253,12 @@ export function ConvertPage() {
                 <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
                   <label className="flex flex-col gap-2">
                     <span className="text-xs font-medium text-muted">{t("convert.sourceLanguage")}</span>
-                    <select
-                      value={fromCode}
-                      onChange={(e) => setFromCode(e.target.value)}
-                      className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-sm text-text focus:border-accent"
-                    >
+                    <Select value={fromCode} onChange={(value) => setFromCode(value)}>
                       <option value="">{t("convert.sourceAuto")}</option>
                       {LANGUAGES.map((l) => (
                         <option key={l.code} value={l.code}>{l.englishName}</option>
                       ))}
-                    </select>
+                    </Select>
                   </label>
                   <TargetLanguageField
                     value={targetInput}
@@ -283,17 +279,13 @@ export function ConvertPage() {
 
               <label className="flex flex-col gap-2 sm:max-w-[220px]">
                 <span className="text-xs font-medium text-muted">{t("convert.targetFormat")}</span>
-                <select
-                  value={targetFormat}
-                  onChange={(e) => setTargetFormat(e.target.value as ConvertTargetFormat)}
-                  className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-sm text-text focus:border-accent"
-                >
+                <Select value={targetFormat} onChange={(value) => setTargetFormat(value as ConvertTargetFormat)}>
                   {TARGET_FORMATS.map((fmt) => (
                     <option key={fmt} value={fmt}>
                       {fmt.toUpperCase()}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
             </div>
           </div>

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Accordion, Field } from "../../../ui/primitives";
+import { Accordion, Field, TextArea } from "../../../ui/primitives";
 import { DEFAULT_PROMPT } from "../../../app/constants";
 import { str } from "../../../lib/settings-value";
 import { ToggleRow, labelCls, textareaCls } from "./shared";
@@ -31,11 +31,11 @@ export function EngineSection({ settings, updateAndSaveDebounced }: EngineSectio
               <label className="text-xs font-medium text-muted">{t("settings.translationEngine.systemPrompt")}</label>
               <button onClick={() => updateAndSaveDebounced("prompt", DEFAULT_PROMPT)} className="text-xs text-faint">{t("common.reset")}</button>
             </div>
-            <textarea aria-label={t("settings.translationEngine.systemPrompt")} value={str(settings.prompt)} onChange={(e) => updateAndSaveDebounced("prompt", e.target.value)} rows={8} className={`${textareaCls} font-mono leading-relaxed`} />
+            <TextArea ariaLabel={t("settings.translationEngine.systemPrompt")} value={str(settings.prompt)} onChange={(value) => updateAndSaveDebounced("prompt", value)} rows={8} mono />
           </div>
           <div>
             <label className={labelCls}>{t("settings.translationEngine.additionalContext")}</label>
-            <textarea aria-label={t("settings.translationEngine.additionalContext")} value={str(settings.additional_context)} onChange={(e) => updateAndSaveDebounced("additional_context", e.target.value)} rows={3} placeholder={t("settings.translationEngine.additionalContextPlaceholder")} className={textareaCls} />
+            <TextArea ariaLabel={t("settings.translationEngine.additionalContext")} value={str(settings.additional_context)} onChange={(value) => updateAndSaveDebounced("additional_context", value)} rows={3} placeholder={t("settings.translationEngine.additionalContextPlaceholder")} />
           </div>
         </div>
       </Accordion>

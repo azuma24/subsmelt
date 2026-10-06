@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Accordion, Field } from "../../../ui/primitives";
+import { Accordion, Field, Select } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
 import { isEnvPinned } from "../settings-model";
 import { labelCls, selectCls } from "./shared";
@@ -24,11 +24,11 @@ export function PathMappingFields({ settings, update }: PathMappingFieldsProps) 
       <div className="space-y-3">
         <div className="md:max-w-[480px]">
           <label className={labelCls}>{t("settings.transcription.transport")}</label>
-          <select aria-label={t("settings.transcription.transport")} value={str(settings.transcription_transport, "auto")} onChange={(e) => update("transcription_transport", e.target.value)} disabled={transportPinned} className={`${selectCls} disabled:cursor-not-allowed disabled:text-muted`}>
+          <Select ariaLabel={t("settings.transcription.transport")} value={str(settings.transcription_transport, "auto")} onChange={(value) => update("transcription_transport", value)} disabled={transportPinned} className="disabled:cursor-not-allowed disabled:text-muted">
             <option value="auto">{t("settings.transcription.transportAuto")}</option>
             <option value="shared">{t("settings.transcription.transportShared")}</option>
             <option value="upload">{t("settings.transcription.transportUpload")}</option>
-          </select>
+          </Select>
           <p className="mt-1 text-xs text-muted">{transportPinned ? t("settings.envPinnedNote", { name: "WHISPER_TRANSPORT" }) : t("settings.transcription.transportHelp")}</p>
         </div>
         <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-2"} md:max-w-[480px]`}>

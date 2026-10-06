@@ -1,7 +1,7 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { TranscriptionHealth } from "../../../types";
-import { ActionButton, Field } from "../../../ui/primitives";
+import { ActionButton, Field, Select } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
 import { isEnvPinned } from "../settings-model";
 import { ModelManagerPanel } from "../ModelManagerPanel";
@@ -121,20 +121,20 @@ export function SttSection({
         </div>
         <div>
           <label className={labelCls}>{t("settings.transcription.language")}</label>
-          <select aria-label={t("settings.transcription.language")} value={selectedLanguage} onChange={(e) => update("transcription_language", e.target.value)} className={selectCls}>
+          <Select ariaLabel={t("settings.transcription.language")} value={selectedLanguage} onChange={(value) => update("transcription_language", value)}>
             {languageOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.labelKey ? t(opt.labelKey) : opt.value}</option>
             ))}
-          </select>
+          </Select>
           <LanguageSupportWarning model={selectedDescriptor} language={selectedLanguage} />
         </div>
         <div>
           <label className={labelCls}>{t("settings.transcription.output")}</label>
-          <select aria-label={t("settings.transcription.output")} value={str(settings.transcription_output_format, "srt")} onChange={(e) => update("transcription_output_format", e.target.value)} className={selectCls}>
+          <Select ariaLabel={t("settings.transcription.output")} value={str(settings.transcription_output_format, "srt")} onChange={(value) => update("transcription_output_format", value)}>
             <option value="srt">SRT</option>
             <option value="vtt">VTT</option>
             <option value="txt">TXT</option>
-          </select>
+          </Select>
         </div>
       </div>
       <ToggleRow

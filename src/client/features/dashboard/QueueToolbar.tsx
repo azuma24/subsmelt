@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 import type { DashboardTab, DashboardTabItem } from "./tabs";
-import { Accordion, ActionButton, Tabs } from "../../ui/primitives";
+import { Accordion, ActionButton, Tabs, Select } from "../../ui/primitives";
 
 
 const chipClass = "w-full md:w-auto";
@@ -118,25 +118,17 @@ export function QueueToolbar({
             <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
               <label className="min-w-0">
                 <span className="mb-1 block text-xs uppercase tracking-wide text-faint">{t("dashboard.queueFilterFolder")}</span>
-                <select
-                  value={folderFilter}
-                  onChange={(e) => onFolderFilterChange(e.target.value)}
-                  className="w-full rounded-sm border border-border bg-surface-raised px-3 py-2 text-xs text-text"
-                >
+                <Select value={folderFilter} onChange={(value) => onFolderFilterChange(value)}>
                   <option value="all">{t("dashboard.queueFilterAllFolders")}</option>
                   {folderOptions.map((folder) => <option key={folder} value={folder}>{folder}</option>)}
-                </select>
+                </Select>
               </label>
               <label className="min-w-0">
                 <span className="mb-1 block text-xs uppercase tracking-wide text-faint">{t("dashboard.queueFilterTarget")}</span>
-                <select
-                  value={targetFilter}
-                  onChange={(e) => onTargetFilterChange(e.target.value)}
-                  className="w-full rounded-sm border border-border bg-surface-raised px-3 py-2 text-xs text-text"
-                >
+                <Select value={targetFilter} onChange={(value) => onTargetFilterChange(value)}>
                   <option value="all">{t("dashboard.queueFilterAllTargets")}</option>
                   {targetOptions.map((target) => <option key={target} value={target}>{target}</option>)}
-                </select>
+                </Select>
               </label>
               <div className="flex items-end">
                 <ActionButton

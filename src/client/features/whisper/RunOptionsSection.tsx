@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Accordion, ProgressSmall, SettingsSection } from "../../ui/primitives";
+import { Accordion, ProgressSmall, SettingsSection, Select } from "../../ui/primitives";
 import type { WhisperModelDescriptor } from "../../types";
 import type { ModelDownloadProgress } from "../../hooks";
 import { COMMON_LANGS, findDescriptor, FORMATS, hidesOptions, selectCls, type OutputFormat } from "./whisper-shared";
@@ -64,15 +64,15 @@ export function RunOptionsSection({
           )}
         </label>
         <label className={optionLabelCls}>{t("whisper.language")}
-          <select value={effLang} onChange={(e) => onLanguageChange(e.target.value)} className={selectCls}>
+          <Select value={effLang} onChange={(value) => onLanguageChange(value)}>
             {languages.map((l) => <option key={l} value={l}>{l}</option>)}
-          </select>
+          </Select>
           <LanguageSupportWarning model={selectedModel} language={effLang} />
         </label>
         <label className={optionLabelCls}>{t("whisper.format")}
-          <select value={effFormat} onChange={(e) => onFormatChange(e.target.value)} className={selectCls}>
+          <Select value={effFormat} onChange={(value) => onFormatChange(value)}>
             {FORMATS.map((f) => <option key={f} value={f}>{f.toUpperCase()}</option>)}
-          </select>
+          </Select>
         </label>
       </div>
 
@@ -80,15 +80,15 @@ export function RunOptionsSection({
         {hidesOptions(selectedModel) && <div className="mb-3"><OptionsDecidedNote model={selectedModel} /></div>}
         <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
           <label className={optionLabelCls}>{t("whisper.device")}
-            <select value={effDevice} onChange={(e) => onDeviceChange(e.target.value)} className={selectCls}>
+            <Select value={effDevice} onChange={(value) => onDeviceChange(value)}>
               {deviceOptions.map((d) => <option key={d} value={d}>{d}</option>)}
-            </select>
+            </Select>
           </label>
           {selectedModel.supports.computeType && (
             <label className={optionLabelCls}>{t("whisper.compute")}
-              <select value={effCompute} onChange={(e) => onComputeChange(e.target.value)} className={selectCls}>
+              <Select value={effCompute} onChange={(value) => onComputeChange(value)}>
                 {computeOptions.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
+              </Select>
             </label>
           )}
           {canDiarize ? (

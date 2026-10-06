@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActionButton } from "../../../ui/primitives";
+import { ActionButton, Select } from "../../../ui/primitives";
 import { LANGUAGES } from "../../../app/constants";
 import { getThemePref, setThemePref, THEME_PREFS, type ThemePref } from "../../../lib/theme";
 import { getFontScale, setFontScale, DEFAULT_SCALE, MIN_SCALE, MAX_SCALE, SCALE_STEP } from "../../../lib/font-scale";
@@ -21,20 +21,15 @@ export function InterfaceSection() {
     <div className="space-y-4">
       <div className="md:max-w-[240px]">
         <label className={labelCls}>{t("settings.interface.theme")}</label>
-        <select
-          aria-label={t("settings.interface.theme")}
-          value={themePref}
-          onChange={(e) => {
-            const next = e.target.value as ThemePref;
+        <Select ariaLabel={t("settings.interface.theme")} value={themePref} onChange={(value) => {
+            const next = value as ThemePref;
             setThemePrefState(next);
             setThemePref(next);
-          }}
-          className={selectCls}
-        >
+          }}>
           {THEME_PREFS.map((pref) => (
             <option key={pref} value={pref}>{t(`settings.interface.theme_${pref}`)}</option>
           ))}
-        </select>
+        </Select>
         <p className="mt-1 text-xs text-faint">{t("settings.interface.themeHint")}</p>
       </div>
       <div className="md:max-w-[240px]">
@@ -73,16 +68,11 @@ export function InterfaceSection() {
       </div>
       <div className="md:max-w-[240px]">
         <label className={labelCls}>{t("settings.interface.language")}</label>
-        <select
-          aria-label={t("settings.interface.language")}
-          value={currentLanguage}
-          onChange={(e) => i18n.changeLanguage(e.target.value)}
-          className={selectCls}
-        >
+        <Select ariaLabel={t("settings.interface.language")} value={currentLanguage} onChange={(value) => i18n.changeLanguage(value)}>
           {LANGUAGES.map((lang) => (
             <option key={lang.code} value={lang.code}>{lang.label}</option>
           ))}
-        </select>
+        </Select>
         <p className="mt-1 text-xs text-faint">{t("settings.interface.languageHint")}</p>
       </div>
     </div>

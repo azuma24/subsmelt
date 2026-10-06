@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActionButton, Drawer } from "../../../ui/primitives";
+import { ActionButton, Drawer, TextArea } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
 import { labelCls, textareaCls } from "./shared";
 
@@ -43,26 +43,12 @@ export function RawConfigDrawer({ settings, update, onSave, dirty, saving }: Raw
         <div className="space-y-6">
           <div>
             <label className={labelCls}>{t("settings.transcription.folderDefaults")}</label>
-            <textarea
-              aria-label={t("settings.transcription.folderDefaults")}
-              value={str(settings.transcription_folder_defaults, "[]")}
-              onChange={(e) => update("transcription_folder_defaults", e.target.value)}
-              rows={8}
-              placeholder={'[{"path":"/media/anime","language":"ja","model":"small"}]'}
-              className={`${textareaCls} font-mono text-xs`}
-            />
+            <TextArea ariaLabel={t("settings.transcription.folderDefaults")} value={str(settings.transcription_folder_defaults, "[]")} onChange={(value) => update("transcription_folder_defaults", value)} rows={8} placeholder={'[{"path":"/media/anime","language":"ja","model":"small"}]'} className="text-xs" mono />
             <p className="mt-1 text-xs leading-relaxed text-faint">{t("settings.transcription.folderDefaultsHelp")}</p>
           </div>
           <div>
             <label className={labelCls}>{t("settings.transcription.advancedOptions")}</label>
-            <textarea
-              aria-label={t("settings.transcription.advancedOptions")}
-              value={str(settings.transcription_advanced_stt, "{}")}
-              onChange={(e) => update("transcription_advanced_stt", e.target.value)}
-              rows={8}
-              placeholder={'{"beam_size":5,"word_timestamps":true,"initial_prompt":"Lecture audio"}'}
-              className={`${textareaCls} font-mono text-xs`}
-            />
+            <TextArea ariaLabel={t("settings.transcription.advancedOptions")} value={str(settings.transcription_advanced_stt, "{}")} onChange={(value) => update("transcription_advanced_stt", value)} rows={8} placeholder={'{"beam_size":5,"word_timestamps":true,"initial_prompt":"Lecture audio"}'} className="text-xs" mono />
             <p className="mt-1 text-xs leading-relaxed text-faint">{t("settings.transcription.advancedOptionsHelp")}</p>
           </div>
           <div className="flex justify-end gap-2">
