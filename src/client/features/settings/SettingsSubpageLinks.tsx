@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { Icon } from "../../ui/Icon";
 
 /** Settings areas that are whole pages of their own, listed beside the sections. */

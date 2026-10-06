@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../i18n";
 import { isNavActive, NAV_GROUPS, NAV_ITEMS, navItemsInGroup } from "./constants";
 import { Icon, type IconName } from "../ui/Icon";
 import { LlmStatusPopover } from "./LlmStatusPopover";

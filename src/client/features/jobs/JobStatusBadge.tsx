@@ -1,5 +1,5 @@
-import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
+import { useTranslation } from "../../i18n";
+import type { TFunction } from "../../i18n";
 import { STATUS_ICON, STATUS_LABEL_KEY } from "../../app/constants";
 import type { Job } from "../../types";
 import { StatusBadge, type StatusDescriptor, type StatusFlag, type StatusTone } from "../../ui/primitives";

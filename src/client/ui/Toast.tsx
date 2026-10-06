@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../i18n";
 import { toastsAwaitingTimer, visibleToasts } from "./toast-queue";
 import { Icon } from "./Icon";
 import { IconButton } from "./Button";

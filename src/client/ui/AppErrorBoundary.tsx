@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../i18n";
 import { PageError } from "./QueryState";
 
 // App-level error boundary. Catches render errors anywhere in the tree below it

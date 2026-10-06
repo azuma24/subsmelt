@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useSearchParams } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import * as api from "../../api";
 import { useLogsQuery, useTranscriptionLogsQuery, useIsMobile } from "../../hooks";

@@ -1,4 +1,4 @@
-import type { TFunction } from "i18next";
+import type { TFunction } from "../../i18n";
 import type {
   YoutubePipeline,
   YoutubeSubtitlePlan,

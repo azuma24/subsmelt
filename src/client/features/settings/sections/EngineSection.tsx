@@ -1,4 +1,4 @@
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../../i18n";
 import { Accordion, Field, TextArea } from "../../../ui/primitives";
 import { DEFAULT_PROMPT } from "../../../app/constants";
 import { str } from "../../../lib/settings-value";

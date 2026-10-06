@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { Icon } from "../../ui/Icon";
 import { ActionButton } from "../../ui/primitives";
 

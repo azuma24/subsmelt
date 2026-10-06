@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { TranscriptionLogs } from "../../api";
 import { highlightText } from "../../lib";

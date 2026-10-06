@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { renderPage } from "../../test-render";
 import type { ScannedFile, TaskStatus } from "../../types";
 import { makeTaskStatus } from "../../test-fixtures";

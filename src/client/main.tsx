@@ -5,7 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { AppErrorBoundary } from "./ui/AppErrorBoundary";
 import "./index.css";
-import "./i18n";
+import i18n, { I18nProvider } from "./i18n";
 
 const queryClient = new QueryClient({
   // Don't auto-retry mutations — a failed POST/DELETE retried 3× can double-fire
@@ -18,12 +18,14 @@ if (!rootEl) throw new Error("Root element #root not found");
 
 ReactDOM.createRoot(rootEl).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AppErrorBoundary>
-          <App />
-        </AppErrorBoundary>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <I18nProvider i18n={i18n}>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <AppErrorBoundary>
+            <App />
+          </AppErrorBoundary>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </I18nProvider>
   </React.StrictMode>,
 );

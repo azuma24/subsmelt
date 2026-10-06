@@ -1,4 +1,4 @@
-import type { TFunction } from "i18next";
+import type { TFunction } from "../../i18n";
 import type { DashboardTab, DashboardTabItem } from "./tabs";
 import { Accordion, ActionButton, Tabs, Select } from "../../ui/primitives";
 

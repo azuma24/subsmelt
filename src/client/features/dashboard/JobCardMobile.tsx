@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { useJobActions } from "../../hooks/useJobActions";
 import type { Job } from "../../types";
 import { ActionButton, ProgressSmall, RowActionsMenu } from "../../ui/primitives";

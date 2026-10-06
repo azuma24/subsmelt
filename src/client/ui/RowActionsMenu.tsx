@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../i18n";
 import { Icon } from "./Icon";
 
 interface RowActionsMenuItem {

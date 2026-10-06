@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "../../ui/Toast";
 import {

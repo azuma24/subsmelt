@@ -1,4 +1,4 @@
-import type { TFunction } from "i18next";
+import type { TFunction } from "../i18n";
 import type { LlmConnectionStatus, LlmMode, LlmStatus } from "../types";
 
 /** ok = all reachable, warn = some offline, down = none reachable, neutral = nothing known. */

@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { classifyError, errorHintKeys } from "../../lib/errorTaxonomy";
 import type { Job } from "../../types";
 import { Drawer } from "../../ui/primitives";

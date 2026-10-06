@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { useJobPreview, useJobsQuery } from "../../hooks";
 import { formatDur } from "../../lib";
 import type { Job } from "../../types";

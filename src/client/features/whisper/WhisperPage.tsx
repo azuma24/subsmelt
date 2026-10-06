@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { Link } from "react-router-dom";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";

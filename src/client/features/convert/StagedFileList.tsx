@@ -1,4 +1,4 @@
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { LANGUAGES, findLanguage, type LanguageEntry } from "./language-table";
 import { extOf, formatBytes } from "./download-outputs";
 

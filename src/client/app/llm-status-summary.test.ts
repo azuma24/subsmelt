@@ -1,13 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import i18n from "i18next";
 import en from "../locales/en/translation.json";
+import { type Bundle, createI18n } from "../i18n";
 import { connectionStateText, summarizeLlmStatus } from "./llm-status-summary";
 import type { LlmConnectionStatus, LlmStatus } from "../types";
 
-const i18nInstance = i18n.createInstance();
-await i18nInstance.init({ resources: { en: { translation: en } }, lng: "en", interpolation: { escapeValue: false } });
-const t = i18nInstance.t.bind(i18nInstance);
+const t = createI18n({ language: "en", fallback: "en", bundles: { en: en as Bundle } }).t;
 
 const conn = (id: string, state: LlmConnectionStatus["state"], jobIds: number[] = []): LlmConnectionStatus => ({
   id,

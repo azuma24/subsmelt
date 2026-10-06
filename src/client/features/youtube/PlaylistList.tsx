@@ -1,4 +1,4 @@
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import type { YoutubePlaylist } from "../../types";
 import { ActionButton, RowActionsMenu } from "../../ui/primitives";
 import { CountChip, Tag } from "./parts";

@@ -1,4 +1,4 @@
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import type { ScannedFile } from "../../types";
 import { ActionButton, EmptyHint, SelectionBar, SettingsSection } from "../../ui/primitives";
 import { pathMarkerFor, relativeDisplayPath } from "../../ui/file-tree/build";

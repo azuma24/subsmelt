@@ -2,8 +2,7 @@ import type { ReactElement } from "react";
 import { renderToString } from "react-dom/server";
 import { QueryClient, QueryClientProvider, type QueryKey } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
-import i18n from "i18next";
-import { I18nextProvider, initReactI18next } from "react-i18next";
+import { type Bundle, createI18n, I18nProvider } from "./i18n";
 import en from "./locales/en/translation.json";
 import { ToastProvider } from "./ui/Toast";
 import { ConfirmProvider } from "./ui/ConfirmModal";
@@ -22,13 +21,7 @@ console.error = (message?: unknown, ...rest: unknown[]) => {
   originalConsoleError(message, ...rest);
 };
 
-const i18nInstance = i18n.createInstance();
-await i18nInstance.use(initReactI18next).init({
-  resources: { en: { translation: en } },
-  lng: "en",
-  fallbackLng: "en",
-  interpolation: { escapeValue: false },
-});
+const i18nInstance = createI18n({ language: "en", fallback: "en", bundles: { en: en as Bundle } });
 
 /** Seed value that puts a query into the error state instead of giving it data. */
 export class SeededError {
@@ -99,7 +92,7 @@ export function renderPage(
     }
   }
   const html = renderToString(
-    <I18nextProvider i18n={i18nInstance}>
+    <I18nProvider i18n={i18nInstance}>
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
           <IsMobileContext.Provider value={isMobile}>
@@ -109,7 +102,7 @@ export function renderPage(
           </IsMobileContext.Provider>
         </MemoryRouter>
       </QueryClientProvider>
-    </I18nextProvider>,
+    </I18nProvider>,
   );
   return {
     html,

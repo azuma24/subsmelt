@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import type { Job } from "../../types";
 import { elapsedSince, estimateJobEta, estimateQueueEta, formatEta } from "./eta";
 import { jobDerived } from "./job-derived";

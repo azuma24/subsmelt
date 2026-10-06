@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useJobPreview, useIsMobile } from "../../hooks";
 import { formatTimecode } from "../../lib";

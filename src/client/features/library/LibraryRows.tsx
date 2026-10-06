@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import type { Job } from "../../types";
 import { Icon } from "../../ui/Icon";
 import { itemLanguageChips, type ClassifiedItem, type LibrarySection, type LibraryStatus } from "./library-model";

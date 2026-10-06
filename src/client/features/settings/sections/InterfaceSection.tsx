@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../../i18n";
 import { ActionButton, Select } from "../../../ui/primitives";
 import { LANGUAGES } from "../../../app/constants";
 import { getThemePref, setThemePref, THEME_PREFS, type ThemePref } from "../../../lib/theme";

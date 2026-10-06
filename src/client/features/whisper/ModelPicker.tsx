@@ -1,5 +1,5 @@
-import type { TFunction } from "i18next";
-import { useTranslation } from "react-i18next";
+import type { TFunction } from "../../i18n";
+import { useTranslation } from "../../i18n";
 import type { WhisperModelDescriptor } from "../../types";
 import { findDescriptor, groupByEngine, MODEL_LABEL_KEYS, supportsLanguage } from "./whisper-shared";
 import { Icon } from "../../ui/Icon";

@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef } from "react";
 import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "./i18n";
 import { ToastProvider, useToast } from "./ui/Toast";
 import { ConfirmProvider } from "./ui/ConfirmModal";
 import { formatDur } from "./lib";

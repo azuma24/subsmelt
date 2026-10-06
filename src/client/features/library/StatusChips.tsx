@@ -1,4 +1,4 @@
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { LIBRARY_STATUSES, type LibraryFilter } from "./library-model";
 import { STATUS_DOT } from "./LibraryRows";
 

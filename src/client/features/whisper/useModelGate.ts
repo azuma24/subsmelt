@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import type { TFunction } from "i18next";
+import type { TFunction } from "../../i18n";
 import { getErrorMessage } from "../../lib";
 import type { WhisperModel } from "../../types";
 import type { ModelDownloadProgress } from "../../hooks";

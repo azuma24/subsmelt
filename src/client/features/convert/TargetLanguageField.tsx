@@ -1,5 +1,5 @@
 import { useId, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { findLanguage, type LanguageEntry } from "./language-table";
 import { suggestLanguages, type LanguageResolution } from "./resolve-language";
 

@@ -1,5 +1,5 @@
 import { useId } from "react";
-import type { TFunction } from "i18next";
+import type { TFunction } from "../../i18n";
 import type { ScannedFile } from "../../types";
 import { ModalShell } from "../../ui/ModalShell";
 import { Icon } from "../../ui/Icon";

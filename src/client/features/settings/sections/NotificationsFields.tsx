@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../../i18n";
 import { Accordion, ActionButton, Field, Select } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
 import { NOTIFY_EVENTS, parseNotifyEvents, setNotifyEvent } from "../notify-events";

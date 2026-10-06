@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../i18n";
 import * as api from "../api";
 import { useMutationWithInvalidation } from "./mutations";
 import { useToast } from "../ui/Toast";

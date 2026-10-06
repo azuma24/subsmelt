@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import * as api from "../../api";
 import type { FolderNode, Task } from "../../types";
 import { DirectoryRulesSection } from "./media-sources/DirectoryRulesSection";

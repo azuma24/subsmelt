@@ -33,7 +33,7 @@ export default defineConfig({
             { name: "react", test: /node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/ },
             {
               name: "vendor",
-              test: /node_modules[\\/](@tanstack|i18next|react-i18next|i18next-browser-languagedetector)[\\/]/,
+              test: /node_modules[\\/]@tanstack[\\/]/,
             },
           ],
         },

@@ -1,4 +1,4 @@
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../../i18n";
 import { Accordion } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
 import { ConnectionsPanel } from "../ConnectionsPanel";

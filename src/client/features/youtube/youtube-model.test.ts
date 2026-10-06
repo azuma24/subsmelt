@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import type { TFunction } from "i18next";
+import type { TFunction } from "../../i18n";
 import type { YoutubePreviewEntry, YoutubeVideo } from "../../types";
 import {
   countByFilter,

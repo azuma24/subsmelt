@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import * as api from "../../api";
 import type { TranslateFileRequest } from "../../api";
 import type { Task, TaskStatus } from "../../types";

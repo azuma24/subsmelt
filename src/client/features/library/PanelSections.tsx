@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import type { Job, SubtitleEntry, TaskStatus } from "../../types";
 import { useJobActions } from "../../hooks/useJobActions";
 import { Icon } from "../../ui/Icon";

@@ -1,4 +1,4 @@
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import type { TaskStatus } from "../../types";
 import { Icon } from "../../ui/Icon";
 import { languageState, type LanguageState } from "./library-model";

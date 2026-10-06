@@ -1,5 +1,5 @@
 import { memo, useCallback, useRef, type Dispatch, type SetStateAction } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { formatDur } from "../../lib";
 import { useJobActions, type JobActions } from "../../hooks/useJobActions";

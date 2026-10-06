@@ -1,6 +1,6 @@
 import { useId, useRef, useState, type ChangeEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../../i18n";
 import * as api from "../../../api";
 import { useConfirm } from "../../../ui/ConfirmModal";
 import { useYoutubeNotesFolderQuery, useYoutubeStatusQuery } from "../../../hooks";

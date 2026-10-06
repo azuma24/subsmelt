@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../i18n";
 import { ModalShell } from "./ModalShell";
 
 interface ConfirmOptions {

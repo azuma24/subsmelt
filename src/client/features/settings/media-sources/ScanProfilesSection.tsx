@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../../i18n";
 import { Accordion } from "../../../ui/primitives";
 import type { ScanProfile } from "./model";
 

@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import * as api from "../../api";
 import type { LlmConnection, LlmMode, LlmProvider } from "../../types";
 import { Field, RowActionsMenu, Select } from "../../ui/primitives";

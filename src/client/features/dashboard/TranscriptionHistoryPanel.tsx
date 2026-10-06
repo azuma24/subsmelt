@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import type { TranscriptionHistoryEntry } from "../../types";
 import { groupTranscriptionAttempts, retryableGroups, type TranscriptionGroup } from "./transcription-groups";
 import { classifyError, errorHintKeys } from "../../lib/errorTaxonomy";

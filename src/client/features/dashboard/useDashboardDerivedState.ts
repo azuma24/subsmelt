@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { TFunction } from "i18next";
+import type { TFunction } from "../../i18n";
 import type { Job } from "../../types";
 
 export function parentFolderLabel(

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import type { TFunction } from "i18next";
+import type { TFunction } from "../../i18n";
 import { jobStatusDescriptor } from "./JobStatusBadge";
 
 const t = ((key: string) => `t:${key}`) as unknown as TFunction;

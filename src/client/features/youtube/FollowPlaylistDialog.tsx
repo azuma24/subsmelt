@@ -1,6 +1,6 @@
 import { useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import * as api from "../../api";
 import { ModalShell } from "../../ui/ModalShell";
 import { getErrorMessage } from "../../lib";

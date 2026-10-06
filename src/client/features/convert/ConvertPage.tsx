@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { Link } from "react-router-dom";
 import * as api from "../../api";
 import type { ConvertTargetFormat } from "../../api";
