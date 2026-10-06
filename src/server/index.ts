@@ -54,6 +54,9 @@ process.on("unhandledRejection", (reason) => {
 });
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
+// Every interface by default so a container's published port works; set HOST
+// to 127.0.0.1 behind a reverse proxy that should be the only way in.
+const HOST = process.env.HOST || "0.0.0.0";
 
 // The web UI is served same-origin from this server, so cross-origin browser
 // requests are never needed. Disabling the allow-origin header prevents other
@@ -71,8 +74,24 @@ app.use((req, _res, next) => {
   next();
 });
 
+// Baseline browser hardening for a LAN-facing app: no MIME sniffing, no
+// framing by other sites, no referrer leaking an internal address.
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("Referrer-Policy", "same-origin");
+  next();
+});
+
 const staticDir = path.join(__dirname, "../../dist/client");
-app.use(express.static(staticDir));
+// Vite names every built asset by content hash, so those can be cached for a
+// year and never revalidated; index.html and the favicon keep their names and
+// must be checked on every load so a new release shows up.
+app.use(
+  "/assets",
+  express.static(path.join(staticDir, "assets"), { immutable: true, maxAge: "1y", index: false }),
+);
+app.use(express.static(staticDir, { maxAge: 0, etag: true }));
 
 // ======== SSE (Feature 6) ========
 app.get("/api/events", (_req, res) => {
@@ -285,7 +304,7 @@ app.get("/{*splat}", (_req, res) => {
 });
 
 // ======== Start ========
-app.listen(PORT, "0.0.0.0", () => {
+app.listen(PORT, HOST, () => {
   // Reconcile any transcription attempts left "running" by a previous process
   // (e.g. crash/restart mid-transcription) so they no longer hang in history.
   const reconciled = transcriptionHistory.reconcileRunning();
@@ -296,7 +315,7 @@ app.listen(PORT, "0.0.0.0", () => {
     );
   }
 
-  logger.info("system", `SubSmelt started on port ${PORT}`);
+  logger.info("system", `SubSmelt started on ${HOST}:${PORT}`);
   logger.info("system", `Timezone: ${process.env.TZ || "UTC"}`);
   logger.info("system", `Media directory: ${MEDIA_DIR}`);
   console.log(`\n  SubSmelt`);
