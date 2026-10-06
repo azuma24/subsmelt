@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { ActionButton } from "./primitives";
+import { Icon } from "./Icon";
 
 // Shared presentational components for surfacing React Query loading/error
 // states consistently across pages. Purely presentational — callers wire these
@@ -25,7 +26,7 @@ export function PageError({ message, onRetry }: { message?: string; onRetry?: ()
       role="alert"
       className="flex min-h-[160px] flex-col items-center justify-center gap-3 px-6 py-12 text-center"
     >
-      <span className="text-xl" aria-hidden="true">⚠</span>
+      <Icon name="warning" size={20} className="text-warning" />
       <p className="text-sm leading-6 text-muted">{message ?? t("errors.loadFailed")}</p>
       {onRetry && (
         <ActionButton variant="ghost" size="sm" onClick={onRetry}>

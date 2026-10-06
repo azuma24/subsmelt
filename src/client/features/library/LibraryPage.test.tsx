@@ -67,6 +67,6 @@ test("the header carries the same sort, select-all and refresh controls as the T
   assert.match(page.html, /<option[^>]*value="name"[^>]*>Name<\/option>/);
   assert.match(page.html, /<option[^>]*value="date"[^>]*>Date<\/option>/);
   assert.ok(page.buttons.includes("Select all"));
-  assert.ok(page.buttons.some((label) => label === "↻ Refresh"));
+  assert.ok(page.buttons.some((label) => label === "Refresh"));
   assert.ok(page.text.includes("Descending"), "direction toggle defaults to descending");
 });

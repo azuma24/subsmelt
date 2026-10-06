@@ -1,11 +1,5 @@
 /**
- * Shared Tailwind class strings for form controls.
- *
- * SettingsPage and ConnectionsPanel each carried a byte-identical copy of this,
- * which is how two inputs drift apart one tweak at a time. WhisperPage's compact
- * selects are deliberately a different size and stay local to that page.
+ * Class strings for the few raw form controls left outside the kit. New code
+ * uses Field, Select and TextArea from ./primitives, which apply the same.
  */
-export const FORM_CONTROL_CLS =
-  "w-full rounded-sm border border-border bg-surface-raised px-3 py-2 text-sm text-text focus:border-accent min-h-touch md:min-h-0";
-
-export const FORM_LABEL_CLS = "mb-2 block text-xs font-medium text-muted";
+export { CONTROL_CLS as FORM_CONTROL_CLS, LABEL_CLS as FORM_LABEL_CLS } from "./Field";

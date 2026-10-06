@@ -5,7 +5,10 @@ import { readFileSync } from "node:fs";
 const css = readFileSync("src/client/index.css", "utf8");
 const app = readFileSync("src/client/App.tsx", "utf8");
 const shell = readFileSync("src/client/app/shell.tsx", "utf8");
-const primitives = readFileSync("src/client/ui/primitives.tsx", "utf8");
+// The kit is one file per primitive; the checks below hold for all of them.
+const primitives = ["Button", "Status", "Field", "Layout", "Accordion", "Drawer", "RowActionsMenu"]
+  .map((name) => readFileSync(`src/client/ui/${name}.tsx`, "utf8"))
+  .join("\n");
 const dashboard = [
   "src/client/features/dashboard/DashboardPage.tsx",
   "src/client/features/dashboard/DashboardHero.tsx",

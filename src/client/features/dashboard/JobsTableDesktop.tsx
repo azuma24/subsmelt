@@ -263,11 +263,11 @@ const JobsTableRow = memo(function JobsTableRow({
             {/* A translating job can be cancelled on its own: the LLM work is
                 aborted and the job ends as a cancelled error, while the queue
                 keeps running with the next pending job. */}
-            {job.status === "translating" && <MiniBtn color="yellow" onClick={() => jobActions.cancel(job.id)}>{t("dashboard.action.cancel")}</MiniBtn>}
-            {job.status === "error" && <MiniBtn color="yellow" onClick={() => jobActions.retry(job.id)}>{t("dashboard.action.retry")}</MiniBtn>}
+            {job.status === "translating" && <MiniBtn tone="warning" onClick={() => jobActions.cancel(job.id)}>{t("dashboard.action.cancel")}</MiniBtn>}
+            {job.status === "error" && <MiniBtn tone="warning" onClick={() => jobActions.retry(job.id)}>{t("dashboard.action.retry")}</MiniBtn>}
             {/* A skipped job was never translated, so "Re-translate" is the wrong
                 promise — it gets its own wording and a highlighted treatment. */}
-            {isSkipped && <MiniBtn color="yellow" onClick={() => jobActions.retranslate(job.id)}>{t("dashboard.action.translateAnyway")}</MiniBtn>}
+            {isSkipped && <MiniBtn tone="warning" onClick={() => jobActions.retranslate(job.id)}>{t("dashboard.action.translateAnyway")}</MiniBtn>}
             {isPending && job.priority > 0 && (
               <MiniBtn onClick={() => jobActions.unpin(job.id)}>{t("dashboard.action.unpin")}</MiniBtn>
             )}

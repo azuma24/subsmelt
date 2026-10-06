@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { toastsAwaitingTimer, visibleToasts } from "./toast-queue";
+import { Icon } from "./Icon";
+import { IconButton } from "./Button";
 
 type ToastType = "success" | "error" | "info";
 
@@ -123,9 +125,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 : "border-accent-line text-accent"
             }`}
           >
-            <span className="shrink-0 mt-1">
-              {toast.type === "success" ? "✓" : toast.type === "error" ? "✕" : "ℹ"}
-            </span>
+            <Icon name={toast.type === "success" ? "done" : toast.type === "error" ? "error" : "info"} className="mt-1" />
             <span className="min-w-0 flex-1 break-words">
               {toast.message}
               {toast.action && (
@@ -138,14 +138,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 </button>
               )}
             </span>
-            <button
-              type="button"
-              onClick={() => removeToast(toast.id)}
-              className="-m-2 flex min-h-touch min-w-touch shrink-0 items-center justify-center opacity-60 hover:opacity-100"
-              aria-label={t("common.dismiss")}
-            >
-              ×
-            </button>
+            <IconButton icon="close" label={t("common.dismiss")} onClick={() => removeToast(toast.id)} className="-m-2 opacity-60 hover:opacity-100" />
           </div>
         ))}
       </div>

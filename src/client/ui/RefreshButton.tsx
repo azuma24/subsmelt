@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { ActionButton } from "./primitives";
+import { Icon } from "./Icon";
 
 export interface RefreshButtonProps {
   busy: boolean;
@@ -8,9 +9,9 @@ export interface RefreshButtonProps {
 }
 
 /**
- * The ↻ re-read control shared by the Library and the Transcribe picker:
+ * The re-read control shared by the Library and the Transcribe picker:
  * disabled with a spinner while the scan refetch is in flight, otherwise the
- * ↻ Refresh ghost button.
+ * Refresh ghost button.
  */
 export function RefreshButton({ busy, onClick, className = "" }: RefreshButtonProps) {
   const { t } = useTranslation();
@@ -23,7 +24,7 @@ export function RefreshButton({ busy, onClick, className = "" }: RefreshButtonPr
         </>
       ) : (
         <>
-          <span aria-hidden="true">↻</span> {t("whisper.refresh")}
+          <Icon name="retry" /> {t("whisper.refresh")}
         </>
       )}
     </ActionButton>

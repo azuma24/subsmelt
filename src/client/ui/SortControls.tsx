@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { ActionButton } from "./primitives";
+import { Icon } from "./Icon";
 
 export type SortBy = "name" | "date";
 export type SortDir = "asc" | "desc";
@@ -33,7 +34,7 @@ export function SortControls({ sortBy, sortDir, onSortByChange, onToggleSortDir 
         <option value="date">{t("whisper.sortByDate")}</option>
       </select>
       <ActionButton variant="ghost" size="sm" onClick={onToggleSortDir}>
-        <span aria-hidden="true">{sortDir === "asc" ? "↑" : "↓"}</span>
+        <Icon name={sortDir === "asc" ? "arrow-up" : "arrow-down"} />
         <span className="sr-only">{sortDir === "asc" ? t("whisper.sortAsc") : t("whisper.sortDesc")}</span>
       </ActionButton>
     </>
