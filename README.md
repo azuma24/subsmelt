@@ -226,7 +226,7 @@ Everything else:
 ```bash
 git clone https://github.com/azuma24/subsmelt
 cd subsmelt
-docker compose up -d      # or: npm ci --legacy-peer-deps && npm run dev
+docker compose up -d      # or: npm ci && npm run dev
 ```
 
 ```bash
@@ -247,9 +247,8 @@ python -m pytest tests -q
 ruff check . && ruff format --check .
 ```
 
-`npm ci` needs `--legacy-peer-deps` (an `i18next` peer-range conflict — the
-reason is in HANDOFF). `vite build` does not typecheck, so run `npm run
-typecheck` before assuming a change is clean. CI runs Biome and ruff, both suites, both
+`vite build` does not typecheck, so run `npm run typecheck` before assuming a
+change is clean. CI runs Biome and ruff, both suites, both
 typechecks, the production build, and builds and starts the Docker image on
 amd64 and arm64 on every pull request.
 
@@ -276,7 +275,7 @@ the parts worth understanding first, the release process, and the known gaps.
 | Translation | Vercel AI SDK (local + OpenAI / Anthropic / Gemini) |
 | Optional STT | Python FastAPI sidecar + faster-whisper / Nemotron, OpenCC |
 | File watch | chokidar |
-| i18n | i18next (32 locales) |
+| i18n | Own runtime (`src/client/i18n`), 32 locales |
 | Container | Single Dockerfile, no external services required |
 | Tooling | TypeScript 7, Biome, ruff |
 

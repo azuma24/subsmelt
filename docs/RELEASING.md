@@ -32,7 +32,7 @@ automatically — do not add a fourth constant.
 more annoying to undo than a failed push:
 
 ```bash
-npm ci --legacy-peer-deps   # the flag is required; see HANDOFF.md §3
+npm ci
 npm run lint && npm test && npm run build
 cd backend-whisper && ruff check . && ruff format --check . && python -m pytest tests -q
 ```

@@ -26,15 +26,16 @@ Two deployables, versioned and released together:
 ## 2. Layout
 
 ```
-src/shared/          Types and the settings table both halves import (API contract)
+src/shared/          Types, the settings table and the charset detector both halves import
 src/server/          Express API, queue, scanner, watcher, SQLite
   queue/             One job as stages (run-job), the live run's state, title sidecars
-  translator/        LLM translation: engine, chunking, prompts, parsing
+  translator/        LLM translation: engine, chunking, prompts; SRT/WebVTT and ASS parsers
   transcription/     Whisper backend client (HTTP, request building)
   routes/            HTTP route registration
 src/client/          React SPA (Vite, Tailwind 4, react-query)
   features/          One directory per screen
   hooks/             Queries, mutations, the SSE stream, media queries
+  i18n/              The translation runtime (t, plurals, lazy bundles) and its React hook
   ui/                The primitives kit (Button, Field, Layout, Status, Icon, …)
   lib/               Framework-free helpers (clipboard, error taxonomy, settings)
   locales/           32 translation bundles
@@ -91,7 +92,7 @@ so a running translation shows its progress before it finishes.
 ## 3. Working on it
 
 ```bash
-npm ci --legacy-peer-deps   # the flag is required; see below
+npm ci
 npm run dev          # server (tsx watch) + vite, concurrently
 npm test             # node:test over src/**/*.test.ts(x); 886 tests
 npm run typecheck    # client AND server projects
@@ -112,9 +113,9 @@ Use Node 20 to 24 (`engines` in `package.json`). `better-sqlite3` is a native
 module, so a shell on a newer Node, or on a different Node from the one that
 ran the install, fails with `NODE_MODULE_VERSION` errors.
 
-`--legacy-peer-deps` is not optional: `i18next@26` declares an optional
-TypeScript peer of `^5 || ^6`, this repo is on TypeScript 7, and npm 10 (bundled
-with Node 22) refuses the install. The Dockerfile and CI pass the same flag.
+`npm ci` needs no flags any more. It used to need `--legacy-peer-deps` for
+i18next's TypeScript peer range; i18next is gone, and the lockfile resolves
+cleanly under npm 10's strict peer rules.
 
 Client and server are separate TypeScript projects (`tsconfig.json` /
 `tsconfig.server.json`) with no project reference between them — the client never
@@ -306,11 +307,22 @@ reader of the code should know afterwards:
   on Rolldown (`build.rolldownOptions.output.advancedChunks` splits React and
   the vendor libraries), Tailwind 4 (CSS-first: the palette and the role
   tokens live in `src/client/index.css` under `@theme`; there is no
-  `tailwind.config`), AI SDK 7, zod 4, chokidar 5, jschardet 4 (a port of
-  chardet with different confidence values: decoding tries strict UTF-8 first,
-  then the best guess). `@types/node` stays at 22 on purpose, matching the
-  runtime. `npm ci` still needs `--legacy-peer-deps` (i18next's TypeScript
-  peer range).
+  `tailwind.config`), AI SDK 7, zod 4 (the SDK's required peer), chokidar 5.
+  `@types/node` stays at 22 on purpose, matching the runtime. `npm ci` needs
+  no flags: the peer-range conflict went with i18next.
+- **What is the app's own code now, and was a package:** SRT/WebVTT and ASS
+  parsing (`src/server/translator/srt-vtt.ts`, `ass.ts`), charset detection
+  for files that are not UTF-8 (`src/shared/charset.ts`: strict UTF-8 first,
+  then every candidate encoding decodes a sample and the one that reads as
+  text in its own script wins; `charset.fixtures.ts` holds 52 byte samples),
+  the converter's ZIP writer (`src/client/features/convert/zip.ts`, deflate
+  through CompressionStream), the translation runtime (`src/client/i18n/`:
+  plural suffixes from Intl.PluralRules, `_zero` first for zero, fallback to
+  the base language then English, the stored choice under the old
+  `i18nextLng` key), the dev runner (`scripts/dev.mjs`) and the scan's
+  concurrency pool (`src/server/async-pool.ts`). The client project names
+  the Node typings its tests need in `tsconfig.json`; nothing pulls them in
+  transitively any more.
 - **Biome** (`biome.jsonc`) lints and formats the TypeScript; three a11y rules
   are off with the reason beside each. **ruff** (`backend-whisper/pyproject.toml`)
   does the same for Python. CI runs both.

@@ -28,12 +28,8 @@ jobs:
           node-version: '22'
           cache: npm
 
-      # --legacy-peer-deps: i18next@26 declares typescript as an OPTIONAL peer at
-      # "^5 || ^6" and this repo is on typescript@7, which npm 10 rejects outright.
-      # TypeScript is only a types-level peer there, and the lockfile already
-      # resolves cleanly, so the conflict is advisory.
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: npm ci
 
       # Biome (lint + format check) and both TypeScript projects.
       - name: Lint and typecheck
