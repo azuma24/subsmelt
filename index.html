@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SubSmelt</title>
+    <!-- Cockpit Grid numerals use JetBrains Mono when the operator already has
+         it installed, otherwise the platform ui-monospace stack (see
+         tailwind.config.js font-mono). Deliberately NOT fetched from Google
+         Fonts: this is a self-hosted, LAN-only app whose README promises "no
+         data leaving your network unless you choose it", and a webfont link
+         hands every viewer's IP and user-agent to a third party on every page
+         load. To ship the exact typeface, vendor the woff2 into the bundle and
+         declare a local @font-face — do not reintroduce a remote stylesheet. -->
+    <script>
+      // Apply the saved theme before first paint to avoid a flash. Mirrors
+      // src/client/lib/theme.ts (pref "system" | "dark" | "light").
+      (function () {
+        try {
+          var pref = localStorage.getItem("subsmelt-theme") || "system";
+          var resolved = pref === "light" || pref === "dark"
+            ? pref
+            : (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+          document.documentElement.setAttribute("data-theme", resolved);
+        } catch (e) {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      })();
+      // Apply the saved UI font scale before first paint. Mirrors
+      // src/client/lib/font-scale.ts (percentage applied as root `zoom`).
+      (function () {
+        try {
+          var raw = parseInt(localStorage.getItem("subsmelt-font-scale"), 10);
+          if (raw >= 70 && raw <= 150) {
+            document.documentElement.style.zoom = String(raw / 100);
+          }
+        } catch (e) { /* ignore */ }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/client/main.tsx"></script>
+  </body>
+</html>

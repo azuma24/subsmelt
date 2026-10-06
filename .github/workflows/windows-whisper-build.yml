@@ -1,0 +1,212 @@
+name: Build Windows Whisper Installer
+
+# Plan Phase 6. Builds the PyInstaller onedir bundle + Inno Setup installer on a
+# Windows runner. Decoupled from the Docker `v*` tags because this build is heavy
+# (CUDA DLLs + onedir, ~1-2 GB) — it runs on its own `whisper-v*` tags and on
+# manual dispatch. On a tag it also uploads the installer as a release asset.
+on:
+  push:
+    tags:
+      - 'whisper-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version string for the installer (e.g. 0.5.0)'
+        required: false
+        default: '0.0.0-dev'
+
+permissions:
+  contents: write   # needed to create/attach release assets on tag
+
+jobs:
+  # Never ship an installer that has not passed the test gate.
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: test
+    runs-on: windows-latest
+    env:
+      # Every pip install in this job resolves to the exact locked versions.
+      PIP_CONSTRAINT: ${{ github.workspace }}/backend-whisper/packaging/windows/constraints.txt
+    defaults:
+      run:
+        working-directory: backend-whisper
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.3
+
+      # Resolve the version: from the whisper-v* tag, else the dispatch input.
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -like 'refs/tags/whisper-v*') {
+            $v = $env:GITHUB_REF -replace '^refs/tags/whisper-v', ''
+          } else {
+            $v = '${{ github.event.inputs.version }}'
+          }
+          if (-not $v) { $v = '0.0.0-dev' }
+          Write-Host "Resolved version: $v"
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      # Build deps: the CPU requirements (faster-whisper pulls the CUDA-capable
+      # ctranslate2 wheel on Windows), PLUS the cuDNN/cuBLAS runtime wheels so
+      # the spec's collect_dynamic_libs finds the DLLs, PLUS PyInstaller.
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install nvidia-cudnn-cu12 nvidia-cublas-cu12 pyinstaller
+          pip list
+
+      # Fetch ffmpeg.exe + vc_redist.x64.exe + the pinned, SHA-256 verified
+      # NeMo-Speech runtime into packaging\windows\vendor\.
+      - name: Fetch vendored binaries
+        run: pwsh packaging/windows/fetch-vendor.ps1
+
+      # Freeze run_server.py -> dist\whisper-server\ (onedir). Run from
+      # backend-whisper/ so the spec's relative paths resolve.
+      - name: Build PyInstaller bundle
+        run: pyinstaller packaging/windows/whisper-server.spec --clean --noconfirm
+
+      # The spec only prints a NOTE when vendor/nemo-speech/bin is absent, so
+      # gate the bundle here. The CUDA exe is not run: the runner has no GPU.
+      - name: Check bundled nemo-speech runtime
+        run: |
+          $exe = "dist/whisper-server/nemo-speech/bin/nemo-speech.exe"
+          if (-not (Test-Path $exe)) { throw "build did not bundle $exe" }
+          $sizeMb = [math]::Round((Get-Item $exe).Length / 1MB, 1)
+          Write-Host "$exe (${sizeMb} MB)"
+          Get-ChildItem dist/whisper-server/nemo-speech/bin | Select-Object Name, Length
+
+      # OpenCC reads its configs and dictionaries from files beside its module;
+      # the spec's collect_data_files("opencc") must have put them in the bundle.
+      - name: Check bundled OpenCC dictionaries
+        run: |
+          foreach ($f in @("_internal/opencc/config/s2twp.json", "_internal/opencc/config/t2s.json", "_internal/opencc/dictionary/TWPhrases.txt")) {
+            if (-not (Test-Path "dist/whisper-server/$f")) { throw "build did not bundle $f" }
+          }
+
+      # Smoke: --print-config resolves config and exits before uvicorn/CUDA are
+      # imported, so it exercises the real launcher path on the GPU-less runner.
+      # (--check would run the cuDNN probe and fail without a GPU; don't use it here.)
+      - name: Smoke test frozen launcher (--print-config)
+        run: |
+          $exe = "dist/whisper-server/run_server.exe"
+          if (-not (Test-Path $exe)) { throw "build did not produce $exe" }
+          & $exe --print-config
+          if ($LASTEXITCODE -ne 0) { throw "run_server.exe --print-config exited $LASTEXITCODE" }
+
+      # Start the real server and wait for /health. --print-config exits before
+      # app.main is imported, so an import-time crash in the frozen bundle (exit
+      # code 1, nothing in the log) only shows up here.
+      - name: Smoke test frozen server (/health)
+        run: |
+          $exe = "dist/whisper-server/run_server.exe"
+          $env:SUBSMELT_WHISPER_HOST = "127.0.0.1"
+          $env:SUBSMELT_WHISPER_PORT = "8765"
+          $env:SUBSMELT_WHISPER_LOG_FILE = ""
+          $proc = Start-Process -FilePath $exe -PassThru -NoNewWindow `
+            -RedirectStandardOutput server.out -RedirectStandardError server.err
+          $ok = $false
+          for ($i = 0; $i -lt 90 -and -not $proc.HasExited; $i++) {
+            try { $h = Invoke-RestMethod http://127.0.0.1:8765/health -TimeoutSec 2; $ok = $true; break } catch { Start-Sleep 1 }
+          }
+          if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }
+          Get-Content server.out, server.err -ErrorAction SilentlyContinue
+          if (-not $ok) { throw "run_server.exe never answered /health (exit code $($proc.ExitCode))" }
+          Write-Host "health: version $($h.capabilities.version)"
+
+      # Decode and transcribe through the frozen bundle with Whisper tiny on CPU.
+      # /health passing says nothing about faster-whisper's audio path: an
+      # unpinned PyAV once broke every Whisper transcription while it was green.
+      # Chinese with chinese_script loads the OpenCC dictionaries in the frozen
+      # server, so a bundle missing them fails here rather than on a user's file.
+      - name: Smoke test frozen Whisper transcription
+        run: |
+          $exe = "dist/whisper-server/run_server.exe"
+          $env:SUBSMELT_WHISPER_HOST = "127.0.0.1"
+          $env:SUBSMELT_WHISPER_PORT = "8766"
+          $env:SUBSMELT_WHISPER_LOG_FILE = ""
+          $env:HF_HOME = "$env:RUNNER_TEMP\hf"
+          # The installer sets this; point at the ffmpeg.exe bundled beside run_server.exe.
+          $env:SUBSMELT_FFMPEG = (Resolve-Path "dist/whisper-server/ffmpeg.exe").Path
+          python -c "import wave; w = wave.open('tone.wav', 'wb'); w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000); w.writeframes(bytes(32000)); w.close()"
+          $proc = Start-Process -FilePath $exe -PassThru -NoNewWindow `
+            -RedirectStandardOutput whisper.out -RedirectStandardError whisper.err
+          try {
+            for ($i = 0; $i -lt 90; $i++) {
+              try { Invoke-RestMethod http://127.0.0.1:8766/health -TimeoutSec 2 | Out-Null; break } catch { Start-Sleep 1 }
+            }
+            Invoke-RestMethod -Method Post http://127.0.0.1:8766/models/download -ContentType "application/json" -Body '{"model":"tiny"}' -TimeoutSec 300 | Out-Null
+            # A file, not an argument: PowerShell strips the JSON's quotes on the way to curl.exe.
+            Set-Content -Path request.json -NoNewline -Value '{"model":"tiny","language":"zh","chinese_script":"zh-TW","output_format":"srt","device":"cpu","compute_type":"int8"}'
+            $out = curl.exe -sS -w "`n%{http_code}" -F "file=@tone.wav" -F "request=<request.json" http://127.0.0.1:8766/transcribe/upload
+            $code = ($out | Select-Object -Last 1)
+            Write-Host ($out -join "`n")
+            if ($code -ne "200") { throw "Whisper transcription through the frozen server returned HTTP $code" }
+            if (-not (($out -join "`n") -match '"chinese_script":"zh-TW"')) { throw "frozen server did not report the Chinese script conversion" }
+          } finally {
+            if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }
+            Get-Content whisper.err -Tail 30 -ErrorAction SilentlyContinue
+          }
+
+      # The tray + GUI controllers ship INSIDE the bundle (they launch and stop
+      # run_server.exe). They are small onefile builds with no CUDA deps; both
+      # specs move their exe next to run_server.exe, which is where their
+      # server-resolution logic looks first.
+      - name: Build tray + GUI controllers
+        run: |
+          pip install pystray pillow
+          pyinstaller packaging/windows/whisper-tray.spec --clean --noconfirm
+          pyinstaller packaging/windows/whisper-gui.spec --clean --noconfirm
+          foreach ($app in 'whisper-tray', 'whisper-gui') {
+            $built = "dist/$app.exe"
+            if (-not (Test-Path $built)) { throw "build did not produce $built" }
+            Move-Item -Force $built "dist/whisper-server/$app.exe"
+          }
+          Get-ChildItem dist/whisper-server/*.exe | Select-Object Name, Length
+
+      # Inno Setup compiles installer.iss -> Output\SubSmeltWhisperBackend-Setup-<ver>.exe
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Compile installer
+        run: |
+          $ver = '${{ steps.ver.outputs.version }}'
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" `
+            "/DMyAppVersion=$ver" `
+            packaging/windows/installer.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC exited $LASTEXITCODE" }
+          Get-ChildItem packaging/windows/Output
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SubSmeltWhisperBackend-Setup-${{ steps.ver.outputs.version }}
+          path: backend-whisper/packaging/windows/Output/*.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      # On a whisper-v* tag, publish the installer as a GitHub release asset.
+      - name: Publish release asset
+        if: startsWith(github.ref, 'refs/tags/whisper-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: backend-whisper/packaging/windows/Output/*.exe
+          name: Whisper Backend ${{ steps.ver.outputs.version }}
+          tag_name: ${{ github.ref_name }}
+          body: |
+            SubSmelt Windows Whisper backend installer (CUDA + CPU fallback).
+            Models are downloaded post-install via the in-app model manager —
+            none are bundled. Nemotron 3.5 ASR ships its NeMo-Speech runtime in
+            the installer; GPU use needs an NVIDIA driver R580 or newer (CUDA 13).
+            See backend-whisper/packaging/windows/README.md.

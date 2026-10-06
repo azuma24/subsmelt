@@ -1,0 +1,500 @@
+import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import * as api from "../../api";
+import { getErrorMessage } from "../../lib";
+import { useJobsQuery, useMutationWithInvalidation, useQueueStatusQuery, useSettingsQuery, useTasksQuery, useTranscriptionHistoryQuery } from "../../hooks";
+import { useToast } from "../../components/Toast";
+import { useConfirm } from "../../components/ConfirmModal";
+import type { JobRow } from "../../types";
+import { ActionButton, EmptyHint, SelectionBar } from "../../ui/primitives";
+import { InlineError } from "../../ui/QueryState";
+import { JobsTableDesktop, JobsTableSkeleton } from "./JobsTableDesktop";
+import { JobCardMobile, JobCardSkeleton } from "./JobCardMobile";
+import { JobDetailsDrawer } from "./JobDetailsDrawer";
+import { PreviewOverlay } from "./PreviewOverlay";
+import { useDashboardDerivedState } from "./useDashboardDerivedState";
+import { DashboardHero } from "./DashboardHero";
+import { QueueToolbar } from "./QueueToolbar";
+import { TranscriptionHistoryPanel } from "./TranscriptionHistoryPanel";
+import { useManualTranscription } from "./useManualTranscription";
+import { str } from "../../lib/settings-value";
+import type { DashboardTab } from "./tabs";
+import { LlmStatusPopover } from "../../app/LlmStatusPopover";
+
+const SETUP_DISMISSED_KEY = "subsmelt_setup_dismissed";
+
+
+export function DashboardPage({ isMobile }: { isMobile: boolean }) {
+  const { t } = useTranslation();
+  const { addToast } = useToast();
+  const { confirm } = useConfirm();
+  const navigate = useNavigate();
+  const jobsQuery = useJobsQuery();
+  const tasksQuery = useTasksQuery();
+  const settingsQuery = useSettingsQuery();
+  const queueStatusQuery = useQueueStatusQuery();
+  const transcriptionHistoryQuery = useTranscriptionHistoryQuery(true, 8);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [previewJobId, setPreviewJobId] = useState<number | null>(null);
+  const [previewSearch, setPreviewSearch] = useState("");
+  const [detailsJobId, setDetailsJobId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [folderFilter, setFolderFilter] = useState("all");
+  const [targetFilter, setTargetFilter] = useState("all");
+  const [activeTab, setActiveTab] = useState<DashboardTab>("queue");
+  // Auto-hide onboarding: read from localStorage
+  const [setupDismissed, setSetupDismissed] = useState(() => {
+    try { return localStorage.getItem(SETUP_DISMISSED_KEY) === "1"; } catch { return false; }
+  });
+
+  const startQueueMutation = useMutationWithInvalidation(() => api.startQueue());
+  const startSelectedMutation = useMutationWithInvalidation((ids: number[]) => api.startQueue(ids));
+  const stopQueueMutation = useMutationWithInvalidation(() => api.stopQueue());
+  const clearJobsMutation = useMutationWithInvalidation(() => api.clearJobs());
+  const deleteSelectedMutation = useMutationWithInvalidation((ids: number[]) => api.deleteJobsApi(ids));
+  const retrySelectedMutation = useMutationWithInvalidation((ids: number[]) => api.retryJobsApi(ids));
+  const forceSelectedMutation = useMutationWithInvalidation((ids: number[]) => api.forceJobsApi(ids));
+
+  const { transcribingPath, isTranscribePending, isRetryPending, handleRetryTranscription } = useManualTranscription();
+
+  const jobs: JobRow[] = jobsQuery.data?.jobs || [];
+  const queueRunning = Boolean(queueStatusQuery.data?.running ?? jobsQuery.data?.queueRunning ?? false);
+  const currentJobId = queueStatusQuery.data?.currentJobId ?? jobsQuery.data?.currentJobId ?? null;
+  const settings = settingsQuery.data || {};
+  const mediaDir = str(settings._media_dir, "/media");
+  const autoTranslate = str(settings.auto_translate, "1") === "1";
+  const tasks = tasksQuery.data || [];
+  const enabledTaskCount = tasks.filter((x) => x.enabled === 1).length;
+  // Server-computed: the legacy llm_endpoint/model keys carry non-empty defaults,
+  // so checking them client-side reported "configured" on a brand-new install and
+  // ticked the quick-start step before the user had set anything up. Only the
+  // server can compare against the shipped seed.
+  const hasLlmConfig = settings._llm_configured === true;
+  const transcriptionEnabled = str(settings.transcription_enabled, "0") === "1";
+  const transcriptionAttempts = transcriptionHistoryQuery.data?.attempts || [];
+  const tokenBudget = Math.max(0, parseInt(str(settings.monthly_token_budget, "0"), 10) || 0);
+
+  // Summed token usage + approximate cost across all jobs (display-only).
+  const usageTotals = jobs.reduce(
+    (acc, job) => {
+      acc.inputTokens += job.input_tokens || 0;
+      acc.outputTokens += job.output_tokens || 0;
+      if (typeof job.est_cost === "number") {
+        acc.cost += job.est_cost;
+        acc.hasCost = true;
+      }
+      return acc;
+    },
+    { inputTokens: 0, outputTokens: 0, cost: 0, hasCost: false },
+  );
+
+  const {
+    pendingJobs,
+    activeJobs,
+    doneJobs,
+    errorJobs,
+    finishedJobCount,
+    jobsById,
+    selectedPendingCount,
+    selectedPendingIds,
+    folderOptions,
+    targetOptions,
+    filteredJobs,
+    visiblePendingIds,
+    visibleErrorIds,
+    visibleRetranslatableIds,
+    hasQueueFilters,
+    statusSegments,
+  } = useDashboardDerivedState({
+    jobs,
+    mediaDir,
+    statusFilter,
+    folderFilter,
+    targetFilter,
+    selectedIds,
+    t,
+  });
+
+  // Auto-dismiss onboarding after first successful job
+  useEffect(() => {
+    if (!setupDismissed && doneJobs.length > 0) {
+      try { localStorage.setItem(SETUP_DISMISSED_KEY, "1"); } catch { /* ignore */ }
+      setSetupDismissed(true);
+    }
+  }, [doneJobs.length, setupDismissed]);
+
+  useEffect(() => {
+    const pendingIdSet = new Set(jobs.filter((j) => j.status === "pending").map((j) => j.id));
+    setSelectedIds((prev) => {
+      const next = new Set(Array.from(prev).filter((id) => pendingIdSet.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [jobs]);
+
+  const reportFailure = (e: unknown) =>
+    addToast(e instanceof Error ? e.message : t("dashboard.toast.actionFailed"), "error");
+
+  const handleRunAll = async () => {
+    try {
+      await startQueueMutation.mutateAsync();
+      addToast(t("dashboard.toast.queueStarted"), "info");
+    } catch (e) {
+      reportFailure(e);
+    }
+  };
+
+  const handleRunSelected = async () => {
+    if (selectedPendingIds.length === 0) return;
+    try {
+      await startSelectedMutation.mutateAsync(selectedPendingIds);
+      addToast(t("dashboard.toast.runSelectedStarted", { count: selectedPendingIds.length }), "info");
+      setSelectedIds(new Set());
+    } catch (e) {
+      reportFailure(e);
+    }
+  };
+
+  const handleStop = async () => {
+    try {
+      await stopQueueMutation.mutateAsync();
+    } catch (e) {
+      reportFailure(e);
+    }
+  };
+
+  const handleClearFinished = async () => {
+    const ok = await confirm({
+      title: t("dashboard.confirm.clearTitle"),
+      message: t("dashboard.confirm.clearMessage", { count: finishedJobCount }),
+      confirmLabel: t("dashboard.confirm.clearConfirm"),
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await clearJobsMutation.mutateAsync();
+      setSelectedIds(new Set());
+      addToast(t("dashboard.toast.jobsCleared"), "info");
+    } catch (e) {
+      reportFailure(e);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedPendingIds.length === 0) return;
+    const ok = await confirm({
+      title: t("dashboard.confirm.deleteSelectedTitle"),
+      message: t("dashboard.confirm.deleteSelectedMessage", { count: selectedPendingIds.length }),
+      confirmLabel: t("dashboard.confirm.deleteSelectedConfirm"),
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      const result = await deleteSelectedMutation.mutateAsync(selectedPendingIds);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        selectedPendingIds.forEach((id) => next.delete(id));
+        return next;
+      });
+      addToast(t("dashboard.toast.selectedDeleted", { count: result.deleted }), "info");
+    } catch (e) {
+      reportFailure(e);
+    }
+  };
+
+  const handleSelectVisiblePending = () => {
+    setSelectedIds((prev) => new Set([...prev, ...visiblePendingIds]));
+  };
+
+  const handleRetryVisibleErrors = async () => {
+    if (visibleErrorIds.length === 0) return;
+    try {
+      const result = await retrySelectedMutation.mutateAsync(visibleErrorIds);
+      addToast(t("dashboard.toast.retrySelectedStarted", { count: result.updated }), "info");
+    } catch (e) {
+      reportFailure(e);
+    }
+  };
+
+  const handleRetranslateVisible = async () => {
+    if (visibleRetranslatableIds.length === 0) return;
+    const ok = await confirm({
+      title: t("dashboard.confirm.retranslateVisibleTitle"),
+      message: t("dashboard.confirm.retranslateVisibleMessage", { count: visibleRetranslatableIds.length }),
+      confirmLabel: t("dashboard.confirm.retranslateVisibleConfirm"),
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      const result = await forceSelectedMutation.mutateAsync(visibleRetranslatableIds);
+      addToast(t("dashboard.toast.forceSelectedStarted", { count: result.updated }), "info");
+    } catch (e) {
+      reportFailure(e);
+    }
+  };
+
+  const toggleSelectedJob = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, [setSelectedIds]);
+
+  const quickChecks = [
+    {
+      done: hasLlmConfig,
+      title: t("dashboard.quickStart.llmTitle"),
+      hint: hasLlmConfig ? t("dashboard.quickStart.done") : t("dashboard.quickStart.llmHint"),
+      action: t("dashboard.quickStart.openSettings"),
+      onClick: () => navigate("/settings"),
+    },
+    {
+      done: enabledTaskCount > 0,
+      title: t("dashboard.quickStart.tasksTitle"),
+      hint: enabledTaskCount > 0 ? t("dashboard.quickStart.done") : t("dashboard.quickStart.tasksHint"),
+      action: t("dashboard.quickStart.openTranslations"),
+      onClick: () => navigate("/settings/languages"),
+    },
+    {
+      // The jobs list is transient — Clear finished empties it, and a rescan
+      // then creates no jobs (outputs exist). Media discovered at least once
+      // is a sticky server fact, so the step cannot regress into a dead end.
+      done:
+        pendingJobs.length > 0 ||
+        doneJobs.length > 0 ||
+        activeJobs.length > 0 ||
+        str(settings.media_scanned) === "1",
+      title: t("dashboard.quickStart.mediaTitle"),
+      hint:
+        pendingJobs.length > 0 ||
+        doneJobs.length > 0 ||
+        activeJobs.length > 0 ||
+        str(settings.media_scanned) === "1"
+          ? t("dashboard.quickStart.done")
+          : t("dashboard.quickStart.mediaHint"),
+      action: t("dashboard.quickStart.scanNow"),
+      // Scanning lives in the Library.
+      onClick: () => navigate("/"),
+    },
+    {
+      done: queueRunning,
+      title: t("dashboard.quickStart.queueTitle"),
+      hint: queueRunning ? t("dashboard.quickStart.queueRunning") : t("dashboard.quickStart.queueIdle"),
+      action: queueRunning ? t("dashboard.quickStart.stopQueue") : t("dashboard.quickStart.runQueue"),
+      onClick: queueRunning ? handleStop : handleRunAll,
+    },
+  ];
+  const showQuickStart = !setupDismissed && quickChecks.some((step) => !step.done);
+
+  const dashboardTabs = [
+    { key: "queue" as DashboardTab, label: t("dashboard.tab.queue"), count: jobs.length },
+    ...(transcriptionEnabled ? [{ key: "transcription" as DashboardTab, label: t("dashboard.tab.transcription"), count: transcriptionAttempts.length }] : []),
+  ];
+
+  const selectStatus = (key: string) => { setStatusFilter(key); setActiveTab("queue"); };
+  // Read live so the drawer follows progress and status instead of showing the
+  // row as it was when opened; it closes on its own if the job is deleted.
+  const detailsJob = detailsJobId === null ? null : jobsById.get(detailsJobId) ?? null;
+  const openLogs = useCallback((jobId: number) => navigate(`/settings/logs?job=${jobId}`), [navigate]);
+  const openDetails = useCallback((job: JobRow) => setDetailsJobId(job.id), []);
+
+  return (
+    <div className="flex min-h-full flex-col">
+      {/* ── Topbar (L1 — Executive Summary) ── */}
+      <div className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b border-[var(--border)] bg-[var(--surface)] px-4 md:px-4">
+        {/* Title with readable typography */}
+        {/* Phones already show "Activity" in the bottom tab bar, so the title is
+            screen-reader only there and the header keeps room for all actions. */}
+        <span className="sr-only md:not-sr-only md:flex-1 md:text-sm md:font-semibold md:text-[var(--text)]">{t("nav.activity")}</span>
+        {/* Phones have no sidebar, so the LLM status line lives here, next
+            to the queue it serves. */}
+        {isMobile && (
+          <div className="min-w-0 flex-1">
+            <LlmStatusPopover placement="below" />
+          </div>
+        )}
+        <div className="ml-auto flex min-w-0 items-center gap-2">
+          {queueRunning ? (
+            <ActionButton variant="danger" size="sm" onClick={handleStop}>{t("dashboard.stop")}</ActionButton>
+          ) : (
+            <ActionButton variant="success" size="sm" onClick={handleRunAll} disabled={pendingJobs.length === 0}>{t("dashboard.runAll")}</ActionButton>
+          )}
+        </div>
+      </div>
+
+      {/* ── Content ── */}
+      <div className="flex-1 space-y-4 p-4 md:p-4">
+
+
+        {/* L1: Cockpit metric band — status filters + token usage in one row */}
+        <DashboardHero
+          statusSegments={statusSegments}
+          statusFilter={statusFilter}
+          activeJobs={activeJobs}
+          pendingJobs={pendingJobs}
+          completedJobs={doneJobs}
+          usageTotals={usageTotals}
+          tokenBudget={tokenBudget}
+          onSelectStatus={selectStatus}
+          t={t}
+        />
+
+        {/* Onboarding quick-start cards — auto-hidden after first successful job */}
+        {showQuickStart && (
+          <div>
+            <div className="mb-1 flex items-center justify-between">
+              <span className="text-xs text-[var(--text-3)]">{t("dashboard.quickStart.title")}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  try { localStorage.setItem(SETUP_DISMISSED_KEY, "1"); } catch { /* ignore */ }
+                  setSetupDismissed(true);
+                }}
+                className="text-xs text-[var(--text-3)] hover:text-[var(--text)]"
+              >
+                {t("dashboard.quickStart.dismiss")}
+              </button>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {quickChecks.map((step) => (
+                <div key={step.title} className={`rounded-md border p-3 ${step.done ? "border-[var(--green-border)] bg-[var(--green-dim)]" : "border-[var(--border)] bg-[var(--surface)]"}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-xs font-semibold text-[var(--text)]">{step.title}</div>
+                    <span className={`text-xs ${step.done ? "text-[var(--green)]" : "text-[var(--yellow)]"}`}>{step.done ? "✓" : "○"}</span>
+                  </div>
+                  <div className="mt-1 text-xs text-[var(--text-2)]">{step.hint}</div>
+                  {!step.done && (
+                    <button onClick={step.onClick} className="mt-2 text-xs text-[var(--accent)]">{step.action}</button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Auto-translate notice (L2) — shown only when off */}
+        {!autoTranslate && (
+          <p className="text-xs text-[var(--text-2)]">
+            {t("dashboard.scanAutoTranslateOff")}
+          </p>
+        )}
+
+        {/* ── Main content area with Tabs: Queue / Transcription ── */}
+        <section className="overflow-hidden rounded-md border border-[var(--border)] bg-[var(--surface)]">
+          {/* Tab header + bulk actions + filters. Status filtering is not here —
+              it lives in the hero band above, which is the single source. */}
+          <QueueToolbar
+            dashboardTabs={dashboardTabs}
+            activeTab={activeTab}
+            onSelectTab={setActiveTab}
+            hasQueueFilters={hasQueueFilters}
+            folderFilter={folderFilter}
+            targetFilter={targetFilter}
+            folderOptions={folderOptions}
+            targetOptions={targetOptions}
+            onFolderFilterChange={setFolderFilter}
+            onTargetFilterChange={setTargetFilter}
+            onClearFilters={() => { setStatusFilter("all"); setFolderFilter("all"); setTargetFilter("all"); }}
+            visiblePendingIds={visiblePendingIds}
+            visibleErrorIds={visibleErrorIds}
+            visibleRetranslatableIds={visibleRetranslatableIds}
+            finishedJobCount={finishedJobCount}
+            isRetryPending={retrySelectedMutation.isPending}
+            isForcePending={forceSelectedMutation.isPending}
+            onSelectVisiblePending={handleSelectVisiblePending}
+            onRetryVisibleErrors={handleRetryVisibleErrors}
+            onRetranslateVisible={handleRetranslateVisible}
+            onClearFinished={handleClearFinished}
+            t={t}
+          />
+
+          {/* L3: SelectionBar — appears only when items selected */}
+          <SelectionBar
+            count={selectedPendingCount}
+            summaryLabel={t("dashboard.selectionSummary", { count: selectedPendingCount })}
+            hintLabel={t("dashboard.selectionHint")}
+            onClear={() => setSelectedIds(new Set())}
+            clearLabel={t("dashboard.clearSelection")}
+            isMobile={isMobile}
+          >
+            {!queueRunning && (
+              <ActionButton size="sm" variant="success" onClick={handleRunSelected} busy={startSelectedMutation.isPending}>
+                {t("dashboard.runSelected", { count: selectedPendingCount })}
+              </ActionButton>
+            )}
+            <ActionButton size="sm" variant="danger" onClick={handleDeleteSelected} busy={deleteSelectedMutation.isPending}>
+              {t("dashboard.deleteSelected")}
+            </ActionButton>
+          </SelectionBar>
+
+          {/* Tab content */}
+          {/* Until the first /api/jobs response the list is unknown, not empty:
+              a skeleton or the failure, never the "no jobs" hint. */}
+          {activeTab === "queue" && jobsQuery.data === undefined && jobsQuery.isError && (
+            <div className="p-4">
+              <InlineError
+                message={t("dashboard.queueLoadFailed", { message: getErrorMessage(jobsQuery.error) })}
+                onRetry={() => void jobsQuery.refetch()}
+              />
+            </div>
+          )}
+          {activeTab === "queue" && jobsQuery.data === undefined && !jobsQuery.isError && (
+            isMobile ? <div className="p-4"><JobCardSkeleton /></div> : <JobsTableSkeleton />
+          )}
+          {activeTab === "queue" && jobsQuery.data !== undefined && (
+            isMobile ? (
+              <div className="space-y-2 p-4">
+                {filteredJobs.length === 0 && <EmptyHint text={t("dashboard.noJobsMatchFilter")} subtext={t("dashboard.emptyJobsHint")} />}
+                {filteredJobs.map((job) => (
+                  <JobCardMobile
+                    key={job.id}
+                    job={job}
+                    currentJobId={currentJobId}
+                    selected={selectedIds.has(job.id)}
+                    onToggleSelected={toggleSelectedJob}
+                    onPreview={setPreviewJobId}
+                    onOpenLogs={openLogs}
+                    onOpenDetails={openDetails}
+                  />
+                ))}
+              </div>
+            ) : (
+              <JobsTableDesktop jobs={filteredJobs} currentJobId={currentJobId} selectedIds={selectedIds} setSelectedIds={setSelectedIds} onPreview={setPreviewJobId} onOpenLogs={openLogs} onOpenDetails={openDetails} />
+            )
+          )}
+
+          {activeTab === "transcription" && transcriptionEnabled && (
+            <TranscriptionHistoryPanel
+              attempts={transcriptionAttempts}
+              transcribingPath={transcribingPath}
+              isRetryPending={isRetryPending}
+              isTranscribePending={isTranscribePending}
+              onRetry={handleRetryTranscription}
+            />
+          )}
+
+        </section>
+      </div>
+
+      <JobDetailsDrawer
+        job={detailsJob}
+        open={detailsJob !== null}
+        onClose={() => setDetailsJobId(null)}
+        onOpenLogs={openLogs}
+      />
+
+      {previewJobId !== null && (
+        <PreviewOverlay
+          isMobile={isMobile}
+          jobId={previewJobId}
+          previewSearch={previewSearch}
+          setPreviewSearch={setPreviewSearch}
+          onClose={() => { setPreviewJobId(null); setPreviewSearch(""); }}
+        />
+      )}
+
+    </div>
+  );
+}

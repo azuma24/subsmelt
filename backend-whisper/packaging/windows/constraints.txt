@@ -1,0 +1,56 @@
+# Exact versions for the Windows installer build (workflow and build-local.ps1
+# apply this file through PIP_CONSTRAINT). Unpinned transitive packages drifted
+# between 0.5.9 and 0.6.0: PyAV 19 broke every Whisper transcription. This is
+# the set from the build whose frozen server passed the /health and Whisper
+# transcription smoke tests. Change a version here on purpose, then let the
+# Windows workflow's smoke tests prove it.
+altgraph==0.17.5
+annotated-types==0.8.0
+anyio==4.15.1
+av==18.1.0
+certifi==2026.7.22
+click==8.5.0
+colorama==0.4.6
+ctranslate2==4.8.2
+fastapi==0.115.14
+faster-whisper==1.2.1
+filelock==4.0.7
+flatbuffers==25.12.19
+fsspec==2026.9.0
+h11==0.16.0
+hf-xet==1.6.0
+httpcore==1.0.9
+httptools==0.8.0
+httpx==0.28.1
+huggingface_hub==1.33.0
+idna==3.20
+numpy==2.5.3
+nvidia-cublas-cu12==12.9.2.10
+nvidia-cuda-nvrtc-cu12==12.9.86
+nvidia-cudnn-cu12==9.27.0.42
+nvidia-ml-py==12.560.30
+onnxruntime==1.30.0
+opencc-python-reimplemented==0.1.7
+packaging==26.3
+pefile==2024.8.26
+pillow==12.3.0
+protobuf==7.36.2
+psutil==7.1.3
+pydantic_core==2.41.5
+pydantic==2.12.5
+pyinstaller-hooks-contrib==2026.8
+pyinstaller==6.22.3
+pystray==0.19.5
+python-dotenv==1.2.3
+python-multipart==0.0.20
+pywin32-ctypes==0.2.3
+PyYAML==6.0.3
+six==1.17.0
+starlette==0.46.2
+tokenizers==0.23.2
+tqdm==4.70.1
+typing_extensions==4.16.0
+typing-inspection==0.4.4
+uvicorn==0.35.0
+watchfiles==1.3.0
+websockets==17.1

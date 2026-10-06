@@ -1,0 +1,401 @@
+import type {
+  FolderNode,
+  JobPreview,
+  JobRow,
+  LlmHealth,
+  LlmStatus,
+  LogEntry,
+  QueueStatus,
+  ScanResult,
+  Task,
+  TranscribeRequest,
+  TranscribeResponse,
+  TranscriptionHealth,
+  TranscriptionHistoryEntry,
+  TranscriptionPreflightResponse,
+  WhisperModel,
+  WhisperModelDeleteResult,
+  WhisperModelDownloadResult,
+  YoutubePlaylist,
+  YoutubePlaylistFields,
+  YoutubePreview,
+  YoutubeNotesFolder,
+  YoutubePipeline,
+  YoutubeStatus,
+  YoutubeBackfill,
+  YoutubeVideo,
+  YoutubeVideoAction,
+} from "./types";
+
+const BASE = "/api";
+
+type JsonErrorBody = { error?: unknown; message?: unknown };
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly url: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+export async function fetchJSON<T = unknown>(
+  url: string,
+  opts: RequestInit = {},
+): Promise<T> {
+  const headers = new Headers(opts.headers);
+  if (opts.body !== undefined && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  const res = await fetch(`${BASE}${url}`, {
+    ...opts,
+    headers,
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as JsonErrorBody;
+    const message =
+      typeof body.error === "string"
+        ? body.error
+        : typeof body.message === "string"
+          ? body.message
+          : `HTTP ${res.status}`;
+    throw new ApiError(message, res.status, url);
+  }
+  return res.json() as Promise<T>;
+}
+
+// Request options threaded through query hooks. Carries React Query's
+// AbortSignal so in-flight requests can be cancelled on unmount/refetch.
+type FetchOpts = { signal?: AbortSignal };
+
+// Settings
+export const getSettings = (opts?: FetchOpts) =>
+  fetchJSON<Record<string, unknown>>("/settings", opts);
+/** `rejected` lists keys the server would not write (env-pinned or unknown). */
+export const saveSettings = (
+  settings: Record<string, unknown>,
+  opts?: FetchOpts,
+) =>
+  fetchJSON<{ ok: boolean; rejected?: string[] }>("/settings", {
+    ...opts,
+    method: "POST",
+    body: JSON.stringify(settings),
+  });
+// Overwrites a config.json the server could not parse with the settings it runs on now.
+export const replaceBrokenConfig = () =>
+  fetchJSON<{ ok: boolean }>("/settings/replace-broken-config", { method: "POST" });
+
+// Tasks
+export const getTasks = (opts?: FetchOpts) => fetchJSON<Task[]>("/tasks", opts);
+export const createTask = (payload: Partial<Task>) =>
+  fetchJSON<Task>("/tasks", { method: "POST", body: JSON.stringify(payload) });
+export const updateTask = (id: number, payload: Partial<Task>) =>
+  fetchJSON<Task>(`/tasks/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+export const deleteTask = (id: number) =>
+  fetchJSON(`/tasks/${id}`, { method: "DELETE" });
+
+// Scanner
+export const scanFolder = () =>
+  fetchJSON<ScanResult>("/scan", { method: "POST" });
+export const previewScan = (opts?: FetchOpts) =>
+  fetchJSON<ScanResult>("/scan/preview", opts);
+export const getFolderTree = (opts?: FetchOpts) =>
+  fetchJSON<{ root: FolderNode }>("/folders/tree", opts);
+
+// Jobs
+export const getJobs = (opts?: FetchOpts) =>
+  fetchJSON<{
+    jobs: JobRow[];
+    queueRunning: boolean;
+    currentJobId: number | null;
+  }>("/jobs", opts);
+export const retryJob = (id: number) =>
+  fetchJSON(`/jobs/${id}/retry`, { method: "POST" });
+export const forceJob = (id: number) =>
+  fetchJSON(`/jobs/${id}/force`, { method: "POST" });
+export const cancelJob = (id: number) =>
+  fetchJSON(`/jobs/${id}/cancel`, { method: "POST" });
+export type TranslateFileRequest = { srtPath: string } & (
+  | { taskId: number }
+  | { langCode: string; targetLang: string }
+);
+export const translateFile = (payload: TranslateFileRequest) =>
+  fetchJSON<{ ok: boolean; jobId: number; taskId: number; created: boolean }>(
+    "/jobs/translate-file",
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+export const retryJobsApi = (ids: number[]) =>
+  fetchJSON<{ ok: boolean; updated: number }>("/jobs/retry-selected", {
+    method: "POST",
+    body: JSON.stringify({ ids }),
+  });
+export const forceJobsApi = (ids: number[]) =>
+  fetchJSON<{ ok: boolean; updated: number }>("/jobs/force-selected", {
+    method: "POST",
+    body: JSON.stringify({ ids }),
+  });
+export const deleteJobApi = (id: number) =>
+  fetchJSON(`/jobs/${id}`, { method: "DELETE" });
+export const deleteJobsApi = (ids: number[]) =>
+  fetchJSON<{ ok: boolean; deleted: number }>("/jobs/delete-selected", {
+    method: "POST",
+    body: JSON.stringify({ ids }),
+  });
+export const clearJobs = () => fetchJSON("/jobs/clear", { method: "POST" });
+export const pinJob = (id: number) =>
+  fetchJSON(`/jobs/${id}/pin`, { method: "POST" });
+export const unpinJob = (id: number) =>
+  fetchJSON(`/jobs/${id}/unpin`, { method: "POST" });
+export const getJobPreview = (id: number, opts?: FetchOpts) =>
+  fetchJSON<JobPreview>(`/jobs/${id}/preview`, opts);
+
+// Manual cue edits — saves edited translated lines to the OUTPUT file.
+export interface CueEditInput {
+  index: number;
+  text: string;
+}
+export const saveJobCues = (
+  id: number,
+  edits: CueEditInput[],
+  opts?: FetchOpts,
+) =>
+  fetchJSON<{ ok: boolean; updated: number }>(`/jobs/${id}/cues`, {
+    ...opts,
+    method: "PUT",
+    body: JSON.stringify({ edits }),
+  });
+// URL for an <a href download> that streams the translated output file.
+export const jobDownloadUrl = (id: number) => `${BASE}/jobs/${id}/download`;
+
+// Queue
+export const startQueue = (ids?: number[]) =>
+  fetchJSON("/queue/start", {
+    method: "POST",
+    body: JSON.stringify(ids && ids.length > 0 ? { ids } : {}),
+  });
+export const stopQueue = () => fetchJSON("/queue/stop", { method: "POST" });
+export const getQueueStatus = (opts?: FetchOpts) =>
+  fetchJSON<QueueStatus>("/queue/status", opts);
+
+// Watcher
+export const startWatcher = () =>
+  fetchJSON("/watcher/start", { method: "POST" });
+export const stopWatcher = () => fetchJSON("/watcher/stop", { method: "POST" });
+
+// Logs
+export const getLogs = (
+  params?: {
+    level?: string;
+    category?: string;
+    jobId?: number;
+    limit?: number;
+    offset?: number;
+  },
+  opts?: FetchOpts,
+) => {
+  const q = new URLSearchParams();
+  if (params?.level) q.set("level", params.level);
+  if (params?.category) q.set("category", params.category);
+  if (typeof params?.jobId === "number") q.set("job_id", String(params.jobId));
+  if (params?.limit) q.set("limit", String(params.limit));
+  if (params?.offset) q.set("offset", String(params.offset));
+  return fetchJSON<LogEntry[]>(`/logs?${q.toString()}`, opts);
+};
+export const clearLogsApi = () => fetchJSON("/logs", { method: "DELETE" });
+
+// Connection test — no payload tests the active connection; a payload tests
+// the supplied (possibly unsaved) connection fields. `connectionId` names a
+// saved connection so the server can fall back to its stored key.
+export const testConnection = (payload?: {
+  provider?: string;
+  connectionId?: string;
+  apiKey?: string;
+  model?: string;
+  endpoint?: string;
+}) =>
+  fetchJSON<{ ok: boolean; message: string }>("/test-connection", {
+    method: "POST",
+    body: JSON.stringify(payload ?? {}),
+  });
+
+export const getLlmHealth = (opts?: FetchOpts) =>
+  fetchJSON<LlmHealth>("/llm-health", opts);
+
+export const getLlmStatus = (opts?: FetchOpts) =>
+  fetchJSON<LlmStatus>("/llm/status", opts);
+
+// Outbound notification webhook test — sends a sample notification using the
+// currently-saved settings and reports whether the webhook accepted it.
+export const testNotification = () =>
+  fetchJSON<{ ok: boolean; error?: string }>("/notify/test", {
+    method: "POST",
+  });
+
+// Subtitle format converter
+export type ConvertTargetFormat = "srt" | "vtt" | "ass" | "ssa";
+export interface ConvertRequest {
+  files: {
+    name: string;
+    content: string;
+    sourceLang?: string;
+    skip?: boolean;
+  }[];
+  targetFormat: ConvertTargetFormat;
+  translate?: boolean;
+  sourceLang?: string;
+  /** Rich language name for the LLM prompt (e.g. "Traditional Chinese (Taiwan)"). */
+  targetLang?: string;
+  /** Canonical BCP-47 code for output filenames (e.g. "zh-TW"). */
+  targetCode?: string;
+}
+export interface ConvertResponse {
+  files: { name: string; content: string }[];
+  errors: { name: string; error: string }[];
+}
+export const convertSubtitles = (body: ConvertRequest, opts?: FetchOpts) =>
+  fetchJSON<ConvertResponse>("/convert", {
+    ...opts,
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+// Speech-to-text
+export const getTranscriptionHealth = (opts?: FetchOpts) =>
+  fetchJSON<TranscriptionHealth>("/transcribe/health", opts);
+export interface TranscriptionLogs {
+  ok: boolean;
+  /** Resolved log path on the backend host, or null when logging is off. */
+  file?: string | null;
+  /** False when the backend never attached a file handler. */
+  active?: boolean;
+  /** Why logging is off, or why the tail could not be read. */
+  error?: string | null;
+  /** True when the file was longer than the tail window. */
+  truncated?: boolean;
+  reason?: string;
+  message?: string;
+  lines: string[];
+}
+export const getTranscriptionLogs = (lines = 200, opts?: FetchOpts) =>
+  fetchJSON<TranscriptionLogs>(`/transcription/logs?lines=${lines}`, opts);
+export const preflightTranscription = (payload: TranscribeRequest) =>
+  fetchJSON<TranscriptionPreflightResponse>("/transcribe/preflight", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+export const transcribeVideo = (payload: TranscribeRequest) =>
+  fetchJSON<TranscribeResponse>("/transcribe", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+export interface TranscribeUrlRequest {
+  url: string;
+  outputFormat?: "srt" | "vtt" | "txt" | "ass";
+  model?: string;
+  language?: string;
+  device?: string;
+  computeType?: string;
+  speakerDiarization?: boolean;
+}
+export interface TranscribeUrlResponse {
+  ok: boolean;
+  content: string;
+  language?: string;
+  segments?: number;
+  outputFormat: string;
+  url: string;
+}
+export const transcribeUrl = (payload: TranscribeUrlRequest) =>
+  fetchJSON<TranscribeUrlResponse>("/transcribe/url", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+export const getTranscriptionHistory = (limit = 10, opts?: FetchOpts) =>
+  fetchJSON<{ attempts: TranscriptionHistoryEntry[] }>(
+    `/transcribe/history?limit=${limit}`,
+    opts,
+  );
+export const clearTranscriptionHistory = () =>
+  fetchJSON<{ ok: boolean; removed: number }>("/transcribe/history", {
+    method: "DELETE",
+  });
+export const deleteTranscriptionAttempt = (id: string) =>
+  fetchJSON<{ ok: boolean; removed: number }>(
+    `/transcribe/history/${encodeURIComponent(id)}`,
+    { method: "DELETE" },
+  );
+export const retryTranscriptionAttempt = (id: string) =>
+  fetchJSON<TranscribeResponse>(`/transcribe/history/${id}/retry`, {
+    method: "POST",
+  });
+export const cancelTranscription = (payload: { path: string }) =>
+  fetchJSON<{ ok: boolean }>("/transcribe/cancel", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+export const cancelAllTranscriptions = () =>
+  fetchJSON<{ ok: boolean; cancelled: number }>("/transcribe/cancel-all", {
+    method: "POST",
+  });
+
+// Whisper Model Manager — proxied through the SubSmelt server to the configured
+// whisper backend. Download progress arrives via the "model:download" SSE event
+// (matched by model id); these calls only kick off / await the terminal result.
+export const listWhisperModels = (opts?: FetchOpts) =>
+  fetchJSON<{ models: WhisperModel[] }>("/whisper/models", opts);
+export const downloadWhisperModel = (model: string) =>
+  fetchJSON<WhisperModelDownloadResult>("/whisper/models/download", {
+    method: "POST",
+    body: JSON.stringify({ model }),
+  });
+export const deleteWhisperModel = (model: string) =>
+  fetchJSON<WhisperModelDeleteResult>(
+    `/whisper/models/${encodeURIComponent(model)}`,
+    { method: "DELETE" },
+  );
+
+// YouTube
+export const getYoutubeStatus = (opts?: FetchOpts) => fetchJSON<YoutubeStatus>("/youtube/status", opts);
+export const getYoutubeNotesFolder = (path: string, opts?: FetchOpts) =>
+  fetchJSON<YoutubeNotesFolder>(`/youtube/notes-folder?path=${encodeURIComponent(path)}`, opts);
+export const getYoutubePipeline = (opts?: FetchOpts) => fetchJSON<YoutubePipeline>("/youtube/pipeline", opts);
+export const getYoutubePlaylists = (opts?: FetchOpts) =>
+  fetchJSON<{ playlists: YoutubePlaylist[] }>("/youtube/playlists", opts);
+export const getYoutubeVideos = (playlistId: string, opts?: FetchOpts) =>
+  fetchJSON<{ videos: YoutubeVideo[] }>(`/youtube/playlists/${encodeURIComponent(playlistId)}/videos`, opts);
+export const previewYoutubePlaylist = (url: string, kind: "playlist" | "channel") =>
+  fetchJSON<YoutubePreview>("/youtube/playlists/preview", { method: "POST", body: JSON.stringify({ url, kind }) });
+export const followYoutubePlaylist = (payload: YoutubePlaylistFields & { url: string; title: string }) =>
+  fetchJSON<YoutubePlaylist>("/youtube/playlists", { method: "POST", body: JSON.stringify(payload) });
+export const updateYoutubePlaylist = (playlistId: string, payload: Partial<YoutubePlaylistFields>) =>
+  fetchJSON<YoutubePlaylist>(`/youtube/playlists/${encodeURIComponent(playlistId)}`, { method: "PUT", body: JSON.stringify(payload) });
+export const changeYoutubeBackfill = (playlistId: string, backfill: YoutubeBackfill) =>
+  fetchJSON<{ ok: true; kept: number; released: number; skipped: number }>(
+    `/youtube/playlists/${encodeURIComponent(playlistId)}/backfill`,
+    { method: "POST", body: JSON.stringify({ backfill }) },
+  );
+export const unfollowYoutubePlaylist = (playlistId: string) =>
+  fetchJSON<{ ok: true }>(`/youtube/playlists/${encodeURIComponent(playlistId)}`, { method: "DELETE" });
+export const syncYoutubePlaylist = (playlistId: string) =>
+  fetchJSON<{ ok: true; title: string; total: number; added: number; removed: number; restored: number }>(
+    `/youtube/playlists/${encodeURIComponent(playlistId)}/sync`,
+    { method: "POST" },
+  );
+export const downloadYoutubeVideos = (playlistId: string, videoIds: string[]) =>
+  fetchJSON<{ downloaded: number; refused: number }>(`/youtube/playlists/${encodeURIComponent(playlistId)}/videos/download`, { method: "POST", body: JSON.stringify({ videoIds }) });
+export const youtubeVideoAction = (videoId: string, action: YoutubeVideoAction) =>
+  fetchJSON<YoutubeVideo>(`/youtube/videos/${encodeURIComponent(videoId)}/${action}`, { method: "POST" });
+export const uploadYoutubeCookies = (content: string) =>
+  fetchJSON<YoutubeStatus["cookies"]>("/youtube/cookies", { method: "PUT", body: JSON.stringify({ content }) });
+export const removeYoutubeCookies = () => fetchJSON<YoutubeStatus["cookies"]>("/youtube/cookies", { method: "DELETE" });
+export const testYoutubeApiKey = (key: string) =>
+  fetchJSON<{ ok: true }>("/youtube/api-key/test", { method: "POST", body: JSON.stringify({ key }) });
+export const updateYtdlp = () =>
+  fetchJSON<{ path: string; version: string | null; output: string }>("/youtube/ytdlp/update", { method: "POST" });

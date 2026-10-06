@@ -1,0 +1,164 @@
+name: CI
+
+# Test gate for both halves of the project. Runs on every PR and on pushes to
+# main, and is what the release workflows (docker-publish, windows-whisper-build)
+# wait for before publishing anything.
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: SubSmelt app (TypeScript)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.3
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # --legacy-peer-deps: i18next@26 declares typescript as an OPTIONAL peer at
+      # "^5 || ^6" and this repo is on typescript@7, which npm 10 rejects outright.
+      # TypeScript is only a types-level peer there, and the lockfile already
+      # resolves cleanly, so the conflict is advisory.
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Typecheck (server)
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  backend:
+    name: Whisper backend (Python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend-whisper
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      # requirements.txt only: the optional diarization/URL extras pull ~2 GB of
+      # torch and are gated at runtime, so the suite must pass without them.
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+
+      - name: Test
+        run: python -m pytest tests -q
+
+  # Builds the image natively on each architecture and runs it. Building only
+  # on amd64 let a wrong YTDLP_SHA256_ARM64 (or an arm64-only breakage) slip
+  # through to the release; the arm64 leg uses GitHub's native arm runner, so
+  # it takes minutes rather than the ~13 min the ffmpeg stage needs under QEMU.
+  # Each arch has its own cache scope: with one shared scope every build
+  # overwrote the other arch's cache manifest.
+  image:
+    name: Docker image (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    env:
+      IMAGE: subsmelt:ci
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4.1.0
+
+      # Build only, never push. The release workflow's npm install broke on a
+      # dependency conflict that nothing caught until a tag was cut; building the
+      # image on every PR keeps that failure in front of the release.
+      - name: Build image
+        uses: docker/build-push-action@v7.2.0
+        with:
+          context: .
+          platforms: linux/${{ matrix.arch }}
+          push: false
+          load: true
+          tags: ${{ env.IMAGE }}
+          cache-from: type=gha,scope=ci-${{ matrix.arch }}
+          cache-to: type=gha,scope=ci-${{ matrix.arch }},mode=max
+
+      - name: Bundled tools run
+        run: |
+          docker run --rm "$IMAGE" ffmpeg -hide_banner -version
+          docker run --rm "$IMAGE" ffprobe -hide_banner -version
+          docker run --rm "$IMAGE" yt-dlp --version
+          # Node's own entrypoint dispatch: options and script paths go to node.
+          docker run --rm "$IMAGE" --version | grep -E '^v22\.'
+          docker run --rm -e PUID=1234 "$IMAGE" --version | grep -E '^v22\.'
+          docker run --rm "$IMAGE" node -e "const D = require('better-sqlite3'); console.log('better-sqlite3', new D(':memory:').prepare('select sqlite_version() v').get().v)"
+
+      # Starts the server as the image ships (root), then with PUID/PGID and a
+      # bare script path as the command, and waits for /api/health and for
+      # Docker's own HEALTHCHECK to report healthy.
+      - name: Container starts and reports healthy
+        run: |
+          wait_healthy() {
+            name="$1"; port="$2"
+            for _ in $(seq 1 60); do
+              if curl -fsS "http://127.0.0.1:${port}/api/health"; then break; fi
+              sleep 1
+            done
+            for _ in $(seq 1 60); do
+              status="$(docker inspect -f '{{.State.Health.Status}}' "$name")"
+              if [ "$status" = healthy ]; then echo; echo "$name: healthy"; return 0; fi
+              if [ "$status" = unhealthy ]; then break; fi
+              sleep 2
+            done
+            echo "$name never became healthy (status: ${status:-none})" >&2
+            docker logs "$name" >&2
+            return 1
+          }
+
+          docker run -d --name smoke-root -p 3000:3000 "$IMAGE"
+          wait_healthy smoke-root 3000
+          test "$(docker exec smoke-root id -u)" = 0
+
+          mkdir -p "$RUNNER_TEMP/puid/config" "$RUNNER_TEMP/puid/data"
+          sudo chown -R 0:0 "$RUNNER_TEMP/puid"
+          docker run -d --name smoke-puid -p 3001:3000 -e PUID=1234 -e PGID=2345 \
+            -v "$RUNNER_TEMP/puid/config:/app/config" -v "$RUNNER_TEMP/puid/data:/app/data" \
+            "$IMAGE" dist/server/index.js
+          wait_healthy smoke-puid 3001
+          docker exec smoke-puid sh -c 'grep -E "^(Uid|Gid):" /proc/1/status'
+          test "$(docker exec smoke-puid sh -c 'stat -c %u:%g /proc/1')" = 1234:2345
+          test "$(stat -c %u:%g "$RUNNER_TEMP/puid/config/config.json")" = 1234:2345
+          test "$(stat -c %u:%g "$RUNNER_TEMP/puid/data")" = 1234:2345
+
+      - name: Container logs
+        if: always()
+        run: |
+          for name in smoke-root smoke-puid; do
+            docker logs "$name" 2>&1 | tail -n 50 || true
+          done

@@ -1,0 +1,228 @@
+export const transcribePostActionValues = ["transcribe_only", "transcribe_and_translate"] as const;
+export type TranscribePostAction = typeof transcribePostActionValues[number];
+export type TranscriptionOutputFormat = "srt" | "vtt" | "txt" | "ass";
+export type LowRamBehavior = "ask" | "downgrade" | "skip" | "run_anyway";
+
+export interface TranscriptionSettings {
+  transcription_backend_url?: string;
+  transcription_backend_token?: string;
+  transcription_model?: string;
+  transcription_device?: string;
+  transcription_compute_type?: string;
+  transcription_language?: string;
+  transcription_use_vad?: string;
+  transcription_output_format?: string;
+  transcription_low_ram_behavior?: string;
+  transcription_path_map_from?: string;
+  transcription_path_map_to?: string;
+  transcription_transport?: string;
+  transcription_request_timeout_s?: string;
+  transcription_max_line_length?: string;
+  transcription_max_subtitle_duration?: string;
+  transcription_merge_short_segments?: string;
+  transcription_folder_defaults?: string;
+  transcription_advanced_stt?: string;
+  preferred_chinese?: string;
+}
+
+export interface TranscriptionFolderDefaults {
+  path?: string;
+  model?: string;
+  language?: string;
+  device?: string;
+  compute_type?: string;
+  output_format?: string;
+  use_vad?: boolean | string;
+  max_line_length?: number | string;
+  max_subtitle_duration?: number | string;
+  merge_short_segments?: boolean | string;
+  advanced_options?: TranscriptionAdvancedOptions;
+}
+
+export interface TranscriptionAdvancedOptions {
+  beam_size?: number;
+  patience?: number;
+  condition_on_previous_text?: boolean;
+  word_timestamps?: boolean;
+  initial_prompt?: string;
+  speaker_diarization?: boolean;
+  bgm_separation?: boolean;
+}
+
+// Per-run overrides that win over the global Settings values (Whisper page lets
+// the user pick model/device/compute/language for a specific batch).
+export interface TranscriptionOverrides {
+  model?: string;
+  language?: string;
+  device?: string;
+  compute_type?: string;
+  // Per-run speaker diarization toggle (Whisper page). Merged into
+  // advanced_options so it wins over per-folder / global advanced_stt.
+  speaker_diarization?: boolean;
+  // A history retry replays the advanced options its attempt ran with, in
+  // place of the per-folder / global ones.
+  advanced_options?: TranscriptionAdvancedOptions;
+}
+
+export interface BuildTranscriptionRequestOptions {
+  videoPath: string;
+  mediaDir: string;
+  settings: TranscriptionSettings;
+  outputFormat?: TranscriptionOutputFormat;
+  postAction?: TranscribePostAction;
+  overrides?: TranscriptionOverrides;
+}
+
+export interface BackendTranscriptionRequest {
+  input_path: string;
+  output_format: TranscriptionOutputFormat;
+  model: string;
+  language: string;
+  device: string;
+  compute_type: string;
+  use_vad: boolean;
+  post_action: TranscribePostAction;
+  allow_unsafe?: boolean;
+  subtitle_quality?: TranscriptionSubtitleQualityOptions;
+  advanced_options?: TranscriptionAdvancedOptions;
+  // The backend converts a Chinese transcript to this script (OpenCC).
+  chinese_script?: "zh-TW" | "zh-CN";
+}
+
+export interface TranscriptionSubtitleQualityOptions {
+  max_line_length?: number;
+  max_subtitle_duration?: number;
+  merge_short_segments?: boolean;
+}
+
+export interface BackendPreflightResponse {
+  ok?: boolean;
+  safe?: boolean;
+  code?: string;
+  availableRamMb?: number;
+  requiredRamMb?: number;
+  recommendedRamMb?: number;
+  suggestedModel?: string | null;
+  ffmpegAvailable?: boolean;
+  diskAvailableMb?: number;
+  requiredDiskMb?: number;
+  modelCache?: {
+    model?: string;
+    cached?: boolean | null;
+    cacheRoot?: string;
+    cachePath?: string | null;
+    firstRunDownloadExpected?: boolean;
+    requiredRamMb?: number;
+    recommendedRamMb?: number;
+    suggestedModel?: string | null;
+    warning?: string;
+  };
+}
+
+export interface BackendTranscriptionResponse {
+  ok: boolean;
+  // Path mode (Model A): backend wrote the subtitle to a shared path.
+  subtitle_path?: string;
+  // Upload mode (Model B): backend returns the subtitle content; the SubSmelt
+  // server writes it to the local output path.
+  content?: string;
+  language?: string;
+  segments?: number;
+  duration_seconds?: number;
+  error?: string;
+  detail?: unknown;
+}
+
+export type TranscriptionTransportMode = "shared" | "upload";
+
+export interface TranscribeBackendOptions {
+  // Timeout in seconds (default 30 minutes): a total for the JSON endpoints, an
+  // idle timeout reset by every line for the streamed ones.
+  timeoutSeconds?: number;
+  // Optional shared-secret token sent as `Authorization: Bearer <token>`.
+  token?: string;
+  // Aborting this signal cancels the HTTP request.
+  signal?: AbortSignal;
+}
+
+export interface TranscriptionProgressUpdate {
+  pct: number;
+  processedSeconds: number;
+  totalSeconds: number;
+}
+
+export interface TranscribeStreamingOptions extends TranscribeBackendOptions {
+  // Called once per backend progress line.
+  onProgress?: (update: TranscriptionProgressUpdate) => void;
+  // Called on a backend phase line (e.g. "diarizing") for a live status hint.
+  onPhase?: (phase: string) => void;
+}
+
+export type ModelEngine = "whisper" | "nemotron";
+
+export interface ModelSupports {
+  prompt: boolean;
+  beamSize: boolean;
+  conditionOnPreviousText: boolean;
+  vad: boolean;
+  computeType: boolean;
+  wordTimestamps: boolean;
+  translateTask: boolean;
+}
+
+// What a speech-to-text model can do, as the backend describes it in
+// capabilities.modelInfo and on GET /models entries.
+export interface WhisperModelDescriptor {
+  id: string;
+  engine: ModelEngine;
+  label: string;
+  sizeMb?: number;
+  requiredRamMb?: number;
+  requiredVramMb?: number;
+  languages: "all" | string[];
+  supports: ModelSupports;
+  available: boolean;
+  unavailableReason: string | null;
+}
+
+// Backends before 0.6.0 send only the first six fields.
+export interface WhisperModelInfo extends Partial<Omit<WhisperModelDescriptor, "id">> {
+  id: string;
+  downloaded: boolean;
+  cachePath?: string | null;
+}
+
+export interface BackendCapabilities {
+  models?: string[];
+  modelInfo?: WhisperModelDescriptor[];
+  nemoSpeech?: { available: boolean; version: string | null };
+  [key: string]: unknown;
+}
+
+export interface BackendHealthResponse {
+  capabilities?: BackendCapabilities;
+  [key: string]: unknown;
+}
+
+export interface WhisperModelDownloadProgress {
+  pct: number;
+  downloadedMb?: number;
+  totalMb?: number;
+}
+
+export interface WhisperModelDownloadResult {
+  ok: boolean;
+  model: string;
+  cachePath?: string | null;
+}
+
+export interface WhisperModelDeleteResult {
+  ok: boolean;
+  freedMb?: number;
+}
+
+export interface DownloadBackendModelOptions {
+  token?: string;
+  timeoutMs?: number;
+  onProgress?: (update: WhisperModelDownloadProgress) => void;
+}

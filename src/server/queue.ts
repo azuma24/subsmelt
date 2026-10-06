@@ -1,0 +1,934 @@
+import fs from "node:fs";
+import path from "node:path";
+import {
+  countPendingJobs,
+  claimPendingJob,
+  updateJob,
+  getJob,
+  addJobUsage,
+  type JobRow,
+} from "./db.js";
+import { getAllSettings, getTask, getSetting } from "./config.js";
+import {
+  summarizeTranslationError,
+  translateFile,
+  planJobContext,
+  translateSingle,
+  ensureTranslatedTitle,
+  cleanMediaTitle,
+} from "./translator.js";
+import {
+  resolveConnectionPool,
+  type ResolvedConnection,
+  type LlmMode,
+} from "./connections.js";
+import { logger } from "./logger.js";
+import { broadcast } from "./sse.js";
+import { notify } from "./notify.js";
+import {
+  acquireConnectionLock,
+  resetConnectionLocks,
+  tryAcquireConnectionLock,
+} from "./connection-lock.js";
+import { existingTaskOutput, standardOutputFor, stripLangSuffix, MEDIA_DIR } from "./scanner.js";
+import { assertMediaPathAllowed } from "./transcription-client.js";
+import {
+  currentTranslationGate,
+  holdQueueStart,
+  takeHeldStart,
+} from "./gpu-gate.js";
+
+let isRunning = false;
+let shouldStop = false;
+// The jobs the live run processes: a Run of selected jobs, or null for all.
+let runFilter: Set<number> | null = null;
+// A start asked for while a run of selected jobs is live: all pending jobs
+// (ids undefined) or more selected ones. The live run takes it up when its
+// own jobs are done, so the jobs a retry, a watcher scan or a one-off
+// translation queued meanwhile are never left pending.
+let requestedRun: { ids: number[] | undefined } | null = null;
+
+function rememberRunRequest(ids: number[] | undefined): void {
+  if (!requestedRun) requestedRun = { ids };
+  else if (!requestedRun.ids || !ids) requestedRun = { ids: undefined };
+  else requestedRun = { ids: [...new Set([...requestedRun.ids, ...ids])] };
+}
+let currentJobId: number | null = null;
+// Jobs translating right now (one per active worker in parallel mode).
+const activeJobIds = new Set<number>();
+// One AbortController per in-flight job; requestStop() aborts them all.
+const abortControllers = new Map<number, AbortController>();
+// Jobs the user cancelled while translating: their abort surfaces through the
+// same fetch errors a stop does, so runJob needs this set to tell the two
+// apart — a cancelled job ends as error, a stopped one back to pending.
+const cancelledJobIds = new Set<number>();
+// The LLM connection each translating job runs on, so the dashboard can show
+// which machine is working on what in parallel mode.
+export interface JobConnection {
+  /** The connection's id from settings, so status views can match it up. */
+  id: string;
+  label: string;
+  host: string;
+  model: string;
+}
+const jobConnections = new Map<number, JobConnection>();
+
+function setJobConnection(jobId: number, connection: JobConnection): void {
+  jobConnections.set(jobId, connection);
+  broadcast("job:connection", { jobId, ...connection });
+}
+
+/** The connection a translating job currently runs on, or null. */
+export function getJobConnection(jobId: number): JobConnection | null {
+  return jobConnections.get(jobId) ?? null;
+}
+
+/** Every translating job with its connection, for the queue status surface. */
+export function getActiveJobConnections(): ({ jobId: number } & JobConnection)[] {
+  return Array.from(jobConnections, ([jobId, connection]) => ({ jobId, ...connection }));
+}
+// Hard ceiling on concurrent translation workers (matches the per-file connection cap).
+const MAX_WORKERS = 32;
+// Progress (completed_cues) is written to SQLite on every cue-advance, which with
+// many workers and long files hammers the WAL. Batch it — at most one write per
+// interval per job — while always forcing the final write so the stored count is
+// exact. The SSE progress broadcast rides the same cadence.
+const PROGRESS_WRITE_THROTTLE_MS = 250;
+// Dedicated system prompt for translating a short media title — the subtitle
+// prompt template assumes cue-by-cue input and produces noisy output for a
+// single title string.
+const titleTranslationPrompt = (lang: string) =>
+  `Translate the following movie or series title into ${lang}. Return only the translated title, nothing else.`;
+
+// Jobs skipped because their subtitle output already exists still deserve a
+// title-sidecar entry (repair for titles missed before the setting was on or
+// after a failed title call). Collected during claim, processed after the run.
+const titleRepairJobs: JobRow[] = [];
+
+/** Media base stem for the title sidecar: video stem, else srt stem minus language suffix. */
+function titleBaseForJob(job: JobRow): string {
+  if (job.video_path)
+    return path.basename(job.video_path, path.extname(job.video_path));
+  return stripLangSuffix(
+    path.basename(job.srt_path, path.extname(job.srt_path)),
+  );
+}
+const offlineConnectionIds = new Set<string>();
+
+/** Connections this queue run found unreachable and stopped using. */
+export function getOfflineConnectionIds(): string[] {
+  return Array.from(offlineConnectionIds);
+}
+
+function availablePool(pool: ResolvedConnection[]): ResolvedConnection[] {
+  const available = pool.filter((conn) => !offlineConnectionIds.has(conn.id));
+  return available.length > 0 ? available : pool;
+}
+
+export function isQueueRunning() {
+  return isRunning;
+}
+
+export function getCurrentJobId() {
+  return currentJobId;
+}
+
+export function getActiveJobIds(): number[] {
+  return Array.from(activeJobIds);
+}
+
+export function requestStop() {
+  if (isRunning) {
+    shouldStop = true;
+    // Abort every in-flight LLM request immediately — don't wait for onProgress
+    for (const controller of abortControllers.values())
+      controller.abort("stop_requested");
+    logger.info("queue", "Stop requested — aborting in-flight LLM calls");
+  }
+}
+
+/**
+ * Cancels one translating job: aborts its LLM calls, ends the job as a
+ * cancelled error, and leaves the queue running — the worker that freed up
+ * claims the next pending job. Unlike a stop, the job does not come back.
+ */
+export function requestJobCancel(jobId: number): boolean {
+  const controller = abortControllers.get(jobId);
+  if (!controller) return false;
+  cancelledJobIds.add(jobId);
+  controller.abort(new Error("JOB_CANCELLED"));
+  logger.info("queue", `Cancel requested for job #${jobId}`, jobId);
+  return true;
+}
+
+/**
+ * Whether a fresh process should pick up the jobs it finds pending. Startup
+ * resets jobs left translating by the previous process to pending, and without
+ * this nothing restarted them until the next scan or manual start.
+ */
+export function shouldResumeQueueOnBoot(
+  autoTranslate: string,
+  pendingCount: number,
+): boolean {
+  return autoTranslate === "1" && pendingCount > 0;
+}
+
+export function resumeQueueOnBoot() {
+  const pending = countPendingJobs();
+  if (!shouldResumeQueueOnBoot(getSetting("auto_translate"), pending)) return;
+  logger.info("queue", `Resuming ${pending} pending job(s) found at startup`);
+  runQueueSafely();
+}
+
+/**
+ * Fire-and-forget queue start for call sites that do not await the run
+ * (routes, watcher, boot resume). processQueue can reject — a claim or a
+ * connection-resolution error propagates out of its Promise.all — and a bare
+ * call would surface as an unhandled rejection that kills the process.
+ */
+export function runQueueSafely(onlyIds?: number[]): void {
+  processQueue(onlyIds).catch((error: any) => {
+    logger.error("queue", `Queue run failed: ${error?.message || error}`);
+  });
+}
+
+export async function processQueue(onlyIds?: number[]) {
+  if (isRunning) {
+    // A run of all jobs already re-checks for pending work before it ends.
+    if (runFilter) rememberRunRequest(onlyIds && onlyIds.length > 0 ? onlyIds : undefined);
+    return;
+  }
+  const gate = currentTranslationGate();
+  if (!gate.open) {
+    holdQueueStart(onlyIds && onlyIds.length > 0 ? onlyIds : undefined);
+    logger.info(
+      "queue",
+      `Translation waits for ${gate.waitingFor} transcription(s) to finish: Whisper and the translation model share one GPU`,
+    );
+    return;
+  }
+  isRunning = true;
+  shouldStop = false;
+  offlineConnectionIds.clear();
+  resetConnectionLocks();
+
+  let filter = onlyIds && onlyIds.length > 0 ? new Set(onlyIds) : null;
+  runFilter = filter;
+  const pendingCount = countPendingJobs(filter);
+  logger.info(
+    "queue",
+    `Queue started (${pendingCount} pending jobs${filter ? ", selected subset" : ""})`,
+  );
+
+  try {
+    // Adaptive worker pool: every worker re-resolves the LLM mode on each job
+    // claim, so switching Single/Fallback ⇄ Parallel takes effect mid-run without
+    // restarting the queue. One slot per configured connection (capped); a slot
+    // only processes when the current mode permits its index (see adaptiveWorker).
+    const { all } = resolveConnectionPool(getAllSettings());
+    const slots = Math.max(1, Math.min(MAX_WORKERS, all.length || 1));
+    logger.info(
+      "queue",
+      `Worker pool: up to ${slots} slot${slots === 1 ? "" : "s"} (adaptive to LLM mode)`,
+      null,
+      { stage: "worker_pool" },
+    );
+    // processQueue() is a no-op while this run is live, so a job queued while
+    // the title repair is calling the LLM has nothing to start it. Repair, then
+    // look for pending work again before declaring the run finished.
+    do {
+      await Promise.all(
+        Array.from({ length: slots }, (_, i) => adaptiveWorker(i, filter)),
+      );
+      if (shouldStop) break;
+      await repairMissingTitles();
+      filter = nextRunFilter(filter);
+    } while (!shouldStop && hasPendingJobs(filter));
+
+    if (shouldStop) {
+      logger.info("queue", "Queue stopped by user request");
+      broadcast("queue:stopped", {});
+      void notify("queue:stopped", {});
+    } else {
+      logger.info("queue", "Queue finished — no more pending jobs");
+      broadcast("queue:finished", {});
+      void notify("queue:finished", {});
+    }
+  } finally {
+    titleRepairJobs.length = 0;
+    isRunning = false;
+    runFilter = null;
+    // A stop ends the run and whatever was asked for during it.
+    requestedRun = null;
+    shouldStop = false;
+    currentJobId = null;
+    activeJobIds.clear();
+    abortControllers.clear();
+    cancelledJobIds.clear();
+    offlineConnectionIds.clear();
+    resetConnectionLocks();
+  }
+}
+
+/** The live run's selection, widened to a start asked for meanwhile once its own jobs are done. */
+function nextRunFilter(filter: Set<number> | null): Set<number> | null {
+  if (!requestedRun || hasPendingJobs(filter)) return filter;
+  const next = requestedRun.ids ? new Set(requestedRun.ids) : null;
+  requestedRun = null;
+  runFilter = next;
+  logger.info("queue", `Queue continues with ${next ? "the jobs selected meanwhile" : "all pending jobs"}`);
+  return next;
+}
+
+/** Starts a run the GPU gate held back, once the gate has opened. */
+export function startHeldQueue(): void {
+  if (isRunning) return;
+  const start = takeHeldStart();
+  if (start) runQueueSafely(start.ids);
+}
+
+/**
+ * Atomically claim the next pending job. Synchronous on purpose: better-sqlite3
+ * calls don't yield, so concurrent pool workers can never read-then-mark the
+ * same job. Returns null when the queue is drained (or stop was requested).
+ * Skipped (output-exists) jobs are consumed here and the next one is tried.
+ */
+/**
+ * Where a job's result lives. A job queued before the language-code standard
+ * writes the standard name ("Show.eng.srt", not "Show.en.srt"), unless the
+ * task's output is already on disk in another spelling: then the job points
+ * at that file. A skipped job's preview and download open it, and a forced
+ * re-translation replaces it in place instead of leaving a second file of the
+ * same language beside the new one.
+ */
+function withStandardOutput(job: JobRow): JobRow {
+  const task = getTask(job.task_id);
+  if (!task) return job;
+  const standard = standardOutputFor(job.srt_path, job.output_path, task);
+  const outputPath = fs.existsSync(standard) ? standard : existingTaskOutput(job.srt_path, task) ?? standard;
+  if (outputPath === job.output_path) return job;
+  updateJob(job.id, { output_path: outputPath });
+  return { ...job, output_path: outputPath };
+}
+
+function claimNextJob(filter: Set<number> | null): JobRow | null {
+  while (!shouldStop) {
+    const claimed = claimPendingJob(filter);
+    if (!claimed) return null;
+    const job = withStandardOutput(claimed);
+
+    if (fs.existsSync(job.output_path) && !job.force) {
+      logger.info(
+        "queue",
+        `Skipping job ${job.id}: output already exists (${job.output_path})`,
+        job.id,
+      );
+      updateJob(job.id, { status: "skipped" });
+      titleRepairJobs.push(job);
+      continue;
+    }
+
+    activeJobIds.add(job.id);
+    currentJobId = job.id;
+    return job;
+  }
+  return null;
+}
+
+const delay = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Backfill title-sidecar entries for jobs whose subtitle output already
+ * existed (skipped at claim time). Cached titles make this a cheap no-op per
+ * folder+language; only genuinely missing titles hit the LLM. Non-fatal.
+ */
+async function repairMissingTitles() {
+  const jobs = titleRepairJobs.splice(0);
+  const settings = getAllSettings();
+  if (settings.title_sidecar !== "1" || jobs.length === 0) return;
+
+  const { pool } = resolveConnectionPool(settings);
+  const primary = availablePool(pool)[0];
+  if (!primary) return;
+  const apiHost =
+    primary.apiHost || settings.llm_endpoint || "http://localhost:8000/v1";
+  const requestTimeoutMs = Math.max(
+    5_000,
+    parseInt(settings.request_timeout_s || "300", 10) * 1000,
+  );
+
+  for (const job of jobs) {
+    if (shouldStop) return;
+    try {
+      const task = getTask(job.task_id);
+      const langCode = task?.lang_code || "?";
+      const targetLang = task?.target_lang || "";
+      const base = titleBaseForJob(job);
+      const title = await ensureTranslatedTitle({
+        outputDir: path.dirname(job.output_path),
+        base,
+        langCode,
+        translate: (text) =>
+          translateSingle(text, {
+            apiKey: primary.apiKey || "",
+            apiHost,
+            model: primary.model || "",
+            provider: primary.provider,
+            systemPrompt: titleTranslationPrompt(targetLang || "English"),
+            temperature: parseFloat(settings.temperature || "0.3"),
+            disableToolCalls: settings.disable_tool_calls === "1",
+            requestTimeoutMs,
+          }),
+      });
+      if (title !== cleanMediaTitle(base)) {
+        logger.info(
+          "translate",
+          `Translated title (${langCode}): ${title}`,
+          job.id,
+          { stage: "title_sidecar", title, langCode },
+        );
+      }
+    } catch (error: any) {
+      logger.warn(
+        "queue",
+        `Title repair failed (non-fatal): ${error?.message || error}`,
+        job.id,
+        { stage: "title_sidecar" },
+      );
+    }
+  }
+}
+
+function hasPendingJobs(filter: Set<number> | null): boolean {
+  return countPendingJobs(filter) > 0;
+}
+
+/**
+ * Adaptive worker. Each loop re-resolves the current LLM mode + pool so a mode
+ * change applies mid-run:
+ *  - parallel (pool > 1): worker `index` pins connection pool[index] and claims
+ *    the next file (work-stealing); the other connections act as per-file fallbacks.
+ *  - single / fallback: only worker 0 runs (sequential, one file at a time); the
+ *    rest idle. If the mode later widens to parallel, idle workers pick up jobs.
+ * A worker exits when the queue is drained (or stop is requested).
+ */
+async function adaptiveWorker(index: number, filter: Set<number> | null) {
+  // Idle slots used to run a COUNT query every 500ms each; with several
+  // connections configured that is a constant stream of pointless queries for
+  // the whole run. Back off while idle, and reset as soon as this slot works.
+  const IDLE_MIN_MS = 500;
+  const IDLE_MAX_MS = 5_000;
+  let idleWaitMs = IDLE_MIN_MS;
+  while (!shouldStop) {
+    const { mode, pool: resolvedPool } = resolveConnectionPool(
+      getAllSettings(),
+    );
+    const pool = availablePool(resolvedPool);
+    const parallel = mode === "parallel" && pool.length > 1;
+    const concurrency = parallel ? pool.length : 1;
+
+    if (index >= concurrency) {
+      // Not active under the current mode. Stay alive while anything is pending OR
+      // in flight, so a mid-run widen to parallel can reactivate this slot; only
+      // exit once the queue is fully drained.
+      // activeJobIds is in-memory: check it first so a busy queue never hits the DB.
+      if (activeJobIds.size === 0 && !hasPendingJobs(filter)) break;
+      await delay(idleWaitMs);
+      idleWaitMs = Math.min(idleWaitMs * 2, IDLE_MAX_MS);
+      continue;
+    }
+    idleWaitMs = IDLE_MIN_MS;
+
+    const job = claimNextJob(filter);
+    if (!job) break;
+
+    const order = parallel
+      ? [pool[index], ...pool.filter((_, j) => j !== index)]
+      : pool;
+    const jobMode: LlmMode = parallel ? "fallback" : mode;
+    const primary = order[0];
+    const releasePrimary = primary
+      ? await acquireConnectionLock(primary)
+      : undefined;
+    let stopped = false;
+    try {
+      stopped = await runJob(
+        job,
+        order,
+        jobMode,
+        primary ? new Set([primary.id]) : new Set<string>(),
+      );
+    } finally {
+      releasePrimary?.();
+    }
+    if (stopped) break;
+  }
+}
+
+/**
+ * Translate one job using the supplied connection list (first = primary).
+ * Returns true when the job was interrupted by a stop request so the caller
+ * can break its loop.
+ */
+async function runJob(
+  job: JobRow,
+  conns: ResolvedConnection[],
+  llmModeForJob: LlmMode,
+  reservedConnectionIds: Set<string> = new Set(),
+): Promise<boolean> {
+  const srtName = job.srt_path.split("/").pop() || job.srt_path;
+  const task = getTask(job.task_id);
+  const langCode = task?.lang_code || "?";
+  const targetLang = task?.target_lang || "";
+
+  logger.info(
+    "queue",
+    `Started: ${srtName} → ${langCode} (job #${job.id})`,
+    job.id,
+  );
+  broadcast("job:start", { jobId: job.id, srtName, langCode });
+
+  const settings = getAllSettings();
+  const startTime = Date.now();
+
+  // Per-job abort controller — aborted immediately by requestStop()
+  const jobAbort = new AbortController();
+  abortControllers.set(job.id, jobAbort);
+
+  const usedConnLabels: string[] = [];
+  const usedConnIds = new Set<string>();
+  // Latest cue total seen from onProgress. `job` is the row as claimed, so
+  // reading job.total_cues after the run always printed "?" — the DB was updated,
+  // the local object was not.
+  let lastTotalCues = 0;
+  // Throttled progress write timestamp (see PROGRESS_WRITE_THROTTLE_MS).
+  let lastProgressWrite = 0;
+
+  try {
+    if (!task)
+      throw new Error(`Translation task #${job.task_id} no longer exists`);
+    if (conns.length === 0)
+      throw new Error("No usable LLM connection configured");
+    // Same boundary the routes enforce on preview/cues/download: DB-stored
+    // paths still hit the filesystem here, so confirm they stay under MEDIA_DIR
+    // before translating (a traversal output_pattern would otherwise write
+    // anywhere the job runs).
+    assertMediaPathAllowed(job.srt_path, MEDIA_DIR);
+    if (job.output_path) assertMediaPathAllowed(job.output_path, MEDIA_DIR);
+    const promptToUse = task?.prompt_override || settings.prompt || "";
+
+    const primary = conns[0];
+    const apiHost =
+      primary.apiHost || settings.llm_endpoint || "http://localhost:8000/v1";
+    const apiKey = primary.apiKey || "";
+    const model = primary.model || "";
+    setJobConnection(job.id, { id: primary.id, label: primary.label, host: apiHost, model });
+    logger.info(
+      "queue",
+      `LLM mode: ${llmModeForJob} (${conns.length} connection${conns.length === 1 ? "" : "s"}) — primary ${primary.label}`,
+      job.id,
+      { stage: "llm_pool" },
+    );
+
+    const chunkSize = Math.max(1, parseInt(settings.chunk_size || "20", 10) || 20);
+    const configuredParallel = Math.max(
+      1,
+      Math.min(8, parseInt(settings.parallel_chunks || "1", 10)),
+    );
+
+    // Probe each connection's context window (LM Studio only — graceful no-op
+    // elsewhere). A configured parallel_chunks is respected up to what the
+    // primary's shared window holds.
+    const ctxPlan = await planJobContext(conns, {
+      fallbackHost: apiHost,
+      chunkSize,
+      configuredParallel,
+      abortSignal: jobAbort.signal,
+    });
+    const parallelChunks = ctxPlan.parallelChunks;
+
+    const requestTimeoutMs = Math.max(
+      5_000,
+      parseInt(settings.request_timeout_s || "300", 10) * 1000,
+    );
+
+    const probes = conns
+      .map((c) => {
+        const info = ctxPlan.byConnection.get(c.id);
+        return `${c.label} maxCtx=${info?.maxContextTokens ?? "unknown"} analysisLines=${info?.recommendedAnalysisLines}`;
+      })
+      .join("; ");
+    const capped = parallelChunks < configuredParallel ? ` (capped from ${configuredParallel} to fit the context window)` : "";
+    logger.info(
+      "queue",
+      `Model context probe: ${probes}; parallelChunks=${parallelChunks}${capped} timeoutMs=${requestTimeoutMs}`,
+      job.id,
+      { stage: "context_probe" },
+    );
+
+    await translateFile({
+      srtPath: job.srt_path,
+      outputPath: job.output_path,
+      apiKey,
+      apiHost,
+      model,
+      provider: primary.provider,
+      connections: conns,
+      llmMode: llmModeForJob,
+      onConnectionUsed: ({ id, label }) => {
+        logger.info(
+          "translate",
+          `Using LLM connection: ${label} (${id})`,
+          job.id,
+          { stage: "llm_connection" },
+        );
+        if (!usedConnIds.has(id)) {
+          usedConnIds.add(id);
+          usedConnLabels.push(label);
+        }
+      },
+      onConnectionActive: ({ id, label }) => {
+        // A fallback switch, or a return to an earlier connection, moves the
+        // job to another machine; keep the dashboard's attribution current.
+        const switched = conns.find((c) => c.id === id);
+        if (switched) {
+          const host = switched.apiHost || settings.llm_endpoint || apiHost;
+          setJobConnection(job.id, { id, label, host, model: switched.model });
+        }
+      },
+      onConnectionError: ({ id, label, error }) => {
+        logger.warn(
+          "translate",
+          `LLM connection failed, cascading to next: ${label} (${id}) — ${error}`,
+          job.id,
+          { stage: "llm_connection_error" },
+        );
+      },
+      onConnectionUnavailable: ({ id, label, error }) => {
+        offlineConnectionIds.add(id);
+        logger.warn(
+          "translate",
+          `LLM connection unavailable after 5 attempts; skipping for this queue run: ${label} (${id}) — ${error}`,
+          job.id,
+          { stage: "llm_connection_unavailable" },
+        );
+      },
+      onConnectionDropped: ({ id, label, error }) => {
+        logger.warn(
+          "translate",
+          `LLM connection dropped for the rest of this job: ${label} (${id}) — ${error}`,
+          job.id,
+          { stage: "llm_connection_dropped" },
+        );
+      },
+      // Only cascades reach this (the primary is reserved above); they must
+      // not block on another worker's job-long hold.
+      acquireConnection: tryAcquireConnectionLock,
+      reservedConnectionIds,
+      prompt: promptToUse,
+      lang: targetLang || "English",
+      sourceLang: task?.source_lang || "Automatic",
+      additional: settings.additional_context || "",
+      temperature: parseFloat(settings.temperature || "0.3"),
+      chunkSize,
+      contextSize: parseInt(settings.context_window || "5", 10),
+      parallelChunks,
+      analysisLinesByConnection: new Map(
+        [...ctxPlan.byConnection].map(([id, info]) => [id, info.recommendedAnalysisLines]),
+      ),
+      requestTimeoutMs,
+      disableToolCalls: settings.disable_tool_calls === "1",
+      refinePass: settings.refine_pass === "1",
+      seriesMemory: settings.series_memory === "1",
+      abortSignal: jobAbort.signal,
+      onProgress: (completed, total) => {
+        if (shouldStop) throw new Error("STOP_REQUESTED");
+        if (cancelledJobIds.has(job.id)) throw new Error("JOB_CANCELLED");
+        lastTotalCues = total;
+        // Skip the DB write + broadcast on intermediate ticks; always land the
+        // final tick so the stored completed_cues is exact when the job settles.
+        const now = Date.now();
+        if (
+          completed >= total ||
+          now - lastProgressWrite >= PROGRESS_WRITE_THROTTLE_MS
+        ) {
+          lastProgressWrite = now;
+          updateJob(job.id, {
+            completed_cues: completed,
+            total_cues: total,
+          });
+          broadcast("job:progress", {
+            jobId: job.id,
+            completed,
+            total,
+            pct: total > 0 ? Math.round((completed / total) * 100) : 0,
+          });
+        }
+      },
+      onRetry: (attempt, error, backoff, maxRetries) => {
+        const diagnostics = summarizeTranslationError(error);
+        logger.warn(
+          "translate",
+          `Retry ${attempt}/${maxRetries ?? "?"}: ${diagnostics.message} (backoff ${backoff}ms)`,
+          job.id,
+          {
+            stage: "translate_retry",
+            status: diagnostics.status,
+            code: diagnostics.code,
+            responseSnippet: diagnostics.responseSnippet,
+            causeMessage: diagnostics.causeMessage,
+          },
+        );
+      },
+      onUsage: (u) => addJobUsage(job.id, u.inputTokens, u.outputTokens),
+      onAnalysis: (analysis) => {
+        updateJob(job.id, { analysis_context: analysis });
+        logger.info(
+          "translate",
+          `Context prepared for ${srtName} (${langCode})`,
+          job.id,
+          {
+            stage: "context_analysis",
+            preview: analysis.slice(0, 300),
+          },
+        );
+        broadcast("job:analysis", { jobId: job.id, analysis, srtName });
+      },
+    });
+
+    const durationSeconds = (Date.now() - startTime) / 1000;
+    const wasForced = !!job.force;
+    // A cancel landing while the last LLM call already resolved must not end
+    // as "done" — the user asked for this job to stop.
+    if (cancelledJobIds.has(job.id)) throw new Error("JOB_CANCELLED");
+    updateJob(job.id, {
+      status: "done",
+      duration_seconds: durationSeconds,
+      force: 0,
+      used_connections: usedConnLabels.join(", ") || null,
+    });
+
+    const durStr = formatDuration(durationSeconds);
+    logger.info(
+      "translate",
+      `Completed: ${srtName} → ${langCode} in ${durStr} (${lastTotalCues || job.total_cues || "?"} cues)`,
+      job.id,
+    );
+    broadcast("job:done", {
+      jobId: job.id,
+      durationSeconds,
+      srtName,
+      langCode,
+    });
+    void notify("job:done", {
+      jobId: job.id,
+      durationSeconds,
+      srtName,
+      langCode,
+    });
+
+    if (settings.title_sidecar === "1") {
+      try {
+        const base = titleBaseForJob(job);
+        const title = await ensureTranslatedTitle({
+          outputDir: path.dirname(job.output_path),
+          base,
+          langCode,
+          force: wasForced,
+          translate: (text) =>
+            translateSingle(text, {
+              apiKey,
+              apiHost,
+              model,
+              provider: primary.provider,
+              systemPrompt: titleTranslationPrompt(targetLang || "English"),
+              temperature: parseFloat(settings.temperature || "0.3"),
+              disableToolCalls: settings.disable_tool_calls === "1",
+              requestTimeoutMs,
+              abortSignal: jobAbort.signal,
+              onUsage: (u) =>
+                addJobUsage(job.id, u.inputTokens, u.outputTokens),
+            }),
+        });
+        if (title !== cleanMediaTitle(base)) {
+          logger.info(
+            "translate",
+            `Translated title (${langCode}): ${title} — ${srtName}`,
+            job.id,
+            { stage: "title_sidecar", title, langCode },
+          );
+        }
+      } catch (error: any) {
+        logger.warn(
+          "queue",
+          `Title sidecar failed (non-fatal): ${error?.message || error}`,
+          job.id,
+          { stage: "title_sidecar" },
+        );
+      }
+    }
+    return false;
+  } catch (error: any) {
+    const durationSeconds = (Date.now() - startTime) / 1000;
+    // A stop wins over a cancel: every interrupted job goes back to pending,
+    // none gets picked out as "Cancelled by user".
+    if (!shouldStop && (error.message === "JOB_CANCELLED" || cancelledJobIds.has(job.id))) {
+      cancelledJobIds.delete(job.id);
+      // A user cancel is terminal: the job ends as a cancelled error (Retry is
+      // offered from there) instead of returning to the queue. The partial
+      // output stays on disk, so a later retry resumes from it.
+      updateJob(job.id, {
+        status: "error",
+        error: "Cancelled by user",
+        duration_seconds: durationSeconds,
+      });
+      logger.info("queue", `Job #${job.id} cancelled by user`, job.id);
+      broadcast("job:cancelled", { jobId: job.id, srtName });
+      return false;
+    }
+    if (error.message === "STOP_REQUESTED" || shouldStop) {
+      // Graceful stop — reset job to pending so it can be picked up later. The
+      // next run starts the file over, so the progress count goes back to zero.
+      updateJob(job.id, {
+        status: "pending",
+        completed_cues: 0,
+        error: null,
+        duration_seconds: durationSeconds,
+      });
+      logger.info(
+        "queue",
+        `Job #${job.id} interrupted by stop request — reset to pending`,
+        job.id,
+      );
+      broadcast("job:stopped", { jobId: job.id, srtName });
+      return true;
+    }
+
+    // Log raw error shape to help debug "Unknown translation error" cases
+    logger.info(
+      "translate",
+      `Raw error: name=${error?.name} constructor=${error?.constructor?.name} message=${JSON.stringify(error?.message)} statusCode=${error?.statusCode ?? error?.status}`,
+      job.id,
+    );
+    const diagnostics = summarizeTranslationError(error);
+    const compactError = summarizeJobErrorForStorage(
+      diagnostics.message,
+      diagnostics.responseSnippet,
+      diagnostics.causeMessage,
+    );
+
+    logger.error(
+      "translate",
+      `Failed: ${srtName} → ${langCode}: ${diagnostics.message}`,
+      job.id,
+      {
+        stage: "translate_failure",
+        status: diagnostics.status,
+        code: diagnostics.code,
+        responseSnippet: diagnostics.responseSnippet,
+        causeMessage: diagnostics.causeMessage,
+        endpoint: sanitizeEndpoint(
+          settings.llm_endpoint || "http://localhost:8000/v1",
+        ),
+        model: settings.model || "",
+        chunkSize: parseInt(settings.chunk_size || "20", 10),
+        contextSize: parseInt(settings.context_window || "5", 10),
+        temperature: parseFloat(settings.temperature || "0.3"),
+        srtPath: job.srt_path,
+        outputPath: job.output_path,
+      },
+    );
+    updateJob(job.id, {
+      status: "error",
+      error: compactError,
+      duration_seconds: durationSeconds,
+      used_connections:
+        usedConnLabels.length > 0 ? usedConnLabels.join(", ") : null,
+    });
+    broadcast("job:error", { jobId: job.id, error: compactError, srtName });
+    void notify("job:error", {
+      jobId: job.id,
+      error: compactError,
+      srtName,
+      langCode,
+    });
+    return false;
+  } finally {
+    // A cancel during the title-sidecar can settle this run after a re-run has
+    // already claimed the job; only the run that still owns the registrations
+    // may clear them, or it would strip the new run's controller and activity
+    // marker. The cancel marker is per-job, not per-run: clearing it here is
+    // what keeps a stale cancel from killing a re-run.
+    if (abortControllers.get(job.id) === jobAbort) {
+      abortControllers.delete(job.id);
+      jobConnections.delete(job.id);
+      activeJobIds.delete(job.id);
+      currentJobId =
+        activeJobIds.size > 0
+          ? Array.from(activeJobIds)[activeJobIds.size - 1]
+          : null;
+    }
+    cancelledJobIds.delete(job.id);
+  }
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds.toFixed(1)}s`;
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}m ${s}s`;
+}
+
+function sanitizeEndpoint(endpoint: string): string {
+  return endpoint.replace(/:\/\/[^@\s]+@/, "://***@");
+}
+
+function summarizeJobErrorForStorage(
+  base: string,
+  responseSnippet?: string,
+  causeMessage?: string,
+): string {
+  const lines = [base];
+  if (responseSnippet) lines.push(`response: ${responseSnippet}`);
+  if (causeMessage) lines.push(`cause: ${causeMessage}`);
+  const combined = lines.join("\n");
+  return combined.length > 2000 ? `${combined.slice(0, 2000)}…` : combined;
+}
+
+// Auto-scan timer
+let scanTimer: ReturnType<typeof setInterval> | null = null;
+
+export function startAutoScan(
+  intervalMinutes: number,
+  scanFn: () => { newJobs: number; totalSubtitles: number },
+) {
+  stopAutoScan();
+  if (intervalMinutes <= 0) return;
+
+  scanTimer = setInterval(
+    () => {
+      try {
+        const result = scanFn();
+        // Same announcement as an HTTP scan, so the UI's caches (including
+        // the sticky media_scanned flag the checklists read) stay current.
+        broadcast("scan:complete", { newJobs: result.newJobs, total: result.totalSubtitles });
+        if (result.newJobs > 0) {
+          logger.info("scan", `Auto-scan: ${result.newJobs} new files found`);
+          if (getSetting("auto_translate") === "1") runQueueSafely();
+        }
+      } catch (e: any) {
+        logger.error("scan", `Auto-scan error: ${e.message}`);
+      }
+    },
+    intervalMinutes * 60 * 1000,
+  );
+  logger.info("system", `Auto-scan enabled: every ${intervalMinutes} minutes`);
+}
+
+export function stopAutoScan() {
+  if (scanTimer) {
+    clearInterval(scanTimer);
+    scanTimer = null;
+  }
+}

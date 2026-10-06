@@ -1,0 +1,13 @@
+# Optional speaker-diarization dependencies (NOT part of the lean base install).
+#
+# pyannote.audio pulls torch + torchaudio + pytorch-lightning (~2 GB). Install
+# only on a box that will run diarization, into the SAME environment as the GPU
+# ctranslate2/cuDNN wheels (the GPU/Windows packaging layer), e.g.:
+#
+#   pip install -r requirements.txt -r requirements-diarization.txt
+#
+# Runtime gating: the backend advertises capabilities.speakerDiarization=true
+# only when pyannote is importable AND a Hugging Face token is set
+# (SUBSMELT_HF_TOKEN or HF_TOKEN). The gated model also needs a one-time license
+# acceptance at https://huggingface.co/pyannote/speaker-diarization-3.1
+pyannote.audio==3.3.2

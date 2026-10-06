@@ -1,0 +1,207 @@
+# -*- mode: python ; coding: utf-8 -*-
+#
+# PyInstaller spec for the SubSmelt Whisper Windows backend (plan Phase 3).
+#
+# WINDOWS-BUILD-ONLY: this spec is authored to be run on a Windows build host.
+# It cannot be built or executed on macOS/Linux. Build with:
+#
+#     pyinstaller packaging\windows\whisper-server.spec --clean --noconfirm
+#
+# It produces an --onedir bundle at dist\whisper-server\ whose entrypoint is
+# run_server.exe (built from ../../run_server.py). --onedir (NOT --onefile) is
+# deliberate: CTranslate2 + the multi-DLL CUDA runtime + future model files make
+# onefile extraction slow and DLL discovery brittle (plan Phase 3).
+#
+# Models are NOT bundled. The installer ships zero weights; the model manager
+# downloads them on demand into the user's model dir (plan Phase 3 / 3a).
+#
+# Run this spec from the backend-whisper/ directory so the relative paths below
+# (run_server.py, app/) resolve. SPECPATH is set by PyInstaller to this file's dir.
+import os
+import shutil
+import sys
+
+from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs, collect_submodules
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+# This spec lives at backend-whisper/packaging/windows/whisper-server.spec.
+# The project root for the app is two levels up.
+SPEC_DIR = os.path.abspath(SPECPATH)                      # .../packaging/windows
+BACKEND_ROOT = os.path.abspath(os.path.join(SPEC_DIR, "..", ".."))  # .../backend-whisper
+ENTRY_SCRIPT = os.path.join(BACKEND_ROOT, "run_server.py")
+APP_DIR = os.path.join(BACKEND_ROOT, "app")
+
+# ---------------------------------------------------------------------------
+# Hidden imports
+# ---------------------------------------------------------------------------
+# uvicorn imports its protocol/loop implementations dynamically, FastAPI/Starlette
+# and pydantic v2 (pydantic_core is a compiled ext) need help, and faster-whisper
+# pulls ctranslate2 + tokenizers. Collect submodules so PyInstaller's static
+# analysis does not miss dynamically imported modules.
+hiddenimports = []
+hiddenimports += collect_submodules("uvicorn")
+hiddenimports += collect_submodules("faster_whisper")
+hiddenimports += collect_submodules("ctranslate2")
+hiddenimports += collect_submodules("fastapi")
+hiddenimports += collect_submodules("starlette")
+hiddenimports += collect_submodules("pydantic")
+hiddenimports += [
+    "pydantic_core",
+    "anyio",
+    "sniffio",
+    "h11",
+    "click",
+    "psutil",
+    # uvicorn[standard] extras commonly resolved at runtime:
+    "uvicorn.logging",
+    "uvicorn.loops.auto",
+    "uvicorn.protocols.http.auto",
+    "uvicorn.protocols.websockets.auto",
+    "uvicorn.lifespan.on",
+    # the launcher imports these lazily for the CUDA probe:
+    "ctranslate2",
+]
+
+# ---------------------------------------------------------------------------
+# Binaries: CUDA runtime DLLs (the #1 footgun — plan §4 risk #1)
+# ---------------------------------------------------------------------------
+# cuDNN/cuBLAS ship as pip wheels (nvidia-cudnn-cu12, nvidia-cublas-cu12). Their
+# DLLs (e.g. cudnn_ops64_9.dll, cublas64_12.dll) live under the wheel's
+# site-packages, typically nvidia\cudnn\bin and nvidia\cublas\bin.
+# collect_dynamic_libs walks those packages and returns (src, dest) tuples so the
+# DLLs land beside the exe and on the DLL search path that run_server.add_dll_directory
+# also covers. If a wheel name changes, update the package names here.
+binaries = []
+for nvidia_pkg in ("nvidia.cudnn", "nvidia.cublas"):
+    try:
+        binaries += collect_dynamic_libs(nvidia_pkg)
+    except Exception as exc:  # pragma: no cover - build-host dependent
+        # Do not hard-fail the spec parse; the README documents installing these
+        # wheels before building. Print so the build log shows the gap.
+        print(f"[whisper-server.spec] WARNING: could not collect {nvidia_pkg}: {exc}")
+# CTranslate2 also ships its own DLLs (libctranslate2, cublasLt, etc.).
+try:
+    binaries += collect_dynamic_libs("ctranslate2")
+except Exception as exc:  # pragma: no cover
+    print(f"[whisper-server.spec] WARNING: could not collect ctranslate2 libs: {exc}")
+
+# ---------------------------------------------------------------------------
+# Data files
+# ---------------------------------------------------------------------------
+# Bundle the app/ package so app.main:app is importable from the frozen exe.
+# (PyInstaller also follows the import graph, but shipping the source tree keeps
+# the package layout intact and makes "app.main:app" resolvable by uvicorn.)
+#
+# ffmpeg.exe: DROP-IN REQUIRED. Place a static ffmpeg.exe at
+#   backend-whisper/packaging/windows/vendor/ffmpeg.exe
+# before building (see README). It is copied to the bundle root; the installer/
+# launcher then sets SUBSMELT_FFMPEG to point at it (consumed by app/audio.py).
+datas = [
+    (APP_DIR, "app"),
+]
+# faster-whisper ships non-Python data assets (notably the bundled Silero VAD
+# model, assets/silero_vad*.onnx). collect_submodules does NOT pick these up, so
+# without this the frozen exe raises ONNXRuntime NO_SUCHFILE when use_vad=True.
+datas += collect_data_files("faster_whisper")
+# onnxruntime runs that VAD model — collect its data files + native libs so the
+# VAD path is fully self-contained (same failure class as the missing .onnx).
+datas += collect_data_files("onnxruntime")
+binaries += collect_dynamic_libs("onnxruntime")
+hiddenimports += collect_submodules("onnxruntime")
+# OpenCC (opencc-python-reimplemented) converts Chinese transcripts. It is pure
+# Python but reads its conversion configs and dictionaries (opencc/config/*.json,
+# opencc/dictionary/*.txt) from beside its own __file__ at runtime, which
+# collect_data_files places at _internal/opencc/. Without them the first Chinese
+# transcript fails with FileNotFoundError. app/chinese_script.py imports it
+# lazily, so list it explicitly too.
+datas += collect_data_files("opencc")
+hiddenimports += ["opencc"]
+# uvicorn imports app.main:app from a runtime STRING, so PyInstaller's static
+# analysis never reaches the app package on its own. List its modules from the
+# files: collect_submodules("app") imports the package, which is not on sys.path
+# while this spec runs, so it returned nothing and the app's own imports (stdlib
+# modules such as wave) were never analysed or bundled.
+_app_modules = sorted(
+    "app." + name[:-3] for name in os.listdir(APP_DIR)
+    if name.endswith(".py") and name != "__init__.py"
+)
+if "app.main" not in _app_modules:
+    raise SystemExit(f"[whisper-server.spec] no app modules found under {APP_DIR}")
+hiddenimports += ["app", *_app_modules]
+hiddenimports += ["pynvml"]
+
+block_cipher = None
+
+a = Analysis(
+    [ENTRY_SCRIPT],
+    pathex=[BACKEND_ROOT],
+    binaries=binaries,
+    datas=datas,
+    hiddenimports=hiddenimports,
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    # large-v3 models etc. are never bundled; nothing to exclude there.
+    excludes=["tkinter", "matplotlib", "pytest"],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=block_cipher,
+    noarchive=False,
+)
+
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    [],
+    exclude_binaries=True,         # onedir: binaries live in COLLECT, not the exe
+    name="run_server",             # -> run_server.exe
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=False,                     # UPX + CUDA DLLs can corrupt; keep off
+    console=True,                  # service captures stdout/stderr to a log file
+    disable_windowed_traceback=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+    # icon="vendor\\whisper.ico",  # optional: drop an icon in vendor/ and enable
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    strip=False,
+    upx=False,
+    upx_exclude=[],
+    name="whisper-server",         # -> dist\whisper-server\
+)
+
+# nemo-speech: the NeMo-Speech.cpp CUDA runtime (nemo-speech.exe + its DLLs) for
+# the Nemotron ASR engine, fetched by fetch-vendor.ps1. It must sit at
+# nemo-speech\bin\ beside run_server.exe, where app/ looks when
+# SUBSMELT_NEMO_SPEECH is unset. A datas entry would land under _internal\ on
+# PyInstaller 6, so copy it into the finished bundle (COLLECT has already run).
+# ffmpeg.exe: same rule. install-service.ps1 looks for it beside run_server.exe
+# to set SUBSMELT_FFMPEG; as a datas entry PyInstaller 6 hid it in _internal\
+# and the service silently fell back to an ffmpeg on PATH.
+_ffmpeg = os.path.join(SPEC_DIR, "vendor", "ffmpeg.exe")
+if os.path.isfile(_ffmpeg):
+    shutil.copy2(_ffmpeg, os.path.join(DISTPATH, "whisper-server", "ffmpeg.exe"))
+else:
+    print("[whisper-server.spec] NOTE: vendor/ffmpeg.exe not found — drop it in "
+          "before building so the bundle is self-contained (see README).")
+
+_nemo_speech_bin = os.path.join(SPEC_DIR, "vendor", "nemo-speech", "bin")
+if os.path.isdir(_nemo_speech_bin):
+    shutil.copytree(_nemo_speech_bin,
+                    os.path.join(DISTPATH, "whisper-server", "nemo-speech", "bin"),
+                    dirs_exist_ok=True)
+else:
+    print("[whisper-server.spec] NOTE: vendor/nemo-speech/bin not found — run "
+          "fetch-vendor.ps1 before building so the Nemotron engine ships (see README).")

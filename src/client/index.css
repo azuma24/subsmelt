@@ -1,0 +1,172 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+
+  --bg: #0b1020;
+  --surface: #111827;
+  --surface-2: #172033;
+  --surface-3: #1e293b;
+  --border: #334155;
+  --border-sub: #243044;
+  --text: #f1f5f9;
+  --text-2: #cbd5e1;
+  --text-3: #94a3b8;
+  /* Softer blue accent on lifted dark surfaces. It keeps Subsmelt's cockpit feel
+     but gives text, borders, and selected states more separation from panels. */
+  --accent: #60a5fa;
+  --accent-dim: rgba(96, 165, 250, 0.14);
+  --accent-border: rgba(96, 165, 250, 0.34);
+  /* Foreground for filled-accent surfaces (primary buttons). Dark text maintains
+     strong contrast against the lighter blue accent. */
+  --on-accent: #0b1020;
+  --green: #4ade80;
+  --green-dim: rgba(74, 222, 128, 0.13);
+  --green-border: rgba(74, 222, 128, 0.32);
+  --yellow: #facc15;
+  --yellow-dim: rgba(250, 204, 21, 0.13);
+  --yellow-border: rgba(250, 204, 21, 0.32);
+  --red: #fb7185;
+  --red-dim: rgba(251, 113, 133, 0.13);
+  --red-border: rgba(251, 113, 133, 0.32);
+
+  /* Elevation: 1 lifts a control off its panel, 2 floats an overlay above the page. */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 12px 32px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+  --scrim: rgba(0, 0, 0, 0.7);
+
+  /* Color roles. New code reads these (Tailwind: bg-surface, text-muted, ...);
+     they alias the hue-named palette above, which each theme redefines.
+     --surface, --border, --text and --accent already name their roles. */
+  --surface-raised: var(--surface-2);
+  --text-muted: var(--text-2);
+  --accent-text: var(--on-accent);
+  --danger: var(--red);
+  --success: var(--green);
+  --warning: var(--yellow);
+
+  /* Motion: one curve; 150ms for state changes, 250ms for entrances. */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+}
+
+/* Light theme — applied when <html data-theme="light"> is set. The default
+   (no attribute, or data-theme="dark") uses the dark palette in :root above. */
+html[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --surface-2: #f6f8fa;
+  --surface-3: #eaeef2;
+  --border: #d0d7de;
+  --border-sub: #e4e8ec;
+  --text: #1f2328;
+  --text-2: #59636e;
+  /* 4.88:1 on --surface and 4.58:1 on --surface-2 (WCAG AA for body text);
+     the previous #818b96 was 3.46:1 / 3.25:1. */
+  --text-3: #687280;
+  /* Cyan-700 in light mode — darker so cyan text/links stay legible on white. */
+  --accent: #0e7490;
+  --accent-dim: rgba(14, 116, 144, 0.08);
+  --accent-border: rgba(14, 116, 144, 0.32);
+  --on-accent: #ffffff;
+  --green: #1a7f37;
+  --green-dim: rgba(26, 127, 55, 0.10);
+  --green-border: rgba(26, 127, 55, 0.30);
+  --yellow: #9a6700;
+  --yellow-dim: rgba(154, 103, 0, 0.10);
+  --yellow-border: rgba(154, 103, 0, 0.30);
+  --red: #cf222e;
+  --red-dim: rgba(207, 34, 46, 0.10);
+  --red-border: rgba(207, 34, 46, 0.30);
+
+  --shadow-1: 0 1px 2px rgba(31, 35, 40, 0.08);
+  --shadow-2: 0 12px 32px rgba(31, 35, 40, 0.16), 0 2px 6px rgba(31, 35, 40, 0.08);
+  --scrim: rgba(31, 35, 40, 0.5);
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", sans-serif;
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--bg);
+  color: var(--text);
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+/* The type scale allows weights 400/500/600 only; browsers default these to 700. */
+b,
+strong {
+  font-weight: 600;
+}
+
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* One focus indicator for every keyboard stop. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Toggle buttons sit edge to edge inside clipped segmented groups; an outset
+   ring would be cut off, so theirs is drawn inside. */
+[aria-pressed]:focus-visible {
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}

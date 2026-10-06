@@ -1,0 +1,35 @@
+services:
+  subsmelt:
+    build: .
+    container_name: subsmelt
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount your media folders under /media — the app scans /media recursively.
+      # Organize however you like:
+      - /path/to/movies:/media/movies
+      - /path/to/anime:/media/anime
+      - /path/to/tv:/media/tv
+      # Or mount a single root:
+      # - /nas/media:/media
+      #
+      # Config (settings + translation tasks — version-control this)
+      - ./config:/app/config
+      # Data (jobs + logs — disposable, safe to wipe)
+      - ./data:/app/data
+    environment:
+      - TZ=America/New_York                  # Timezone for log timestamps
+      # Optional: run as your host user instead of root. On start the container
+      # chowns ./config and ./data (never media) to this user, so config.json
+      # (written 0600 because it holds API keys) and the database become
+      # editable on the host. Media folders must already be writable by this
+      # user. Leave unset to keep running as root, as earlier images did.
+      # Find your ids with `id -u` and `id -g`.
+      # - PUID=1000
+      # - PGID=1000
+      # Optional: override default LLM settings (also configurable in web UI)
+      # - LLM_ENDPOINT=http://192.168.1.10:8000/v1
+      # - API_KEY=
+      # - MODEL=Qwen/Qwen2.5-72B-Instruct
+    restart: unless-stopped
+    # The image has a HEALTHCHECK on /api/health; `docker ps` shows its status.
