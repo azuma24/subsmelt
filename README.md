@@ -211,6 +211,7 @@ Everything else:
 | `TZ` | `UTC` | Timezone for log timestamps |
 | `PUID` / `PGID` | — | Run as this user and group; `config/` and `data/` are handed to them (media is left alone). Unset: runs as root, as before |
 | `PORT` | `3000` | Web server port |
+| `HOST` | `0.0.0.0` | Interface the web server binds; `127.0.0.1` keeps it local to the machine |
 | `LLM_ENDPOINT` | — | Override LLM endpoint on startup |
 | `API_KEY` | — | Override API key on startup |
 | `MODEL` | — | Override model name on startup |
@@ -231,7 +232,9 @@ docker compose up -d      # or: npm ci --legacy-peer-deps && npm run dev
 ```bash
 npm run dev          # API (tsx watch) + Vite dev server
 npm test             # node:test across src/**/*.test.ts(x)
-npm run typecheck    # client AND server TypeScript projects (also: npm run lint)
+npm run typecheck    # client AND server TypeScript projects
+npm run lint         # Biome (lint + format check), then the typechecks
+npm run format       # rewrite the tree with Biome
 npm run build        # typecheck, then vite build, then tsc for the server
 ```
 
@@ -239,13 +242,14 @@ The Python sidecar has its own suite, which must be run from its directory:
 
 ```bash
 cd backend-whisper
-pip install -r requirements.txt pytest
+pip install -r requirements.txt pytest ruff
 python -m pytest tests -q
+ruff check . && ruff format --check .
 ```
 
 `npm ci` needs `--legacy-peer-deps` (an `i18next` peer-range conflict — the
 reason is in HANDOFF). `vite build` does not typecheck, so run `npm run
-typecheck` before assuming a change is clean. CI runs both suites, both
+typecheck` before assuming a change is clean. CI runs Biome and ruff, both suites, both
 typechecks, the production build, and builds and starts the Docker image on
 amd64 and arm64 on every pull request.
 
@@ -266,14 +270,15 @@ the parts worth understanding first, the release process, and the known gaps.
 | Layer | Technology |
 |-------|-----------|
 | Runtime | Node.js 22 LTS (engines: >=20 <25) |
-| Backend | Express, better-sqlite3 |
-| Frontend | React 18, Vite, Tailwind CSS |
+| Backend | Express 5, better-sqlite3 |
+| Frontend | React 19, Vite 8, Tailwind CSS 4 (Safari 16.4+, Chrome/Edge 111+, Firefox 128+) |
 | Real-time | Server-Sent Events |
 | Translation | Vercel AI SDK (local + OpenAI / Anthropic / Gemini) |
 | Optional STT | Python FastAPI sidecar + faster-whisper / Nemotron, OpenCC |
 | File watch | chokidar |
 | i18n | i18next (32 locales) |
 | Container | Single Dockerfile, no external services required |
+| Tooling | TypeScript 7, Biome, ruff |
 
 ---
 

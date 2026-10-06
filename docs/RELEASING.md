@@ -33,8 +33,8 @@ more annoying to undo than a failed push:
 
 ```bash
 npm ci --legacy-peer-deps   # the flag is required; see HANDOFF.md §3
-npm run typecheck && npm test && npm run build
-cd backend-whisper && python -m pytest tests -q
+npm run lint && npm test && npm run build
+cd backend-whisper && ruff check . && ruff format --check . && python -m pytest tests -q
 ```
 
 **4. Commit to `main`.** The convention is a direct commit, not a PR:
