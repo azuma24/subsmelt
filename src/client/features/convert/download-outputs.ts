@@ -37,20 +37,19 @@ export function triggerDownload(blob: Blob, fileName: string) {
 }
 
 export async function buildZipBlob(files: OutputFile[]): Promise<Blob> {
-  const { default: JSZip } = await import("jszip");
-  const zip = new JSZip();
+  const { buildZip } = await import("./zip");
   const used = new Map<string, number>();
-  for (const out of files) {
+  const entries = files.map((out) => {
     const count = used.get(out.name) ?? 0;
     used.set(out.name, count + 1);
     const dot = out.name.lastIndexOf(".");
-    const entryName =
+    const name =
       count === 0
         ? out.name
         : dot > 0
           ? `${out.name.slice(0, dot)}(${count})${out.name.slice(dot)}`
           : `${out.name}(${count})`;
-    zip.file(entryName, out.content);
-  }
-  return zip.generateAsync({ type: "blob" });
+    return { name, content: out.content };
+  });
+  return buildZip(entries);
 }
