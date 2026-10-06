@@ -1,3 +1,5 @@
+/** Durations, timecodes, relative times, token counts and costs as the UI shows them. */
+
 export function formatDur(s: number): string {
   if (s < 60) return `${s.toFixed(1)}s`;
   const m = Math.floor(s / 60);
@@ -59,12 +61,6 @@ export function formatCost(cost: number | null | undefined): string {
   if (cost === 0) return "$0.00";
   if (cost < 0.01) return "<$0.01";
   return `$${cost.toFixed(2)}`;
-}
-
-export function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error;
-  return "Unexpected error";
 }
 
 export function highlightText(text: string, query: string): string[] {

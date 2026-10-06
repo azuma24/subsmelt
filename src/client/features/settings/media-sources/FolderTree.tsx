@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FolderNode, Task } from "../../../types";
-import { FileTreeView, type FolderRowContext } from "../../../components/file-tree/FileTreeView";
-import type { TreeExpansion } from "../../../components/file-tree/use-persisted-expansion";
-import type { DrillDownState } from "../../../components/file-tree/use-drill-down";
+import { FileTreeView, type FolderRowContext } from "../../../ui/file-tree/FileTreeView";
+import type { TreeExpansion } from "../../../ui/file-tree/use-persisted-expansion";
+import type { DrillDownState } from "../../../ui/file-tree/use-drill-down";
 import {
   TRI_STATES,
   hasDescendant,

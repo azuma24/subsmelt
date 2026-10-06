@@ -4,9 +4,9 @@ import * as api from "../../api";
 import { useTasksQuery, useMutationWithInvalidation } from "../../hooks";
 import { getErrorMessage } from "../../lib";
 import type { Task } from "../../types";
-import { useToast } from "../../components/Toast";
-import { useConfirm } from "../../components/ConfirmModal";
-import { ModalShell } from "../../components/ModalShell";
+import { useToast } from "../../ui/Toast";
+import { useConfirm } from "../../ui/ConfirmModal";
+import { ModalShell } from "../../ui/ModalShell";
 import { PRESETS } from "../../app/constants";
 import { Accordion, ActionButton, EmptyHint, Field, RowActionsMenu, SelectionBar } from "../../ui/primitives";
 import {

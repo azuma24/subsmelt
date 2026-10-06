@@ -1,9 +1,9 @@
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../api";
-import { useMutationWithInvalidation } from "../hooks";
-import { useToast } from "../components/Toast";
-import { useConfirm } from "../components/ConfirmModal";
+import { useMutationWithInvalidation } from "./mutations";
+import { useToast } from "../ui/Toast";
+import { useConfirm } from "../ui/ConfirmModal";
 import { classifyErrorReason } from "../features/dashboard/job-actions";
 
 // Single source of truth for per-job actions shared by JobsTableDesktop and

@@ -5,8 +5,8 @@ import { MemoryRouter } from "react-router-dom";
 import i18n from "i18next";
 import { I18nextProvider, initReactI18next } from "react-i18next";
 import en from "./locales/en/translation.json";
-import { ToastProvider } from "./components/Toast";
-import { ConfirmProvider } from "./components/ConfirmModal";
+import { ToastProvider } from "./ui/Toast";
+import { ConfirmProvider } from "./ui/ConfirmModal";
 
 export const TEST_APP_VERSION = "0.0.0-test";
 

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { loadRecentTargets, pushRecentTarget } from "./recent-targets";
-import type { KeyValueStorage } from "../../components/file-tree/expansion-store";
+import type { KeyValueStorage } from "../../ui/file-tree/expansion-store";
 
 function memoryStorage(): KeyValueStorage & { data: Map<string, string> } {
   const data = new Map<string, string>();

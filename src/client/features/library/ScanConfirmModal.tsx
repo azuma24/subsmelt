@@ -1,7 +1,7 @@
 import { useId } from "react";
 import type { TFunction } from "i18next";
 import type { ScannedFile } from "../../types";
-import { ModalShell } from "../../components/ModalShell";
+import { ModalShell } from "../../ui/ModalShell";
 import { Icon } from "../../ui/Icon";
 
 export interface ScanFolderCount {

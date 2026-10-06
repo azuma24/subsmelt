@@ -1,8 +1,8 @@
 import { lazy, Suspense, useEffect, useRef } from "react";
 import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ToastProvider, useToast } from "./components/Toast";
-import { ConfirmProvider } from "./components/ConfirmModal";
+import { ToastProvider, useToast } from "./ui/Toast";
+import { ConfirmProvider } from "./ui/ConfirmModal";
 import { formatDur } from "./lib";
 import { applyTheme, getThemePref, watchSystemTheme } from "./lib/theme";
 import { applyFontScale, getFontScale } from "./lib/font-scale";

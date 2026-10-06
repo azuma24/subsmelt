@@ -1,16 +1,16 @@
 import { useTranslation } from "react-i18next";
 import type { ScannedFile } from "../../types";
 import { ActionButton, EmptyHint, SelectionBar, SettingsSection } from "../../ui/primitives";
-import { pathMarkerFor, relativeDisplayPath } from "../../components/file-tree/build";
-import { FileTreeView, type FileRowContext, type FolderRowContext } from "../../components/file-tree/FileTreeView";
-import type { TreeExpansion } from "../../components/file-tree/use-persisted-expansion";
-import type { DrillDownState } from "../../components/file-tree/use-drill-down";
+import { pathMarkerFor, relativeDisplayPath } from "../../ui/file-tree/build";
+import { FileTreeView, type FileRowContext, type FolderRowContext } from "../../ui/file-tree/FileTreeView";
+import type { TreeExpansion } from "../../ui/file-tree/use-persisted-expansion";
+import type { DrillDownState } from "../../ui/file-tree/use-drill-down";
 import type { SortBy, SortDir, TreeNode } from "./folderTree";
 import { baseName, type FileProgress } from "./whisper-shared";
 import { hasLiveTranscriptions } from "./batch-store";
 import { Icon } from "../../ui/Icon";
-import { SortControls } from "../../components/SortControls";
-import { RefreshButton } from "../../components/RefreshButton";
+import { SortControls } from "../../ui/SortControls";
+import { RefreshButton } from "../../ui/RefreshButton";
 
 export interface LibraryPickerProps {
   isMobile: boolean;

@@ -4,7 +4,7 @@ import * as api from "../../api";
 import type { TranslateFileRequest } from "../../api";
 import type { Task, TaskStatus } from "../../types";
 import { useMutationWithInvalidation, useTasksQuery } from "../../hooks";
-import { useToast } from "../../components/Toast";
+import { useToast } from "../../ui/Toast";
 import { getErrorMessage } from "../../lib";
 import { TargetLanguageField } from "../convert/TargetLanguageField";
 import { resolveTargetLanguage, type LanguageResolution } from "../convert/resolve-language";

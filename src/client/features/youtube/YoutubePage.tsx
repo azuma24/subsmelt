@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
-import { useToast } from "../../components/Toast";
+import { useToast } from "../../ui/Toast";
 import { useSettingsQuery, useTasksQuery, useYoutubePipelineQuery, useYoutubePlaylistsQuery, useYoutubeStatusQuery } from "../../hooks";
 import { str } from "../../lib/settings-value";
 import type { YoutubeCooldown, YoutubePipeline, YoutubePlaylist } from "../../types";

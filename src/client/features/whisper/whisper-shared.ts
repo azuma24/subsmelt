@@ -96,4 +96,4 @@ export const COMPUTE_BY_DEVICE: Record<string, string[]> = {
 // phase "waiting_for_gpu": held until a translation batch frees the GPU.
 export interface FileProgress { pct?: number; done?: boolean; error?: boolean; noSpeech?: boolean; cancelled?: boolean; phase?: string }
 
-export { selectCls } from "../../components/SortControls";
+export { selectCls } from "../../ui/SortControls";

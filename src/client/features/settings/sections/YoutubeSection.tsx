@@ -2,7 +2,7 @@ import { useId, useRef, useState, type ChangeEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import * as api from "../../../api";
-import { useConfirm } from "../../../components/ConfirmModal";
+import { useConfirm } from "../../../ui/ConfirmModal";
 import { useYoutubeNotesFolderQuery, useYoutubeStatusQuery } from "../../../hooks";
 import { getErrorMessage } from "../../../lib";
 import { str } from "../../../lib/settings-value";

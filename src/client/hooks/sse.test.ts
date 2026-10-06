@@ -8,8 +8,8 @@ import {
   withJobEvent,
   withVideoProgress,
   type JobsResponse,
-} from "./hooks.js";
-import type { Job, YoutubeVideo } from "./types.js";
+} from "./index.js";
+import type { Job, YoutubeVideo } from "../types.js";
 
 test("parseSSEData returns parsed object payloads and ignores invalid JSON", () => {
   assert.deepEqual(parseSSEData('{"jobId":123,"status":"done"}'), { jobId: 123, status: "done" });

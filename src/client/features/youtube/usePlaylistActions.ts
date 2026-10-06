@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
-import { useConfirm } from "../../components/ConfirmModal";
-import { useToast } from "../../components/Toast";
+import { useConfirm } from "../../ui/ConfirmModal";
+import { useToast } from "../../ui/Toast";
 import { getErrorMessage } from "../../lib";
 import type { YoutubePlaylist } from "../../types";
 

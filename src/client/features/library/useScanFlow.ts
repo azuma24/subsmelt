@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
 import { LIBRARY_QUERY_KEY, useMutationWithInvalidation } from "../../hooks";
-import { useToast } from "../../components/Toast";
+import { useToast } from "../../ui/Toast";
 import type { ScanResult } from "../../types";
 import { summarizeScanFolders, type ScanPlan } from "./ScanConfirmModal";
 

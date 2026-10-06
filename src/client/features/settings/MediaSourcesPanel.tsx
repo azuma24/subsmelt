@@ -5,8 +5,8 @@ import type { FolderNode, Task } from "../../types";
 import { DirectoryRulesSection } from "./media-sources/DirectoryRulesSection";
 import { FolderTree, toSettingsTree } from "./media-sources/FolderTree";
 import { ScanProfilesSection } from "./media-sources/ScanProfilesSection";
-import { usePersistedExpansion, type TreeExpansion } from "../../components/file-tree/use-persisted-expansion";
-import { useDrillDown } from "../../components/file-tree/use-drill-down";
+import { usePersistedExpansion, type TreeExpansion } from "../../ui/file-tree/use-persisted-expansion";
+import { useDrillDown } from "../../ui/file-tree/use-drill-down";
 import {
   SCAN_MODES,
   collectNodePaths,

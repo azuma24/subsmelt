@@ -4,9 +4,9 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useJobPreview } from "../../hooks";
 import { formatTimecode } from "../../lib";
 import { copyText } from "../../lib/clipboard";
-import { ModalShell } from "../../components/ModalShell";
+import { ModalShell } from "../../ui/ModalShell";
 import { PageError, PageLoading } from "../../ui/QueryState";
-import { useToast } from "../../components/Toast";
+import { useToast } from "../../ui/Toast";
 import { ApiError, jobDownloadUrl, saveJobCues } from "../../api";
 import type { PreviewLine } from "../../types";
 

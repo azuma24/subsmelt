@@ -1,6 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { PageError } from "../ui/QueryState";
+import { PageError } from "./QueryState";
 
 // App-level error boundary. Catches render errors anywhere in the tree below it
 // and shows a retryable PageError instead of white-screening the app. The

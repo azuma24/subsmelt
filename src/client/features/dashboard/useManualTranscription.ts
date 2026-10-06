@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
 import { LIBRARY_QUERY_KEY, useMutationWithInvalidation, useSSE } from "../../hooks";
-import { useToast } from "../../components/Toast";
+import { useToast } from "../../ui/Toast";
 import type { ScanResult, TranscriptionHistoryEntry } from "../../types";
 import {
   createManualTranscriptionProgress,

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { ActionButton } from "../ui/primitives";
+import { ActionButton } from "./primitives";
 
 export type SortBy = "name" | "date";
 export type SortDir = "asc" | "desc";

@@ -4,8 +4,8 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
-import { useToast } from "../../components/Toast";
-import { useConfirm } from "../../components/ConfirmModal";
+import { useToast } from "../../ui/Toast";
+import { useConfirm } from "../../ui/ConfirmModal";
 import {
   LIBRARY_QUERY_KEY,
   useLibraryQuery,
@@ -21,9 +21,9 @@ import type { ScannedFile, TranscriptionHistoryEntry, WhisperModel } from "../..
 import { buildFolderTree } from "./folderTree";
 import { filterLibraryFiles } from "./libraryFilter";
 import type { SortBy, SortDir } from "./folderTree";
-import { collectFolderPaths } from "../../components/file-tree/build";
-import { usePersistedExpansion } from "../../components/file-tree/use-persisted-expansion";
-import { useDrillDown } from "../../components/file-tree/use-drill-down";
+import { collectFolderPaths } from "../../ui/file-tree/build";
+import { usePersistedExpansion } from "../../ui/file-tree/use-persisted-expansion";
+import { useDrillDown } from "../../ui/file-tree/use-drill-down";
 import { TranscriptionHistoryPanel } from "../dashboard/TranscriptionHistoryPanel";
 import { str } from "../../lib/settings-value";
 import { useModelGate } from "./useModelGate";

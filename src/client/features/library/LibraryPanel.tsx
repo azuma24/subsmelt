@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import { useMutationWithInvalidation } from "../../hooks";
-import { useToast } from "../../components/Toast";
+import { useToast } from "../../ui/Toast";
 import type { Job, TaskStatus } from "../../types";
 import { Icon } from "../../ui/Icon";
 import type { UseManualTranscriptionResult } from "../dashboard/useManualTranscription";

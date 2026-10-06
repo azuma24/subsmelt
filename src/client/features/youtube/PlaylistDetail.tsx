@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
-import { useToast } from "../../components/Toast";
+import { useToast } from "../../ui/Toast";
 import { useTasksQuery, useYoutubePipelineQuery, useYoutubeVideosQuery } from "../../hooks";
 import { getErrorMessage } from "../../lib";
 import type { YoutubePlaylist, YoutubeVideo, YoutubeVideoAction } from "../../types";

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
-import { useToast } from "../../components/Toast";
+import { useToast } from "../../ui/Toast";
 import { ActionButton, SettingsSection } from "../../ui/primitives";
 import { FORMATS, selectCls, type OutputFormat } from "./whisper-shared";
 

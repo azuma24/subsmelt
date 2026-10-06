@@ -6,7 +6,7 @@ import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
 import { LLM_STATUS_QUERY_KEY, useJobsQuery, useSettingsQuery, useTasksQuery, useTranscriptionHealthQuery } from "../../hooks";
 import { SetupProgress, type SetupStep } from "./SetupProgress";
-import { useToast } from "../../components/Toast";
+import { useToast } from "../../ui/Toast";
 import { Accordion, ActionButton, SettingsSection } from "../../ui/primitives";
 import { InlineError } from "../../ui/QueryState";
 import { JSON_BLOB_SETTINGS, getStr, validateJsonSetting, type JsonBlobSettingKey } from "./settings-model";
