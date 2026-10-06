@@ -236,3 +236,45 @@ the path with `run_server`'s own precedence.
 | [TODO.md](TODO.md) | Current — open items only |
 | [why-llm-translation.md](why-llm-translation.md) | Current — explainer for users |
 | [RELEASING.md](RELEASING.md) | **Current** — release procedure and tag-push constraints |
+## 7. Session handoff — 2026-10-06
+
+What a session on this machine left behind, and where each piece lives.
+
+**Canonical history is `forgejo/main`** (the LAN remote). The GitHub remote
+(`origin`) is not a mirror of it: `origin/main` is a **squashed snapshot**
+(`50d9109 SubSmelt 0.6.6` + a docs commit) with **no shared history**, so
+updating it is a snapshot re-publish, never a normal push:
+
+```sh
+git push origin $(git commit-tree forgejo/main^{tree} -m "SubSmelt <version>" -p HEAD) ...  # see RELEASING flow actually used
+```
+
+In practice the flow has been: create a root commit from the current tree and
+force-push it to `origin/main`. Do this deliberately, never as a drive-by.
+
+**This session's work (all committed):**
+
+- **Library sort controls** — the Library page lost its sort when the old scan
+  tab died; it is back (`buildLibraryView` takes `sortBy`/`sortDir`; items sort
+  by name or date, folder sections by name or newest file, undated last). The
+  controls are shared components (`src/client/components/SortControls.tsx`,
+  `RefreshButton.tsx`) rendered by both the Library page and the Transcribe
+  picker; the sort preference persists to `transcription_sort_by` /
+  `transcription_sort_dir`, which both pages read. Landed on `main`
+  (cherry-picked) and on `feat/library-page`.
+- **"Renaming the LLM breaks the running translation"** — investigated and
+  **not reproducible on 0.6.x**: every path (panel rename with preserved id,
+  redacted-key round-trip, mid-run rename, full `POST /api/settings`) keeps the
+  API key and the running job's connection snapshot. The historical bug was
+  real but fixed in `4c6a880` (pre-0.6.0 flat-key installs saved the redaction
+  marker as the key). Regression suite: `src/server/rename-midrun.test.ts`.
+  If a pre-0.6.0 install still shows it, updating fixes it.
+- **Stale local drafts discarded** — this checkout's uncommitted whisper WIP
+  was an earlier draft of work since finished on `forgejo/main` (`fold_iso3`,
+  the snap-guard fix `ee1cf2b`, tests inside the class). It is stashed
+  (`git stash list`), not deleted, and safe to drop.
+
+**State:** `main` == `forgejo/main` tip + this session's commits;
+`feat/library-page` holds the same feature work on its older base (superseded
+by `main`, kept for reference). Both `backend-whisper` (383 tests) and the TS
+suite (882 tests) pass, `typecheck` clean.
