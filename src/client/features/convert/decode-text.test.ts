@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import iconv from "iconv-lite";
-import { decodeSubtitleBytes, readSubtitleFile } from "./decode-text.js";
+import { decodeSubtitleBytes, decodeWindows1252, readSubtitleFile } from "./decode-text.js";
 
 const HEADER = "1\n00:00:01,000 --> 00:00:02,000\n";
 const bytes = (text: string, encoding: string, addBOM = false): Uint8Array =>
@@ -46,4 +46,14 @@ test("invalid UTF-8 never throws and keeps the surrounding ASCII intact", () => 
 test("readSubtitleFile decodes a Blob the way the drop zone hands it over", async () => {
   const body = `${HEADER}中文字幕測試，這是一個繁體中文的檔案\n我們正在翻譯字幕的內容\n`;
   assert.equal(await readSubtitleFile(new Blob([bytes(body, "big5") as BlobPart])), body);
+});
+
+test("the windows-1252 family decodes the same way in every runtime", () => {
+  // 0x97 is an em dash in windows-1252; Node's TextDecoder reads it as U+0097.
+  const body = `${HEADER}Voilà — café\n`;
+  const encoded = bytes(body, "windows-1252");
+  assert.equal(decodeWindows1252(encoded), body);
+  assert.equal(decodeSubtitleBytes(encoded), body);
+  // A lone undefined byte keeps its C1 value instead of throwing.
+  assert.equal(decodeWindows1252(Uint8Array.of(0x41, 0x81, 0x42)), "A\u0081B");
 });
