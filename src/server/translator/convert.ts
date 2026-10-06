@@ -1,6 +1,5 @@
-import { parseSync, stringifySync } from "subtitle";
-import assParser from "ass-parser";
-import assStringify from "ass-stringify";
+import { parseAss, stringifyAss, type AssLine, type AssSection, type AssValue } from "./ass.js";
+import { parseSrtVtt, stringifySubtitle, type SubtitleNode } from "./srt-vtt.js";
 import { errorMessage } from "../errors.js";
 
 /** The parsed shape of a single subtitle cue shared across the translator. */
@@ -17,19 +16,19 @@ export interface SubtitleCue {
 /** Back-compat alias retained for internal call sites. */
 export type CueLike = SubtitleCue;
 
-export type AssSection = assParser.AssSection;
-export type AssLine = assParser.AssLine;
+export type { AssLine, AssSection, AssValue } from "./ass.js";
+export type { SubtitleNode } from "./srt-vtt.js";
 /** An ASS/SSA file: the whole document, and its Dialogue lines as cues. */
 export interface AssDocument {
   full: AssSection[];
   events: SubtitleCue[];
 }
-export type ParsedSubtitle = ReturnType<typeof parseSync> | AssDocument;
+export type ParsedSubtitle = SubtitleNode[] | AssDocument;
 
 export const isAssDocument = (parsed: ParsedSubtitle): parsed is AssDocument => !Array.isArray(parsed);
 
 /** A named field of a Style or Dialogue line; "" when the line is not a field map. */
-export function assField(value: assParser.AssValue, name: string): string {
+export function assField(value: AssValue, name: string): string {
   return typeof value === "object" && !Array.isArray(value) ? (value[name] ?? "") : "";
 }
 
@@ -44,33 +43,14 @@ export function cuesOf(parsed: ParsedSubtitle): SubtitleCue[] {
   return isAssDocument(parsed) ? parsed.events : parsed.filter((node) => node.type === "cue");
 }
 
-/**
- * The `subtitle` parser only understands cue blocks. It throws on WebVTT STYLE
- * and REGION blocks and on a text cue identifier before the first cue, and it
- * folds a later text identifier into the previous cue's text. Drop both; the
- * parser discards identifiers anyway.
- */
-function stripVttNonCueParts(content: string): string {
-  return content
-    .split(/(?:\r?\n[ \t]*){2,}/)
-    .flatMap((block) => {
-      const lines = block.split(/\r?\n/);
-      if (/^(STYLE|REGION)[ \t]*$/.test(lines[0])) return [];
-      const hasIdentifier = lines.length > 1 && !lines[0].includes("-->") && lines[1].includes("-->");
-      return [(hasIdentifier ? lines.slice(1) : lines).join("\n")];
-    })
-    .join("\n\n");
-}
-
 export function parseSubtitle(fileContent: string, fileExtension: string): ParsedSubtitle {
   if (["srt", "vtt"].includes(fileExtension)) {
-    return parseSync(fileExtension === "vtt" ? stripVttNonCueParts(fileContent) : fileContent);
+    return parseSrtVtt(fileContent);
   }
   if (["ass", "ssa"].includes(fileExtension)) {
-    const parsedAss = assParser(fileContent);
-    const events: SubtitleCue[] = parsedAss
-      .filter((x) => x.section === "Events")[0]
-      .body.filter(({ key }) => key === "Dialogue")
+    const parsedAss = parseAss(fileContent);
+    const events: SubtitleCue[] = (parsedAss.find((x) => x.section === "Events")?.body ?? [])
+      .filter(({ key }) => key === "Dialogue")
       .map((line) => ({
         type: "cue",
         data: {
@@ -274,7 +254,7 @@ export function convertSubtitle(content: string, fromExt: string, toExt: string)
 
   if (["srt", "vtt"].includes(to)) {
     const format = to === "vtt" ? "WebVTT" : "SRT";
-    return stringifySync(
+    return stringifySubtitle(
       cues.map((cue: SubtitleCue) => ({
         type: "cue",
         data: {
@@ -285,7 +265,7 @@ export function convertSubtitle(content: string, fromExt: string, toExt: string)
           text: cue?.data?.text || "",
         },
       })),
-      { format },
+      format,
     );
   }
 
@@ -294,7 +274,7 @@ export function convertSubtitle(content: string, fromExt: string, toExt: string)
   // original cues. Otherwise we build a fresh ASS document from the cues.
   if (isAssDocument(parsed)) {
     let dialogueIndex = 0;
-    return assStringify(
+    return stringifyAss(
       parsed.full.map((section) => {
         if (section.section !== "Events" || !Array.isArray(section.body)) return section;
         return {
@@ -309,7 +289,7 @@ export function convertSubtitle(content: string, fromExt: string, toExt: string)
     );
   }
 
-  return assStringify(buildAssDocumentFromCues(cues));
+  return stringifyAss(buildAssDocumentFromCues(cues));
 }
 
 export function splitIntoChunks(array: SubtitleCue[], by = 20): SubtitleCue[][] {

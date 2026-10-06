@@ -1,8 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { parseSync, stringifySync } from "subtitle";
-import assParser from "ass-parser";
-import assStringify from "ass-stringify";
+import { parseAss, stringifyAss } from "./ass.js";
+import { parseSrtVtt, stringifySubtitle } from "./srt-vtt.js";
 import {
   assField,
   buildAssDocumentFromCues,
@@ -55,7 +54,7 @@ export function applyCueEdits(content: string, ext: string, edits: CueEdit[]): {
   let updated = 0;
 
   if (["srt", "vtt"].includes(normalizedExt)) {
-    const parsed = parseSync(content);
+    const parsed = parseSrtVtt(content);
     let cuePosition = 0;
     const rebuilt = parsed.map((node) => {
       if (node.type !== "cue") return node;
@@ -83,11 +82,11 @@ export function applyCueEdits(content: string, ext: string, edits: CueEdit[]): {
       };
     });
     const format = normalizedExt === "vtt" ? "WebVTT" : "SRT";
-    return { output: stringifySync(rebuilt, { format }), updated };
+    return { output: stringifySubtitle(rebuilt, format), updated };
   }
 
   if (["ass", "ssa"].includes(normalizedExt)) {
-    const parsedAss = assParser(content);
+    const parsedAss = parseAss(content);
     let dialogueIndex = 0;
     const rebuilt = parsedAss.map((section) => {
       if (section.section !== "Events" || !Array.isArray(section.body)) return section;
@@ -105,7 +104,7 @@ export function applyCueEdits(content: string, ext: string, edits: CueEdit[]): {
         }),
       };
     });
-    return { output: assStringify(rebuilt), updated };
+    return { output: stringifyAss(rebuilt), updated };
   }
 
   throw new Error(`Unsupported extension: ${normalizedExt}`);
@@ -142,7 +141,7 @@ export function saveTranslated(
 
   if (["srt", "vtt"].includes(ext)) {
     const format = ext === "vtt" ? "WebVTT" : "SRT";
-    newSubtitle = stringifySync(
+    newSubtitle = stringifySubtitle(
       cues.map((x: SubtitleCue) => ({
         type: "cue",
         data: {
@@ -152,12 +151,12 @@ export function saveTranslated(
           text: x?.data?.translatedText || x?.data?.text || "",
         },
       })),
-      { format },
+      format,
     );
   } else if (["ass", "ssa"].includes(ext)) {
     if (parsedSubtitle && isAssDocument(parsedSubtitle) && Array.isArray(parsedSubtitle.full)) {
       let dialogueIndex = 0;
-      newSubtitle = assStringify(
+      newSubtitle = stringifyAss(
         parsedSubtitle.full.map((section) => {
           if (section.section !== "Events" || !Array.isArray(section.body)) return section;
           return {
@@ -172,7 +171,7 @@ export function saveTranslated(
         }),
       );
     } else {
-      newSubtitle = assStringify(buildAssDocumentFromCues(cues));
+      newSubtitle = stringifyAss(buildAssDocumentFromCues(cues));
     }
   } else {
     throw new Error(`Unsupported extension: ${ext}`);
