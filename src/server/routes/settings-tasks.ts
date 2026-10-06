@@ -30,7 +30,8 @@ import { REDACTED_SECRET, parseConnections, resolveConnectionPool, restoreRedact
 import { logger } from "../logger.js";
 import { normalizeMediaSubfolder } from "../media-paths.js";
 import { isWatcherRunning, restartWatcher } from "../watcher.js";
-import { numericSettingError, parseTaskUpdate, sanitizeLanguageName, validateOutputPattern } from "./validation.js";
+import { parseTaskUpdate, sanitizeLanguageName, settingError, validateOutputPattern } from "./validation.js";
+import { SECRET_SETTING_KEYS } from "../settings-schema.js";
 import { errorMessage } from "../errors.js";
 
 // Pure client-driven format conversion (no translation, no DB). The browser
@@ -40,16 +41,7 @@ import { errorMessage } from "../errors.js";
 const CONVERT_TARGET_FORMATS = ["srt", "vtt", "ass", "ssa"] as const;
 const MAX_CONVERT_FILES = 50;
 const MAX_CONVERT_FILE_BYTES = 10 * 1024 * 1024; // 10 MB per file
-const SECRET_SETTING_KEYS = new Set([
-  "api_key",
-  "cloud_api_key_openai",
-  "cloud_api_key_anthropic",
-  "cloud_api_key_gemini",
-  "transcription_backend_token",
-  "youtube_api_key",
-  // Discord and Slack webhook URLs carry their token in the path.
-  "notify_webhook_url",
-]);
+// Which keys are secrets is part of the settings schema (src/shared/settings.ts).
 // Owned by the YouTube playlist routes. A Settings save sends back the whole
 // settings object it loaded, which would overwrite playlists followed since.
 const ROUTE_OWNED_SETTING_KEYS = new Set(["youtube_playlists"]);
@@ -163,9 +155,9 @@ export function registerSettingsTasksRoutes(app: Express): void {
       }
       // Only changed values are checked, so a bad value already on disk never
       // blocks saving something else.
-      const numericError = numericSettingError(key, resolved);
-      if (numericError) {
-        invalid.push(numericError);
+      const valueError = settingError(key, resolved);
+      if (valueError) {
+        invalid.push(valueError);
         continue;
       }
       patch[key] = resolved;

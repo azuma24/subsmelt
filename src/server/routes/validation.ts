@@ -129,41 +129,7 @@ export function parseLogsQuery(query: Record<string, unknown>): Parsed<LogsQuery
 }
 
 /**
- * Allowed ranges for the numeric settings. Readers parse these leniently, so an
- * out-of-range value used to do damage quietly: chunk_size 0 sent a whole file
- * as one request, request_timeout_s 0 became 5 s. The Settings inputs carry the
- * same min/max (EngineSection, SourcesSection, SttAdvancedFields).
+ * Why a setting's new value is refused, or null. The ranges and kinds live in
+ * src/shared/settings.ts; the Settings inputs carry the same min/max.
  */
-export const NUMERIC_SETTING_BOUNDS: Record<string, { min: number; max: number; integer: boolean }> = {
-  chunk_size: { min: 1, max: 500, integer: true },
-  context_window: { min: 0, max: 100, integer: true },
-  parallel_chunks: { min: 1, max: 8, integer: true },
-  request_timeout_s: { min: 10, max: 7200, integer: true },
-  temperature: { min: 0, max: 2, integer: false },
-  auto_scan_interval: { min: 0, max: 10080, integer: true },
-  monthly_token_budget: { min: 0, max: 1_000_000_000_000, integer: true },
-  transcription_max_concurrent: { min: 1, max: 4, integer: true },
-  transcription_request_timeout_s: { min: 30, max: 86400, integer: true },
-  // 0 turns the limit off.
-  transcription_max_line_length: { min: 0, max: 200, integer: true },
-  transcription_max_subtitle_duration: { min: 0, max: 60, integer: false },
-};
-
-const INTEGER_SYNTAX = /^-?\d+$/;
-const DECIMAL_SYNTAX = /^-?(\d+(\.\d*)?|\.\d+)$/;
-
-/** null when `value` is fine for `key` (or `key` is not numeric), else why not. */
-export function numericSettingError(key: string, value: string): string | null {
-  const bounds = NUMERIC_SETTING_BOUNDS[key];
-  if (!bounds) return null;
-  // Plain decimal only: readers use parseInt/parseFloat, which would read
-  // "1e2" as 1 and "0x10" as 0, so anything Number() accepts but they do not
-  // would pass here and mean something else at runtime.
-  const syntax = bounds.integer ? INTEGER_SYNTAX : DECIMAL_SYNTAX;
-  const parsed = syntax.test(value) ? Number(value) : NaN;
-  const fits = Number.isFinite(parsed)
-    && parsed >= bounds.min
-    && parsed <= bounds.max;
-  if (fits) return null;
-  return `${key} must be ${bounds.integer ? "a whole number" : "a number"} from ${bounds.min} to ${bounds.max}`;
-}
+export { settingError } from "../../shared/settings.js";

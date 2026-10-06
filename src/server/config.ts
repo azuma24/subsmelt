@@ -266,6 +266,11 @@ export function getSetting(key: string): string {
   return envPinnedSettings[key] ?? _config.settings[key] ?? DEFAULT_SETTINGS[key] ?? "";
 }
 
+/** The value a setting ships with, before config.json or the environment changes it. */
+export function defaultSetting(key: string): string {
+  return DEFAULT_SETTINGS[key] ?? "";
+}
+
 export function setSetting(key: string, value: string): void {
   setSettings({ [key]: value });
 }

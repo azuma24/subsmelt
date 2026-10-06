@@ -23,6 +23,7 @@ import { addSSEClient, broadcast } from "./sse.js";
 import { notifyTest } from "./notify.js";
 import { startWatcher, stopWatcher, isWatcherRunning } from "./watcher.js";
 import { parseLogsQuery } from "./routes/validation.js";
+import { readSettings } from "./settings-schema.js";
 import type { TranscribePostAction } from "./transcription-client.js";
 import { registerSettingsTasksRoutes } from "./routes/settings-tasks.js";
 import { registerJobsRoutes } from "./routes/jobs.js";
@@ -123,13 +124,10 @@ app.post("/api/scan", async (_req, res) => {
   const run = (async (): ReturnType<typeof scanFolder> => {
     let result = await scanFolder(true);
     const settings = getAllSettings();
-    const behavior = settings.transcription_missing_subtitle_behavior || "ask";
+    const typed = readSettings();
+    const behavior = typed.transcription_missing_subtitle_behavior;
     const backendUrl = getTranscriptionBackendUrl(settings);
-    if (
-      settings.transcription_enabled === "1" &&
-      backendUrl &&
-      behavior !== "ask"
-    ) {
+    if (typed.transcription_enabled && backendUrl && behavior !== "ask") {
       const postAction: TranscribePostAction =
         behavior === "auto_transcribe_and_translate"
           ? "transcribe_and_translate"
@@ -149,13 +147,7 @@ app.post("/api/scan", async (_req, res) => {
       // Bound the fan-out so a huge library doesn't spin up hundreds of attempts
       // (each registering a history row + in-flight entry) before the slot gate
       // can even hold them back.
-      const scanConcurrency = Math.max(
-        1,
-        Math.min(
-          4,
-          parseInt(settings.transcription_max_concurrent || "1", 10) || 1,
-        ),
-      );
+      const scanConcurrency = typed.transcription_max_concurrent;
       for await (const _ of asyncPool(
         scanConcurrency,
         missingVideos,
@@ -187,10 +179,7 @@ app.post("/api/scan", async (_req, res) => {
               );
               return;
             }
-            if (
-              settings.transcription_low_ram_behavior === "skip" &&
-              message.startsWith("Transcription skipped:")
-            ) {
+            if (typed.transcription_low_ram_behavior === "skip" && message.startsWith("Transcription skipped:")) {
               logger.info(
                 "system",
                 `Skipped auto-transcription for ${path.basename(videoPath)}: ${message}`,

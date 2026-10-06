@@ -9,6 +9,7 @@ import {
   type JobRow,
 } from "./db.js";
 import { getAllSettings, getTask, getSetting } from "./config.js";
+import { readSettings } from "./settings-schema.js";
 import {
   summarizeTranslationError,
   translateFile,
@@ -491,6 +492,7 @@ async function runJob(
   broadcast("job:start", { jobId: job.id, srtName, langCode });
 
   const settings = getAllSettings();
+  const typed = readSettings();
   const startTime = Date.now();
 
   // Per-job abort controller — aborted immediately by requestStop()
@@ -532,11 +534,8 @@ async function runJob(
       { stage: "llm_pool" },
     );
 
-    const chunkSize = Math.max(1, parseInt(settings.chunk_size || "20", 10) || 20);
-    const configuredParallel = Math.max(
-      1,
-      Math.min(8, parseInt(settings.parallel_chunks || "1", 10)),
-    );
+    const chunkSize = typed.chunk_size;
+    const configuredParallel = typed.parallel_chunks;
 
     // Probe each connection's context window (LM Studio only — graceful no-op
     // elsewhere). A configured parallel_chunks is respected up to what the
@@ -549,10 +548,7 @@ async function runJob(
     });
     const parallelChunks = ctxPlan.parallelChunks;
 
-    const requestTimeoutMs = Math.max(
-      5_000,
-      parseInt(settings.request_timeout_s || "300", 10) * 1000,
-    );
+    const requestTimeoutMs = typed.request_timeout_s * 1000;
 
     const probes = conns
       .map((c) => {
@@ -630,18 +626,18 @@ async function runJob(
       prompt: promptToUse,
       lang: targetLang || "English",
       sourceLang: task?.source_lang || "Automatic",
-      additional: settings.additional_context || "",
-      temperature: parseFloat(settings.temperature || "0.3"),
+      additional: typed.additional_context,
+      temperature: typed.temperature,
       chunkSize,
-      contextSize: parseInt(settings.context_window || "5", 10),
+      contextSize: typed.context_window,
       parallelChunks,
       analysisLinesByConnection: new Map(
         [...ctxPlan.byConnection].map(([id, info]) => [id, info.recommendedAnalysisLines]),
       ),
       requestTimeoutMs,
-      disableToolCalls: settings.disable_tool_calls === "1",
-      refinePass: settings.refine_pass === "1",
-      seriesMemory: settings.series_memory === "1",
+      disableToolCalls: typed.disable_tool_calls,
+      refinePass: typed.refine_pass,
+      seriesMemory: typed.series_memory,
       abortSignal: jobAbort.signal,
       onProgress: (completed, total) => {
         if (shouldStop) throw new Error("STOP_REQUESTED");
@@ -729,7 +725,7 @@ async function runJob(
       langCode,
     });
 
-    if (settings.title_sidecar === "1") {
+    if (typed.title_sidecar) {
       try {
         const base = titleBaseForJob(job);
         const title = await ensureTranslatedTitle({
@@ -744,8 +740,8 @@ async function runJob(
               model,
               provider: primary.provider,
               systemPrompt: titleTranslationPrompt(targetLang || "English"),
-              temperature: parseFloat(settings.temperature || "0.3"),
-              disableToolCalls: settings.disable_tool_calls === "1",
+              temperature: typed.temperature,
+              disableToolCalls: typed.disable_tool_calls,
               requestTimeoutMs,
               abortSignal: jobAbort.signal,
               onUsage: (u) =>
@@ -833,9 +829,9 @@ async function runJob(
           settings.llm_endpoint || "http://localhost:8000/v1",
         ),
         model: settings.model || "",
-        chunkSize: parseInt(settings.chunk_size || "20", 10),
-        contextSize: parseInt(settings.context_window || "5", 10),
-        temperature: parseFloat(settings.temperature || "0.3"),
+        chunkSize: typed.chunk_size,
+        contextSize: typed.context_window,
+        temperature: typed.temperature,
         srtPath: job.srt_path,
         outputPath: job.output_path,
       },
