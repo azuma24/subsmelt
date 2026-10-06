@@ -35,8 +35,9 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Typecheck (server)
-        run: npm run typecheck
+      # Biome (lint + format check) and both TypeScript projects.
+      - name: Lint and typecheck
+        run: npm run lint
 
       - name: Test
         run: npm test
@@ -64,7 +65,13 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt pytest
+          pip install -r requirements.txt pytest ruff
+
+      # Config in backend-whisper/pyproject.toml.
+      - name: Lint and format check
+        run: |
+          ruff check .
+          ruff format --check .
 
       - name: Test
         run: python -m pytest tests -q
