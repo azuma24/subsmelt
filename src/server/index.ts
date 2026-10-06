@@ -1,8 +1,7 @@
 import express from "express";
-import cors from "cors";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import asyncPool from "tiny-async-pool";
+import { forEachConcurrent } from "./async-pool.js";
 import { getAllSettings, setSetting, getSetting } from "./config.js";
 import { scanFolder, listFolderTree, MEDIA_DIR } from "./scanner.js";
 import { runQueueSafely, isQueueRunning, startAutoScan, resumeQueueOnBoot } from "./queue.js";
@@ -51,7 +50,6 @@ const HOST = process.env.HOST || "0.0.0.0";
 // The web UI is served same-origin from this server, so cross-origin browser
 // requests are never needed. Disabling the allow-origin header prevents other
 // sites from scripting this self-hosted API via the user's browser.
-app.use(cors({ origin: false }));
 // CORS hides responses, but a foreign page can still fire a simple POST; this
 // refuses those before any route acts on them.
 app.use(crossSiteGuard);
@@ -131,7 +129,7 @@ app.post("/api/scan", async (_req, res) => {
       // (each registering a history row + in-flight entry) before the slot gate
       // can even hold them back.
       const scanConcurrency = typed.transcription_max_concurrent;
-      for await (const _ of asyncPool(scanConcurrency, missingVideos, async (videoPath) => {
+      await forEachConcurrent(scanConcurrency, missingVideos, async (videoPath) => {
         try {
           const { result: transcribed } = await runTranscriptionAttempt({
             videoPath,
@@ -167,9 +165,7 @@ app.post("/api/scan", async (_req, res) => {
         } finally {
           releaseAutoTranscription(videoPath);
         }
-      })) {
-        // Drain the concurrency pool; per-file errors are handled in the iterator.
-      }
+      });
       if (missingVideos.length > 0) {
         result = await scanFolder(postAction === "transcribe_and_translate");
       }
