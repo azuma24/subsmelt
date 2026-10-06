@@ -59,3 +59,13 @@ test("one file renders under its folder with its full name, status chips and cou
   assert.equal(page.buttons.filter((label) => label === "Scan").length, 1);
   assert.ok(page.links.includes("Upload file"));
 });
+
+test("the header carries the same sort, select-all and refresh controls as the Transcribe picker", () => {
+  const page = render([noJobs, settings, library([episode])]);
+  assert.match(page.html, /aria-label="Sort files"/);
+  assert.match(page.html, /<option[^>]*value="name"[^>]*>Name<\/option>/);
+  assert.match(page.html, /<option[^>]*value="date"[^>]*>Date<\/option>/);
+  assert.ok(page.buttons.includes("Select all"));
+  assert.ok(page.buttons.some((label) => label === "↻ Refresh"));
+  assert.ok(page.text.includes("Descending"), "direction toggle defaults to descending");
+});

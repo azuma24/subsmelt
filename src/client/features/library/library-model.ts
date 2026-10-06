@@ -1,4 +1,5 @@
 import type { JobRow, ScannedFile, TaskStatus } from "../../types";
+import type { SortBy, SortDir } from "../whisper/folderTree";
 import { getTaskStatus } from "./task-status";
 
 /**
@@ -138,20 +139,49 @@ export interface LibraryView {
 }
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
-const byPath = (a: ClassifiedItem, b: ClassifiedItem) =>
-  collator.compare(a.item.folder, b.item.folder) || collator.compare(a.item.name, b.item.name);
 
-/** "All" groups by folder; any other filter flattens into that status's group. */
+const byName = (a: ClassifiedItem, b: ClassifiedItem, dir: number) =>
+  collator.compare(a.item.name, b.item.name) * dir || collator.compare(a.item.key, b.item.key);
+
+/** videoMtime, or null for orphan subtitles without a video. */
+const mtimeOf = (entry: ClassifiedItem): number | null => entry.item.file.videoMtime ?? null;
+
+const compareMtime = (a: number | null, b: number | null, dir: number) => {
+  if (a === null && b === null) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+  return (a - b) * dir;
+};
+
+/** Date order with direction; undated items sink to the end, tied by name. */
+const byDate = (a: ClassifiedItem, b: ClassifiedItem, dir: number) =>
+  compareMtime(mtimeOf(a), mtimeOf(b), dir) || byName(a, b, dir);
+
+/** A folder's date is its newest known video mtime. */
+const latestMtime = (entries: ClassifiedItem[]): number | null =>
+  entries.reduce<number | null>((latest, entry) => {
+    const mtime = mtimeOf(entry);
+    if (mtime === null) return latest;
+    return latest === null ? mtime : Math.max(latest, mtime);
+  }, null);
+
+/** "All" groups by folder; any other filter flattens into that status's group.
+ *  Items sort by name or date per `sortBy`/`sortDir`; folder sections follow
+ *  the same key — alphabetical, or by their newest file in date order. */
 export function buildLibraryView(
   items: LibraryItem[],
   jobsById: Map<number, JobRow>,
   filter: LibraryFilter,
   query: string,
+  sortBy: SortBy,
+  sortDir: SortDir,
 ): LibraryView {
+  const dir = sortDir === "asc" ? 1 : -1;
+  const itemOrder = sortBy === "date" ? byDate : byName;
   const searched = items
     .filter((item) => matchesQuery(item, query))
     .map((item) => ({ item, status: itemStatus(item, jobsById) }))
-    .sort(byPath);
+    .sort((a, b) => itemOrder(a, b, dir));
 
   const counts = Object.fromEntries([["all", searched.length], ...LIBRARY_STATUSES.map((s) => [s, 0])]) as Record<LibraryFilter, number>;
   for (const entry of searched) counts[entry.status] += 1;
@@ -167,7 +197,15 @@ export function buildLibraryView(
     list.push(entry);
     byFolder.set(entry.item.folder, list);
   }
-  const sections = [...byFolder.entries()].map(([key, sectionItems]): LibrarySection => ({ key, mode: "folder", items: sectionItems }));
+  const sections = [...byFolder.entries()]
+    .map(([key, sectionItems]): LibrarySection => ({ key, mode: "folder", items: sectionItems }))
+    .sort((a, b) => {
+      if (sortBy === "date") {
+        const byLatest = compareMtime(latestMtime(a.items), latestMtime(b.items), dir);
+        if (byLatest !== 0) return byLatest;
+      }
+      return collator.compare(a.key, b.key) * dir;
+    });
   return { counts, sections };
 }
 

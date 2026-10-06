@@ -97,7 +97,7 @@ const rowLabels = (rows: LibraryRow[]) =>
   rows.map((row) => (row.type === "section" ? `# ${row.section.key}` : row.entry.item.name));
 
 test("All groups by folder in natural order", () => {
-  const view = buildLibraryView(items, jobs, "all", "");
+  const view = buildLibraryView(items, jobs, "all", "", "name", "asc");
   assert.deepEqual(rowLabels(flattenRows(view.sections, new Set())), [
     "# ",
     "Loose.srt",
@@ -115,7 +115,7 @@ test("All groups by folder in natural order", () => {
 });
 
 test("a collapsed folder keeps its header and hides its rows", () => {
-  const view = buildLibraryView(items, jobs, "all", "");
+  const view = buildLibraryView(items, jobs, "all", "", "name", "asc");
   assert.deepEqual(rowLabels(flattenRows(view.sections, new Set(["Movies", "TV/Show/Season 01"]))), [
     "# ",
     "Loose.srt",
@@ -127,25 +127,25 @@ test("a collapsed folder keeps its header and hides its rows", () => {
 });
 
 test("a status filter flattens into one status group across folders", () => {
-  const view = buildLibraryView(items, jobs, "done", "");
-  assert.deepEqual(rowLabels(flattenRows(view.sections, new Set(["Movies"]))), ["# done", "Loose.srt", "Notes.srt", "Blade Runner.mkv", "Dune.mkv"]);
+  const view = buildLibraryView(items, jobs, "done", "", "name", "asc");
+  assert.deepEqual(rowLabels(flattenRows(view.sections, new Set(["Movies"]))), ["# done", "Blade Runner.mkv", "Dune.mkv", "Loose.srt", "Notes.srt"]);
 });
 
 test("counts cover the searched set and always equal each filter's list length", () => {
   for (const query of ["", "show", "dune", "nothing-matches"]) {
-    const all = buildLibraryView(items, jobs, "all", query);
+    const all = buildLibraryView(items, jobs, "all", query, "name", "asc");
     for (const filter of ["all", "error", "needsTranscription", "missingLanguage", "inProgress", "done"] as const) {
-      const listed = flattenRows(buildLibraryView(items, jobs, filter, query).sections, new Set()).filter((row) => row.type === "item").length;
+      const listed = flattenRows(buildLibraryView(items, jobs, filter, query, "name", "asc").sections, new Set()).filter((row) => row.type === "item").length;
       assert.equal(all.counts[filter], listed, `${filter} with query "${query}"`);
     }
   }
-  assert.deepEqual(buildLibraryView(items, jobs, "all", "").counts, {
+  assert.deepEqual(buildLibraryView(items, jobs, "all", "", "name", "asc").counts, {
     all: 8, error: 1, needsTranscription: 1, missingLanguage: 1, inProgress: 1, done: 4,
   });
 });
 
 test("search matches the folder path as well as the name", () => {
-  const view = buildLibraryView(items, jobs, "all", "season 01");
+  const view = buildLibraryView(items, jobs, "all", "season 01", "name", "asc");
   assert.equal(view.counts.all, 3);
 });
 
@@ -200,4 +200,67 @@ test("a row's status group comes from the same per-language state as its chips",
   const jobsById = new Map([[9, job(9, "pending")]]);
   assert.deepEqual(itemLanguageChips(item, jobsById).map(({ status }) => status), ["pending"]);
   assert.equal(itemStatus(item, jobsById), "inProgress");
+});
+
+const dated = (path: string, mtime: number): ScannedFile => ({
+  videoPath: path,
+  videoName: path.split("/").pop() ?? null,
+  videoMtime: mtime,
+  subtitles: [],
+});
+const undatedOrphan: ScannedFile = {
+  videoPath: null,
+  videoName: null,
+  videoMtime: null,
+  subtitles: [{ srtPath: "/media/Z/Orphan.srt", srtName: "Orphan.srt", tasks: [] }],
+};
+const datedItems = toLibraryItems([
+  dated("/media/A/alpha.mkv", 100),
+  dated("/media/A/beta.mkv", 200),
+  dated("/media/B/gamma.mkv", 300),
+  undatedOrphan,
+], "/media");
+
+test("date sort orders items newest first, folders by their newest file, undated last", () => {
+  const view = buildLibraryView(datedItems, new Map(), "all", "", "date", "desc");
+  assert.deepEqual(rowLabels(flattenRows(view.sections, new Set())), [
+    "# B",
+    "gamma.mkv",
+    "# A",
+    "beta.mkv",
+    "alpha.mkv",
+    "# Z",
+    "Orphan.srt",
+  ]);
+});
+
+test("date sort asc flips both items and folders; undated still sink to the end", () => {
+  const view = buildLibraryView(datedItems, new Map(), "all", "", "date", "asc");
+  assert.deepEqual(rowLabels(flattenRows(view.sections, new Set())), [
+    "# A",
+    "alpha.mkv",
+    "beta.mkv",
+    "# B",
+    "gamma.mkv",
+    "# Z",
+    "Orphan.srt",
+  ]);
+});
+
+test("name sort desc reverses items and folders alike", () => {
+  const view = buildLibraryView(datedItems, new Map(), "all", "", "name", "desc");
+  assert.deepEqual(rowLabels(flattenRows(view.sections, new Set())), [
+    "# Z",
+    "Orphan.srt",
+    "# B",
+    "gamma.mkv",
+    "# A",
+    "beta.mkv",
+    "alpha.mkv",
+  ]);
+});
+
+test("a status filter keeps the chosen sort within its flat group", () => {
+  const view = buildLibraryView(datedItems, new Map(), "needsTranscription", "", "date", "desc");
+  assert.deepEqual(rowLabels(flattenRows(view.sections, new Set())), ["# needsTranscription", "gamma.mkv", "beta.mkv", "alpha.mkv"]);
 });

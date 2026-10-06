@@ -14,6 +14,8 @@ import { InlineError } from "../../ui/QueryState";
 import { PreviewOverlay } from "../dashboard/PreviewOverlay";
 import { useManualTranscription } from "../dashboard/useManualTranscription";
 import { buildLibraryView, flattenRows, itemJobIds, itemStatus, toLibraryItems, type LibraryFilter, type LibrarySection } from "./library-model";
+import { SortControls, type SortBy, type SortDir } from "../../components/SortControls";
+import { RefreshButton } from "../../components/RefreshButton";
 import { withQueuedTask } from "./task-status";
 import { LibraryList, type FocusRequest } from "./LibraryList";
 import { LibraryRowsSkeleton } from "./LibraryRows";
@@ -29,6 +31,9 @@ const toggleIn = (set: ReadonlySet<string>, key: string): Set<string> => {
   else next.add(key);
   return next;
 };
+
+const validSortBy = (value: unknown): SortBy => (value === "name" || value === "date" ? value : "date");
+const validSortDir = (value: unknown): SortDir => (value === "asc" || value === "desc" ? value : "desc");
 
 export function LibraryPage() {
   const { t } = useTranslation();
@@ -53,11 +58,33 @@ export function LibraryPage() {
   const [previewSearch, setPreviewSearch] = useState("");
 
   const settings = settingsQuery.data || {};
+  // One sort preference for the whole app: the Library seeds from, and writes
+  // through to, the same settings keys the Transcribe page's picker uses.
+  // Local state changes immediately; the setting makes it survive a reload.
+  const persistSetting = useMutationWithInvalidation((patch: Record<string, string>) => api.saveSettings(patch));
+  const [sortBy, setSortBy] = useState<SortBy>("date");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  useEffect(() => {
+    if (!settingsQuery.isSuccess) return;
+    setSortBy(validSortBy(settings.transcription_sort_by));
+    setSortDir(validSortDir(settings.transcription_sort_dir));
+  }, [settings.transcription_sort_by, settings.transcription_sort_dir, settingsQuery.isSuccess]);
+  const handleSortByChange = useCallback((value: SortBy) => {
+    setSortBy(value);
+    persistSetting.mutate({ transcription_sort_by: value });
+  }, [persistSetting]);
+  const toggleSortDir = useCallback(() => {
+    setSortDir((current) => {
+      const next: SortDir = current === "asc" ? "desc" : "asc";
+      persistSetting.mutate({ transcription_sort_dir: next });
+      return next;
+    });
+  }, [persistSetting]);
   const mediaDir = str(settings._media_dir, "/media");
   const transcriptionEnabled = str(settings.transcription_enabled, "0") === "1";
   const jobsById = useMemo(() => new Map((jobsQuery.data?.jobs ?? []).map((job: JobRow) => [job.id, job])), [jobsQuery.data]);
   const items = useMemo(() => toLibraryItems(libraryQuery.data?.files ?? [], mediaDir), [libraryQuery.data, mediaDir]);
-  const view = useMemo(() => buildLibraryView(items, jobsById, filter, query), [items, jobsById, filter, query]);
+  const view = useMemo(() => buildLibraryView(items, jobsById, filter, query, sortBy, sortDir), [items, jobsById, filter, query, sortBy, sortDir]);
   const rows = useMemo(() => flattenRows(view.sections, collapsed), [view.sections, collapsed]);
   const openItem = openKey === null ? undefined : items.find((item) => item.key === openKey);
   const firstItemKey = rows.find((row) => row.type === "item")?.entry.item.key ?? null;
@@ -99,6 +126,11 @@ export function LibraryPage() {
       return next;
     });
   }, []);
+  // Every row currently listed — the filter and search already applied — so
+  // bulk actions can never touch a file the person cannot see.
+  const selectAllVisible = useCallback(() => {
+    setChecked(new Set(view.sections.flatMap((section) => section.items.map((entry) => entry.item.key))));
+  }, [view.sections]);
   const handleQueued = useCallback((srtPath: string, task: TaskStatus) => {
     queryClient.setQueryData<ScanResult>(LIBRARY_QUERY_KEY, (prev) => prev && { ...prev, files: withQueuedTask(prev.files, srtPath, task) });
   }, [queryClient]);
@@ -159,6 +191,7 @@ export function LibraryPage() {
             <h1 className="text-xl font-semibold text-text">{t("nav.library")}</h1>
             {files && files.length > 0 && <p className="text-sm text-muted">{t("library.summary.files", { count: items.length })}</p>}
           </div>
+          <RefreshButton busy={libraryQuery.isFetching} onClick={() => void libraryQuery.refetch()} />
           <Link
             to="/convert"
             className="inline-flex min-h-touch items-center gap-2 rounded-sm border border-border bg-surface px-3 text-sm font-medium text-text transition-colors duration-fast hover:bg-surface-raised"
@@ -185,6 +218,12 @@ export function LibraryPage() {
               />
               <kbd className="hidden rounded-sm border border-border px-1 font-mono text-xs text-muted sm:inline">/</kbd>
             </label>
+            <div className="flex flex-wrap items-center gap-2">
+              <SortControls sortBy={sortBy} sortDir={sortDir} onSortByChange={handleSortByChange} onToggleSortDir={toggleSortDir} />
+              <ActionButton variant="ghost" size="sm" onClick={selectAllVisible} disabled={view.counts.all === 0}>
+                {t("whisper.selectAll")}
+              </ActionButton>
+            </div>
             <StatusChips counts={view.counts} active={filter} onSelect={setFilter} />
           </>
         )}

@@ -1,8 +1,8 @@
 import type { ScannedFile } from "../../types";
 import { buildPathTree, pathMarkerFor, type PathTreeNode } from "../../components/file-tree/build";
+import type { SortBy, SortDir } from "../../components/SortControls";
 
-export type SortBy = "name" | "date";
-export type SortDir = "asc" | "desc";
+export type { SortBy, SortDir };
 
 export type TreeNode = PathTreeNode<ScannedFile>;
 

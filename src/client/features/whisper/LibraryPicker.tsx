@@ -6,9 +6,11 @@ import { FileTreeView, type FileRowContext, type FolderRowContext } from "../../
 import type { TreeExpansion } from "../../components/file-tree/use-persisted-expansion";
 import type { DrillDownState } from "../../components/file-tree/use-drill-down";
 import type { SortBy, SortDir, TreeNode } from "./folderTree";
-import { baseName, type FileProgress, selectCls } from "./whisper-shared";
+import { baseName, type FileProgress } from "./whisper-shared";
 import { hasLiveTranscriptions } from "./batch-store";
 import { Icon } from "../../ui/Icon";
+import { SortControls } from "../../components/SortControls";
+import { RefreshButton } from "../../components/RefreshButton";
 
 export interface LibraryPickerProps {
   isMobile: boolean;
@@ -85,28 +87,11 @@ export function LibraryPicker({
           />
           {t("whisper.hideWithSubtitles")}
         </label>
-        <select
-          aria-label={t("whisper.sortAriaLabel")}
-          value={sortBy}
-          onChange={(e) => onSortByChange(e.target.value as SortBy)}
-          className={selectCls}
-        >
-          <option value="name">{t("whisper.sortByName")}</option>
-          <option value="date">{t("whisper.sortByDate")}</option>
-        </select>
-        <ActionButton variant="ghost" size="sm" onClick={onToggleSortDir}>
-          <span aria-hidden="true">{sortDir === "asc" ? "↑" : "↓"}</span>
-          <span className="sr-only">{sortDir === "asc" ? t("whisper.sortAsc") : t("whisper.sortDesc")}</span>
-        </ActionButton>
+        <SortControls sortBy={sortBy} sortDir={sortDir} onSortByChange={onSortByChange} onToggleSortDir={onToggleSortDir} />
         <ActionButton variant="ghost" size="sm" onClick={onSelectAll} disabled={running || visibleFiles.length === 0}>
           {t("whisper.selectAll")}
         </ActionButton>
-        <ActionButton variant="ghost" size="sm" onClick={() => { void onRefreshScan(); }} disabled={isScanFetching} className="ml-auto">
-          {isScanFetching
-            ? <><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--accent)]" aria-hidden="true" />{t("whisper.scanning")}</>
-            : <><span aria-hidden="true">↻</span> {t("whisper.refresh")}</>
-          }
-        </ActionButton>
+        <RefreshButton busy={isScanFetching} onClick={() => { void onRefreshScan(); }} className="ml-auto" />
       </div>
 
       {isFiltered && (

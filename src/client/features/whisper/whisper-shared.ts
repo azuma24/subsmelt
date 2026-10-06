@@ -96,4 +96,4 @@ export const COMPUTE_BY_DEVICE: Record<string, string[]> = {
 // phase "waiting_for_gpu": held until a translation batch frees the GPU.
 export interface FileProgress { pct?: number; done?: boolean; error?: boolean; noSpeech?: boolean; cancelled?: boolean; phase?: string }
 
-export const selectCls = "rounded-sm border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text)] min-h-touch md:min-h-0";
+export { selectCls } from "../../components/SortControls";
