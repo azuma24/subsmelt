@@ -1,7 +1,7 @@
 # SubSmelt — Handoff
 
-Orientation for someone picking this project up. Current as of **0.6.0**
-(2026-10-01). For what changed when, see
+Orientation for someone picking this project up. Current as of **0.6.6**
+(2026-10-06). For what changed when, see
 [../CHANGELOG.md](../CHANGELOG.md); for how to run it, see
 [../README.md](../README.md).
 
@@ -165,7 +165,7 @@ included**; the model manager downloads those on first use.
   `translating`. `gpu-gate.ts` holds translation while YouTube transcriptions
   are pending when `gpu_shared` is on. yt-dlp always runs through `ytdlp.ts`
   (argument array, own process group, `--js-runtimes node`); tests use
-  `fake-yt-dlp.mjs`. Spec: [PRD-youtube-playlists.md](PRD-youtube-playlists.md).
+  `fake-yt-dlp.mjs`.
 - **Nemotron 3.5 ASR** (`backend-whisper/app/catalog.py`, `nemotron*.py`). One
   model catalog with engine descriptors and a two-entry engine registry in
   `transcribe.py`. The engine shells out to the bundled `nemo-speech` 0.1.0,
@@ -218,12 +218,9 @@ Nothing here is in progress. Ordered by what I would fix first.
 
 ### Product
 
-The [2026-08 UX/UI audit](2026-08-11-uxui-audit.md) supersedes the
-[2026-06 IA audit](UX-IA-Audit.md) and now covers every screen, including the
-Whisper and Convert pages the older one never reached. Phases A–F are
-implemented (audit §5); Phase D's first-run item shipped as *signposting* —
-Settings shows what is outstanding and the Dashboard has a checklist, but there
-is still no guided wizard through the ~65 settings.
+First run is *signposting*, not a wizard: Settings shows what is outstanding and
+Activity has a checklist, but nothing walks a new operator through the ~65
+settings.
 
 The Whisper control window still lacks the model manager and diagnostics the
 tray app has. It can now tail the log in-window ("View log"), resolving
@@ -237,15 +234,5 @@ the path with `run_server`'s own precedence.
 |---|---|
 | [../README.md](../README.md), [../CHANGELOG.md](../CHANGELOG.md), this file | Current |
 | [TODO.md](TODO.md) | Current — open items only |
-| [PRD-youtube-playlists.md](PRD-youtube-playlists.md) | **Current** — spec for the YouTube feature shipped in 0.6.0 |
 | [why-llm-translation.md](why-llm-translation.md) | Current — explainer for users |
 | [RELEASING.md](RELEASING.md) | **Current** — release procedure and tag-push constraints |
-| [2026-08-11-uxui-audit.md](2026-08-11-uxui-audit.md) | **Current** — covers every screen; Phases A–F implemented (§5), C/D/E roadmap items remain in §4. §4a holds the theme-token rules and their enforcement greps |
-| [UX-IA-Audit.md](UX-IA-Audit.md) | Historical (2026-06-13); superseded by the 2026-08 audit, which re-verified what actually shipped |
-| [2026-05-02-frontend-audit.md](2026-05-02-frontend-audit.md) | Historical; its P1 items are done (see TODO.md) |
-| [windows-whisper-server-plan.md](windows-whisper-server-plan.md) | Historical build plan; the packaging it describes shipped in 0.5.x |
-| [PRD-directory-rules.md](PRD-directory-rules.md), [PRD-multi-llm-connections.md](PRD-multi-llm-connections.md) | Historical PRDs for shipped features |
-
-Historical documents are kept for the reasoning behind decisions. **Do not treat
-them as descriptions of current behaviour** — several describe intentions that
-shipped differently.

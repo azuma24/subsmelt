@@ -7,10 +7,9 @@ import { useConfirm } from "../components/ConfirmModal";
 import { classifyErrorReason } from "../features/dashboard/job-actions";
 
 // Single source of truth for per-job actions shared by JobsTableDesktop and
-// JobCardMobile (frontend-audit §9). Each action wraps the matching API mutation
+// JobCardMobile. Each action wraps the matching API mutation
 // with the consistent toast + error handling the rest of the app uses, and the
-// destructive single delete is routed through the shared confirm modal
-// (frontend-audit §11).
+// destructive single delete is routed through the shared confirm modal.
 
 interface UseJobActionsOptions {
   // Called after a job is successfully deleted so the caller can drop it from any
@@ -28,7 +27,7 @@ export interface JobActions {
   remove: (id: number) => Promise<void>;
   classifyErrorReason: (error: string | null) => string;
   // True while the corresponding mutation is in flight, so buttons can be
-  // disabled to prevent double-fire (frontend-audit §11).
+  // disabled to prevent double-fire.
   isRetrying: boolean;
   isRetranslating: boolean;
   isCancelling: boolean;

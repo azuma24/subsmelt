@@ -1,6 +1,5 @@
 # SubSmelt Whisper Backend — Windows Build Runbook
 
-Phase 3 of [`docs/windows-whisper-server-plan.md`](../../../docs/windows-whisper-server-plan.md).
 This directory packages the existing `backend-whisper` FastAPI service into a
 standalone Windows application: a PyInstaller `--onedir` bundle, an Inno Setup
 installer, a Windows Service, and a system-tray controller.

@@ -3,7 +3,7 @@
 // The React hook that wires these into mutations + toasts lives in
 // `src/client/hooks/useJobActions.ts`. Keeping the pure classifier here means
 // both the desktop table and the mobile card import the exact same logic
-// instead of duplicating it (frontend-audit §9).
+// instead of duplicating it.
 
 // Maps a raw job error string onto a stable reason slug used to look up a
 // localized label (`dashboard.errorReason.<reason>`). Returns "unknown" when no

@@ -3,7 +3,7 @@ import { ActionButton } from "./primitives";
 
 // Shared presentational components for surfacing React Query loading/error
 // states consistently across pages. Purely presentational — callers wire these
-// to their own query state (isLoading/isError/refetch). See frontend-audit §3.
+// to their own query state (isLoading/isError/refetch).
 
 export function PageLoading({ label }: { label?: string }) {
   const { t } = useTranslation();

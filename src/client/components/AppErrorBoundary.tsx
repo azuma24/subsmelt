@@ -5,7 +5,7 @@ import { PageError } from "../ui/QueryState";
 // App-level error boundary. Catches render errors anywhere in the tree below it
 // and shows a retryable PageError instead of white-screening the app. The
 // "reload" action does a full page reload, which is the safest recovery from an
-// unknown render error. See frontend-audit §3.
+// unknown render error.
 
 interface AppErrorBoundaryProps {
   children: ReactNode;
