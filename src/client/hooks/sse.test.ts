@@ -21,10 +21,10 @@ test("SSE invalidation keys are targeted by event type", () => {
   // Progress, connection and analysis events patch the cached jobs list instead of refetching it.
   assert.deepEqual(getSSEInvalidationKeys("job:progress"), [["queue-status"]]);
   assert.deepEqual(getSSEInvalidationKeys("job:analysis"), []);
-  assert.deepEqual(getSSEInvalidationKeys("job:start"), [["jobs"], ["queue-status"], ["llm-status"]]);
-  assert.deepEqual(getSSEInvalidationKeys("job:done"), [["jobs"], ["queue-status"], ["logs"], ["transcription-history"], ["llm-status"]]);
+  assert.deepEqual(getSSEInvalidationKeys("job:start"), [["jobs"], ["queue-status"], ["llm-status"], ["youtube", "pipeline"]]);
+  assert.deepEqual(getSSEInvalidationKeys("job:done"), [["jobs"], ["queue-status"], ["logs"], ["transcription-history"], ["llm-status"], ["youtube", "pipeline"]]);
   assert.deepEqual(getSSEInvalidationKeys("job:connection"), [["queue-status"], ["llm-status"]]);
-  assert.deepEqual(getSSEInvalidationKeys("queue:finished"), [["jobs"], ["queue-status"], ["logs"], ["transcription-history"], ["library"], ["llm-status"]]);
+  assert.deepEqual(getSSEInvalidationKeys("queue:finished"), [["jobs"], ["queue-status"], ["logs"], ["transcription-history"], ["library"], ["llm-status"], ["youtube", "pipeline"]]);
   assert.deepEqual(getSSEInvalidationKeys("scan:complete"), [["jobs"], ["queue-status"], ["logs"], ["settings"], ["transcription-history"], ["library"]]);
   assert.deepEqual(getSSEInvalidationKeys("youtube:playlist"), [["youtube"]]);
   assert.deepEqual(getSSEInvalidationKeys("youtube:video"), [["youtube", "playlists"], ["youtube", "videos"], ["youtube", "pipeline"]]);

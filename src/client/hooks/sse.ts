@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Job, JobsResponse, YoutubeVideo } from "../types";
 
@@ -66,17 +66,18 @@ export function getSSEInvalidationKeys(name: SSEEventName): QueryKey[] {
       // Parallel runs and fallbacks emit this per chunk.
       return [["queue-status"], ["llm-status"]];
     case "job:start":
-      return [["jobs"], ["queue-status"], ["llm-status"]];
+      // The YouTube pipeline's GPU hold follows the translation queue.
+      return [["jobs"], ["queue-status"], ["llm-status"], ["youtube", "pipeline"]];
     case "job:done":
     case "job:error":
     case "job:cancelled":
     case "job:stopped":
       // Library rows read live job status from the jobs list, so per-job events
       // skip the library refetch: each one walks the whole media folder.
-      return [["jobs"], ["queue-status"], ["logs"], ["transcription-history"], ["llm-status"]];
+      return [["jobs"], ["queue-status"], ["logs"], ["transcription-history"], ["llm-status"], ["youtube", "pipeline"]];
     case "queue:finished":
     case "queue:stopped":
-      return [["jobs"], ["queue-status"], ["logs"], ["transcription-history"], ["library"], ["llm-status"]];
+      return [["jobs"], ["queue-status"], ["logs"], ["transcription-history"], ["library"], ["llm-status"], ["youtube", "pipeline"]];
     case "scan:complete":
       return [["jobs"], ["queue-status"], ["logs"], ["settings"], ["transcription-history"], ["library"]];
     case "transcription:progress":
@@ -209,6 +210,35 @@ export function createDebouncedInvalidator(
   };
 }
 
+// Whether the shared EventSource is open. Queries that SSE keeps fresh poll
+// slowly while it is, and at their full rate while it is not (a proxy that
+// buffers event streams, a dropped socket mid-reconnect).
+const connection = { open: false, listeners: new Set<() => void>() };
+
+function setConnectionOpen(open: boolean): void {
+  if (connection.open === open) return;
+  connection.open = open;
+  connection.listeners.forEach((listener) => listener());
+}
+
+const subscribeConnection = (listener: () => void) => {
+  connection.listeners.add(listener);
+  return () => connection.listeners.delete(listener);
+};
+
+export function useSseConnected(): boolean {
+  return useSyncExternalStore(subscribeConnection, () => connection.open, () => false);
+}
+
+/**
+ * A refetch interval that backs off while SSE is delivering: the full rate
+ * recovers from a dead stream, the slow rate only catches what no event
+ * carries.
+ */
+export function useSsePollInterval(whenDisconnectedMs: number, whenConnectedMs: number): number {
+  return useSseConnected() ? whenConnectedMs : whenDisconnectedMs;
+}
+
 // Single shared EventSource for the whole app. Multiple components call useSSE
 // (App, Dashboard, ModelManager); each previously opened its OWN connection and
 // ran its OWN cache invalidation, so every event fired N times and the browser's
@@ -239,6 +269,8 @@ function ensureSse(queryClient: ReturnType<typeof useQueryClient>): SseSingleton
     let opened = false;
 
     es.onopen = () => {
+      opened = true;
+      setConnectionOpen(true);
       // Recover the events missed while the connection was down — but only
       // after a real gap; the first open has nothing to recover.
       if (attempts > 0) refresh();
@@ -272,6 +304,7 @@ function ensureSse(queryClient: ReturnType<typeof useQueryClient>): SseSingleton
     SSE_EVENT_NAMES.forEach(bind);
 
     es.onerror = () => {
+      setConnectionOpen(false);
       if (es.readyState === EventSource.CLOSED) {
         // An HTTP-level rejection (the server's 100-client cap answers a bare
         // 503) or a dead network: EventSource does not retry these by itself,
@@ -317,6 +350,7 @@ export function useSSE(onEvent?: SSEEventHandler) {
         if (s.reopenTimer) clearTimeout(s.reopenTimer);
         s.invalidator.cancel();
         s.es.close();
+        setConnectionOpen(false);
         sseSingleton = null;
       }
     };

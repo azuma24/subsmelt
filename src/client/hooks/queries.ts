@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import * as api from "../api";
+import { useSsePollInterval } from "./sse";
 import type {
   JobPreview,
   JobsResponse,
@@ -40,10 +41,10 @@ export function useJobsQuery() {
   return useQuery({
     queryKey: ["jobs"],
     queryFn: ({ signal }) => api.getJobs({ signal }),
-    // SSE invalidates ["jobs"] reactively (see getSSEInvalidationKeys), so this
-    // timer is just a heartbeat to recover from a dropped connection. Relaxed
-    // 10s → 30s.
-    refetchInterval: 30_000,
+    // SSE patches and invalidates ["jobs"] as events arrive (see sse.ts), so
+    // while the stream is open this is a two-minute safety net; without it
+    // the list polls every 30 s.
+    refetchInterval: useSsePollInterval(30_000, 120_000),
   });
 }
 
@@ -62,9 +63,9 @@ export function useQueueStatusQuery() {
   return useQuery<QueueStatus>({
     queryKey: ["queue-status"],
     queryFn: ({ signal }) => api.getQueueStatus({ signal }),
-    // SSE invalidates ["queue-status"] reactively on job progress/lifecycle
-    // events, so this timer is just a heartbeat. Relaxed 5s → 30s.
-    refetchInterval: 30_000,
+    // SSE invalidates ["queue-status"] on every job progress and lifecycle
+    // event, so while the stream is open this is a two-minute safety net.
+    refetchInterval: useSsePollInterval(30_000, 120_000),
   });
 }
 
@@ -76,7 +77,9 @@ export function useLlmStatusQuery() {
   return useQuery<LlmStatus>({
     queryKey: LLM_STATUS_QUERY_KEY,
     queryFn: ({ signal }) => api.getLlmStatus({ signal }),
-    refetchInterval: 30_000,
+    // Job events refetch it; the interval is what notices a host going down,
+    // so it keeps polling, just less often while the stream is open.
+    refetchInterval: useSsePollInterval(30_000, 60_000),
   });
 }
 
@@ -133,7 +136,7 @@ export function useYoutubePlaylistsQuery() {
     queryKey: ["youtube", "playlists"],
     queryFn: ({ signal }) => api.getYoutubePlaylists({ signal }),
     // SSE youtube:playlist refreshes this; the timer keeps "checked 6 min ago" honest.
-    refetchInterval: 60_000,
+    refetchInterval: useSsePollInterval(60_000, 180_000),
   });
 }
 
@@ -149,8 +152,9 @@ export function useYoutubePipelineQuery() {
   return useQuery({
     queryKey: ["youtube", "pipeline"],
     queryFn: ({ signal }) => api.getYoutubePipeline({ signal }),
-    // Translation jobs start and finish without a YouTube event; the timer catches the GPU hold lifting.
-    refetchInterval: 10_000,
+    // Job lifecycle events invalidate it too (see sse.ts), so the timer only
+    // has to catch the GPU hold lifting; it polls slowly while the stream is open.
+    refetchInterval: useSsePollInterval(10_000, 60_000),
   });
 }
 
