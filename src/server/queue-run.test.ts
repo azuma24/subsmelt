@@ -14,6 +14,7 @@ fs.mkdirSync(process.env.MEDIA_DIR);
 const db = await import("./db.js");
 const config = await import("./config.js");
 const queue = await import("./queue.js");
+const usage = await import("./usage.js");
 
 (globalThis as any).AI_SDK_LOG_WARNINGS = false;
 
@@ -184,6 +185,38 @@ test("a translating job reports the connection and model running it", async () =
   }
 
   assert.equal(queue.getJobConnection(job), null);
+  db.deleteJob(job);
+});
+
+test("every LLM call a job makes lands in the usage ledger with its model and file", async () => {
+  useConnections("single", [
+    { id: "gpu", label: "Local 4090", provider: "local", model: "qwen3-14b", endpoint: "http://gpu.test/v1" },
+  ]);
+  usage.clearUsage();
+  const job = addJob({ srtExists: true, outputExists: false });
+  const run = queue.processQueue();
+  try {
+    await waitFor(() => {
+      for (const answer of release.splice(0)) answer("你好");
+      return db.getJob(job)?.status === "done";
+    }, "the job to finish");
+  } finally {
+    queue.requestStop();
+    await run;
+    release.length = 0;
+    resetConnections();
+  }
+
+  const { recent, byModel } = usage.buildUsageReport("all");
+  assert.ok(recent.length > 0);
+  assert.ok(
+    recent.every((call) => call.jobId === job && call.srtName === `job-${jobSeq}.srt` && call.model === "qwen3-14b"),
+  );
+  assert.deepEqual(
+    byModel.map((m) => [m.provider, m.model, m.connectionLabel, m.costUsd]),
+    [["local", "qwen3-14b", "Local 4090", null]],
+  );
+  assert.equal(db.getJob(job)?.input_tokens, recent.length);
   db.deleteJob(job);
 });
 

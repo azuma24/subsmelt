@@ -2,6 +2,7 @@
   "nav": {
     "languages": "语言",
     "logs": "日志",
+    "usage": "用量",
     "settings": "设置",
     "convert": "转换",
     "whisper": "转录",
@@ -1436,5 +1437,95 @@
     "manage": "管理连接",
     "emptyHint": "尚未设置 LLM 连接。添加一个即可开始翻译。",
     "errorHint": "无法加载连接状态。"
+  },
+  "usage": {
+    "title": "用量",
+    "subtitle": "SubSmelt 发出的每次 LLM 调用的 token 数和预估费用。",
+    "refresh": "刷新",
+    "clear": "清除用量历史",
+    "loadFailed": "无法加载用量: {{message}}",
+    "noFile": "无文件",
+    "calls": "{{calls}} 次调用",
+    "inOut": "输入 {{input}} · 输出 {{output}}",
+    "range": {
+      "label": "时间范围",
+      "7d": "7天",
+      "30d": "30天",
+      "90d": "90天",
+      "365d": "1年",
+      "all": "全部"
+    },
+    "confirm": {
+      "title": "清除用量历史?",
+      "message": "这会删除所有已记录的 LLM 调用。任务上的 token 总数保持不变。此操作无法撤销。",
+      "confirm": "清除历史"
+    },
+    "toast": {
+      "cleared": "已清除用量历史({{deleted}} 次调用)",
+      "clearFailed": "无法清除用量历史: {{message}}"
+    },
+    "empty": {
+      "title": "尚无已记录的 LLM 调用",
+      "rangeTitle": "此时间范围内没有 LLM 调用",
+      "body": "账本会随着翻译的运行而填充。每次分析、分块、重试和标题调用都会连同其 token 数和预估费用显示在这里。"
+    },
+    "stat": {
+      "total": "总 token",
+      "input": "输入",
+      "output": "输出",
+      "cost": "预估费用",
+      "costNa": "不适用",
+      "costNaHelp": "本地模型和未定价的模型没有费用估算",
+      "calls": "LLM 调用",
+      "files": "文件",
+      "budget": "本月预算",
+      "overBudget": "超出预算",
+      "budgetOf": "本月预算 {{budget}}",
+      "cached": "缓存 {{tokens}}",
+      "reasoning": "推理 {{tokens}}"
+    },
+    "chart": {
+      "tokensTitle": "每日 token",
+      "costTitle": "每日费用",
+      "input": "输入",
+      "output": "输出",
+      "showTable": "显示表格",
+      "hideTable": "隐藏表格",
+      "keyboard": "{{title}}。使用方向键逐日浏览。",
+      "tokensSummary": "{{from}} 至 {{to}} 每日 token:共 {{total}},{{peakDay}} 达到峰值 {{peak}}。",
+      "costSummary": "{{from}} 至 {{to}} 每日预估费用:共 {{total}}。"
+    },
+    "table": {
+      "day": "日期",
+      "calls": "调用",
+      "cost": "费用",
+      "file": "文件",
+      "time": "时间",
+      "kind": "类型",
+      "model": "模型",
+      "input": "输入",
+      "output": "输出"
+    },
+    "byModel": {
+      "title": "按模型"
+    },
+    "byKind": {
+      "title": "按调用类型",
+      "help": "单行是分块失败后逐行重新翻译的回退方式,因此这里占比高意味着重试开销大。"
+    },
+    "kind": {
+      "analysis": "分析",
+      "chunk": "分块",
+      "single": "单行",
+      "refine": "润色",
+      "title": "标题",
+      "convert": "转换"
+    },
+    "topFiles": {
+      "title": "热门文件"
+    },
+    "recent": {
+      "title": "最近调用"
+    }
   }
 }

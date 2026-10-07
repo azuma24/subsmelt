@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { logger } from "../logger.js";
 import type { LlmMode, ResolvedConnection } from "../connections.js";
+import type { UsageKind } from "../../shared/usage.js";
 import type { CloudProvider, TokenUsage } from "./ai-client.js";
 import { retryTranslate, translateChunk, translateSingle } from "./ai-client.js";
 import { parseSubtitle, readSubtitleFileText, saveTranslated, splitIntoChunks, type SubtitleCue } from "./utils.js";
@@ -103,14 +104,12 @@ export interface TranslateFileOptions {
   acquireConnection?: (conn: ResolvedConnection) => Promise<() => void>;
   /** Connections already reserved by this job (so translateFile must not re-lock). */
   reservedConnectionIds?: Iterable<string>;
-  /**
-   * Token-usage aggregator. Fired incrementally after each successful LLM call
-   * (analysis, chunk, single, refine) for this file so a caller can live-update a
-   * running total. Purely additive: callers that omit it are unaffected. No DB or
-   * UI is touched here — this only plumbs usage out.
-   */
-  onUsage?: (u: TokenUsage) => void;
+  /** Fired after each successful LLM call, naming what it was for and which connection ran it. */
+  onUsage?: (u: UsageEvent) => void;
 }
+
+/** One successful LLM call's tokens, attributed. */
+export type UsageEvent = TokenUsage & { kind: UsageKind; connection: ResolvedConnection };
 
 /** Suffix for in-progress translations; renamed onto the real path when done. */
 export const PARTIAL_SUFFIX = ".part";
@@ -186,6 +185,9 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     usedConnIds.add(c.id);
     opts.onConnectionUsed?.({ id: c.id, label: c.label });
   };
+  const { onUsage } = opts;
+  const usageFor = (kind: UsageKind, connection: ResolvedConnection) =>
+    onUsage ? (u: TokenUsage) => onUsage({ ...u, kind, connection }) : undefined;
   const reservedConnectionIds = new Set(opts.reservedConnectionIds ?? []);
   // One failed chunk worker fails the whole job, so its siblings must stop
   // calling the LLM and rewriting the partial instead of running the file to
@@ -259,7 +261,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
           abortSignal,
           maxAnalysisLines: opts.analysisLinesByConnection?.get(conn.id) ?? opts.maxAnalysisLines,
           requestTimeoutMs: jobTimeoutMs,
-          onUsage: opts.onUsage,
+          onUsage: usageFor("analysis", conn),
         }),
       );
       markUsed(conn);
@@ -354,7 +356,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
                 disableToolCalls: opts.disableToolCalls,
                 requestTimeoutMs: jobTimeoutMs,
                 contextPromptPrefix,
-                onUsage: opts.onUsage,
+                onUsage: usageFor("chunk", conn),
               })
                 .then((r) => {
                   if (!Array.isArray(r) || r.length !== coreText.length) {
@@ -411,7 +413,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
                 abortSignal,
                 disableToolCalls: opts.disableToolCalls,
                 requestTimeoutMs: timeoutMs,
-                onUsage: opts.onUsage,
+                onUsage: usageFor("single", conn),
               }),
             retries,
             1000,
@@ -565,7 +567,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
             abortSignal,
             disableToolCalls: opts.disableToolCalls,
             requestTimeoutMs: jobTimeoutMs,
-            onUsage: opts.onUsage,
+            onUsage: usageFor("refine", refineConn),
           }),
         );
         if (refined) translatedWindow = refined;

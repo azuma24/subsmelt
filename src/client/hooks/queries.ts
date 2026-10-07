@@ -11,6 +11,8 @@ import type {
   Task,
   TranscriptionHealth,
   TranscriptionHistoryEntry,
+  UsageRange,
+  UsageReport,
 } from "../types";
 
 export type { JobsResponse };
@@ -192,5 +194,15 @@ export function useWhisperModelsQuery(enabled = true) {
     queryFn: ({ signal }) => api.listWhisperModels({ signal }),
     enabled,
     staleTime: 15_000,
+  });
+}
+
+export function useUsageQuery(range: UsageRange) {
+  return useQuery<UsageReport>({
+    queryKey: ["usage", range],
+    queryFn: ({ signal }) => api.getUsage(range, { signal }),
+    // A range switch keeps the previous report on screen instead of blanking the charts.
+    placeholderData: keepPreviousData,
+    refetchInterval: useSsePollInterval(30_000, 120_000),
   });
 }

@@ -2,6 +2,7 @@
   "nav": {
     "languages": "Nyelvek",
     "logs": "Naplók",
+    "usage": "Használat",
     "settings": "Beállítások",
     "convert": "Konvertálás",
     "whisper": "Átírás",
@@ -1436,5 +1437,95 @@
     "manage": "Kapcsolatok kezelése",
     "emptyHint": "Még nincs beállítva LLM-kapcsolat. Adj hozzá egyet a fordítás megkezdéséhez.",
     "errorHint": "A kapcsolatok állapota nem tölthető be."
+  },
+  "usage": {
+    "title": "Használat",
+    "subtitle": "A SubSmelt által indított minden LLM-hívás tokenjei és becsült költsége.",
+    "refresh": "Frissítés",
+    "clear": "Használati előzmények törlése",
+    "loadFailed": "A használati adatok nem tölthetők be: {{message}}",
+    "noFile": "Nincs fájl",
+    "calls": "{{calls}} hívás",
+    "inOut": "{{input}} be · {{output}} ki",
+    "range": {
+      "label": "Időtartomány",
+      "7d": "7 n",
+      "30d": "30 n",
+      "90d": "90 n",
+      "365d": "1 év",
+      "all": "Mind"
+    },
+    "confirm": {
+      "title": "Törli a használati előzményeket?",
+      "message": "Ez minden rögzített LLM-hívást töröl. A feladatok token-összegei változatlanok maradnak. Ez nem vonható vissza.",
+      "confirm": "Előzmények törlése"
+    },
+    "toast": {
+      "cleared": "A használati előzmények törölve ({{deleted}} hívás)",
+      "clearFailed": "A használati előzmények törlése nem sikerült: {{message}}"
+    },
+    "empty": {
+      "title": "Még nincs rögzített LLM-hívás",
+      "rangeTitle": "Ebben az időtartományban nincs LLM-hívás",
+      "body": "A napló a fordítások futásával telik meg. Minden elemzési, részlet-, újrapróbálkozási és címhívás itt jelenik meg a tokenjeivel és becsült költségével."
+    },
+    "stat": {
+      "total": "Tokenek összesen",
+      "input": "Bemenet",
+      "output": "Kimenet",
+      "cost": "Becsült költség",
+      "costNa": "n/a",
+      "costNaHelp": "A helyi és ár nélküli modellekhez nincs költségbecslés",
+      "calls": "LLM-hívások",
+      "files": "Fájlok",
+      "budget": "Havi keret",
+      "overBudget": "Keret túllépve",
+      "budgetOf": "ebből {{budget}} ebben a hónapban",
+      "cached": "{{tokens}} gyorsítótárból",
+      "reasoning": "{{tokens}} érvelésre"
+    },
+    "chart": {
+      "tokensTitle": "Tokenek naponta",
+      "costTitle": "Költség naponta",
+      "input": "Bemenet",
+      "output": "Kimenet",
+      "showTable": "Táblázat megjelenítése",
+      "hideTable": "Táblázat elrejtése",
+      "keyboard": "{{title}}. A nyílbillentyűkkel léphet a napok között.",
+      "tokensSummary": "Tokenek naponta {{from}} és {{to}} között: összesen {{total}}, csúcs {{peak}} ekkor: {{peakDay}}.",
+      "costSummary": "Becsült költség naponta {{from}} és {{to}} között: összesen {{total}}."
+    },
+    "table": {
+      "day": "Nap",
+      "calls": "Hívások",
+      "cost": "Költség",
+      "file": "Fájl",
+      "time": "Idő",
+      "kind": "Típus",
+      "model": "Modell",
+      "input": "Be",
+      "output": "Ki"
+    },
+    "byModel": {
+      "title": "Modell szerint"
+    },
+    "byKind": {
+      "title": "Hívástípus szerint",
+      "help": "Az Egy sor a tartalék megoldás, amely egy részlet hibája után soronként újrafordít, ezért itt a nagy arány újrapróbálkozási többletet jelent."
+    },
+    "kind": {
+      "analysis": "Elemzés",
+      "chunk": "Részlet",
+      "single": "Egy sor",
+      "refine": "Finomítás",
+      "title": "Cím",
+      "convert": "Konvertálás"
+    },
+    "topFiles": {
+      "title": "Legtöbbet használt fájlok"
+    },
+    "recent": {
+      "title": "Legutóbbi hívások"
+    }
   }
 }

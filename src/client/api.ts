@@ -1,4 +1,7 @@
 import type {
+  UsageCleared,
+  UsageRange,
+  UsageReport,
   FolderNode,
   JobPreview,
   Job,
@@ -185,6 +188,9 @@ export const getLogs = (
   return fetchJSON<LogEntry[]>(`/logs?${q.toString()}`, opts);
 };
 export const clearLogsApi = () => fetchJSON("/logs", { method: "DELETE" });
+
+export const getUsage = (range: UsageRange, opts?: FetchOpts) => fetchJSON<UsageReport>(`/usage?range=${range}`, opts);
+export const deleteUsage = () => fetchJSON<UsageCleared>("/usage", { method: "DELETE" });
 
 // Connection test — no payload tests the active connection; a payload tests
 // the supplied (possibly unsaved) connection fields. `connectionId` names a

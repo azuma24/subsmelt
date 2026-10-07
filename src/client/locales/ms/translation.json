@@ -2,6 +2,7 @@
   "nav": {
     "languages": "Bahasa",
     "logs": "Log",
+    "usage": "Penggunaan",
     "settings": "Tetapan",
     "convert": "Tukar",
     "whisper": "Transkripsi",
@@ -1436,5 +1437,95 @@
     "manage": "Urus sambungan",
     "emptyHint": "Belum ada sambungan LLM. Tambah satu untuk mula menterjemah.",
     "errorHint": "Status sambungan tidak dapat dimuatkan."
+  },
+  "usage": {
+    "title": "Penggunaan",
+    "subtitle": "Token dan anggaran kos bagi setiap panggilan LLM yang dibuat oleh SubSmelt.",
+    "refresh": "Muat semula",
+    "clear": "Kosongkan sejarah penggunaan",
+    "loadFailed": "Tidak dapat memuatkan penggunaan: {{message}}",
+    "noFile": "Tiada fail",
+    "calls": "{{calls}} panggilan",
+    "inOut": "{{input}} masuk · {{output}} keluar",
+    "range": {
+      "label": "Julat masa",
+      "7d": "7h",
+      "30d": "30h",
+      "90d": "90h",
+      "365d": "1t",
+      "all": "Semua"
+    },
+    "confirm": {
+      "title": "Kosongkan sejarah penggunaan?",
+      "message": "Ini memadam setiap panggilan LLM yang direkodkan. Jumlah token pada tugas kekal seperti sedia ada. Tindakan ini tidak boleh dibuat asal.",
+      "confirm": "Kosongkan sejarah"
+    },
+    "toast": {
+      "cleared": "Sejarah penggunaan dikosongkan ({{deleted}} panggilan)",
+      "clearFailed": "Tidak dapat mengosongkan sejarah penggunaan: {{message}}"
+    },
+    "empty": {
+      "title": "Belum ada panggilan LLM direkodkan",
+      "rangeTitle": "Tiada panggilan LLM dalam julat masa ini",
+      "body": "Lejar terisi apabila terjemahan berjalan. Setiap panggilan analisis, cebisan, cuba semula dan tajuk muncul di sini bersama token dan anggaran kosnya."
+    },
+    "stat": {
+      "total": "Jumlah token",
+      "input": "Input",
+      "output": "Output",
+      "cost": "Anggaran kos",
+      "costNa": "t/a",
+      "costNaHelp": "Model tempatan dan model tanpa harga tiada anggaran kos",
+      "calls": "Panggilan LLM",
+      "files": "Fail",
+      "budget": "Bajet bulan ini",
+      "overBudget": "Melebihi bajet",
+      "budgetOf": "daripada {{budget}} bulan ini",
+      "cached": "{{tokens}} daripada cache",
+      "reasoning": "{{tokens}} penaakulan"
+    },
+    "chart": {
+      "tokensTitle": "Token sehari",
+      "costTitle": "Kos sehari",
+      "input": "Input",
+      "output": "Output",
+      "showTable": "Papar jadual",
+      "hideTable": "Sembunyi jadual",
+      "keyboard": "{{title}}. Gunakan kekunci anak panah untuk bergerak antara hari.",
+      "tokensSummary": "Token sehari dari {{from}} hingga {{to}}: jumlah {{total}}, puncak {{peak}} pada {{peakDay}}.",
+      "costSummary": "Anggaran kos sehari dari {{from}} hingga {{to}}: jumlah {{total}}."
+    },
+    "table": {
+      "day": "Hari",
+      "calls": "Panggilan",
+      "cost": "Kos",
+      "file": "Fail",
+      "time": "Masa",
+      "kind": "Jenis",
+      "model": "Model",
+      "input": "Masuk",
+      "output": "Keluar"
+    },
+    "byModel": {
+      "title": "Mengikut model"
+    },
+    "byKind": {
+      "title": "Mengikut jenis panggilan",
+      "help": "Baris tunggal ialah sandaran yang menterjemah semula satu baris pada satu masa selepas cebisan gagal, jadi bahagian yang besar di sini bermakna beban cuba semula."
+    },
+    "kind": {
+      "analysis": "Analisis",
+      "chunk": "Cebisan",
+      "single": "Baris tunggal",
+      "refine": "Penambahbaikan",
+      "title": "Tajuk",
+      "convert": "Penukaran"
+    },
+    "topFiles": {
+      "title": "Fail teratas"
+    },
+    "recent": {
+      "title": "Panggilan terkini"
+    }
   }
 }

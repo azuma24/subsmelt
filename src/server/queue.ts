@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import path from "node:path";
 import { countPendingJobs, claimPendingJob, updateJob, type JobRow } from "./db.js";
 import { getAllSettings, getTask, getSetting } from "./config.js";
 import { readSettings } from "./settings-schema.js";
@@ -22,6 +23,7 @@ import {
 } from "./queue/state.js";
 import { DEFAULT_LLM_ENDPOINT, runJob } from "./queue/run-job.js";
 import { writeJobTitle } from "./queue/titles.js";
+import { recordUsage } from "./usage.js";
 
 // The per-job state (what translates now, on which connection, what was
 // cancelled) lives in ./queue/state.ts; the routes read it through these.
@@ -268,6 +270,7 @@ async function repairMissingTitles() {
       temperature: typed.temperature,
       disableToolCalls: typed.disable_tool_calls,
       requestTimeoutMs,
+      onUsage: (u) => recordUsage({ ...u, jobId: job.id, src: job.srt_path, srtName: path.basename(job.srt_path) }),
     });
   }
 }

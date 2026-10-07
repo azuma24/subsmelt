@@ -2,6 +2,7 @@
   "nav": {
     "languages": "Języki",
     "logs": "Dzienniki",
+    "usage": "Użycie",
     "settings": "Ustawienia",
     "convert": "Konwertuj",
     "whisper": "Transkrypcja",
@@ -1450,5 +1451,95 @@
     "manage": "Zarządzaj połączeniami",
     "emptyHint": "Nie skonfigurowano jeszcze żadnego połączenia LLM. Dodaj je, aby zacząć tłumaczyć.",
     "errorHint": "Nie udało się wczytać stanu połączeń."
+  },
+  "usage": {
+    "title": "Użycie",
+    "subtitle": "Tokeny i szacowany koszt każdego wywołania LLM wykonanego przez SubSmelt.",
+    "refresh": "Odśwież",
+    "clear": "Wyczyść historię użycia",
+    "loadFailed": "Nie udało się wczytać użycia: {{message}}",
+    "noFile": "Brak pliku",
+    "calls": "{{calls}} wywołań",
+    "inOut": "{{input}} wej. · {{output}} wyj.",
+    "range": {
+      "label": "Zakres czasu",
+      "7d": "7 d",
+      "30d": "30 d",
+      "90d": "90 d",
+      "365d": "1 r",
+      "all": "Wszystko"
+    },
+    "confirm": {
+      "title": "Wyczyścić historię użycia?",
+      "message": "Spowoduje to usunięcie wszystkich zapisanych wywołań LLM. Sumy tokenów w zadaniach pozostaną bez zmian. Tej operacji nie można cofnąć.",
+      "confirm": "Wyczyść historię"
+    },
+    "toast": {
+      "cleared": "Historia użycia wyczyszczona ({{deleted}} wywołań)",
+      "clearFailed": "Nie udało się wyczyścić historii użycia: {{message}}"
+    },
+    "empty": {
+      "title": "Nie zapisano jeszcze żadnych wywołań LLM",
+      "rangeTitle": "Brak wywołań LLM w tym zakresie czasu",
+      "body": "Rejestr wypełnia się w miarę działania tłumaczeń. Każde wywołanie analizy, fragmentu, ponowienia i tytułu pojawia się tu wraz z tokenami i szacowanym kosztem."
+    },
+    "stat": {
+      "total": "Tokeny łącznie",
+      "input": "Wejście",
+      "output": "Wyjście",
+      "cost": "Szac. koszt",
+      "costNa": "brak danych",
+      "costNaHelp": "Modele lokalne i bez cennika nie mają szacunku kosztu",
+      "calls": "Wywołania LLM",
+      "files": "Pliki",
+      "budget": "Budżet miesięczny",
+      "overBudget": "Przekroczony budżet",
+      "budgetOf": "z {{budget}} w tym miesiącu",
+      "cached": "{{tokens}} z pamięci podręcznej",
+      "reasoning": "{{tokens}} na rozumowanie"
+    },
+    "chart": {
+      "tokensTitle": "Tokeny dziennie",
+      "costTitle": "Koszt dziennie",
+      "input": "Wejście",
+      "output": "Wyjście",
+      "showTable": "Pokaż tabelę",
+      "hideTable": "Ukryj tabelę",
+      "keyboard": "{{title}}. Użyj klawiszy strzałek, aby przechodzić między dniami.",
+      "tokensSummary": "Tokeny dziennie od {{from}} do {{to}}: łącznie {{total}}, szczyt {{peak}} w dniu {{peakDay}}.",
+      "costSummary": "Szacowany koszt dziennie od {{from}} do {{to}}: łącznie {{total}}."
+    },
+    "table": {
+      "day": "Dzień",
+      "calls": "Wywołania",
+      "cost": "Koszt",
+      "file": "Plik",
+      "time": "Czas",
+      "kind": "Typ",
+      "model": "Model",
+      "input": "Wej.",
+      "output": "Wyj."
+    },
+    "byModel": {
+      "title": "Według modelu"
+    },
+    "byKind": {
+      "title": "Według typu wywołania",
+      "help": "Pojedynczy wiersz to rozwiązanie awaryjne, które po niepowodzeniu fragmentu tłumaczy ponownie po jednym wierszu, więc duży udział tutaj oznacza narzut ponowień."
+    },
+    "kind": {
+      "analysis": "Analiza",
+      "chunk": "Fragment",
+      "single": "Pojedynczy wiersz",
+      "refine": "Dopracowanie",
+      "title": "Tytuł",
+      "convert": "Konwersja"
+    },
+    "topFiles": {
+      "title": "Najczęściej używane pliki"
+    },
+    "recent": {
+      "title": "Ostatnie wywołania"
+    }
   }
 }

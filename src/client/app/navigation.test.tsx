@@ -4,6 +4,7 @@ import { renderPage } from "../test-render";
 import { DesktopSidebar, MobileBottomNav } from "./shell";
 import { isNavActive, NAV_ITEMS } from "./constants";
 import { legacyRedirect } from "./redirects";
+import { SettingsSubpageLinks } from "../features/settings/SettingsSubpageLinks";
 
 const ORDER = ["Library", "Activity", "Transcribe", "YouTube", "Settings"];
 
@@ -46,6 +47,7 @@ test("settings sub-pages keep Settings active; Library is active only at the roo
   assert.deepEqual(active("/"), ["/"]);
   assert.deepEqual(active("/settings/logs"), ["/settings"]);
   assert.deepEqual(active("/settings/languages"), ["/settings"]);
+  assert.deepEqual(active("/settings/usage"), ["/settings"]);
   assert.deepEqual(active("/activity"), ["/activity"]);
   assert.deepEqual(active("/convert"), []);
 });
@@ -55,4 +57,10 @@ test("old Translations and Logs URLs redirect into Settings, keeping the query",
   assert.equal(legacyRedirect("/tasks", ""), "/settings/languages");
   assert.equal(legacyRedirect("/logs", "?job=12"), "/settings/logs?job=12");
   assert.equal(legacyRedirect("/settings", ""), null);
+});
+
+test("Settings links its own pages in order: Languages, Usage, Logs", () => {
+  const page = renderPage(<SettingsSubpageLinks variant="rows" />);
+  assert.deepEqual(page.links, ["Languages", "Usage", "Logs"]);
+  assert.match(page.html, /href="\/settings\/usage"/);
 });

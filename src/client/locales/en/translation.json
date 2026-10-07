@@ -4,6 +4,7 @@
     "whisper": "Transcribe",
     "convert": "Convert / Translate",
     "logs": "Logs",
+    "usage": "Usage",
     "settings": "Settings",
     "groupOperate": "Operate",
     "groupCreate": "Create",
@@ -1436,5 +1437,95 @@
     "manage": "Manage connections",
     "emptyHint": "No LLM connection is set up yet. Add one to start translating.",
     "errorHint": "Could not load the connection status."
+  },
+  "usage": {
+    "title": "Usage",
+    "subtitle": "Tokens and estimated cost of every LLM call SubSmelt made.",
+    "refresh": "Refresh",
+    "clear": "Clear usage history",
+    "loadFailed": "Could not load usage: {{message}}",
+    "noFile": "No file",
+    "calls": "{{calls}} calls",
+    "inOut": "{{input}} in · {{output}} out",
+    "range": {
+      "label": "Time range",
+      "7d": "7d",
+      "30d": "30d",
+      "90d": "90d",
+      "365d": "1y",
+      "all": "All"
+    },
+    "confirm": {
+      "title": "Clear usage history?",
+      "message": "This deletes every recorded LLM call. Token totals on jobs stay as they are. This cannot be undone.",
+      "confirm": "Clear history"
+    },
+    "toast": {
+      "cleared": "Usage history cleared ({{deleted}} calls)",
+      "clearFailed": "Could not clear usage history: {{message}}"
+    },
+    "empty": {
+      "title": "No LLM calls recorded yet",
+      "rangeTitle": "No LLM calls in this time range",
+      "body": "The ledger fills as translations run. Every analysis, chunk, retry and title call lands here with its tokens and estimated cost."
+    },
+    "stat": {
+      "total": "Total tokens",
+      "input": "Input",
+      "output": "Output",
+      "cost": "Est. cost",
+      "costNa": "n/a",
+      "costNaHelp": "Local and unpriced models have no cost estimate",
+      "calls": "LLM calls",
+      "files": "Files",
+      "budget": "Month budget",
+      "overBudget": "Over budget",
+      "budgetOf": "of {{budget}} this month",
+      "cached": "{{tokens}} from cache",
+      "reasoning": "{{tokens}} reasoning"
+    },
+    "chart": {
+      "tokensTitle": "Tokens per day",
+      "costTitle": "Cost per day",
+      "input": "Input",
+      "output": "Output",
+      "showTable": "Show table",
+      "hideTable": "Hide table",
+      "keyboard": "{{title}}. Use the arrow keys to step through the days.",
+      "tokensSummary": "Tokens per day from {{from}} to {{to}}: {{total}} in total, peak {{peak}} on {{peakDay}}.",
+      "costSummary": "Estimated cost per day from {{from}} to {{to}}: {{total}} in total."
+    },
+    "table": {
+      "day": "Day",
+      "calls": "Calls",
+      "cost": "Cost",
+      "file": "File",
+      "time": "Time",
+      "kind": "Type",
+      "model": "Model",
+      "input": "In",
+      "output": "Out"
+    },
+    "byModel": {
+      "title": "By model"
+    },
+    "byKind": {
+      "title": "By call type",
+      "help": "Single line is the fallback that retranslates one line at a time after a chunk failed, so a large share there is retry overhead."
+    },
+    "kind": {
+      "analysis": "Analysis",
+      "chunk": "Chunk",
+      "single": "Single line",
+      "refine": "Refine",
+      "title": "Title",
+      "convert": "Convert"
+    },
+    "topFiles": {
+      "title": "Top files"
+    },
+    "recent": {
+      "title": "Recent calls"
+    }
   }
 }

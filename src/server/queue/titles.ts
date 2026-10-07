@@ -1,7 +1,7 @@
 import path from "node:path";
 import type { JobRow } from "../db.js";
 import type { ResolvedConnection } from "../connections.js";
-import { cleanMediaTitle, ensureTranslatedTitle, translateSingle, type TokenUsage } from "../translator.js";
+import { cleanMediaTitle, ensureTranslatedTitle, translateSingle, type UsageEvent } from "../translator.js";
 import { stripLangSuffix } from "../scanner.js";
 import { logger } from "../logger.js";
 import { errorMessage } from "../errors.js";
@@ -30,7 +30,7 @@ export interface TitleTranslationOptions {
   /** Re-translate even when the sidecar already holds a title (a forced job). */
   force?: boolean;
   abortSignal?: AbortSignal;
-  onUsage?: (usage: TokenUsage) => void;
+  onUsage?: (usage: UsageEvent) => void;
 }
 
 /**
@@ -44,6 +44,7 @@ export async function writeJobTitle(
   opts: TitleTranslationOptions,
 ): Promise<void> {
   const base = titleBaseForJob(job);
+  const { onUsage } = opts;
   try {
     const title = await ensureTranslatedTitle({
       outputDir: path.dirname(job.output_path),
@@ -61,7 +62,7 @@ export async function writeJobTitle(
           disableToolCalls: opts.disableToolCalls,
           requestTimeoutMs: opts.requestTimeoutMs,
           abortSignal: opts.abortSignal,
-          onUsage: opts.onUsage,
+          onUsage: onUsage && ((u) => onUsage({ ...u, kind: "title", connection: opts.connection })),
         }),
     });
     if (title !== cleanMediaTitle(base)) {

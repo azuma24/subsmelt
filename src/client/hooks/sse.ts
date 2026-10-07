@@ -74,7 +74,15 @@ export function getSSEInvalidationKeys(name: SSEEventName): QueryKey[] {
     case "job:stopped":
       // Library rows read live job status from the jobs list, so per-job events
       // skip the library refetch: each one walks the whole media folder.
-      return [["jobs"], ["queue-status"], ["logs"], ["transcription-history"], ["llm-status"], ["youtube", "pipeline"]];
+      return [
+        ["jobs"],
+        ["queue-status"],
+        ["logs"],
+        ["transcription-history"],
+        ["llm-status"],
+        ["youtube", "pipeline"],
+        ["usage"],
+      ];
     case "queue:finished":
     case "queue:stopped":
       return [
@@ -85,6 +93,7 @@ export function getSSEInvalidationKeys(name: SSEEventName): QueryKey[] {
         ["library"],
         ["llm-status"],
         ["youtube", "pipeline"],
+        ["usage"],
       ];
     case "scan:complete":
       return [["jobs"], ["queue-status"], ["logs"], ["settings"], ["transcription-history"], ["library"]];
@@ -283,7 +292,9 @@ function ensureSse(queryClient: ReturnType<typeof useQueryClient>): SseSingleton
   });
   const refresh = (name?: SSEEventName) => {
     invalidator.schedule(
-      name ? getSSEInvalidationKeys(name) : [["jobs"], ["queue-status"], ["logs"], ["transcription-history"]],
+      name
+        ? getSSEInvalidationKeys(name)
+        : [["jobs"], ["queue-status"], ["logs"], ["transcription-history"], ["usage"]],
     );
   };
 

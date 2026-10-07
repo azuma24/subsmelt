@@ -3,6 +3,12 @@
 All notable changes to SubSmelt. The app and the Windows Whisper backend share a
 version number and are released together (`v0.5.6` and `whisper-v0.5.6`).
 
+## [Unreleased]
+
+### Added
+
+- **Usage page under Settings.** Every successful LLM call is now recorded with its model, connection, call type, file, input and output tokens, cache and reasoning tokens, and a cost estimate priced when the call ran. The page charts tokens and cost per day, ranks models, call types and files, and lists the last 50 calls, for 7, 30 or 90 days, a year or all time. Calls from the Convert page and title repair are counted too. `GET /api/usage?range=30d` returns the same report, and `DELETE /api/usage` clears the history.
+
 ## [0.6.7] — 2026-10-07
 
 ### Added

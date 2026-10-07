@@ -2,6 +2,7 @@
   "nav": {
     "languages": "Ngôn ngữ",
     "logs": "Nhật ký",
+    "usage": "Mức sử dụng",
     "settings": "Cài đặt",
     "convert": "Chuyển đổi",
     "whisper": "Chuyển âm",
@@ -1436,5 +1437,95 @@
     "manage": "Quản lý kết nối",
     "emptyHint": "Chưa có kết nối LLM nào. Hãy thêm một kết nối để bắt đầu dịch.",
     "errorHint": "Không tải được trạng thái kết nối."
+  },
+  "usage": {
+    "title": "Mức sử dụng",
+    "subtitle": "Token và chi phí ước tính của mọi lệnh gọi LLM mà SubSmelt đã thực hiện.",
+    "refresh": "Làm mới",
+    "clear": "Xóa lịch sử sử dụng",
+    "loadFailed": "Không thể tải mức sử dụng: {{message}}",
+    "noFile": "Không có tệp",
+    "calls": "{{calls}} lệnh gọi",
+    "inOut": "{{input}} vào · {{output}} ra",
+    "range": {
+      "label": "Khoảng thời gian",
+      "7d": "7 ngày",
+      "30d": "30 ngày",
+      "90d": "90 ngày",
+      "365d": "1 năm",
+      "all": "Tất cả"
+    },
+    "confirm": {
+      "title": "Xóa lịch sử sử dụng?",
+      "message": "Thao tác này xóa mọi lệnh gọi LLM đã ghi. Tổng token của các tác vụ vẫn giữ nguyên. Không thể hoàn tác.",
+      "confirm": "Xóa lịch sử"
+    },
+    "toast": {
+      "cleared": "Đã xóa lịch sử sử dụng ({{deleted}} lệnh gọi)",
+      "clearFailed": "Không thể xóa lịch sử sử dụng: {{message}}"
+    },
+    "empty": {
+      "title": "Chưa ghi nhận lệnh gọi LLM nào",
+      "rangeTitle": "Không có lệnh gọi LLM trong khoảng thời gian này",
+      "body": "Sổ ghi đầy dần khi các bản dịch chạy. Mỗi lệnh gọi phân tích, đoạn, thử lại và tiêu đề đều xuất hiện ở đây cùng token và chi phí ước tính."
+    },
+    "stat": {
+      "total": "Tổng token",
+      "input": "Đầu vào",
+      "output": "Đầu ra",
+      "cost": "Chi phí ước tính",
+      "costNa": "N/A",
+      "costNaHelp": "Mô hình cục bộ và mô hình chưa có giá không có ước tính chi phí",
+      "calls": "Lệnh gọi LLM",
+      "files": "Tệp",
+      "budget": "Ngân sách tháng",
+      "overBudget": "Vượt ngân sách",
+      "budgetOf": "trên {{budget}} trong tháng này",
+      "cached": "{{tokens}} từ bộ nhớ đệm",
+      "reasoning": "{{tokens}} suy luận"
+    },
+    "chart": {
+      "tokensTitle": "Token mỗi ngày",
+      "costTitle": "Chi phí mỗi ngày",
+      "input": "Đầu vào",
+      "output": "Đầu ra",
+      "showTable": "Hiện bảng",
+      "hideTable": "Ẩn bảng",
+      "keyboard": "{{title}}. Dùng phím mũi tên để chuyển giữa các ngày.",
+      "tokensSummary": "Token mỗi ngày từ {{from}} đến {{to}}: tổng {{total}}, cao nhất {{peak}} vào {{peakDay}}.",
+      "costSummary": "Chi phí ước tính mỗi ngày từ {{from}} đến {{to}}: tổng {{total}}."
+    },
+    "table": {
+      "day": "Ngày",
+      "calls": "Lệnh gọi",
+      "cost": "Chi phí",
+      "file": "Tệp",
+      "time": "Thời gian",
+      "kind": "Loại",
+      "model": "Mô hình",
+      "input": "Vào",
+      "output": "Ra"
+    },
+    "byModel": {
+      "title": "Theo mô hình"
+    },
+    "byKind": {
+      "title": "Theo loại lệnh gọi",
+      "help": "Dòng đơn là phương án dự phòng dịch lại từng dòng một sau khi một đoạn thất bại, nên tỷ trọng lớn ở đây nghĩa là chi phí phát sinh do thử lại."
+    },
+    "kind": {
+      "analysis": "Phân tích",
+      "chunk": "Đoạn",
+      "single": "Dòng đơn",
+      "refine": "Tinh chỉnh",
+      "title": "Tiêu đề",
+      "convert": "Chuyển đổi"
+    },
+    "topFiles": {
+      "title": "Tệp dùng nhiều nhất"
+    },
+    "recent": {
+      "title": "Lệnh gọi gần đây"
+    }
   }
 }

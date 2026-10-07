@@ -21,26 +21,42 @@ import { errorMessage, errorName, errorStatus } from "../errors.js";
 export type CloudProvider = LlmProvider;
 
 /**
- * Token usage captured from a single generateText call. Normalised across AI SDK
- * versions: v6 exposes `inputTokens`/`outputTokens`, older versions used
- * `promptTokens`/`completionTokens`. We surface the v6 names.
+ * Token usage captured from a single generateText call, in the AI SDK's names.
+ * Cache and reasoning counts are breakdowns: cache reads and writes are part of
+ * `inputTokens`, reasoning is part of `outputTokens`.
  */
-export type TokenUsage = { inputTokens: number; outputTokens: number };
+export type TokenUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  reasoningTokens: number;
+};
 
 /**
  * Defensively extract a normalised {@link TokenUsage} from a generateText result.
- * Handles both v6 (`inputTokens`/`outputTokens`) and legacy
- * (`promptTokens`/`completionTokens`) shapes, treating missing/undefined fields
- * as 0. Returns null when nothing usable is present.
+ * Reads the AI SDK's `inputTokenDetails`/`outputTokenDetails` breakdowns and
+ * falls back to the legacy `promptTokens`/`completionTokens` names, treating
+ * missing fields as 0. Returns null when no input or output was reported.
  */
 export function extractUsage(result: unknown): TokenUsage | null {
   const usage = (result as { usage?: Record<string, unknown> } | null)?.usage;
   if (!usage || typeof usage !== "object") return null;
   const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  const details = (v: unknown): Record<string, unknown> =>
+    v && typeof v === "object" ? (v as Record<string, unknown>) : {};
   const inputTokens = num(usage.inputTokens) || num(usage.promptTokens);
   const outputTokens = num(usage.outputTokens) || num(usage.completionTokens);
   if (inputTokens === 0 && outputTokens === 0) return null;
-  return { inputTokens, outputTokens };
+  const input = details(usage.inputTokenDetails);
+  const output = details(usage.outputTokenDetails);
+  return {
+    inputTokens,
+    outputTokens,
+    cacheReadTokens: num(input.cacheReadTokens),
+    cacheWriteTokens: num(input.cacheWriteTokens),
+    reasoningTokens: num(output.reasoningTokens),
+  };
 }
 
 /** Fire an onUsage callback for a generateText result, swallowing extraction failures. */

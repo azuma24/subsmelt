@@ -2,6 +2,7 @@
   "nav": {
     "languages": "Mga Wika",
     "logs": "Mga Log",
+    "usage": "Paggamit",
     "settings": "Mga Setting",
     "convert": "I-convert",
     "whisper": "Transkripsiyon",
@@ -1436,5 +1437,95 @@
     "manage": "Pamahalaan ang mga koneksyon",
     "emptyHint": "Wala pang naka-set up na koneksyon ng LLM. Magdagdag ng isa para magsimulang magsalin.",
     "errorHint": "Hindi ma-load ang status ng mga koneksyon."
+  },
+  "usage": {
+    "title": "Paggamit",
+    "subtitle": "Mga token at tantyang gastos ng bawat tawag sa LLM na ginawa ng SubSmelt.",
+    "refresh": "I-refresh",
+    "clear": "I-clear ang history ng paggamit",
+    "loadFailed": "Hindi ma-load ang paggamit: {{message}}",
+    "noFile": "Walang file",
+    "calls": "{{calls}} tawag",
+    "inOut": "{{input}} input · {{output}} output",
+    "range": {
+      "label": "Saklaw ng oras",
+      "7d": "7d",
+      "30d": "30d",
+      "90d": "90d",
+      "365d": "1y",
+      "all": "Lahat"
+    },
+    "confirm": {
+      "title": "I-clear ang history ng paggamit?",
+      "message": "Buburahin nito ang bawat naitalang tawag sa LLM. Mananatili ang kabuuang token sa mga job. Hindi na ito mababawi.",
+      "confirm": "I-clear ang history"
+    },
+    "toast": {
+      "cleared": "Na-clear ang history ng paggamit ({{deleted}} tawag)",
+      "clearFailed": "Hindi ma-clear ang history ng paggamit: {{message}}"
+    },
+    "empty": {
+      "title": "Wala pang naitalang tawag sa LLM",
+      "rangeTitle": "Walang tawag sa LLM sa saklaw ng oras na ito",
+      "body": "Napupuno ang ledger habang tumatakbo ang mga pagsasalin. Lahat ng tawag para sa analysis, chunk, retry at pamagat ay lalabas dito kasama ang mga token at tantyang gastos nito."
+    },
+    "stat": {
+      "total": "Kabuuang token",
+      "input": "Input",
+      "output": "Output",
+      "cost": "Tantyang gastos",
+      "costNa": "n/a",
+      "costNaHelp": "Walang tantya ng gastos ang mga lokal at walang presyong modelo",
+      "calls": "Mga tawag sa LLM",
+      "files": "Mga file",
+      "budget": "Badyet ngayong buwan",
+      "overBudget": "Lampas sa badyet",
+      "budgetOf": "ng {{budget}} ngayong buwan",
+      "cached": "{{tokens}} mula sa cache",
+      "reasoning": "{{tokens}} sa reasoning"
+    },
+    "chart": {
+      "tokensTitle": "Mga token bawat araw",
+      "costTitle": "Gastos bawat araw",
+      "input": "Input",
+      "output": "Output",
+      "showTable": "Ipakita ang talahanayan",
+      "hideTable": "Itago ang talahanayan",
+      "keyboard": "{{title}}. Gamitin ang mga arrow key para lumipat sa mga araw.",
+      "tokensSummary": "Mga token bawat araw mula {{from}} hanggang {{to}}: {{total}} sa kabuuan, pinakamataas na {{peak}} noong {{peakDay}}.",
+      "costSummary": "Tantyang gastos bawat araw mula {{from}} hanggang {{to}}: {{total}} sa kabuuan."
+    },
+    "table": {
+      "day": "Araw",
+      "calls": "Mga tawag",
+      "cost": "Gastos",
+      "file": "File",
+      "time": "Oras",
+      "kind": "Uri",
+      "model": "Modelo",
+      "input": "In",
+      "output": "Out"
+    },
+    "byModel": {
+      "title": "Ayon sa modelo"
+    },
+    "byKind": {
+      "title": "Ayon sa uri ng tawag",
+      "help": "Ang Isang linya ay ang fallback na nagsasalin muli ng isang linya kada beses kapag pumalya ang isang chunk, kaya ang malaking bahagi rito ay sobrang gastos sa retry."
+    },
+    "kind": {
+      "analysis": "Analysis",
+      "chunk": "Chunk",
+      "single": "Isang linya",
+      "refine": "Refine",
+      "title": "Pamagat",
+      "convert": "Convert"
+    },
+    "topFiles": {
+      "title": "Mga nangungunang file"
+    },
+    "recent": {
+      "title": "Mga kamakailang tawag"
+    }
   }
 }

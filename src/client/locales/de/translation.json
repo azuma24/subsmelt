@@ -2,6 +2,7 @@
   "nav": {
     "languages": "Sprachen",
     "logs": "Protokolle",
+    "usage": "Nutzung",
     "settings": "Einstellungen",
     "convert": "Konvertieren",
     "whisper": "Transkribieren",
@@ -1436,5 +1437,95 @@
     "manage": "Verbindungen verwalten",
     "emptyHint": "Noch keine LLM-Verbindung eingerichtet. Füge eine hinzu, um mit dem Übersetzen zu beginnen.",
     "errorHint": "Der Verbindungsstatus konnte nicht geladen werden."
+  },
+  "usage": {
+    "title": "Nutzung",
+    "subtitle": "Tokens und geschätzte Kosten jedes LLM-Aufrufs, den SubSmelt gemacht hat.",
+    "refresh": "Aktualisieren",
+    "clear": "Nutzungsverlauf löschen",
+    "loadFailed": "Nutzung konnte nicht geladen werden: {{message}}",
+    "noFile": "Keine Datei",
+    "calls": "{{calls}} Aufrufe",
+    "inOut": "{{input}} ein · {{output}} aus",
+    "range": {
+      "label": "Zeitraum",
+      "7d": "7 T",
+      "30d": "30 T",
+      "90d": "90 T",
+      "365d": "1 J",
+      "all": "Alle"
+    },
+    "confirm": {
+      "title": "Nutzungsverlauf löschen?",
+      "message": "Dadurch wird jeder erfasste LLM-Aufruf gelöscht. Die Token-Summen der Aufträge bleiben unverändert. Das lässt sich nicht rückgängig machen.",
+      "confirm": "Verlauf löschen"
+    },
+    "toast": {
+      "cleared": "Nutzungsverlauf gelöscht ({{deleted}} Aufrufe)",
+      "clearFailed": "Nutzungsverlauf konnte nicht gelöscht werden: {{message}}"
+    },
+    "empty": {
+      "title": "Noch keine LLM-Aufrufe erfasst",
+      "rangeTitle": "Keine LLM-Aufrufe in diesem Zeitraum",
+      "body": "Das Protokoll füllt sich, während Übersetzungen laufen. Jeder Aufruf für Analyse, Block, Wiederholung und Titel erscheint hier mit seinen Tokens und geschätzten Kosten."
+    },
+    "stat": {
+      "total": "Tokens gesamt",
+      "input": "Eingabe",
+      "output": "Ausgabe",
+      "cost": "Geschätzte Kosten",
+      "costNa": "k. A.",
+      "costNaHelp": "Für lokale und nicht bepreiste Modelle gibt es keine Kostenschätzung",
+      "calls": "LLM-Aufrufe",
+      "files": "Dateien",
+      "budget": "Monatsbudget",
+      "overBudget": "Budget überschritten",
+      "budgetOf": "von {{budget}} in diesem Monat",
+      "cached": "{{tokens}} aus dem Cache",
+      "reasoning": "{{tokens}} fürs Reasoning"
+    },
+    "chart": {
+      "tokensTitle": "Tokens pro Tag",
+      "costTitle": "Kosten pro Tag",
+      "input": "Eingabe",
+      "output": "Ausgabe",
+      "showTable": "Tabelle anzeigen",
+      "hideTable": "Tabelle ausblenden",
+      "keyboard": "{{title}}. Mit den Pfeiltasten durch die Tage gehen.",
+      "tokensSummary": "Tokens pro Tag von {{from}} bis {{to}}: insgesamt {{total}}, Spitze {{peak}} am {{peakDay}}.",
+      "costSummary": "Geschätzte Kosten pro Tag von {{from}} bis {{to}}: insgesamt {{total}}."
+    },
+    "table": {
+      "day": "Tag",
+      "calls": "Aufrufe",
+      "cost": "Kosten",
+      "file": "Datei",
+      "time": "Zeit",
+      "kind": "Typ",
+      "model": "Modell",
+      "input": "Ein",
+      "output": "Aus"
+    },
+    "byModel": {
+      "title": "Nach Modell"
+    },
+    "byKind": {
+      "title": "Nach Aufruftyp",
+      "help": "Einzelzeile ist der Ausweichmodus, der nach einem fehlgeschlagenen Block jeweils eine Zeile neu übersetzt. Ein hoher Anteil hier bedeutet also viel Wiederholungsaufwand."
+    },
+    "kind": {
+      "analysis": "Analyse",
+      "chunk": "Block",
+      "single": "Einzelzeile",
+      "refine": "Verfeinerung",
+      "title": "Titel",
+      "convert": "Konvertierung"
+    },
+    "topFiles": {
+      "title": "Meistgenutzte Dateien"
+    },
+    "recent": {
+      "title": "Letzte Aufrufe"
+    }
   }
 }

@@ -2,6 +2,7 @@
   "nav": {
     "languages": "Lingue",
     "logs": "Log",
+    "usage": "Utilizzo",
     "settings": "Impostazioni",
     "convert": "Converti",
     "whisper": "Trascrivi",
@@ -1443,5 +1444,95 @@
     "manage": "Gestisci connessioni",
     "emptyHint": "Nessuna connessione LLM configurata. Aggiungine una per iniziare a tradurre.",
     "errorHint": "Impossibile caricare lo stato delle connessioni."
+  },
+  "usage": {
+    "title": "Utilizzo",
+    "subtitle": "Token e costo stimato di ogni chiamata all'LLM effettuata da SubSmelt.",
+    "refresh": "Aggiorna",
+    "clear": "Cancella la cronologia di utilizzo",
+    "loadFailed": "Impossibile caricare l'utilizzo: {{message}}",
+    "noFile": "Nessun file",
+    "calls": "{{calls}} chiamate",
+    "inOut": "{{input}} in · {{output}} out",
+    "range": {
+      "label": "Intervallo di tempo",
+      "7d": "7 g",
+      "30d": "30 g",
+      "90d": "90 g",
+      "365d": "1 a",
+      "all": "Tutto"
+    },
+    "confirm": {
+      "title": "Cancellare la cronologia di utilizzo?",
+      "message": "Verranno eliminate tutte le chiamate all'LLM registrate. I totali di token dei lavori restano invariati. Non è possibile annullare l'operazione.",
+      "confirm": "Cancella cronologia"
+    },
+    "toast": {
+      "cleared": "Cronologia di utilizzo cancellata ({{deleted}} chiamate)",
+      "clearFailed": "Impossibile cancellare la cronologia di utilizzo: {{message}}"
+    },
+    "empty": {
+      "title": "Nessuna chiamata all'LLM registrata finora",
+      "rangeTitle": "Nessuna chiamata all'LLM in questo intervallo",
+      "body": "Il registro si riempie man mano che le traduzioni vengono eseguite. Ogni chiamata di analisi, blocco, nuovo tentativo e titolo compare qui con i suoi token e il costo stimato."
+    },
+    "stat": {
+      "total": "Token totali",
+      "input": "Input",
+      "output": "Output",
+      "cost": "Costo stimato",
+      "costNa": "n/d",
+      "costNaHelp": "I modelli locali e senza prezzo non hanno una stima del costo",
+      "calls": "Chiamate LLM",
+      "files": "File",
+      "budget": "Budget del mese",
+      "overBudget": "Budget superato",
+      "budgetOf": "di {{budget}} questo mese",
+      "cached": "{{tokens}} dalla cache",
+      "reasoning": "{{tokens}} di ragionamento"
+    },
+    "chart": {
+      "tokensTitle": "Token al giorno",
+      "costTitle": "Costo al giorno",
+      "input": "Input",
+      "output": "Output",
+      "showTable": "Mostra tabella",
+      "hideTable": "Nascondi tabella",
+      "keyboard": "{{title}}. Usa i tasti freccia per scorrere i giorni.",
+      "tokensSummary": "Token al giorno dal {{from}} al {{to}}: {{total}} in totale, picco di {{peak}} il {{peakDay}}.",
+      "costSummary": "Costo stimato al giorno dal {{from}} al {{to}}: {{total}} in totale."
+    },
+    "table": {
+      "day": "Giorno",
+      "calls": "Chiamate",
+      "cost": "Costo",
+      "file": "File",
+      "time": "Ora",
+      "kind": "Tipo",
+      "model": "Modello",
+      "input": "In",
+      "output": "Out"
+    },
+    "byModel": {
+      "title": "Per modello"
+    },
+    "byKind": {
+      "title": "Per tipo di chiamata",
+      "help": "Riga singola è il ripiego che ritraduce una riga alla volta dopo il fallimento di un blocco, quindi una quota elevata qui indica sovraccarico di nuovi tentativi."
+    },
+    "kind": {
+      "analysis": "Analisi",
+      "chunk": "Blocco",
+      "single": "Riga singola",
+      "refine": "Rifinitura",
+      "title": "Titolo",
+      "convert": "Conversione"
+    },
+    "topFiles": {
+      "title": "File principali"
+    },
+    "recent": {
+      "title": "Chiamate recenti"
+    }
   }
 }

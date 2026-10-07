@@ -185,17 +185,54 @@ test("rateLimitRetryDelayMs: detects rate limit from message text", () => {
 
 test("extractUsage: v6 shape (inputTokens/outputTokens)", () => {
   const u = extractUsage({ usage: { inputTokens: 10, outputTokens: 4, totalTokens: 14 } });
-  assert.deepEqual(u, { inputTokens: 10, outputTokens: 4 });
+  assert.deepEqual(u, {
+    inputTokens: 10,
+    outputTokens: 4,
+    cacheReadTokens: 0,
+    cacheWriteTokens: 0,
+    reasoningTokens: 0,
+  });
 });
 
 test("extractUsage: legacy shape (promptTokens/completionTokens)", () => {
   const u = extractUsage({ usage: { promptTokens: 8, completionTokens: 3 } });
-  assert.deepEqual(u, { inputTokens: 8, outputTokens: 3 });
+  assert.deepEqual(u, { inputTokens: 8, outputTokens: 3, cacheReadTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0 });
 });
 
 test("extractUsage: undefined fields treated as 0", () => {
   const u = extractUsage({ usage: { inputTokens: 5, outputTokens: undefined } });
-  assert.deepEqual(u, { inputTokens: 5, outputTokens: 0 });
+  assert.deepEqual(u, { inputTokens: 5, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0 });
+});
+
+test("extractUsage: cache and reasoning breakdowns come from the token details", () => {
+  const u = extractUsage({
+    usage: {
+      inputTokens: 1200,
+      inputTokenDetails: { noCacheTokens: 200, cacheReadTokens: 900, cacheWriteTokens: 100 },
+      outputTokens: 300,
+      outputTokenDetails: { textTokens: 120, reasoningTokens: 180 },
+      totalTokens: 1500,
+    },
+  });
+  assert.deepEqual(u, {
+    inputTokens: 1200,
+    outputTokens: 300,
+    cacheReadTokens: 900,
+    cacheWriteTokens: 100,
+    reasoningTokens: 180,
+  });
+});
+
+test("extractUsage: undefined breakdown fields are 0", () => {
+  const u = extractUsage({
+    usage: {
+      inputTokens: 7,
+      inputTokenDetails: { cacheReadTokens: undefined },
+      outputTokens: 2,
+      outputTokenDetails: { reasoningTokens: undefined },
+    },
+  });
+  assert.deepEqual(u, { inputTokens: 7, outputTokens: 2, cacheReadTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0 });
 });
 
 test("extractUsage: no usage / all-zero returns null", () => {
@@ -207,7 +244,7 @@ test("extractUsage: no usage / all-zero returns null", () => {
 // ── usage aggregation (the pattern callers use with onUsage) ─────────────────
 
 test("usage aggregation: incremental onUsage callbacks sum to a file total", () => {
-  const total: TokenUsage = { inputTokens: 0, outputTokens: 0 };
+  const total = { inputTokens: 0, outputTokens: 0 };
   const onUsage = (u: TokenUsage) => {
     total.inputTokens += u.inputTokens;
     total.outputTokens += u.outputTokens;

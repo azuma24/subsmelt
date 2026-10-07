@@ -2,6 +2,7 @@
   "nav": {
     "languages": "Idiomas",
     "logs": "Registros",
+    "usage": "Uso",
     "settings": "Configuración",
     "convert": "Convertir",
     "whisper": "Transcribir",
@@ -1443,5 +1444,95 @@
     "manage": "Gestionar conexiones",
     "emptyHint": "Aún no hay ninguna conexión LLM. Añade una para empezar a traducir.",
     "errorHint": "No se pudo cargar el estado de las conexiones."
+  },
+  "usage": {
+    "title": "Uso",
+    "subtitle": "Tokens y coste estimado de cada llamada al LLM que ha hecho SubSmelt.",
+    "refresh": "Actualizar",
+    "clear": "Borrar el historial de uso",
+    "loadFailed": "No se pudo cargar el uso: {{message}}",
+    "noFile": "Sin archivo",
+    "calls": "{{calls}} llamadas",
+    "inOut": "{{input}} entrada · {{output}} salida",
+    "range": {
+      "label": "Intervalo de tiempo",
+      "7d": "7 d",
+      "30d": "30 d",
+      "90d": "90 d",
+      "365d": "1 a",
+      "all": "Todo"
+    },
+    "confirm": {
+      "title": "¿Borrar el historial de uso?",
+      "message": "Esto elimina todas las llamadas al LLM registradas. Los totales de tokens de los trabajos no cambian. No se puede deshacer.",
+      "confirm": "Borrar historial"
+    },
+    "toast": {
+      "cleared": "Historial de uso borrado ({{deleted}} llamadas)",
+      "clearFailed": "No se pudo borrar el historial de uso: {{message}}"
+    },
+    "empty": {
+      "title": "Aún no hay llamadas al LLM registradas",
+      "rangeTitle": "No hay llamadas al LLM en este intervalo",
+      "body": "El registro se llena a medida que se ejecutan las traducciones. Cada llamada de análisis, fragmento, reintento y título aparece aquí con sus tokens y su coste estimado."
+    },
+    "stat": {
+      "total": "Tokens totales",
+      "input": "Entrada",
+      "output": "Salida",
+      "cost": "Coste est.",
+      "costNa": "n/d",
+      "costNaHelp": "Los modelos locales y sin precio no tienen estimación de coste",
+      "calls": "Llamadas al LLM",
+      "files": "Archivos",
+      "budget": "Presupuesto mensual",
+      "overBudget": "Presupuesto superado",
+      "budgetOf": "de {{budget}} este mes",
+      "cached": "{{tokens}} desde la caché",
+      "reasoning": "{{tokens}} de razonamiento"
+    },
+    "chart": {
+      "tokensTitle": "Tokens por día",
+      "costTitle": "Coste por día",
+      "input": "Entrada",
+      "output": "Salida",
+      "showTable": "Mostrar tabla",
+      "hideTable": "Ocultar tabla",
+      "keyboard": "{{title}}. Usa las teclas de flecha para recorrer los días.",
+      "tokensSummary": "Tokens por día del {{from}} al {{to}}: {{total}} en total, máximo de {{peak}} el {{peakDay}}.",
+      "costSummary": "Coste estimado por día del {{from}} al {{to}}: {{total}} en total."
+    },
+    "table": {
+      "day": "Día",
+      "calls": "Llamadas",
+      "cost": "Coste",
+      "file": "Archivo",
+      "time": "Hora",
+      "kind": "Tipo",
+      "model": "Modelo",
+      "input": "Ent.",
+      "output": "Sal."
+    },
+    "byModel": {
+      "title": "Por modelo"
+    },
+    "byKind": {
+      "title": "Por tipo de llamada",
+      "help": "Línea individual es el recurso que vuelve a traducir una línea cada vez cuando falla un fragmento, así que una proporción alta aquí indica sobrecarga por reintentos."
+    },
+    "kind": {
+      "analysis": "Análisis",
+      "chunk": "Fragmento",
+      "single": "Línea individual",
+      "refine": "Refinado",
+      "title": "Título",
+      "convert": "Conversión"
+    },
+    "topFiles": {
+      "title": "Archivos principales"
+    },
+    "recent": {
+      "title": "Llamadas recientes"
+    }
   }
 }

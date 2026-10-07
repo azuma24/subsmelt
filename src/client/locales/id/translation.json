@@ -2,6 +2,7 @@
   "nav": {
     "languages": "Bahasa",
     "logs": "Log",
+    "usage": "Penggunaan",
     "settings": "Pengaturan",
     "convert": "Konversi",
     "whisper": "Transkripsi",
@@ -1436,5 +1437,95 @@
     "manage": "Kelola koneksi",
     "emptyHint": "Belum ada koneksi LLM. Tambahkan satu untuk mulai menerjemahkan.",
     "errorHint": "Status koneksi tidak dapat dimuat."
+  },
+  "usage": {
+    "title": "Penggunaan",
+    "subtitle": "Token dan perkiraan biaya setiap panggilan LLM yang dilakukan SubSmelt.",
+    "refresh": "Muat ulang",
+    "clear": "Hapus riwayat penggunaan",
+    "loadFailed": "Tidak dapat memuat penggunaan: {{message}}",
+    "noFile": "Tanpa file",
+    "calls": "{{calls}} panggilan",
+    "inOut": "{{input}} masuk · {{output}} keluar",
+    "range": {
+      "label": "Rentang waktu",
+      "7d": "7h",
+      "30d": "30h",
+      "90d": "90h",
+      "365d": "1t",
+      "all": "Semua"
+    },
+    "confirm": {
+      "title": "Hapus riwayat penggunaan?",
+      "message": "Ini menghapus setiap panggilan LLM yang tercatat. Total token pada tugas tidak berubah. Tindakan ini tidak dapat dibatalkan.",
+      "confirm": "Hapus riwayat"
+    },
+    "toast": {
+      "cleared": "Riwayat penggunaan dihapus ({{deleted}} panggilan)",
+      "clearFailed": "Tidak dapat menghapus riwayat penggunaan: {{message}}"
+    },
+    "empty": {
+      "title": "Belum ada panggilan LLM yang tercatat",
+      "rangeTitle": "Tidak ada panggilan LLM dalam rentang waktu ini",
+      "body": "Catatan terisi seiring terjemahan berjalan. Setiap panggilan analisis, potongan, percobaan ulang, dan judul muncul di sini beserta token dan perkiraan biayanya."
+    },
+    "stat": {
+      "total": "Total token",
+      "input": "Input",
+      "output": "Output",
+      "cost": "Perkiraan biaya",
+      "costNa": "t/a",
+      "costNaHelp": "Model lokal dan tanpa harga tidak memiliki perkiraan biaya",
+      "calls": "Panggilan LLM",
+      "files": "File",
+      "budget": "Anggaran bulan ini",
+      "overBudget": "Melebihi anggaran",
+      "budgetOf": "dari {{budget}} bulan ini",
+      "cached": "{{tokens}} dari cache",
+      "reasoning": "{{tokens}} penalaran"
+    },
+    "chart": {
+      "tokensTitle": "Token per hari",
+      "costTitle": "Biaya per hari",
+      "input": "Input",
+      "output": "Output",
+      "showTable": "Tampilkan tabel",
+      "hideTable": "Sembunyikan tabel",
+      "keyboard": "{{title}}. Gunakan tombol panah untuk berpindah antarhari.",
+      "tokensSummary": "Token per hari dari {{from}} sampai {{to}}: total {{total}}, puncak {{peak}} pada {{peakDay}}.",
+      "costSummary": "Perkiraan biaya per hari dari {{from}} sampai {{to}}: total {{total}}."
+    },
+    "table": {
+      "day": "Hari",
+      "calls": "Panggilan",
+      "cost": "Biaya",
+      "file": "File",
+      "time": "Waktu",
+      "kind": "Jenis",
+      "model": "Model",
+      "input": "Masuk",
+      "output": "Keluar"
+    },
+    "byModel": {
+      "title": "Menurut model"
+    },
+    "byKind": {
+      "title": "Menurut jenis panggilan",
+      "help": "Satu baris adalah cadangan yang menerjemahkan ulang satu baris sekali jalan setelah sebuah potongan gagal, jadi porsi besar di sini berarti beban percobaan ulang."
+    },
+    "kind": {
+      "analysis": "Analisis",
+      "chunk": "Potongan",
+      "single": "Satu baris",
+      "refine": "Penyempurnaan",
+      "title": "Judul",
+      "convert": "Konversi"
+    },
+    "topFiles": {
+      "title": "File teratas"
+    },
+    "recent": {
+      "title": "Panggilan terbaru"
+    }
   }
 }

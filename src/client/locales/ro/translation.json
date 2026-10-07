@@ -2,6 +2,7 @@
   "nav": {
     "languages": "Limbi",
     "logs": "Jurnale",
+    "usage": "Utilizare",
     "settings": "Setări",
     "convert": "Conversie",
     "whisper": "Transcriere",
@@ -1443,5 +1444,95 @@
     "manage": "Gestionează conexiunile",
     "emptyHint": "Nu există încă nicio conexiune LLM. Adaugă una pentru a începe traducerea.",
     "errorHint": "Starea conexiunilor nu a putut fi încărcată."
+  },
+  "usage": {
+    "title": "Utilizare",
+    "subtitle": "Tokenurile și costul estimat al fiecărui apel LLM făcut de SubSmelt.",
+    "refresh": "Reîmprospătează",
+    "clear": "Șterge istoricul de utilizare",
+    "loadFailed": "Utilizarea nu a putut fi încărcată: {{message}}",
+    "noFile": "Niciun fișier",
+    "calls": "{{calls}} apeluri",
+    "inOut": "{{input}} intrare · {{output}} ieșire",
+    "range": {
+      "label": "Interval de timp",
+      "7d": "7 z",
+      "30d": "30 z",
+      "90d": "90 z",
+      "365d": "1 an",
+      "all": "Tot"
+    },
+    "confirm": {
+      "title": "Ștergi istoricul de utilizare?",
+      "message": "Această acțiune șterge fiecare apel LLM înregistrat. Totalurile de tokenuri ale lucrărilor rămân neschimbate. Acțiunea nu poate fi anulată.",
+      "confirm": "Șterge istoricul"
+    },
+    "toast": {
+      "cleared": "Istoricul de utilizare a fost șters ({{deleted}} apeluri)",
+      "clearFailed": "Istoricul de utilizare nu a putut fi șters: {{message}}"
+    },
+    "empty": {
+      "title": "Încă nu a fost înregistrat niciun apel LLM",
+      "rangeTitle": "Niciun apel LLM în acest interval de timp",
+      "body": "Registrul se umple pe măsură ce rulează traducerile. Fiecare apel de analiză, fragment, reîncercare și titlu apare aici cu tokenurile și costul estimat."
+    },
+    "stat": {
+      "total": "Total tokenuri",
+      "input": "Intrare",
+      "output": "Ieșire",
+      "cost": "Cost estimat",
+      "costNa": "indisp.",
+      "costNaHelp": "Modelele locale și cele fără preț nu au estimare de cost",
+      "calls": "Apeluri LLM",
+      "files": "Fișiere",
+      "budget": "Buget lunar",
+      "overBudget": "Buget depășit",
+      "budgetOf": "din {{budget}} luna aceasta",
+      "cached": "{{tokens}} din cache",
+      "reasoning": "{{tokens}} de raționament"
+    },
+    "chart": {
+      "tokensTitle": "Tokenuri pe zi",
+      "costTitle": "Cost pe zi",
+      "input": "Intrare",
+      "output": "Ieșire",
+      "showTable": "Arată tabelul",
+      "hideTable": "Ascunde tabelul",
+      "keyboard": "{{title}}. Folosește tastele săgeți pentru a parcurge zilele.",
+      "tokensSummary": "Tokenuri pe zi între {{from}} și {{to}}: {{total}} în total, vârf de {{peak}} pe {{peakDay}}.",
+      "costSummary": "Cost estimat pe zi între {{from}} și {{to}}: {{total}} în total."
+    },
+    "table": {
+      "day": "Zi",
+      "calls": "Apeluri",
+      "cost": "Cost",
+      "file": "Fișier",
+      "time": "Ora",
+      "kind": "Tip",
+      "model": "Model",
+      "input": "Intr.",
+      "output": "Ieș."
+    },
+    "byModel": {
+      "title": "După model"
+    },
+    "byKind": {
+      "title": "După tipul apelului",
+      "help": "Linie unică este soluția de rezervă care retraduce o linie pe rând după ce un fragment eșuează, deci o pondere mare aici înseamnă cost suplimentar din reîncercări."
+    },
+    "kind": {
+      "analysis": "Analiză",
+      "chunk": "Fragment",
+      "single": "Linie unică",
+      "refine": "Rafinare",
+      "title": "Titlu",
+      "convert": "Conversie"
+    },
+    "topFiles": {
+      "title": "Cele mai folosite fișiere"
+    },
+    "recent": {
+      "title": "Apeluri recente"
+    }
   }
 }
