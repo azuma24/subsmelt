@@ -33,6 +33,7 @@ import { isWatcherRunning, restartWatcher } from "../watcher.js";
 import { parseTaskUpdate, sanitizeLanguageName, settingError, validateOutputPattern } from "./validation.js";
 import { SECRET_SETTING_KEYS } from "../settings-schema.js";
 import { errorMessage } from "../errors.js";
+import { recordUsage } from "../usage.js";
 
 // Pure client-driven format conversion (no translation, no DB). The browser
 // uploads file contents; we re-stringify each into the target format and return
@@ -355,6 +356,7 @@ export function registerSettingsTasksRoutes(app: Express): void {
               const diagnostics = summarizeTranslationError(error);
               logger.warn("translate", `Convert retry ${attempt}: ${diagnostics.message} (backoff ${backoff}ms)`);
             },
+            onUsage: (u) => recordUsage({ ...u, kind: "convert", jobId: null, srtName: name }),
           });
           outputs.push({ name: outName, content: fs.readFileSync(outputPath, "utf8") });
         } catch (error) {

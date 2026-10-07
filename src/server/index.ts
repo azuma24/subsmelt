@@ -20,6 +20,7 @@ import { registerJobsRoutes } from "./routes/jobs.js";
 import { registerModelsRoutes } from "./routes/models.js";
 import { registerLlmStatusRoutes } from "./routes/llm-status.js";
 import { registerYoutubeRoutes } from "./routes/youtube.js";
+import { registerUsageRoutes } from "./routes/usage.js";
 import { YoutubeStore } from "./youtube/store.js";
 import { YoutubeWorker } from "./youtube/worker.js";
 import {
@@ -231,6 +232,7 @@ app.delete("/api/logs", (_req, res) => {
 
 registerModelsRoutes(app);
 registerLlmStatusRoutes(app);
+registerUsageRoutes(app);
 
 registerTranscriptionRoutes(app);
 

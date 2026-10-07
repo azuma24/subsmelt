@@ -2,7 +2,8 @@ import { addJobUsage, updateJob, type JobRow } from "../db.js";
 import { getAllSettings, getTask } from "../config.js";
 import { readSettings, type TypedSettings } from "../settings-schema.js";
 import type { TranslationTask } from "../../shared/tasks.js";
-import { planJobContext, summarizeTranslationError, translateFile } from "../translator.js";
+import { planJobContext, summarizeTranslationError, translateFile, type UsageEvent } from "../translator.js";
+import { recordUsage } from "../usage.js";
 import type { LlmMode, ResolvedConnection } from "../connections.js";
 import { logger } from "../logger.js";
 import { broadcast } from "../sse.js";
@@ -282,7 +283,7 @@ async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
         },
       );
     },
-    onUsage: (u) => addJobUsage(job.id, u.inputTokens, u.outputTokens),
+    onUsage: (u) => recordJobUsage(ctx, u),
     onAnalysis: (analysis) => {
       updateJob(job.id, { analysis_context: analysis });
       logger.info("translate", `Context prepared for ${srtName} (${langCode})`, job.id, {
@@ -339,6 +340,12 @@ function settleJob(ctx: JobContext): void {
   void notify("job:done", { jobId: job.id, durationSeconds, srtName, langCode });
 }
 
+/** Counts one LLM call toward the job's live totals and the usage ledger. */
+function recordJobUsage(ctx: JobContext, usage: UsageEvent): void {
+  addJobUsage(ctx.job.id, usage.inputTokens, usage.outputTokens);
+  recordUsage({ ...usage, jobId: ctx.job.id, srtName: ctx.srtName });
+}
+
 /** Translates the media title into the folder's sidecar on the job's primary connection. */
 async function translateJobTitle(ctx: JobContext, plan: JobPlan): Promise<void> {
   const { job, typed } = ctx;
@@ -353,7 +360,7 @@ async function translateJobTitle(ctx: JobContext, plan: JobPlan): Promise<void> 
     // The job was re-run on purpose, so the cached title goes too.
     force: !!job.force,
     abortSignal: ctx.abort.signal,
-    onUsage: (u) => addJobUsage(job.id, u.inputTokens, u.outputTokens),
+    onUsage: (u) => recordJobUsage(ctx, u),
   });
 }
 
