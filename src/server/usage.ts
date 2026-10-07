@@ -163,7 +163,7 @@ export function buildUsageReport(range: UsageRange, now: Date = new Date()): Usa
     recent: all<UsageCall>(
       `SELECT ts, job_id AS jobId, srt_name AS srtName, kind, model, input_tokens AS inputTokens,
         output_tokens AS outputTokens, cost_usd AS costUsd
-      FROM llm_usage ${where} ORDER BY id DESC LIMIT ${RECENT_CALLS}`,
+      FROM llm_usage ${where} ORDER BY ts DESC, id DESC LIMIT ${RECENT_CALLS}`,
     ),
   };
 }

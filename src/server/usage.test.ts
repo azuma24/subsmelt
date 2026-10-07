@@ -138,9 +138,9 @@ test("7d sums only the last seven UTC days and fills every day", async () => {
   assert.deepEqual(
     report.recent.map((c) => [c.kind, c.srtName]),
     [
-      ["analysis", "b.srt"],
-      ["single", "a.srt"],
       ["chunk", "a.srt"],
+      ["single", "a.srt"],
+      ["analysis", "b.srt"],
     ],
   );
 });
