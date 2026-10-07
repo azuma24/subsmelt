@@ -2,6 +2,7 @@
   "nav": {
     "languages": "Talen",
     "logs": "Logboeken",
+    "usage": "Gebruik",
     "settings": "Instellingen",
     "convert": "Converteren",
     "whisper": "Transcribeer",
@@ -1436,5 +1437,95 @@
     "manage": "Verbindingen beheren",
     "emptyHint": "Er is nog geen LLM-verbinding ingesteld. Voeg er een toe om te beginnen met vertalen.",
     "errorHint": "De verbindingsstatus kon niet worden geladen."
+  },
+  "usage": {
+    "title": "Gebruik",
+    "subtitle": "Tokens en geschatte kosten van elke LLM-aanroep die SubSmelt heeft gedaan.",
+    "refresh": "Vernieuwen",
+    "clear": "Gebruiksgeschiedenis wissen",
+    "loadFailed": "Gebruik kon niet worden geladen: {{message}}",
+    "noFile": "Geen bestand",
+    "calls": "{{calls}} aanroepen",
+    "inOut": "{{input}} in · {{output}} uit",
+    "range": {
+      "label": "Tijdsbereik",
+      "7d": "7d",
+      "30d": "30d",
+      "90d": "90d",
+      "365d": "1j",
+      "all": "Alles"
+    },
+    "confirm": {
+      "title": "Gebruiksgeschiedenis wissen?",
+      "message": "Hiermee wordt elke vastgelegde LLM-aanroep verwijderd. De token-totalen van opdrachten blijven zoals ze zijn. Dit kan niet ongedaan worden gemaakt.",
+      "confirm": "Geschiedenis wissen"
+    },
+    "toast": {
+      "cleared": "Gebruiksgeschiedenis gewist ({{deleted}} aanroepen)",
+      "clearFailed": "Gebruiksgeschiedenis kon niet worden gewist: {{message}}"
+    },
+    "empty": {
+      "title": "Nog geen LLM-aanroepen vastgelegd",
+      "rangeTitle": "Geen LLM-aanroepen in dit tijdsbereik",
+      "body": "Het logboek vult zich terwijl vertalingen draaien. Elke aanroep voor analyse, blok, nieuwe poging en titel verschijnt hier met zijn tokens en geschatte kosten."
+    },
+    "stat": {
+      "total": "Tokens totaal",
+      "input": "Invoer",
+      "output": "Uitvoer",
+      "cost": "Geschatte kosten",
+      "costNa": "n.v.t.",
+      "costNaHelp": "Voor lokale en niet geprijsde modellen is er geen kostenschatting",
+      "calls": "LLM-aanroepen",
+      "files": "Bestanden",
+      "budget": "Maandbudget",
+      "overBudget": "Over budget",
+      "budgetOf": "van {{budget}} deze maand",
+      "cached": "{{tokens}} uit cache",
+      "reasoning": "{{tokens}} redenering"
+    },
+    "chart": {
+      "tokensTitle": "Tokens per dag",
+      "costTitle": "Kosten per dag",
+      "input": "Invoer",
+      "output": "Uitvoer",
+      "showTable": "Tabel tonen",
+      "hideTable": "Tabel verbergen",
+      "keyboard": "{{title}}. Gebruik de pijltjestoetsen om door de dagen te stappen.",
+      "tokensSummary": "Tokens per dag van {{from}} tot {{to}}: {{total}} in totaal, piek van {{peak}} op {{peakDay}}.",
+      "costSummary": "Geschatte kosten per dag van {{from}} tot {{to}}: {{total}} in totaal."
+    },
+    "table": {
+      "day": "Dag",
+      "calls": "Aanroepen",
+      "cost": "Kosten",
+      "file": "Bestand",
+      "time": "Tijd",
+      "kind": "Type",
+      "model": "Model",
+      "input": "In",
+      "output": "Uit"
+    },
+    "byModel": {
+      "title": "Per model"
+    },
+    "byKind": {
+      "title": "Per aanroeptype",
+      "help": "Enkele regel is de terugvaloptie die na een mislukt blok één regel tegelijk opnieuw vertaalt, dus een groot aandeel hier betekent veel overhead door nieuwe pogingen."
+    },
+    "kind": {
+      "analysis": "Analyse",
+      "chunk": "Blok",
+      "single": "Enkele regel",
+      "refine": "Verfijning",
+      "title": "Titel",
+      "convert": "Conversie"
+    },
+    "topFiles": {
+      "title": "Meest gebruikte bestanden"
+    },
+    "recent": {
+      "title": "Recente aanroepen"
+    }
   }
 }

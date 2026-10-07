@@ -2,6 +2,7 @@
   "nav": {
     "languages": "Jazyky",
     "logs": "Protokoly",
+    "usage": "Využití",
     "settings": "Nastavení",
     "convert": "Převést",
     "whisper": "Přepis",
@@ -1450,5 +1451,95 @@
     "manage": "Spravovat připojení",
     "emptyHint": "Zatím není nastavené žádné připojení LLM. Přidejte ho a začněte překládat.",
     "errorHint": "Stav připojení se nepodařilo načíst."
+  },
+  "usage": {
+    "title": "Využití",
+    "subtitle": "Tokeny a odhad nákladů každého volání LLM, které SubSmelt provedl.",
+    "refresh": "Obnovit",
+    "clear": "Smazat historii využití",
+    "loadFailed": "Využití se nepodařilo načíst: {{message}}",
+    "noFile": "Žádný soubor",
+    "calls": "{{calls}} volání",
+    "inOut": "{{input}} vstup · {{output}} výstup",
+    "range": {
+      "label": "Časové období",
+      "7d": "7 d",
+      "30d": "30 d",
+      "90d": "90 d",
+      "365d": "1 r",
+      "all": "Vše"
+    },
+    "confirm": {
+      "title": "Smazat historii využití?",
+      "message": "Tím se smažou všechna zaznamenaná volání LLM. Součty tokenů u úloh zůstanou beze změny. Tuto akci nelze vrátit zpět.",
+      "confirm": "Smazat historii"
+    },
+    "toast": {
+      "cleared": "Historie využití smazána ({{deleted}} volání)",
+      "clearFailed": "Historii využití se nepodařilo smazat: {{message}}"
+    },
+    "empty": {
+      "title": "Zatím nebylo zaznamenáno žádné volání LLM",
+      "rangeTitle": "V tomto období nejsou žádná volání LLM",
+      "body": "Záznam se plní, jak běží překlady. Každé volání analýzy, části, opakování a názvu se tu objeví se svými tokeny a odhadem nákladů."
+    },
+    "stat": {
+      "total": "Tokeny celkem",
+      "input": "Vstup",
+      "output": "Výstup",
+      "cost": "Odhad nákladů",
+      "costNa": "nedostupné",
+      "costNaHelp": "Lokální modely a modely bez ceny nemají odhad nákladů",
+      "calls": "Volání LLM",
+      "files": "Soubory",
+      "budget": "Měsíční rozpočet",
+      "overBudget": "Rozpočet překročen",
+      "budgetOf": "z {{budget}} tento měsíc",
+      "cached": "{{tokens}} z mezipaměti",
+      "reasoning": "{{tokens}} na uvažování"
+    },
+    "chart": {
+      "tokensTitle": "Tokeny za den",
+      "costTitle": "Náklady za den",
+      "input": "Vstup",
+      "output": "Výstup",
+      "showTable": "Zobrazit tabulku",
+      "hideTable": "Skrýt tabulku",
+      "keyboard": "{{title}}. Mezi dny se pohybujte šipkami.",
+      "tokensSummary": "Tokeny za den od {{from}} do {{to}}: celkem {{total}}, maximum {{peak}} dne {{peakDay}}.",
+      "costSummary": "Odhad nákladů za den od {{from}} do {{to}}: celkem {{total}}."
+    },
+    "table": {
+      "day": "Den",
+      "calls": "Volání",
+      "cost": "Náklady",
+      "file": "Soubor",
+      "time": "Čas",
+      "kind": "Typ",
+      "model": "Model",
+      "input": "Vstup",
+      "output": "Výstup"
+    },
+    "byModel": {
+      "title": "Podle modelu"
+    },
+    "byKind": {
+      "title": "Podle typu volání",
+      "help": "Jednotlivý řádek je záložní postup, který po selhání části překládá znovu jeden řádek po druhém, takže velký podíl zde znamená režii opakování."
+    },
+    "kind": {
+      "analysis": "Analýza",
+      "chunk": "Část",
+      "single": "Jednotlivý řádek",
+      "refine": "Vylepšení",
+      "title": "Název",
+      "convert": "Převod"
+    },
+    "topFiles": {
+      "title": "Nejvíce využité soubory"
+    },
+    "recent": {
+      "title": "Poslední volání"
+    }
   }
 }

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useIsMobile } from "../hooks";
+import { Icon, type IconName } from "./Icon";
 
 interface PageHeaderProps {
   /** The page title. A string becomes the h1; a node can carry a breadcrumb. */
@@ -47,9 +48,10 @@ export function PageHeader({
   );
 }
 
-export function EmptyHint({ text, subtext }: { text: string; subtext?: string }) {
+export function EmptyHint({ text, subtext, icon }: { text: string; subtext?: string; icon?: IconName }) {
   return (
     <div className="rounded-md border border-dashed border-border bg-surface-raised px-4 py-12 text-center text-sm leading-6 text-muted">
+      {icon && <Icon name={icon} size={20} className="mb-3 text-faint" />}
       <p>{text}</p>
       {subtext && <p className="mt-2 text-xs leading-6 text-faint">{subtext}</p>}
     </div>

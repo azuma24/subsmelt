@@ -2,6 +2,7 @@
   "nav": {
     "languages": "Diller",
     "logs": "Günlükler",
+    "usage": "Kullanım",
     "settings": "Ayarlar",
     "convert": "Dönüştür",
     "whisper": "Transkripsiyon",
@@ -1436,5 +1437,95 @@
     "manage": "Bağlantıları yönet",
     "emptyHint": "Henüz bir LLM bağlantısı kurulmadı. Çeviriye başlamak için bir tane ekleyin.",
     "errorHint": "Bağlantı durumu yüklenemedi."
+  },
+  "usage": {
+    "title": "Kullanım",
+    "subtitle": "SubSmelt'in yaptığı her LLM çağrısının token sayısı ve tahmini maliyeti.",
+    "refresh": "Yenile",
+    "clear": "Kullanım geçmişini temizle",
+    "loadFailed": "Kullanım yüklenemedi: {{message}}",
+    "noFile": "Dosya yok",
+    "calls": "{{calls}} çağrı",
+    "inOut": "{{input}} giriş · {{output}} çıkış",
+    "range": {
+      "label": "Zaman aralığı",
+      "7d": "7g",
+      "30d": "30g",
+      "90d": "90g",
+      "365d": "1y",
+      "all": "Tümü"
+    },
+    "confirm": {
+      "title": "Kullanım geçmişi temizlensin mi?",
+      "message": "Bu işlem kaydedilen her LLM çağrısını siler. İşlerdeki token toplamları olduğu gibi kalır. Bu işlem geri alınamaz.",
+      "confirm": "Geçmişi temizle"
+    },
+    "toast": {
+      "cleared": "Kullanım geçmişi temizlendi ({{deleted}} çağrı)",
+      "clearFailed": "Kullanım geçmişi temizlenemedi: {{message}}"
+    },
+    "empty": {
+      "title": "Henüz kaydedilmiş LLM çağrısı yok",
+      "rangeTitle": "Bu zaman aralığında LLM çağrısı yok",
+      "body": "Çeviriler çalıştıkça defter dolar. Her analiz, parça, yeniden deneme ve başlık çağrısı, token sayısı ve tahmini maliyetiyle burada görünür."
+    },
+    "stat": {
+      "total": "Toplam token",
+      "input": "Giriş",
+      "output": "Çıkış",
+      "cost": "Tahmini maliyet",
+      "costNa": "yok",
+      "costNaHelp": "Yerel ve fiyatlandırılmamış modellerin maliyet tahmini yoktur",
+      "calls": "LLM çağrıları",
+      "files": "Dosyalar",
+      "budget": "Aylık bütçe",
+      "overBudget": "Bütçe aşıldı",
+      "budgetOf": "bu ay {{budget}} üzerinden",
+      "cached": "önbellekten {{tokens}}",
+      "reasoning": "{{tokens}} muhakeme"
+    },
+    "chart": {
+      "tokensTitle": "Günlük token",
+      "costTitle": "Günlük maliyet",
+      "input": "Giriş",
+      "output": "Çıkış",
+      "showTable": "Tabloyu göster",
+      "hideTable": "Tabloyu gizle",
+      "keyboard": "{{title}}. Günler arasında gezinmek için ok tuşlarını kullanın.",
+      "tokensSummary": "{{from}} ile {{to}} arasında günlük token: toplam {{total}}, en yüksek {{peak}} ({{peakDay}}).",
+      "costSummary": "{{from}} ile {{to}} arasında günlük tahmini maliyet: toplam {{total}}."
+    },
+    "table": {
+      "day": "Gün",
+      "calls": "Çağrı",
+      "cost": "Maliyet",
+      "file": "Dosya",
+      "time": "Saat",
+      "kind": "Tür",
+      "model": "Model",
+      "input": "Giriş",
+      "output": "Çıkış"
+    },
+    "byModel": {
+      "title": "Modele göre"
+    },
+    "byKind": {
+      "title": "Çağrı türüne göre",
+      "help": "Tek satır, bir parça başarısız olduktan sonra her seferinde bir satırı yeniden çeviren yedek yöntemdir; bu yüzden buradaki büyük pay yeniden deneme yükü demektir."
+    },
+    "kind": {
+      "analysis": "Analiz",
+      "chunk": "Parça",
+      "single": "Tek satır",
+      "refine": "İnce ayar",
+      "title": "Başlık",
+      "convert": "Dönüştürme"
+    },
+    "topFiles": {
+      "title": "En çok kullanılan dosyalar"
+    },
+    "recent": {
+      "title": "Son çağrılar"
+    }
   }
 }

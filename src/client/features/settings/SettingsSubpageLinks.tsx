@@ -5,6 +5,7 @@ import { Icon } from "../../ui/Icon";
 /** Settings areas that are whole pages of their own, listed beside the sections. */
 export const SETTINGS_SUBPAGES = [
   { path: "/settings/languages", labelKey: "nav.languages" },
+  { path: "/settings/usage", labelKey: "nav.usage" },
   { path: "/settings/logs", labelKey: "nav.logs" },
 ] as const;
 

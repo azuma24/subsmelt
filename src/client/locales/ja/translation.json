@@ -2,6 +2,7 @@
   "nav": {
     "languages": "言語",
     "logs": "ログ",
+    "usage": "使用状況",
     "settings": "設定",
     "convert": "変換",
     "whisper": "文字起こし",
@@ -1436,5 +1437,95 @@
     "manage": "接続を管理",
     "emptyHint": "LLM 接続がまだ設定されていません。翻訳を始めるには接続を追加してください。",
     "errorHint": "接続の状態を読み込めませんでした。"
+  },
+  "usage": {
+    "title": "使用状況",
+    "subtitle": "SubSmeltが行ったすべてのLLM呼び出しのトークン数と推定コスト。",
+    "refresh": "更新",
+    "clear": "使用履歴を消去",
+    "loadFailed": "使用状況を読み込めませんでした: {{message}}",
+    "noFile": "ファイルなし",
+    "calls": "{{calls}} 回の呼び出し",
+    "inOut": "入力 {{input}} · 出力 {{output}}",
+    "range": {
+      "label": "期間",
+      "7d": "7日",
+      "30d": "30日",
+      "90d": "90日",
+      "365d": "1年",
+      "all": "すべて"
+    },
+    "confirm": {
+      "title": "使用履歴を消去しますか?",
+      "message": "記録されたすべてのLLM呼び出しが削除されます。ジョブのトークン合計は変わりません。この操作は元に戻せません。",
+      "confirm": "履歴を消去"
+    },
+    "toast": {
+      "cleared": "使用履歴を消去しました({{deleted}} 回の呼び出し)",
+      "clearFailed": "使用履歴を消去できませんでした: {{message}}"
+    },
+    "empty": {
+      "title": "記録されたLLM呼び出しはまだありません",
+      "rangeTitle": "この期間のLLM呼び出しはありません",
+      "body": "翻訳が実行されるたびに台帳が埋まっていきます。分析、チャンク、再試行、タイトルの各呼び出しが、トークン数と推定コストとともにここに記録されます。"
+    },
+    "stat": {
+      "total": "合計トークン",
+      "input": "入力",
+      "output": "出力",
+      "cost": "推定コスト",
+      "costNa": "該当なし",
+      "costNaHelp": "ローカルモデルや価格未設定のモデルにはコストの推定がありません",
+      "calls": "LLM呼び出し",
+      "files": "ファイル",
+      "budget": "今月の予算",
+      "overBudget": "予算超過",
+      "budgetOf": "今月の予算 {{budget}} のうち",
+      "cached": "キャッシュから {{tokens}}",
+      "reasoning": "推論 {{tokens}}"
+    },
+    "chart": {
+      "tokensTitle": "1日あたりのトークン数",
+      "costTitle": "1日あたりのコスト",
+      "input": "入力",
+      "output": "出力",
+      "showTable": "表を表示",
+      "hideTable": "表を非表示",
+      "keyboard": "{{title}}。矢印キーで日付を移動できます。",
+      "tokensSummary": "{{from}} から {{to}} までの1日あたりのトークン数: 合計 {{total}}、ピークは {{peakDay}} の {{peak}}。",
+      "costSummary": "{{from}} から {{to}} までの1日あたりの推定コスト: 合計 {{total}}。"
+    },
+    "table": {
+      "day": "日付",
+      "calls": "呼び出し",
+      "cost": "コスト",
+      "file": "ファイル",
+      "time": "時刻",
+      "kind": "種類",
+      "model": "モデル",
+      "input": "入力",
+      "output": "出力"
+    },
+    "byModel": {
+      "title": "モデル別"
+    },
+    "byKind": {
+      "title": "呼び出しの種類別",
+      "help": "単一行は、チャンクが失敗した後に1行ずつ翻訳し直すフォールバックです。ここの割合が大きい場合は再試行のオーバーヘッドが大きいことを意味します。"
+    },
+    "kind": {
+      "analysis": "分析",
+      "chunk": "チャンク",
+      "single": "単一行",
+      "refine": "改良",
+      "title": "タイトル",
+      "convert": "変換"
+    },
+    "topFiles": {
+      "title": "上位ファイル"
+    },
+    "recent": {
+      "title": "最近の呼び出し"
+    }
   }
 }

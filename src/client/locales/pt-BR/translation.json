@@ -2,6 +2,7 @@
   "nav": {
     "languages": "Idiomas",
     "logs": "Logs",
+    "usage": "Uso",
     "settings": "Configurações",
     "convert": "Converter",
     "whisper": "Transcrição",
@@ -1443,5 +1444,95 @@
     "manage": "Gerenciar conexões",
     "emptyHint": "Nenhuma conexão LLM configurada ainda. Adicione uma para começar a traduzir.",
     "errorHint": "Não foi possível carregar o status das conexões."
+  },
+  "usage": {
+    "title": "Uso",
+    "subtitle": "Tokens e custo estimado de cada chamada ao LLM feita pelo SubSmelt.",
+    "refresh": "Atualizar",
+    "clear": "Limpar histórico de uso",
+    "loadFailed": "Não foi possível carregar o uso: {{message}}",
+    "noFile": "Sem arquivo",
+    "calls": "{{calls}} chamadas",
+    "inOut": "{{input}} entrada · {{output}} saída",
+    "range": {
+      "label": "Período",
+      "7d": "7d",
+      "30d": "30d",
+      "90d": "90d",
+      "365d": "1a",
+      "all": "Tudo"
+    },
+    "confirm": {
+      "title": "Limpar o histórico de uso?",
+      "message": "Isso exclui todas as chamadas ao LLM registradas. Os totais de tokens dos trabalhos permanecem como estão. Não é possível desfazer.",
+      "confirm": "Limpar histórico"
+    },
+    "toast": {
+      "cleared": "Histórico de uso limpo ({{deleted}} chamadas)",
+      "clearFailed": "Não foi possível limpar o histórico de uso: {{message}}"
+    },
+    "empty": {
+      "title": "Nenhuma chamada ao LLM registrada ainda",
+      "rangeTitle": "Nenhuma chamada ao LLM neste período",
+      "body": "O registro se enche conforme as traduções são executadas. Cada chamada de análise, bloco, nova tentativa e título aparece aqui com seus tokens e custo estimado."
+    },
+    "stat": {
+      "total": "Total de tokens",
+      "input": "Entrada",
+      "output": "Saída",
+      "cost": "Custo est.",
+      "costNa": "n/d",
+      "costNaHelp": "Modelos locais e sem preço não têm estimativa de custo",
+      "calls": "Chamadas ao LLM",
+      "files": "Arquivos",
+      "budget": "Orçamento do mês",
+      "overBudget": "Orçamento excedido",
+      "budgetOf": "de {{budget}} neste mês",
+      "cached": "{{tokens}} do cache",
+      "reasoning": "{{tokens}} de raciocínio"
+    },
+    "chart": {
+      "tokensTitle": "Tokens por dia",
+      "costTitle": "Custo por dia",
+      "input": "Entrada",
+      "output": "Saída",
+      "showTable": "Mostrar tabela",
+      "hideTable": "Ocultar tabela",
+      "keyboard": "{{title}}. Use as setas do teclado para percorrer os dias.",
+      "tokensSummary": "Tokens por dia de {{from}} a {{to}}: {{total}} no total, pico de {{peak}} em {{peakDay}}.",
+      "costSummary": "Custo estimado por dia de {{from}} a {{to}}: {{total}} no total."
+    },
+    "table": {
+      "day": "Dia",
+      "calls": "Chamadas",
+      "cost": "Custo",
+      "file": "Arquivo",
+      "time": "Hora",
+      "kind": "Tipo",
+      "model": "Modelo",
+      "input": "Ent.",
+      "output": "Saí."
+    },
+    "byModel": {
+      "title": "Por modelo"
+    },
+    "byKind": {
+      "title": "Por tipo de chamada",
+      "help": "Linha única é o recurso de contingência que retraduz uma linha por vez depois que um bloco falha, então uma fatia grande aqui indica sobrecarga de novas tentativas."
+    },
+    "kind": {
+      "analysis": "Análise",
+      "chunk": "Bloco",
+      "single": "Linha única",
+      "refine": "Refinamento",
+      "title": "Título",
+      "convert": "Conversão"
+    },
+    "topFiles": {
+      "title": "Principais arquivos"
+    },
+    "recent": {
+      "title": "Chamadas recentes"
+    }
   }
 }

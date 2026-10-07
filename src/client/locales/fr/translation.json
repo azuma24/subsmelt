@@ -2,6 +2,7 @@
   "nav": {
     "languages": "Langues",
     "logs": "Journaux",
+    "usage": "Utilisation",
     "settings": "Paramètres",
     "convert": "Convertir",
     "whisper": "Transcrire",
@@ -1443,5 +1444,95 @@
     "manage": "Gérer les connexions",
     "emptyHint": "Aucune connexion LLM n’est encore configurée. Ajoutez-en une pour commencer à traduire.",
     "errorHint": "Impossible de charger l’état des connexions."
+  },
+  "usage": {
+    "title": "Utilisation",
+    "subtitle": "Tokens et coût estimé de chaque appel au LLM effectué par SubSmelt.",
+    "refresh": "Actualiser",
+    "clear": "Effacer l'historique d'utilisation",
+    "loadFailed": "Impossible de charger l'utilisation : {{message}}",
+    "noFile": "Aucun fichier",
+    "calls": "{{calls}} appels",
+    "inOut": "{{input}} en entrée · {{output}} en sortie",
+    "range": {
+      "label": "Période",
+      "7d": "7 j",
+      "30d": "30 j",
+      "90d": "90 j",
+      "365d": "1 an",
+      "all": "Tout"
+    },
+    "confirm": {
+      "title": "Effacer l'historique d'utilisation ?",
+      "message": "Cela supprime tous les appels au LLM enregistrés. Les totaux de tokens des tâches ne changent pas. Cette action est irréversible.",
+      "confirm": "Effacer l'historique"
+    },
+    "toast": {
+      "cleared": "Historique d'utilisation effacé ({{deleted}} appels)",
+      "clearFailed": "Impossible d'effacer l'historique d'utilisation : {{message}}"
+    },
+    "empty": {
+      "title": "Aucun appel au LLM enregistré pour l'instant",
+      "rangeTitle": "Aucun appel au LLM sur cette période",
+      "body": "Le registre se remplit au fil des traductions. Chaque appel d'analyse, de bloc, de nouvel essai et de titre apparaît ici avec ses tokens et son coût estimé."
+    },
+    "stat": {
+      "total": "Total des tokens",
+      "input": "Entrée",
+      "output": "Sortie",
+      "cost": "Coût estimé",
+      "costNa": "n/d",
+      "costNaHelp": "Les modèles locaux et sans tarif n'ont pas d'estimation de coût",
+      "calls": "Appels au LLM",
+      "files": "Fichiers",
+      "budget": "Budget du mois",
+      "overBudget": "Budget dépassé",
+      "budgetOf": "sur {{budget}} ce mois-ci",
+      "cached": "{{tokens}} depuis le cache",
+      "reasoning": "{{tokens}} de raisonnement"
+    },
+    "chart": {
+      "tokensTitle": "Tokens par jour",
+      "costTitle": "Coût par jour",
+      "input": "Entrée",
+      "output": "Sortie",
+      "showTable": "Afficher le tableau",
+      "hideTable": "Masquer le tableau",
+      "keyboard": "{{title}}. Utilisez les flèches du clavier pour parcourir les jours.",
+      "tokensSummary": "Tokens par jour du {{from}} au {{to}} : {{total}} au total, pic de {{peak}} le {{peakDay}}.",
+      "costSummary": "Coût estimé par jour du {{from}} au {{to}} : {{total}} au total."
+    },
+    "table": {
+      "day": "Jour",
+      "calls": "Appels",
+      "cost": "Coût",
+      "file": "Fichier",
+      "time": "Heure",
+      "kind": "Type",
+      "model": "Modèle",
+      "input": "Entrée",
+      "output": "Sortie"
+    },
+    "byModel": {
+      "title": "Par modèle"
+    },
+    "byKind": {
+      "title": "Par type d'appel",
+      "help": "Ligne seule est le mode de repli qui retraduit une ligne à la fois après l'échec d'un bloc ; une grosse part ici correspond donc à du surcoût de nouveaux essais."
+    },
+    "kind": {
+      "analysis": "Analyse",
+      "chunk": "Bloc",
+      "single": "Ligne seule",
+      "refine": "Affinage",
+      "title": "Titre",
+      "convert": "Conversion"
+    },
+    "topFiles": {
+      "title": "Fichiers les plus utilisés"
+    },
+    "recent": {
+      "title": "Appels récents"
+    }
   }
 }

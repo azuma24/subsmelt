@@ -2,6 +2,7 @@
   "nav": {
     "languages": "Språk",
     "logs": "Loggar",
+    "usage": "Användning",
     "settings": "Inställningar",
     "convert": "Konvertera",
     "whisper": "Transkription",
@@ -1436,5 +1437,95 @@
     "manage": "Hantera anslutningar",
     "emptyHint": "Ingen LLM-anslutning är konfigurerad än. Lägg till en för att börja översätta.",
     "errorHint": "Det gick inte att läsa in anslutningsstatus."
+  },
+  "usage": {
+    "title": "Användning",
+    "subtitle": "Tokens och uppskattad kostnad för varje LLM-anrop som SubSmelt har gjort.",
+    "refresh": "Uppdatera",
+    "clear": "Rensa användningshistoriken",
+    "loadFailed": "Det gick inte att läsa in användningen: {{message}}",
+    "noFile": "Ingen fil",
+    "calls": "{{calls}} anrop",
+    "inOut": "{{input}} in · {{output}} ut",
+    "range": {
+      "label": "Tidsintervall",
+      "7d": "7 d",
+      "30d": "30 d",
+      "90d": "90 d",
+      "365d": "1 år",
+      "all": "Alla"
+    },
+    "confirm": {
+      "title": "Rensa användningshistoriken?",
+      "message": "Det här tar bort varje registrerat LLM-anrop. Tokensummorna för jobben påverkas inte. Det går inte att ångra.",
+      "confirm": "Rensa historiken"
+    },
+    "toast": {
+      "cleared": "Användningshistoriken rensades ({{deleted}} anrop)",
+      "clearFailed": "Det gick inte att rensa användningshistoriken: {{message}}"
+    },
+    "empty": {
+      "title": "Inga LLM-anrop har registrerats ännu",
+      "rangeTitle": "Inga LLM-anrop i det här tidsintervallet",
+      "body": "Loggen fylls på allteftersom översättningar körs. Varje anrop för analys, segment, nytt försök och titel visas här med sina tokens och sin uppskattade kostnad."
+    },
+    "stat": {
+      "total": "Tokens totalt",
+      "input": "Indata",
+      "output": "Utdata",
+      "cost": "Uppsk. kostnad",
+      "costNa": "saknas",
+      "costNaHelp": "Lokala modeller och modeller utan pris har ingen kostnadsuppskattning",
+      "calls": "LLM-anrop",
+      "files": "Filer",
+      "budget": "Månadsbudget",
+      "overBudget": "Över budget",
+      "budgetOf": "av {{budget}} den här månaden",
+      "cached": "{{tokens}} från cache",
+      "reasoning": "{{tokens}} resonemang"
+    },
+    "chart": {
+      "tokensTitle": "Tokens per dag",
+      "costTitle": "Kostnad per dag",
+      "input": "Indata",
+      "output": "Utdata",
+      "showTable": "Visa tabell",
+      "hideTable": "Dölj tabell",
+      "keyboard": "{{title}}. Använd piltangenterna för att stega mellan dagarna.",
+      "tokensSummary": "Tokens per dag från {{from}} till {{to}}: {{total}} totalt, topp på {{peak}} den {{peakDay}}.",
+      "costSummary": "Uppskattad kostnad per dag från {{from}} till {{to}}: {{total}} totalt."
+    },
+    "table": {
+      "day": "Dag",
+      "calls": "Anrop",
+      "cost": "Kostnad",
+      "file": "Fil",
+      "time": "Tid",
+      "kind": "Typ",
+      "model": "Modell",
+      "input": "In",
+      "output": "Ut"
+    },
+    "byModel": {
+      "title": "Per modell"
+    },
+    "byKind": {
+      "title": "Per anropstyp",
+      "help": "Enskild rad är reservläget som översätter om en rad i taget efter att ett segment har misslyckats, så en stor andel här betyder extra kostnad för nya försök."
+    },
+    "kind": {
+      "analysis": "Analys",
+      "chunk": "Segment",
+      "single": "Enskild rad",
+      "refine": "Förfining",
+      "title": "Titel",
+      "convert": "Konvertering"
+    },
+    "topFiles": {
+      "title": "Mest använda filer"
+    },
+    "recent": {
+      "title": "Senaste anrop"
+    }
   }
 }

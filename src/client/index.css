@@ -34,6 +34,11 @@
   --red: #fb7185;
   --red-dim: rgba(251, 113, 133, 0.13);
   --red-border: rgba(251, 113, 133, 0.32);
+  /* Chart series, blue then orange: the first two slots of the dataviz
+     reference palette, validated on --surface for contrast and colour-blind
+     separation (validate_palette.js, dark mode). Marks only, never text. */
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
 
   /* Elevation: 1 lifts a control off its panel, 2 floats an overlay above the page. */
   --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -76,6 +81,8 @@ html[data-theme="light"] {
   --red: #cf222e;
   --red-dim: rgba(207, 34, 46, 0.10);
   --red-border: rgba(207, 34, 46, 0.30);
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
 
   --elevation-1: 0 1px 2px rgba(31, 35, 40, 0.08);
   --elevation-2: 0 12px 32px rgba(31, 35, 40, 0.16), 0 2px 6px rgba(31, 35, 40, 0.08);
@@ -181,6 +188,8 @@ html[data-theme="light"] {
   --color-success-soft: var(--green-dim);
   --color-success-line: var(--green-border);
   --color-scrim: var(--scrim);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
 
   --shadow-*: initial;
   --shadow-1: var(--elevation-1);
