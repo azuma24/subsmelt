@@ -8,7 +8,15 @@
  * english) are still read, so files written with them keep counting.
  */
 import type { TranslationTask } from "./config.js";
-import { isKnownLanguage, languageFileAliases, languageFileCode, languageKey, preferredChineseKey, taskLanguageKey, type PreferredChinese } from "./youtube/subtitle-routes.js";
+import {
+  isKnownLanguage,
+  languageFileAliases,
+  languageFileCode,
+  languageKey,
+  preferredChineseKey,
+  taskLanguageKey,
+  type PreferredChinese,
+} from "./youtube/subtitle-routes.js";
 
 export type { PreferredChinese };
 
@@ -21,7 +29,10 @@ export function standardLangCode(code: string, preferred: PreferredChinese = "zh
 }
 
 /** A task's standard code, read from its language name first ("Traditional Chinese" says more than "chi"). */
-export function standardTaskLangCode(task: Pick<TranslationTask, "target_lang" | "lang_code">, preferred: PreferredChinese = "zh-TW"): string {
+export function standardTaskLangCode(
+  task: Pick<TranslationTask, "target_lang" | "lang_code">,
+  preferred: PreferredChinese = "zh-TW",
+): string {
   const key = taskLanguageKey(task);
   return isKnownLanguage(key) ? languageFileCode(key, preferred) : task.lang_code.trim();
 }
@@ -59,7 +70,11 @@ const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&
  * ("{{name}}.eng.srt") gets the placeholder instead. A task whose standard
  * code another task already uses is left alone.
  */
-export function standardizeTask<T extends TranslationTask>(task: T, others: readonly TranslationTask[], preferred: PreferredChinese = "zh-TW"): T {
+export function standardizeTask<T extends TranslationTask>(
+  task: T,
+  others: readonly TranslationTask[],
+  preferred: PreferredChinese = "zh-TW",
+): T {
   const next = standardTaskLangCode(task, preferred);
   if (next === task.lang_code || others.some((o) => o.id !== task.id && o.lang_code === next)) return task;
   const spelledOut = new RegExp(`\\.${escapeRegExp(task.lang_code)}\\.`, "i");
@@ -75,10 +90,16 @@ export function standardizeTask<T extends TranslationTask>(task: T, others: read
  * switch of the preferred Chinese swaps two codes: Simplified can take "chi"
  * only after Traditional has moved off it to "cht".
  */
-export function standardizeTasks<T extends TranslationTask>(tasks: readonly T[], preferred: PreferredChinese = "zh-TW"): T[] {
+export function standardizeTasks<T extends TranslationTask>(
+  tasks: readonly T[],
+  preferred: PreferredChinese = "zh-TW",
+): T[] {
   let current = [...tasks];
   for (let pass = 0; pass <= tasks.length; pass++) {
-    const next = current.reduce<T[]>((done, task, i) => [...done, standardizeTask(task, [...done, ...current.slice(i + 1)], preferred)], []);
+    const next: T[] = [];
+    for (const [i, task] of current.entries()) {
+      next.push(standardizeTask(task, [...next, ...current.slice(i + 1)], preferred));
+    }
     if (next.every((task, i) => task === current[i])) return next;
     current = next;
   }

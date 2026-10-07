@@ -1,7 +1,7 @@
 import type {
   FolderNode,
   JobPreview,
-  JobRow,
+  Job,
   LlmHealth,
   LlmStatus,
   LogEntry,
@@ -42,10 +42,7 @@ export class ApiError extends Error {
   }
 }
 
-export async function fetchJSON<T = unknown>(
-  url: string,
-  opts: RequestInit = {},
-): Promise<T> {
+export async function fetchJSON<T = unknown>(url: string, opts: RequestInit = {}): Promise<T> {
   const headers = new Headers(opts.headers);
   if (opts.body !== undefined && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
@@ -73,13 +70,9 @@ export async function fetchJSON<T = unknown>(
 type FetchOpts = { signal?: AbortSignal };
 
 // Settings
-export const getSettings = (opts?: FetchOpts) =>
-  fetchJSON<Record<string, unknown>>("/settings", opts);
+export const getSettings = (opts?: FetchOpts) => fetchJSON<Record<string, unknown>>("/settings", opts);
 /** `rejected` lists keys the server would not write (env-pinned or unknown). */
-export const saveSettings = (
-  settings: Record<string, unknown>,
-  opts?: FetchOpts,
-) =>
+export const saveSettings = (settings: Record<string, unknown>, opts?: FetchOpts) =>
   fetchJSON<{ ok: boolean; rejected?: string[] }>("/settings", {
     ...opts,
     method: "POST",
@@ -98,39 +91,32 @@ export const updateTask = (id: number, payload: Partial<Task>) =>
     method: "PUT",
     body: JSON.stringify(payload),
   });
-export const deleteTask = (id: number) =>
-  fetchJSON(`/tasks/${id}`, { method: "DELETE" });
+export const deleteTask = (id: number) => fetchJSON(`/tasks/${id}`, { method: "DELETE" });
 
 // Scanner
-export const scanFolder = () =>
-  fetchJSON<ScanResult>("/scan", { method: "POST" });
-export const previewScan = (opts?: FetchOpts) =>
-  fetchJSON<ScanResult>("/scan/preview", opts);
-export const getFolderTree = (opts?: FetchOpts) =>
-  fetchJSON<{ root: FolderNode }>("/folders/tree", opts);
+export const scanFolder = () => fetchJSON<ScanResult>("/scan", { method: "POST" });
+export const previewScan = (opts?: FetchOpts) => fetchJSON<ScanResult>("/scan/preview", opts);
+export const getFolderTree = (opts?: FetchOpts) => fetchJSON<{ root: FolderNode }>("/folders/tree", opts);
 
 // Jobs
 export const getJobs = (opts?: FetchOpts) =>
   fetchJSON<{
-    jobs: JobRow[];
+    jobs: Job[];
     queueRunning: boolean;
     currentJobId: number | null;
   }>("/jobs", opts);
-export const retryJob = (id: number) =>
-  fetchJSON(`/jobs/${id}/retry`, { method: "POST" });
-export const forceJob = (id: number) =>
-  fetchJSON(`/jobs/${id}/force`, { method: "POST" });
-export const cancelJob = (id: number) =>
-  fetchJSON(`/jobs/${id}/cancel`, { method: "POST" });
+export const retryJob = (id: number) => fetchJSON(`/jobs/${id}/retry`, { method: "POST" });
+export const forceJob = (id: number) => fetchJSON(`/jobs/${id}/force`, { method: "POST" });
+export const cancelJob = (id: number) => fetchJSON(`/jobs/${id}/cancel`, { method: "POST" });
 export type TranslateFileRequest = { srtPath: string } & (
   | { taskId: number }
   | { langCode: string; targetLang: string }
 );
 export const translateFile = (payload: TranslateFileRequest) =>
-  fetchJSON<{ ok: boolean; jobId: number; taskId: number; created: boolean }>(
-    "/jobs/translate-file",
-    { method: "POST", body: JSON.stringify(payload) },
-  );
+  fetchJSON<{ ok: boolean; jobId: number; taskId: number; created: boolean }>("/jobs/translate-file", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 export const retryJobsApi = (ids: number[]) =>
   fetchJSON<{ ok: boolean; updated: number }>("/jobs/retry-selected", {
     method: "POST",
@@ -141,31 +127,23 @@ export const forceJobsApi = (ids: number[]) =>
     method: "POST",
     body: JSON.stringify({ ids }),
   });
-export const deleteJobApi = (id: number) =>
-  fetchJSON(`/jobs/${id}`, { method: "DELETE" });
+export const deleteJobApi = (id: number) => fetchJSON(`/jobs/${id}`, { method: "DELETE" });
 export const deleteJobsApi = (ids: number[]) =>
   fetchJSON<{ ok: boolean; deleted: number }>("/jobs/delete-selected", {
     method: "POST",
     body: JSON.stringify({ ids }),
   });
 export const clearJobs = () => fetchJSON("/jobs/clear", { method: "POST" });
-export const pinJob = (id: number) =>
-  fetchJSON(`/jobs/${id}/pin`, { method: "POST" });
-export const unpinJob = (id: number) =>
-  fetchJSON(`/jobs/${id}/unpin`, { method: "POST" });
-export const getJobPreview = (id: number, opts?: FetchOpts) =>
-  fetchJSON<JobPreview>(`/jobs/${id}/preview`, opts);
+export const pinJob = (id: number) => fetchJSON(`/jobs/${id}/pin`, { method: "POST" });
+export const unpinJob = (id: number) => fetchJSON(`/jobs/${id}/unpin`, { method: "POST" });
+export const getJobPreview = (id: number, opts?: FetchOpts) => fetchJSON<JobPreview>(`/jobs/${id}/preview`, opts);
 
 // Manual cue edits — saves edited translated lines to the OUTPUT file.
 export interface CueEditInput {
   index: number;
   text: string;
 }
-export const saveJobCues = (
-  id: number,
-  edits: CueEditInput[],
-  opts?: FetchOpts,
-) =>
+export const saveJobCues = (id: number, edits: CueEditInput[], opts?: FetchOpts) =>
   fetchJSON<{ ok: boolean; updated: number }>(`/jobs/${id}/cues`, {
     ...opts,
     method: "PUT",
@@ -181,12 +159,10 @@ export const startQueue = (ids?: number[]) =>
     body: JSON.stringify(ids && ids.length > 0 ? { ids } : {}),
   });
 export const stopQueue = () => fetchJSON("/queue/stop", { method: "POST" });
-export const getQueueStatus = (opts?: FetchOpts) =>
-  fetchJSON<QueueStatus>("/queue/status", opts);
+export const getQueueStatus = (opts?: FetchOpts) => fetchJSON<QueueStatus>("/queue/status", opts);
 
 // Watcher
-export const startWatcher = () =>
-  fetchJSON("/watcher/start", { method: "POST" });
+export const startWatcher = () => fetchJSON("/watcher/start", { method: "POST" });
 export const stopWatcher = () => fetchJSON("/watcher/stop", { method: "POST" });
 
 // Logs
@@ -225,11 +201,9 @@ export const testConnection = (payload?: {
     body: JSON.stringify(payload ?? {}),
   });
 
-export const getLlmHealth = (opts?: FetchOpts) =>
-  fetchJSON<LlmHealth>("/llm-health", opts);
+export const getLlmHealth = (opts?: FetchOpts) => fetchJSON<LlmHealth>("/llm-health", opts);
 
-export const getLlmStatus = (opts?: FetchOpts) =>
-  fetchJSON<LlmStatus>("/llm/status", opts);
+export const getLlmStatus = (opts?: FetchOpts) => fetchJSON<LlmStatus>("/llm/status", opts);
 
 // Outbound notification webhook test — sends a sample notification using the
 // currently-saved settings and reports whether the webhook accepted it.
@@ -267,8 +241,7 @@ export const convertSubtitles = (body: ConvertRequest, opts?: FetchOpts) =>
   });
 
 // Speech-to-text
-export const getTranscriptionHealth = (opts?: FetchOpts) =>
-  fetchJSON<TranscriptionHealth>("/transcribe/health", opts);
+export const getTranscriptionHealth = (opts?: FetchOpts) => fetchJSON<TranscriptionHealth>("/transcribe/health", opts);
 export interface TranscriptionLogs {
   ok: boolean;
   /** Resolved log path on the backend host, or null when logging is off. */
@@ -318,19 +291,13 @@ export const transcribeUrl = (payload: TranscribeUrlRequest) =>
     body: JSON.stringify(payload),
   });
 export const getTranscriptionHistory = (limit = 10, opts?: FetchOpts) =>
-  fetchJSON<{ attempts: TranscriptionHistoryEntry[] }>(
-    `/transcribe/history?limit=${limit}`,
-    opts,
-  );
+  fetchJSON<{ attempts: TranscriptionHistoryEntry[] }>(`/transcribe/history?limit=${limit}`, opts);
 export const clearTranscriptionHistory = () =>
   fetchJSON<{ ok: boolean; removed: number }>("/transcribe/history", {
     method: "DELETE",
   });
 export const deleteTranscriptionAttempt = (id: string) =>
-  fetchJSON<{ ok: boolean; removed: number }>(
-    `/transcribe/history/${encodeURIComponent(id)}`,
-    { method: "DELETE" },
-  );
+  fetchJSON<{ ok: boolean; removed: number }>(`/transcribe/history/${encodeURIComponent(id)}`, { method: "DELETE" });
 export const retryTranscriptionAttempt = (id: string) =>
   fetchJSON<TranscribeResponse>(`/transcribe/history/${id}/retry`, {
     method: "POST",
@@ -348,18 +315,14 @@ export const cancelAllTranscriptions = () =>
 // Whisper Model Manager — proxied through the SubSmelt server to the configured
 // whisper backend. Download progress arrives via the "model:download" SSE event
 // (matched by model id); these calls only kick off / await the terminal result.
-export const listWhisperModels = (opts?: FetchOpts) =>
-  fetchJSON<{ models: WhisperModel[] }>("/whisper/models", opts);
+export const listWhisperModels = (opts?: FetchOpts) => fetchJSON<{ models: WhisperModel[] }>("/whisper/models", opts);
 export const downloadWhisperModel = (model: string) =>
   fetchJSON<WhisperModelDownloadResult>("/whisper/models/download", {
     method: "POST",
     body: JSON.stringify({ model }),
   });
 export const deleteWhisperModel = (model: string) =>
-  fetchJSON<WhisperModelDeleteResult>(
-    `/whisper/models/${encodeURIComponent(model)}`,
-    { method: "DELETE" },
-  );
+  fetchJSON<WhisperModelDeleteResult>(`/whisper/models/${encodeURIComponent(model)}`, { method: "DELETE" });
 
 // YouTube
 export const getYoutubeStatus = (opts?: FetchOpts) => fetchJSON<YoutubeStatus>("/youtube/status", opts);
@@ -375,7 +338,10 @@ export const previewYoutubePlaylist = (url: string, kind: "playlist" | "channel"
 export const followYoutubePlaylist = (payload: YoutubePlaylistFields & { url: string; title: string }) =>
   fetchJSON<YoutubePlaylist>("/youtube/playlists", { method: "POST", body: JSON.stringify(payload) });
 export const updateYoutubePlaylist = (playlistId: string, payload: Partial<YoutubePlaylistFields>) =>
-  fetchJSON<YoutubePlaylist>(`/youtube/playlists/${encodeURIComponent(playlistId)}`, { method: "PUT", body: JSON.stringify(payload) });
+  fetchJSON<YoutubePlaylist>(`/youtube/playlists/${encodeURIComponent(playlistId)}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
 export const changeYoutubeBackfill = (playlistId: string, backfill: YoutubeBackfill) =>
   fetchJSON<{ ok: true; kept: number; released: number; skipped: number }>(
     `/youtube/playlists/${encodeURIComponent(playlistId)}/backfill`,
@@ -389,7 +355,10 @@ export const syncYoutubePlaylist = (playlistId: string) =>
     { method: "POST" },
   );
 export const downloadYoutubeVideos = (playlistId: string, videoIds: string[]) =>
-  fetchJSON<{ downloaded: number; refused: number }>(`/youtube/playlists/${encodeURIComponent(playlistId)}/videos/download`, { method: "POST", body: JSON.stringify({ videoIds }) });
+  fetchJSON<{ downloaded: number; refused: number }>(
+    `/youtube/playlists/${encodeURIComponent(playlistId)}/videos/download`,
+    { method: "POST", body: JSON.stringify({ videoIds }) },
+  );
 export const youtubeVideoAction = (videoId: string, action: YoutubeVideoAction) =>
   fetchJSON<YoutubeVideo>(`/youtube/videos/${encodeURIComponent(videoId)}/${action}`, { method: "POST" });
 export const uploadYoutubeCookies = (content: string) =>

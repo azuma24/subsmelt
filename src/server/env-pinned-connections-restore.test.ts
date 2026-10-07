@@ -13,13 +13,29 @@ const configFile = path.join(root, "config", "config.json");
 process.env.CONFIG_DIR = path.dirname(configFile);
 process.env.DATA_DIR = path.join(root, "data");
 process.env.MEDIA_DIR = path.join(root, "media");
-for (const name of ["LLM_ENDPOINT", "API_KEY", "MODEL", "WHISPER_BACKEND_URL", "WHISPER_BACKEND_TOKEN", "WHISPER_TRANSPORT"]) {
+for (const name of [
+  "LLM_ENDPOINT",
+  "API_KEY",
+  "MODEL",
+  "WHISPER_BACKEND_URL",
+  "WHISPER_BACKEND_TOKEN",
+  "WHISPER_TRANSPORT",
+]) {
   delete process.env[name];
 }
 process.env.LLM_ENDPOINT = "http://env-llm:1/v1";
 process.env.API_KEY = "sk-from-env";
 process.env.MODEL = "env-model";
-const savedLocal = { id: "local", label: "Desk", provider: "local", apiKey: "sk-saved", model: "saved-model", endpoint: "http://saved:1/v1", enabled: true, order: 0 };
+const savedLocal = {
+  id: "local",
+  label: "Desk",
+  provider: "local",
+  apiKey: "sk-saved",
+  model: "saved-model",
+  endpoint: "http://saved:1/v1",
+  enabled: true,
+  order: 0,
+};
 fs.mkdirSync(path.dirname(configFile));
 fs.writeFileSync(configFile, JSON.stringify({ settings: { llm_connections: JSON.stringify([savedLocal]) } }));
 
@@ -39,7 +55,16 @@ test("editing connections under env pins keeps the saved local connection, so re
   const connections = JSON.parse(current.llm_connections);
   assert.deepEqual([connections[0].endpoint, connections[0].model], ["http://env-llm:1/v1", "env-model"]);
   connections[0].label = "Desk GPU";
-  connections.push({ id: "openai", label: "OpenAI", provider: "openai", apiKey: "sk-cloud", model: "gpt-4o", endpoint: "", enabled: true, order: 1 });
+  connections.push({
+    id: "openai",
+    label: "OpenAI",
+    provider: "openai",
+    apiKey: "sk-cloud",
+    model: "gpt-4o",
+    endpoint: "",
+    enabled: true,
+    order: 1,
+  });
 
   const result = await (
     await fetch(`${base}/api/settings`, {
@@ -54,5 +79,8 @@ test("editing connections under env pins keeps the saved local connection, so re
   assert.deepEqual(saved[0], { ...savedLocal, label: "Desk GPU" });
   assert.equal(saved[1].apiKey, "sk-cloud");
   const effective = JSON.parse(getAllSettings().llm_connections);
-  assert.deepEqual([effective[0].endpoint, effective[0].apiKey, effective[0].model], ["http://env-llm:1/v1", "sk-from-env", "env-model"]);
+  assert.deepEqual(
+    [effective[0].endpoint, effective[0].apiKey, effective[0].model],
+    ["http://env-llm:1/v1", "sk-from-env", "env-model"],
+  );
 });

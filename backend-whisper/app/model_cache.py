@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Mapping, TypedDict
+from typing import TypedDict
 
 from .catalog import descriptor_for
 from .preflight import evaluate_model_safety
@@ -64,6 +65,7 @@ def _faster_whisper_repos() -> dict[str, str]:
     if _FW_MODELS is None:
         try:
             from faster_whisper.utils import _MODELS  # type: ignore
+
             _FW_MODELS = {str(k).lower(): str(v) for k, v in dict(_MODELS).items()}
         except Exception:  # pragma: no cover - faster-whisper not installed
             _FW_MODELS = {}

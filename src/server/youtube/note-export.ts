@@ -6,9 +6,17 @@ import { logger } from "../logger.js";
 import { notify } from "../notify.js";
 import { findAnyCase, MEDIA_DIR } from "../scanner.js";
 import { broadcast } from "../sse.js";
-import { normalizeTimeToMs, parseSubtitle, type SubtitleCue } from "../translator/convert.js";
+import { normalizeTimeToMs, parseSubtitle, cuesOf } from "../translator/convert.js";
 import { readSubtitleFileText } from "../translator/encoding.js";
-import { noteFileName, renderNote, safeNoteName, type Chapter, type Cue, type NoteInfo, type NoteTranslation } from "./note.js";
+import {
+  noteFileName,
+  renderNote,
+  safeNoteName,
+  type Chapter,
+  type Cue,
+  type NoteInfo,
+  type NoteTranslation,
+} from "./note.js";
 import { findPlaylist, type YoutubePlaylist } from "./playlists.js";
 import type { SubtitlePlan, VideoRow, YoutubeStore } from "./store.js";
 import { mkdirShared, shareFile } from "../shared-files.js";
@@ -37,7 +45,10 @@ export function notesFolderStatus(dir: string = getSetting("youtube_notes_dir"))
 export type NoteExportFailure = "unknown_video" | "no_media" | "no_transcript" | "notes_folder";
 
 export class NoteExportError extends Error {
-  constructor(readonly kind: NoteExportFailure, message: string) {
+  constructor(
+    readonly kind: NoteExportFailure,
+    message: string,
+  ) {
     super(message);
     this.name = "NoteExportError";
   }
@@ -80,7 +91,7 @@ const ASS_BREAK = /\\[Nn]/g;
 function readCues(file: string): Cue[] {
   const ext = path.extname(file).slice(1).toLowerCase();
   const parsed = parseSubtitle(readSubtitleFileText(file), ext);
-  const nodes: SubtitleCue[] = Array.isArray(parsed) ? parsed : parsed.events;
+  const nodes = cuesOf(parsed);
   const isAss = !Array.isArray(parsed);
   return nodes
     .filter((node) => node.type === "cue")
@@ -101,7 +112,8 @@ function chaptersOf(info: Info): Chapter[] {
   );
 }
 
-const sameLanguage = (a: string, b: string) => a.toLowerCase() === b.toLowerCase() || a.toLowerCase().startsWith(`${b.toLowerCase()}-`);
+const sameLanguage = (a: string, b: string) =>
+  a.toLowerCase() === b.toLowerCase() || a.toLowerCase().startsWith(`${b.toLowerCase()}-`);
 
 /** `<base>.<lang>.srt` files next to the media, by language suffix. */
 function subtitlesBesideMedia(dir: string, base: string): Map<string, string> {
@@ -117,7 +129,13 @@ function subtitlesBesideMedia(dir: string, base: string): Map<string, string> {
 /** Every path a task's subtitle can have beside the video: the name it writes first, then older spellings of its language. */
 function taskOutputPaths(dir: string, base: string, task: TranslationTask): string[] {
   return fileLangCodes(task, preferredChinese()).map((code) =>
-    path.join(dir, task.output_pattern.replace(/\{\{name\}\}/g, () => base).replace(/\{\{lang_code\}\}/g, () => code).replace(/\{\{ext\}\}/g, "srt")),
+    path.join(
+      dir,
+      task.output_pattern
+        .replace(/\{\{name\}\}/g, () => base)
+        .replace(/\{\{lang_code\}\}/g, () => code)
+        .replace(/\{\{ext\}\}/g, "srt"),
+    ),
   );
 }
 
@@ -135,7 +153,12 @@ interface Transcript {
  * The spoken-language subtitle: the one the video row records, else the file
  * in the info JSON's language, else any `<base>.<lang>.srt` no task wrote.
  */
-function findTranscript(video: VideoRow, besides: Map<string, string>, language: string | null, taskOutputs: Set<string>): Transcript | null {
+function findTranscript(
+  video: VideoRow,
+  besides: Map<string, string>,
+  language: string | null,
+  taskOutputs: Set<string>,
+): Transcript | null {
   if (video.subtitle_path) {
     const file = resolveMediaRelative(video.subtitle_path);
     if (fs.existsSync(file)) return { file, suffix: [...besides].find(([, f]) => f === file)?.[0] ?? null };
@@ -155,11 +178,17 @@ type NoteTask = NonNullable<ReturnType<typeof getTask>>;
  */
 function noteTasks(video: VideoRow, playlist: YoutubePlaylist | undefined): NoteTask[] {
   const plan = video.subtitle_plan ? (JSON.parse(video.subtitle_plan) as SubtitlePlan) : null;
-  const ids = plan ? plan.routes.map((route) => route.taskId) : playlist?.subtitleTaskIds ?? [];
+  const ids = plan ? plan.routes.map((route) => route.taskId) : (playlist?.subtitleTaskIds ?? []);
   return ids.map(getTask).filter((task) => task !== undefined);
 }
 
-function translationsFor(tasks: NoteTask[], dir: string, base: string, transcript: Transcript, sourceCues: Cue[]): NoteTranslation[] {
+function translationsFor(
+  tasks: NoteTask[],
+  dir: string,
+  base: string,
+  transcript: Transcript,
+  sourceCues: Cue[],
+): NoteTranslation[] {
   const sourceTexts = sourceCues.map((c) => c.text).join("\n");
   const out: NoteTranslation[] = [];
   for (const task of tasks) {
@@ -175,7 +204,8 @@ function translationsFor(tasks: NoteTask[], dir: string, base: string, transcrip
 
 function transcriptSource(info: Info, playlist: YoutubePlaylist | undefined, language: string | null): string {
   const creator = info.subtitles && typeof info.subtitles === "object" ? Object.keys(info.subtitles) : [];
-  const fromYoutube = playlist?.captions !== "whisper_only" && language !== null && creator.some((code) => sameLanguage(code, language));
+  const fromYoutube =
+    playlist?.captions !== "whisper_only" && language !== null && creator.some((code) => sameLanguage(code, language));
   return fromYoutube ? "youtube_captions" : `whisper:${getSetting("transcription_model")}`;
 }
 
@@ -208,7 +238,10 @@ function isInside(root: string, file: string): boolean {
  * webhook. Running it again overwrites the note; a note left under an old
  * title is removed.
  */
-export async function exportNoteForVideo(deps: NoteExportDeps, videoId: string): Promise<NoteReadyPayload & { file: string }> {
+export async function exportNoteForVideo(
+  deps: NoteExportDeps,
+  videoId: string,
+): Promise<NoteReadyPayload & { file: string }> {
   const video = deps.store.getVideo(videoId);
   if (!video) throw new NoteExportError("unknown_video", `Unknown video ${videoId}`);
   if (!video.media_path) throw new NoteExportError("no_media", `Video ${videoId} has not been downloaded`);
@@ -233,7 +266,10 @@ export async function exportNoteForVideo(deps: NoteExportDeps, videoId: string):
   const root = getSetting("youtube_notes_dir");
   const status = notesFolderStatus(root);
   if (!status.writable) {
-    throw new NoteExportError("notes_folder", status.exists ? `Notes folder ${root} is not writable` : `Notes folder ${root} is not mounted`);
+    throw new NoteExportError(
+      "notes_folder",
+      status.exists ? `Notes folder ${root} is not writable` : `Notes folder ${root} is not mounted`,
+    );
   }
 
   const cues = readCues(transcript.file);
@@ -260,7 +296,8 @@ export async function exportNoteForVideo(deps: NoteExportDeps, videoId: string):
   mkdirShared(noteDir);
   const file = path.join(noteDir, noteFileName(title, videoId));
   writeFileAtomic(file, renderNote(noteInfo, cues, translations));
-  if (video.note_path && video.note_path !== file && isInside(root, video.note_path)) fs.rmSync(video.note_path, { force: true });
+  if (video.note_path && video.note_path !== file && isInside(root, video.note_path))
+    fs.rmSync(video.note_path, { force: true });
   deps.store.setNotePath(videoId, file, new Date().toISOString());
 
   const payload: NoteReadyPayload = {

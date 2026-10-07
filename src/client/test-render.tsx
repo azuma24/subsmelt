@@ -2,11 +2,11 @@ import type { ReactElement } from "react";
 import { renderToString } from "react-dom/server";
 import { QueryClient, QueryClientProvider, type QueryKey } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
-import i18n from "i18next";
-import { I18nextProvider, initReactI18next } from "react-i18next";
+import { type Bundle, createI18n, I18nProvider } from "./i18n";
 import en from "./locales/en/translation.json";
-import { ToastProvider } from "./components/Toast";
-import { ConfirmProvider } from "./components/ConfirmModal";
+import { ToastProvider } from "./ui/Toast";
+import { ConfirmProvider } from "./ui/ConfirmModal";
+import { IsMobileContext } from "./hooks/media";
 
 export const TEST_APP_VERSION = "0.0.0-test";
 
@@ -21,13 +21,7 @@ console.error = (message?: unknown, ...rest: unknown[]) => {
   originalConsoleError(message, ...rest);
 };
 
-const i18nInstance = i18n.createInstance();
-await i18nInstance.use(initReactI18next).init({
-  resources: { en: { translation: en } },
-  lng: "en",
-  fallbackLng: "en",
-  interpolation: { escapeValue: false },
-});
+const i18nInstance = createI18n({ language: "en", fallback: "en", bundles: { en: en as Bundle } });
 
 /** Seed value that puts a query into the error state instead of giving it data. */
 export class SeededError {
@@ -45,7 +39,14 @@ export interface RenderedPage {
   links: string[];
 }
 
-const ENTITIES: Record<string, string> = { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#x27;": "'", "&nbsp;": " " };
+const ENTITIES: Record<string, string> = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#x27;": "'",
+  "&nbsp;": " ",
+};
 
 function toText(html: string): string {
   return html
@@ -64,28 +65,44 @@ function innerTexts(html: string, pattern: RegExp): string[] {
  * App.tsx. Seeded query data stands in for the API: effects never run in the
  * server renderer, so nothing is fetched.
  */
-export function renderPage(page: ReactElement, seed: QuerySeed = []): RenderedPage {
+export interface RenderOptions {
+  /** Render the phone layout, as App does below the md breakpoint. */
+  isMobile?: boolean;
+}
+
+export function renderPage(
+  page: ReactElement,
+  seed: QuerySeed = [],
+  { isMobile = false }: RenderOptions = {},
+): RenderedPage {
   // retryOnMount: false keeps a seeded error from being reported optimistically
   // as "pending" (the observer would otherwise plan a refetch on mount).
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false, staleTime: Infinity } } });
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, retryOnMount: false, staleTime: Infinity } },
+  });
   for (const [key, data] of seed) {
     if (data instanceof SeededError) {
       const error = new Error(data.message);
-      queryClient.getQueryCache().build(queryClient, { queryKey: key }).setState({ status: "error", error, fetchStatus: "idle", errorUpdateCount: 1 });
+      queryClient
+        .getQueryCache()
+        .build(queryClient, { queryKey: key })
+        .setState({ status: "error", error, fetchStatus: "idle", errorUpdateCount: 1 });
     } else {
       queryClient.setQueryData(key, data);
     }
   }
   const html = renderToString(
-    <I18nextProvider i18n={i18nInstance}>
+    <I18nProvider i18n={i18nInstance}>
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
-          <ToastProvider>
-            <ConfirmProvider>{page}</ConfirmProvider>
-          </ToastProvider>
+          <IsMobileContext.Provider value={isMobile}>
+            <ToastProvider>
+              <ConfirmProvider>{page}</ConfirmProvider>
+            </ToastProvider>
+          </IsMobileContext.Provider>
         </MemoryRouter>
       </QueryClientProvider>
-    </I18nextProvider>,
+    </I18nProvider>,
   );
   return {
     html,

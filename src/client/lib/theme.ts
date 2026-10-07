@@ -35,9 +35,15 @@ export function resolveTheme(pref: ThemePref): ResolvedTheme {
   return pref === "system" ? systemTheme() : pref;
 }
 
+/** The page background per theme; mirrors --bg in index.css. */
+const THEME_COLOR: Record<ResolvedTheme, string> = { dark: "#0b1020", light: "#f6f8fa" };
+
 export function applyTheme(pref: ThemePref): void {
   try {
-    document.documentElement.setAttribute("data-theme", resolveTheme(pref));
+    const resolved = resolveTheme(pref);
+    document.documentElement.setAttribute("data-theme", resolved);
+    // Keeps the browser chrome on phones in step with the page background.
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", THEME_COLOR[resolved]);
   } catch {
     /* ignore */
   }

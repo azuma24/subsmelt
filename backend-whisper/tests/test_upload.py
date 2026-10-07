@@ -1,8 +1,8 @@
 import io
 import os
 import unittest
-from unittest import mock
 from pathlib import Path
+from unittest import mock
 
 # --- Direct fake-function tests (no fastapi/faster-whisper needed) ---
 try:
@@ -41,7 +41,9 @@ class UploadFinalizeTests(unittest.TestCase):
         self.assertIn("-->", result["content"])
 
     def test_upload_streaming_emits_progress_then_content_result(self):
-        events = list(fake_transcribe_streaming_for_tests(Path("/uploads/clip.mkv"), self._request(), deliver="content"))
+        events = list(
+            fake_transcribe_streaming_for_tests(Path("/uploads/clip.mkv"), self._request(), deliver="content")
+        )
         progress = [e for e in events if e["type"] == "progress"]
         results = [e for e in events if e["type"] == "result"]
         self.assertGreaterEqual(len(progress), 1)
@@ -74,7 +76,9 @@ else:
     ENDPOINT_IMPORT_ERROR = None
 
 
-@unittest.skipIf(ENDPOINT_IMPORT_ERROR is not None, f"backend optional dependencies unavailable: {ENDPOINT_IMPORT_ERROR}")
+@unittest.skipIf(
+    ENDPOINT_IMPORT_ERROR is not None, f"backend optional dependencies unavailable: {ENDPOINT_IMPORT_ERROR}"
+)
 class UploadEndpointTests(unittest.TestCase):
     def setUp(self):
         os.environ["SUBSMELT_WHISPER_FAKE"] = "1"
@@ -107,8 +111,10 @@ class UploadEndpointTests(unittest.TestCase):
         # everything it inspects: a small build host refuses large-v3 with 422
         # insufficient_ram, and a host without ffmpeg refuses with 422
         # ffmpeg_missing. Neither is what this test is about.
-        with mock.patch.object(main_module, "available_ram_mb", return_value=64000), \
-             mock.patch.object(main_module, "ffmpeg_available", return_value=True):
+        with (
+            mock.patch.object(main_module, "available_ram_mb", return_value=64000),
+            mock.patch.object(main_module, "ffmpeg_available", return_value=True),
+        ):
             resp = self.client.post(
                 "/transcribe/upload",
                 files=self._file(),
@@ -132,6 +138,7 @@ class UploadEndpointTests(unittest.TestCase):
 
     def test_upload_is_saved_under_its_basename(self):
         import tempfile
+
         from starlette.datastructures import UploadFile
 
         with tempfile.TemporaryDirectory() as tmp:

@@ -28,18 +28,25 @@ const waitWarned = new Set<string>();
 
 export async function acquireConnectionLock(
   conn: LockableConnection,
-  waitMs: number = CONNECTION_LOCK_WAIT_MS
+  waitMs: number = CONNECTION_LOCK_WAIT_MS,
 ): Promise<() => void> {
   const previous = lockTails.get(conn.id) ?? Promise.resolve();
   let releaseCurrent!: () => void;
-  const current = new Promise<void>((resolve) => { releaseCurrent = resolve; });
-  lockTails.set(conn.id, previous.then(() => current));
+  const current = new Promise<void>((resolve) => {
+    releaseCurrent = resolve;
+  });
+  lockTails.set(
+    conn.id,
+    previous.then(() => current),
+  );
   outstanding.set(conn.id, (outstanding.get(conn.id) ?? 0) + 1);
 
   let timer: ReturnType<typeof setTimeout> | undefined;
   const acquired = await Promise.race([
     previous.then(() => true),
-    new Promise<boolean>((resolve) => { timer = setTimeout(() => resolve(false), waitMs); }),
+    new Promise<boolean>((resolve) => {
+      timer = setTimeout(() => resolve(false), waitMs);
+    }),
   ]);
   if (timer) clearTimeout(timer);
 
@@ -47,7 +54,7 @@ export async function acquireConnectionLock(
     waitWarned.add(conn.id);
     logger.warn(
       "queue",
-      `Connection ${conn.label} stayed busy for ${Math.round(waitMs / 1000)}s; proceeding without its lock to avoid stalling the queue.`
+      `Connection ${conn.label} stayed busy for ${Math.round(waitMs / 1000)}s; proceeding without its lock to avoid stalling the queue.`,
     );
   }
 
@@ -67,9 +74,7 @@ export async function acquireConnectionLock(
  * meant every cascaded chunk paid the full CONNECTION_LOCK_WAIT_MS and then
  * ran unlocked anyway.
  */
-export async function tryAcquireConnectionLock(
-  conn: LockableConnection
-): Promise<() => void> {
+export async function tryAcquireConnectionLock(conn: LockableConnection): Promise<() => void> {
   if ((outstanding.get(conn.id) ?? 0) > 0) return () => {};
   return acquireConnectionLock(conn);
 }

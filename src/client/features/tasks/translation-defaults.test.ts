@@ -20,10 +20,7 @@ test("new translation drafts default to automatic source detection and English o
   assert.equal(draft.source_lang, AUTO_SOURCE_LANG);
   assert.equal(draft.target_lang, DEFAULT_TARGET_LANG);
   assert.equal(draft.lang_code, DEFAULT_LANG_CODE);
-  assert.equal(
-    applyOutputFormat(draft.output_pattern, "srt"),
-    "{{name}}.{{lang_code}}.srt",
-  );
+  assert.equal(applyOutputFormat(draft.output_pattern, "srt"), "{{name}}.{{lang_code}}.srt");
 });
 
 test("quick-add presets still use automatic source detection", () => {
@@ -74,21 +71,11 @@ test("choosing a language preset updates target language, language code, and rec
 test("automatic source detection copy is localized in all bundled locales", () => {
   const requiredKeys = ["sourceAutoBadge", "sourceAutoHelp", "targetLang"];
   for (const { code: locale } of LANGUAGES) {
-    const raw = readFileSync(
-      `src/client/locales/${locale}/translation.json`,
-      "utf8",
-    );
+    const raw = readFileSync(`src/client/locales/${locale}/translation.json`, "utf8");
     const data = JSON.parse(raw);
     for (const key of requiredKeys) {
-      assert.equal(
-        typeof data.translation_languages[key],
-        "string",
-        `${locale} missing ${key}`,
-      );
-      assert.ok(
-        data.translation_languages[key].length > 0,
-        `${locale} empty ${key}`,
-      );
+      assert.equal(typeof data.translation_languages[key], "string", `${locale} missing ${key}`);
+      assert.ok(data.translation_languages[key].length > 0, `${locale} empty ${key}`);
     }
   }
 });

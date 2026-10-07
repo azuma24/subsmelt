@@ -26,15 +26,17 @@ nothing enforces agreement:
 The Windows control GUI reads its version from `app/version.py`, so it follows
 automatically — do not add a fourth constant.
 
-**2. Move `## [Unreleased]` into a dated section** in `CHANGELOG.md`.
+**2. Move `## [Unreleased]` into a dated section** in `CHANGELOG.md`, and put
+the new number in `README.md` (the "Current release" line and the pinned image
+tag in Quick Start).
 
 **3. Verify before tagging.** CI runs all of this, but a failed release tag is
 more annoying to undo than a failed push:
 
 ```bash
-npm ci --legacy-peer-deps   # the flag is required; see HANDOFF.md §3
-npm run typecheck && npm test && npm run build
-cd backend-whisper && python -m pytest tests -q
+npm ci
+npm run lint && npm test && npm run build
+cd backend-whisper && ruff check . && ruff format --check . && python -m pytest tests -q
 ```
 
 **4. Commit to `main`.** The convention is a direct commit, not a PR:

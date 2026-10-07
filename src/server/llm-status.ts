@@ -1,4 +1,5 @@
-import type { LlmMode, ResolvedConnection } from "./connections.js";
+import type { ResolvedConnection } from "./connections.js";
+import type { LlmConnectionState, LlmConnectionStatus, LlmMode, LlmStatus } from "../shared/llm.js";
 import { connectionModelsUrl } from "./translator/connection-health.js";
 import { cloudModelsRequest } from "./routes/models.js";
 
@@ -12,21 +13,7 @@ import { cloudModelsRequest } from "./routes/models.js";
  * short timeout and a cache so a polling client never hammers a backend.
  */
 
-export type LlmConnectionState = "in_use" | "idle" | "offline" | "unknown";
-
-export interface LlmConnectionStatus {
-  id: string;
-  label: string;
-  model: string;
-  host: string;
-  state: LlmConnectionState;
-  jobIds: number[];
-}
-
-export interface LlmStatus {
-  mode: LlmMode;
-  connections: LlmConnectionStatus[];
-}
+export type { LlmConnectionState, LlmConnectionStatus, LlmStatus };
 
 export type Reachability = "reachable" | "offline" | "unknown";
 export type ReachabilityProbe = (conn: ResolvedConnection) => Promise<Reachability>;
@@ -113,7 +100,10 @@ export async function buildLlmStatus({ mode, pool, activeJobs, offlineIds, probe
   const offline = new Set(offlineIds);
   const connections = await Promise.all(
     pool.map(async (conn): Promise<LlmConnectionStatus> => {
-      const jobIds = activeJobs.filter((job) => job.id === conn.id).map((job) => job.jobId).sort((a, b) => a - b);
+      const jobIds = activeJobs
+        .filter((job) => job.id === conn.id)
+        .map((job) => job.jobId)
+        .sort((a, b) => a - b);
       return {
         id: conn.id,
         label: conn.label,
@@ -129,7 +119,14 @@ export async function buildLlmStatus({ mode, pool, activeJobs, offlineIds, probe
   const leftovers = new Map<string, LlmConnectionStatus>();
   for (const job of activeJobs) {
     if (configured.has(job.id)) continue;
-    const row = leftovers.get(job.id) ?? { id: job.id, label: job.label, model: job.model, host: hostOf(job.host), state: "in_use", jobIds: [] };
+    const row = leftovers.get(job.id) ?? {
+      id: job.id,
+      label: job.label,
+      model: job.model,
+      host: hostOf(job.host),
+      state: "in_use",
+      jobIds: [],
+    };
     row.jobIds = [...row.jobIds, job.jobId].sort((a, b) => a - b);
     leftovers.set(job.id, row);
   }

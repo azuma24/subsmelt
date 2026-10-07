@@ -1,6 +1,7 @@
 """Where the nemo-speech binary and the Nemotron weights are, and whether the
 engine can run here. The loader holds a :class:`NemotronHandle` as the
 resident "model" the way it holds a WhisperModel for Whisper."""
+
 from __future__ import annotations
 
 import os

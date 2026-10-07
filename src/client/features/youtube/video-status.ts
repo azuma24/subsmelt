@@ -1,5 +1,11 @@
-import type { TFunction } from "i18next";
-import type { YoutubePipeline, YoutubeSubtitlePlan, YoutubeVideo, YoutubeVideoAction, YoutubeVideoStatus } from "../../types";
+import type { TFunction } from "../../i18n";
+import type {
+  YoutubePipeline,
+  YoutubeSubtitlePlan,
+  YoutubeVideo,
+  YoutubeVideoAction,
+  YoutubeVideoStatus,
+} from "../../types";
 import type { StatusDescriptor, StatusTone } from "../../ui/primitives";
 
 /** The filter tabs, in display order after "all". */
@@ -39,7 +45,8 @@ export function videoFilterOf(status: YoutubeVideoStatus): VideoFilter {
 }
 
 /** A transcribing video with no live progress is waiting for its subtitle step, not running it. */
-const awaitingSubtitles = (video: Pick<YoutubeVideo, "status" | "pct">) => video.status === "transcribing" && video.pct === undefined;
+const awaitingSubtitles = (video: Pick<YoutubeVideo, "status" | "pct">) =>
+  video.status === "transcribing" && video.pct === undefined;
 
 /** What a shared GPU is holding back right now. */
 export interface GpuHold {
@@ -56,9 +63,19 @@ export function gpuHold(pipeline: YoutubePipeline | undefined): GpuHold {
   return { whisper: pipeline.gpu.translationRunning, translation: pipeline.gpu.held };
 }
 
-export function videoStatusDescriptor(video: Pick<YoutubeVideo, "status" | "pct">, t: TFunction, hold: GpuHold = NO_HOLD): StatusDescriptor {
-  if (awaitingSubtitles(video)) return { glyph: "··", tone: "warn", label: t(hold.whisper ? "youtube.status.gpuWait" : "youtube.status.subtitlesNext") };
-  if (video.status === "translating" && hold.translation) return { glyph: "··", tone: "warn", label: t("youtube.status.translationHeld") };
+export function videoStatusDescriptor(
+  video: Pick<YoutubeVideo, "status" | "pct">,
+  t: TFunction,
+  hold: GpuHold = NO_HOLD,
+): StatusDescriptor {
+  if (awaitingSubtitles(video))
+    return {
+      glyph: "··",
+      tone: "warn",
+      label: t(hold.whisper ? "youtube.status.gpuWait" : "youtube.status.subtitlesNext"),
+    };
+  if (video.status === "translating" && hold.translation)
+    return { glyph: "··", tone: "warn", label: t("youtube.status.translationHeld") };
   const view = STATUS_VIEW[video.status];
   return { glyph: view.glyph, tone: view.tone, label: t(`youtube.status.${video.status}`) };
 }
@@ -78,7 +95,10 @@ export function videoActionLabelKey(status: YoutubeVideoStatus, action: YoutubeV
   return `youtube.actions.${action}`;
 }
 
-export function videoPipeline(video: Pick<YoutubeVideo, "status" | "pct" | "media_path">, hold: GpuHold = NO_HOLD): readonly PipeStep[] {
+export function videoPipeline(
+  video: Pick<YoutubeVideo, "status" | "pct" | "media_path">,
+  hold: GpuHold = NO_HOLD,
+): readonly PipeStep[] {
   if (video.status === "failed" && video.media_path) return ["done", "fail", "", ""];
   if (awaitingSubtitles(video)) return ["done", "wait", "", ""];
   if (video.status === "translating" && hold.translation) return ["done", "done", "wait", ""];
@@ -86,14 +106,18 @@ export function videoPipeline(video: Pick<YoutubeVideo, "status" | "pct" | "medi
 }
 
 /** How many of `videos` sit in each status. */
-export function statusCounts(videos: readonly Pick<YoutubeVideo, "status">[]): Partial<Record<YoutubeVideoStatus, number>> {
+export function statusCounts(
+  videos: readonly Pick<YoutubeVideo, "status">[],
+): Partial<Record<YoutubeVideoStatus, number>> {
   const counts: Partial<Record<YoutubeVideoStatus, number>> = {};
   for (const video of videos) counts[video.status] = (counts[video.status] ?? 0) + 1;
   return counts;
 }
 
 /** Video counts per filter tab. "all" leaves skipped videos out, as its list does. */
-export function countByFilter(byStatus: Partial<Record<YoutubeVideoStatus, number>>): Record<VideoFilter | "all", number> {
+export function countByFilter(
+  byStatus: Partial<Record<YoutubeVideoStatus, number>>,
+): Record<VideoFilter | "all", number> {
   const counts: Record<VideoFilter | "all", number> = { all: 0, run: 0, wait: 0, done: 0, bad: 0, off: 0 };
   for (const [status, n] of Object.entries(byStatus) as [YoutubeVideoStatus, number][]) {
     const filter = STATUS_VIEW[status].filter;
@@ -130,15 +154,26 @@ const spokenLabel = (key: string) => key.replace(/^[a-z]+/, (base) => base.toUpp
  * from creator · JPN → translated". Tasks are named by their language code.
  */
 export function subtitleSummary(
-  { subtitles: plan, transcript_source: source, status }: { subtitles: YoutubeSubtitlePlan; transcript_source: string | null; status: YoutubeVideoStatus },
+  {
+    subtitles: plan,
+    transcript_source: source,
+    status,
+  }: { subtitles: YoutubeSubtitlePlan; transcript_source: string | null; status: YoutubeVideoStatus },
   langCodes: ReadonlyMap<number, string>,
   hold: GpuHold,
   t: TFunction,
 ): string {
   const transcript = plan.spoken
-    ? t(source === "youtube_captions" ? "youtube.subs.captions" : "youtube.subs.transcript", { lang: spokenLabel(plan.spoken) })
+    ? t(source === "youtube_captions" ? "youtube.subs.captions" : "youtube.subs.transcript", {
+        lang: spokenLabel(plan.spoken),
+      })
     : t("youtube.subs.transcriptOnly");
-  const translation = status !== "translating" ? "youtube.subs.translated" : hold.translation ? "youtube.subs.waiting" : "youtube.subs.translating";
+  const translation =
+    status !== "translating"
+      ? "youtube.subs.translated"
+      : hold.translation
+        ? "youtube.subs.waiting"
+        : "youtube.subs.translating";
   const routes = plan.routes.map(({ taskId, kind }) => {
     const lang = (langCodes.get(taskId) ?? `#${taskId}`).toUpperCase();
     if (kind === "same") return t("youtube.subs.transcript", { lang });

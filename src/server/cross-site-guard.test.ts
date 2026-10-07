@@ -46,11 +46,16 @@ test("the UI's own requests, a typed URL, and scripts without an Origin go throu
     // Behind a proxy that rewrites Host, the browser's host arrives in X-Forwarded-Host.
     await forceAll({ origin: "https://subs.home.lan", "x-forwarded-host": "subs.home.lan" }),
   ];
-  assert.deepEqual(responses.map((r) => r.status), [200, 200, 200, 200, 200]);
+  assert.deepEqual(
+    responses.map((r) => r.status),
+    [200, 200, 200, 200, 200],
+  );
   assert.equal(forced, before + 5);
 });
 
 test("reads stay open to any origin, since CORS already keeps their responses private", async () => {
-  const res = await fetch(`http://${host}/api/jobs`, { headers: { origin: "https://evil.example", "sec-fetch-site": "cross-site" } });
+  const res = await fetch(`http://${host}/api/jobs`, {
+    headers: { origin: "https://evil.example", "sec-fetch-site": "cross-site" },
+  });
   assert.equal(res.status, 200);
 });

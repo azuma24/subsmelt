@@ -3,6 +3,7 @@
 server_launch.py lives under packaging/windows/tray/ (it is frozen into the tray
 and GUI exes, not into the server), so it is loaded here by path.
 """
+
 import importlib.util
 import os
 import tempfile
@@ -11,10 +12,7 @@ from pathlib import Path
 
 import run_server
 
-_MODULE_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "packaging" / "windows" / "tray" / "server_launch.py"
-)
+_MODULE_PATH = Path(__file__).resolve().parents[1] / "packaging" / "windows" / "tray" / "server_launch.py"
 _spec = importlib.util.spec_from_file_location("server_launch", _MODULE_PATH)
 server_launch = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(server_launch)
@@ -47,8 +45,7 @@ class ServerExeLookupTests(unittest.TestCase):
 
     def test_finds_bundle_next_to_the_apps_own_directory(self):
         expected = self._touch(self.root / "whisper-server" / "run_server")
-        found, _searched = server_launch.find_server_exe(
-            self.root / "tools", env={}, windows=False)
+        found, _searched = server_launch.find_server_exe(self.root / "tools", env={}, windows=False)
         self.assertEqual(found, expected)
 
     def test_env_override_wins_over_probed_locations(self):
@@ -62,8 +59,7 @@ class ServerExeLookupTests(unittest.TestCase):
         self.assertEqual(found, override)
 
     def test_missing_executable_reports_every_probed_path(self):
-        found, searched = server_launch.find_server_exe(
-            self.root / "empty", env={}, windows=False)
+        found, searched = server_launch.find_server_exe(self.root / "empty", env={}, windows=False)
         self.assertIsNone(found)
         self.assertTrue(searched)
 
@@ -116,8 +112,12 @@ class BindDefaultTests(unittest.TestCase):
     def setUp(self) -> None:
         self._saved = {
             key: os.environ.pop(key, None)
-            for key in ("SUBSMELT_WHISPER_HOST", "SUBSMELT_WHISPER_TOKEN",
-                        "SUBSMELT_WHISPER_CONFIG", "SUBSMELT_WHISPER_PORT")
+            for key in (
+                "SUBSMELT_WHISPER_HOST",
+                "SUBSMELT_WHISPER_TOKEN",
+                "SUBSMELT_WHISPER_CONFIG",
+                "SUBSMELT_WHISPER_PORT",
+            )
         }
         self.addCleanup(self._restore)
 
@@ -137,8 +137,14 @@ class BindDefaultTests(unittest.TestCase):
 
     def _config(self, host: str, token: str | None) -> "run_server.ServerConfig":
         return run_server.ServerConfig(
-            host=host, port=8001, model_dir=None, token=token, media_root=None,
-            ffmpeg=None, log_level="info", log_file=None,
+            host=host,
+            port=8001,
+            model_dir=None,
+            token=token,
+            media_root=None,
+            ffmpeg=None,
+            log_level="info",
+            log_file=None,
         )
 
     def test_wide_bind_without_token_warns(self):

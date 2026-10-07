@@ -1,25 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { Link } from "react-router-dom";
 import * as api from "../../api";
 import type { ConvertTargetFormat } from "../../api";
 import { ApiError } from "../../api";
-import { useToast } from "../../components/Toast";
-import { useLlmHealthQuery } from "../../hooks";
-import { ActionButton } from "../../ui/primitives";
+import { useToast } from "../../ui/Toast";
+import { useLlmHealthQuery, useIsMobile } from "../../hooks";
+import { ActionButton, PageHeader, Select } from "../../ui/primitives";
 import { InlineError } from "../../ui/QueryState";
 import { AUTO_SOURCE_LANG } from "../tasks/translation-defaults";
-import type { KeyValueStorage } from "../../components/file-tree/expansion-store";
+import type { KeyValueStorage } from "../../ui/file-tree/expansion-store";
 import { LANGUAGES, findLanguage } from "./language-table";
 import { resolveTargetLanguage } from "./resolve-language";
 import { sampleCueText } from "./cue-sample";
-import { detectSampleLanguage } from "./detect-language";
 import { loadRecentTargets, pushRecentTarget } from "./recent-targets";
 import { TargetLanguageField } from "./TargetLanguageField";
 import { DropZone } from "./DropZone";
 import { StagedFileList, type FileRunStatus } from "./StagedFileList";
 import { effectiveSource, skipTranslation, type StagedFile } from "./staged-file";
-import { readSubtitleFile } from "./decode-text";
+import { detectSampleLanguage, readSubtitleFile } from "./lazy-analysis";
 import { isSupported, triggerDownload, buildZipBlob, type OutputFile } from "./download-outputs";
 
 const TARGET_FORMATS: ConvertTargetFormat[] = ["srt", "vtt", "ass", "ssa"];
@@ -32,7 +31,8 @@ function getBrowserStorage(): KeyValueStorage | null {
   }
 }
 
-export function ConvertPage({ isMobile }: { isMobile: boolean }) {
+export function ConvertPage() {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const { addToast } = useToast();
   const [staged, setStaged] = useState<StagedFile[]>([]);
@@ -62,12 +62,14 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
     void (async () => {
       for (const item of todo) {
         const text = await readSubtitleFile(item.file).catch(() => "");
-        const code = detectSampleLanguage(sampleCueText(text));
+        const code = await detectSampleLanguage(sampleCueText(text));
         if (cancelled) return;
         setStaged((prev) => prev.map((s) => (s.id === item.id ? { ...s, detected: code } : s)));
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [translate, staged]);
 
   const pickTarget = useCallback((entry: { code: string; englishName: string }) => {
@@ -152,12 +154,14 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
         const content = await readSubtitleFile(item.file);
         const source = effectiveSource(item, fromCode);
         const res = await api.convertSubtitles({
-          files: [{
-            name: item.file.name,
-            content,
-            sourceLang: source ? findLanguage(source)?.promptName ?? AUTO_SOURCE_LANG : AUTO_SOURCE_LANG,
-            skip: skipTranslation(item, fromCode, translate, resolvedTarget?.code ?? null),
-          }],
+          files: [
+            {
+              name: item.file.name,
+              content,
+              sourceLang: source ? (findLanguage(source)?.promptName ?? AUTO_SOURCE_LANG) : AUTO_SOURCE_LANG,
+              skip: skipTranslation(item, fromCode, translate, resolvedTarget?.code ?? null),
+            },
+          ],
           targetFormat,
           translate,
           sourceLang: AUTO_SOURCE_LANG,
@@ -186,20 +190,21 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
     setLastOutputs(outputs);
     await downloadOutputs(outputs);
     addToast(
-      t(translate ? "convert.translateDownloadReady" : "convert.downloadReady", { count: outputs.length, format: targetFormat.toUpperCase() }),
+      t(translate ? "convert.translateDownloadReady" : "convert.downloadReady", {
+        count: outputs.length,
+        format: targetFormat.toUpperCase(),
+      }),
       "success",
     );
   };
 
   return (
     <div className="flex h-full flex-col">
-      <div className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b border-[var(--border)] bg-[var(--surface)] px-4 md:px-4">
-        <h1 className="text-sm font-semibold text-[var(--text)]">{t("nav.convert")}</h1>
-      </div>
+      <PageHeader title={t("nav.convert")} />
 
       <div className="flex-1 overflow-auto p-4 md:p-4">
         <div className="mx-auto flex max-w-[680px] flex-col gap-4">
-          <p className="text-sm leading-6 text-[var(--text-2)]">{t("convert.description")}</p>
+          <p className="text-sm leading-6 text-muted">{t("convert.description")}</p>
 
           <DropZone onFiles={addFiles} />
 
@@ -219,23 +224,27 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
           {/* Per-file errors */}
           {fileErrors.length > 0 && (
             <div className="flex flex-col gap-2" role="alert" aria-live="assertive">
-              <span className="text-xs font-medium text-[var(--red)]">{t("convert.errors")}</span>
+              <span className="text-xs font-medium text-danger">{t("convert.errors")}</span>
               {fileErrors.map((err) => (
                 <InlineError key={err.name} message={`${err.name}: ${err.error}`} />
               ))}
             </div>
           )}
 
-          <div className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
-            <h2 className="text-sm font-semibold text-[var(--text)]">{t("convert.outputSettings")}</h2>
+          <div className="rounded-md border border-border bg-surface p-4">
+            <h2 className="text-sm font-semibold text-text">{t("convert.outputSettings")}</h2>
 
-            <div className="mt-3 inline-flex rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-1" role="tablist" aria-label={t("convert.outputSettings")}>
+            <div
+              className="mt-3 inline-flex rounded-sm border border-border bg-surface-raised p-1"
+              role="tablist"
+              aria-label={t("convert.outputSettings")}
+            >
               <button
                 type="button"
                 role="tab"
                 aria-selected={!translate}
                 onClick={() => setTranslate(false)}
-                className={`rounded-sm px-3 py-2 text-xs font-medium ${!translate ? "bg-[var(--surface)] text-[var(--text)] shadow-1" : "text-[var(--text-2)]"}`}
+                className={`rounded-sm px-3 py-2 text-xs font-medium ${!translate ? "bg-surface text-text shadow-1" : "text-muted"}`}
               >
                 {t("convert.modeFormat")}
               </button>
@@ -244,7 +253,7 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
                 role="tab"
                 aria-selected={translate}
                 onClick={() => setTranslate(true)}
-                className={`rounded-sm px-3 py-2 text-xs font-medium ${translate ? "bg-[var(--surface)] text-[var(--text)] shadow-1" : "text-[var(--text-2)]"}`}
+                className={`rounded-sm px-3 py-2 text-xs font-medium ${translate ? "bg-surface text-text shadow-1" : "text-muted"}`}
               >
                 {t("convert.modeTranslate")}
               </button>
@@ -254,17 +263,15 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
               {translate && (
                 <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
                   <label className="flex flex-col gap-2">
-                    <span className="text-xs font-medium text-[var(--text-2)]">{t("convert.sourceLanguage")}</span>
-                    <select
-                      value={fromCode}
-                      onChange={(e) => setFromCode(e.target.value)}
-                      className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--accent)]"
-                    >
+                    <span className="text-xs font-medium text-muted">{t("convert.sourceLanguage")}</span>
+                    <Select value={fromCode} onChange={(value) => setFromCode(value)}>
                       <option value="">{t("convert.sourceAuto")}</option>
                       {LANGUAGES.map((l) => (
-                        <option key={l.code} value={l.code}>{l.englishName}</option>
+                        <option key={l.code} value={l.code}>
+                          {l.englishName}
+                        </option>
                       ))}
-                    </select>
+                    </Select>
                   </label>
                   <TargetLanguageField
                     value={targetInput}
@@ -277,53 +284,60 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
               )}
 
               {translate && llmHealth.isSuccess && !llmReady && (
-                <p className="text-xs text-[var(--yellow)]">
+                <p className="text-xs text-warning">
                   {t("convert.needLlm")}{" "}
-                  <Link to="/settings" className="underline">{t("whisper.openSettings")}</Link>
+                  <Link to="/settings" className="underline">
+                    {t("whisper.openSettings")}
+                  </Link>
                 </p>
               )}
 
               <label className="flex flex-col gap-2 sm:max-w-[220px]">
-                <span className="text-xs font-medium text-[var(--text-2)]">{t("convert.targetFormat")}</span>
-                <select
-                  value={targetFormat}
-                  onChange={(e) => setTargetFormat(e.target.value as ConvertTargetFormat)}
-                  className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--accent)]"
-                >
+                <span className="text-xs font-medium text-muted">{t("convert.targetFormat")}</span>
+                <Select value={targetFormat} onChange={(value) => setTargetFormat(value as ConvertTargetFormat)}>
                   {TARGET_FORMATS.map((fmt) => (
                     <option key={fmt} value={fmt}>
                       {fmt.toUpperCase()}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
             </div>
           </div>
 
           {/* Action — the CTA stands alone so it isn't mistaken for another setting */}
           <div className={`flex items-center gap-3 ${isMobile ? "flex-col items-stretch" : "justify-end"}`}>
-            {staged.length === 0 && (
-              <span className="text-xs text-[var(--text-3)]">{t("convert.addFilesToStart")}</span>
-            )}
+            {staged.length === 0 && <span className="text-xs text-faint">{t("convert.addFilesToStart")}</span>}
             <ActionButton
               variant="primary"
               onClick={handleConvert}
-              disabled={staged.length === 0 || (translate && !resolvedTarget) || (translate && llmHealth.isSuccess && !llmReady)}
+              disabled={
+                staged.length === 0 || (translate && !resolvedTarget) || (translate && llmHealth.isSuccess && !llmReady)
+              }
               busy={converting}
               className={isMobile ? "w-full" : ""}
             >
-              {converting ? t(translate ? "convert.translating" : "convert.converting") : t(translate ? "convert.modeTranslate" : "convert.convert")}
+              {converting
+                ? t(translate ? "convert.translating" : "convert.converting")
+                : t(translate ? "convert.modeTranslate" : "convert.convert")}
             </ActionButton>
           </div>
 
           {lastOutputs.length > 0 && (
-            <div className="rounded-md border border-[var(--green-border)] bg-[var(--green-dim)] p-4" role="status" aria-live="polite">
+            <div className="rounded-md border border-success-line bg-success-soft p-4" role="status" aria-live="polite">
               <div className={`flex gap-3 ${isMobile ? "flex-col items-stretch" : "items-center justify-between"}`}>
                 <div>
-                  <p className="text-sm font-semibold text-[var(--green)]">{t("convert.downloadsReady", { count: lastOutputs.length })}</p>
-                  <p className="mt-1 text-xs leading-6 text-[var(--text-2)]">{t("convert.downloadsReadyHelp")}</p>
+                  <p className="text-sm font-semibold text-success">
+                    {t("convert.downloadsReady", { count: lastOutputs.length })}
+                  </p>
+                  <p className="mt-1 text-xs leading-6 text-muted">{t("convert.downloadsReadyHelp")}</p>
                 </div>
-                <ActionButton variant="success" size="sm" onClick={() => void downloadOutputs()} className={isMobile ? "w-full" : ""}>
+                <ActionButton
+                  variant="success"
+                  size="sm"
+                  onClick={() => void downloadOutputs()}
+                  className={isMobile ? "w-full" : ""}
+                >
                   {lastOutputs.length === 1 ? t("convert.downloadFile") : t("convert.downloadZip")}
                 </ActionButton>
               </div>
@@ -333,8 +347,10 @@ export function ConvertPage({ isMobile }: { isMobile: boolean }) {
                     <button
                       key={out.name}
                       type="button"
-                      onClick={() => triggerDownload(new Blob([out.content], { type: "text/plain;charset=utf-8" }), out.name)}
-                      className="rounded-sm border border-[var(--green-border)] bg-[var(--surface)] px-3 py-1 text-xs text-[var(--text-2)] hover:text-[var(--text)]"
+                      onClick={() =>
+                        triggerDownload(new Blob([out.content], { type: "text/plain;charset=utf-8" }), out.name)
+                      }
+                      className="rounded-sm border border-success-line bg-surface px-3 py-1 text-xs text-muted hover:text-text"
                     >
                       {out.name}
                     </button>

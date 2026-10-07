@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
-import { useConfirm } from "../../components/ConfirmModal";
-import { useToast } from "../../components/Toast";
+import { useConfirm } from "../../ui/ConfirmModal";
+import { useToast } from "../../ui/Toast";
 import { ActionButton } from "../../ui/primitives";
 import { Banner } from "../youtube/parts";
 
@@ -57,7 +57,7 @@ export function ConfigLoadErrorBanner({ failure }: { failure: ConfigLoadFailure 
   return (
     <Banner tone="bad" title={t("settings.configLoadError.title", { file: failure.file })}>
       {t("settings.configLoadError.body", { backup: failure.backup })}
-      {failure.message && <span className="mt-1 block break-all font-mono text-xs text-[var(--text-2)]">{failure.message}</span>}
+      {failure.message && <span className="mt-1 block break-all font-mono text-xs text-muted">{failure.message}</span>}
       {/* Below the text rather than beside it, so a long path never squeezes the copy on a phone. */}
       <span className="mt-2 block">
         <ActionButton variant="ghost" size="sm" onClick={replace} busy={replacing}>

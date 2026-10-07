@@ -8,6 +8,7 @@ sleeps ``SUBSMELT_FAKE_NEMO_SLEEP`` seconds per call so a cancel can land
 mid-run, writes its pid to ``SUBSMELT_FAKE_NEMO_PIDFILE`` when set, and exits 3
 with nemo-speech's error JSON when the model path does not exist.
 """
+
 import json
 import os
 import sys
@@ -57,17 +58,26 @@ def main(argv):
     language = opts.get("--language", "auto")
     locale = "en-US" if language == "auto" else language
     words = [
-        {"word": f"word{i}", "start": round(i * WORD_EVERY_S, 2), "end": round(i * WORD_EVERY_S + WORD_LENGTH_S, 2), "confidence": 1}
+        {
+            "word": f"word{i}",
+            "start": round(i * WORD_EVERY_S, 2),
+            "end": round(i * WORD_EVERY_S + WORD_LENGTH_S, 2),
+            "confidence": 1,
+        }
         for i in range(int(duration / WORD_EVERY_S))
     ]
-    print(json.dumps({
-        "file": wav_path,
-        "text": " ".join(word["word"] for word in words),
-        "confidence": 1,
-        "duration": duration,
-        "languages": [locale],
-        "words": words,
-    }))
+    print(
+        json.dumps(
+            {
+                "file": wav_path,
+                "text": " ".join(word["word"] for word in words),
+                "confidence": 1,
+                "duration": duration,
+                "languages": [locale],
+                "words": words,
+            }
+        )
+    )
     return 0
 
 

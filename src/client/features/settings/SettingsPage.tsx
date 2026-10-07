@@ -1,13 +1,20 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
-import { LLM_STATUS_QUERY_KEY, useJobsQuery, useSettingsQuery, useTasksQuery, useTranscriptionHealthQuery } from "../../hooks";
+import {
+  LLM_STATUS_QUERY_KEY,
+  useJobsQuery,
+  useSettingsQuery,
+  useTasksQuery,
+  useTranscriptionHealthQuery,
+  useIsMobile,
+} from "../../hooks";
 import { SetupProgress, type SetupStep } from "./SetupProgress";
-import { useToast } from "../../components/Toast";
-import { Accordion, ActionButton, SettingsSection } from "../../ui/primitives";
+import { useToast } from "../../ui/Toast";
+import { Accordion, ActionButton, SettingsSection, PageHeader } from "../../ui/primitives";
 import { InlineError } from "../../ui/QueryState";
 import { JSON_BLOB_SETTINGS, getStr, validateJsonSetting, type JsonBlobSettingKey } from "./settings-model";
 import { str } from "../../lib/settings-value";
@@ -27,7 +34,8 @@ const isSectionKey = (value: string | null): value is SectionKey => SECTION_KEYS
 /** saved: written as sent. rejected: written, minus keys the server refused. failed: nothing written. */
 type SaveOutcome = "saved" | "rejected" | "failed";
 
-export function SettingsPage({ isMobile }: { isMobile: boolean }) {
+export function SettingsPage() {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const { addToast } = useToast();
   const navigate = useNavigate();
@@ -48,7 +56,9 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   // ?section=youtube lets other pages link straight to a section.
   const [params] = useSearchParams();
   const requestedSection = params.get("section");
-  const [activeSection, setActiveSection] = useState<SectionKey>(isSectionKey(requestedSection) ? requestedSection : "llm");
+  const [activeSection, setActiveSection] = useState<SectionKey>(
+    isSectionKey(requestedSection) ? requestedSection : "llm",
+  );
 
   // Synchronous mirror of `form` so rapid update()/updateAndSave() calls in the
   // same tick build on each other instead of overwriting from a stale render closure.
@@ -66,6 +76,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
 
   // A refetch (scan:complete invalidation, window focus) only replaces the
   // server snapshot; keys the user is still editing keep their local value.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the server snapshot changes; applyForm only writes refs and state
   useEffect(() => {
     if (settingsQuery.data) applyForm(receiveServer(formRef.current, settingsQuery.data));
   }, [settingsQuery.data]);
@@ -73,7 +84,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   // Silent predicate: are both JSON-blob settings well-formed in `s`?
   const jsonBlobsValid = (s: Record<string, unknown>): boolean =>
     (Object.keys(JSON_BLOB_SETTINGS) as JsonBlobSettingKey[]).every(
-      (key) => validateJsonSetting(key, getStr(s, key)).ok
+      (key) => validateJsonSetting(key, getStr(s, key)).ok,
     );
 
   // Every save goes through here. Resolves true when `body` reached the server;
@@ -142,7 +153,9 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
     for (const key of Object.keys(JSON_BLOB_SETTINGS) as JsonBlobSettingKey[]) {
       const result = validateJsonSetting(key, getStr(view(formRef.current), key));
       if (!result.ok) {
-        const label = t(`settings.transcription.${key === "transcription_folder_defaults" ? "folderDefaults" : "advancedOptions"}`);
+        const label = t(
+          `settings.transcription.${key === "transcription_folder_defaults" ? "folderDefaults" : "advancedOptions"}`,
+        );
         addToast(t("settings.invalidJson", { field: label }), "error");
         return false;
       }
@@ -152,11 +165,14 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
 
   // Leaving the page flushes whatever is still unsaved: a pending debounced
   // autosave, and the deferred fields that normally wait for the topbar Save.
-  useEffect(() => () => {
-    clearSaveTimer();
-    if (isDirty(formRef.current) && validateJsonBlobs()) void persist(view(formRef.current));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: flushes on unmount only, reading the latest form through refs
+  useEffect(
+    () => () => {
+      clearSaveTimer();
+      if (isDirty(formRef.current) && validateJsonBlobs()) void persist(view(formRef.current));
+    },
+    [],
+  );
 
   const handleSave = async (): Promise<boolean> => {
     if (!validateJsonBlobs()) return false;
@@ -179,7 +195,10 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
     setTestingTranscription(true);
     setTranscriptionTestResult(null);
     try {
-      if (!(await flushBeforeTest())) { setTestingTranscription(false); return; }
+      if (!(await flushBeforeTest())) {
+        setTestingTranscription(false);
+        return;
+      }
       const result = await api.getTranscriptionHealth();
       const message = result.ok
         ? t("settings.transcription.testReachable")
@@ -198,7 +217,10 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
     setTestingNotification(true);
     setNotificationTestResult(null);
     try {
-      if (!(await flushBeforeTest())) { setTestingNotification(false); return; }
+      if (!(await flushBeforeTest())) {
+        setTestingNotification(false);
+        return;
+      }
       const result = await api.testNotification();
       if (result.ok) {
         setNotificationTestResult({ ok: true, message: t("settings.notifications.testSent") });
@@ -256,71 +278,70 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   // extraction: LLM and Engine autosave everything (debounced); Sources saves
   // its pickers immediately but leaves the four Advanced fields to the topbar
   // Save; STT is deferred throughout except the backend token.
-  const sectionMeta: Record<SectionKey, { navLabel: string; title: string; description: string; content: ReactNode }> = {
-    llm: {
-      navLabel: t("settings.llmConnection.title"),
-      title: t("settings.llmConnection.title"),
-      description: t("settings.llmConnection.description"),
-      content: <LlmSection settings={settings} isMobile={isMobile} updateAndSaveDebounced={updateAndSaveDebounced} addToast={addToast} />,
-    },
-    engine: {
-      navLabel: t("settings.translationEngine.title"),
-      title: t("settings.translationEngine.title"),
-      description: t("settings.translationEngine.description"),
-      content: <EngineSection settings={settings} isMobile={isMobile} updateAndSaveDebounced={updateAndSaveDebounced} />,
-    },
-    sources: {
-      navLabel: t("settings.sources.title"),
-      title: t("settings.sources.title"),
-      description: t("settings.sources.description"),
-      content: (
-        <SourcesSection
-          settings={settings}
-          isMobile={isMobile}
-          update={update}
-          updateAndSave={updateAndSave}
-          updateManyAndSave={updateManyAndSave}
-          updateAndSaveDebounced={updateAndSaveDebounced}
-          onToggleWatcher={toggleWatcher}
-          onNotificationTest={handleNotificationTest}
-          testingNotification={testingNotification}
-          notificationTestResult={notificationTestResult}
-        />
-      ),
-    },
-    stt: {
-      navLabel: t("settings.transcription.title"),
-      title: t("settings.transcription.title"),
-      description: t("settings.transcription.description"),
-      content: (
-        <SttSection
-          settings={settings}
-          isMobile={isMobile}
-          update={update}
-          updateAndSaveDebounced={updateAndSaveDebounced}
-          healthQuery={transcriptionHealthQuery}
-          dirty={dirty}
-          saving={saving}
-          onSave={handleSave}
-          onTest={handleTranscriptionTest}
-          testing={testingTranscription}
-          testResult={transcriptionTestResult}
-        />
-      ),
-    },
-    youtube: {
-      navLabel: t("settings.youtube.title"),
-      title: t("settings.youtube.title"),
-      description: t("settings.youtube.description"),
-      content: <YoutubeSection settings={settings} update={update} updateAndSaveDebounced={updateAndSaveDebounced} />,
-    },
-    iface: {
-      navLabel: t("settings.interface.title"),
-      title: t("settings.interface.title"),
-      description: t("settings.interface.description"),
-      content: <InterfaceSection />,
-    },
-  };
+  const sectionMeta: Record<SectionKey, { navLabel: string; title: string; description: string; content: ReactNode }> =
+    {
+      llm: {
+        navLabel: t("settings.llmConnection.title"),
+        title: t("settings.llmConnection.title"),
+        description: t("settings.llmConnection.description"),
+        content: <LlmSection settings={settings} updateAndSaveDebounced={updateAndSaveDebounced} addToast={addToast} />,
+      },
+      engine: {
+        navLabel: t("settings.translationEngine.title"),
+        title: t("settings.translationEngine.title"),
+        description: t("settings.translationEngine.description"),
+        content: <EngineSection settings={settings} updateAndSaveDebounced={updateAndSaveDebounced} />,
+      },
+      sources: {
+        navLabel: t("settings.sources.title"),
+        title: t("settings.sources.title"),
+        description: t("settings.sources.description"),
+        content: (
+          <SourcesSection
+            settings={settings}
+            update={update}
+            updateAndSave={updateAndSave}
+            updateManyAndSave={updateManyAndSave}
+            updateAndSaveDebounced={updateAndSaveDebounced}
+            onToggleWatcher={toggleWatcher}
+            onNotificationTest={handleNotificationTest}
+            testingNotification={testingNotification}
+            notificationTestResult={notificationTestResult}
+          />
+        ),
+      },
+      stt: {
+        navLabel: t("settings.transcription.title"),
+        title: t("settings.transcription.title"),
+        description: t("settings.transcription.description"),
+        content: (
+          <SttSection
+            settings={settings}
+            update={update}
+            updateAndSaveDebounced={updateAndSaveDebounced}
+            healthQuery={transcriptionHealthQuery}
+            dirty={dirty}
+            saving={saving}
+            onSave={handleSave}
+            onTest={handleTranscriptionTest}
+            testing={testingTranscription}
+            testResult={transcriptionTestResult}
+          />
+        ),
+      },
+      youtube: {
+        navLabel: t("settings.youtube.title"),
+        title: t("settings.youtube.title"),
+        description: t("settings.youtube.description"),
+        content: <YoutubeSection settings={settings} update={update} updateAndSaveDebounced={updateAndSaveDebounced} />,
+      },
+      iface: {
+        navLabel: t("settings.interface.title"),
+        title: t("settings.interface.title"),
+        description: t("settings.interface.description"),
+        content: <InterfaceSection />,
+      },
+    };
   const navOrder: readonly SectionKey[] = SECTION_KEYS;
 
   // First-run signposting. Both queries are already in the app-level cache, so
@@ -330,8 +351,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
   // The jobs list is transient — Clear finished empties it, and a rescan then
   // creates no jobs (outputs exist), so a jobs-based step would never clear
   // again. The server's sticky flag says media was discovered at least once.
-  const hasDiscoveredMedia =
-    (jobsQuery.data?.jobs || []).length > 0 || str(settings.media_scanned) === "1";
+  const hasDiscoveredMedia = (jobsQuery.data?.jobs || []).length > 0 || str(settings.media_scanned) === "1";
   const setupSteps: SetupStep[] = [
     {
       key: "llm",
@@ -363,12 +383,17 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
 
   return (
     <div className="flex min-h-full flex-col">
-      {/* Topbar */}
-      <div className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b border-[var(--border)] bg-[var(--surface)] px-4 md:px-4">
-        <span className="flex-1 text-sm font-semibold text-[var(--text)]">{t("settings.title")}</span>
-        {dirty && <span className="text-xs text-[var(--yellow)]">{t("common.unsavedChanges")}</span>}
-        <ActionButton size="sm" onClick={handleSave} disabled={!dirty || saving}>{saving ? t("app.saving") : t("app.save")}</ActionButton>
-      </div>
+      <PageHeader
+        title={t("settings.title")}
+        actions={
+          <>
+            {dirty && <span className="text-xs text-warning">{t("common.unsavedChanges")}</span>}
+            <ActionButton size="sm" onClick={handleSave} disabled={!dirty || saving}>
+              {saving ? t("app.saving") : t("app.save")}
+            </ActionButton>
+          </>
+        }
+      />
 
       {/* One max width for the checklist and the nav + panel grid, so the
           checklist does not run past the column it introduces. */}
@@ -394,7 +419,7 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
             {navOrder.map((key) => (
               <Accordion key={key} title={sectionMeta[key].title} defaultOpen={key === activeSection}>
                 <div className="space-y-4">
-                  <p className="text-xs leading-6 text-[var(--text-2)]">{sectionMeta[key].description}</p>
+                  <p className="text-xs leading-6 text-muted">{sectionMeta[key].description}</p>
                   {sectionMeta[key].content}
                 </div>
               </Accordion>
@@ -405,9 +430,10 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
             <nav className="flex flex-col gap-px">
               {navOrder.map((key) => (
                 <button
+                  type="button"
                   key={key}
                   onClick={() => setActiveSection(key)}
-                  className={`rounded-sm border px-2 py-2 text-left text-sm transition-colors ${activeSection === key ? "border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]" : "border-transparent text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"}`}
+                  className={`rounded-sm border px-2 py-2 text-left text-sm transition-colors ${activeSection === key ? "border-accent-line bg-accent-soft text-accent" : "border-transparent text-muted hover:bg-surface-raised hover:text-text"}`}
                 >
                   {sectionMeta[key].navLabel}
                 </button>
@@ -415,14 +441,17 @@ export function SettingsPage({ isMobile }: { isMobile: boolean }) {
               <SettingsSubpageLinks variant="nav" />
             </nav>
             <div>
-              <SettingsSection title={sectionMeta[activeSection].title} description={sectionMeta[activeSection].description}>
+              <SettingsSection
+                title={sectionMeta[activeSection].title}
+                description={sectionMeta[activeSection].description}
+              >
                 {sectionMeta[activeSection].content}
               </SettingsSection>
             </div>
           </div>
         )}
 
-        <p className="pt-4 text-center text-xs text-[var(--text-3)]">
+        <p className="pt-4 text-center text-xs text-faint">
           {t("settings.about.version", { version: __APP_VERSION__ })}
         </p>
       </div>

@@ -1,4 +1,4 @@
-import type { JobRow } from "../../types";
+import type { Job } from "../../types";
 
 /**
  * Time-remaining estimates for translation work.
@@ -54,7 +54,7 @@ export function estimateJobEta({ completed, total, elapsedMs }: JobEtaInput): Jo
  * stable median without letting ancient runs (different model, different
  * settings) skew the projection.
  */
-export function recentDurationsSeconds(finishedJobs: readonly JobRow[], limit: number): number[] {
+export function recentDurationsSeconds(finishedJobs: readonly Job[], limit: number): number[] {
   return [...finishedJobs]
     .sort((a, b) => (b.started_at ?? "").localeCompare(a.started_at ?? ""))
     .map((job) => job.duration_seconds)
@@ -75,9 +75,7 @@ export function estimateQueueEta(pendingCount: number, recentDurationsSeconds: n
   if (usable.length === 0) return null;
 
   const middle = Math.floor(usable.length / 2);
-  const medianSeconds = usable.length % 2 === 0
-    ? (usable[middle - 1] + usable[middle]) / 2
-    : usable[middle];
+  const medianSeconds = usable.length % 2 === 0 ? (usable[middle - 1] + usable[middle]) / 2 : usable[middle];
 
   return medianSeconds * 1000 * pendingCount;
 }

@@ -3,18 +3,8 @@ import path from "node:path";
 import { logger } from "../logger.js";
 import type { LlmMode, ResolvedConnection } from "../connections.js";
 import type { CloudProvider, TokenUsage } from "./ai-client.js";
-import {
-  retryTranslate,
-  translateChunk,
-  translateSingle,
-} from "./ai-client.js";
-import {
-  parseSubtitle,
-  readSubtitleFileText,
-  saveTranslated,
-  splitIntoChunks,
-  type SubtitleCue,
-} from "./utils.js";
+import { retryTranslate, translateChunk, translateSingle } from "./ai-client.js";
+import { parseSubtitle, readSubtitleFileText, saveTranslated, splitIntoChunks, type SubtitleCue } from "./utils.js";
 import { createConnectionHealth } from "./connection-health.js";
 import { ContextOverflowError } from "./context-overflow.js";
 import { createConcurrencyGate } from "./concurrency-gate.js";
@@ -31,7 +21,14 @@ import {
   scanForGlossaryTerms,
   type SeriesGlossary,
 } from "./context.js";
-export { isSafeHttpUrl, type JobContextPlan, type ModelContextInfo, planJobContext, probeModelContext } from "./context-probe.js";
+import { errorMessage } from "../errors.js";
+export {
+  isSafeHttpUrl,
+  type JobContextPlan,
+  type ModelContextInfo,
+  planJobContext,
+  probeModelContext,
+} from "./context-probe.js";
 export {
   type TranslationErrorDiagnostics,
   summarizeTranslationError,
@@ -164,9 +161,19 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
 
   // Resolve the connection pool. Falls back to the single legacy fields so
   // existing callers (and single mode) behave exactly as before.
-  const connections: ResolvedConnection[] = (opts.connections && opts.connections.length > 0)
-    ? opts.connections
-    : [{ id: "default", label: "default", apiKey: opts.apiKey, apiHost: opts.apiHost, model: opts.model, provider: opts.provider }];
+  const connections: ResolvedConnection[] =
+    opts.connections && opts.connections.length > 0
+      ? opts.connections
+      : [
+          {
+            id: "default",
+            label: "default",
+            apiKey: opts.apiKey,
+            apiHost: opts.apiHost,
+            model: opts.model,
+            provider: opts.provider,
+          },
+        ];
   const llmMode: LlmMode = opts.llmMode || "single";
   const usedConnIds = new Set<string>();
   let lastActiveId: string | undefined;
@@ -185,9 +192,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // completion for a job already marked error. Every LLM call below listens to
   // this signal, which also relays the caller's stop request.
   const jobAbort = new AbortController();
-  const abortSignal = opts.abortSignal
-    ? AbortSignal.any([opts.abortSignal, jobAbort.signal])
-    : jobAbort.signal;
+  const abortSignal = opts.abortSignal ? AbortSignal.any([opts.abortSignal, jobAbort.signal]) : jobAbort.signal;
   // Connection probing, the per-job timeout breaker and the acquire/release
   // wrapper live in connection-health.ts — extracted so they can be tested.
   const health = createConnectionHealth({
@@ -243,24 +248,26 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   let analysisErr: unknown;
   for (const conn of connections) {
     try {
-      analysis = await withConnection(conn, () => analyzeSubtitlesForContext(allTexts, {
-        apiKey: conn.apiKey,
-        apiHost: conn.apiHost,
-        model: conn.model,
-        provider: conn.provider,
-        lang: opts.lang,
-        temperature: 0.3,
-        abortSignal,
-        maxAnalysisLines: opts.analysisLinesByConnection?.get(conn.id) ?? opts.maxAnalysisLines,
-        requestTimeoutMs: jobTimeoutMs,
-        onUsage: opts.onUsage,
-      }));
+      analysis = await withConnection(conn, () =>
+        analyzeSubtitlesForContext(allTexts, {
+          apiKey: conn.apiKey,
+          apiHost: conn.apiHost,
+          model: conn.model,
+          provider: conn.provider,
+          lang: opts.lang,
+          temperature: 0.3,
+          abortSignal,
+          maxAnalysisLines: opts.analysisLinesByConnection?.get(conn.id) ?? opts.maxAnalysisLines,
+          requestTimeoutMs: jobTimeoutMs,
+          onUsage: opts.onUsage,
+        }),
+      );
       markUsed(conn);
       break;
-    } catch (e: any) {
-      if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED") throw e;
+    } catch (e) {
+      if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED") throw e;
       analysisErr = e;
-      opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(e?.message || e) });
+      opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(errorMessage(e) || e) });
     }
   }
   // Every connection failed its availability probe — surface the real error
@@ -295,7 +302,9 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   });
 
   const indexMap = new Map<SubtitleCue, number>();
-  subtitle.forEach((cue, idx) => indexMap.set(cue, idx));
+  subtitle.forEach((cue, idx) => {
+    indexMap.set(cue, idx);
+  });
 
   // ── Multi-connection helpers ────────────────────────────────────────────
   // In parallel mode each worker is assigned a primary connection (round-robin
@@ -315,7 +324,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   async function translateChunkWithFallback(
     coreText: string[],
     order: ResolvedConnection[],
-    contextPromptPrefix: string
+    contextPromptPrefix: string,
   ): Promise<{ result: string[]; conn: ResolvedConnection } | null> {
     const usable = liveConnections(order);
     if (usable.length === 0) {
@@ -324,49 +333,53 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     for (const conn of usable) {
       let sharedServer = false;
       try {
-        const result = await withConnection(conn, () => retryTranslate(
-          (attempt) => {
-            const attemptTemp = Math.max(
-              0.1,
-              Math.min(2, opts.temperature + (attempt - 1) * 0.15 + (Math.random() - 0.5) * 0.1)
-            );
-            const inFlight = (chunksInFlight.get(conn.apiHost) ?? 0) + 1;
-            chunksInFlight.set(conn.apiHost, inFlight);
-            sharedServer = inFlight > 1;
-            return translateChunk(coreText, {
-              apiKey: conn.apiKey,
-              apiHost: conn.apiHost,
-              model: conn.model,
-              provider: conn.provider,
-              systemPrompt,
-              temperature: attemptTemp,
-              abortSignal,
-              disableToolCalls: opts.disableToolCalls,
-              requestTimeoutMs: jobTimeoutMs,
-              contextPromptPrefix,
-              onUsage: opts.onUsage,
-            }).then((r) => {
-              if (!Array.isArray(r) || r.length !== coreText.length) {
-                throw new Error("did not match schema");
-              }
-              return r;
-            }).finally(() => {
-              chunksInFlight.set(conn.apiHost, (chunksInFlight.get(conn.apiHost) ?? 1) - 1);
-            });
-          },
-          2,
-          1000,
-          opts.onRetry
-        ));
+        const result = await withConnection(conn, () =>
+          retryTranslate(
+            (attempt) => {
+              const attemptTemp = Math.max(
+                0.1,
+                Math.min(2, opts.temperature + (attempt - 1) * 0.15 + (Math.random() - 0.5) * 0.1),
+              );
+              const inFlight = (chunksInFlight.get(conn.apiHost) ?? 0) + 1;
+              chunksInFlight.set(conn.apiHost, inFlight);
+              sharedServer = inFlight > 1;
+              return translateChunk(coreText, {
+                apiKey: conn.apiKey,
+                apiHost: conn.apiHost,
+                model: conn.model,
+                provider: conn.provider,
+                systemPrompt,
+                temperature: attemptTemp,
+                abortSignal,
+                disableToolCalls: opts.disableToolCalls,
+                requestTimeoutMs: jobTimeoutMs,
+                contextPromptPrefix,
+                onUsage: opts.onUsage,
+              })
+                .then((r) => {
+                  if (!Array.isArray(r) || r.length !== coreText.length) {
+                    throw new Error("did not match schema");
+                  }
+                  return r;
+                })
+                .finally(() => {
+                  chunksInFlight.set(conn.apiHost, (chunksInFlight.get(conn.apiHost) ?? 1) - 1);
+                });
+            },
+            2,
+            1000,
+            opts.onRetry,
+          ),
+        );
         markUsed(conn);
         return { result, conn };
-      } catch (e: any) {
-        if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED") throw e;
+      } catch (e) {
+        if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED") throw e;
         // Retried later at lower concurrency (see processChunk).
         if (sharedServer && e instanceof ContextOverflowError) throw e;
         // exhausted retries on this connection — cascade to the next
         noteConnectionFailure(conn, e);
-        opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(e?.message || e) });
+        opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(errorMessage(e) || e) });
       }
     }
     return null;
@@ -376,7 +389,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     lineText: string,
     order: ResolvedConnection[],
     retries = SINGLE_LINE_RETRIES,
-    timeoutMs = SINGLE_LINE_TIMEOUT_MS
+    timeoutMs = SINGLE_LINE_TIMEOUT_MS,
   ): Promise<string> {
     let lastErr: unknown;
     const usable = liveConnections(order);
@@ -385,31 +398,33 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     }
     for (const conn of usable) {
       try {
-        const r = await withConnection(conn, () => retryTranslate(
-          (_) =>
-            translateSingle(lineText, {
-              apiKey: conn.apiKey,
-              apiHost: conn.apiHost,
-              model: conn.model,
-              provider: conn.provider,
-              systemPrompt,
-              temperature: opts.temperature,
-              abortSignal,
-              disableToolCalls: opts.disableToolCalls,
-              requestTimeoutMs: timeoutMs,
-              onUsage: opts.onUsage,
-            }),
-          retries,
-          1000,
-          opts.onRetry
-        ));
+        const r = await withConnection(conn, () =>
+          retryTranslate(
+            (_) =>
+              translateSingle(lineText, {
+                apiKey: conn.apiKey,
+                apiHost: conn.apiHost,
+                model: conn.model,
+                provider: conn.provider,
+                systemPrompt,
+                temperature: opts.temperature,
+                abortSignal,
+                disableToolCalls: opts.disableToolCalls,
+                requestTimeoutMs: timeoutMs,
+                onUsage: opts.onUsage,
+              }),
+            retries,
+            1000,
+            opts.onRetry,
+          ),
+        );
         markUsed(conn);
         return r;
-      } catch (e: any) {
-        if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED") throw e;
+      } catch (e) {
+        if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED") throw e;
         lastErr = e;
         noteConnectionFailure(conn, e);
-        opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(e?.message || e) });
+        opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(errorMessage(e) || e) });
       }
     }
     throw lastErr || new Error("All LLM connections failed");
@@ -424,9 +439,10 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // cap (8): each extra connection is a separate backend, so workers scale up to
   // MAX_PARALLEL_CONNECTIONS distinct primaries.
   const MAX_PARALLEL_CONNECTIONS = 32;
-  const concurrency = llmMode === "parallel"
-    ? Math.max(1, Math.min(MAX_PARALLEL_CONNECTIONS, Math.max(configuredConcurrency, connections.length)))
-    : configuredConcurrency;
+  const concurrency =
+    llmMode === "parallel"
+      ? Math.max(1, Math.min(MAX_PARALLEL_CONNECTIONS, Math.max(configuredConcurrency, connections.length)))
+      : configuredConcurrency;
 
   // Concurrency-limited chunk processor.
   // Each slot processes chunks from the shared queue independently.
@@ -462,12 +478,15 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     // New approach: send context lines as read-only "preceding/following context"
     // in the prompt, send only core lines as the translation target.
     // Validation is now against coreText.length (always stable).
-    const contextBefore = subtitle.slice(contextStart, coreStart)
-      .map((c: SubtitleCue) => c?.data ? String(c.data.text).replace(/\n/g, " ").trim() : "");
-    const contextAfter = subtitle.slice(coreEnd + 1, contextEnd + 1)
-      .map((c: SubtitleCue) => c?.data ? String(c.data.text).replace(/\n/g, " ").trim() : "");
-    const coreText = subtitle.slice(coreStart, coreEnd + 1)
-      .map((c: SubtitleCue) => c?.data ? String(c.data.text).replace(/\n/g, " ").trim() : "");
+    const contextBefore = subtitle
+      .slice(contextStart, coreStart)
+      .map((c: SubtitleCue) => (c?.data ? String(c.data.text).replace(/\n/g, " ").trim() : ""));
+    const contextAfter = subtitle
+      .slice(coreEnd + 1, contextEnd + 1)
+      .map((c: SubtitleCue) => (c?.data ? String(c.data.text).replace(/\n/g, " ").trim() : ""));
+    const coreText = subtitle
+      .slice(coreStart, coreEnd + 1)
+      .map((c: SubtitleCue) => (c?.data ? String(c.data.text).replace(/\n/g, " ").trim() : ""));
 
     // Build context-aware prompt prefix
     let contextPromptPrefix = "";
@@ -503,8 +522,8 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       const chunkResult = await translateChunkWithFallback(coreText, connOrder, contextPromptPrefix);
       translatedWindow = chunkResult?.result ?? null;
       pass1Conn = chunkResult?.conn ?? null;
-    } catch (e: any) {
-      if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED") throw e;
+    } catch (e) {
+      if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED") throw e;
       // Only an overflow on a shared server escapes the cascade: requeue it.
       if (e instanceof ContextOverflowError) return "requeue";
       translatedWindow = null;
@@ -527,29 +546,31 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     // Refinement Pass (Pass 2) — optional editor pass over the pass-1 output.
     // Additive only: accepted solely when it returns the exact same line count;
     // any failure/mismatch keeps the pass-1 translation untouched.
-    if (opts.refinePass && translatedWindow && translatedWindow.every((t) => typeof t === "string")) {
+    if (opts.refinePass && translatedWindow?.every((t) => typeof t === "string")) {
       // Reuse the connection that produced pass-1 (falls back to the primary
       // only when pass-1 came from the single-line fallback path).
       const refineConn = pass1Conn ?? connOrder[0];
       // A refine failure (null, mismatch, network/abort/schema throw) must never
       // discard a good pass-1 translation. Catch any throw and keep pass-1.
       try {
-        const refined = await withConnection(refineConn, () => refineChunk(coreText, translatedWindow as string[], {
-          apiKey: refineConn.apiKey,
-          apiHost: refineConn.apiHost,
-          model: refineConn.model,
-          provider: refineConn.provider,
-          lang: opts.lang,
-          additional: effectiveAdditional,
-          temperature: opts.temperature,
-          abortSignal,
-          disableToolCalls: opts.disableToolCalls,
-          requestTimeoutMs: jobTimeoutMs,
-          onUsage: opts.onUsage,
-        }));
+        const refined = await withConnection(refineConn, () =>
+          refineChunk(coreText, translatedWindow as string[], {
+            apiKey: refineConn.apiKey,
+            apiHost: refineConn.apiHost,
+            model: refineConn.model,
+            provider: refineConn.provider,
+            lang: opts.lang,
+            additional: effectiveAdditional,
+            temperature: opts.temperature,
+            abortSignal,
+            disableToolCalls: opts.disableToolCalls,
+            requestTimeoutMs: jobTimeoutMs,
+            onUsage: opts.onUsage,
+          }),
+        );
         if (refined) translatedWindow = refined;
-      } catch (e: any) {
-        if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED") throw e;
+      } catch (e) {
+        if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED") throw e;
         // Keep the pass-1 translatedWindow untouched (same as the null case).
       }
     }
@@ -578,13 +599,10 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     saveChain = saveChain.then(() => {
       try {
         saveTranslated(partialPath, parsed, outputExt, subtitle);
-      } catch (e: any) {
+      } catch (e) {
         // Best-effort partial save — never throw (the final write at job end is
         // authoritative), but don't swallow silently: surface it for operators.
-        logger.warn(
-          "translate",
-          `Partial save failed for ${partialPath}: ${e?.message || e}`
-        );
+        logger.warn("translate", `Partial save failed for ${partialPath}: ${errorMessage(e) || e}`);
       }
     });
     return "done";
@@ -606,7 +624,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
           if (outcome === "requeue" && gate.halveFrom(limitAtStart)) {
             logger.warn(
               "translate",
-              `Chunks overflowed the model's shared context window; translating ${gate.limit} at a time`
+              `Chunks overflowed the model's shared context window; translating ${gate.limit} at a time`,
             );
           }
         } finally {
@@ -633,14 +651,14 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
         // leftover cue, so an unresponsive backend must not cost a full job
         // timeout (times five retries) per line here either.
         cue.data.translatedText = await translateSingleWithFallback(cue.data.text || "", connections);
-      } catch (e: any) {
-        if (e?.message === "STOP_REQUESTED" || e?.message === "JOB_CANCELLED") throw e;
+      } catch (e) {
+        if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED") throw e;
         // Every cue must end with some text — never drop a line from output.
         // When even the per-line fallback can't translate, pass the source
         // through so the cue still appears (untranslated, but present).
         logger.warn(
           "translate",
-          `Per-line fallback failed for a cue; passing source text through: ${e?.message || e}`
+          `Per-line fallback failed for a cue; passing source text through: ${errorMessage(e) || e}`,
         );
         cue.data.translatedText = cue.data.text || "";
       }
@@ -680,7 +698,7 @@ export async function testConnection(opts: {
       temperature: 0.3,
     });
     return { ok: true, message: `Success: "${result}"` };
-  } catch (error: any) {
-    return { ok: false, message: error.message || "Connection failed" };
+  } catch (error) {
+    return { ok: false, message: errorMessage(error) || "Connection failed" };
   }
 }

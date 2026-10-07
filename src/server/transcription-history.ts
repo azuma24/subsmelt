@@ -2,7 +2,14 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { logger } from "./logger.js";
-import type { TranscribePostAction, TranscriptionAdvancedOptions, TranscriptionOutputFormat, TranscriptionSubtitleQualityOptions } from "./transcription-client.js";
+import type { TranscriptionAttemptStatus, TranscriptionHistoryEntry } from "../shared/transcription.js";
+import type {
+  TranscribePostAction,
+  TranscriptionAdvancedOptions,
+  TranscriptionOutputFormat,
+  TranscriptionSubtitleQualityOptions,
+} from "./transcription-client.js";
+import { errorMessage } from "./errors.js";
 
 const DATA_DIR = process.env.DATA_DIR || "./data";
 const HISTORY_FILE = path.join(DATA_DIR, "transcription-history.json");
@@ -12,28 +19,7 @@ const NO_SPEECH_FILE = path.join(DATA_DIR, "transcription-no-speech.json");
 /** The errorSummary of a run that found nothing to transcribe. */
 export const NO_SPEECH_SUMMARY = "No speech found";
 
-export type TranscriptionAttemptStatus = "running" | "succeeded" | "failed" | "cancelled";
-
-export interface TranscriptionHistoryEntry {
-  id: string;
-  inputPath: string;
-  outputPath: string;
-  model: string;
-  language: string;
-  outputFormat: TranscriptionOutputFormat;
-  postAction: TranscribePostAction;
-  status: TranscriptionAttemptStatus;
-  startedAt: string;
-  finishedAt: string | null;
-  durationSeconds: number | null;
-  errorSummary: string | null;
-  subtitleQuality?: TranscriptionSubtitleQualityOptions | null;
-  advancedOptions?: TranscriptionAdvancedOptions | null;
-  // Absent on attempts recorded before retries replayed them.
-  device?: string;
-  computeType?: string;
-  overwrite?: boolean;
-}
+export type { TranscriptionAttemptStatus, TranscriptionHistoryEntry };
 
 interface StartAttemptInput {
   inputPath: string;
@@ -69,18 +55,21 @@ function safeJsonParse(raw: string): TranscriptionHistoryEntry[] {
 }
 
 export function summarizeTranscriptionError(error: unknown): string {
-  const raw = typeof error === "string"
-    ? error
-    : error instanceof Error
-      ? error.message
-      : String(error ?? "Transcription failed");
+  const raw =
+    typeof error === "string"
+      ? error
+      : error instanceof Error
+        ? errorMessage(error)
+        : String(error ?? "Transcription failed");
 
-  return raw
-    .replace(/[A-Za-z]:\\[^\s"'()]+/g, "[path]")
-    .replace(/(?:\/[^/\s"'()]+)+/g, "[path]")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 240) || "Transcription failed";
+  return (
+    raw
+      .replace(/[A-Za-z]:\\[^\s"'()]+/g, "[path]")
+      .replace(/(?:\/[^/\s"'()]+)+/g, "[path]")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 240) || "Transcription failed"
+  );
 }
 
 export class TranscriptionHistoryStore {
@@ -102,9 +91,7 @@ export class TranscriptionHistoryStore {
 
   private read(): TranscriptionHistoryEntry[] {
     if (this.cache === null) {
-      this.cache = fs.existsSync(this.filePath)
-        ? safeJsonParse(fs.readFileSync(this.filePath, "utf8"))
-        : [];
+      this.cache = fs.existsSync(this.filePath) ? safeJsonParse(fs.readFileSync(this.filePath, "utf8")) : [];
     }
     return this.cache;
   }
@@ -123,9 +110,7 @@ export class TranscriptionHistoryStore {
     // never flush again.
     this.writeChain = this.writeChain
       .then(() => this.flush(json))
-      .catch((error: any) =>
-        logger.error("system", `History flush failed: ${error?.message || error}`),
-      );
+      .catch((error) => logger.error("system", `History flush failed: ${errorMessage(error) || error}`));
   }
 
   private flush(json: string): void {
@@ -135,7 +120,9 @@ export class TranscriptionHistoryStore {
       fs.renameSync(tmpPath, this.filePath);
     } catch {
       fs.writeFileSync(this.filePath, json, "utf8");
-      try { fs.unlinkSync(tmpPath); } catch {}
+      try {
+        fs.unlinkSync(tmpPath);
+      } catch {}
     }
   }
 
@@ -278,7 +265,8 @@ export class NoSpeechRegistry {
     if (this.entries === null) {
       try {
         const parsed = JSON.parse(fs.readFileSync(this.filePath, "utf8")) as unknown;
-        this.entries = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, number> : {};
+        this.entries =
+          parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, number>) : {};
       } catch {
         this.entries = {};
       }
@@ -290,8 +278,8 @@ export class NoSpeechRegistry {
     try {
       fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
       fs.writeFileSync(this.filePath, JSON.stringify(this.read(), null, 2), "utf8");
-    } catch (error: any) {
-      logger.error("system", `Saving the no-speech list failed: ${error?.message || error}`);
+    } catch (error) {
+      logger.error("system", `Saving the no-speech list failed: ${errorMessage(error) || error}`);
     }
   }
 }

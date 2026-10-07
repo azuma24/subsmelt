@@ -46,20 +46,17 @@ test("startup returns interrupted jobs to pending with their progress cleared", 
 
   db.resetInterruptedJobs();
 
+  assert.deepEqual([db.getJob(interrupted)?.status, db.getJob(interrupted)?.completed_cues], ["pending", 0]);
   assert.deepEqual(
-    [db.getJob(interrupted)?.status, db.getJob(interrupted)?.completed_cues],
-    ["pending", 0],
+    db.getJobs("translating").map((job) => job.id),
+    [],
   );
-  assert.deepEqual(db.getJobs("translating").map((job) => job.id), []);
 });
 
 test("single-job reset, force and delete still act on jobs no worker holds", () => {
   const errored = seed("error", { completed_cues: 7 });
   assert.equal(db.resetJob(errored), 1);
-  assert.deepEqual(
-    [db.getJob(errored)?.status, db.getJob(errored)?.completed_cues],
-    ["pending", 0],
-  );
+  assert.deepEqual([db.getJob(errored)?.status, db.getJob(errored)?.completed_cues], ["pending", 0]);
 
   const done = seed("done");
   assert.equal(db.forceJob(done), 1);

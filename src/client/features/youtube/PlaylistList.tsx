@@ -1,10 +1,11 @@
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import type { YoutubePlaylist } from "../../types";
 import { ActionButton, RowActionsMenu } from "../../ui/primitives";
 import { CountChip, Tag } from "./parts";
 import { availabilityLabel, followKind, profileLabel, relativeFromNow } from "./format";
 import { countByFilter } from "./video-status";
 import type { usePlaylistActions } from "./usePlaylistActions";
+import { Icon } from "../../ui/Icon";
 
 interface PlaylistListProps {
   playlists: YoutubePlaylist[];
@@ -18,31 +19,48 @@ export function PlaylistList({ playlists, folderRoot, actions, onOpen, onEdit }:
   return (
     <ul className="space-y-3">
       {playlists.map((playlist) => (
-        <PlaylistRow key={playlist.id} playlist={playlist} folderRoot={folderRoot} actions={actions} onOpen={onOpen} onEdit={onEdit} />
+        <PlaylistRow
+          key={playlist.id}
+          playlist={playlist}
+          folderRoot={folderRoot}
+          actions={actions}
+          onOpen={onOpen}
+          onEdit={onEdit}
+        />
       ))}
     </ul>
   );
 }
 
-function PlaylistRow({ playlist, folderRoot, actions, onOpen, onEdit }: { playlist: YoutubePlaylist } & Omit<PlaylistListProps, "playlists">) {
+function PlaylistRow({
+  playlist,
+  folderRoot,
+  actions,
+  onOpen,
+  onEdit,
+}: { playlist: YoutubePlaylist } & Omit<PlaylistListProps, "playlists">) {
   const { t, i18n } = useTranslation();
   const counts = countByFilter(playlist.counts.byStatus);
   const availability = availabilityLabel(playlist.sync.availability, t);
   const checking = actions.isChecking(playlist);
   const meta = [
     `${folderRoot}/${playlist.folder}`,
-    playlist.sync.lastCheckedAt ? t("youtube.checkedAgo", { time: relativeFromNow(playlist.sync.lastCheckedAt, i18n.language) }) : t("youtube.notChecked"),
-    playlist.sync.lastCheckedAt && playlist.sync.nextCheckAt ? t("youtube.nextCheckIn", { time: relativeFromNow(playlist.sync.nextCheckAt, i18n.language) }) : null,
+    playlist.sync.lastCheckedAt
+      ? t("youtube.checkedAgo", { time: relativeFromNow(playlist.sync.lastCheckedAt, i18n.language) })
+      : t("youtube.notChecked"),
+    playlist.sync.lastCheckedAt && playlist.sync.nextCheckAt
+      ? t("youtube.nextCheckIn", { time: relativeFromNow(playlist.sync.nextCheckAt, i18n.language) })
+      : null,
   ].filter(Boolean);
 
   return (
-    <li className="flex flex-col gap-3 rounded-md border border-[var(--border)] bg-[var(--surface)] p-4 md:flex-row md:items-start md:justify-between md:p-4">
+    <li className="flex flex-col gap-3 rounded-md border border-border bg-surface p-4 md:flex-row md:items-start md:justify-between md:p-4">
       <div className="min-w-0 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => onOpen(playlist)}
-            className="min-h-touch text-left text-base font-semibold text-[var(--text)] underline-offset-4 hover:text-[var(--accent)] hover:underline"
+            className="min-h-touch text-left text-base font-semibold text-text underline-offset-4 hover:text-accent hover:underline"
           >
             {playlist.title}
           </button>
@@ -51,10 +69,10 @@ function PlaylistRow({ playlist, folderRoot, actions, onOpen, onEdit }: { playli
           <Tag>{profileLabel(playlist.media, t)}</Tag>
           <Tag>{playlist.mode === "auto" ? t("youtube.modeAuto") : t("youtube.modeManual")}</Tag>
         </div>
-        <p className="break-words text-xs leading-5 text-[var(--text-3)]">{meta.join(" · ")}</p>
+        <p className="break-words text-xs leading-5 text-faint">{meta.join(" · ")}</p>
         {playlist.sync.lastError && (
-          <p className="break-words text-xs leading-5 text-[var(--red)]">
-            <span aria-hidden="true">✕ </span>
+          <p className="break-words text-xs leading-5 text-danger">
+            <Icon name="error" />
             {t("youtube.toast.checkFailed", { error: playlist.sync.lastError })}
           </p>
         )}

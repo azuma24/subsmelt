@@ -8,15 +8,13 @@ already gone.
 whisper_gui.py imports tkinter behind a guard, so it loads headless; only
 ServerController is exercised here.
 """
+
 import importlib.util
 import sys
 import unittest
 from pathlib import Path
 
-_MODULE_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "packaging" / "windows" / "tray" / "whisper_gui.py"
-)
+_MODULE_PATH = Path(__file__).resolve().parents[1] / "packaging" / "windows" / "tray" / "whisper_gui.py"
 _spec = importlib.util.spec_from_file_location("whisper_gui", _MODULE_PATH)
 whisper_gui = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(whisper_gui)

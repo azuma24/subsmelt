@@ -31,10 +31,17 @@ const preview: JobPreview = {
 const seed: QuerySeed = [[["job-preview", 7], preview]];
 
 test("the analysis opens collapsed to a heading and a one-line teaser, with the cues visible", () => {
-  const page = renderPage(<PreviewOverlay isMobile={false} jobId={7} previewSearch="" setPreviewSearch={() => {}} onClose={() => {}} />, seed);
+  const page = renderPage(
+    <PreviewOverlay jobId={7} previewSearch="" setPreviewSearch={() => {}} onClose={() => {}} />,
+    seed,
+  );
 
   assert.match(page.html, /aria-expanded="false"/);
-  assert.ok(page.buttons.includes("Context / Plot Summary / Glossary Show A space-opera serial; keep the general's title formal."));
+  assert.ok(
+    page.buttons.includes(
+      "Context / Plot Summary / Glossary Show A space-opera serial; keep the general's title formal.",
+    ),
+  );
   assert.ok(!page.text.includes("Scene 1"), "plot body stays hidden until expanded");
   assert.ok(!page.buttons.includes("Copy plot summary"), "copy actions live inside the expanded body");
   assert.ok(page.text.includes("Hello there."));

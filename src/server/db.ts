@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import path from "node:path";
 import fs from "node:fs";
 import { setLogDb } from "./logger.js";
+import type { JobRow, LogRow } from "../shared/jobs.js";
 
 const DATA_DIR = process.env.DATA_DIR || "./data";
 fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -60,15 +61,11 @@ if (!jobColumns.some((c) => c.name === "started_at")) {
 
 // Queue workers claim pending jobs by status/priority rather than materializing
 // the full pending table on every poll.
-db.exec(
-  "CREATE INDEX IF NOT EXISTS idx_jobs_pending_priority ON jobs (status, priority DESC, created_at ASC, id ASC)",
-);
+db.exec("CREATE INDEX IF NOT EXISTS idx_jobs_pending_priority ON jobs (status, priority DESC, created_at ASC, id ASC)");
 // The dashboard list sorts every job by priority/recency; the status-leading
 // index above cannot serve that ordering, so it would be a full scan plus a
 // temporary b-tree per request.
-db.exec(
-  "CREATE INDEX IF NOT EXISTS idx_jobs_list_order ON jobs (priority DESC, created_at DESC, id DESC)",
-);
+db.exec("CREATE INDEX IF NOT EXISTS idx_jobs_list_order ON jobs (priority DESC, created_at DESC, id DESC)");
 
 // --- Schema: Logs ---
 
@@ -102,41 +99,9 @@ export function resetInterruptedJobs(): number {
 }
 resetInterruptedJobs();
 
-// --- Row types ---
+// --- Row types (src/shared/jobs.ts: the client reads the same shapes) ---
 
-/** Shape of a `jobs` row as stored in SQLite. */
-export interface JobRow {
-  id: number;
-  task_id: number;
-  srt_path: string;
-  output_path: string;
-  video_path: string | null;
-  status: string;
-  priority: number;
-  force: number;
-  total_cues: number | null;
-  completed_cues: number | null;
-  error: string | null;
-  analysis_context: string | null;
-  used_connections: string | null;
-  duration_seconds: number | null;
-  input_tokens: number | null;
-  output_tokens: number | null;
-  started_at: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-}
-
-/** Shape of a `logs` row as stored in SQLite. */
-export interface LogRow {
-  id: number;
-  timestamp: string;
-  level: string;
-  category: string;
-  message: string;
-  job_id: number | null;
-  meta: string | null;
-}
+export type { JobRow, LogRow };
 
 // --- Jobs ---
 
@@ -152,13 +117,7 @@ export function createJob(job: {
       `INSERT OR IGNORE INTO jobs (task_id, srt_path, output_path, video_path, status)
        VALUES (?, ?, ?, ?, ?)`,
     )
-    .run(
-      job.task_id,
-      job.srt_path,
-      job.output_path,
-      job.video_path,
-      job.status || "pending",
-    );
+    .run(job.task_id, job.srt_path, job.output_path, job.video_path, job.status || "pending");
 }
 
 export function updateJob(
@@ -178,7 +137,7 @@ export function updateJob(
   }>,
 ) {
   const sets: string[] = ["updated_at = datetime('now')"];
-  const vals: any[] = [];
+  const vals: (string | number | null)[] = [];
   for (const [k, v] of Object.entries(updates)) {
     if (v !== undefined) {
       sets.push(`${k} = ?`);
@@ -194,17 +153,9 @@ export function updateJob(
  * reported, so the totals build up while the job runs. Deltas are coerced to
  * finite non-negative integers; a no-op when both are zero.
  */
-export function addJobUsage(
-  id: number,
-  inputDelta: number,
-  outputDelta: number,
-) {
-  const inDelta = Number.isFinite(inputDelta)
-    ? Math.max(0, Math.trunc(inputDelta))
-    : 0;
-  const outDelta = Number.isFinite(outputDelta)
-    ? Math.max(0, Math.trunc(outputDelta))
-    : 0;
+export function addJobUsage(id: number, inputDelta: number, outputDelta: number) {
+  const inDelta = Number.isFinite(inputDelta) ? Math.max(0, Math.trunc(inputDelta)) : 0;
+  const outDelta = Number.isFinite(outputDelta) ? Math.max(0, Math.trunc(outputDelta)) : 0;
   if (inDelta === 0 && outDelta === 0) return;
   db.prepare(
     "UPDATE jobs SET input_tokens = COALESCE(input_tokens, 0) + ?, output_tokens = COALESCE(output_tokens, 0) + ? WHERE id = ?",
@@ -214,14 +165,10 @@ export function addJobUsage(
 export function getJobs(status?: string): JobRow[] {
   if (status) {
     return db
-      .prepare(
-        `SELECT * FROM jobs WHERE status = ? ORDER BY priority DESC, created_at ASC`,
-      )
+      .prepare(`SELECT * FROM jobs WHERE status = ? ORDER BY priority DESC, created_at ASC`)
       .all(status) as JobRow[];
   }
-  return db
-    .prepare(`SELECT * FROM jobs ORDER BY priority DESC, created_at DESC`)
-    .all() as JobRow[];
+  return db.prepare(`SELECT * FROM jobs ORDER BY priority DESC, created_at DESC`).all() as JobRow[];
 }
 
 /** The dashboard list: every column except analysis_context, which is a
@@ -231,11 +178,7 @@ const JOB_LIST_COLUMNS =
   "id, task_id, srt_path, output_path, video_path, status, priority, force, total_cues, completed_cues, error, duration_seconds, started_at, created_at, updated_at, input_tokens, output_tokens, used_connections";
 
 export function getJobsForList(): JobRow[] {
-  return db
-    .prepare(
-      `SELECT ${JOB_LIST_COLUMNS} FROM jobs ORDER BY priority DESC, created_at DESC`,
-    )
-    .all() as JobRow[];
+  return db.prepare(`SELECT ${JOB_LIST_COLUMNS} FROM jobs ORDER BY priority DESC, created_at DESC`).all() as JobRow[];
 }
 
 /** One row per (source subtitle, task) with its job state, for the scanner to
@@ -247,57 +190,53 @@ export function listJobTaskStatuses(): Array<{
   task_id: number;
   status: string;
 }> {
-  return db
-    .prepare("SELECT id, srt_path, output_path, task_id, status FROM jobs")
-    .all() as Array<{ id: number; srt_path: string; output_path: string; task_id: number; status: string }>;
+  return db.prepare("SELECT id, srt_path, output_path, task_id, status FROM jobs").all() as Array<{
+    id: number;
+    srt_path: string;
+    output_path: string;
+    task_id: number;
+    status: string;
+  }>;
 }
 
 /** A job that has not finished and would write `outputPath`, other than `exceptId`. */
 export function findUnfinishedJobForOutput(outputPath: string, exceptId: number | null): { id: number } | undefined {
   return db
-    .prepare(
-      "SELECT id FROM jobs WHERE output_path = ? AND status NOT IN ('done', 'skipped') AND id != ? LIMIT 1",
-    )
+    .prepare("SELECT id FROM jobs WHERE output_path = ? AND status NOT IN ('done', 'skipped') AND id != ? LIMIT 1")
     .get(outputPath, exceptId ?? -1) as { id: number } | undefined;
 }
 
 /** The job for one (source subtitle, task) pair, which the jobs table keeps unique. */
-export function findJobForTask(srtPath: string, taskId: number): { id: number; task_id: number; status: string } | undefined {
-  return db
-    .prepare("SELECT id, task_id, status FROM jobs WHERE srt_path = ? AND task_id = ?")
-    .get(srtPath, taskId) as { id: number; task_id: number; status: string } | undefined;
+export function findJobForTask(
+  srtPath: string,
+  taskId: number,
+): { id: number; task_id: number; status: string } | undefined {
+  return db.prepare("SELECT id, task_id, status FROM jobs WHERE srt_path = ? AND task_id = ?").get(srtPath, taskId) as
+    | { id: number; task_id: number; status: string }
+    | undefined;
 }
 
 /** srt_path and status only — folder counts never need the other columns. */
 export function listJobPathsAndStatuses(): Array<{ srt_path: string; status: string }> {
-  return db
-    .prepare("SELECT srt_path, status FROM jobs")
-    .all() as Array<{ srt_path: string; status: string }>;
+  return db.prepare("SELECT srt_path, status FROM jobs").all() as Array<{ srt_path: string; status: string }>;
 }
 
 export function countPendingJobs(ids?: Set<number> | null): number {
   if (!ids || ids.size === 0) {
-    return (
-      db
-        .prepare("SELECT COUNT(*) AS count FROM jobs WHERE status = 'pending'")
-        .get() as { count: number }
-    ).count;
+    return (db.prepare("SELECT COUNT(*) AS count FROM jobs WHERE status = 'pending'").get() as { count: number }).count;
   }
   const values = Array.from(ids);
   const placeholders = values.map(() => "?").join(",");
   return (
     db
-      .prepare(
-        `SELECT COUNT(*) AS count FROM jobs WHERE status = 'pending' AND id IN (${placeholders})`,
-      )
+      .prepare(`SELECT COUNT(*) AS count FROM jobs WHERE status = 'pending' AND id IN (${placeholders})`)
       .get(...values) as { count: number }
   ).count;
 }
 
 export function claimPendingJob(ids?: Set<number> | null): JobRow | null {
   const values = ids && ids.size > 0 ? Array.from(ids) : [];
-  const filter =
-    values.length > 0 ? ` AND id IN (${values.map(() => "?").join(",")})` : "";
+  const filter = values.length > 0 ? ` AND id IN (${values.map(() => "?").join(",")})` : "";
   const select = db.prepare(
     `SELECT * FROM jobs WHERE status = 'pending'${filter} ORDER BY priority DESC, created_at ASC, id ASC LIMIT 1`,
   );
@@ -315,26 +254,17 @@ export function claimPendingJob(ids?: Set<number> | null): JobRow | null {
 export function countOpenJobsForSubtitle(srtPath: string): number {
   return (
     db
-      .prepare(
-        "SELECT COUNT(*) AS count FROM jobs WHERE srt_path = ? AND status IN ('pending', 'translating')",
-      )
+      .prepare("SELECT COUNT(*) AS count FROM jobs WHERE srt_path = ? AND status IN ('pending', 'translating')")
       .get(srtPath) as { count: number }
   ).count;
 }
 
 export function getJob(id: number): JobRow | undefined {
-  return db.prepare(`SELECT * FROM jobs WHERE id = ?`).get(id) as
-    | JobRow
-    | undefined;
+  return db.prepare(`SELECT * FROM jobs WHERE id = ?`).get(id) as JobRow | undefined;
 }
 
-export function getJobBySrtAndTask(
-  srtPath: string,
-  taskId: number,
-): JobRow | undefined {
-  return db
-    .prepare("SELECT * FROM jobs WHERE srt_path = ? AND task_id = ?")
-    .get(srtPath, taskId) as JobRow | undefined;
+export function getJobBySrtAndTask(srtPath: string, taskId: number): JobRow | undefined {
+  return db.prepare("SELECT * FROM jobs WHERE srt_path = ? AND task_id = ?").get(srtPath, taskId) as JobRow | undefined;
 }
 
 // The single-job variants return the affected row count (0 or 1) like the batch
@@ -350,9 +280,7 @@ export function resetJob(id: number, outputPath?: string): number {
 }
 
 export function resetJobs(ids: number[]) {
-  const cleanIds = Array.from(
-    new Set(ids.filter((id) => Number.isInteger(id) && id > 0)),
-  );
+  const cleanIds = Array.from(new Set(ids.filter((id) => Number.isInteger(id) && id > 0)));
   if (cleanIds.length === 0) return 0;
 
   const stmt = db.prepare(
@@ -375,9 +303,7 @@ export function forceJob(id: number): number {
 }
 
 export function forceJobs(ids: number[]) {
-  const cleanIds = Array.from(
-    new Set(ids.filter((id) => Number.isInteger(id) && id > 0)),
-  );
+  const cleanIds = Array.from(new Set(ids.filter((id) => Number.isInteger(id) && id > 0)));
   if (cleanIds.length === 0) return 0;
 
   const stmt = db.prepare(
@@ -398,23 +324,17 @@ export function forceAllJobs() {
 }
 
 export function pinJob(id: number) {
-  const max = db.prepare("SELECT MAX(priority) as m FROM jobs").get() as any;
+  const max = db.prepare("SELECT MAX(priority) as m FROM jobs").get() as { m: number | null } | undefined;
   const newPriority = (max?.m || 0) + 1;
-  db.prepare(
-    "UPDATE jobs SET priority = ?, updated_at = datetime('now') WHERE id = ?",
-  ).run(newPriority, id);
+  db.prepare("UPDATE jobs SET priority = ?, updated_at = datetime('now') WHERE id = ?").run(newPriority, id);
 }
 
 export function unpinJob(id: number) {
-  db.prepare(
-    "UPDATE jobs SET priority = 0, updated_at = datetime('now') WHERE id = ?",
-  ).run(id);
+  db.prepare("UPDATE jobs SET priority = 0, updated_at = datetime('now') WHERE id = ?").run(id);
 }
 
 export function reorderJobs(jobIds: number[]) {
-  const stmt = db.prepare(
-    "UPDATE jobs SET priority = ?, updated_at = datetime('now') WHERE id = ?",
-  );
+  const stmt = db.prepare("UPDATE jobs SET priority = ?, updated_at = datetime('now') WHERE id = ?");
   const tx = db.transaction(() => {
     for (let i = 0; i < jobIds.length; i++) {
       stmt.run(jobIds.length - i, jobIds[i]);
@@ -424,20 +344,14 @@ export function reorderJobs(jobIds: number[]) {
 }
 
 export function deleteJob(id: number): number {
-  return db
-    .prepare("DELETE FROM jobs WHERE id = ? AND status != 'translating'")
-    .run(id).changes;
+  return db.prepare("DELETE FROM jobs WHERE id = ? AND status != 'translating'").run(id).changes;
 }
 
 export function deleteJobs(ids: number[]) {
-  const cleanIds = Array.from(
-    new Set(ids.filter((id) => Number.isInteger(id) && id > 0)),
-  );
+  const cleanIds = Array.from(new Set(ids.filter((id) => Number.isInteger(id) && id > 0)));
   if (cleanIds.length === 0) return 0;
 
-  const stmt = db.prepare(
-    "DELETE FROM jobs WHERE id = ? AND status = 'pending'",
-  );
+  const stmt = db.prepare("DELETE FROM jobs WHERE id = ? AND status = 'pending'");
   let deleted = 0;
   const tx = db.transaction(() => {
     for (const id of cleanIds) {
@@ -451,15 +365,11 @@ export function deleteJobs(ids: number[]) {
 // Pending and translating jobs stay: a worker may hold one, and deleting its
 // row would hide work that is still running.
 export function clearFinishedJobs(): number {
-  return db
-    .prepare("DELETE FROM jobs WHERE status IN ('done', 'skipped', 'error')")
-    .run().changes;
+  return db.prepare("DELETE FROM jobs WHERE status IN ('done', 'skipped', 'error')").run().changes;
 }
 
 export function deletePendingJobsForTask(taskId: number): number {
-  return db
-    .prepare("DELETE FROM jobs WHERE task_id = ? AND status = 'pending'")
-    .run(taskId).changes;
+  return db.prepare("DELETE FROM jobs WHERE task_id = ? AND status = 'pending'").run(taskId).changes;
 }
 
 // --- Logs ---
@@ -472,7 +382,7 @@ export function getLogs(opts?: {
   offset?: number;
 }): LogRow[] {
   let sql = "SELECT * FROM logs WHERE 1=1";
-  const vals: any[] = [];
+  const vals: (string | number)[] = [];
 
   if (opts?.level) {
     sql += " AND level = ?";
@@ -516,7 +426,11 @@ export function pruneLogs({
   now = Date.now(),
   maxAgeDays = LOG_RETENTION_DAYS,
   maxRows = LOG_MAX_ROWS,
-}: { now?: number; maxAgeDays?: number; maxRows?: number } = {}): number {
+}: {
+  now?: number;
+  maxAgeDays?: number;
+  maxRows?: number;
+} = {}): number {
   const cutoff = new Date(now - maxAgeDays * 24 * 60 * 60 * 1000).toISOString();
   const byAge = db.prepare("DELETE FROM logs WHERE timestamp < ?").run(cutoff).changes;
   const byCount = db

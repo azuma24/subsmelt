@@ -7,7 +7,10 @@ test("detects Japanese from kana text", () => {
 });
 
 test("detects English", () => {
-  assert.equal(detectSampleLanguage("The quick brown fox jumps over the lazy dog and keeps on running far away."), "en");
+  assert.equal(
+    detectSampleLanguage("The quick brown fox jumps over the lazy dog and keeps on running far away."),
+    "en",
+  );
 });
 
 test("detects Korean", () => {

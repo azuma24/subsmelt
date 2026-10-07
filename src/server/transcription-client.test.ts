@@ -108,11 +108,12 @@ test("buildTranscriptionRequest keeps whisper behavior app-owned", () => {
 });
 
 test("buildTranscriptionRequest sends the preferred Chinese script, Taiwan by default", () => {
-  const build = (settings: Record<string, string>) => buildTranscriptionRequest({
-    videoPath: "/media/anime/Episode 01.mkv",
-    mediaDir: "/media",
-    settings,
-  }).chinese_script;
+  const build = (settings: Record<string, string>) =>
+    buildTranscriptionRequest({
+      videoPath: "/media/anime/Episode 01.mkv",
+      mediaDir: "/media",
+      settings,
+    }).chinese_script;
 
   assert.equal(build({ preferred_chinese: "zh-CN" }), "zh-CN");
   assert.equal(build({ preferred_chinese: "zh-TW" }), "zh-TW");
@@ -144,34 +145,46 @@ test("buildTranscriptionRequest rewrites only the backend path when a mapping is
 });
 
 test("buildTranscriptionRequest still rejects source paths outside the media root even when mapping is configured", () => {
-  assert.throws(() => buildTranscriptionRequest({
-    videoPath: "/other-share/anime/Episode 04.mkv",
-    mediaDir: "/media",
-    settings: {
-      transcription_path_map_from: "/media",
-      transcription_path_map_to: "/srv/media-library",
-    },
-  }), /outside media directory/);
+  assert.throws(
+    () =>
+      buildTranscriptionRequest({
+        videoPath: "/other-share/anime/Episode 04.mkv",
+        mediaDir: "/media",
+        settings: {
+          transcription_path_map_from: "/media",
+          transcription_path_map_to: "/srv/media-library",
+        },
+      }),
+    /outside media directory/,
+  );
 });
 
 test("buildTranscriptionRequest rejects unsafe mapping configuration and traversal-ish mapped results", () => {
-  assert.throws(() => buildTranscriptionRequest({
-    videoPath: "/media/anime/Episode 05.mkv",
-    mediaDir: "/media",
-    settings: {
-      transcription_path_map_from: "/media",
-      transcription_path_map_to: "http://user:***@backend/share",
-    },
-  }), /must be an absolute filesystem path/);
+  assert.throws(
+    () =>
+      buildTranscriptionRequest({
+        videoPath: "/media/anime/Episode 05.mkv",
+        mediaDir: "/media",
+        settings: {
+          transcription_path_map_from: "/media",
+          transcription_path_map_to: "http://user:***@backend/share",
+        },
+      }),
+    /must be an absolute filesystem path/,
+  );
 
-  assert.throws(() => buildTranscriptionRequest({
-    videoPath: "/media/anime/Episode 05.mkv",
-    mediaDir: "/media",
-    settings: {
-      transcription_path_map_from: "/media/../media",
-      transcription_path_map_to: "/srv/media-library",
-    },
-  }), /must not contain traversal segments/);
+  assert.throws(
+    () =>
+      buildTranscriptionRequest({
+        videoPath: "/media/anime/Episode 05.mkv",
+        mediaDir: "/media",
+        settings: {
+          transcription_path_map_from: "/media/../media",
+          transcription_path_map_to: "/srv/media-library",
+        },
+      }),
+    /must not contain traversal segments/,
+  );
 });
 
 test("buildTranscriptionRequest includes subtitle polish options from settings", () => {
@@ -246,40 +259,62 @@ test("buildTranscriptionRequest sends supported advanced STT options without ena
 });
 
 test("buildTranscriptionRequest rejects invalid STT JSON settings instead of silently using global defaults", () => {
-  assert.throws(() => buildTranscriptionRequest({
-    videoPath: "/media/anime/Episode 08.mkv",
-    mediaDir: "/media",
-    settings: { transcription_folder_defaults: "[{not json]" },
-  }), /Invalid transcription_folder_defaults JSON/);
+  assert.throws(
+    () =>
+      buildTranscriptionRequest({
+        videoPath: "/media/anime/Episode 08.mkv",
+        mediaDir: "/media",
+        settings: { transcription_folder_defaults: "[{not json]" },
+      }),
+    /Invalid transcription_folder_defaults JSON/,
+  );
 
-  assert.throws(() => buildTranscriptionRequest({
-    videoPath: "/media/anime/Episode 08.mkv",
-    mediaDir: "/media",
-    settings: { transcription_advanced_stt: "{not json}" },
-  }), /Invalid transcription_advanced_stt JSON/);
+  assert.throws(
+    () =>
+      buildTranscriptionRequest({
+        videoPath: "/media/anime/Episode 08.mkv",
+        mediaDir: "/media",
+        settings: { transcription_advanced_stt: "{not json}" },
+      }),
+    /Invalid transcription_advanced_stt JSON/,
+  );
 });
 
 test("localTranscriptionOutputPath mirrors backend language suffix output naming", () => {
-  assert.equal(localTranscriptionOutputPath("/media/anime/Episode 07.mkv", "ja", "vtt"), "/media/anime/Episode 07.ja.vtt");
-  assert.equal(localTranscriptionOutputPath("/media/anime/Episode 07.mkv", "auto", "srt"), "/media/anime/Episode 07.srt");
+  assert.equal(
+    localTranscriptionOutputPath("/media/anime/Episode 07.mkv", "ja", "vtt"),
+    "/media/anime/Episode 07.ja.vtt",
+  );
+  assert.equal(
+    localTranscriptionOutputPath("/media/anime/Episode 07.mkv", "auto", "srt"),
+    "/media/anime/Episode 07.srt",
+  );
 });
 
 test("buildTranscriptionRequest rejects a language that would reshape the subtitle output path", () => {
-  assert.throws(() => buildTranscriptionRequest({
-    videoPath: "/media/anime/Episode 09.mkv",
-    mediaDir: "/media",
-    settings: {},
-    overrides: { language: "../x" },
-  }), { message: "Unsupported transcription language: ../x" });
+  assert.throws(
+    () =>
+      buildTranscriptionRequest({
+        videoPath: "/media/anime/Episode 09.mkv",
+        mediaDir: "/media",
+        settings: {},
+        overrides: { language: "../x" },
+      }),
+    { message: "Unsupported transcription language: ../x" },
+  );
 });
 
 test("buildTranscriptionRequest rejects an output format outside srt/vtt/txt/ass", () => {
-  assert.throws(() => buildTranscriptionRequest({
-    videoPath: "/media/anime/Episode 09.mkv",
-    mediaDir: "/media",
-    settings: {},
-    outputFormat: "srt/../../evil" as TranscriptionOutputFormat,
-  }), { message: "Unsupported transcription output format: srt/../../evil" });
+  assert.throws(
+    () =>
+      buildTranscriptionRequest({
+        videoPath: "/media/anime/Episode 09.mkv",
+        mediaDir: "/media",
+        settings: {},
+        outputFormat: "srt/../../evil" as TranscriptionOutputFormat,
+      }),
+    { message: "Unsupported transcription output format: srt/../../evil" },
+  );
 });
 
 test("a valid language and output format still name the subtitle next to the video", () => {
@@ -291,7 +326,10 @@ test("a valid language and output format still name the subtitle next to the vid
     overrides: { language: "en" },
   });
 
-  assert.equal(localTranscriptionOutputPath("/media/anime/Episode 09.mkv", request.language, request.output_format), "/media/anime/Episode 09.en.srt");
+  assert.equal(
+    localTranscriptionOutputPath("/media/anime/Episode 09.mkv", request.language, request.output_format),
+    "/media/anime/Episode 09.en.srt",
+  );
 });
 
 test("a language with a region subtag names the subtitle with that tag", () => {
@@ -303,7 +341,10 @@ test("a language with a region subtag names the subtitle with that tag", () => {
     overrides: { language: "zh-TW" },
   });
 
-  assert.equal(localTranscriptionOutputPath("/media/drama/Episode 01.mkv", request.language, request.output_format), "/media/drama/Episode 01.zh-TW.srt");
+  assert.equal(
+    localTranscriptionOutputPath("/media/drama/Episode 01.mkv", request.language, request.output_format),
+    "/media/drama/Episode 01.zh-TW.srt",
+  );
 });
 
 test("transcribe post action values remain restricted", () => {
@@ -315,9 +356,17 @@ test("applyPreflightPolicy downgrades low-RAM requests when configured", async (
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
     calls.push(JSON.parse(String(init?.body)));
-    const body = calls.length === 1
-      ? { ok: false, safe: false, code: "insufficient_ram", availableRamMb: 4096, requiredRamMb: 8192, suggestedModel: "small" }
-      : { ok: true, safe: true, code: "ok" };
+    const body =
+      calls.length === 1
+        ? {
+            ok: false,
+            safe: false,
+            code: "insufficient_ram",
+            availableRamMb: 4096,
+            requiredRamMb: 8192,
+            suggestedModel: "small",
+          }
+        : { ok: true, safe: true, code: "ok" };
     return Response.json(body);
   }) as typeof fetch;
   try {
@@ -347,7 +396,14 @@ test("applyPreflightPolicy never downgrades a Nemotron request to a Whisper mode
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
     calls.push(JSON.parse(String(init?.body)));
-    return Response.json({ ok: false, safe: false, code: "insufficient_ram", availableRamMb: 1024, requiredRamMb: 2048, suggestedModel: "small" });
+    return Response.json({
+      ok: false,
+      safe: false,
+      code: "insufficient_ram",
+      availableRamMb: 1024,
+      requiredRamMb: 2048,
+      suggestedModel: "small",
+    });
   }) as typeof fetch;
   try {
     await assert.rejects(
@@ -375,7 +431,14 @@ test("applyPreflightPolicy never downgrades a Nemotron request to a Whisper mode
 
 test("applyPreflightPolicy sends explicit unsafe override only for run_anyway", async () => {
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = (async () => Response.json({ ok: false, safe: false, code: "insufficient_ram", availableRamMb: 1024, requiredRamMb: 4096 })) as typeof fetch;
+  globalThis.fetch = (async () =>
+    Response.json({
+      ok: false,
+      safe: false,
+      code: "insufficient_ram",
+      availableRamMb: 1024,
+      requiredRamMb: 4096,
+    })) as typeof fetch;
   try {
     const request = await applyPreflightPolicy(
       "http://whisper-backend:8001",

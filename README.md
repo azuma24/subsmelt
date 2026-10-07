@@ -6,6 +6,8 @@ Point SubSmelt at your media folders and it automatically translates every subti
 
 One subtitle file. Multiple language outputs. Fully automated.
 
+Current release: **0.6.7** — [what changed](CHANGELOG.md).
+
 ---
 
 ## Quick Start
@@ -13,7 +15,7 @@ One subtitle file. Multiple language outputs. Fully automated.
 ```yaml
 services:
   subsmelt:
-    image: ghcr.io/azuma24/subsmelt:latest
+    image: ghcr.io/azuma24/subsmelt:latest   # or pin a release: ghcr.io/azuma24/subsmelt:0.6.7
     container_name: subsmelt
     ports:
       - "3000:3000"
@@ -63,7 +65,8 @@ costs nothing against a local endpoint.
 - **Queue management** — priority pinning, force re-translate, graceful stop, already-translated detection, and resume on restart
 - **Crash safety** — work in progress goes to a `.part` file and is only renamed on completion, so an interrupted job is retried rather than left truncated
 - **Real-time progress** — live job progress over Server-Sent Events with time remaining and throughput, and failures mapped to a cause and a next step
-- **Subtitle preview** — side-by-side original vs translated with full-text search
+- **Subtitle preview** — side-by-side original vs translated with full-text search, and edits saved back to the file
+- **Convert and translate single files** — drop `.srt`, `.vtt`, `.ass` or `.ssa` files on the Convert page to change their format or translate them on the spot; legacy encodings (GBK, Big5, Shift_JIS, EUC-KR, windows-125x and more) are detected, and the results download as one ZIP
 - **Translated title sidecar** (optional) — stores each media title translated into every target language in a `.subsmelt_titles.json` next to the output, shown in the scan results; filenames on disk are never renamed
 - **YouTube to notes** — follow a playlist or a channel (Shorts and live streams optional); new videos are downloaded, subtitled, translated and saved as Markdown notes for Obsidian. Older videos stay listed so you can pick the ones you want
 - **Optional speech-to-text** — attach a Whisper backend to generate source subtitles when none exist; transcripts are named with their language, and Chinese is converted to your preferred script
@@ -84,7 +87,7 @@ Open **Settings → LLM Connection** and add one or more connections:
 
 With several connections, pick a mode: **single**, **fallback** (try them in order) or **parallel** (spread chunks across them). The sidebar shows which connection is translating and whether each one answers.
 
-For local endpoints, **↻ Fetch models** pulls the model list and **Test Connection** verifies it. In LM Studio, load the model with a context length of 16k or more.
+For local endpoints, **Fetch models** pulls the model list and **Test Connection** verifies it. In LM Studio, load the model with a context length of 16k or more.
 
 ### 2. Add translation targets
 
@@ -211,6 +214,7 @@ Everything else:
 | `TZ` | `UTC` | Timezone for log timestamps |
 | `PUID` / `PGID` | — | Run as this user and group; `config/` and `data/` are handed to them (media is left alone). Unset: runs as root, as before |
 | `PORT` | `3000` | Web server port |
+| `HOST` | `0.0.0.0` | Interface the web server binds; `127.0.0.1` keeps it local to the machine |
 | `LLM_ENDPOINT` | — | Override LLM endpoint on startup |
 | `API_KEY` | — | Override API key on startup |
 | `MODEL` | — | Override model name on startup |
@@ -225,13 +229,15 @@ Everything else:
 ```bash
 git clone https://github.com/azuma24/subsmelt
 cd subsmelt
-docker compose up -d      # or: npm ci --legacy-peer-deps && npm run dev
+docker compose up -d      # or: npm ci && npm run dev
 ```
 
 ```bash
 npm run dev          # API (tsx watch) + Vite dev server
 npm test             # node:test across src/**/*.test.ts(x)
-npm run typecheck    # client AND server TypeScript projects (also: npm run lint)
+npm run typecheck    # client AND server TypeScript projects
+npm run lint         # Biome (lint + format check), then the typechecks
+npm run format       # rewrite the tree with Biome
 npm run build        # typecheck, then vite build, then tsc for the server
 ```
 
@@ -239,13 +245,13 @@ The Python sidecar has its own suite, which must be run from its directory:
 
 ```bash
 cd backend-whisper
-pip install -r requirements.txt pytest
+pip install -r requirements.txt pytest ruff
 python -m pytest tests -q
+ruff check . && ruff format --check .
 ```
 
-`npm ci` needs `--legacy-peer-deps` (an `i18next` peer-range conflict — the
-reason is in HANDOFF). `vite build` does not typecheck, so run `npm run
-typecheck` before assuming a change is clean. CI runs both suites, both
+`vite build` does not typecheck, so run `npm run typecheck` before assuming a
+change is clean. CI runs Biome and ruff, both suites, both
 typechecks, the production build, and builds and starts the Docker image on
 amd64 and arm64 on every pull request.
 
@@ -266,14 +272,16 @@ the parts worth understanding first, the release process, and the known gaps.
 | Layer | Technology |
 |-------|-----------|
 | Runtime | Node.js 22 LTS (engines: >=20 <25) |
-| Backend | Express, better-sqlite3 |
-| Frontend | React 18, Vite, Tailwind CSS |
+| Backend | Express 5, better-sqlite3 |
+| Frontend | React 19, Vite 8, Tailwind CSS 4 (Safari 16.4+, Chrome/Edge 111+, Firefox 128+) |
 | Real-time | Server-Sent Events |
 | Translation | Vercel AI SDK (local + OpenAI / Anthropic / Gemini) |
 | Optional STT | Python FastAPI sidecar + faster-whisper / Nemotron, OpenCC |
 | File watch | chokidar |
-| i18n | i18next (32 locales) |
+| i18n | Own runtime (`src/client/i18n`), 32 locales |
 | Container | Single Dockerfile, no external services required |
+| Tooling | TypeScript 7, Biome, ruff |
+| Footprint | 13 runtime packages; subtitle parsing, charset detection, the ZIP writer and translations are the app's own code |
 
 ---
 

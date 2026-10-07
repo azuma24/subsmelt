@@ -30,7 +30,9 @@ import { REDACTED_SECRET, parseConnections, resolveConnectionPool, restoreRedact
 import { logger } from "../logger.js";
 import { normalizeMediaSubfolder } from "../media-paths.js";
 import { isWatcherRunning, restartWatcher } from "../watcher.js";
-import { numericSettingError, parseTaskUpdate, sanitizeLanguageName, validateOutputPattern } from "./validation.js";
+import { parseTaskUpdate, sanitizeLanguageName, settingError, validateOutputPattern } from "./validation.js";
+import { SECRET_SETTING_KEYS } from "../settings-schema.js";
+import { errorMessage } from "../errors.js";
 
 // Pure client-driven format conversion (no translation, no DB). The browser
 // uploads file contents; we re-stringify each into the target format and return
@@ -39,16 +41,7 @@ import { numericSettingError, parseTaskUpdate, sanitizeLanguageName, validateOut
 const CONVERT_TARGET_FORMATS = ["srt", "vtt", "ass", "ssa"] as const;
 const MAX_CONVERT_FILES = 50;
 const MAX_CONVERT_FILE_BYTES = 10 * 1024 * 1024; // 10 MB per file
-const SECRET_SETTING_KEYS = new Set([
-  "api_key",
-  "cloud_api_key_openai",
-  "cloud_api_key_anthropic",
-  "cloud_api_key_gemini",
-  "transcription_backend_token",
-  "youtube_api_key",
-  // Discord and Slack webhook URLs carry their token in the path.
-  "notify_webhook_url",
-]);
+// Which keys are secrets is part of the settings schema (src/shared/settings.ts).
 // Owned by the YouTube playlist routes. A Settings save sends back the whole
 // settings object it loaded, which would overwrite playlists followed since.
 const ROUTE_OWNED_SETTING_KEYS = new Set(["youtube_playlists"]);
@@ -68,8 +61,8 @@ function redactSettings(settings: Record<string, string>): Record<string, string
           connections.map((connection) =>
             connection && typeof connection === "object" && connection.apiKey
               ? { ...connection, apiKey: REDACTED_SECRET }
-              : connection
-          )
+              : connection,
+          ),
         );
       }
     } catch {
@@ -99,7 +92,11 @@ export function registerSettingsTasksRoutes(app: Express): void {
   app.post("/api/settings/replace-broken-config", (_req, res) => {
     const failure = getConfigLoadFailure();
     replaceBrokenConfig();
-    if (failure) logger.warn("system", `Replaced unreadable ${failure.file} with the current settings; the original is kept at ${failure.backup}`);
+    if (failure)
+      logger.warn(
+        "system",
+        `Replaced unreadable ${failure.file} with the current settings; the original is kept at ${failure.backup}`,
+      );
     res.json({ ok: true });
   });
 
@@ -113,7 +110,8 @@ export function registerSettingsTasksRoutes(app: Express): void {
     const settings = req.body && typeof req.body === "object" ? { ...req.body } : {};
     if (typeof settings.youtube_download_dir === "string") {
       const folder = normalizeMediaSubfolder(settings.youtube_download_dir);
-      if (!folder) return res.status(400).json({ error: "The YouTube download folder must be a folder inside the media folder" });
+      if (!folder)
+        return res.status(400).json({ error: "The YouTube download folder must be a folder inside the media folder" });
       settings.youtube_download_dir = folder.replace(/\/+$/, "");
     }
     const changedKeys: string[] = [];
@@ -146,11 +144,12 @@ export function registerSettingsTasksRoutes(app: Express): void {
       // Secret values are never returned by GET. A client that saves unrelated
       // settings therefore sends the redaction marker back; preserve the
       // existing secret in that case, while an empty/new value still edits it.
-      const resolved = SECRET_SETTING_KEYS.has(key) && value === REDACTED_SECRET
-        ? getSetting(key)
-        : key === "llm_connections"
-          ? persistableConnections(restoreRedactedApiKeys(value, parseConnections(getAllSettings())))
-          : value;
+      const resolved =
+        SECRET_SETTING_KEYS.has(key) && value === REDACTED_SECRET
+          ? getSetting(key)
+          : key === "llm_connections"
+            ? persistableConnections(restoreRedactedApiKeys(value, parseConnections(getAllSettings())))
+            : value;
       // Clients (the Settings page included) PUT the whole settings object, so
       // most keys in any given request are unchanged. Writing and logging all of
       // them buried real edits under ~60 keys of noise on every save.
@@ -162,9 +161,9 @@ export function registerSettingsTasksRoutes(app: Express): void {
       }
       // Only changed values are checked, so a bad value already on disk never
       // blocks saving something else.
-      const numericError = numericSettingError(key, resolved);
-      if (numericError) {
-        invalid.push(numericError);
+      const valueError = settingError(key, resolved);
+      if (valueError) {
+        invalid.push(valueError);
         continue;
       }
       patch[key] = resolved;
@@ -199,7 +198,11 @@ export function registerSettingsTasksRoutes(app: Express): void {
     if (output_pattern !== undefined && typeof output_pattern !== "string")
       return res.status(400).json({ error: "output_pattern must be a string" });
     // Saved as the standard code ("kor" is stored as "ko"), so check that one for duplicates.
-    const langCodeError = validateTaskLangCode(String(lang_code)) ?? validateTaskLangCode(standardTaskLangCode({ target_lang: String(target_lang), lang_code: String(lang_code) }, preferredChinese()));
+    const langCodeError =
+      validateTaskLangCode(String(lang_code)) ??
+      validateTaskLangCode(
+        standardTaskLangCode({ target_lang: String(target_lang), lang_code: String(lang_code) }, preferredChinese()),
+      );
     if (langCodeError) return res.status(400).json({ error: langCodeError });
     const pattern = validateOutputPattern(typeof output_pattern === "string" ? output_pattern : "");
     if (!pattern.ok) return res.status(400).json({ error: pattern.error });
@@ -219,8 +222,12 @@ export function registerSettingsTasksRoutes(app: Express): void {
     if (update.value.lang_code !== undefined) {
       const id = parseInt(req.params.id, 10);
       const targetLang = update.value.target_lang ?? getTask(id)?.target_lang ?? "";
-      const langCodeError = validateTaskLangCode(update.value.lang_code, id)
-        ?? validateTaskLangCode(standardTaskLangCode({ target_lang: targetLang, lang_code: update.value.lang_code }, preferredChinese()), id);
+      const langCodeError =
+        validateTaskLangCode(update.value.lang_code, id) ??
+        validateTaskLangCode(
+          standardTaskLangCode({ target_lang: targetLang, lang_code: update.value.lang_code }, preferredChinese()),
+          id,
+        );
       if (langCodeError) return res.status(400).json({ error: langCodeError });
     }
     updateTask(parseInt(req.params.id, 10), update.value);
@@ -245,11 +252,15 @@ export function registerSettingsTasksRoutes(app: Express): void {
     // Canonical BCP-47 code for output filenames (e.g. "zh-TW"); targetLang
     // stays the rich language name the prompt wants. Sanitized because it lands
     // in a filename.
-    const targetCode = String(body.targetCode || "").trim().replace(/[^A-Za-z0-9-]/g, "");
+    const targetCode = String(body.targetCode || "")
+      .trim()
+      .replace(/[^A-Za-z0-9-]/g, "");
     const files = Array.isArray(body.files) ? body.files : null;
 
     if (!CONVERT_TARGET_FORMATS.includes(targetFormat as (typeof CONVERT_TARGET_FORMATS)[number])) {
-      return res.status(400).json({ error: `Unsupported target format. Use one of: ${CONVERT_TARGET_FORMATS.join(", ")}` });
+      return res
+        .status(400)
+        .json({ error: `Unsupported target format. Use one of: ${CONVERT_TARGET_FORMATS.join(", ")}` });
     }
     if (translate && !targetLang) {
       return res.status(400).json({ error: "targetLang is required when translate is enabled" });
@@ -266,7 +277,9 @@ export function registerSettingsTasksRoutes(app: Express): void {
     for (const file of files) {
       const content = typeof file?.content === "string" ? file.content : "";
       if (Buffer.byteLength(content, "utf8") > MAX_CONVERT_FILE_BYTES) {
-        return res.status(400).json({ error: `File too large: ${String(file?.name || "unknown")} (max 10MB per file)` });
+        return res
+          .status(400)
+          .json({ error: `File too large: ${String(file?.name || "unknown")} (max 10MB per file)` });
       }
     }
 
@@ -345,14 +358,17 @@ export function registerSettingsTasksRoutes(app: Express): void {
           });
           outputs.push({ name: outName, content: fs.readFileSync(outputPath, "utf8") });
         } catch (error) {
-          errors.push({ name, error: error instanceof Error ? error.message : String(error) });
+          errors.push({ name, error: error instanceof Error ? errorMessage(error) : String(error) });
         }
       }
     } finally {
       fs.rmSync(tmpRoot, { recursive: true, force: true });
     }
 
-    logger.info("system", `${translate ? "Translated+converted" : "Converted"} ${outputs.length}/${files.length} subtitle file(s) → ${targetFormat}`);
+    logger.info(
+      "system",
+      `${translate ? "Translated+converted" : "Converted"} ${outputs.length}/${files.length} subtitle file(s) → ${targetFormat}`,
+    );
     res.json({ files: outputs, errors });
   });
 }

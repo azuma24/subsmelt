@@ -41,7 +41,7 @@ class GetWhisperModelTests(unittest.TestCase):
             def unload_model(self, to_cpu=False):
                 self.unload_calls += 1
 
-        class _FakeWhisperModel:  # noqa: D401 - test double
+        class _FakeWhisperModel:
             def __init__(self, model, **kwargs):
                 captured["model"] = model
                 captured["kwargs"] = kwargs
@@ -97,9 +97,7 @@ class GetWhisperModelTests(unittest.TestCase):
         # raises a clean local-files-only error (mapped to 409 upstream).
         model_loader.get_whisper_model("tiny", "cpu", "int8")
         self.assertEqual(self._captured["model"], "tiny")
-        self.assertEqual(
-            self._captured["kwargs"].get("download_root"), str(cache_root_from_env())
-        )
+        self.assertEqual(self._captured["kwargs"].get("download_root"), str(cache_root_from_env()))
         self.assertTrue(self._captured["kwargs"].get("local_files_only"))
 
     def test_aligns_80_mel_extractor_to_encoder_n_mels(self):
@@ -179,6 +177,7 @@ class GetWhisperModelTests(unittest.TestCase):
             """Fires a competing load right after the lease's cache read, the window
             where the old lock-free fast path let eviction unload a model that was
             about to be handed out."""
+
             fired = False
 
             def get(self, key, default=None):

@@ -1,8 +1,9 @@
-import type { TFunction } from "i18next";
-import type { JobRow } from "../../types";
+import type { TFunction } from "../../i18n";
+import type { Job } from "../../types";
 import { ActiveJobCard } from "./ActiveJobCard";
 import { formatTokens, formatCost } from "../../lib";
 import { recentDurationsSeconds } from "./eta";
+import { Icon } from "../../ui/Icon";
 
 interface StatusSegment {
   key: string;
@@ -15,10 +16,10 @@ interface StatusSegment {
 interface DashboardHeroProps {
   statusSegments: StatusSegment[];
   statusFilter: string;
-  activeJobs: JobRow[];
-  pendingJobs: JobRow[];
+  activeJobs: Job[];
+  pendingJobs: Job[];
   /** Recently completed jobs — their durations drive the queue-time projection. */
-  completedJobs?: JobRow[];
+  completedJobs?: Job[];
   /** Summed token usage + approximate cost across all visible jobs. */
   usageTotals: { inputTokens: number; outputTokens: number; cost: number; hasCost: boolean };
   /** Soft monthly token budget (0 = unlimited) — display-only indicator. */
@@ -43,9 +44,10 @@ export function DashboardHero({
 }: DashboardHeroProps) {
   const totalTokens = usageTotals.inputTokens + usageTotals.outputTokens;
   const costStr = usageTotals.hasCost ? `≈ ${formatCost(usageTotals.cost)}` : t("dashboard.stat.costLocal");
-  const budgetStr = tokenBudget > 0
-    ? t("dashboard.stat.tokenBudget", { used: formatTokens(totalTokens), budget: formatTokens(tokenBudget) })
-    : costStr;
+  const budgetStr =
+    tokenBudget > 0
+      ? t("dashboard.stat.tokenBudget", { used: formatTokens(totalTokens), budget: formatTokens(tokenBudget) })
+      : costStr;
   const overBudget = tokenBudget > 0 && totalTokens > tokenBudget;
   const recentDurations = recentDurationsSeconds(completedJobs, 20);
 
@@ -55,9 +57,10 @@ export function DashboardHero({
   // These cells are the app's only status filter (the queue toolbar's duplicate
   // pill row was removed), and the band grows by one when skipped jobs exist.
   // Both column counts are written out in full so Tailwind's scanner sees them.
-  const bandClass = statusSegments.length > 5
-    ? "grid grid-cols-2 gap-px overflow-hidden rounded-md border border-[var(--border)] bg-[var(--border)] sm:grid-cols-3 lg:grid-cols-7"
-    : "grid grid-cols-2 gap-px overflow-hidden rounded-md border border-[var(--border)] bg-[var(--border)] sm:grid-cols-3 lg:grid-cols-6";
+  const bandClass =
+    statusSegments.length > 5
+      ? "grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-3 lg:grid-cols-7"
+      : "grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-3 lg:grid-cols-6";
   // With an odd number of cells the trailing readout would leave a blank cell
   // in the 2-column phone grid (and one in the 3-column band), so it takes the
   // rest of its row there; on lg every cell is one column of the single row.
@@ -76,12 +79,16 @@ export function DashboardHero({
               type="button"
               aria-pressed={isActive}
               onClick={() => onSelectStatus(seg.key)}
-              className={`px-4 py-3 text-left transition-colors ${isActive ? "bg-[var(--surface-2)]" : "bg-[var(--surface)] hover:bg-[var(--surface-2)]"}`}
+              className={`px-4 py-3 text-left transition-colors ${isActive ? "bg-surface-raised" : "bg-surface hover:bg-surface-raised"}`}
             >
-              <div className={`${cellLabel} ${isActive ? "text-[var(--accent)]" : "text-[var(--text-3)]"}`}>{seg.label}</div>
+              <div className={`${cellLabel} ${isActive ? "text-accent" : "text-faint"}`}>{seg.label}</div>
               {/* A zero count stays muted — a red "0 errors" reads as an alarm
                   about nothing. Status colors only earn their tone with content. */}
-              <div className={`${cellValue} ${seg.count === 0 && !isActive ? "text-[var(--text-3)]" : isActive ? seg.activeColor : seg.color}`}>{seg.count}</div>
+              <div
+                className={`${cellValue} ${seg.count === 0 && !isActive ? "text-faint" : isActive ? seg.activeColor : seg.color}`}
+              >
+                {seg.count}
+              </div>
             </button>
           );
         })}
@@ -89,9 +96,12 @@ export function DashboardHero({
             cell to its left is a button; this one is a div with the same padding
             and type, so it read as clickable. A recessed fill plus a heavier
             leading rule marks it as a readout instead. */}
-        <div className={`border-l-2 border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 ${tokensSpanClass}`}>
-          <div className={`${cellLabel} truncate ${overBudget ? "text-[var(--red)]" : "text-[var(--text-3)]"}`}>{overBudget && <span aria-hidden="true">⚠ </span>}{t("dashboard.stat.tokens")} · {budgetStr}</div>
-          <div className={`${cellValue} ${overBudget ? "text-[var(--red)]" : "text-[var(--text)]"}`}>{formatTokens(totalTokens)}</div>
+        <div className={`border-l-2 border-border bg-surface-raised px-4 py-3 ${tokensSpanClass}`}>
+          <div className={`${cellLabel} truncate ${overBudget ? "text-danger" : "text-faint"}`}>
+            {overBudget && <Icon name="warning" />}
+            {t("dashboard.stat.tokens")} · {budgetStr}
+          </div>
+          <div className={`${cellValue} ${overBudget ? "text-danger" : "text-text"}`}>{formatTokens(totalTokens)}</div>
         </div>
       </div>
 

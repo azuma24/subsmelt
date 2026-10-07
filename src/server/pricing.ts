@@ -35,9 +35,9 @@ export const MODEL_PRICES: Record<string, ModelPrice> = {
   "gpt-4-turbo": { input: 10, output: 30 },
   "o4-mini": { input: 1.1, output: 4.4 },
   "o3-mini": { input: 1.1, output: 4.4 },
-  "o3": { input: 2, output: 8 },
+  o3: { input: 2, output: 8 },
   "o1-mini": { input: 1.1, output: 4.4 },
-  "o1": { input: 15, output: 60 },
+  o1: { input: 15, output: 60 },
 
   // Anthropic
   "claude-3-5-haiku": { input: 0.8, output: 4 },
@@ -71,7 +71,11 @@ export function lookupModelPrice(model: string | null | undefined): ModelPrice |
   if (MODEL_PRICES[key]) return MODEL_PRICES[key];
 
   // Strip a leading "models/" (Gemini) or "<provider>/" namespace.
-  const bare = key.replace(/^models\//, "").split("/").pop() ?? key;
+  const bare =
+    key
+      .replace(/^models\//, "")
+      .split("/")
+      .pop() ?? key;
   if (MODEL_PRICES[bare]) return MODEL_PRICES[bare];
 
   // Longest substring match wins (more specific id beats a generic prefix).
@@ -94,7 +98,7 @@ export function lookupModelPrice(model: string | null | undefined): ModelPrice |
 export function estimateCost(
   model: string | null | undefined,
   inputTokens: number,
-  outputTokens: number
+  outputTokens: number,
 ): number | null {
   const price = lookupModelPrice(model);
   if (!price) return null;

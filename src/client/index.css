@@ -1,7 +1,10 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
+/*
+ * Palette. Hue-named values each theme redefines; utilities never read these
+ * directly. The role tokens in the @theme inline block below alias them, so a
+ * theme switch changes every utility without regenerating any CSS.
+ */
 :root {
   color-scheme: dark;
 
@@ -33,19 +36,9 @@
   --red-border: rgba(251, 113, 133, 0.32);
 
   /* Elevation: 1 lifts a control off its panel, 2 floats an overlay above the page. */
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-2: 0 12px 32px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+  --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --elevation-2: 0 12px 32px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
   --scrim: rgba(0, 0, 0, 0.7);
-
-  /* Color roles. New code reads these (Tailwind: bg-surface, text-muted, ...);
-     they alias the hue-named palette above, which each theme redefines.
-     --surface, --border, --text and --accent already name their roles. */
-  --surface-raised: var(--surface-2);
-  --text-muted: var(--text-2);
-  --accent-text: var(--on-accent);
-  --danger: var(--red);
-  --success: var(--green);
-  --warning: var(--yellow);
 
   /* Motion: one curve; 150ms for state changes, 250ms for entrances. */
   --ease: cubic-bezier(0.2, 0, 0, 1);
@@ -84,61 +77,200 @@ html[data-theme="light"] {
   --red-dim: rgba(207, 34, 46, 0.10);
   --red-border: rgba(207, 34, 46, 0.30);
 
-  --shadow-1: 0 1px 2px rgba(31, 35, 40, 0.08);
-  --shadow-2: 0 12px 32px rgba(31, 35, 40, 0.16), 0 2px 6px rgba(31, 35, 40, 0.08);
+  --elevation-1: 0 1px 2px rgba(31, 35, 40, 0.08);
+  --elevation-2: 0 12px 32px rgba(31, 35, 40, 0.16), 0 2px 6px rgba(31, 35, 40, 0.08);
   --scrim: rgba(31, 35, 40, 0.5);
 }
 
-html, body, #root {
-  height: 100%;
-}
+/*
+ * Design system. Each scale replaces Tailwind's default, so an off-scale
+ * utility (text-5xl, rounded-lg, font-bold, bg-blue-500) does not exist.
+ */
+@theme {
+  /* Type: seven steps, nothing under 12px. */
+  --text-*: initial;
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 14px;
+  --text-sm--line-height: 20px;
+  --text-base: 16px;
+  --text-base--line-height: 24px;
+  --text-lg: 20px;
+  --text-lg--line-height: 28px;
+  --text-xl: 24px;
+  --text-xl--line-height: 32px;
+  --text-2xl: 32px;
+  --text-2xl--line-height: 40px;
+  --text-3xl: 48px;
+  --text-3xl--line-height: 56px;
 
-html {
-  font-size: 16px;
-  -webkit-text-size-adjust: 100%;
-}
+  --font-weight-*: initial;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
 
-body {
-  margin: 0;
-  font-family: ui-sans-serif, "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", sans-serif;
-  line-height: 1.5;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background: var(--bg);
-  color: var(--text);
-}
+  /* Two corner radii. rounded-full stays built in. */
+  --radius-*: initial;
+  --radius-sm: 6px;
+  --radius-md: 12px;
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  /* Cockpit Grid numerals; falls back to the platform monospace stack. */
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-* {
-  box-sizing: border-box;
-}
+  /* Minimum hit target for touch (WCAG 2.5.8 / Apple HIG): min-h-touch, min-w-touch. */
+  --spacing-touch: 44px;
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
+  --default-transition-timing-function: var(--ease);
+  --animate-slide-in: slideIn var(--duration-base) var(--ease);
+  --animate-slide-up: slideUp var(--duration-base) var(--ease);
 
-/* The type scale allows weights 400/500/600 only; browsers default these to 700. */
-b,
-strong {
-  font-weight: 600;
-}
-
-@media (max-width: 767px) {
-  input,
-  select,
-  textarea {
-    font-size: 16px;
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
   }
 }
 
-/* One focus indicator for every keyboard stop. */
+/*
+ * Color roles (Tailwind: bg-surface, text-muted, border-danger-line, ...) and
+ * elevation, read through var() so both themes resolve at paint time.
+ *   canvas          the page behind every panel
+ *   surface         a panel; -raised a control on a panel; -highlight hover/active/track
+ *   border          dividers and outlines; -subtle for grouping inside a panel
+ *   text            body copy; muted secondary; faint tertiary
+ *   accent          interactive; -soft a tint, -line an outline, -text on a filled accent
+ *   danger / warning / success   each with -soft and -line like accent
+ */
+@theme inline {
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-canvas: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-2);
+  --color-surface-highlight: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-sub);
+  --color-text: var(--text);
+  --color-muted: var(--text-2);
+  --color-faint: var(--text-3);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-dim);
+  --color-accent-line: var(--accent-border);
+  --color-accent-text: var(--on-accent);
+  --color-danger: var(--red);
+  --color-danger-soft: var(--red-dim);
+  --color-danger-line: var(--red-border);
+  --color-warning: var(--yellow);
+  --color-warning-soft: var(--yellow-dim);
+  --color-warning-line: var(--yellow-border);
+  --color-success: var(--green);
+  --color-success-soft: var(--green-dim);
+  --color-success-line: var(--green-border);
+  --color-scrim: var(--scrim);
+
+  --shadow-*: initial;
+  --shadow-1: var(--elevation-1);
+  --shadow-2: var(--elevation-2);
+}
+
+@utility duration-fast {
+  transition-duration: var(--duration-fast);
+}
+@utility duration-base {
+  transition-duration: var(--duration-base);
+}
+
+/*
+ * Element defaults. These sit in the base layer so a utility on the element
+ * (text-xs on a button) still wins, as it did before cascade layers.
+ */
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    font-family: ui-sans-serif, "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", sans-serif;
+    line-height: 1.5;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  /* Tailwind 4 defaults borders to currentColor; a bare border-t means the divider color here. */
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+
+  /* Tailwind 4 gives buttons the default cursor; this app's buttons are links to actions. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  /* The type scale allows weights 400/500/600 only; browsers default these to 700. */
+  b,
+  strong {
+    font-weight: 600;
+  }
+
+  /* iOS zooms into inputs below 16px; a text-size utility on the input still wins. */
+  @media (max-width: 767px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+}
+
+/* One focus indicator for every keyboard stop. Unlayered on purpose: no
+   utility may remove it. */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -159,14 +291,4 @@ strong {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-}
-
-@keyframes slideIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
 }

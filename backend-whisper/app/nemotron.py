@@ -4,17 +4,18 @@ nemo-speech prints one JSON document when a file is done and nothing before,
 so long audio is cut at silences into chunks of about ten minutes; each
 finished chunk is one progress line, and cancelling kills the running child.
 """
+
 from __future__ import annotations
 
+import itertools
 import json
 import re
 import subprocess
 import tempfile
-import time
 import wave
+from collections.abc import Callable, Generator, Sequence
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Callable, Generator, Sequence
 
 from .audio import ffmpeg_binary
 from .engine import TranscriptionCancelled, progress_event
@@ -57,7 +58,18 @@ def parse_silences(ffmpeg_stderr: str) -> list[Silence]:
 
 
 def detect_silences(audio_path: Path) -> list[Silence]:
-    command = [ffmpeg_binary(), "-hide_banner", "-nostats", "-i", str(audio_path), "-af", SILENCE_FILTER, "-f", "null", "-"]
+    command = [
+        ffmpeg_binary(),
+        "-hide_banner",
+        "-nostats",
+        "-i",
+        str(audio_path),
+        "-af",
+        SILENCE_FILTER,
+        "-f",
+        "null",
+        "-",
+    ]
     result = subprocess.run(command, capture_output=True, text=True, check=False)
     return parse_silences(result.stderr or "")
 
@@ -83,7 +95,7 @@ def plan_chunks(duration: float, silences: Callable[[], Sequence[Silence]]) -> l
     while duration - bounds[-1] > CHUNK_MAX_S:
         bounds.append(_cut_point(bounds[-1] + CHUNK_TARGET_S, found))
     bounds.append(duration)
-    return list(zip(bounds, bounds[1:]))
+    return list(itertools.pairwise(bounds))
 
 
 def cut_chunk(source: Path, chunk: Chunk, dest_dir: Path, index: int) -> Path:
@@ -112,7 +124,7 @@ def _wait_or_kill(proc: subprocess.Popen, is_cancelled: Callable[[], bool] | Non
             if is_cancelled is not None and is_cancelled():
                 proc.kill()
                 proc.communicate()
-                raise TranscriptionCancelled("Transcription cancelled by client")
+                raise TranscriptionCancelled("Transcription cancelled by client") from None
 
 
 def _parse_output(stdout: str, stderr: str, returncode: int) -> dict:
@@ -120,7 +132,7 @@ def _parse_output(stdout: str, stderr: str, returncode: int) -> dict:
         data = json.loads(stdout)
     except ValueError:
         detail = (stderr or stdout).strip()[-500:]
-        raise RuntimeError(f"nemo-speech exited with code {returncode} without a JSON result: {detail}")
+        raise RuntimeError(f"nemo-speech exited with code {returncode} without a JSON result: {detail}") from None
     if isinstance(data, dict) and "error" in data:
         error = data["error"] if isinstance(data["error"], dict) else {}
         raise RuntimeError(f"nemo-speech failed: {error.get('message') or data['error']}")
@@ -137,9 +149,17 @@ def transcribe_chunk(
     is_cancelled: Callable[[], bool] | None,
 ) -> dict:
     command = [
-        str(handle.binary), "transcribe", str(wav),
-        "--model", str(handle.gguf), "--language", locale,
-        "--json", "--quiet", "--device", device,
+        str(handle.binary),
+        "transcribe",
+        str(wav),
+        "--model",
+        str(handle.gguf),
+        "--language",
+        locale,
+        "--json",
+        "--quiet",
+        "--device",
+        device,
     ]
     proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
     stdout, stderr = _wait_or_kill(proc, is_cancelled)
@@ -148,7 +168,11 @@ def transcribe_chunk(
 
 def _offset_words(raw_words: Sequence[dict], offset: float) -> list[Word]:
     return [
-        Word(text=str(item.get("word", "")), start=float(item.get("start", 0.0)) + offset, end=float(item.get("end", 0.0)) + offset)
+        Word(
+            text=str(item.get("word", "")),
+            start=float(item.get("start", 0.0)) + offset,
+            end=float(item.get("end", 0.0)) + offset,
+        )
         for item in raw_words
     ]
 

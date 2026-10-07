@@ -1,7 +1,7 @@
 # SubSmelt — Handoff
 
-Orientation for someone picking this project up. Current as of **0.6.6**
-(2026-10-06). For what changed when, see
+Orientation for someone picking this project up. Current as of **0.6.7**
+(2026-10-07). For what changed when, see
 [../CHANGELOG.md](../CHANGELOG.md); for how to run it, see
 [../README.md](../README.md).
 
@@ -26,12 +26,17 @@ Two deployables, versioned and released together:
 ## 2. Layout
 
 ```
+src/shared/          Types, the settings table and the charset detector both halves import
 src/server/          Express API, queue, scanner, watcher, SQLite
-  translator/        LLM translation: engine, chunking, prompts, parsing
+  queue/             One job as stages (run-job), the live run's state, title sidecars
+  translator/        LLM translation: engine, chunking, prompts; SRT/WebVTT and ASS parsers
   transcription/     Whisper backend client (HTTP, request building)
   routes/            HTTP route registration
-src/client/          React SPA (Vite, Tailwind, react-query)
+src/client/          React SPA (Vite, Tailwind 4, react-query)
   features/          One directory per screen
+  hooks/             Queries, mutations, the SSE stream, media queries
+  i18n/              The translation runtime (t, plurals, lazy bundles) and its React hook
+  ui/                The primitives kit (Button, Field, Layout, Status, Icon, …)
   lib/               Framework-free helpers (clipboard, error taxonomy, settings)
   locales/           32 translation bundles
 backend-whisper/     FastAPI + faster-whisper sidecar
@@ -43,9 +48,20 @@ backend-whisper/     FastAPI + faster-whisper sidecar
 
 **`src/server/queue.ts`** — the job pump. Workers claim pending jobs from SQLite
 (`claimPendingJob` is a single transaction, so concurrent workers cannot double
-claim), resolve the LLM connection pool per job, and call `translateFile`. The
-worker pool adapts to the configured LLM mode on every claim, so switching
+claim), resolve the LLM connection pool per job, and call `runJob` in
+`queue/run-job.ts`, which runs one job as begin → plan (context probe) →
+translate → settle, with the stop/cancel/failure settlement in one function.
+`queue/state.ts` holds what the live run knows about its jobs (active ids,
+abort controllers, cancels, connections) behind accessors. The worker pool
+adapts to the configured LLM mode on every claim, so switching
 single/fallback/parallel takes effect mid-run.
+
+**`src/shared/settings.ts`** — the one table of every setting: kind (flag,
+int, float, enum, json, text), bounds and default. The server's
+`settings-schema.ts` builds a zod schema from it (`readSettings()` returns
+typed values, falling back to the default for a bad stored value), the
+settings route refuses a value that does not fit, and the Settings inputs carry
+the same min/max.
 
 **`src/server/translator/engine.ts`** — one file translation: parse → optional
 context analysis (glossary extraction) → chunk → translate with cascade and
@@ -76,24 +92,30 @@ so a running translation shows its progress before it finishes.
 ## 3. Working on it
 
 ```bash
-npm ci --legacy-peer-deps   # the flag is required; see below
+npm ci
 npm run dev          # server (tsx watch) + vite, concurrently
-npm test             # node:test over src/**/*.test.ts(x); 485 tests
+npm test             # node:test over src/**/*.test.ts(x); 886 tests
 npm run typecheck    # client AND server projects
+npm run lint         # Biome (lint + format check), then the typechecks
+npm run format       # rewrite the tree with Biome (biome.jsonc)
 npm run build        # typecheck, then vite build, then tsc for the server
 
 cd backend-whisper
-pip install -r requirements.txt pytest
-python -m pytest tests -q          # must be run from backend-whisper/; 291 tests
+pip install -r requirements.txt pytest ruff
+python -m pytest tests -q          # must be run from backend-whisper/; 384 tests
+ruff check . && ruff format --check .   # config in pyproject.toml
 ```
+
+`git config blame.ignoreRevsFile .git-blame-ignore-revs` makes `git blame`
+skip the one-off commit that formatted the whole tree.
 
 Use Node 20 to 24 (`engines` in `package.json`). `better-sqlite3` is a native
 module, so a shell on a newer Node, or on a different Node from the one that
 ran the install, fails with `NODE_MODULE_VERSION` errors.
 
-`--legacy-peer-deps` is not optional: `i18next@26` declares an optional
-TypeScript peer of `^5 || ^6`, this repo is on TypeScript 7, and npm 10 (bundled
-with Node 22) refuses the install. The Dockerfile and CI pass the same flag.
+`npm ci` needs no flags any more. It used to need `--legacy-peer-deps` for
+i18next's TypeScript peer range; i18next is gone, and the lockfile resolves
+cleanly under npm 10's strict peer rules.
 
 Client and server are separate TypeScript projects (`tsconfig.json` /
 `tsconfig.server.json`) with no project reference between them — the client never
@@ -114,9 +136,9 @@ Anything behind a click needs a DOM-based test, which the repo does not have.
 
 ### CI and releases
 
-`.github/workflows/ci.yml` runs the TypeScript suite, both typechecks, the
-production build, pytest, and a Docker image build (no push) on every PR and push
-to `main`. Both release workflows declare `needs: test`, so nothing publishes
+`.github/workflows/ci.yml` runs Biome, the TypeScript suite, both typechecks,
+the production build, ruff, pytest, and a Docker image build (no push) on every
+PR and push to `main`. Both release workflows declare `needs: test`, so nothing publishes
 without it. (CI was found switched off in GitHub's settings during 0.6.0, which is
 why PRs had no checks; check `gh workflow list` if checks go missing.)
 
@@ -259,7 +281,7 @@ carried was an earlier draft of work already finished in the squashed state
 - **Library sort controls** — the Library page lost its sort when the old scan
   tab died; it is back (`buildLibraryView` takes `sortBy`/`sortDir`; items sort
   by name or date, folder sections by name or newest file, undated last). The
-  controls are shared components (`src/client/components/SortControls.tsx`,
+  controls are shared components (`src/client/ui/SortControls.tsx`,
   `RefreshButton.tsx`) rendered by both the Library page and the Transcribe
   picker; the sort preference persists to `transcription_sort_by` /
   `transcription_sort_dir`, which both pages read.
@@ -274,3 +296,45 @@ carried was an earlier draft of work already finished in the squashed state
 **State:** `main` == squashed 0.6.6 + this session's three commits; both
 `backend-whisper` (383 tests) and the TS suite (882 tests) pass, `typecheck`
 clean. Push to both remotes is a fast-forward.
+
+## 8. Session handoff — 2026-10-06 (modernisation)
+
+One branch, `claude/modernize-and-refactor`, one commit per change. What a
+reader of the code should know afterwards:
+
+- **Every dependency is on its current major**: React 19, Express 5 (routes use
+  `/{*splat}`, `req.body` can be undefined so a middleware sets `{}`), Vite 8
+  on Rolldown (`build.rolldownOptions.output.advancedChunks` splits React and
+  the vendor libraries), Tailwind 4 (CSS-first: the palette and the role
+  tokens live in `src/client/index.css` under `@theme`; there is no
+  `tailwind.config`), AI SDK 7, zod 4 (the SDK's required peer), chokidar 5.
+  `@types/node` stays at 22 on purpose, matching the runtime. `npm ci` needs
+  no flags: the peer-range conflict went with i18next.
+- **What is the app's own code now, and was a package:** SRT/WebVTT and ASS
+  parsing (`src/server/translator/srt-vtt.ts`, `ass.ts`), charset detection
+  for files that are not UTF-8 (`src/shared/charset.ts`: strict UTF-8 first,
+  then every candidate encoding decodes a sample and the one that reads as
+  text in its own script wins; `charset.fixtures.ts` holds 52 byte samples),
+  the converter's ZIP writer (`src/client/features/convert/zip.ts`, deflate
+  through CompressionStream), the translation runtime (`src/client/i18n/`:
+  plural suffixes from Intl.PluralRules, `_zero` first for zero, fallback to
+  the base language then English, the stored choice under the old
+  `i18nextLng` key), the dev runner (`scripts/dev.mjs`) and the scan's
+  concurrency pool (`src/server/async-pool.ts`). The client project names
+  the Node typings its tests need in `tsconfig.json`; nothing pulls them in
+  transitively any more.
+- **Biome** (`biome.jsonc`) lints and formats the TypeScript; three a11y rules
+  are off with the reason beside each. **ruff** (`backend-whisper/pyproject.toml`)
+  does the same for Python. CI runs both.
+- **`src/shared/`** is the API contract. Add a type there when both sides
+  need it; `src/client/types.ts` re-exports under the client's names.
+- **Client structure:** `hooks/` (queries, mutations, SSE, media queries;
+  `useIsMobile` comes from a context the shell provides, so no page passes
+  `isMobile` down), `ui/` (every primitive, `primitives.ts` is the barrel),
+  `lib/` (framework-free). `PageHeader` is the one header; `Select`,
+  `TextArea`, `IconButton` and `Toggle` are the kit's controls.
+- **Polling backs off while the SSE stream is open** (`useSsePollInterval`);
+  the stream's invalidation map in `hooks/sse.ts` is what keeps the pages
+  current, so a new event kind must be added there.
+- **Not done, on purpose:** authentication, a bind change beyond `HOST`, and
+  rate limiting — see TODO.md.

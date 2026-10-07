@@ -6,7 +6,15 @@ import { findAnyCase, outputNameFor } from "../scanner.js";
 import { fileLangCodes } from "../language-codes.js";
 import { copyCookiesInto } from "./cookies.js";
 import type { YoutubePlaylist } from "./playlists.js";
-import { languageFileCode, languageKey, planSubtitles, spokenCaption, taskLanguageKey, whisperLanguage, type SubtitleRoute } from "./subtitle-routes.js";
+import {
+  languageFileCode,
+  languageKey,
+  planSubtitles,
+  spokenCaption,
+  taskLanguageKey,
+  whisperLanguage,
+  type SubtitleRoute,
+} from "./subtitle-routes.js";
 import { captionArgs, errorSummary, runYtdlp } from "./ytdlp.js";
 import { shareFile } from "../shared-files.js";
 
@@ -44,7 +52,6 @@ export interface SubtitleInput {
   knownTranscript: string | null;
   playlist: Pick<YoutubePlaylist, "captions" | "subtitleTaskIds"> | undefined;
 }
-
 
 export interface SubtitleResult {
   transcriptPath: string;
@@ -95,7 +102,8 @@ export async function produceSubtitles(input: SubtitleInput, deps: SubtitleDeps)
   const info = readInfo(stem);
   const captionLangs = input.playlist?.captions === "whisper_only" ? [] : info.captions;
   let spoken = info.language ? languageKey(info.language) : null;
-  const transcriptFor = (key: string | null) => (key ? `${stem}.${languageFileCode(key, preferredChinese())}.srt` : `${stem}.srt`);
+  const transcriptFor = (key: string | null) =>
+    key ? `${stem}.${languageFileCode(key, preferredChinese())}.srt` : `${stem}.srt`;
 
   let transcriptPath: string | null = null;
   let transcriptSource: string | null = null;
@@ -104,7 +112,10 @@ export async function produceSubtitles(input: SubtitleInput, deps: SubtitleDeps)
     spoken ??= suffixLanguage(transcriptPath, stem);
   } else if (spoken) {
     // A transcript left by an earlier run counts in any spelling of its language ("Talk.en.srt" for "eng").
-    const spokenCodes = fileLangCodes({ target_lang: spoken, lang_code: languageFileCode(spoken, preferredChinese()) }, preferredChinese());
+    const spokenCodes = fileLangCodes(
+      { target_lang: spoken, lang_code: languageFileCode(spoken, preferredChinese()) },
+      preferredChinese(),
+    );
     transcriptPath = spokenCodes.map((code) => findAnyCase(`${stem}.${code}.srt`)).find(Boolean) ?? null;
   }
 
@@ -130,15 +141,22 @@ export async function produceSubtitles(input: SubtitleInput, deps: SubtitleDeps)
   }
 
   const tasks = (input.playlist?.subtitleTaskIds ?? []).map((id) => getTask(id)).filter((task) => task !== undefined);
-  const planned = planSubtitles(spoken, tasks.map((task) => ({ taskId: task.id, lang: taskLanguageKey(task) })), captionLangs);
+  const planned = planSubtitles(
+    spoken,
+    tasks.map((task) => ({ taskId: task.id, lang: taskLanguageKey(task) })),
+    captionLangs,
+  );
   const routes: SubtitleRoute[] = [];
   let jobsCreated = 0;
   for (const route of planned) {
     const task = tasks.find((t) => t.id === route.taskId)!;
     // The name the task writes first; an older spelling already on disk counts too.
-    const outputs = fileLangCodes(task, preferredChinese()).map((code) => path.join(path.dirname(stem), outputNameFor(path.basename(stem), { ...task, lang_code: code }, "srt")));
+    const outputs = fileLangCodes(task, preferredChinese()).map((code) =>
+      path.join(path.dirname(stem), outputNameFor(path.basename(stem), { ...task, lang_code: code }, "srt")),
+    );
     const outputPath = outputs[0];
-    const isTranscript = (output: string) => transcriptPath !== null && output.toLowerCase() === transcriptPath.toLowerCase();
+    const isTranscript = (output: string) =>
+      transcriptPath !== null && output.toLowerCase() === transcriptPath.toLowerCase();
     if (outputs.some(isTranscript) || outputs.some((output) => findAnyCase(output) !== null)) {
       routes.push(route);
       continue;
@@ -153,7 +171,12 @@ export async function produceSubtitles(input: SubtitleInput, deps: SubtitleDeps)
       routes.push(route);
       continue;
     }
-    const created = createJob({ task_id: task.id, srt_path: transcriptPath, output_path: outputPath, video_path: input.mediaPath });
+    const created = createJob({
+      task_id: task.id,
+      srt_path: transcriptPath,
+      output_path: outputPath,
+      video_path: input.mediaPath,
+    });
     jobsCreated += created.changes;
     routes.push({ taskId: task.id, kind: "translate" });
   }
@@ -170,14 +193,25 @@ async function fetchOrReport(deps: SubtitleDeps, videoId: string, lang: string, 
 }
 
 /** Downloads one creator caption with yt-dlp into `dest`, through a scratch folder. */
-export async function fetchCaptionWithYtdlp(videoId: string, lang: string, dest: string, tmpDir: string): Promise<boolean> {
+export async function fetchCaptionWithYtdlp(
+  videoId: string,
+  lang: string,
+  dest: string,
+  tmpDir: string,
+): Promise<boolean> {
   fs.rmSync(tmpDir, { recursive: true, force: true });
   const outDir = path.join(tmpDir, "out");
   fs.mkdirSync(outDir, { recursive: true });
   try {
     const cookies = copyCookiesInto(tmpDir);
     const result = await runYtdlp(
-      captionArgs({ videoId, lang, tmpDir: path.join(tmpDir, "part"), homeDir: outDir, cookiesPath: cookies ?? undefined }),
+      captionArgs({
+        videoId,
+        lang,
+        tmpDir: path.join(tmpDir, "part"),
+        homeDir: outDir,
+        cookiesPath: cookies ?? undefined,
+      }),
       { timeoutMs: CAPTION_TIMEOUT_MS },
     );
     if (result.timedOut) throw new Error("Caption download timed out");

@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { renderPage, SeededError, type QuerySeed } from "../../test-render";
 import type { ScannedFile } from "../../types";
+import { makeTaskStatus } from "../../test-fixtures";
 import { LibraryPage } from "./LibraryPage";
 
 const noJobs = [["jobs"], { jobs: [], queueRunning: false, currentJobId: null }] as const;
@@ -12,14 +13,16 @@ const episode: ScannedFile = {
   videoPath: "/media/TV/Severance/Season 02/Severance.S02E08.Sweet.Vitriol.1080p.ATVP.WEB-DL.mkv",
   videoName: "Severance.S02E08.Sweet.Vitriol.1080p.ATVP.WEB-DL.mkv",
   videoMtime: 1,
-  subtitles: [{
-    srtPath: "/media/TV/Severance/Season 02/Severance.S02E08.Sweet.Vitriol.1080p.ATVP.WEB-DL.en.srt",
-    srtName: "Severance.S02E08.Sweet.Vitriol.1080p.ATVP.WEB-DL.en.srt",
-    tasks: [
-      { taskId: 1, targetLang: "Traditional Chinese", langCode: "chi", outputName: "", status: "new", jobId: null },
-      { taskId: 2, targetLang: "Japanese", langCode: "jpn", outputName: "", status: "skipped", jobId: null },
-    ],
-  }],
+  subtitles: [
+    {
+      srtPath: "/media/TV/Severance/Season 02/Severance.S02E08.Sweet.Vitriol.1080p.ATVP.WEB-DL.en.srt",
+      srtName: "Severance.S02E08.Sweet.Vitriol.1080p.ATVP.WEB-DL.en.srt",
+      tasks: [
+        makeTaskStatus({ taskId: 1, targetLang: "Traditional Chinese", langCode: "chi", status: "new" }),
+        makeTaskStatus({ taskId: 2, targetLang: "Japanese", langCode: "jpn", status: "skipped" }),
+      ],
+    },
+  ],
 };
 
 const render = (seed: QuerySeed) => renderPage(<LibraryPage />, seed);
@@ -49,7 +52,14 @@ test("an empty library explains itself and points at media sources", () => {
 test("one file renders under its folder with its full name, status chips and counts", () => {
   const page = render([noJobs, settings, library([episode])]);
   assert.ok(page.text.includes("1 file"));
-  for (const chip of ["All 1", "Errors 0", "Needs transcription 0", "Missing a language 1", "In progress 0", "Done 0"]) {
+  for (const chip of [
+    "All 1",
+    "Errors 0",
+    "Needs transcription 0",
+    "Missing a language 1",
+    "In progress 0",
+    "Done 0",
+  ]) {
     assert.ok(page.buttons.includes(chip), `missing chip ${chip}`);
   }
   assert.ok(page.text.includes("TV/Severance/Season 02"));
@@ -66,6 +76,6 @@ test("the header carries the same sort, select-all and refresh controls as the T
   assert.match(page.html, /<option[^>]*value="name"[^>]*>Name<\/option>/);
   assert.match(page.html, /<option[^>]*value="date"[^>]*>Date<\/option>/);
   assert.ok(page.buttons.includes("Select all"));
-  assert.ok(page.buttons.some((label) => label === "↻ Refresh"));
+  assert.ok(page.buttons.some((label) => label === "Refresh"));
   assert.ok(page.text.includes("Descending"), "direction toggle defaults to descending");
 });

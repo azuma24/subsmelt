@@ -1,4 +1,4 @@
-import type { KeyValueStorage } from "../../components/file-tree/expansion-store";
+import type { KeyValueStorage } from "../../ui/file-tree/expansion-store";
 
 const KEY = "convert.recentTargets";
 const MAX_RECENTS = 5;

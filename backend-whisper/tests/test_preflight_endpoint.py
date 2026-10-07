@@ -32,11 +32,15 @@ class PreflightUnknownReadingTests(unittest.TestCase):
         self._tmp.cleanup()
 
     def _preflight(self, body: dict, *, ram: int = 64000, disk: int = 100000) -> dict:
-        with mock.patch.object(main_module, "MEDIA_ROOT", str(self.media)), \
-             mock.patch.object(main_module, "available_ram_mb", return_value=ram), \
-             mock.patch.object(main_module, "disk_free_mb", return_value=disk), \
-             mock.patch.object(main_module, "ffmpeg_available", return_value=True):
-            resp = self.client.post("/preflight", json={"input_path": str(self.media / "clip.mkv"), "model": "small", **body})
+        with (
+            mock.patch.object(main_module, "MEDIA_ROOT", str(self.media)),
+            mock.patch.object(main_module, "available_ram_mb", return_value=ram),
+            mock.patch.object(main_module, "disk_free_mb", return_value=disk),
+            mock.patch.object(main_module, "ffmpeg_available", return_value=True),
+        ):
+            resp = self.client.post(
+                "/preflight", json={"input_path": str(self.media / "clip.mkv"), "model": "small", **body}
+            )
         self.assertEqual(resp.status_code, 200)
         return resp.json()
 

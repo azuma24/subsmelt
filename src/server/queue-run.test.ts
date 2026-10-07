@@ -39,14 +39,13 @@ const failingHosts = new Set<string>();
 globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
   const url = String(input instanceof Request ? input.url : input);
   if (url.endsWith("/v1/models")) return new Response('{"data":[]}', { status: 200 });
-  if (url.includes("broken.test") || failingHosts.has(new URL(url).host)) return new Response('{"error":"bad request"}', { status: 400 });
+  if (url.includes("broken.test") || failingHosts.has(new URL(url).host))
+    return new Response('{"error":"bad request"}', { status: 400 });
   if (!url.endsWith("/chat/completions")) return new Response("{}", { status: 404 });
   return new Promise<Response>((resolve, reject) => {
-    init?.signal?.addEventListener(
-      "abort",
-      () => reject(Object.assign(new Error("aborted"), { name: "AbortError" })),
-      { once: true },
-    );
+    init?.signal?.addEventListener("abort", () => reject(Object.assign(new Error("aborted"), { name: "AbortError" })), {
+      once: true,
+    });
     release.push((content = "Translated Title") => resolve(chatCompletion(content)));
   });
 }) as typeof fetch;
@@ -161,7 +160,13 @@ function resetConnections() {
 
 test("a translating job reports the connection and model running it", async () => {
   useConnections("single", [
-    { id: "gpu", label: "Local 4090", provider: "local", model: "Qwen/Qwen2.5-72B-Instruct", endpoint: "http://gpu.test/v1" },
+    {
+      id: "gpu",
+      label: "Local 4090",
+      provider: "local",
+      model: "Qwen/Qwen2.5-72B-Instruct",
+      endpoint: "http://gpu.test/v1",
+    },
   ]);
   const job = addJob({ srtExists: true, outputExists: false });
   const run = queue.processQueue();
@@ -184,8 +189,22 @@ test("a translating job reports the connection and model running it", async () =
 
 test("a fallback switch mid-job reports the model of the connection that took over", async () => {
   useConnections("fallback", [
-    { id: "broken", label: "Desk GPU", provider: "local", model: "llama-3.1-8b", endpoint: "http://broken.test/v1", order: 0 },
-    { id: "backup", label: "Spare box", provider: "local", model: "gemma-2-27b", endpoint: "http://backup.test/v1", order: 1 },
+    {
+      id: "broken",
+      label: "Desk GPU",
+      provider: "local",
+      model: "llama-3.1-8b",
+      endpoint: "http://broken.test/v1",
+      order: 0,
+    },
+    {
+      id: "backup",
+      label: "Spare box",
+      provider: "local",
+      model: "gemma-2-27b",
+      endpoint: "http://backup.test/v1",
+      order: 1,
+    },
   ]);
   // Two one-cue chunks keep the job translating after the first chunk switches over.
   config.setSetting("chunk_size", "1");
@@ -217,8 +236,22 @@ test("a fallback switch mid-job reports the model of the connection that took ov
 
 test("a job that falls back and then recovers reports the primary's model again", async () => {
   useConnections("fallback", [
-    { id: "flaky", label: "Desk GPU", provider: "local", model: "llama-3.1-8b", endpoint: "http://flaky.test/v1", order: 0 },
-    { id: "backup", label: "Spare box", provider: "local", model: "gemma-2-27b", endpoint: "http://backup.test/v1", order: 1 },
+    {
+      id: "flaky",
+      label: "Desk GPU",
+      provider: "local",
+      model: "llama-3.1-8b",
+      endpoint: "http://flaky.test/v1",
+      order: 0,
+    },
+    {
+      id: "backup",
+      label: "Spare box",
+      provider: "local",
+      model: "gemma-2-27b",
+      endpoint: "http://backup.test/v1",
+      order: 1,
+    },
   ]);
   config.setSetting("chunk_size", "1");
   const job = addJob({ srtExists: true, outputExists: false });
@@ -297,7 +330,14 @@ function addKoreanJob(name: string, outputName: string, existing: string[]): num
   const cue = "1\n00:00:01,000 --> 00:00:02,000\nhello\n";
   fs.writeFileSync(path.join(mediaDir, `${name}.en.srt`), cue, "utf8");
   for (const file of existing) fs.writeFileSync(path.join(mediaDir, file), cue, "utf8");
-  return Number(db.createJob({ task_id: koreanTaskId, srt_path: path.join(mediaDir, `${name}.en.srt`), output_path: path.join(mediaDir, outputName), video_path: null }).lastInsertRowid);
+  return Number(
+    db.createJob({
+      task_id: koreanTaskId,
+      srt_path: path.join(mediaDir, `${name}.en.srt`),
+      output_path: path.join(mediaDir, outputName),
+      video_path: null,
+    }).lastInsertRowid,
+  );
 }
 
 test("a job skipped because its output exists in an old spelling points at that file", async () => {
@@ -315,7 +355,10 @@ test("re-translating an output written in an old spelling replaces that file ins
   db.forceJob(job);
   const run = queue.processQueue([job]);
   while (db.getJob(job)?.status !== "done") {
-    await waitFor(() => release.length > 0 || db.getJob(job)?.status === "done" || db.getJob(job)?.status === "error", "the job to call the LLM or finish");
+    await waitFor(
+      () => release.length > 0 || db.getJob(job)?.status === "done" || db.getJob(job)?.status === "error",
+      "the job to call the LLM or finish",
+    );
     assert.notEqual(db.getJob(job)?.status, "error", db.getJob(job)?.error ?? "");
     release.shift()?.('["안녕"]');
   }

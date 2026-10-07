@@ -12,16 +12,26 @@ export const labelCls = FORM_LABEL_CLS;
 /** Coerce a settings value to boolean — `settings` is a Record<string, unknown> on the wire. */
 export const bool = (v: unknown): boolean => Boolean(v);
 
-export function ToggleRow({ title, description, checked, onChange }: { title: string; description?: string; checked: boolean; onChange: (checked: boolean) => void }) {
+export function ToggleRow({
+  title,
+  description,
+  checked,
+  onChange,
+}: {
+  title: string;
+  description?: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
   return (
-    <label className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-3">
+    <label className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-sm border border-border bg-surface-raised px-3 py-3">
       <div>
-        <p className="text-sm font-medium text-[var(--text)]">{title}</p>
-        {description && <p className="mt-1 text-xs text-[var(--text-2)]">{description}</p>}
+        <p className="text-sm font-medium text-text">{title}</p>
+        {description && <p className="mt-1 text-xs text-muted">{description}</p>}
       </div>
       <input
         type="checkbox"
-        className="h-4 w-4 shrink-0 accent-[var(--accent)]"
+        className="h-4 w-4 shrink-0 accent-accent"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
       />

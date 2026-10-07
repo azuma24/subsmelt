@@ -31,9 +31,13 @@ test("a dead backend aborts the run instead of walking every line", async () => 
   const lines = Array.from({ length: 20 }, (_, i) => `line ${i}`);
 
   await assert.rejects(
-    () => runLineFallback(lines, {
-      translateLine: async () => { calls += 1; throw new Error("Request timed out after 300s"); },
-    }),
+    () =>
+      runLineFallback(lines, {
+        translateLine: async () => {
+          calls += 1;
+          throw new Error("Request timed out after 300s");
+        },
+      }),
     /aborted after 3 consecutive failures/,
   );
 
@@ -73,9 +77,13 @@ test("a stop request propagates immediately and is not counted as a failure", as
   let calls = 0;
 
   await assert.rejects(
-    () => runLineFallback(["a", "b", "c"], {
-      translateLine: async () => { calls += 1; throw new Error("STOP_REQUESTED"); },
-    }),
+    () =>
+      runLineFallback(["a", "b", "c"], {
+        translateLine: async () => {
+          calls += 1;
+          throw new Error("STOP_REQUESTED");
+        },
+      }),
     /STOP_REQUESTED/,
   );
 
@@ -84,19 +92,30 @@ test("a stop request propagates immediately and is not counted as a failure", as
 
 test("the abort callback sees the triggering error", async () => {
   let seen: unknown = null;
-  await assert.rejects(() => runLineFallback(["a", "b", "c", "d"], {
-    translateLine: async () => { throw new Error("fetch failed"); },
-    onAbort: (error) => { seen = error; },
-  }));
+  await assert.rejects(() =>
+    runLineFallback(["a", "b", "c", "d"], {
+      translateLine: async () => {
+        throw new Error("fetch failed");
+      },
+      onAbort: (error) => {
+        seen = error;
+      },
+    }),
+  );
 
   assert.match(String((seen as Error)?.message), /fetch failed/);
 });
 
 test("the failure limit is configurable", async () => {
   let calls = 0;
-  await assert.rejects(() => runLineFallback(["a", "b", "c", "d", "e"], {
-    translateLine: async () => { calls += 1; throw new Error("timeout"); },
-    failureLimit: 2,
-  }));
+  await assert.rejects(() =>
+    runLineFallback(["a", "b", "c", "d", "e"], {
+      translateLine: async () => {
+        calls += 1;
+        throw new Error("timeout");
+      },
+      failureLimit: 2,
+    }),
+  );
   assert.equal(calls, 2);
 });

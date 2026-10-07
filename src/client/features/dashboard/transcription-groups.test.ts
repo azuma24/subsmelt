@@ -24,8 +24,18 @@ test("repeated failures for one file collapse into a single row", () => {
   // The observed case: the same file failed four times and rendered as four
   // rows, each needing its own Retry click.
   const attempts = [
-    attempt({ id: "4", inputPath: "/media/Proxmox.mp4", startedAt: "2026-07-31T04:00:00.000Z", errorSummary: "terminated" }),
-    attempt({ id: "3", inputPath: "/media/Proxmox.mp4", startedAt: "2026-07-31T03:00:00.000Z", errorSummary: "fetch failed" }),
+    attempt({
+      id: "4",
+      inputPath: "/media/Proxmox.mp4",
+      startedAt: "2026-07-31T04:00:00.000Z",
+      errorSummary: "terminated",
+    }),
+    attempt({
+      id: "3",
+      inputPath: "/media/Proxmox.mp4",
+      startedAt: "2026-07-31T03:00:00.000Z",
+      errorSummary: "fetch failed",
+    }),
     attempt({ id: "2", inputPath: "/media/Proxmox.mp4", startedAt: "2026-07-31T02:00:00.000Z" }),
     attempt({ id: "1", inputPath: "/media/Proxmox.mp4", startedAt: "2026-07-31T01:00:00.000Z" }),
   ];
@@ -46,7 +56,10 @@ test("groups are ordered by their most recent attempt", () => {
     attempt({ id: "a2", inputPath: "/media/A.mp4", startedAt: "2026-07-31T02:00:00.000Z" }),
   ]);
 
-  assert.deepEqual(groups.map((g) => g.inputPath), ["/media/B.mp4", "/media/A.mp4"]);
+  assert.deepEqual(
+    groups.map((g) => g.inputPath),
+    ["/media/B.mp4", "/media/A.mp4"],
+  );
   assert.equal(groups[1].latest.id, "a2");
 });
 
@@ -57,19 +70,30 @@ test("attempts within a group are newest first regardless of input order", () =>
     attempt({ id: "mid", inputPath: "/media/A.mp4", startedAt: "2026-07-31T05:00:00.000Z" }),
   ]);
 
-  assert.deepEqual(groups[0].attempts.map((a) => a.id), ["new", "mid", "old"]);
+  assert.deepEqual(
+    groups[0].attempts.map((a) => a.id),
+    ["new", "mid", "old"],
+  );
 });
 
 test("retry-all targets only files whose latest attempt failed", () => {
   const groups = groupTranscriptionAttempts([
     // Failed twice, then succeeded — nothing left to retry.
-    attempt({ id: "r1", inputPath: "/media/Recovered.mp4", startedAt: "2026-07-31T03:00:00.000Z", status: "succeeded" }),
+    attempt({
+      id: "r1",
+      inputPath: "/media/Recovered.mp4",
+      startedAt: "2026-07-31T03:00:00.000Z",
+      status: "succeeded",
+    }),
     attempt({ id: "r0", inputPath: "/media/Recovered.mp4", startedAt: "2026-07-31T02:00:00.000Z" }),
     attempt({ id: "f0", inputPath: "/media/Broken.mp4", startedAt: "2026-07-31T04:00:00.000Z" }),
     attempt({ id: "run", inputPath: "/media/Running.mp4", startedAt: "2026-07-31T05:00:00.000Z", status: "running" }),
   ]);
 
-  assert.deepEqual(retryableGroups(groups).map((g) => g.inputPath), ["/media/Broken.mp4"]);
+  assert.deepEqual(
+    retryableGroups(groups).map((g) => g.inputPath),
+    ["/media/Broken.mp4"],
+  );
 });
 
 test("file name handles both path separators", () => {

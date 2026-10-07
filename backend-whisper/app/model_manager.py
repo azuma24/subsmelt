@@ -1,20 +1,19 @@
 from __future__ import annotations
 
-import os
 import queue
 import shutil
 import threading
+from collections.abc import Callable, Iterator, Mapping
 from pathlib import Path
-from typing import Callable, Iterator, Mapping
 
 from . import nemotron_runtime
 from .catalog import ADVERTISED_MODELS, MODELS, ModelDescriptor, descriptor_for, to_wire
 from .engine import EngineUnavailableError
 from .model_cache import (
-    dir_has_weights,
     cache_dir_name_for_model,
     cache_root_from_env,
     describe_model_cache,
+    dir_has_weights,
     repo_id_for_model,
 )
 from .preflight import available_ram_mb
@@ -185,7 +184,7 @@ def _download_scope(model: str) -> dict:
     return {"allow_patterns": [weights_file]} if weights_file else {}
 
 
-def _make_progress_tqdm(progress_queue: "queue.Queue[dict]"):
+def _make_progress_tqdm(progress_queue: queue.Queue[dict]):
     """Build a tqdm subclass that pushes download progress into ``progress_queue``.
 
     huggingface_hub drives downloads through tqdm; passing ``tqdm_class`` lets us
@@ -278,7 +277,7 @@ def download_model_events(
             }
             return
 
-        progress_queue: "queue.Queue[dict]" = queue.Queue()
+        progress_queue: queue.Queue[dict] = queue.Queue()
         sentinel = object()
         result_holder: dict = {}
 
@@ -294,7 +293,7 @@ def download_model_events(
                     **_download_scope(normalized),
                 )
                 result_holder["path"] = path
-            except Exception as exc:  # noqa: BLE001 - surface as a terminal error line
+            except Exception as exc:
                 result_holder["error"] = str(exc)
             finally:
                 progress_queue.put(sentinel)  # type: ignore[arg-type]

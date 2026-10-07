@@ -4,23 +4,41 @@ import asyncio
 import json
 import logging
 import os
-import secrets
-from pathlib import Path
-from typing import AsyncIterator, Callable, Iterator
-
 import re
+import secrets
 import shutil
 import tempfile
+from collections.abc import AsyncIterator, Callable, Iterator
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ValidationError
 from starlette.concurrency import run_in_threadpool
 
-from .gpu import cuda_device_count, gpu_info, total_free_vram_mb
 from .catalog import ADVERTISED_MODELS
+from .diarize import (
+    DiarizationTokenMissingError,
+    DiarizationUnavailableError,
+    diarize_available,
+)
 from .engine import EngineUnavailableError, LanguageNotSupportedError, TranscriptionCancelled
+from .fetch_url import (
+    UrlFetchError,
+    UrlFetchUnavailableError,
+    download_url,
+    url_fetch_available,
+)
+from .gpu import cuda_device_count, gpu_info, total_free_vram_mb
+from .log_state import get_log_state, log_file_path
 from .model_cache import describe_model_cache
+from .model_loader import (
+    CudaOutOfMemoryError,
+    CudaUnavailableError,
+    InvalidComputeTypeError,
+    ModelWeightsMissingError,
+    unload_model,
+)
 from .model_manager import (
     ModelNotDownloadedError,
     UnknownModelError,
@@ -32,7 +50,8 @@ from .model_manager import (
     download_model_events,
     normalize_model,
 )
-from .nemotron_runtime import availability as nemo_speech_availability, binary_version as nemo_speech_version
+from .nemotron_runtime import availability as nemo_speech_availability
+from .nemotron_runtime import binary_version as nemo_speech_version
 from .preflight import (
     DIARIZATION_RAM_MB,
     DIARIZATION_VRAM_MB,
@@ -52,26 +71,6 @@ from .schemas import (
     TranscribeResponse,
     UploadTranscribeResponse,
 )
-from .version import TRANSPORT_MODES, backend_version
-from .log_state import get_log_state, log_file_path
-from .model_loader import (
-    CudaOutOfMemoryError,
-    CudaUnavailableError,
-    InvalidComputeTypeError,
-    ModelWeightsMissingError,
-    unload_model,
-)
-from .diarize import (
-    DiarizationTokenMissingError,
-    DiarizationUnavailableError,
-    diarize_available,
-)
-from .fetch_url import (
-    UrlFetchError,
-    UrlFetchUnavailableError,
-    download_url,
-    url_fetch_available,
-)
 from .transcribe import (
     assert_language_supported,
     fake_transcribe_for_tests,
@@ -79,6 +78,7 @@ from .transcribe import (
     run_transcription,
     run_transcription_streaming,
 )
+from .version import TRANSPORT_MODES, backend_version
 
 MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/media")
 ALLOW_UNSAFE = os.environ.get("SUBSMELT_WHISPER_ALLOW_UNSAFE", "0") == "1"
@@ -401,14 +401,14 @@ async def _ndjson_stream(
                 post(item)
         except TranscriptionCancelled:
             pass  # client went away; nothing left to send
-        except Exception as exc:  # noqa: BLE001 - surface as a terminal error line
+        except Exception as exc:
             post({"type": "error", "error": str(exc)})
         finally:
             try:
                 gen.close()
                 if cleanup is not None:
                     cleanup()
-            except Exception:  # noqa: BLE001 - e.g. a Windows file lock on the temp media
+            except Exception:
                 log.exception("stream cleanup failed")
             finally:
                 post(done)
@@ -604,16 +604,21 @@ def validate_transcribe_request(request: TranscribeRequest) -> Path:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail={"code": "path_not_allowed", "message": str(exc)}) from exc
     if not result.safe and not (ALLOW_UNSAFE or request.allow_unsafe):
-        raise HTTPException(status_code=422, detail={
-            "code": result.code,
-            "message": f"Transcription preflight failed: {result.code}",
-            "availableRamMb": result.available_ram_mb,
-            "requiredRamMb": result.required_ram_mb,
-            "suggestedModel": result.suggested_model,
-        })
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": result.code,
+                "message": f"Transcription preflight failed: {result.code}",
+                "availableRamMb": result.available_ram_mb,
+                "requiredRamMb": result.required_ram_mb,
+                "suggestedModel": result.suggested_model,
+            },
+        )
 
     if not input_path.exists():
-        raise HTTPException(status_code=404, detail={"code": "input_missing", "message": "Input media file does not exist"})
+        raise HTTPException(
+            status_code=404, detail={"code": "input_missing", "message": "Input media file does not exist"}
+        )
 
     _assert_model_usable(request)
     return input_path
@@ -627,7 +632,7 @@ def transcribe(request: TranscribeRequest, _auth: None = Depends(require_token))
             result = fake_transcribe_for_tests(input_path, request, deliver="path")
         else:
             result = run_transcription(request, input_path, deliver="path")
-    except Exception as exc:  # noqa: BLE001 - mapped to typed HTTP errors
+    except Exception as exc:
         raise _map_transcription_error(exc) from exc
     return TranscribeResponse(**result)
 
@@ -721,13 +726,16 @@ def validate_upload_request(request: TranscribeRequest, upload_size_mb: int, scr
     code = _preflight_code(model_safe, model_code, ffmpeg_ok, disk_safety)
 
     if not safe and not (ALLOW_UNSAFE or request.allow_unsafe):
-        raise HTTPException(status_code=422, detail={
-            "code": code,
-            "message": f"Transcription preflight failed: {code}",
-            "availableRamMb": avail_ram,
-            "requiredRamMb": req_ram,
-            "suggestedModel": suggested,
-        })
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": code,
+                "message": f"Transcription preflight failed: {code}",
+                "availableRamMb": avail_ram,
+                "requiredRamMb": req_ram,
+                "suggestedModel": suggested,
+            },
+        )
 
     _assert_model_usable(request)
 
@@ -782,7 +790,12 @@ def _map_transcription_error(exc: Exception) -> HTTPException:
     if isinstance(exc, LanguageNotSupportedError):
         return HTTPException(
             status_code=400,
-            detail={"code": "language_not_supported", "message": str(exc), "model": exc.model, "language": exc.language},
+            detail={
+                "code": "language_not_supported",
+                "message": str(exc),
+                "model": exc.model,
+                "language": exc.language,
+            },
         )
     if isinstance(exc, EngineUnavailableError):
         return HTTPException(
@@ -819,12 +832,14 @@ def transcribe_upload(
                 result = fake_transcribe_for_tests(saved, parsed, deliver="content")
             else:
                 result = run_transcription(parsed, saved, deliver="content")
-        except Exception as exc:  # noqa: BLE001 - mapped to typed HTTP errors
+        except Exception as exc:
             raise _map_transcription_error(exc) from exc
         return UploadTranscribeResponse(**result)
 
 
-def _upload_stream_response(saved: Path, parsed: TranscribeRequest, tmp_ctx: tempfile.TemporaryDirectory) -> StreamingResponse:
+def _upload_stream_response(
+    saved: Path, parsed: TranscribeRequest, tmp_ctx: tempfile.TemporaryDirectory
+) -> StreamingResponse:
     """Stream an upload-mode transcription; ``tmp_ctx`` is removed when it ends,
     including on a client disconnect."""
     cancel_event = asyncio.Event()

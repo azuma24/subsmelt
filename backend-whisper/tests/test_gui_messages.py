@@ -6,15 +6,13 @@ a threaded Tcl build. The readiness poller runs on a worker thread, so it cannot
 touch Tk at all: it leaves text here and the Tk thread collects it on its own
 timer.
 """
+
 import importlib.util
 import threading
 import unittest
 from pathlib import Path
 
-_MODULE_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "packaging" / "windows" / "tray" / "whisper_gui.py"
-)
+_MODULE_PATH = Path(__file__).resolve().parents[1] / "packaging" / "windows" / "tray" / "whisper_gui.py"
 _spec = importlib.util.spec_from_file_location("whisper_gui", _MODULE_PATH)
 whisper_gui = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(whisper_gui)
@@ -75,10 +73,7 @@ class ThreadMessagesTests(unittest.TestCase):
         self.assertEqual(self.messages.latest(), "plain")
 
     def test_concurrent_posts_are_not_lost_or_duplicated(self):
-        threads = [
-            threading.Thread(target=self.messages.post, args=(f"msg-{i}",))
-            for i in range(20)
-        ]
+        threads = [threading.Thread(target=self.messages.post, args=(f"msg-{i}",)) for i in range(20)]
         for thread in threads:
             thread.start()
         for thread in threads:

@@ -55,7 +55,14 @@ after(() => {
 const media = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-stream-timeout-")), "a.mkv");
 fs.writeFileSync(media, "video");
 const request: BackendTranscriptionRequest = {
-  input_path: media, output_format: "srt", model: "small", language: "en", device: "cpu", compute_type: "int8", use_vad: true, post_action: "transcribe_only",
+  input_path: media,
+  output_format: "srt",
+  model: "small",
+  language: "en",
+  device: "cpu",
+  compute_type: "int8",
+  use_vad: true,
+  post_action: "transcribe_only",
 };
 
 const transports: Array<[string, (options: TranscribeStreamingOptions) => Promise<unknown>]> = [

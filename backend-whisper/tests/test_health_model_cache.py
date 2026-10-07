@@ -56,9 +56,7 @@ class HealthModelCacheTests(unittest.TestCase):
         os.environ["SUBSMELT_WHISPER_TOKEN"] = "s3cr3t"
         self.assertIsNone(self._model_cache("small")["cache_root"])
         self.assertIsNone(self._model_cache("small", headers={"Authorization": "Bearer nope"})["cache_root"])
-        self.assertIsInstance(
-            self._model_cache("small", headers={"Authorization": "Bearer s3cr3t"})["cache_root"], str
-        )
+        self.assertIsInstance(self._model_cache("small", headers={"Authorization": "Bearer s3cr3t"})["cache_root"], str)
 
 
 if __name__ == "__main__":

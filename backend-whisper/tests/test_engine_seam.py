@@ -62,7 +62,9 @@ class EngineSeamTests(unittest.TestCase):
         return TranscribeRequest(input_path=str(self.media / "clip.mkv"), model="small", language="auto", **overrides)
 
     def test_streaming_yields_runner_progress_then_the_rendered_result(self):
-        events = list(transcribe.run_transcription_streaming(self._request(), self.media / "clip.mkv", deliver="content"))
+        events = list(
+            transcribe.run_transcription_streaming(self._request(), self.media / "clip.mkv", deliver="content")
+        )
         self.assertEqual(
             events,
             [
@@ -80,7 +82,9 @@ class EngineSeamTests(unittest.TestCase):
         )
 
     def test_blocking_call_returns_the_streamed_result_and_writes_next_to_the_input(self):
-        result = transcribe.run_transcription(self._request(output_format="txt"), self.media / "clip.mkv", deliver="path")
+        result = transcribe.run_transcription(
+            self._request(output_format="txt"), self.media / "clip.mkv", deliver="path"
+        )
         self.assertEqual(
             result,
             {
@@ -119,10 +123,16 @@ class EngineSeamTests(unittest.TestCase):
     def test_cancel_is_checked_before_diarization_starts(self):
         runner, is_cancelled = self._cancel_once_the_runner_returns()
         request = self._request(advanced_options={"speaker_diarization": True})
-        with mock.patch.dict(transcribe.ENGINE_RUNNERS, {"whisper": runner}), \
-             mock.patch.object(transcribe, "assign_speakers") as diarize:
+        with (
+            mock.patch.dict(transcribe.ENGINE_RUNNERS, {"whisper": runner}),
+            mock.patch.object(transcribe, "assign_speakers") as diarize,
+        ):
             with self.assertRaises(transcribe.TranscriptionCancelled):
-                list(transcribe.run_transcription_streaming(request, self.media / "clip.mkv", is_cancelled, deliver="path"))
+                list(
+                    transcribe.run_transcription_streaming(
+                        request, self.media / "clip.mkv", is_cancelled, deliver="path"
+                    )
+                )
         diarize.assert_not_called()
         self.assertFalse((self.media / "clip.srt").exists())
 
@@ -137,7 +147,11 @@ class EngineSeamTests(unittest.TestCase):
             return False
 
         with mock.patch.object(transcribe, "extract_audio", extract):
-            list(transcribe.run_transcription_streaming(self._request(), self.media / "clip.mkv", is_cancelled, deliver="content"))
+            list(
+                transcribe.run_transcription_streaming(
+                    self._request(), self.media / "clip.mkv", is_cancelled, deliver="content"
+                )
+            )
         self.assertIs(seen["is_cancelled"], is_cancelled)
 
     def _silent_runner(self, request, audio_path, is_cancelled, min_progress_interval):
@@ -150,7 +164,14 @@ class EngineSeamTests(unittest.TestCase):
             result = transcribe.run_transcription(self._request(), self.media / "clip.mkv", deliver="path")
         self.assertEqual(
             result,
-            {"ok": True, "subtitle_path": None, "language": "en", "segments": 0, "duration_seconds": 2.0, "chinese_script": None},
+            {
+                "ok": True,
+                "subtitle_path": None,
+                "language": "en",
+                "segments": 0,
+                "duration_seconds": 2.0,
+                "chinese_script": None,
+            },
         )
         self.assertEqual(sorted(p.name for p in self.media.iterdir()), ["clip.mkv"])
 
@@ -181,10 +202,12 @@ class LanguageErrorOverHttpTests(unittest.TestCase):
         self._fake.stop()
 
     def test_json_endpoint_reports_language_not_supported(self):
-        with mock.patch.object(main_module, "MEDIA_ROOT", str(self.media)), \
-             mock.patch.object(main_module, "available_ram_mb", return_value=64000), \
-             mock.patch.object(main_module, "ffmpeg_available", return_value=True), \
-             mock.patch.object(main_module, "assert_model_downloaded", return_value=None):
+        with (
+            mock.patch.object(main_module, "MEDIA_ROOT", str(self.media)),
+            mock.patch.object(main_module, "available_ram_mb", return_value=64000),
+            mock.patch.object(main_module, "ffmpeg_available", return_value=True),
+            mock.patch.object(main_module, "assert_model_downloaded", return_value=None),
+        ):
             resp = self.client.post(
                 "/transcribe",
                 json={"input_path": str(self.media / "clip.mkv"), "model": "distil-large-v3", "language": "ja"},

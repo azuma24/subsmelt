@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { Icon } from "../../ui/Icon";
 import { ActionButton } from "../../ui/primitives";
 
@@ -39,7 +39,9 @@ export function LibraryLoadError({ message, onRetry }: { message: string; onRetr
   return (
     <div role="alert" className="flex flex-col items-center gap-3 px-6 py-16 text-center">
       <p className="max-w-md text-sm text-danger [overflow-wrap:anywhere]">{t("library.loadFailed", { message })}</p>
-      <ActionButton variant="ghost" size="sm" onClick={onRetry}>{t("errors.retry")}</ActionButton>
+      <ActionButton variant="ghost" size="sm" onClick={onRetry}>
+        {t("errors.retry")}
+      </ActionButton>
     </div>
   );
 }

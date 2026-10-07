@@ -10,10 +10,16 @@ const freshInstall: QuerySeed = [
 ];
 
 test("Settings opens on the LLM connection section with every section in the nav", () => {
-  const page = renderPage(<SettingsPage isMobile={false} />, freshInstall);
+  const page = renderPage(<SettingsPage />, freshInstall);
 
   assert.match(page.text, /^Settings Save /);
-  for (const section of ["LLM Connection", "Translation Engine", "Sources & Monitoring", "Speech-to-text", "Interface"]) {
+  for (const section of [
+    "LLM Connection",
+    "Translation Engine",
+    "Sources & Monitoring",
+    "Speech-to-text",
+    "Interface",
+  ]) {
     assert.ok(page.buttons.includes(section), `missing section ${section}`);
   }
   assert.ok(page.headings.includes("LLM Connection"));
@@ -22,13 +28,13 @@ test("Settings opens on the LLM connection section with every section in the nav
 });
 
 test("Save stays disabled until something is edited", () => {
-  const page = renderPage(<SettingsPage isMobile={false} />, freshInstall);
+  const page = renderPage(<SettingsPage />, freshInstall);
 
-  assert.match(page.html, /<button disabled=""[^>]*>Save<\/button>/);
+  assert.match(page.html, /<button\b[^>]*\bdisabled=""[^>]*>Save<\/button>/);
 });
 
 test("a fresh install lists what is left to set up", () => {
-  const page = renderPage(<SettingsPage isMobile={false} />, freshInstall);
+  const page = renderPage(<SettingsPage />, freshInstall);
 
   assert.ok(page.text.includes("Setup checklist 0 of 3 done"));
   assert.ok(page.text.includes("○ LLM connection Configure endpoint and model."));

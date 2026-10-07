@@ -12,9 +12,9 @@ test("parseRules: empty / invalid input yields empty array", () => {
 });
 
 test("parseRules: normalizes path and coerces fields", () => {
-  const rules = parseRules(JSON.stringify([
-    { id: "a", path: "/Anime/JP/", enabled: true, translateWithoutVideo: "on", taskIds: [1, 2] },
-  ]));
+  const rules = parseRules(
+    JSON.stringify([{ id: "a", path: "/Anime/JP/", enabled: true, translateWithoutVideo: "on", taskIds: [1, 2] }]),
+  );
   assert.equal(rules.length, 1);
   assert.equal(rules[0].path, "Anime/JP");
   assert.equal(rules[0].enabled, true);
@@ -23,12 +23,14 @@ test("parseRules: normalizes path and coerces fields", () => {
 });
 
 test("parseRules: drops malformed entries and bad tri-state falls back to inherit", () => {
-  const rules = parseRules(JSON.stringify([
-    { id: "ok", path: "a", enabled: 1, translateWithoutVideo: "bogus", taskIds: [3, "x", 4] },
-    { path: "missing-id" },
-    "garbage",
-    42,
-  ]));
+  const rules = parseRules(
+    JSON.stringify([
+      { id: "ok", path: "a", enabled: 1, translateWithoutVideo: "bogus", taskIds: [3, "x", 4] },
+      { path: "missing-id" },
+      "garbage",
+      42,
+    ]),
+  );
   assert.equal(rules.length, 1);
   assert.equal(rules[0].id, "ok");
   assert.equal(rules[0].enabled, true);
@@ -37,14 +39,19 @@ test("parseRules: drops malformed entries and bad tri-state falls back to inheri
 });
 
 test("parseRules: backslash and dot segments rejected/normalized; escaping path dropped", () => {
-  const rules = parseRules(JSON.stringify([
-    { id: "win", path: "Anime\\\\Sub", enabled: true, translateWithoutVideo: "off", taskIds: [] },
-    { id: "esc", path: "../secret", enabled: true, translateWithoutVideo: "on", taskIds: [] },
-  ]));
+  const rules = parseRules(
+    JSON.stringify([
+      { id: "win", path: "Anime\\\\Sub", enabled: true, translateWithoutVideo: "off", taskIds: [] },
+      { id: "esc", path: "../secret", enabled: true, translateWithoutVideo: "on", taskIds: [] },
+    ]),
+  );
   const win = rules.find((r) => r.id === "win");
   assert.ok(win);
   assert.equal(win!.path, "Anime/Sub");
-  assert.equal(rules.find((r) => r.id === "esc"), undefined);
+  assert.equal(
+    rules.find((r) => r.id === "esc"),
+    undefined,
+  );
 });
 
 const rule = (over: Partial<DirectoryRule>): DirectoryRule => ({
@@ -110,13 +117,14 @@ test("resolveDirectoryRule: extra task IDs union across all matching rules, dedu
     rule({ id: "other", path: "Dramas", taskIds: [9] }),
   ];
   const r = resolveDirectoryRule("Anime/JP/Show", rules, false);
-  assert.deepEqual([...r.extraTaskIds].sort((a, b) => a - b), [1, 2, 3]);
+  assert.deepEqual(
+    [...r.extraTaskIds].sort((a, b) => a - b),
+    [1, 2, 3],
+  );
 });
 
 test("resolveDirectoryRule: disabled rules are ignored", () => {
-  const rules = [
-    rule({ id: "off", path: "Anime", enabled: false, translateWithoutVideo: "on", taskIds: [5] }),
-  ];
+  const rules = [rule({ id: "off", path: "Anime", enabled: false, translateWithoutVideo: "on", taskIds: [5] })];
   const r = resolveDirectoryRule("Anime/Show", rules, false);
   assert.equal(r.translateWithoutVideo, false);
   assert.deepEqual(r.extraTaskIds, []);

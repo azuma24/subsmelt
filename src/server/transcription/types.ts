@@ -1,6 +1,30 @@
-export const transcribePostActionValues = ["transcribe_only", "transcribe_and_translate"] as const;
-export type TranscribePostAction = typeof transcribePostActionValues[number];
-export type TranscriptionOutputFormat = "srt" | "vtt" | "txt" | "ass";
+import type {
+  ModelEngine,
+  ModelSupports,
+  TranscribePostAction,
+  TranscriptionAdvancedOptions,
+  TranscriptionOutputFormat,
+  TranscriptionPreflightResponse,
+  TranscriptionSubtitleQualityOptions,
+  WhisperModelDeleteResult,
+  WhisperModelDescriptor,
+  WhisperModelDownloadResult,
+  WhisperModelInfo,
+} from "../../shared/transcription.js";
+
+export { transcribePostActionValues } from "../../shared/transcription.js";
+export type {
+  ModelEngine,
+  ModelSupports,
+  TranscribePostAction,
+  TranscriptionAdvancedOptions,
+  TranscriptionOutputFormat,
+  TranscriptionSubtitleQualityOptions,
+  WhisperModelDeleteResult,
+  WhisperModelDescriptor,
+  WhisperModelDownloadResult,
+  WhisperModelInfo,
+};
 export type LowRamBehavior = "ask" | "downgrade" | "skip" | "run_anyway";
 
 export interface TranscriptionSettings {
@@ -37,16 +61,6 @@ export interface TranscriptionFolderDefaults {
   max_subtitle_duration?: number | string;
   merge_short_segments?: boolean | string;
   advanced_options?: TranscriptionAdvancedOptions;
-}
-
-export interface TranscriptionAdvancedOptions {
-  beam_size?: number;
-  patience?: number;
-  condition_on_previous_text?: boolean;
-  word_timestamps?: boolean;
-  initial_prompt?: string;
-  speaker_diarization?: boolean;
-  bgm_separation?: boolean;
 }
 
 // Per-run overrides that win over the global Settings values (Whisper page lets
@@ -89,35 +103,8 @@ export interface BackendTranscriptionRequest {
   chinese_script?: "zh-TW" | "zh-CN";
 }
 
-export interface TranscriptionSubtitleQualityOptions {
-  max_line_length?: number;
-  max_subtitle_duration?: number;
-  merge_short_segments?: boolean;
-}
-
-export interface BackendPreflightResponse {
-  ok?: boolean;
-  safe?: boolean;
-  code?: string;
-  availableRamMb?: number;
-  requiredRamMb?: number;
-  recommendedRamMb?: number;
-  suggestedModel?: string | null;
-  ffmpegAvailable?: boolean;
-  diskAvailableMb?: number;
-  requiredDiskMb?: number;
-  modelCache?: {
-    model?: string;
-    cached?: boolean | null;
-    cacheRoot?: string;
-    cachePath?: string | null;
-    firstRunDownloadExpected?: boolean;
-    requiredRamMb?: number;
-    recommendedRamMb?: number;
-    suggestedModel?: string | null;
-    warning?: string;
-  };
-}
+/** What the backend's /preflight answers; the client sees it as TranscriptionPreflightResponse. */
+export type BackendPreflightResponse = TranscriptionPreflightResponse;
 
 export interface BackendTranscriptionResponse {
   ok: boolean;
@@ -158,40 +145,6 @@ export interface TranscribeStreamingOptions extends TranscribeBackendOptions {
   onPhase?: (phase: string) => void;
 }
 
-export type ModelEngine = "whisper" | "nemotron";
-
-export interface ModelSupports {
-  prompt: boolean;
-  beamSize: boolean;
-  conditionOnPreviousText: boolean;
-  vad: boolean;
-  computeType: boolean;
-  wordTimestamps: boolean;
-  translateTask: boolean;
-}
-
-// What a speech-to-text model can do, as the backend describes it in
-// capabilities.modelInfo and on GET /models entries.
-export interface WhisperModelDescriptor {
-  id: string;
-  engine: ModelEngine;
-  label: string;
-  sizeMb?: number;
-  requiredRamMb?: number;
-  requiredVramMb?: number;
-  languages: "all" | string[];
-  supports: ModelSupports;
-  available: boolean;
-  unavailableReason: string | null;
-}
-
-// Backends before 0.6.0 send only the first six fields.
-export interface WhisperModelInfo extends Partial<Omit<WhisperModelDescriptor, "id">> {
-  id: string;
-  downloaded: boolean;
-  cachePath?: string | null;
-}
-
 export interface BackendCapabilities {
   models?: string[];
   modelInfo?: WhisperModelDescriptor[];
@@ -208,17 +161,6 @@ export interface WhisperModelDownloadProgress {
   pct: number;
   downloadedMb?: number;
   totalMb?: number;
-}
-
-export interface WhisperModelDownloadResult {
-  ok: boolean;
-  model: string;
-  cachePath?: string | null;
-}
-
-export interface WhisperModelDeleteResult {
-  ok: boolean;
-  freedMb?: number;
 }
 
 export interface DownloadBackendModelOptions {

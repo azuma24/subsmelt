@@ -17,24 +17,43 @@ import {
   savePlaylist,
   type YoutubePlaylist,
 } from "../youtube/playlists.js";
-import { exportNoteForVideo, NoteExportError, notesFolderStatus, type NoteExportFailure } from "../youtube/note-export.js";
+import {
+  exportNoteForVideo,
+  NoteExportError,
+  notesFolderStatus,
+  type NoteExportFailure,
+} from "../youtube/note-export.js";
 import { cookiesStatus, parseCookies, removeCookies, saveCookies } from "../youtube/cookies.js";
 import { IllegalTransitionError, type YoutubeStore } from "../youtube/store.js";
-import { changeBackfill, changeChannelContent, isUnavailableEntry, listFollowedWithYtdlp, listingTitle, resolveChannelWithYtdlp } from "../youtube/sync.js";
+import {
+  changeBackfill,
+  changeChannelContent,
+  isUnavailableEntry,
+  listFollowedWithYtdlp,
+  listingTitle,
+  resolveChannelWithYtdlp,
+} from "../youtube/sync.js";
 import { isChannelUploads, isPlaylistId, isVideoId, parseChannelInput, parsePlaylistInput } from "../youtube/urls.js";
 import type { UserAction } from "../youtube/video-status.js";
+import type { YoutubePipeline, YoutubePlaylistSummary, YoutubeStatus } from "../../shared/youtube.js";
 import { isQueueRunning } from "../queue.js";
 import { CooldownError, nextCheckAt, transcriptionReady, type YoutubeWorker } from "../youtube/worker.js";
 import { ffmpegVersion, resolveYtdlpBin, updateYtdlp, ytdlpVersion } from "../youtube/ytdlp.js";
+import { errorMessage } from "../errors.js";
 
-const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
+const message = (error: unknown) => (error instanceof Error ? errorMessage(error) : String(error));
 // A day ahead of UTC, so a user east of Greenwich can pick the month that has already started for them.
 const today = () => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
 const NO_KEY_ERROR = "Added since needs a YouTube Data API key in Settings";
 
-const NOTE_ERROR_STATUS: Record<NoteExportFailure, number> = { unknown_video: 404, no_media: 409, no_transcript: 409, notes_folder: 503 };
+const NOTE_ERROR_STATUS: Record<NoteExportFailure, number> = {
+  unknown_video: 404,
+  no_media: 409,
+  no_transcript: 409,
+  notes_folder: 503,
+};
 
-export async function youtubeStatus(worker?: YoutubeWorker) {
+export async function youtubeStatus(worker?: YoutubeWorker): Promise<YoutubeStatus> {
   const [ytdlp, ffmpeg] = await Promise.all([ytdlpVersion(), ffmpegVersion()]);
   const cooldown = worker?.activeCooldown() ?? null;
   return {
@@ -48,7 +67,7 @@ export async function youtubeStatus(worker?: YoutubeWorker) {
 }
 
 /** What holds the subtitle and translation steps back: the shared GPU, or no transcription backend. */
-export function pipelineStatus(store: YoutubeStore) {
+export function pipelineStatus(store: YoutubeStore): YoutubePipeline {
   const gate = currentTranslationGate();
   const ready = transcriptionReady();
   return {
@@ -58,11 +77,15 @@ export function pipelineStatus(store: YoutubeStore) {
       waitingFor: gate.open ? 0 : gate.waitingFor,
       translationRunning: isQueueRunning(),
     },
-    transcription: { ready, waiting: ready ? 0 : store.statusTotals().transcribing ?? 0 },
+    transcription: { ready, waiting: ready ? 0 : (store.statusTotals().transcribing ?? 0) },
   };
 }
 
-function playlistSummary(store: YoutubeStore, worker: YoutubeWorker, playlist: YoutubePlaylist) {
+function playlistSummary(
+  store: YoutubeStore,
+  worker: YoutubeWorker,
+  playlist: YoutubePlaylist,
+): YoutubePlaylistSummary {
   const { firstSyncAt: _firstSyncAt, ...sync } = store.getSyncState(playlist.id);
   return {
     ...playlist,
@@ -112,7 +135,10 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore, worker:
 
   // The Settings field checks the folder as it is typed, before it is saved.
   app.get("/api/youtube/notes-folder", (req, res) => {
-    const dir = typeof req.query.path === "string" && req.query.path.trim() ? req.query.path.trim() : getSetting("youtube_notes_dir");
+    const dir =
+      typeof req.query.path === "string" && req.query.path.trim()
+        ? req.query.path.trim()
+        : getSetting("youtube_notes_dir");
     res.json(notesFolderStatus(dir));
   });
 
@@ -180,7 +206,7 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore, worker:
     if (isChannel && !channel) return res.status(400).json({ error: "Paste a link to a YouTube channel" });
     if (!isChannel && !playlistId) return res.status(400).json({ error: "Paste a link to a YouTube playlist" });
     let id: string;
-    let listing;
+    let listing: Awaited<ReturnType<typeof listFollowedWithYtdlp>>;
     try {
       id = channel ? await worker.metadataCall(() => resolveChannelWithYtdlp(channel)) : playlistId!;
       listing = await worker.metadataCall(() => listFollowedWithYtdlp(id));
@@ -210,7 +236,12 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore, worker:
       folder: folderFromTitle(title, id),
       addedDates: addedDates !== null,
       addedDatesError,
-      entries: available.map((e) => ({ posted: e.publishedAt, added: addedDates?.get(e.videoId) ?? null, durationS: e.durationS, kind: e.contentKind ?? null })),
+      entries: available.map((e) => ({
+        posted: e.publishedAt,
+        added: addedDates?.get(e.videoId) ?? null,
+        durationS: e.durationS,
+        kind: e.contentKind ?? null,
+      })),
     });
   });
 
@@ -222,7 +253,8 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore, worker:
     const title = typeof body.title === "string" && body.title.trim() ? body.title.trim().slice(0, 200) : id;
     const fields = parsePlaylistFields(body, defaultPlaylistFields(folderFromTitle(title, id)), today());
     if (!fields.ok) return res.status(400).json({ error: fields.error });
-    if (fields.value.backfill.kind === "added_since" && !getSetting("youtube_api_key")) return res.status(400).json({ error: NO_KEY_ERROR });
+    if (fields.value.backfill.kind === "added_since" && !getSetting("youtube_api_key"))
+      return res.status(400).json({ error: NO_KEY_ERROR });
 
     const playlist: YoutubePlaylist = { id, title, ...fields.value };
     store.deleteSyncState(id);
@@ -247,7 +279,10 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore, worker:
     if (isChannelUploads(playlist.id) && JSON.stringify(updated.include) !== JSON.stringify(playlist.include)) {
       try {
         const change = await changeChannelContent(store, updated, updated.include, worker.syncDeps());
-        logger.info("youtube", `Changed Shorts and live of ${playlist.title}: ${change.released} released, ${change.skipped} skipped`);
+        logger.info(
+          "youtube",
+          `Changed Shorts and live of ${playlist.title}: ${change.released} released, ${change.skipped} skipped`,
+        );
         worker.kick();
       } catch (error) {
         const current = findPlaylist(playlist.id);
@@ -284,12 +319,16 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore, worker:
     if (!playlist) return;
     const backfill = parseBackfill(req.body?.backfill, today());
     if (!backfill.ok) return res.status(400).json({ error: backfill.error });
-    if (backfill.value.kind === "added_since" && !getSetting("youtube_api_key")) return res.status(400).json({ error: NO_KEY_ERROR });
+    if (backfill.value.kind === "added_since" && !getSetting("youtube_api_key"))
+      return res.status(400).json({ error: NO_KEY_ERROR });
     try {
       const change = await changeBackfill(store, playlist, backfill.value, worker.syncDeps());
       const current = findPlaylist(playlist.id);
       if (current) savePlaylist({ ...current, backfill: backfill.value });
-      logger.info("youtube", `Changed backfill of ${playlist.title}: ${change.released} released, ${change.skipped} skipped`);
+      logger.info(
+        "youtube",
+        `Changed backfill of ${playlist.title}: ${change.released} released, ${change.skipped} skipped`,
+      );
       broadcast("youtube:playlist", { playlistId: playlist.id });
       worker.kick();
       res.json({ ok: true, ...change });
@@ -303,7 +342,12 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore, worker:
     const playlist = withPlaylist(res, req.params.id);
     if (!playlist) return;
     const ids: unknown = req.body?.videoIds;
-    if (!Array.isArray(ids) || ids.length === 0 || ids.length > MAX_PICKED_VIDEOS || !ids.every((id) => typeof id === "string")) {
+    if (
+      !Array.isArray(ids) ||
+      ids.length === 0 ||
+      ids.length > MAX_PICKED_VIDEOS ||
+      !ids.every((id) => typeof id === "string")
+    ) {
       return res.status(400).json({ error: `videoIds must list 1 to ${MAX_PICKED_VIDEOS} video ids` });
     }
     const now = new Date().toISOString();
@@ -330,7 +374,10 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore, worker:
     const playlist = withPlaylist(res, req.params.id);
     if (!playlist) return;
     const videos = store.playlistVideos(playlist.id).map(({ subtitle_plan, ...video }) => {
-      const pct = video.status === "downloading" || video.status === "transcribing" ? worker.progressOf(video.video_id) : undefined;
+      const pct =
+        video.status === "downloading" || video.status === "transcribing"
+          ? worker.progressOf(video.video_id)
+          : undefined;
       const subtitles = subtitle_plan ? JSON.parse(subtitle_plan) : null;
       return pct === undefined ? { ...video, subtitles } : { ...video, subtitles, pct };
     });

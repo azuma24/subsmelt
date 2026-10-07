@@ -55,10 +55,12 @@ lines typical, 800 max. These two are the only source files over 800.
 
 - [ ] **Lock the Linux backend Docker image** like the Windows installer
       (`packaging/windows/constraints.txt`).
-- [ ] The app has no favicon, so every page load logs a `/favicon.ico` 404.
-
 - [ ] The CI runner has no `ffmpeg`, so the backend's ffmpeg paths are only
       exercised against mocks
+- [ ] **Three Biome a11y rules are off** (`useSemanticElements`,
+      `useFocusableInteractive`, `noLabelWithoutControl`; reasons in
+      `biome.jsonc`). Revisit the first two if the jobs table ever becomes a
+      real `<table>`.
 - [ ] **Render tests cover four screens, first frame only.** `DashboardPage`,
       `SettingsPage`, `WhisperPage` and `ConvertPage` have `*.test.tsx` files
       that server-render them with seeded query data (`src/client/test-render.tsx`).

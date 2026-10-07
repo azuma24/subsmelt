@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { monthLabel } from "./format";
+import { Icon } from "../../ui/Icon";
 
 export interface YearMonth {
   year: number;
@@ -11,7 +12,17 @@ export interface YearMonth {
 export const monthKey = ({ year, month }: YearMonth) => `${year}-${String(month).padStart(2, "0")}`;
 
 /** A year and month picker: year arrows, twelve month buttons with post counts, nothing after this month. */
-export function MonthPicker({ value, onChange, counts, today }: { value: YearMonth; onChange: (v: YearMonth) => void; counts: Map<string, number>; today: YearMonth }) {
+export function MonthPicker({
+  value,
+  onChange,
+  counts,
+  today,
+}: {
+  value: YearMonth;
+  onChange: (v: YearMonth) => void;
+  counts: Map<string, number>;
+  today: YearMonth;
+}) {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const [viewYear, setViewYear] = useState(value.year);
@@ -40,6 +51,7 @@ export function MonthPicker({ value, onChange, counts, today }: { value: YearMon
   };
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: the wrapper only closes the popover on Escape; the button and the month grid are the interactive elements
     <div
       ref={rootRef}
       className="relative"
@@ -57,17 +69,36 @@ export function MonthPicker({ value, onChange, counts, today }: { value: YearMon
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={toggle}
-        className="flex min-h-touch items-center gap-2 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text)] hover:border-[var(--accent-border)]"
+        className="flex min-h-touch items-center gap-2 rounded-sm border border-border bg-surface-raised px-3 text-sm text-text hover:border-accent-line"
       >
         {monthLabel(monthKey(value), i18n.language)}
-        <span aria-hidden="true" className="text-[var(--text-3)]">▾</span>
+        <Icon name="chevron-down" className="text-faint" />
       </button>
       {open && (
-        <div role="dialog" aria-label={t("youtube.dialog.chooseMonth")} className="absolute left-0 top-[calc(100%+4px)] z-20 w-[288px] rounded-md border border-[var(--border)] bg-[var(--surface)] p-3 shadow-2">
+        <div
+          role="dialog"
+          aria-label={t("youtube.dialog.chooseMonth")}
+          className="absolute left-0 top-[calc(100%+4px)] z-20 w-[288px] rounded-md border border-border bg-surface p-3 shadow-2"
+        >
           <div className="mb-2 flex items-center justify-between">
-            <button type="button" aria-label={t("youtube.dialog.prevYear")} onClick={() => setViewYear((y) => y - 1)} className="flex h-11 w-11 items-center justify-center rounded-sm text-[var(--text-2)] hover:bg-[var(--surface-2)]">‹</button>
-            <b className="tabular-nums text-sm text-[var(--text)]">{viewYear}</b>
-            <button type="button" aria-label={t("youtube.dialog.nextYear")} disabled={viewYear >= today.year} onClick={() => setViewYear((y) => y + 1)} className="flex h-11 w-11 items-center justify-center rounded-sm text-[var(--text-2)] hover:bg-[var(--surface-2)] disabled:opacity-40">›</button>
+            <button
+              type="button"
+              aria-label={t("youtube.dialog.prevYear")}
+              onClick={() => setViewYear((y) => y - 1)}
+              className="flex h-11 w-11 items-center justify-center rounded-sm text-muted hover:bg-surface-raised"
+            >
+              ‹
+            </button>
+            <b className="tabular-nums text-sm text-text">{viewYear}</b>
+            <button
+              type="button"
+              aria-label={t("youtube.dialog.nextYear")}
+              disabled={viewYear >= today.year}
+              onClick={() => setViewYear((y) => y + 1)}
+              className="flex h-11 w-11 items-center justify-center rounded-sm text-muted hover:bg-surface-raised disabled:opacity-40"
+            >
+              ›
+            </button>
           </div>
           <div className="grid grid-cols-4 gap-1">
             {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => {
@@ -81,17 +112,20 @@ export function MonthPicker({ value, onChange, counts, today }: { value: YearMon
                   disabled={future}
                   aria-pressed={selected}
                   data-selected={selected}
-                  aria-label={t("youtube.dialog.monthVideos", { month: monthLabel(monthKey({ year: viewYear, month }), i18n.language), count: n })}
+                  aria-label={t("youtube.dialog.monthVideos", {
+                    month: monthLabel(monthKey({ year: viewYear, month }), i18n.language),
+                    count: n,
+                  })}
                   onClick={() => choose(month)}
-                  className={`flex min-h-touch flex-col items-center justify-center rounded-sm border text-xs leading-4 disabled:cursor-not-allowed disabled:opacity-35 ${selected ? "border-[var(--accent)] bg-[var(--accent-dim)] text-[var(--text)]" : "border-transparent text-[var(--text-2)] hover:bg-[var(--surface-2)]"}`}
+                  className={`flex min-h-touch flex-col items-center justify-center rounded-sm border text-xs leading-4 disabled:cursor-not-allowed disabled:opacity-35 ${selected ? "border-accent bg-accent-soft text-text" : "border-transparent text-muted hover:bg-surface-raised"}`}
                 >
                   {shortMonth.format(Date.UTC(viewYear, month - 1, 1))}
-                  {!future && <small className="text-xs tabular-nums text-[var(--text-3)]">{n}</small>}
+                  {!future && <small className="text-xs tabular-nums text-faint">{n}</small>}
                 </button>
               );
             })}
           </div>
-          <p className="mt-2 text-xs text-[var(--text-3)]">{t("youtube.dialog.monthFootnote")}</p>
+          <p className="mt-2 text-xs text-faint">{t("youtube.dialog.monthFootnote")}</p>
         </div>
       )}
     </div>

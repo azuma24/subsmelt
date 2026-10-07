@@ -1,7 +1,7 @@
-import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
+import { useTranslation } from "../../i18n";
+import type { TFunction } from "../../i18n";
 import { STATUS_ICON, STATUS_LABEL_KEY } from "../../app/constants";
-import type { JobRow } from "../../types";
+import type { Job } from "../../types";
 import { StatusBadge, type StatusDescriptor, type StatusFlag, type StatusTone } from "../../ui/primitives";
 
 // `skipped` gets its own tone: it means the file was never translated, so it
@@ -13,7 +13,7 @@ const JOB_TONE: Record<string, StatusTone> = {
   skipped: "warn",
 };
 
-export function jobStatusDescriptor(job: Pick<JobRow, "status" | "force" | "priority">, t: TFunction): StatusDescriptor {
+export function jobStatusDescriptor(job: Pick<Job, "status" | "force" | "priority">, t: TFunction): StatusDescriptor {
   const label = STATUS_LABEL_KEY[job.status] ? t(STATUS_LABEL_KEY[job.status]) : job.status;
   const icon = STATUS_ICON[job.status];
   const flags: StatusFlag[] = [];
@@ -27,7 +27,7 @@ export function jobStatusDescriptor(job: Pick<JobRow, "status" | "force" | "prio
   };
 }
 
-export function JobStatusBadge({ job }: { job: JobRow }) {
+export function JobStatusBadge({ job }: { job: Job }) {
   const { t } = useTranslation();
   return <StatusBadge status={jobStatusDescriptor(job, t)} />;
 }

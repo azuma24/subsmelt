@@ -25,12 +25,17 @@ export async function transcribeWithBackend(
   const url = normalizeTranscriptionBackendUrl(backendUrl);
   if (!url) throw new Error("Transcription backend URL is not configured");
   const timeoutMs = resolveTranscribeTimeoutMs(options?.timeoutSeconds);
-  const response = await fetchWithTimeout(`${url}/transcribe`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...transcriptionAuthHeaders(options?.token) },
-    body: JSON.stringify(request),
-    signal: options?.signal,
-  }, timeoutMs, "Transcription backend");
+  const response = await fetchWithTimeout(
+    `${url}/transcribe`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...transcriptionAuthHeaders(options?.token) },
+      body: JSON.stringify(request),
+      signal: options?.signal,
+    },
+    timeoutMs,
+    "Transcription backend",
+  );
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throwBackendError(body, response.status);
   return body as BackendTranscriptionResponse;
@@ -49,8 +54,13 @@ export async function transcribeWithBackendStreaming(
 ): Promise<BackendTranscriptionResponse> {
   const url = normalizeTranscriptionBackendUrl(backendUrl);
   if (!url) throw new Error("Transcription backend URL is not configured");
-  return postTranscriptionStream(`${url}/transcribe/stream`, {
-    headers: { "Content-Type": "application/json", ...transcriptionAuthHeaders(options?.token) },
-    body: JSON.stringify(request),
-  }, "Transcription backend stream", options);
+  return postTranscriptionStream(
+    `${url}/transcribe/stream`,
+    {
+      headers: { "Content-Type": "application/json", ...transcriptionAuthHeaders(options?.token) },
+      body: JSON.stringify(request),
+    },
+    "Transcription backend stream",
+    options,
+  );
 }

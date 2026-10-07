@@ -202,15 +202,19 @@ function floatSetting(raw: string | number | undefined): number | undefined {
   return Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
-function subtitleQualitySettings(settings: TranscriptionSettings, folderDefaults?: TranscriptionFolderDefaults): TranscriptionSubtitleQualityOptions | undefined {
+function subtitleQualitySettings(
+  settings: TranscriptionSettings,
+  folderDefaults?: TranscriptionFolderDefaults,
+): TranscriptionSubtitleQualityOptions | undefined {
   const maxLineLength = intSetting(folderDefaults?.max_line_length ?? settings.transcription_max_line_length);
-  const maxSubtitleDuration = floatSetting(folderDefaults?.max_subtitle_duration ?? settings.transcription_max_subtitle_duration);
-  const mergeShortSegments = boolSetting(folderDefaults?.merge_short_segments ?? settings.transcription_merge_short_segments, false);
-  if (
-    maxLineLength === undefined &&
-    maxSubtitleDuration === undefined &&
-    !mergeShortSegments
-  ) {
+  const maxSubtitleDuration = floatSetting(
+    folderDefaults?.max_subtitle_duration ?? settings.transcription_max_subtitle_duration,
+  );
+  const mergeShortSegments = boolSetting(
+    folderDefaults?.merge_short_segments ?? settings.transcription_merge_short_segments,
+    false,
+  );
+  if (maxLineLength === undefined && maxSubtitleDuration === undefined && !mergeShortSegments) {
     return undefined;
   }
   return {
@@ -221,41 +225,60 @@ function subtitleQualitySettings(settings: TranscriptionSettings, folderDefaults
 }
 
 function parseJsonObject<T>(raw: string | undefined, fallback: T, label = "JSON setting"): T {
-  if (!raw || !raw.trim()) return fallback;
+  if (!raw?.trim()) return fallback;
   try {
     const parsed = JSON.parse(raw) as unknown;
-    return parsed && typeof parsed === "object" ? parsed as T : fallback;
+    return parsed && typeof parsed === "object" ? (parsed as T) : fallback;
   } catch {
     throw new Error(`Invalid ${label} JSON`);
   }
 }
 
-export function localTranscriptionOutputPath(inputPath: string, language: string, outputFormat: TranscriptionOutputFormat): string {
+export function localTranscriptionOutputPath(
+  inputPath: string,
+  language: string,
+  outputFormat: TranscriptionOutputFormat,
+): string {
   const parsed = path.parse(inputPath);
   const suffix = !language || language === "auto" ? outputFormat : `${language}.${outputFormat}`;
   return path.join(parsed.dir, `${parsed.name}.${suffix}`);
 }
 
-function matchingFolderDefaults(inputPath: string, mediaDir: string, settings: TranscriptionSettings): TranscriptionFolderDefaults | undefined {
+function matchingFolderDefaults(
+  inputPath: string,
+  mediaDir: string,
+  settings: TranscriptionSettings,
+): TranscriptionFolderDefaults | undefined {
   const entries = parseJsonObject<unknown>(settings.transcription_folder_defaults, [], "transcription_folder_defaults");
   if (!Array.isArray(entries)) return undefined;
 
   const mediaRoot = resolveSymlinks(mediaDir);
   const candidates = entries
-    .filter((entry): entry is TranscriptionFolderDefaults => Boolean(entry && typeof entry === "object" && typeof (entry as TranscriptionFolderDefaults).path === "string"))
+    .filter((entry): entry is TranscriptionFolderDefaults =>
+      Boolean(entry && typeof entry === "object" && typeof (entry as TranscriptionFolderDefaults).path === "string"),
+    )
     .map((entry) => ({ ...entry, path: resolveSymlinks(String(entry.path)) }))
     .filter((entry) => {
       const folderPath = String(entry.path);
-      return (folderPath === mediaRoot || folderPath.startsWith(`${mediaRoot}${path.sep}`))
-        && (inputPath === folderPath || inputPath.startsWith(`${folderPath}${path.sep}`));
+      return (
+        (folderPath === mediaRoot || folderPath.startsWith(`${mediaRoot}${path.sep}`)) &&
+        (inputPath === folderPath || inputPath.startsWith(`${folderPath}${path.sep}`))
+      );
     })
     .sort((a, b) => String(b.path).length - String(a.path).length);
 
   return candidates[0];
 }
 
-function advancedSttOptions(settings: TranscriptionSettings, folderDefaults?: TranscriptionFolderDefaults): TranscriptionAdvancedOptions | undefined {
-  const globalOptions = parseJsonObject<TranscriptionAdvancedOptions>(settings.transcription_advanced_stt, {}, "transcription_advanced_stt");
+function advancedSttOptions(
+  settings: TranscriptionSettings,
+  folderDefaults?: TranscriptionFolderDefaults,
+): TranscriptionAdvancedOptions | undefined {
+  const globalOptions = parseJsonObject<TranscriptionAdvancedOptions>(
+    settings.transcription_advanced_stt,
+    {},
+    "transcription_advanced_stt",
+  );
   const merged: TranscriptionAdvancedOptions = { ...globalOptions, ...(folderDefaults?.advanced_options || {}) };
   const beamSize = intSetting(merged.beam_size);
   const patience = floatSetting(merged.patience);
@@ -263,7 +286,9 @@ function advancedSttOptions(settings: TranscriptionSettings, folderDefaults?: Tr
   const result: TranscriptionAdvancedOptions = {
     ...(beamSize !== undefined ? { beam_size: beamSize } : {}),
     ...(patience !== undefined ? { patience } : {}),
-    ...(typeof merged.condition_on_previous_text === "boolean" ? { condition_on_previous_text: merged.condition_on_previous_text } : {}),
+    ...(typeof merged.condition_on_previous_text === "boolean"
+      ? { condition_on_previous_text: merged.condition_on_previous_text }
+      : {}),
     ...(typeof merged.word_timestamps === "boolean" ? { word_timestamps: merged.word_timestamps } : {}),
     ...(initialPrompt ? { initial_prompt: initialPrompt } : {}),
     ...(typeof merged.speaker_diarization === "boolean" ? { speaker_diarization: merged.speaker_diarization } : {}),
@@ -302,17 +327,21 @@ export function buildTranscriptionRequest(options: BuildTranscriptionRequestOpti
   // translation tasks use); the backend catalog and faster-whisper both want
   // the short form. Only bare 3-letter codes fold — region subtags like
   // "zh-TW" name the subtitle file and must pass through untouched.
-  const normalizedLanguage =
-    language === "auto" || !/^[a-z]{3}$/.test(language) ? language : languageKey(language);
+  const normalizedLanguage = language === "auto" || !/^[a-z]{3}$/.test(language) ? language : languageKey(language);
   if (!LANGUAGE_PATTERN.test(normalizedLanguage)) throw new Error(`Unsupported transcription language: ${language}`);
 
   return {
     input_path: backendInputPath,
-    output_format: options.outputFormat ?? outputFormat(folderDefaults?.output_format ?? options.settings.transcription_output_format, "srt"),
+    output_format:
+      options.outputFormat ??
+      outputFormat(folderDefaults?.output_format ?? options.settings.transcription_output_format, "srt"),
     model: setting(ov.model ?? folderDefaults?.model ?? options.settings.transcription_model, "small"),
     language: normalizedLanguage,
     device: setting(ov.device ?? folderDefaults?.device ?? options.settings.transcription_device, "cpu"),
-    compute_type: setting(ov.compute_type ?? folderDefaults?.compute_type ?? options.settings.transcription_compute_type, "int8"),
+    compute_type: setting(
+      ov.compute_type ?? folderDefaults?.compute_type ?? options.settings.transcription_compute_type,
+      "int8",
+    ),
     use_vad: boolSetting(folderDefaults?.use_vad ?? options.settings.transcription_use_vad, true),
     post_action: postAction,
     ...(subtitleQuality ? { subtitle_quality: subtitleQuality } : {}),

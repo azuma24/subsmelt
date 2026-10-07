@@ -23,7 +23,16 @@ const VID = "qD0_yWgifDM";
 const T0 = "2026-09-30T10:00:00.000Z";
 const DEST = path.join(root, "media", "YouTube", "AI");
 const ARGV = path.join(root, "argv.jsonl");
-const FAKE_KEYS = ["FAKE_YTDLP_STDOUT", "FAKE_YTDLP_STDERR", "FAKE_YTDLP_EXIT", "FAKE_YTDLP_FAIL_WHEN_ARG", "FAKE_YTDLP_SLEEP_MS", "FAKE_YTDLP_SLEEP_WHEN_ARG", "FAKE_YTDLP_TITLE", "FAKE_YTDLP_INFO"];
+const FAKE_KEYS = [
+  "FAKE_YTDLP_STDOUT",
+  "FAKE_YTDLP_STDERR",
+  "FAKE_YTDLP_EXIT",
+  "FAKE_YTDLP_FAIL_WHEN_ARG",
+  "FAKE_YTDLP_SLEEP_MS",
+  "FAKE_YTDLP_SLEEP_WHEN_ARG",
+  "FAKE_YTDLP_TITLE",
+  "FAKE_YTDLP_INFO",
+];
 
 const progress = (downloaded: number, filename = "part.m4a") =>
   `[subsmelt-progress] ${JSON.stringify({ status: "downloading", downloaded_bytes: downloaded, total_bytes: 1000, filename })}\n`;
@@ -54,7 +63,11 @@ interface Rig {
 }
 
 /** A followed playlist with one video in `status`, fake yt-dlp settings from `fake`, and a clock the test moves. */
-function rig(t: { after: (fn: () => void) => void }, fake: Record<string, string> = {}, options: { status?: "queued" | "new"; playlist?: Partial<YoutubePlaylist> } = {}): Rig {
+function rig(
+  t: { after: (fn: () => void) => void },
+  fake: Record<string, string> = {},
+  options: { status?: "queued" | "new"; playlist?: Partial<YoutubePlaylist> } = {},
+): Rig {
   fs.rmSync(path.join(root, "media"), { recursive: true, force: true });
   fs.rmSync(path.join(root, "data", "youtube"), { recursive: true, force: true });
   fs.rmSync(ARGV, { force: true });
@@ -67,31 +80,76 @@ function rig(t: { after: (fn: () => void) => void }, fake: Record<string, string
 
   savePlaylist(playlist(options.playlist));
   const store = new YoutubeStore(new Database(":memory:"));
-  store.applyListing(PL, [{
-    videoId: VID, title: "How to spot a fake", channel: "TED-Ed", durationS: 234, publishedAt: "2023-10-01", position: 1,
-    initial: { status: options.status ?? "queued" },
-  }], { complete: true, now: T0 });
+  store.applyListing(
+    PL,
+    [
+      {
+        videoId: VID,
+        title: "How to spot a fake",
+        channel: "TED-Ed",
+        durationS: 234,
+        publishedAt: "2023-10-01",
+        position: 1,
+        initial: { status: options.status ?? "queued" },
+      },
+    ],
+    { complete: true, now: T0 },
+  );
   const events: Rig["events"] = [];
   const clock = { now: new Date(T0) };
   // The subtitle step has its own tests: here a downloaded video stays as the download left it.
-  const make = () => new YoutubeWorker(store, { now: () => clock.now, announce: (event, data) => events.push([event, data]), transcribe: () => new Promise(() => undefined) });
+  const make = () =>
+    new YoutubeWorker(store, {
+      now: () => clock.now,
+      announce: (event, data) => events.push([event, data]),
+      transcribe: () => new Promise(() => undefined),
+    });
   return { store, events, clock, worker: make(), restart: make };
 }
 
-const ytdlpRuns = (): string[][] => (fs.existsSync(ARGV) ? fs.readFileSync(ARGV, "utf8").trim().split("\n").map((l) => JSON.parse(l)) : []);
+const ytdlpRuns = (): string[][] =>
+  fs.existsSync(ARGV)
+    ? fs
+        .readFileSync(ARGV, "utf8")
+        .trim()
+        .split("\n")
+        .map((l) => JSON.parse(l))
+    : [];
 const sortArgs = () => ytdlpRuns().map((args) => args[args.indexOf("-S") + 1]);
 const row = (store: Store) => {
   const v = store.getVideo(VID)!;
-  return { status: v.status, attempts: v.attempts, reason: v.reason, retry_after: v.retry_after, media_path: v.media_path, skip_kind: v.skip_kind };
+  return {
+    status: v.status,
+    attempts: v.attempts,
+    reason: v.reason,
+    retry_after: v.retry_after,
+    media_path: v.media_path,
+    skip_kind: v.skip_kind,
+  };
 };
 const leftovers = () => (fs.existsSync(youtubeTmpRoot()) ? fs.readdirSync(youtubeTmpRoot(), { recursive: true }) : []);
-const later = (clock: { now: Date }, iso: string) => { clock.now = new Date(iso); };
-const DOWNLOADED = { status: "transcribing", attempts: 0, reason: null, retry_after: null, media_path: `YouTube/AI/TED-Ed lesson [${VID}].m4a`, skip_kind: null };
+const later = (clock: { now: Date }, iso: string) => {
+  clock.now = new Date(iso);
+};
+const DOWNLOADED = {
+  status: "transcribing",
+  attempts: 0,
+  reason: null,
+  retry_after: null,
+  media_path: `YouTube/AI/TED-Ed lesson [${VID}].m4a`,
+  skip_kind: null,
+};
 
 test("a queued video downloads into the playlist folder with progress, a cookie copy, and no scratch files left", async (t) => {
   const { store, events, worker } = rig(t, {
     FAKE_YTDLP_STDOUT: `[download] Destination: x\n${progress(250)}${progress(260)}${progress(500)}${progress(1000)}`,
-    FAKE_YTDLP_INFO: JSON.stringify({ title: "How to spot a fake, exactly", channel: "TED-Ed", upload_date: "20231015", duration: 234.4, cookies: "SID=x; Domain=.youtube.com" }),
+    FAKE_YTDLP_INFO: JSON.stringify({
+      title: "How to spot a fake, exactly",
+      channel: "TED-Ed",
+      upload_date: "20231015",
+      duration: 234.4,
+      cookies: "SID=x; Domain=.youtube.com",
+    }),
   });
   fs.mkdirSync(path.join(root, "data", "youtube"), { recursive: true });
   fs.writeFileSync(path.join(root, "data", "youtube", "cookies.txt"), ".youtube.com\tTRUE\t/\tTRUE\t0\tSID\tx\n");
@@ -103,7 +161,10 @@ test("a queued video downloads into the playlist folder with progress, a cookie 
   const info = JSON.parse(fs.readFileSync(path.join(DEST, `TED-Ed lesson [${VID}].info.json`), "utf8"));
   assert.deepEqual(Object.keys(info).sort(), ["channel", "duration", "id", "title", "upload_date"]);
   const video = store.getVideo(VID)!;
-  assert.deepEqual([video.title, video.published_at, video.duration_s], ["How to spot a fake, exactly", "2023-10-15", 234]);
+  assert.deepEqual(
+    [video.title, video.published_at, video.duration_s],
+    ["How to spot a fake, exactly", "2023-10-15", 234],
+  );
 
   const [args] = ytdlpRuns();
   assert.equal(args[args.indexOf("--cookies") + 1], path.join(root, "data", "youtube", "tmp", VID, "cookies.txt"));
@@ -123,7 +184,14 @@ test("HTTP 429 queues the video again and pauses the lane for an hour, then two"
   const { store, events, clock, worker } = rig(t, { FAKE_YTDLP_STDERR: tooMany, FAKE_YTDLP_EXIT: "1" });
 
   await worker.drain();
-  assert.deepEqual(row(store), { status: "queued", attempts: 0, reason: tooMany.trim(), retry_after: null, media_path: null, skip_kind: null });
+  assert.deepEqual(row(store), {
+    status: "queued",
+    attempts: 0,
+    reason: tooMany.trim(),
+    retry_after: null,
+    media_path: null,
+    skip_kind: null,
+  });
   assert.deepEqual(events.at(-1), ["youtube:cooldown", { until: "2026-09-30T11:00:00.000Z", cause: "rate_limited" }]);
 
   later(clock, "2026-09-30T10:59:00.000Z");
@@ -145,7 +213,10 @@ test("HTTP 429 queues the video again and pauses the lane for an hour, then two"
 });
 
 test("a bot check queues the video again under a cooldown that names the cause", async (t) => {
-  const { store, worker } = rig(t, { FAKE_YTDLP_STDERR: `ERROR: [youtube] ${VID}: Sign in to confirm you’re not a bot. Use --cookies\n`, FAKE_YTDLP_EXIT: "1" });
+  const { store, worker } = rig(t, {
+    FAKE_YTDLP_STDERR: `ERROR: [youtube] ${VID}: Sign in to confirm you’re not a bot. Use --cookies\n`,
+    FAKE_YTDLP_EXIT: "1",
+  });
   await worker.drain();
   assert.equal(row(store).status, "queued");
   assert.deepEqual(worker.activeCooldown(), { until: "2026-09-30T11:00:00.000Z", cause: "bot_check", strikes: 1 });
@@ -155,7 +226,14 @@ test("YouTube's soft session limit queues the video again under a cooldown inste
   const soft = `ERROR: [youtube] ${VID}: Video unavailable. This content isn't available, try again later. The current session has been rate-limited by YouTube for up to an hour.\n`;
   const { store, worker } = rig(t, { FAKE_YTDLP_STDERR: soft, FAKE_YTDLP_EXIT: "1" });
   await worker.drain();
-  assert.deepEqual(row(store), { status: "queued", attempts: 0, reason: soft.trim(), retry_after: null, media_path: null, skip_kind: null });
+  assert.deepEqual(row(store), {
+    status: "queued",
+    attempts: 0,
+    reason: soft.trim(),
+    retry_after: null,
+    media_path: null,
+    skip_kind: null,
+  });
   assert.deepEqual(worker.activeCooldown(), { until: "2026-09-30T11:00:00.000Z", cause: "rate_limited", strikes: 1 });
 });
 
@@ -164,7 +242,14 @@ test("a premiere waits until the time YouTube gave, then downloads", async (t) =
   const { store, clock, worker } = rig(t, { FAKE_YTDLP_STDERR: premiere, FAKE_YTDLP_EXIT: "1" });
 
   await worker.drain();
-  assert.deepEqual(row(store), { status: "waiting", attempts: 0, reason: premiere.trim(), retry_after: "2026-09-30T15:00:00.000Z", media_path: null, skip_kind: null });
+  assert.deepEqual(row(store), {
+    status: "waiting",
+    attempts: 0,
+    reason: premiere.trim(),
+    retry_after: "2026-09-30T15:00:00.000Z",
+    media_path: null,
+    skip_kind: null,
+  });
 
   delete process.env.FAKE_YTDLP_STDERR;
   delete process.env.FAKE_YTDLP_EXIT;
@@ -177,11 +262,15 @@ test("a premiere waits until the time YouTube gave, then downloads", async (t) =
 });
 
 test("a format error retries once without the codec preference", async (t) => {
-  const { store, worker } = rig(t, {
-    FAKE_YTDLP_STDERR: `ERROR: [youtube] ${VID}: Requested format is not available. Use --list-formats\n`,
-    FAKE_YTDLP_EXIT: "1",
-    FAKE_YTDLP_FAIL_WHEN_ARG: "vcodec:",
-  }, { playlist: { media: { type: "video", maxHeight: 720, codec: "h264", container: "mp4" } } });
+  const { store, worker } = rig(
+    t,
+    {
+      FAKE_YTDLP_STDERR: `ERROR: [youtube] ${VID}: Requested format is not available. Use --list-formats\n`,
+      FAKE_YTDLP_EXIT: "1",
+      FAKE_YTDLP_FAIL_WHEN_ARG: "vcodec:",
+    },
+    { playlist: { media: { type: "video", maxHeight: 720, codec: "h264", container: "mp4" } } },
+  );
 
   await worker.drain();
   assert.deepEqual(row(store), { ...DOWNLOADED, media_path: `YouTube/AI/TED-Ed lesson [${VID}].mp4` });
@@ -192,7 +281,14 @@ test("a format error that survives the retry fails the video", async (t) => {
   const notAvailable = `ERROR: [youtube] ${VID}: Requested format is not available. Use --list-formats\n`;
   const { store, worker } = rig(t, { FAKE_YTDLP_STDERR: notAvailable, FAKE_YTDLP_EXIT: "1" });
   await worker.drain();
-  assert.deepEqual(row(store), { status: "failed", attempts: 0, reason: notAvailable.trim(), retry_after: null, media_path: null, skip_kind: null });
+  assert.deepEqual(row(store), {
+    status: "failed",
+    attempts: 0,
+    reason: notAvailable.trim(),
+    retry_after: null,
+    media_path: null,
+    skip_kind: null,
+  });
   assert.deepEqual(sortArgs(), ["lang,acodec:m4a", "lang"]);
 });
 
@@ -217,8 +313,14 @@ test("other failures back off 10 minutes, 1 hour, 6 hours, and the fourth fails 
 
 test("private and members-only videos leave the lane with their own status", async (t) => {
   const cases: [string, [string, string | null]][] = [
-    [`ERROR: [youtube] ${VID}: Private video. Sign in if you've been granted access to this video\n`, ["unavailable", null]],
-    [`ERROR: [youtube] ${VID}: Join this channel to get access to members-only content like this video\n`, ["skipped", "members_only"]],
+    [
+      `ERROR: [youtube] ${VID}: Private video. Sign in if you've been granted access to this video\n`,
+      ["unavailable", null],
+    ],
+    [
+      `ERROR: [youtube] ${VID}: Join this channel to get access to members-only content like this video\n`,
+      ["skipped", "members_only"],
+    ],
   ];
   for (const [stderr, expected] of cases) {
     const { store, worker } = rig(t, { FAKE_YTDLP_STDERR: stderr, FAKE_YTDLP_EXIT: "1" });
@@ -239,7 +341,8 @@ test("manual mode downloads nothing until the user asks for the video", async (t
 test("stopping mid-download leaves the row for the next boot, which downloads it again", async (t) => {
   const { store, worker, restart } = rig(t, { FAKE_YTDLP_SLEEP_MS: "10000" });
   const running = worker.drain();
-  while (!fs.existsSync(path.join(youtubeTmpRoot(), VID, "part", `${VID}.part`))) await new Promise((r) => setTimeout(r, 10));
+  while (!fs.existsSync(path.join(youtubeTmpRoot(), VID, "part", `${VID}.part`)))
+    await new Promise((r) => setTimeout(r, 10));
   worker.stop();
   await running;
   assert.equal(row(store).status, "downloading");
@@ -253,12 +356,46 @@ test("stopping mid-download leaves the row for the next boot, which downloads it
 });
 
 // What a crash leaves behind at each step of a download, as rows and files.
-const CRASH_POINTS: { name: string; files: Record<string, string>; ytdlpRuns: number; reconciled: { requeued: number; adopted: number } }[] = [
+const CRASH_POINTS: {
+  name: string;
+  files: Record<string, string>;
+  ytdlpRuns: number;
+  reconciled: { requeued: number; adopted: number };
+}[] = [
   { name: "before yt-dlp started", files: {}, ytdlpRuns: 1, reconciled: { requeued: 1, adopted: 0 } },
-  { name: "mid-download", files: { [`data/youtube/tmp/${VID}/part/${VID}.part`]: "partial", [`data/youtube/tmp/${VID}/cookies.txt`]: "jar" }, ytdlpRuns: 1, reconciled: { requeued: 1, adopted: 0 } },
-  { name: "mid-move, info JSON moved but not the media", files: { [`media/YouTube/AI/TED-Ed lesson [${VID}].info.json`]: "{}" }, ytdlpRuns: 1, reconciled: { requeued: 1, adopted: 0 } },
-  { name: "mid cross-filesystem copy of the media", files: { [`media/YouTube/AI/TED-Ed lesson [${VID}].info.json`]: "{}", [`media/YouTube/AI/TED-Ed lesson [${VID}].m4a.subsmelt-partial`]: "med" }, ytdlpRuns: 1, reconciled: { requeued: 1, adopted: 0 } },
-  { name: "after the move, before the row was updated", files: { [`media/YouTube/AI/TED-Ed lesson [${VID}].info.json`]: JSON.stringify({ title: "How to spot a fake, exactly", upload_date: "20231015" }), [`media/YouTube/AI/TED-Ed lesson [${VID}].m4a`]: "media" }, ytdlpRuns: 0, reconciled: { requeued: 1, adopted: 1 } },
+  {
+    name: "mid-download",
+    files: { [`data/youtube/tmp/${VID}/part/${VID}.part`]: "partial", [`data/youtube/tmp/${VID}/cookies.txt`]: "jar" },
+    ytdlpRuns: 1,
+    reconciled: { requeued: 1, adopted: 0 },
+  },
+  {
+    name: "mid-move, info JSON moved but not the media",
+    files: { [`media/YouTube/AI/TED-Ed lesson [${VID}].info.json`]: "{}" },
+    ytdlpRuns: 1,
+    reconciled: { requeued: 1, adopted: 0 },
+  },
+  {
+    name: "mid cross-filesystem copy of the media",
+    files: {
+      [`media/YouTube/AI/TED-Ed lesson [${VID}].info.json`]: "{}",
+      [`media/YouTube/AI/TED-Ed lesson [${VID}].m4a.subsmelt-partial`]: "med",
+    },
+    ytdlpRuns: 1,
+    reconciled: { requeued: 1, adopted: 0 },
+  },
+  {
+    name: "after the move, before the row was updated",
+    files: {
+      [`media/YouTube/AI/TED-Ed lesson [${VID}].info.json`]: JSON.stringify({
+        title: "How to spot a fake, exactly",
+        upload_date: "20231015",
+      }),
+      [`media/YouTube/AI/TED-Ed lesson [${VID}].m4a`]: "media",
+    },
+    ytdlpRuns: 0,
+    reconciled: { requeued: 1, adopted: 1 },
+  },
 ];
 
 for (const point of CRASH_POINTS) {
@@ -279,17 +416,36 @@ for (const point of CRASH_POINTS) {
     assert.deepEqual(row(store), DOWNLOADED);
     assert.deepEqual(fs.readdirSync(DEST).sort(), [`TED-Ed lesson [${VID}].info.json`, `TED-Ed lesson [${VID}].m4a`]);
     assert.equal(ytdlpRuns().length, point.ytdlpRuns);
-    if (point.reconciled.adopted) assert.deepEqual([store.getVideo(VID)!.title, store.getVideo(VID)!.published_at], ["How to spot a fake, exactly", "2023-10-15"]);
+    if (point.reconciled.adopted)
+      assert.deepEqual(
+        [store.getVideo(VID)!.title, store.getVideo(VID)!.published_at],
+        ["How to spot a fake, exactly", "2023-10-15"],
+      );
   });
 }
 
 test("kick keeps taking videos from the lane until none is left", async (t) => {
   const { store, worker } = rig(t);
-  store.applyListing(PL, [{ videoId: "uXspbC2srEQ", title: "Introducing dots", channel: "OpenAI", durationS: 148, publishedAt: "2026-09-30", position: 2, initial: { status: "queued" } }], { complete: false, now: T0 });
+  store.applyListing(
+    PL,
+    [
+      {
+        videoId: "uXspbC2srEQ",
+        title: "Introducing dots",
+        channel: "OpenAI",
+        durationS: 148,
+        publishedAt: "2026-09-30",
+        position: 2,
+        initial: { status: "queued" },
+      },
+    ],
+    { complete: false, now: T0 },
+  );
   worker.kick();
   worker.kick();
   const statuses = () => [store.getVideo(VID)!.status, store.getVideo("uXspbC2srEQ")!.status];
-  for (let i = 0; i < 500 && statuses().some((s) => s !== "transcribing"); i++) await new Promise((r) => setTimeout(r, 10));
+  for (let i = 0; i < 500 && statuses().some((s) => s !== "transcribing"); i++)
+    await new Promise((r) => setTimeout(r, 10));
   assert.deepEqual(statuses(), ["transcribing", "transcribing"]);
   assert.equal(ytdlpRuns().length, 2);
 });
@@ -298,10 +454,16 @@ test("a playlist check does not wait behind a download that is still running", a
   const { store, worker } = rig(t, {
     FAKE_YTDLP_SLEEP_MS: "3000",
     FAKE_YTDLP_SLEEP_WHEN_ARG: "--write-info-json",
-    FAKE_YTDLP_STDOUT: JSON.stringify({ id: PL, title: "AI", playlist_count: 1, entries: [{ id: VID, title: "How to spot a fake", duration: 234 }] }),
+    FAKE_YTDLP_STDOUT: JSON.stringify({
+      id: PL,
+      title: "AI",
+      playlist_count: 1,
+      entries: [{ id: VID, title: "How to spot a fake", duration: 234 }],
+    }),
   });
   const downloading = worker.drain();
-  while (!fs.existsSync(path.join(youtubeTmpRoot(), VID, "part", `${VID}.part`))) await new Promise((r) => setTimeout(r, 10));
+  while (!fs.existsSync(path.join(youtubeTmpRoot(), VID, "part", `${VID}.part`)))
+    await new Promise((r) => setTimeout(r, 10));
 
   const result = await worker.checkPlaylist(playlist());
   assert.equal(result.total, 1);
@@ -318,7 +480,8 @@ test("a cooldown a check starts during a download survives the download's succes
     FAKE_YTDLP_EXIT: "1",
   });
   const downloading = worker.drain();
-  while (!fs.existsSync(path.join(youtubeTmpRoot(), VID, "part", `${VID}.part`))) await new Promise((r) => setTimeout(r, 10));
+  while (!fs.existsSync(path.join(youtubeTmpRoot(), VID, "part", `${VID}.part`)))
+    await new Promise((r) => setTimeout(r, 10));
 
   await assert.rejects(worker.checkPlaylist(playlist()), /429/);
   await downloading;
@@ -327,14 +490,24 @@ test("a cooldown a check starts during a download survives the download's succes
 });
 
 test("a playlist check that YouTube refuses with 429 starts the cooldown", async (t) => {
-  const { worker } = rig(t, { FAKE_YTDLP_STDERR: "ERROR: [youtube:tab] HTTP Error 429: Too Many Requests\n", FAKE_YTDLP_EXIT: "1" });
-  await assert.rejects(worker.checkPlaylist(playlist()), { message: "ERROR: [youtube:tab] HTTP Error 429: Too Many Requests" });
+  const { worker } = rig(t, {
+    FAKE_YTDLP_STDERR: "ERROR: [youtube:tab] HTTP Error 429: Too Many Requests\n",
+    FAKE_YTDLP_EXIT: "1",
+  });
+  await assert.rejects(worker.checkPlaylist(playlist()), {
+    message: "ERROR: [youtube:tab] HTTP Error 429: Too Many Requests",
+  });
   assert.deepEqual(worker.activeCooldown(), { until: "2026-09-30T11:00:00.000Z", cause: "rate_limited", strikes: 1 });
 });
 
 const undatedListing = JSON.stringify({
-  id: PL, title: "AI", playlist_count: 2,
-  entries: [{ id: "uXspbC2srEQ", title: "Introducing dots", duration: 148 }, { id: "BHPDsGVciDk", title: "Best AI Release of 2026", duration: 727 }],
+  id: PL,
+  title: "AI",
+  playlist_count: 2,
+  entries: [
+    { id: "uXspbC2srEQ", title: "Introducing dots", duration: 148 },
+    { id: "BHPDsGVciDk", title: "Best AI Release of 2026", duration: 727 },
+  ],
 });
 
 test("a bot check on a posted-since date lookup stops the sync and starts the cooldown", async (t) => {
@@ -347,7 +520,9 @@ test("a bot check on a posted-since date lookup stops the sync and starts the co
   const posted = playlist({ backfill: { kind: "posted_since", date: "2026-09-01" } });
   savePlaylist(posted);
 
-  await assert.rejects(worker.checkPlaylist(posted, { asNewFollow: true }), { message: "ERROR: [youtube] uXspbC2srEQ: Sign in to confirm you're not a bot" });
+  await assert.rejects(worker.checkPlaylist(posted, { asNewFollow: true }), {
+    message: "ERROR: [youtube] uXspbC2srEQ: Sign in to confirm you're not a bot",
+  });
   assert.deepEqual(worker.activeCooldown(), { until: "2026-09-30T11:00:00.000Z", cause: "bot_check", strikes: 1 });
   assert.equal(ytdlpRuns().length, 2);
 });
@@ -366,8 +541,11 @@ test("a posted-since date lookup that fails for another reason keeps the sync go
   assert.equal(result.total, 2);
   assert.equal(worker.activeCooldown(), null);
   assert.equal(ytdlpRuns().length, 3);
-  assert.deepEqual(["uXspbC2srEQ", "BHPDsGVciDk"].map((id) => [store.getVideo(id)!.status, store.getVideo(id)!.skip_kind]), [
-    ["skipped", "before_start"],
-    ["skipped", "before_start"],
-  ]);
+  assert.deepEqual(
+    ["uXspbC2srEQ", "BHPDsGVciDk"].map((id) => [store.getVideo(id)!.status, store.getVideo(id)!.skip_kind]),
+    [
+      ["skipped", "before_start"],
+      ["skipped", "before_start"],
+    ],
+  );
 });

@@ -35,9 +35,7 @@ test("sizes prompts to the loaded context, not the model's maximum", async () =>
 });
 
 test("falls back to the model's maximum when no loaded context is reported", async () => {
-  const { apiHost, server } = await lmStudio([
-    { id: "qwen/qwen3.8-27b", max_context_length: 32768 },
-  ]);
+  const { apiHost, server } = await lmStudio([{ id: "qwen/qwen3.8-27b", max_context_length: 32768 }]);
   try {
     const info = await probeModelContext(apiHost, "qwen/qwen3.8-27b");
     assert.equal(info.maxContextTokens, 32768);

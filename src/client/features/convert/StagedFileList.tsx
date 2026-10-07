@@ -1,8 +1,9 @@
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { LANGUAGES, findLanguage, type LanguageEntry } from "./language-table";
 import { extOf, formatBytes } from "./download-outputs";
 
 import { effectiveSource, isSameAsTarget, type StagedFile } from "./staged-file";
+import { IconButton } from "../../ui/primitives";
 
 export type FileRunStatus = "working" | "done" | "error";
 
@@ -39,13 +40,11 @@ export function StagedFileList({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-[var(--text-2)]">
-          {t("convert.staged", { count: staged.length })}
-        </span>
+        <span className="text-xs font-medium text-muted">{t("convert.staged", { count: staged.length })}</span>
         <button
           type="button"
           onClick={clearFiles}
-          className="rounded-sm px-3 py-1 text-xs font-medium text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+          className="rounded-sm px-3 py-1 text-xs font-medium text-muted transition-colors hover:bg-surface-raised hover:text-text"
         >
           {t("convert.clearAll")}
         </button>
@@ -58,35 +57,38 @@ export function StagedFileList({
           const sameAsTarget = isSameAsTarget(item, globalFrom, translate, resolvedTarget?.code ?? null);
           const status = fileStatus[id];
           return (
-            <li
-              key={id}
-              className="flex flex-col gap-2 rounded-sm border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
-            >
+            <li key={id} className="flex flex-col gap-2 rounded-sm border border-border bg-surface px-3 py-2">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-xs uppercase text-[var(--accent)]">{extOf(file.name) || "?"}</span>
-                <span className="min-w-0 flex-1 truncate text-xs text-[var(--text)]" title={file.name}>
+                <span className="font-mono text-xs uppercase text-accent">{extOf(file.name) || "?"}</span>
+                <span className="min-w-0 flex-1 truncate text-xs text-text" title={file.name}>
                   {file.name}
                 </span>
                 {status && (
-                  <span className={`shrink-0 text-xs ${status === "error" ? "text-[var(--red)]" : status === "done" ? "text-[var(--green)]" : "font-medium text-[var(--accent)]"}`}>
-                    {status === "working" ? t("convert.translating") : status === "done" ? t("whisper.statusDone") : t("whisper.statusError")}
+                  <span
+                    className={`shrink-0 text-xs ${status === "error" ? "text-danger" : status === "done" ? "text-success" : "font-medium text-accent"}`}
+                  >
+                    {status === "working"
+                      ? t("convert.translating")
+                      : status === "done"
+                        ? t("whisper.statusDone")
+                        : t("whisper.statusError")}
                   </span>
                 )}
-                <span className="shrink-0 text-xs tabular-nums text-[var(--text-3)]">{formatBytes(file.size)}</span>
-                <button
-                  type="button"
+                <span className="shrink-0 text-xs tabular-nums text-faint">{formatBytes(file.size)}</span>
+                <IconButton
+                  icon="close"
+                  label={t("convert.remove")}
+                  variant="danger"
                   onClick={() => removeFile(id)}
-                  aria-label={t("convert.remove")}
-                  title={t("convert.remove")}
-                  className="shrink-0 rounded-sm px-2 py-1 text-xs text-[var(--text-3)] transition-colors hover:bg-[var(--red-dim)] hover:text-[var(--red)]"
-                >
-                  ✕
-                </button>
+                  className="text-faint"
+                />
               </div>
               {translate && (
                 <div className="flex flex-wrap items-center gap-2">
                   {/* Detection badge: pending → detecting; null → unknown; code → name. */}
-                  <span className={`rounded-full px-2 py-1 text-xs ${item.detected === undefined ? "bg-[var(--surface-2)] text-[var(--text-3)]" : sourceEntry ? "bg-[var(--accent-dim)] text-[var(--accent)]" : "bg-[var(--yellow-dim)] text-[var(--yellow)]"}`}>
+                  <span
+                    className={`rounded-full px-2 py-1 text-xs ${item.detected === undefined ? "bg-surface-raised text-faint" : sourceEntry ? "bg-accent-soft text-accent" : "bg-warning-soft text-warning"}`}
+                  >
                     {item.detected === undefined
                       ? t("convert.detecting")
                       : sourceEntry
@@ -98,21 +100,23 @@ export function StagedFileList({
                     onChange={(e) => setOverride(id, e.target.value || null)}
                     aria-label={t("convert.overrideLabel", { name: file.name })}
                     disabled={converting}
-                    className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-xs text-[var(--text-2)]"
+                    className="rounded-sm border border-border bg-surface-raised px-2 py-1 text-xs text-muted"
                   >
                     <option value="">{t("convert.sourceAuto")}</option>
                     {LANGUAGES.map((l) => (
-                      <option key={l.code} value={l.code}>{l.englishName}</option>
+                      <option key={l.code} value={l.code}>
+                        {l.englishName}
+                      </option>
                     ))}
                   </select>
                   {sameAsTarget && (
-                    <label className="flex items-center gap-2 rounded-full bg-[var(--yellow-dim)] px-2 py-1 text-xs text-[var(--yellow)]">
+                    <label className="flex items-center gap-2 rounded-full bg-warning-soft px-2 py-1 text-xs text-warning">
                       <input
                         type="checkbox"
                         checked={item.skip}
                         onChange={(e) => setSkip(id, e.target.checked)}
                         disabled={converting}
-                        className="h-3 w-3 accent-[var(--yellow)]"
+                        className="h-3 w-3 accent-warning"
                       />
                       {t("convert.sameLangWarning", { lang: sourceEntry?.englishName ?? source })}
                     </label>

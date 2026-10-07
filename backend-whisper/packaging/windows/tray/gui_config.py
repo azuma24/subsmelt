@@ -10,6 +10,7 @@ to the service as well as to a GUI-launched child.
 
 Kept free of tkinter so it can be tested anywhere.
 """
+
 from __future__ import annotations
 
 import json
@@ -61,10 +62,7 @@ SHADOWING_ENV_VARS = {
 def shadowed_by_env(env: dict[str, str] | None = None) -> list[str]:
     """Environment variables that will override the saved config, if any."""
     environ = os.environ if env is None else env
-    return [
-        name for name in SHADOWING_ENV_VARS.values()
-        if (environ.get(name) or "").strip()
-    ]
+    return [name for name in SHADOWING_ENV_VARS.values() if (environ.get(name) or "").strip()]
 
 
 def shadowed_note(names: list[str]) -> str | None:

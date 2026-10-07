@@ -71,11 +71,7 @@ export function transitionManualTranscriptionProgress(
     case "error":
       return {
         ...progress,
-        stage: isCancelledError(event.message)
-          ? "cancelled"
-          : isSkippedError(event.message)
-            ? "skipped"
-            : "failed",
+        stage: isCancelledError(event.message) ? "cancelled" : isSkippedError(event.message) ? "skipped" : "failed",
         message: event.message,
       };
   }

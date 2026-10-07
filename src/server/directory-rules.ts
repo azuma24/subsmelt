@@ -101,7 +101,7 @@ function matches(relDir: string, rulePath: string): boolean {
 export function resolveDirectoryRule(
   relDir: string,
   rules: DirectoryRule[],
-  globalTranslateWithoutVideo: boolean
+  globalTranslateWithoutVideo: boolean,
 ): ResolvedDirectoryRule {
   const matching = rules
     .filter((r) => r.enabled && matches(relDir, r.path))

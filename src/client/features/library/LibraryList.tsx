@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, type KeyboardEvent, type ReactNode } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import type { JobRow } from "../../types";
+import type { Job } from "../../types";
 import type { LibraryRow, LibrarySection } from "./library-model";
 import { ItemRow, SectionHeader } from "./LibraryRows";
 
@@ -21,7 +21,7 @@ export interface FocusRequest {
 
 interface LibraryListProps {
   rows: LibraryRow[];
-  jobsById: Map<number, JobRow>;
+  jobsById: Map<number, Job>;
   checked: ReadonlySet<string>;
   openKey: string | null;
   /** The row that takes Tab focus: the open one, else the first. */
@@ -34,7 +34,18 @@ interface LibraryListProps {
 }
 
 export function LibraryList(props: LibraryListProps) {
-  const { rows, jobsById, checked, openKey, focusKey, focusRequest, onToggleChecked, onToggleSection, onToggleCollapsed, onOpen } = props;
+  const {
+    rows,
+    jobsById,
+    checked,
+    openKey,
+    focusKey,
+    focusRequest,
+    onToggleChecked,
+    onToggleSection,
+    onToggleCollapsed,
+    onOpen,
+  } = props;
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualize = rows.length >= VIRTUALIZE_THRESHOLD;
   const virtualizer = useVirtualizer({
@@ -44,18 +55,19 @@ export function LibraryList(props: LibraryListProps) {
     getItemKey: (index) => rowKey(rows[index]),
     overscan: 12,
   });
-  const itemRowIndexes = useMemo(
-    () => rows.flatMap((row, index) => (row.type === "item" ? [index] : [])),
-    [rows],
-  );
+  const itemRowIndexes = useMemo(() => rows.flatMap((row, index) => (row.type === "item" ? [index] : [])), [rows]);
 
   // Roving tabindex: one row takes Tab. When virtualized and that row is out of
   // the rendered window, the first rendered row stands in so Tab still reaches the list.
   const virtualItems = virtualize ? virtualizer.getVirtualItems() : [];
   const renderedKeys = virtualize
-    ? virtualItems.flatMap((v) => { const row = rows[v.index]; return row?.type === "item" ? [row.entry.item.key] : []; })
+    ? virtualItems.flatMap((v) => {
+        const row = rows[v.index];
+        return row?.type === "item" ? [row.entry.item.key] : [];
+      })
     : null;
-  const tabKey = renderedKeys && focusKey !== null && !renderedKeys.includes(focusKey) ? renderedKeys[0] ?? null : focusKey;
+  const tabKey =
+    renderedKeys && focusKey !== null && !renderedKeys.includes(focusKey) ? (renderedKeys[0] ?? null) : focusKey;
 
   const renderRow = (row: LibraryRow): ReactNode => {
     if (row.type === "section") {
@@ -88,7 +100,8 @@ export function LibraryList(props: LibraryListProps) {
   const focusRow = (rowIndex: number) => {
     const row = rows[rowIndex];
     if (row?.type !== "item") return;
-    const find = () => scrollRef.current?.querySelector<HTMLButtonElement>(`[data-row-key="${CSS.escape(row.entry.item.key)}"]`);
+    const find = () =>
+      scrollRef.current?.querySelector<HTMLButtonElement>(`[data-row-key="${CSS.escape(row.entry.item.key)}"]`);
     const element = find();
     if (element) {
       element.focus();
@@ -98,11 +111,11 @@ export function LibraryList(props: LibraryListProps) {
     requestAnimationFrame(() => find()?.focus());
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only a new request moves focus, not every rows update
   useEffect(() => {
     if (!focusRequest) return;
     const index = rows.findIndex((row) => row.type === "item" && row.entry.item.key === focusRequest.key);
     if (index >= 0) focusRow(index);
-    // Only a new request should move focus, not every rows update.
   }, [focusRequest]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -120,6 +133,7 @@ export function LibraryList(props: LibraryListProps) {
   };
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: the wrapper only relays j/k and arrow keys to the focused row, which is the interactive element
     <div ref={scrollRef} onKeyDown={handleKeyDown} className="min-h-0 flex-1 overflow-y-auto">
       {virtualize ? (
         <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>

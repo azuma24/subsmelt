@@ -41,7 +41,7 @@ export function isSafeHttpUrl(rawUrl: string): boolean {
   if (isPrivate) {
     logger.warn(
       "translate",
-      `Model-context probe targets a private/loopback host (${host}); allowing (self-hosted endpoint), but verify this is intended.`
+      `Model-context probe targets a private/loopback host (${host}); allowing (self-hosted endpoint), but verify this is intended.`,
     );
   }
   return true;
@@ -119,7 +119,7 @@ export async function probeModelContext(
   apiHost: string,
   model: string,
   chunkSize = 20,
-  abortSignal?: AbortSignal
+  abortSignal?: AbortSignal,
 ): Promise<ModelContextInfo> {
   try {
     // Strip /v1 or trailing path — LM Studio native API is at the root
@@ -133,7 +133,9 @@ export async function probeModelContext(
     // The probe honours the job's abort signal too, so a stop or cancel that
     // lands during the probe takes effect immediately instead of at the first
     // translation call.
-    const resp = await fetch(url, { signal: AbortSignal.any([AbortSignal.timeout(5000), ...(abortSignal ? [abortSignal] : [])]) });
+    const resp = await fetch(url, {
+      signal: AbortSignal.any([AbortSignal.timeout(5000), ...(abortSignal ? [abortSignal] : [])]),
+    });
     if (!resp.ok) return UNKNOWN_CONTEXT;
 
     const json = (await resp.json()) as {
@@ -155,7 +157,7 @@ export async function probeModelContext(
     if (!maxCtx) return UNKNOWN_CONTEXT;
 
     return deriveContextInfo(maxCtx, chunkSize);
-  } catch (error: any) {
+  } catch {
     // A stop/cancel aborting the probe is not a probe failure — surface it so
     // the job's own handling applies instead of silently translating on.
     if (abortSignal?.aborted) throw controlledAbortError(abortSignal);
@@ -176,7 +178,7 @@ export interface JobContextPlan {
  */
 export async function planJobContext(
   connections: ResolvedConnection[],
-  opts: { fallbackHost: string; chunkSize: number; configuredParallel: number; abortSignal?: AbortSignal }
+  opts: { fallbackHost: string; chunkSize: number; configuredParallel: number; abortSignal?: AbortSignal },
 ): Promise<JobContextPlan> {
   const byConnection = new Map<string, ModelContextInfo>();
   for (const conn of connections) {

@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
 import { LIBRARY_QUERY_KEY, useMutationWithInvalidation, useSSE } from "../../hooks";
-import { useToast } from "../../components/Toast";
+import { useToast } from "../../ui/Toast";
 import type { ScanResult, TranscriptionHistoryEntry } from "../../types";
 import {
   createManualTranscriptionProgress,
@@ -19,7 +19,11 @@ export interface UseManualTranscriptionResult {
   transcribingPath: string | null;
   isTranscribePending: boolean;
   isRetryPending: boolean;
-  handleTranscribe: (videoPath: string, postAction: TranscribePostAction, opts?: { skipRescan?: boolean }) => Promise<void>;
+  handleTranscribe: (
+    videoPath: string,
+    postAction: TranscribePostAction,
+    opts?: { skipRescan?: boolean },
+  ) => Promise<void>;
   handleCancelTranscription: (videoPath: string) => Promise<void>;
   handleBatchTranscribe: (videoPaths: string[], postAction: TranscribePostAction) => Promise<void>;
   handleRetryTranscription: (attempt: TranscriptionHistoryEntry) => Promise<void>;
@@ -39,12 +43,18 @@ export function useManualTranscription(): UseManualTranscriptionResult {
     else void queryClient.invalidateQueries({ queryKey: LIBRARY_QUERY_KEY });
   };
   const { addToast } = useToast();
-  const [transcriptionProgressByPath, setTranscriptionProgressByPath] = useState<Record<string, ManualTranscriptionProgress>>({});
+  const [transcriptionProgressByPath, setTranscriptionProgressByPath] = useState<
+    Record<string, ManualTranscriptionProgress>
+  >({});
   const [transcribingPath, setTranscribingPath] = useState<string | null>(null);
 
-  const transcribeMutation = useMutationWithInvalidation((payload: { videoPath: string; postAction: TranscribePostAction }) => api.transcribeVideo(payload));
+  const transcribeMutation = useMutationWithInvalidation(
+    (payload: { videoPath: string; postAction: TranscribePostAction }) => api.transcribeVideo(payload),
+  );
   const retryTranscriptionMutation = useMutationWithInvalidation((id: string) => api.retryTranscriptionAttempt(id));
-  const cancelTranscriptionMutation = useMutationWithInvalidation((videoPath: string) => api.cancelTranscription({ path: videoPath }));
+  const cancelTranscriptionMutation = useMutationWithInvalidation((videoPath: string) =>
+    api.cancelTranscription({ path: videoPath }),
+  );
 
   const updateTranscriptionProgress = (
     videoPath: string,
@@ -53,9 +63,10 @@ export function useManualTranscription(): UseManualTranscriptionResult {
     setTranscriptionProgressByPath((prev) => {
       const current = prev[videoPath];
       if (!current) return prev;
-      const next = typeof updater === "function"
-        ? (updater as (current: ManualTranscriptionProgress) => ManualTranscriptionProgress)(current)
-        : updater;
+      const next =
+        typeof updater === "function"
+          ? (updater as (current: ManualTranscriptionProgress) => ManualTranscriptionProgress)(current)
+          : updater;
       return { ...prev, [videoPath]: next };
     });
   };
@@ -93,7 +104,11 @@ export function useManualTranscription(): UseManualTranscriptionResult {
     }
   };
 
-  const handleTranscribe = async (videoPath: string, postAction: TranscribePostAction, opts?: { skipRescan?: boolean }) => {
+  const handleTranscribe = async (
+    videoPath: string,
+    postAction: TranscribePostAction,
+    opts?: { skipRescan?: boolean },
+  ) => {
     setTranscriptionProgressByPath((prev) => ({
       ...prev,
       [videoPath]: createManualTranscriptionProgress(postAction),

@@ -18,7 +18,12 @@ const db = await import("./db.js");
 const { processQueue } = await import("./queue.js");
 
 test("deleting a task's pending jobs keeps its finished jobs and other tasks' jobs", () => {
-  const jobs = [[2, "pending"], [2, "done"], [2, "error"], [3, "pending"]] as const;
+  const jobs = [
+    [2, "pending"],
+    [2, "done"],
+    [2, "error"],
+    [3, "pending"],
+  ] as const;
   for (const [taskId, status] of jobs) {
     db.createJob({
       task_id: taskId,
@@ -33,7 +38,10 @@ test("deleting a task's pending jobs keeps its finished jobs and other tasks' jo
 
   assert.equal(removed, 1);
   assert.deepEqual(
-    db.getJobs().map((job) => `${job.task_id}:${job.status}`).sort(),
+    db
+      .getJobs()
+      .map((job) => `${job.task_id}:${job.status}`)
+      .sort(),
     ["2:done", "2:error", "3:pending"],
   );
 });

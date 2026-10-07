@@ -1,20 +1,21 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useSearchParams } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import * as api from "../../api";
-import { useLogsQuery, useTranscriptionLogsQuery } from "../../hooks";
+import { useLogsQuery, useTranscriptionLogsQuery, useIsMobile } from "../../hooks";
 import { fullTime, getErrorMessage, highlightText, relativeTime } from "../../lib";
 import type { LogEntry } from "../../types";
-import { useToast } from "../../components/Toast";
-import { useConfirm } from "../../components/ConfirmModal";
-import { Accordion, RowActionsMenu, Tabs } from "../../ui/primitives";
+import { useToast } from "../../ui/Toast";
+import { useConfirm } from "../../ui/ConfirmModal";
+import { Accordion, RowActionsMenu, Tabs, PageHeader, Select } from "../../ui/primitives";
 import { InlineError } from "../../ui/QueryState";
 import { BackendLogView } from "./BackendLogView";
 
 type LogSource = "app" | "backend";
 
-export function LogsPage({ isMobile }: { isMobile: boolean }) {
+export function LogsPage() {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const { addToast } = useToast();
   const { confirm } = useConfirm();
@@ -22,7 +23,7 @@ export function LogsPage({ isMobile }: { isMobile: boolean }) {
   const initialJobParam = params.get("job");
   const parsedInitialJobId = initialJobParam ? Number(initialJobParam) : NaN;
   const [jobIdFilter, setJobIdFilter] = useState<number | null>(
-    Number.isInteger(parsedInitialJobId) && parsedInitialJobId > 0 ? parsedInitialJobId : null
+    Number.isInteger(parsedInitialJobId) && parsedInitialJobId > 0 ? parsedInitialJobId : null,
   );
   const [level, setLevel] = useState("");
   const [category, setCategory] = useState("");
@@ -39,24 +40,41 @@ export function LogsPage({ isMobile }: { isMobile: boolean }) {
   // in an unrelated field or an SSE-driven re-render doesn't re-filter/re-copy
   // the (up to 300) log entries on every render — only `logs`/`search` matter.
   const chronologicalLogs = useMemo(
-    () => [...(search ? logs.filter((entry) => entry.message.toLowerCase().includes(search.toLowerCase()) || (entry.meta && entry.meta.toLowerCase().includes(search.toLowerCase()))) : logs)].reverse(),
-    [logs, search]
+    () =>
+      [
+        ...(search
+          ? logs.filter(
+              (entry) =>
+                entry.message.toLowerCase().includes(search.toLowerCase()) ||
+                entry.meta?.toLowerCase().includes(search.toLowerCase()),
+            )
+          : logs),
+      ].reverse(),
+    [logs, search],
   );
 
   useEffect(() => {
-    setParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (typeof jobIdFilter === "number" && Number.isInteger(jobIdFilter) && jobIdFilter > 0) {
-        next.set("job", String(jobIdFilter));
-      } else {
-        next.delete("job");
-      }
-      return next;
-    }, { replace: true });
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (typeof jobIdFilter === "number" && Number.isInteger(jobIdFilter) && jobIdFilter > 0) {
+          next.set("job", String(jobIdFilter));
+        } else {
+          next.delete("job");
+        }
+        return next;
+      },
+      { replace: true },
+    );
   }, [jobIdFilter, setParams]);
 
   const handleClear = async () => {
-    const ok = await confirm({ title: t("logs.confirm.clearTitle"), message: t("logs.confirm.clearMessage"), confirmLabel: t("logs.confirm.clearConfirm"), danger: true });
+    const ok = await confirm({
+      title: t("logs.confirm.clearTitle"),
+      message: t("logs.confirm.clearMessage"),
+      confirmLabel: t("logs.confirm.clearConfirm"),
+      danger: true,
+    });
     if (!ok) return;
     try {
       await api.clearLogsApi();
@@ -76,128 +94,134 @@ export function LogsPage({ isMobile }: { isMobile: boolean }) {
 
   return (
     <div className="flex h-full flex-col">
-      {/* L1 Topbar: title + search + follow + level quick-pills + overflow menu */}
-      <div className={`sticky top-0 z-30 shrink-0 border-b border-[var(--border)] bg-[var(--surface)] px-4 py-2 md:px-4 ${isMobile ? "space-y-2" : ""}`}>
-        {/* Row 1: title + follow + overflow menu */}
-        <div className="flex min-h-touch items-center gap-3">
-          <span className="text-sm font-semibold text-[var(--text)]">{t("logs.title")}</span>
-          <Tabs
-            tabs={[
-              { key: "app", label: t("logs.source.app") },
-              { key: "backend", label: t("logs.source.backend") },
-            ]}
-            activeKey={source}
-            onSelect={(key) => setSource(key as LogSource)}
-          />
-          {source === "app" && jobIdFilter && <span className="text-xs text-[var(--accent)]">{t("logs.filteredByJob", { id: jobIdFilter })}</span>}
-          <div className="ml-auto flex items-center gap-3">
-            <label className="flex items-center gap-2 text-xs text-[var(--text-2)]">
-              <input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} className="accent-[var(--accent)]" />
+      {/* Title, source tabs, follow and the overflow menu on the first row;
+          search, level pills and the filters accordion below. */}
+      <PageHeader
+        title={t("logs.title")}
+        middle={
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <Tabs
+              tabs={[
+                { key: "app", label: t("logs.source.app") },
+                { key: "backend", label: t("logs.source.backend") },
+              ]}
+              activeKey={source}
+              onSelect={(key) => setSource(key as LogSource)}
+            />
+            {source === "app" && jobIdFilter && (
+              <span className="text-xs text-accent">{t("logs.filteredByJob", { id: jobIdFilter })}</span>
+            )}
+          </div>
+        }
+        actions={
+          <>
+            <label className="flex items-center gap-2 text-xs text-muted">
+              <input
+                type="checkbox"
+                checked={follow}
+                onChange={(e) => setFollow(e.target.checked)}
+                className="accent-accent"
+              />
               {t("logs.follow")}
             </label>
             {/* Clear → overflow menu (L3, destructive). Clearing only ever means
                 the app's own store; the backend's file is not ours to delete. */}
             {source === "app" && (
-              <RowActionsMenu
-                items={[
-                  { label: t("logs.clear"), danger: true, onClick: handleClear },
-                ]}
-              />
+              <RowActionsMenu items={[{ label: t("logs.clear"), danger: true, onClick: handleClear }]} />
             )}
-          </div>
-        </div>
+          </>
+        }
+      >
         {/* Row 2: search + level quick-pills. Level and category are the app
             store's own fields — the backend tail is plain text, so it carries
             only the search box (rendered by BackendLogView). */}
         {source === "app" && (
-        <div className={`flex gap-2 ${isMobile ? "flex-col" : "flex-wrap items-center"}`}>
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("logs.search")}
-            aria-label={t("logs.search")}
-            className="min-w-0 flex-1 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--accent)]"
-          />
-          {/* Level quick-pills */}
-          <div className="flex gap-2">
-            {(["error", "warn", "info"] as const).map((l) => (
-              <button
-                key={l}
-                type="button"
-                onClick={() => toggleLevel(l)}
-                aria-pressed={level === l}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                  level === l
-                    ? l === "error"
-                      ? "border-[var(--red-border)] bg-[var(--red-dim)] text-[var(--red)]"
-                      : l === "warn"
-                        ? "border-[var(--yellow-border)] bg-[var(--yellow-dim)] text-[var(--yellow)]"
-                        : "border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]"
-                    : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)]"
-                }`}
-              >
-                {l === "error" ? t("logs.level.error") : l === "warn" ? t("logs.level.warn") : t("logs.level.info")}
-              </button>
-            ))}
+          <div className={`mt-2 flex gap-2 ${isMobile ? "flex-col" : "flex-wrap items-center"}`}>
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("logs.search")}
+              aria-label={t("logs.search")}
+              className="min-w-0 flex-1 rounded-sm border border-border bg-surface-raised px-3 py-2 text-sm text-text focus:border-accent"
+            />
+            {/* Level quick-pills */}
+            <div className="flex gap-2">
+              {(["error", "warn", "info"] as const).map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  onClick={() => toggleLevel(l)}
+                  aria-pressed={level === l}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    level === l
+                      ? l === "error"
+                        ? "border-danger-line bg-danger-soft text-danger"
+                        : l === "warn"
+                          ? "border-warning-line bg-warning-soft text-warning"
+                          : "border-accent-line bg-accent-soft text-accent"
+                      : "border-border bg-surface-raised text-muted hover:text-text"
+                  }`}
+                >
+                  {l === "error" ? t("logs.level.error") : l === "warn" ? t("logs.level.warn") : t("logs.level.info")}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
         )}
 
         {/* L3: Filters accordion — category + job-id */}
         {source === "app" && (
-        <Accordion title={t("logs.filters")} defaultOpen={hasFilters} variant="inline" className="mt-2">
-          <div className={`flex gap-2 pt-1 ${isMobile ? "flex-col" : "flex-wrap items-center"}`}>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              aria-label={t("logs.category.all")}
-              className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-2)] focus:border-[var(--accent)]"
-            >
-              <option value="">{t("logs.category.all")}</option>
-              <option value="scan">{t("logs.category.scan")}</option>
-              <option value="translate">{t("logs.category.translate")}</option>
-              <option value="queue">{t("logs.category.queue")}</option>
-              <option value="system">{t("logs.category.system")}</option>
-              <option value="youtube">{t("logs.category.youtube")}</option>
-            </select>
-            <input
-              type="number"
-              value={jobIdFilter ?? ""}
-              onChange={(e) => {
-                const raw = e.target.value.trim();
-                if (!raw) { setJobIdFilter(null); return; }
-                const next = Number(raw);
-                setJobIdFilter(Number.isInteger(next) && next > 0 ? next : null);
-              }}
-              placeholder={t("logs.jobId")}
-              aria-label={t("logs.jobId")}
-              className="w-28 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--accent)]"
-            />
-            {typeof jobIdFilter === "number" && jobIdFilter > 0 && (
-              <button onClick={() => setJobIdFilter(null)} className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text-2)]">
-                {t("logs.clearJobFilter")}
-              </button>
-            )}
-          </div>
-        </Accordion>
+          <Accordion title={t("logs.filters")} defaultOpen={hasFilters} variant="inline" className="mt-2">
+            <div className={`flex gap-2 pt-1 ${isMobile ? "flex-col" : "flex-wrap items-center"}`}>
+              <Select value={category} onChange={(value) => setCategory(value)} ariaLabel={t("logs.category.all")}>
+                <option value="">{t("logs.category.all")}</option>
+                <option value="scan">{t("logs.category.scan")}</option>
+                <option value="translate">{t("logs.category.translate")}</option>
+                <option value="queue">{t("logs.category.queue")}</option>
+                <option value="system">{t("logs.category.system")}</option>
+                <option value="youtube">{t("logs.category.youtube")}</option>
+              </Select>
+              <input
+                type="number"
+                value={jobIdFilter ?? ""}
+                onChange={(e) => {
+                  const raw = e.target.value.trim();
+                  if (!raw) {
+                    setJobIdFilter(null);
+                    return;
+                  }
+                  const next = Number(raw);
+                  setJobIdFilter(Number.isInteger(next) && next > 0 ? next : null);
+                }}
+                placeholder={t("logs.jobId")}
+                aria-label={t("logs.jobId")}
+                className="w-28 rounded-sm border border-border bg-surface-raised px-3 py-2 text-sm text-text focus:border-accent"
+              />
+              {typeof jobIdFilter === "number" && jobIdFilter > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setJobIdFilter(null)}
+                  className="rounded-sm border border-border bg-surface-raised px-3 py-2 text-xs text-muted"
+                >
+                  {t("logs.clearJobFilter")}
+                </button>
+              )}
+            </div>
+          </Accordion>
         )}
 
         {/* Entry count */}
         {source === "app" && (
-          <div className="pb-1 text-xs text-[var(--text-3)]">
-            {search ? t("logs.entriesFiltered", { filtered: chronologicalLogs.length, total: logs.length }) : t("logs.entries", { count: chronologicalLogs.length })}
+          <div className="pb-1 text-xs text-faint">
+            {search
+              ? t("logs.entriesFiltered", { filtered: chronologicalLogs.length, total: logs.length })
+              : t("logs.entries", { count: chronologicalLogs.length })}
           </div>
         )}
-      </div>
+      </PageHeader>
 
-      {source === "backend" && (
-        <BackendLogView
-          query={backendLogsQuery}
-          follow={follow}
-          isMobile={isMobile}
-        />
-      )}
+      {source === "backend" && <BackendLogView query={backendLogsQuery} follow={follow} />}
 
       {source === "app" && logsQuery.isError && (
         <div className="px-4 pt-2 md:px-4">
@@ -205,15 +229,16 @@ export function LogsPage({ isMobile }: { isMobile: boolean }) {
         </div>
       )}
 
-      {source === "app" && (
-        chronologicalLogs.length === 0 ? (
+      {source === "app" &&
+        (chronologicalLogs.length === 0 ? (
           <div className="flex-1 overflow-y-auto px-4 py-2 md:px-4">
-            <div className="px-4 py-12 text-center text-sm text-[var(--text-3)]">{search ? t("logs.noLogsSearch") : jobIdFilter ? t("logs.noLogsForJob") : t("logs.noLogs")}</div>
+            <div className="px-4 py-12 text-center text-sm text-faint">
+              {search ? t("logs.noLogsSearch") : jobIdFilter ? t("logs.noLogsForJob") : t("logs.noLogs")}
+            </div>
           </div>
         ) : (
           <LogList logs={chronologicalLogs} search={search} follow={follow} />
-        )
-      )}
+        ))}
     </div>
   );
 }
@@ -248,6 +273,7 @@ function PlainLogList({ logs, search, follow }: { logs: LogEntry[]; search: stri
 
   // Newest entries are at the end (chronological order). Re-run when new entries
   // arrive (length changes) or follow toggles on, matching the original.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-scrolls when entries arrive
   useEffect(() => {
     if (!follow) return;
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -281,10 +307,10 @@ function VirtualLogList({ logs, search, follow }: { logs: LogEntry[]; search: st
 
   // Auto-scroll-to-latest (follow mode). Re-run when new entries arrive (length
   // changes) or follow toggles on.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-scrolls when entries arrive; the virtualizer is stable
   useEffect(() => {
     if (!follow) return;
     if (logs.length > 0) virtualizer.scrollToIndex(logs.length - 1, { align: "end" });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logs.length, follow]);
 
   return (
@@ -322,27 +348,45 @@ function VirtualLogList({ logs, search, follow }: { logs: LogEntry[]; search: st
 }
 
 const LEVEL_META: Record<string, { label: string; color: string }> = {
-  info: { label: "INFO", color: "text-[var(--accent)]" },
-  warn: { label: "WARN", color: "text-[var(--yellow)]" },
-  error: { label: "ERR", color: "text-[var(--red)]" },
+  info: { label: "INFO", color: "text-accent" },
+  warn: { label: "WARN", color: "text-warning" },
+  error: { label: "ERR", color: "text-danger" },
 };
 
 function LogRow({ entry, search }: { entry: LogEntry; search: string }) {
   const { t } = useTranslation();
   const parts = search ? highlightText(entry.message, search) : [entry.message];
-  const meta = LEVEL_META[entry.level] || { label: entry.level.toUpperCase(), color: "text-[var(--text-2)]" };
+  const meta = LEVEL_META[entry.level] || { label: entry.level.toUpperCase(), color: "text-muted" };
   return (
     // Phones stack the meta line above a full-width message; from md up the
     // wrapper dissolves (contents) and the three cells sit in the row as before.
-    <div className="flex flex-col gap-1 border-b border-[var(--border-sub)] py-2 font-mono text-xs md:flex-row md:gap-3">
+    <div className="flex flex-col gap-1 border-b border-border-subtle py-2 font-mono text-xs md:flex-row md:gap-3">
       <div className="flex gap-3 md:contents">
-        <span className="w-[55px] shrink-0 cursor-default text-[var(--text-3)]" title={fullTime(entry.timestamp)}>{relativeTime(entry.timestamp)}</span>
+        <span className="w-[55px] shrink-0 cursor-default text-faint" title={fullTime(entry.timestamp)}>
+          {relativeTime(entry.timestamp)}
+        </span>
         <span className={`w-[40px] shrink-0 font-semibold ${meta.color}`}>{meta.label}</span>
-        <span className="w-[60px] shrink-0 truncate text-[var(--text-3)]">{entry.category}</span>
+        <span className="w-[60px] shrink-0 truncate text-faint">{entry.category}</span>
       </div>
       <div className="min-w-0 flex-1 break-words">
-        <span className={entry.level === "error" ? "text-[var(--red)]" : entry.level === "warn" ? "text-[var(--yellow)]" : "text-[var(--text-2)]"}>{parts.map((part, i) => search && part.toLowerCase() === search.toLowerCase() ? <mark key={i} className="rounded-sm bg-[var(--yellow-dim)] px-1 text-[var(--yellow)]">{part}</mark> : <Fragment key={i}>{part}</Fragment>)}</span>
-        {entry.job_id && <NavLink to={`/jobs/${entry.job_id}`} className="ml-2 text-[var(--text-2)] hover:text-[var(--accent)]">{t("logs.jobLink", { id: entry.job_id })}</NavLink>}
+        <span
+          className={entry.level === "error" ? "text-danger" : entry.level === "warn" ? "text-warning" : "text-muted"}
+        >
+          {parts.map((part, i) =>
+            search && part.toLowerCase() === search.toLowerCase() ? (
+              <mark key={i} className="rounded-sm bg-warning-soft px-1 text-warning">
+                {part}
+              </mark>
+            ) : (
+              <Fragment key={i}>{part}</Fragment>
+            ),
+          )}
+        </span>
+        {entry.job_id && (
+          <NavLink to={`/jobs/${entry.job_id}`} className="ml-2 text-muted hover:text-accent">
+            {t("logs.jobLink", { id: entry.job_id })}
+          </NavLink>
+        )}
       </div>
     </div>
   );

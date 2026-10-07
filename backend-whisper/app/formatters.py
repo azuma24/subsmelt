@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, Protocol
+from typing import Protocol
 
 from .segments import has_wide_chars
 
@@ -13,7 +14,7 @@ class SegmentLike(Protocol):
 
 
 def _timestamp(seconds: float, sep: str = ",") -> str:
-    ms_total = int(round(seconds * 1000))
+    ms_total = round(seconds * 1000)
     hours, rem = divmod(ms_total, 3_600_000)
     minutes, rem = divmod(rem, 60_000)
     secs, ms = divmod(rem, 1000)
@@ -105,7 +106,7 @@ def write_srt(segments: Iterable[SegmentLike], output_path: Path, max_line_lengt
 def write_vtt(segments: Iterable[SegmentLike], output_path: Path, max_line_length: int | None = None) -> int:
     lines = ["WEBVTT", ""]
     count = 0
-    for count, segment in enumerate(_spoken(segments), start=1):
+    for count, segment in enumerate(_spoken(segments), start=1):  # noqa: B007 - count is read after the loop
         lines.append(f"{_timestamp(segment.start, '.')} --> {_timestamp(segment.end, '.')}")
         lines.append(_wrap_text(_with_speaker(segment), max_line_length))
         lines.append("")
@@ -116,7 +117,7 @@ def write_vtt(segments: Iterable[SegmentLike], output_path: Path, max_line_lengt
 def write_txt(segments: Iterable[SegmentLike], output_path: Path) -> int:
     texts: list[str] = []
     count = 0
-    for count, segment in enumerate(_spoken(segments), start=1):
+    for count, segment in enumerate(_spoken(segments), start=1):  # noqa: B007 - count is read after the loop
         texts.append(_with_speaker(segment).strip())
     output_path.write_text("\n".join(texts) + ("\n" if texts else ""), encoding="utf-8")
     return count
@@ -124,7 +125,7 @@ def write_txt(segments: Iterable[SegmentLike], output_path: Path) -> int:
 
 def _ass_timestamp(seconds: float) -> str:
     """ASS time: H:MM:SS.cc (centiseconds, single-digit hours)."""
-    cs_total = int(round(seconds * 100))
+    cs_total = round(seconds * 100)
     hours, rem = divmod(cs_total, 360_000)
     minutes, rem = divmod(rem, 6_000)
     secs, cs = divmod(rem, 100)
@@ -151,7 +152,7 @@ def write_ass(segments: Iterable[SegmentLike], output_path: Path, max_line_lengt
     """Write Advanced SubStation Alpha (.ass). Line breaks use ASS's ``\\N``."""
     lines = [_ASS_HEADER]
     count = 0
-    for count, segment in enumerate(_spoken(segments), start=1):
+    for count, segment in enumerate(_spoken(segments), start=1):  # noqa: B007 - count is read after the loop
         text = _wrap_text(segment.text, max_line_length).replace("\n", "\\N")
         # Speaker goes in the ASS Name/actor field (not the rendered text).
         name = _speaker(segment)

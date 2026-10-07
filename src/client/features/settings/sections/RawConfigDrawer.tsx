@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { ActionButton, Drawer } from "../../../ui/primitives";
+import { useTranslation } from "../../../i18n";
+import { ActionButton, Drawer, TextArea } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
-import { labelCls, textareaCls } from "./shared";
+import { labelCls } from "./shared";
 
 interface RawConfigDrawerProps {
   settings: Record<string, unknown>;
@@ -29,10 +29,10 @@ export function RawConfigDrawer({ settings, update, onSave, dirty, saving }: Raw
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-3">
+      <div className="flex items-center justify-between gap-3 rounded-sm border border-border bg-surface-raised px-3 py-3">
         <div>
-          <p className="text-sm font-medium text-[var(--text)]">{t("settings.rawConfig")}</p>
-          <p className="mt-1 text-xs text-[var(--text-2)]">{t("settings.rawConfigHint")}</p>
+          <p className="text-sm font-medium text-text">{t("settings.rawConfig")}</p>
+          <p className="mt-1 text-xs text-muted">{t("settings.rawConfigHint")}</p>
         </div>
         <ActionButton variant="ghost" size="sm" onClick={() => setOpen(true)}>
           {t("settings.rawConfigOpen")}
@@ -43,31 +43,43 @@ export function RawConfigDrawer({ settings, update, onSave, dirty, saving }: Raw
         <div className="space-y-6">
           <div>
             <label className={labelCls}>{t("settings.transcription.folderDefaults")}</label>
-            <textarea
-              aria-label={t("settings.transcription.folderDefaults")}
+            <TextArea
+              ariaLabel={t("settings.transcription.folderDefaults")}
               value={str(settings.transcription_folder_defaults, "[]")}
-              onChange={(e) => update("transcription_folder_defaults", e.target.value)}
+              onChange={(value) => update("transcription_folder_defaults", value)}
               rows={8}
               placeholder={'[{"path":"/media/anime","language":"ja","model":"small"}]'}
-              className={`${textareaCls} font-mono text-xs`}
+              className="text-xs"
+              mono
             />
-            <p className="mt-1 text-xs leading-relaxed text-[var(--text-3)]">{t("settings.transcription.folderDefaultsHelp")}</p>
+            <p className="mt-1 text-xs leading-relaxed text-faint">{t("settings.transcription.folderDefaultsHelp")}</p>
           </div>
           <div>
             <label className={labelCls}>{t("settings.transcription.advancedOptions")}</label>
-            <textarea
-              aria-label={t("settings.transcription.advancedOptions")}
+            <TextArea
+              ariaLabel={t("settings.transcription.advancedOptions")}
               value={str(settings.transcription_advanced_stt, "{}")}
-              onChange={(e) => update("transcription_advanced_stt", e.target.value)}
+              onChange={(value) => update("transcription_advanced_stt", value)}
               rows={8}
               placeholder={'{"beam_size":5,"word_timestamps":true,"initial_prompt":"Lecture audio"}'}
-              className={`${textareaCls} font-mono text-xs`}
+              className="text-xs"
+              mono
             />
-            <p className="mt-1 text-xs leading-relaxed text-[var(--text-3)]">{t("settings.transcription.advancedOptionsHelp")}</p>
+            <p className="mt-1 text-xs leading-relaxed text-faint">{t("settings.transcription.advancedOptionsHelp")}</p>
           </div>
           <div className="flex justify-end gap-2">
-            <ActionButton variant="ghost" size="sm" onClick={() => setOpen(false)}>{t("common.close")}</ActionButton>
-            <ActionButton size="sm" onClick={async () => { if (await onSave()) setOpen(false); }} disabled={!dirty || saving}>{saving ? t("app.saving") : t("app.save")}</ActionButton>
+            <ActionButton variant="ghost" size="sm" onClick={() => setOpen(false)}>
+              {t("common.close")}
+            </ActionButton>
+            <ActionButton
+              size="sm"
+              onClick={async () => {
+                if (await onSave()) setOpen(false);
+              }}
+              disabled={!dirty || saving}
+            >
+              {saving ? t("app.saving") : t("app.save")}
+            </ActionButton>
           </div>
         </div>
       </Drawer>

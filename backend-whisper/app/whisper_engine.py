@@ -1,13 +1,14 @@
 """The faster-whisper engine runner."""
+
 from __future__ import annotations
 
+from collections.abc import Callable, Generator
 from pathlib import Path
-from typing import Callable, Generator
 
 from .engine import TranscriptionCancelled, progress_event
 from .model_loader import CudaOutOfMemoryError, _is_cuda_oom, lease
-from .schemas import TranscribeRequest
 from .nemotron_languages import normalize_language
+from .schemas import TranscribeRequest
 from .segments import snap_start_to_words
 
 
@@ -77,7 +78,7 @@ def _iter_segments_with_progress(
             segment = next(segment_iterator)
         except StopIteration:
             break
-        except Exception as exc:  # noqa: BLE001 - OOM can surface mid-iteration
+        except Exception as exc:
             _raise_if_cuda_oom(exc, request.model)
             raise
         if is_cancelled is not None and is_cancelled():
@@ -108,7 +109,7 @@ def run(
     with lease(request.model, request.device, request.compute_type) as model:
         try:
             segments_iter, info = model.transcribe(str(audio_path), **faster_whisper_transcribe_kwargs(request))
-        except Exception as exc:  # noqa: BLE001 - surface CUDA OOM as a typed error
+        except Exception as exc:
             _raise_if_cuda_oom(exc, request.model)
             raise
         total_seconds = float(getattr(info, "duration", 0.0) or 0.0)

@@ -34,7 +34,7 @@ async function withChatServer(message: ChatMessage | "hang", fn: (apiHost: strin
           created: 0,
           model: "test-model",
           choices: [{ index: 0, message: { role: "assistant", ...message }, finish_reason: "stop" }],
-        })
+        }),
       );
     });
   });
@@ -96,7 +96,7 @@ async function timedOutToolCall(run: (apiHost: string) => Promise<unknown>) {
   const requests = await withChatServer("hang", async (apiHost) => {
     message = await run(apiHost).then(
       () => "resolved",
-      (error: Error) => error.message
+      (error: Error) => error.message,
     );
   });
   return { requests, message };
@@ -104,14 +104,14 @@ async function timedOutToolCall(run: (apiHost: string) => Promise<unknown>) {
 
 test("translateChunk: a tool-call timeout surfaces without a plain-text retry", async () => {
   const outcome = await timedOutToolCall((apiHost) =>
-    translateChunk(["source line"], { ...modelOpts(apiHost), requestTimeoutMs: 50 })
+    translateChunk(["source line"], { ...modelOpts(apiHost), requestTimeoutMs: 50 }),
   );
   assert.deepEqual(outcome, { requests: 1, message: "Request timeout after 50ms" });
 });
 
 test("translateSingle: a tool-call timeout surfaces without a plain-text retry", async () => {
   const outcome = await timedOutToolCall((apiHost) =>
-    translateSingle("source line", { ...modelOpts(apiHost), requestTimeoutMs: 50 })
+    translateSingle("source line", { ...modelOpts(apiHost), requestTimeoutMs: 50 }),
   );
   assert.deepEqual(outcome, { requests: 1, message: "Request timeout after 50ms" });
 });

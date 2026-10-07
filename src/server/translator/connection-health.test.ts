@@ -77,13 +77,19 @@ test("live() filters out dropped connections and preserves order", () => {
   const c = conn("c");
   for (let i = 0; i < CONNECTION_TIMEOUT_LIMIT; i++) health.noteFailure(b, new Error("timeout"));
 
-  assert.deepEqual(health.live([a, b, c]).map((x) => x.id), ["a", "c"]);
+  assert.deepEqual(
+    health.live([a, b, c]).map((x) => x.id),
+    ["a", "c"],
+  );
 });
 
 test("availability is probed once, then cached for the job", async () => {
   let calls = 0;
   const health = createConnectionHealth({
-    fetchImpl: async () => { calls += 1; return okResponse(); },
+    fetchImpl: async () => {
+      calls += 1;
+      return okResponse();
+    },
     delayImpl: noDelay,
   });
   const target = conn("probe-once");
@@ -98,7 +104,10 @@ test("an unreachable connection is retried, then marked unavailable", async () =
   const events: string[] = [];
   let calls = 0;
   const health = createConnectionHealth({
-    fetchImpl: async () => { calls += 1; throw new Error("ECONNREFUSED"); },
+    fetchImpl: async () => {
+      calls += 1;
+      throw new Error("ECONNREFUSED");
+    },
     delayImpl: noDelay,
     onConnectionUnavailable: (info) => events.push(info.error),
   });
@@ -124,7 +133,12 @@ test("a reachable connection is never marked unavailable", async () => {
 
 test("cloud SDK providers skip the probe entirely", async () => {
   let calls = 0;
-  const health = createConnectionHealth({ fetchImpl: async () => { calls += 1; return okResponse(); } });
+  const health = createConnectionHealth({
+    fetchImpl: async () => {
+      calls += 1;
+      return okResponse();
+    },
+  });
 
   await health.ensureReady(conn("cloud", { provider: "openai" as ResolvedConnection["provider"] }));
 
@@ -134,10 +148,7 @@ test("cloud SDK providers skip the probe entirely", async () => {
 
 test("models URL is derived from the API host", () => {
   assert.equal(connectionModelsUrl(conn("a")), "http://localhost:1234/v1/models");
-  assert.equal(
-    connectionModelsUrl(conn("b", { apiHost: "http://host:8000/v1/" })),
-    "http://host:8000/v1/models",
-  );
+  assert.equal(connectionModelsUrl(conn("b", { apiHost: "http://host:8000/v1/" })), "http://host:8000/v1/models");
   assert.equal(connectionModelsUrl(conn("c", { apiHost: "not a url" })), null);
 });
 
@@ -146,14 +157,22 @@ test("withConnection releases the lock even when the work throws", async () => {
   const health = createConnectionHealth({
     fetchImpl: async () => okResponse(),
     delayImpl: noDelay,
-    acquireConnection: async () => () => { released += 1; },
+    acquireConnection: async () => () => {
+      released += 1;
+    },
   });
 
   const value = await health.withConnection(conn("ok"), async () => "done");
   assert.equal(value, "done");
   assert.equal(released, 1);
 
-  await assert.rejects(() => health.withConnection(conn("ok"), async () => { throw new Error("boom"); }), /boom/);
+  await assert.rejects(
+    () =>
+      health.withConnection(conn("ok"), async () => {
+        throw new Error("boom");
+      }),
+    /boom/,
+  );
   assert.equal(released, 2);
 });
 
@@ -162,7 +181,10 @@ test("reserved connections are not re-acquired", async () => {
   const health = createConnectionHealth({
     fetchImpl: async () => okResponse(),
     reservedConnectionIds: ["mine"],
-    acquireConnection: async () => { acquired += 1; return () => {}; },
+    acquireConnection: async () => {
+      acquired += 1;
+      return () => {};
+    },
   });
 
   await health.withConnection(conn("mine"), async () => null);
@@ -177,7 +199,9 @@ test("an aborted job stops probing immediately", async () => {
   controller.abort();
   const health = createConnectionHealth({
     abortSignal: controller.signal,
-    fetchImpl: async () => { throw new Error("should not be called"); },
+    fetchImpl: async () => {
+      throw new Error("should not be called");
+    },
     delayImpl: noDelay,
   });
 

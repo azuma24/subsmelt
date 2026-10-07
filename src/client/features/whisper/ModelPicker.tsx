@@ -1,7 +1,8 @@
-import type { TFunction } from "i18next";
-import { useTranslation } from "react-i18next";
+import type { TFunction } from "../../i18n";
+import { useTranslation } from "../../i18n";
 import type { WhisperModelDescriptor } from "../../types";
 import { findDescriptor, groupByEngine, MODEL_LABEL_KEYS, supportsLanguage } from "./whisper-shared";
+import { Icon } from "../../ui/Icon";
 
 export function modelLabel(t: TFunction, model: WhisperModelDescriptor): string {
   const key = MODEL_LABEL_KEYS[model.id];
@@ -41,17 +42,21 @@ export function ModelPicker({ descriptors, value, onChange, className, ariaLabel
           <optgroup key={group.engine} label={t(`stt.engine.${group.engine}`)}>
             {group.items.map((model) => (
               <option key={model.id} value={model.id} disabled={!model.available}>
-                {modelLabel(t, model)}{suffix(model)}
+                {modelLabel(t, model)}
+                {suffix(model)}
               </option>
             ))}
           </optgroup>
         ))}
       </select>
-      <p className="mt-1 text-xs leading-snug text-[var(--text-3)]">{t(`stt.engineStrength.${selected.engine}`)}</p>
+      <p className="mt-1 text-xs leading-snug text-faint">{t(`stt.engineStrength.${selected.engine}`)}</p>
       {!selected.available && (
-        <p className="mt-1 text-xs leading-snug text-[var(--red)]">
-          <span aria-hidden="true">✗ </span>
-          {t("stt.modelUnavailable", { model: selected.label, reason: selected.unavailableReason ?? t("settings.models.runtimeMissing") })}
+        <p className="mt-1 text-xs leading-snug text-danger">
+          <Icon name="error" />
+          {t("stt.modelUnavailable", {
+            model: selected.label,
+            reason: selected.unavailableReason ?? t("settings.models.runtimeMissing"),
+          })}
         </p>
       )}
     </>
@@ -63,8 +68,8 @@ export function LanguageSupportWarning({ model, language }: { model: WhisperMode
   const { t } = useTranslation();
   if (supportsLanguage(model, language)) return null;
   return (
-    <p className="mt-1 text-xs leading-snug text-[var(--yellow)]">
-      <span aria-hidden="true">⚠ </span>
+    <p className="mt-1 text-xs leading-snug text-warning">
+      <Icon name="warning" />
       {t("stt.languageUnsupported", { model: model.label, language })}
     </p>
   );
@@ -73,5 +78,5 @@ export function LanguageSupportWarning({ model, language }: { model: WhisperMode
 /** Shown where options were hidden because the selected model decides them. */
 export function OptionsDecidedNote({ model }: { model: WhisperModelDescriptor }) {
   const { t } = useTranslation();
-  return <p className="text-xs leading-snug text-[var(--text-3)]">{t("stt.optionsDecidedByModel", { model: model.label })}</p>;
+  return <p className="text-xs leading-snug text-faint">{t("stt.optionsDecidedByModel", { model: model.label })}</p>;
 }

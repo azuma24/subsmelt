@@ -1,4 +1,5 @@
 import type { ResolvedConnection } from "../connections.js";
+import { errorCauseMessage, errorMessage } from "../errors.js";
 import { controlledAbortError } from "./ai-client.js";
 
 /**
@@ -78,8 +79,7 @@ export function connectionModelsUrl(conn: ResolvedConnection): string | null {
 
 /** Best-effort human message from a probe failure. */
 export function offlineMessage(error: unknown): string {
-  const err = error as any;
-  return String(err?.message || err?.cause?.message || error || "connection unavailable");
+  return errorMessage(error) || errorCauseMessage(error) || "connection unavailable";
 }
 
 /**
@@ -105,7 +105,7 @@ const TRANSPORT_MARKERS = [
 ];
 
 export function isTransportFailure(error: unknown): boolean {
-  const message = String((error as any)?.message || error).toLowerCase();
+  const message = errorMessage(error).toLowerCase();
   return TRANSPORT_MARKERS.some((marker) => message.includes(marker));
 }
 

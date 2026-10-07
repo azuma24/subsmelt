@@ -6,7 +6,18 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import { YoutubeStore } from "./store.js";
-import { changeBackfill, changeChannelContent, exactUploadDateWithYtdlp, listChannelUploads, listPlaylistWithYtdlp, parseFlatListing, resolveChannelWithYtdlp, syncPlaylist, type FlatListing, type SyncDeps } from "./sync.js";
+import {
+  changeBackfill,
+  changeChannelContent,
+  exactUploadDateWithYtdlp,
+  listChannelUploads,
+  listPlaylistWithYtdlp,
+  parseFlatListing,
+  resolveChannelWithYtdlp,
+  syncPlaylist,
+  type FlatListing,
+  type SyncDeps,
+} from "./sync.js";
 import type { YoutubePlaylist } from "./playlists.js";
 
 const FAKE_BIN = path.join(path.dirname(fileURLToPath(import.meta.url)), "fake-yt-dlp.mjs");
@@ -28,9 +39,27 @@ function listingJson(entries: object[], playlistCount = entries.length): string 
   });
 }
 
-const DOTS = { id: "uXspbC2srEQ", title: "Introducing dots", channel: "OpenAI", duration: 148, timestamp: ts("2026-09-30") };
-const PRIME = { id: "BHPDsGVciDk", title: "Best AI Release of 2026", channel: "The PrimeTime", duration: 727, timestamp: ts("2026-09-26") };
-const OLD = { id: "qN6OM1IzjIE", title: "Teaching in the Age of AI", channel: "Jane Street", duration: 5798, timestamp: ts("2026-07-30") };
+const DOTS = {
+  id: "uXspbC2srEQ",
+  title: "Introducing dots",
+  channel: "OpenAI",
+  duration: 148,
+  timestamp: ts("2026-09-30"),
+};
+const PRIME = {
+  id: "BHPDsGVciDk",
+  title: "Best AI Release of 2026",
+  channel: "The PrimeTime",
+  duration: 727,
+  timestamp: ts("2026-09-26"),
+};
+const OLD = {
+  id: "qN6OM1IzjIE",
+  title: "Teaching in the Age of AI",
+  channel: "Jane Street",
+  duration: 5798,
+  timestamp: ts("2026-07-30"),
+};
 const PRIVATE = { id: "LKsEieYbUz4", title: "[Private video]", duration: null };
 
 const playlist = (overrides: Partial<YoutubePlaylist> = {}): YoutubePlaylist => ({
@@ -60,7 +89,9 @@ function deps(listings: FlatListing[], overrides: Partial<SyncDeps> = {}): SyncD
 }
 
 const statuses = (store: YoutubeStore) =>
-  store.playlistVideos(PL).map((v) => [v.video_id, v.status, v.skip_kind, v.removed_at === null ? "listed" : "removed"]);
+  store
+    .playlistVideos(PL)
+    .map((v) => [v.video_id, v.status, v.skip_kind, v.removed_at === null ? "listed" : "removed"]);
 
 test("a listing larger than the capture limit is an error, never a cut-off document", async (t) => {
   process.env.SUBSMELT_YTDLP_BIN = FAKE_BIN;
@@ -69,7 +100,9 @@ test("a listing larger than the capture limit is an error, never a cut-off docum
     delete process.env.SUBSMELT_YTDLP_BIN;
     delete process.env.FAKE_YTDLP_STDOUT;
   });
-  await assert.rejects(listPlaylistWithYtdlp(PL, { maxBytes: 200 }), { message: "The playlist listing is larger than 200 bytes" });
+  await assert.rejects(listPlaylistWithYtdlp(PL, { maxBytes: 200 }), {
+    message: "The playlist listing is larger than 200 bytes",
+  });
   assert.equal((await listPlaylistWithYtdlp(PL, { maxBytes: 10_000 })).entries.length, 3);
 });
 
@@ -79,7 +112,14 @@ test("parseFlatListing reads ids, rounded dates, and private placeholders", () =
   assert.equal(listing.availability, "unlisted");
   assert.equal(listing.playlistCount, 3);
   assert.deepEqual(listing.entries, [
-    { videoId: "uXspbC2srEQ", title: "Introducing dots", channel: "OpenAI", durationS: 148, publishedAt: "2026-09-30", position: 1 },
+    {
+      videoId: "uXspbC2srEQ",
+      title: "Introducing dots",
+      channel: "OpenAI",
+      durationS: 148,
+      publishedAt: "2026-09-30",
+      position: 1,
+    },
     { videoId: "LKsEieYbUz4", title: null, channel: null, durationS: null, publishedAt: null, position: 2 },
   ]);
 });
@@ -91,20 +131,39 @@ test("listPlaylistWithYtdlp runs the flat listing on the canonical URL and surfa
   process.env.FAKE_YTDLP_ARGV_FILE = argvFile;
   process.env.FAKE_YTDLP_STDOUT = listingJson([DOTS]);
   t.after(() => {
-    for (const name of ["SUBSMELT_YTDLP_BIN", "FAKE_YTDLP_ARGV_FILE", "FAKE_YTDLP_STDOUT", "FAKE_YTDLP_STDERR", "FAKE_YTDLP_EXIT"]) delete process.env[name];
+    for (const name of [
+      "SUBSMELT_YTDLP_BIN",
+      "FAKE_YTDLP_ARGV_FILE",
+      "FAKE_YTDLP_STDOUT",
+      "FAKE_YTDLP_STDERR",
+      "FAKE_YTDLP_EXIT",
+    ])
+      delete process.env[name];
   });
 
   const listing = await listPlaylistWithYtdlp(PL);
-  assert.deepEqual(listing.entries.map((e) => e.videoId), ["uXspbC2srEQ"]);
+  assert.deepEqual(
+    listing.entries.map((e) => e.videoId),
+    ["uXspbC2srEQ"],
+  );
   assert.deepEqual(JSON.parse(fs.readFileSync(argvFile, "utf8").trim()), [
-    "-J", "--flat-playlist", "--js-runtimes", "node", "--extractor-args", "youtubetab:approximate_date", "--",
+    "-J",
+    "--flat-playlist",
+    "--js-runtimes",
+    "node",
+    "--extractor-args",
+    "youtubetab:approximate_date",
+    "--",
     `https://www.youtube.com/playlist?list=${PL}`,
   ]);
 
   process.env.FAKE_YTDLP_STDOUT = "";
-  process.env.FAKE_YTDLP_STDERR = "WARNING: something\nERROR: [youtube:tab] PL-Smx9IA029hG4XKsjwo6psQhtDfsosa8: The playlist does not exist\n";
+  process.env.FAKE_YTDLP_STDERR =
+    "WARNING: something\nERROR: [youtube:tab] PL-Smx9IA029hG4XKsjwo6psQhtDfsosa8: The playlist does not exist\n";
   process.env.FAKE_YTDLP_EXIT = "1";
-  await assert.rejects(listPlaylistWithYtdlp(PL), { message: "ERROR: [youtube:tab] PL-Smx9IA029hG4XKsjwo6psQhtDfsosa8: The playlist does not exist" });
+  await assert.rejects(listPlaylistWithYtdlp(PL), {
+    message: "ERROR: [youtube:tab] PL-Smx9IA029hG4XKsjwo6psQhtDfsosa8: The playlist does not exist",
+  });
 });
 
 test("listPlaylistWithYtdlp parses a listing larger than a megabyte", async (t) => {
@@ -141,7 +200,11 @@ test("first sync with backfill None skips what is already there; private entries
     ["BHPDsGVciDk", "skipped", "before_start", "listed"],
   ]);
   assert.deepEqual(store.getSyncState(PL), {
-    lastCheckedAt: NOW.toISOString(), lastError: null, count: 3, availability: "unlisted", firstSyncAt: NOW.toISOString(),
+    lastCheckedAt: NOW.toISOString(),
+    lastError: null,
+    count: 3,
+    availability: "unlisted",
+    firstSyncAt: NOW.toISOString(),
   });
 });
 
@@ -165,45 +228,82 @@ test("later syncs queue new videos in auto mode and mark them new in manual mode
 
 test("a private placeholder that later lists as a real video is released like a newly listed one", async () => {
   const store = new YoutubeStore(new Database(":memory:"));
-  await syncPlaylist(store, playlist({ backfill: { kind: "all" } }), deps([parseFlatListing(listingJson([DOTS, PRIVATE]))]));
+  await syncPlaylist(
+    store,
+    playlist({ backfill: { kind: "all" } }),
+    deps([parseFlatListing(listingJson([DOTS, PRIVATE]))]),
+  );
   assert.equal(store.getVideo(PRIVATE.id)?.status, "unavailable");
 
   const nowPublic = { ...PRIVATE, title: "Now public", duration: 300, timestamp: ts("2026-09-29") };
-  const result = await syncPlaylist(store, playlist(), deps([parseFlatListing(listingJson([DOTS, nowPublic]))], { now: () => LATER }));
+  const result = await syncPlaylist(
+    store,
+    playlist(),
+    deps([parseFlatListing(listingJson([DOTS, nowPublic]))], { now: () => LATER }),
+  );
   assert.equal(result.added, 0);
   assert.deepEqual([store.getVideo(PRIVATE.id)?.status, store.getVideo(PRIVATE.id)?.title], ["queued", "Now public"]);
 
   const manual = new YoutubeStore(new Database(":memory:"));
   await syncPlaylist(manual, playlist({ mode: "manual" }), deps([parseFlatListing(listingJson([PRIVATE]))]));
-  await syncPlaylist(manual, playlist({ mode: "manual" }), deps([parseFlatListing(listingJson([nowPublic]))], { now: () => LATER }));
+  await syncPlaylist(
+    manual,
+    playlist({ mode: "manual" }),
+    deps([parseFlatListing(listingJson([nowPublic]))], { now: () => LATER }),
+  );
   assert.equal(manual.getVideo(PRIVATE.id)?.status, "new");
 });
 
 test("a sync requeues videos YouTube's soft session limit marked unavailable, but not ones a download found gone", async () => {
   const store = new YoutubeStore(new Database(":memory:"));
-  await syncPlaylist(store, playlist({ backfill: { kind: "all" } }), deps([parseFlatListing(listingJson([DOTS, PRIME]))]));
+  await syncPlaylist(
+    store,
+    playlist({ backfill: { kind: "all" } }),
+    deps([parseFlatListing(listingJson([DOTS, PRIME]))]),
+  );
   const marked = (id: string, reason: string) => {
     store.setStatus(id, "downloading", { now: NOW.toISOString() });
     store.setStatus(id, "unavailable", { now: NOW.toISOString(), reason });
   };
-  marked(DOTS.id, "ERROR: [youtube] uXspbC2srEQ: Video unavailable. This content isn't available, try again later. The current session has been rate-limited by YouTube for up to an hour.");
-  marked(PRIME.id, "ERROR: [youtube] BHPDsGVciDk: Video unavailable. The uploader has not made this video available in your country");
+  marked(
+    DOTS.id,
+    "ERROR: [youtube] uXspbC2srEQ: Video unavailable. This content isn't available, try again later. The current session has been rate-limited by YouTube for up to an hour.",
+  );
+  marked(
+    PRIME.id,
+    "ERROR: [youtube] BHPDsGVciDk: Video unavailable. The uploader has not made this video available in your country",
+  );
 
   await syncPlaylist(store, playlist(), deps([parseFlatListing(listingJson([DOTS, PRIME]))], { now: () => LATER }));
-  assert.deepEqual([DOTS.id, PRIME.id].map((id) => [store.getVideo(id)?.status, store.getVideo(id)?.reason === null]), [
-    ["queued", true],
-    ["unavailable", false],
-  ]);
+  assert.deepEqual(
+    [DOTS.id, PRIME.id].map((id) => [store.getVideo(id)?.status, store.getVideo(id)?.reason === null]),
+    [
+      ["queued", true],
+      ["unavailable", false],
+    ],
+  );
 });
 
 test("removal is marked only when the listing count matches playlist_count", async () => {
   const store = new YoutubeStore(new Database(":memory:"));
-  await syncPlaylist(store, playlist({ backfill: { kind: "all" } }), deps([parseFlatListing(listingJson([DOTS, PRIME]))]));
+  await syncPlaylist(
+    store,
+    playlist({ backfill: { kind: "all" } }),
+    deps([parseFlatListing(listingJson([DOTS, PRIME]))]),
+  );
 
-  const short = await syncPlaylist(store, playlist(), deps([parseFlatListing(listingJson([DOTS], 2))], { now: () => LATER }));
+  const short = await syncPlaylist(
+    store,
+    playlist(),
+    deps([parseFlatListing(listingJson([DOTS], 2))], { now: () => LATER }),
+  );
   assert.equal(short.removed, 0);
 
-  const complete = await syncPlaylist(store, playlist(), deps([parseFlatListing(listingJson([DOTS], 1))], { now: () => LATER }));
+  const complete = await syncPlaylist(
+    store,
+    playlist(),
+    deps([parseFlatListing(listingJson([DOTS], 1))], { now: () => LATER }),
+  );
   assert.equal(complete.removed, 1);
   assert.deepEqual(statuses(store), [
     ["uXspbC2srEQ", "queued", null, "listed"],
@@ -213,26 +313,52 @@ test("removal is marked only when the listing count matches playlist_count", asy
 
 test("a failed listing records the error and leaves the videos alone", async () => {
   const store = new YoutubeStore(new Database(":memory:"));
-  const failing = deps([], { listPlaylist: async () => { throw new Error("ERROR: HTTP Error 429: Too Many Requests"); } });
+  const failing = deps([], {
+    listPlaylist: async () => {
+      throw new Error("ERROR: HTTP Error 429: Too Many Requests");
+    },
+  });
   await assert.rejects(syncPlaylist(store, playlist(), failing), /HTTP Error 429/);
   assert.deepEqual(store.getSyncState(PL), {
-    lastCheckedAt: NOW.toISOString(), lastError: "ERROR: HTTP Error 429: Too Many Requests", count: null, availability: null, firstSyncAt: null,
+    lastCheckedAt: NOW.toISOString(),
+    lastError: "ERROR: HTTP Error 429: Too Many Requests",
+    count: null,
+    availability: null,
+    firstSyncAt: null,
   });
 });
 
 test("first sync with Added since stores added dates and fails without them", async () => {
   const store = new YoutubeStore(new Database(":memory:"));
   const listing = parseFlatListing(listingJson([DOTS, OLD]));
-  const added = new Map([["uXspbC2srEQ", "2026-09-30"], ["qN6OM1IzjIE", "2026-09-15"]]);
-  await syncPlaylist(store, playlist({ backfill: { kind: "added_since", date: "2026-09-10" } }), deps([listing], { addedDates: async () => added }));
-  assert.deepEqual(store.playlistVideos(PL).map((v) => [v.video_id, v.status, v.added_at]), [
-    ["uXspbC2srEQ", "queued", "2026-09-30"],
-    ["qN6OM1IzjIE", "queued", "2026-09-15"],
+  const added = new Map([
+    ["uXspbC2srEQ", "2026-09-30"],
+    ["qN6OM1IzjIE", "2026-09-15"],
   ]);
+  await syncPlaylist(
+    store,
+    playlist({ backfill: { kind: "added_since", date: "2026-09-10" } }),
+    deps([listing], { addedDates: async () => added }),
+  );
+  assert.deepEqual(
+    store.playlistVideos(PL).map((v) => [v.video_id, v.status, v.added_at]),
+    [
+      ["uXspbC2srEQ", "queued", "2026-09-30"],
+      ["qN6OM1IzjIE", "queued", "2026-09-15"],
+    ],
+  );
 
   const other = new YoutubeStore(new Database(":memory:"));
   await assert.rejects(
-    syncPlaylist(other, playlist({ backfill: { kind: "added_since", date: "2026-09-10" } }), deps([listing], { addedDates: async () => { throw new Error("API key not valid"); } })),
+    syncPlaylist(
+      other,
+      playlist({ backfill: { kind: "added_since", date: "2026-09-10" } }),
+      deps([listing], {
+        addedDates: async () => {
+          throw new Error("API key not valid");
+        },
+      }),
+    ),
     /API key not valid/,
   );
   assert.equal(other.playlistVideos(PL).length, 0);
@@ -293,7 +419,12 @@ test("a filter change releases skipped videos to new on a manual playlist and ne
 test("a followed channel keeps its own name, not the uploads playlist's", async () => {
   const store = new YoutubeStore(new Database(":memory:"));
   const uploads = "UUXuqSBlHAE6Xw-yeJA0Tunw";
-  const listing = { ...parseFlatListing(listingJson([DOTS])), id: uploads, title: "Uploads from Linus Tech Tips", channel: "Linus Tech Tips" };
+  const listing = {
+    ...parseFlatListing(listingJson([DOTS])),
+    id: uploads,
+    title: "Uploads from Linus Tech Tips",
+    channel: "Linus Tech Tips",
+  };
   const result = await syncPlaylist(store, playlist({ id: uploads, title: "Linus Tech Tips" }), deps([listing]));
   assert.equal(result.title, "Linus Tech Tips");
 });
@@ -320,11 +451,14 @@ test("a channel is listed as its videos, Shorts and live streams, each tagged; a
   assert.equal(listing.id, UPLOADS);
   assert.equal(listing.channel, "Linus Tech Tips");
   assert.equal(listing.playlistCount, 3);
-  assert.deepEqual(listing.entries.map((e) => [e.videoId, e.contentKind]), [
-    ["uXspbC2srEQ", "video"],
-    ["BHPDsGVciDk", "video"],
-    ["zH9bqwNShiM", "short"],
-  ]);
+  assert.deepEqual(
+    listing.entries.map((e) => [e.videoId, e.contentKind]),
+    [
+      ["uXspbC2srEQ", "video"],
+      ["BHPDsGVciDk", "video"],
+      ["zH9bqwNShiM", "short"],
+    ],
+  );
 });
 
 test("a channel listing failure other than a missing list is an error", async () => {
@@ -336,7 +470,13 @@ test("a channel listing failure other than a missing list is an error", async ()
 });
 
 const channel = (overrides: Partial<YoutubePlaylist> = {}) =>
-  playlist({ id: UPLOADS, title: "Linus Tech Tips", backfill: { kind: "all" }, include: { shorts: false, live: false }, ...overrides });
+  playlist({
+    id: UPLOADS,
+    title: "Linus Tech Tips",
+    backfill: { kind: "all" },
+    include: { shorts: false, live: false },
+    ...overrides,
+  });
 
 async function channelListing(): Promise<FlatListing> {
   return listChannelUploads(UPLOADS, channelLists({ UULF: [DOTS], UUSH: [SHORT], UULV: [LIVE] }));
@@ -364,7 +504,12 @@ test("turning Shorts on applies the backfill to them; turning them off skips the
   assert.deepEqual(channelStatuses(store).zH9bqwNShiM, ["queued", null]);
   assert.deepEqual(channelStatuses(store).Z1sqWFs86uU, ["skipped", "content"]);
 
-  const off = await changeChannelContent(store, channel({ include: { shorts: true, live: false } }), { shorts: false, live: false }, deps([]));
+  const off = await changeChannelContent(
+    store,
+    channel({ include: { shorts: true, live: false } }),
+    { shorts: false, live: false },
+    deps([]),
+  );
   assert.deepEqual(off, { released: 0, skipped: 1 });
   assert.deepEqual(channelStatuses(store).zH9bqwNShiM, ["skipped", "content"]);
 });
@@ -381,13 +526,23 @@ test("turning live streams on with backfill None leaves the old ones skipped bef
 test("a channel never scans its uploads for added dates, which equal the upload dates", async () => {
   const store = new YoutubeStore(new Database(":memory:"));
   let scans = 0;
-  await syncPlaylist(store, channel(), deps([await channelListing()], { addedDates: async () => { scans += 1; return new Map(); } }));
+  await syncPlaylist(
+    store,
+    channel(),
+    deps([await channelListing()], {
+      addedDates: async () => {
+        scans += 1;
+        return new Map();
+      },
+    }),
+  );
   assert.equal(scans, 0);
 });
 
 test("an exact-date lookup refused by YouTube's soft session limit throws, so the lane cools down", async (t) => {
   process.env.SUBSMELT_YTDLP_BIN = FAKE_BIN;
-  process.env.FAKE_YTDLP_STDERR = "ERROR: [youtube] uXspbC2srEQ: Video unavailable. This content isn't available, try again later. The current session has been rate-limited by YouTube for up to an hour.\n";
+  process.env.FAKE_YTDLP_STDERR =
+    "ERROR: [youtube] uXspbC2srEQ: Video unavailable. This content isn't available, try again later. The current session has been rate-limited by YouTube for up to an hour.\n";
   process.env.FAKE_YTDLP_EXIT = "1";
   t.after(() => {
     for (const name of ["SUBSMELT_YTDLP_BIN", "FAKE_YTDLP_STDERR", "FAKE_YTDLP_EXIT"]) delete process.env[name];
@@ -395,34 +550,64 @@ test("an exact-date lookup refused by YouTube's soft session limit throws, so th
   await assert.rejects(exactUploadDateWithYtdlp("uXspbC2srEQ"), /session has been rate-limited/);
 });
 
-const undated = (id: string, contentKind: "video" | "short" | "live", position: number) =>
-  ({ videoId: id, contentKind, title: `Upload ${id}`, channel: "Chan", durationS: 60, publishedAt: null, position });
+const undated = (id: string, contentKind: "video" | "short" | "live", position: number) => ({
+  videoId: id,
+  contentKind,
+  title: `Upload ${id}`,
+  channel: "Chan",
+  durationS: 60,
+  publishedAt: null,
+  position,
+});
 
 test("posted-since never looks up the date of a kind the follow leaves out", async () => {
   const store = new YoutubeStore(new Database(":memory:"));
   const listing: FlatListing = {
-    id: PL, title: "Chan", channel: "Chan", availability: "public", playlistCount: 3,
-    entries: [undated("aaaaaaaaaaa", "video", 1), undated("bbbbbbbbbbb", "short", 2), undated("ccccccccccc", "live", 3)],
+    id: PL,
+    title: "Chan",
+    channel: "Chan",
+    availability: "public",
+    playlistCount: 3,
+    entries: [
+      undated("aaaaaaaaaaa", "video", 1),
+      undated("bbbbbbbbbbb", "short", 2),
+      undated("ccccccccccc", "live", 3),
+    ],
   };
   const asked: string[] = [];
-  await syncPlaylist(store, playlist({ backfill: { kind: "posted_since", date: "2026-09-01" } }), deps([listing], {
-    exactUploadDate: async (id) => { asked.push(id); return "2026-09-10"; },
-  }));
+  await syncPlaylist(
+    store,
+    playlist({ backfill: { kind: "posted_since", date: "2026-09-01" } }),
+    deps([listing], {
+      exactUploadDate: async (id) => {
+        asked.push(id);
+        return "2026-09-10";
+      },
+    }),
+  );
   assert.deepEqual(asked, ["aaaaaaaaaaa"]);
-  assert.deepEqual(["aaaaaaaaaaa", "bbbbbbbbbbb", "ccccccccccc"].map((id) => [store.getVideo(id)!.status, store.getVideo(id)!.skip_kind]), [
-    ["queued", null],
-    ["skipped", "content"],
-    ["skipped", "content"],
-  ]);
+  assert.deepEqual(
+    ["aaaaaaaaaaa", "bbbbbbbbbbb", "ccccccccccc"].map((id) => [
+      store.getVideo(id)!.status,
+      store.getVideo(id)!.skip_kind,
+    ]),
+    [
+      ["queued", null],
+      ["skipped", "content"],
+      ["skipped", "content"],
+    ],
+  );
 });
 
 test("a first sync cut short by YouTube keeps the dates it found, and the retry looks up only the rest", async () => {
   const store = new YoutubeStore(new Database(":memory:"));
-  const listing = parseFlatListing(listingJson([
-    { id: "aaaaaaaaaaa", title: "One", duration: 60 },
-    { id: "bbbbbbbbbbb", title: "Two", duration: 60 },
-    { id: "ccccccccccc", title: "Three", duration: 60 },
-  ]));
+  const listing = parseFlatListing(
+    listingJson([
+      { id: "aaaaaaaaaaa", title: "One", duration: 60 },
+      { id: "bbbbbbbbbbb", title: "Two", duration: 60 },
+      { id: "ccccccccccc", title: "Three", duration: 60 },
+    ]),
+  );
   const posted = playlist({ backfill: { kind: "posted_since", date: "2026-09-01" } });
   const asked: string[] = [];
   const lookup = (failOn: string | null) => async (id: string) => {
@@ -436,11 +621,14 @@ test("a first sync cut short by YouTube keeps the dates it found, and the retry 
   await syncPlaylist(store, posted, deps([listing], { exactUploadDate: lookup(null), now: () => LATER }));
 
   assert.deepEqual(asked, ["aaaaaaaaaaa", "bbbbbbbbbbb", "ccccccccccc", "ccccccccccc"]);
-  assert.deepEqual(store.playlistVideos(PL).map((v) => [v.video_id, v.status, v.published_at]), [
-    ["aaaaaaaaaaa", "queued", "2026-09-10"],
-    ["bbbbbbbbbbb", "skipped", "2026-08-01"],
-    ["ccccccccccc", "queued", "2026-09-10"],
-  ]);
+  assert.deepEqual(
+    store.playlistVideos(PL).map((v) => [v.video_id, v.status, v.published_at]),
+    [
+      ["aaaaaaaaaaa", "queued", "2026-09-10"],
+      ["bbbbbbbbbbb", "skipped", "2026-08-01"],
+      ["ccccccccccc", "queued", "2026-09-10"],
+    ],
+  );
 });
 
 test("listings, channel lookups and date lookups pass a private copy of the uploaded cookies", async (t) => {
@@ -465,7 +653,11 @@ test("listings, channel lookups and date lookups pass a private copy of the uplo
   process.env.FAKE_YTDLP_STDOUT = "20260930\n";
   assert.equal(await exactUploadDateWithYtdlp("uXspbC2srEQ"), "2026-09-30");
 
-  const runs = fs.readFileSync(argvFile, "utf8").trim().split("\n").map((l) => JSON.parse(l) as string[]);
+  const runs = fs
+    .readFileSync(argvFile, "utf8")
+    .trim()
+    .split("\n")
+    .map((l) => JSON.parse(l) as string[]);
   assert.equal(runs.length, 3);
   for (const args of runs) {
     const jar = args[args.indexOf("--cookies") + 1];
@@ -478,16 +670,34 @@ test("listings, channel lookups and date lookups pass a private copy of the uplo
 
 test("a check applies the follow's settings as saved when it finishes, not as they were when it began", async () => {
   const store = new YoutubeStore(new Database(":memory:"));
-  const first: FlatListing = { id: PL, title: "Chan", channel: "Chan", availability: "public", playlistCount: 1, entries: [undated("aaaaaaaaaaa", "video", 1)] };
+  const first: FlatListing = {
+    id: PL,
+    title: "Chan",
+    channel: "Chan",
+    availability: "public",
+    playlistCount: 1,
+    entries: [undated("aaaaaaaaaaa", "video", 1)],
+  };
   await syncPlaylist(store, playlist({ include: { shorts: true, live: true } }), deps([first]));
 
   // Shorts and live were turned off while the listing ran.
-  const second: FlatListing = { ...first, playlistCount: 3, entries: [...first.entries, undated("bbbbbbbbbbb", "short", 2), undated("ccccccccccc", "live", 3)] };
+  const second: FlatListing = {
+    ...first,
+    playlistCount: 3,
+    entries: [...first.entries, undated("bbbbbbbbbbb", "short", 2), undated("ccccccccccc", "live", 3)],
+  };
   const saved = playlist({ include: { shorts: false, live: false }, mode: "manual" });
-  await syncPlaylist(store, playlist({ include: { shorts: true, live: true } }), deps([second], { now: () => LATER, currentPlaylist: () => saved }));
+  await syncPlaylist(
+    store,
+    playlist({ include: { shorts: true, live: true } }),
+    deps([second], { now: () => LATER, currentPlaylist: () => saved }),
+  );
 
-  assert.deepEqual(["bbbbbbbbbbb", "ccccccccccc"].map((id) => [store.getVideo(id)!.status, store.getVideo(id)!.skip_kind]), [
-    ["skipped", "content"],
-    ["skipped", "content"],
-  ]);
+  assert.deepEqual(
+    ["bbbbbbbbbbb", "ccccccccccc"].map((id) => [store.getVideo(id)!.status, store.getVideo(id)!.skip_kind]),
+    [
+      ["skipped", "content"],
+      ["skipped", "content"],
+    ],
+  );
 });

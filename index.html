@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SubSmelt</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- Matches --bg in src/client/index.css; the theme script below keeps it
+         in step with the resolved theme. -->
+    <meta name="theme-color" content="#0b1020" />
     <!-- Cockpit Grid numerals use JetBrains Mono when the operator already has
          it installed, otherwise the platform ui-monospace stack (see
          tailwind.config.js font-mono). Deliberately NOT fetched from Google
@@ -22,6 +26,8 @@
             ? pref
             : (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
           document.documentElement.setAttribute("data-theme", resolved);
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute("content", resolved === "light" ? "#f6f8fa" : "#0b1020");
         } catch (e) {
           document.documentElement.setAttribute("data-theme", "dark");
         }

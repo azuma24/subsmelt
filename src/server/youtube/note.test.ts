@@ -3,7 +3,16 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { clock, groupParagraphs, noteFileName, paragraphStarts, renderNote, safeNoteName, type Cue, type NoteInfo } from "./note.js";
+import {
+  clock,
+  groupParagraphs,
+  noteFileName,
+  paragraphStarts,
+  renderNote,
+  safeNoteName,
+  type Cue,
+  type NoteInfo,
+} from "./note.js";
 
 const GOLDEN = path.join(path.dirname(fileURLToPath(import.meta.url)), "testdata", "note.golden.md");
 
@@ -69,7 +78,13 @@ test("a sentence end before 45 s does not break the paragraph", () => {
 
 test("a chapter start breaks the paragraph even mid-sentence", () => {
   const cues = [cue(0, 5, "we start"), cue(5, 12, "and then"), cue(12, 20, "carry on")];
-  assert.deepEqual(paragraphStarts(cues, [{ start: 0, title: "A" }, { start: 10, title: "B" }]), [0, 12]);
+  assert.deepEqual(
+    paragraphStarts(cues, [
+      { start: 0, title: "A" },
+      { start: 10, title: "B" },
+    ]),
+    [0, 12],
+  );
 });
 
 test("a translation with its own timing breaks at the first cue past each source paragraph start", () => {
@@ -88,7 +103,7 @@ test("cue text loses markup and joins CJK without spaces but Latin with one", ()
 test("note file names drop characters that break Obsidian links or paths", () => {
   assert.equal(noteFileName("Why the Roman Empire fell", "dQw4w9WgXcQ"), "Why the Roman Empire fell (dQw4w9WgXcQ).md");
   assert.equal(noteFileName("[Live] Q&A #3 ^ top | best", "dQw4w9WgXcQ"), "Live Q&A 3 top best (dQw4w9WgXcQ).md");
-  assert.equal(noteFileName("AC/DC: back\\in \"black\"?", "dQw4w9WgXcQ"), "AC DC back in black (dQw4w9WgXcQ).md");
+  assert.equal(noteFileName('AC/DC: back\\in "black"?', "dQw4w9WgXcQ"), "AC DC back in black (dQw4w9WgXcQ).md");
   assert.equal(noteFileName("...hidden.", "dQw4w9WgXcQ"), "hidden (dQw4w9WgXcQ).md");
   assert.equal(noteFileName("[#|]", "dQw4w9WgXcQ"), "dQw4w9WgXcQ.md");
   assert.equal(noteFileName("羅馬帝國為何衰亡", "dQw4w9WgXcQ"), "羅馬帝國為何衰亡 (dQw4w9WgXcQ).md");
@@ -112,7 +127,9 @@ test("clock shows hours only when there are some", () => {
 });
 
 test("a hash at the start of a word is escaped so Obsidian does not read a tag", () => {
-  assert.deepEqual(groupParagraphs([cue(0, 1, "learn #python today, issue#3")], [0]), [{ start: 0, text: "learn \\#python today, issue#3" }]);
+  assert.deepEqual(groupParagraphs([cue(0, 1, "learn #python today, issue#3")], [0]), [
+    { start: 0, text: "learn \\#python today, issue#3" },
+  ]);
 });
 
 test("the lines of one cue join like cues do", () => {

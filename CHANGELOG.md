@@ -3,6 +3,28 @@
 All notable changes to SubSmelt. The app and the Windows Whisper backend share a
 version number and are released together (`v0.5.6` and `whisper-v0.5.6`).
 
+## [0.6.7] — 2026-10-07
+
+### Added
+
+- **A favicon and a theme-coloured browser chrome.** The tab shows the SubSmelt mark, and the address bar on phones takes the page's background in dark and light mode. The `/favicon.ico` 404 on every page load is gone.
+- **`HOST`** environment variable: the web server binds every interface by default, as before; set `HOST=127.0.0.1` to keep it local to the machine.
+- **Baseline security headers** on every response (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`).
+
+### Changed
+
+- **One page header everywhere.** Library, Activity, Transcribe, YouTube, Convert, Settings, Translations and Logs share the same sticky header, and it wraps its actions under the title on a phone instead of squeezing the title. Text glyphs (`↻`, `⋯`, `○`, `⚠`, `▸`) are icons, and every select, textarea and toggle comes from one kit, so they look and focus the same on every screen.
+- **Faster to open, lighter to run.** The subtitle converter's language detection loads on first use instead of with the app, and its charset sniffing is a few kilobytes of the app's own code instead of a megabyte of library; React, the router and the query library ship as their own long-cached chunks; hashed assets are served with a one-year cache. While the live event stream is open the pages poll the API far less often (jobs every two minutes instead of every 30 seconds), since the stream already announces every change. The library scan no longer blocks the server while it walks a large tree.
+- **Settings are checked by kind.** Every setting has one definition shared by the client and the server; a flag, a number out of range or an unknown enum value is refused with a message that says the allowed range, and the queue reads typed values instead of parsing strings.
+- **Subtitle previews of `.ass` files** show the right cue times.
+- **Dependencies:** React 19, Express 5, Vite 8, Tailwind CSS 4, Vercel AI SDK 7, zod 4, chokidar 5, jschardet 4. The oldest browsers Tailwind 4 supports are Safari 16.4, Chrome and Edge 111 and Firefox 128.
+
+### Developer
+
+- **Linting and formatting:** Biome for the TypeScript halves (`npm run lint`, `npm run format`) and ruff for the Whisper backend, both run in CI. The whole tree was formatted once; `.git-blame-ignore-revs` lists that commit.
+- **Twelve packages fewer.** Subtitle parsing (SRT, WebVTT, ASS), charset detection, the download's ZIP writer, the translation runtime, the dev runner, the scan's concurrency pool and the CORS stub are the app's own code now (`src/server/translator/{srt-vtt,ass}.ts`, `src/shared/charset.ts`, `src/client/features/convert/zip.ts`, `src/client/i18n/`, `scripts/dev.mjs`), each with tests that pin the old behaviour. Gone: subtitle, ass-parser, ass-stringify, jschardet, iconv-lite, jszip, i18next, react-i18next, i18next-browser-languagedetector, concurrently, cors, tiny-async-pool. zod stays as the AI SDK's required peer.
+- `src/shared/` holds the API types and the settings table both sides use. The client's hooks live in `hooks/`, its primitives in `ui/`; the queue runs a job as stages in `src/server/queue/`. Catch blocks and SDK errors are typed on the server; there is no `any` left outside tests.
+
 ## [0.6.6] — 2026-10-06
 
 ### Added

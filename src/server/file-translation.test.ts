@@ -38,11 +38,19 @@ test("a new language creates one disabled task and a pending job; asking again r
   assert.equal(first.kind, "queued");
   assert.ok(first.kind === "queued");
   assert.deepEqual(second, { kind: "already-queued", jobId: first.jobId, taskId: first.taskId });
-  assert.deepEqual(taskSummaries(), ["eng:English:1:{{name}}.{{lang_code}}.srt", "fra:French:0:{{name}}.{{lang_code}}.srt"]);
+  assert.deepEqual(taskSummaries(), [
+    "eng:English:1:{{name}}.{{lang_code}}.srt",
+    "fra:French:0:{{name}}.{{lang_code}}.srt",
+  ]);
   const job = db.getJob(first.jobId);
   assert.deepEqual(
     { status: job?.status, output: job?.output_path, video: job?.video_path, task: job?.task_id },
-    { status: "pending", output: path.join(dir, "Movie.fra.srt"), video: path.join(dir, "Movie.mkv"), task: first.taskId },
+    {
+      status: "pending",
+      output: path.join(dir, "Movie.fra.srt"),
+      video: path.join(dir, "Movie.mkv"),
+      task: first.taskId,
+    },
   );
 });
 
@@ -122,7 +130,7 @@ test("a failed job is reset to pending; a finished one is refused", () => {
   });
 });
 
-test("a scan shows the one-off task on its subtitle, never lists its output as a source, and applies it nowhere else", () => {
+test("a scan shows the one-off task on its subtitle, never lists its output as a source, and applies it nowhere else", async () => {
   const dir = library("scan", ["Ep1.mkv", "Ep1.srt", "Ep2.mkv", "Ep2.srt"]);
   const queued = queueFileTranslation(path.join(dir, "Ep1.srt"), { langCode: "it", targetLang: "Italian" });
   assert.ok(queued.kind === "queued");
@@ -130,7 +138,7 @@ test("a scan shows the one-off task on its subtitle, never lists its output as a
   fs.writeFileSync(path.join(dir, "Ep1.ita.srt"), "");
   db.updateJob(queued.jobId, { status: "done" });
 
-  const { files } = scanFolder(true);
+  const { files } = await scanFolder(true);
 
   const inDir = files.filter((file) => file.videoPath?.startsWith(`${dir}${path.sep}`));
   assert.deepEqual(
@@ -147,7 +155,10 @@ test("a scan shows the one-off task on its subtitle, never lists its output as a
     ],
   );
   assert.deepEqual(
-    db.getJobs().filter((job) => job.task_id === queued.taskId).map((job) => path.basename(job.srt_path)),
+    db
+      .getJobs()
+      .filter((job) => job.task_id === queued.taskId)
+      .map((job) => path.basename(job.srt_path)),
     ["Ep1.srt"],
   );
 });
@@ -185,7 +196,12 @@ test("a failed job reset after its task's naming changed writes to the new outpu
 test("switching the preferred Chinese moves the Chinese tasks at once, so Simplified can be added before a restart", (t) => {
   t.after(() => config.setSetting("preferred_chinese", "zh-TW"));
   config.setSetting("preferred_chinese", "zh-TW");
-  const traditionalId = config.createTask({ source_lang: "Automatic", target_lang: "Traditional Chinese", output_pattern: "{{name}}.{{lang_code}}.srt", lang_code: "zh-TW" }).lastInsertRowid;
+  const traditionalId = config.createTask({
+    source_lang: "Automatic",
+    target_lang: "Traditional Chinese",
+    output_pattern: "{{name}}.{{lang_code}}.srt",
+    lang_code: "zh-TW",
+  }).lastInsertRowid;
   assert.equal(config.getTask(traditionalId)?.lang_code, "chi");
   const dir = library("switch-chinese", ["Fresh.mkv", "Fresh.en.srt", "Old.mkv", "Old.en.srt", "Old.chi.srt"]);
 
@@ -193,11 +209,17 @@ test("switching the preferred Chinese moves the Chinese tasks at once, so Simpli
   assert.equal(config.getTask(traditionalId)?.lang_code, "cht");
 
   // .chi now names Simplified: a Simplified translation is queued under it...
-  const fresh = queueFileTranslation(path.join(dir, "Fresh.en.srt"), { langCode: "zh-CN", targetLang: "Simplified Chinese" });
+  const fresh = queueFileTranslation(path.join(dir, "Fresh.en.srt"), {
+    langCode: "zh-CN",
+    targetLang: "Simplified Chinese",
+  });
   assert.ok(fresh.kind === "queued", JSON.stringify(fresh));
   assert.equal(db.getJob(fresh.jobId)?.output_path, path.join(dir, "Fresh.chi.srt"));
   // ...an existing .chi counts as the Simplified one, not as the Traditional task's former code...
-  const old = queueFileTranslation(path.join(dir, "Old.en.srt"), { langCode: "zh-CN", targetLang: "Simplified Chinese" });
+  const old = queueFileTranslation(path.join(dir, "Old.en.srt"), {
+    langCode: "zh-CN",
+    targetLang: "Simplified Chinese",
+  });
   assert.deepEqual(old, { kind: "rejected", status: 409, error: "Old.chi.srt already exists" });
   // ...and the Traditional task writes .cht.
   const traditional = queueFileTranslation(path.join(dir, "Old.en.srt"), { taskId: traditionalId });

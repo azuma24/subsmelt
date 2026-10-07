@@ -3,16 +3,14 @@
 gui_config.py lives under packaging/windows/tray/ (frozen into the GUI exe, not
 the server), so it is loaded here by path.
 """
+
 import importlib.util
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
-_MODULE_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "packaging" / "windows" / "tray" / "gui_config.py"
-)
+_MODULE_PATH = Path(__file__).resolve().parents[1] / "packaging" / "windows" / "tray" / "gui_config.py"
 _spec = importlib.util.spec_from_file_location("gui_config", _MODULE_PATH)
 gui_config = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(gui_config)
@@ -144,11 +142,13 @@ class EnvShadowingTests(unittest.TestCase):
         self.assertIsNone(gui_config.shadowed_note([]))
 
     def test_all_three_shadowing_variables_are_covered(self):
-        names = gui_config.shadowed_by_env({
-            "SUBSMELT_WHISPER_HOST": "0.0.0.0",
-            "SUBSMELT_WHISPER_PORT": "8001",
-            "SUBSMELT_WHISPER_TOKEN": "s3cr3t",
-        })
+        names = gui_config.shadowed_by_env(
+            {
+                "SUBSMELT_WHISPER_HOST": "0.0.0.0",
+                "SUBSMELT_WHISPER_PORT": "8001",
+                "SUBSMELT_WHISPER_TOKEN": "s3cr3t",
+            }
+        )
         self.assertEqual(len(names), 3)
 
 
@@ -178,6 +178,4 @@ class GenerateTokenTests(unittest.TestCase):
             self.assertEqual(gui_config.load_config(path)["token"], token)
 
     def test_a_generated_token_clears_the_bind_warning(self):
-        self.assertIsNone(
-            gui_config.bind_warning("0.0.0.0", gui_config.generate_token())
-        )
+        self.assertIsNone(gui_config.bind_warning("0.0.0.0", gui_config.generate_token()))

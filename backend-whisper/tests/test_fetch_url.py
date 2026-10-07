@@ -2,9 +2,9 @@
 
 import os
 import socket
-import threading
 import sys
 import tempfile
+import threading
 import time
 import types
 import unittest
@@ -56,6 +56,7 @@ class FetchUrlTests(unittest.TestCase):
     def test_hostname_public_blocks_private_resolution(self):
         def resolver(host):
             return ["192.168.1.5"]
+
         with self.assertRaises(fetch_url.UrlFetchError):
             fetch_url._assert_hostname_public("http://internal.example/x", resolver=resolver)
         # allow_unsafe bypasses the DNS guard too.
@@ -64,12 +65,14 @@ class FetchUrlTests(unittest.TestCase):
     def test_hostname_public_allows_public_resolution(self):
         def resolver(host):
             return ["8.8.8.8", "1.1.1.1"]
+
         # Nothing raised.
         fetch_url._assert_hostname_public("http://public.example/x", resolver=resolver)
 
     def test_hostname_public_swallows_resolution_failure(self):
         def resolver(host):
             raise OSError("no such host")
+
         # A resolution failure is not an SSRF signal — do not block the fetch.
         fetch_url._assert_hostname_public("http://maybe.example/x", resolver=resolver)
 
@@ -106,6 +109,7 @@ class FetchUrlTests(unittest.TestCase):
             self.skipTest("yt-dlp installed; unavailable path not exercised")
         import tempfile
         from pathlib import Path
+
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(fetch_url.UrlFetchUnavailableError):
                 fetch_url.download_url("https://example.com/v", Path(tmp))
@@ -203,7 +207,8 @@ class DownloadUrlTests(unittest.TestCase):
 
     def test_public_media_hosts_download_to_the_dest_dir(self):
         _FakeYoutubeDL.info = {
-            "id": "v1", "ext": "m4a",
+            "id": "v1",
+            "ext": "m4a",
             "webpage_url": "https://example.com/v1",
             "requested_formats": [{"url": "https://8.8.8.8/a.m4a", "filesize": 1024}],
         }
@@ -216,7 +221,9 @@ class DownloadUrlTests(unittest.TestCase):
 
     def test_oversized_probe_result_is_refused_before_download(self):
         _FakeYoutubeDL.info = {
-            "id": "v1", "ext": "m4a", "webpage_url": "https://example.com/v1",
+            "id": "v1",
+            "ext": "m4a",
+            "webpage_url": "https://example.com/v1",
             "requested_formats": [{"url": "https://8.8.8.8/a.m4a", "filesize_approx": fetch_url.MAX_FETCH_BYTES + 1}],
         }
         with self.assertRaises(fetch_url.UrlFetchError) as ctx:
@@ -239,7 +246,9 @@ class DownloadUrlTests(unittest.TestCase):
 
     def test_manifest_hosts_are_checked_too(self):
         _FakeYoutubeDL.info = {
-            "id": "v1", "ext": "m4a", "webpage_url": "https://example.com/v1",
+            "id": "v1",
+            "ext": "m4a",
+            "webpage_url": "https://example.com/v1",
             "requested_formats": [{"url": "https://8.8.8.8/a.m3u8", "manifest_url": "http://10.0.0.9/master.m3u8"}],
         }
         with self.assertRaises(fetch_url.UrlFetchError):

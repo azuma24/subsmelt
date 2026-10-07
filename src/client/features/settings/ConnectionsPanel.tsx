@@ -1,11 +1,12 @@
 import { useId, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import * as api from "../../api";
 import type { LlmConnection, LlmMode, LlmProvider } from "../../types";
-import { Field, RowActionsMenu } from "../../ui/primitives";
+import { Field, RowActionsMenu, Select } from "../../ui/primitives";
 import { FORM_CONTROL_CLS, FORM_LABEL_CLS } from "../../ui/form-classes";
 import { Icon } from "../../ui/Icon";
 import { isEnvPinned } from "./settings-model";
+import { useIsMobile } from "../../hooks";
 
 const PROVIDERS: LlmProvider[] = ["local", "openai", "anthropic", "gemini"];
 const DEFAULT_LOCAL_ENDPOINT = "http://localhost:8000/v1";
@@ -35,7 +36,6 @@ interface ConnectionsPanelProps {
   settings: Record<string, unknown>;
   update: (key: string, value: unknown) => void;
   addToast: ToastFn;
-  isMobile: boolean;
 }
 
 function genId(): string {
@@ -58,13 +58,15 @@ function parseConnections(raw: unknown): LlmConnection[] {
   return [];
 }
 
-export function ConnectionsPanel({ settings, update, addToast, isMobile }: ConnectionsPanelProps) {
+export function ConnectionsPanel({ settings, update, addToast }: ConnectionsPanelProps) {
   const { t } = useTranslation();
   const modeLabelId = useId();
   const [modelsByConn, setModelsByConn] = useState<Record<string, string[]>>({});
   const [loadingByConn, setLoadingByConn] = useState<Record<string, boolean>>({});
   const [testingByConn, setTestingByConn] = useState<Record<string, boolean>>({});
-  const [testResultByConn, setTestResultByConn] = useState<Record<string, { ok: boolean; message: string } | undefined>>({});
+  const [testResultByConn, setTestResultByConn] = useState<
+    Record<string, { ok: boolean; message: string } | undefined>
+  >({});
   const [showKeyByConn, setShowKeyByConn] = useState<Record<string, boolean>>({});
   // Per-card override of the default expansion. Absent = follow the default for
   // the current mode (see `defaultExpanded` below).
@@ -158,7 +160,7 @@ export function ConnectionsPanel({ settings, update, addToast, isMobile }: Conne
         endpoint: c.endpoint,
       });
       setTestResultByConn((s) => ({ ...s, [c.id]: result }));
-      addToast(result.ok ? `✓ ${c.label}: ${result.message}` : `✗ ${c.label}: ${result.message}`, result.ok ? "success" : "error");
+      addToast(`${c.label}: ${result.message}`, result.ok ? "success" : "error");
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
       setTestResultByConn((s) => ({ ...s, [c.id]: { ok: false, message } }));
@@ -171,24 +173,31 @@ export function ConnectionsPanel({ settings, update, addToast, isMobile }: Conne
     <div className="space-y-4">
       {/* Mode selector */}
       <div>
-        <label id={modeLabelId} className={labelCls}>{t("settings.connections.mode")}</label>
-        <div role="group" aria-labelledby={modeLabelId} className="flex overflow-hidden rounded-sm border border-[var(--border)]">
+        <label id={modeLabelId} className={labelCls}>
+          {t("settings.connections.mode")}
+        </label>
+        <div
+          role="group"
+          aria-labelledby={modeLabelId}
+          className="flex overflow-hidden rounded-sm border border-border"
+        >
           {(["single", "fallback", "parallel"] as LlmMode[]).map((m) => (
             <button
+              type="button"
               key={m}
               onClick={() => update("llm_mode", m)}
               aria-pressed={mode === m}
-              className={`flex-1 border-r border-[var(--border)] py-2 text-xs font-medium transition-colors last:border-r-0 min-h-touch md:min-h-0 ${
+              className={`flex-1 border-r border-border py-2 text-xs font-medium transition-colors last:border-r-0 min-h-touch md:min-h-0 ${
                 mode === m
-                  ? "bg-[var(--accent-dim)] text-[var(--accent)]"
-                  : "bg-[var(--surface-2)] text-[var(--text-2)] hover:bg-[var(--surface-3)] hover:text-[var(--text)]"
+                  ? "bg-accent-soft text-accent"
+                  : "bg-surface-raised text-muted hover:bg-surface-highlight hover:text-text"
               }`}
             >
               {t(`settings.connections.mode${m.charAt(0).toUpperCase()}${m.slice(1)}`)}
             </button>
           ))}
         </div>
-        <p className="mt-2 text-xs leading-relaxed text-[var(--text-3)]">{t(MODE_HELP_KEY[mode])}</p>
+        <p className="mt-2 text-xs leading-relaxed text-faint">{t(MODE_HELP_KEY[mode])}</p>
       </div>
 
       {/* Connection cards. In `single` mode only the active connection is
@@ -207,7 +216,6 @@ export function ConnectionsPanel({ settings, update, addToast, isMobile }: Conne
               total={conns.length}
               mode={mode}
               isActive={isActive}
-              isMobile={isMobile}
               expanded={expandedByConn[c.id] ?? defaultExpanded}
               onToggleExpanded={() => setExpandedByConn((s) => ({ ...s, [c.id]: !(s[c.id] ?? defaultExpanded) }))}
               models={modelsByConn[c.id] || []}
@@ -225,7 +233,12 @@ export function ConnectionsPanel({ settings, update, addToast, isMobile }: Conne
               onTest={() => testConn(c)}
               envPinned={
                 c.id === "local" && c.provider === "local"
-                  ? Object.fromEntries(ENV_LOCAL_FIELDS.filter(({ setting }) => isEnvPinned(settings, setting)).map(({ field, env }) => [field, env]))
+                  ? Object.fromEntries(
+                      ENV_LOCAL_FIELDS.filter(({ setting }) => isEnvPinned(settings, setting)).map(({ field, env }) => [
+                        field,
+                        env,
+                      ]),
+                    )
                   : {}
               }
             />
@@ -234,8 +247,9 @@ export function ConnectionsPanel({ settings, update, addToast, isMobile }: Conne
       </div>
 
       <button
+        type="button"
         onClick={addConn}
-        className="w-full rounded-sm border border-dashed border-[var(--border)] bg-[var(--surface-2)] py-3 text-sm font-medium text-[var(--accent)] hover:bg-[var(--surface-3)]"
+        className="w-full rounded-sm border border-dashed border-border bg-surface-raised py-3 text-sm font-medium text-accent hover:bg-surface-highlight"
       >
         {t("settings.connections.add")}
       </button>
@@ -249,7 +263,6 @@ interface ConnectionCardProps {
   total: number;
   mode: LlmMode;
   isActive: boolean;
-  isMobile: boolean;
   expanded: boolean;
   onToggleExpanded: () => void;
   models: string[];
@@ -283,7 +296,6 @@ function ConnectionCard({
   total,
   mode,
   isActive,
-  isMobile,
   expanded,
   onToggleExpanded,
   models,
@@ -301,6 +313,7 @@ function ConnectionCard({
   onTest,
   envPinned,
 }: ConnectionCardProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const bodyId = useId();
   const providerGroupId = useId();
@@ -310,7 +323,7 @@ function ConnectionCard({
   const summary = `${providerLabel} · ${c.model || t("settings.connections.noModel")}`;
 
   return (
-    <div className="space-y-3 rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-4">
+    <div className="space-y-3 rounded-md border border-border bg-surface-raised p-4">
       {/* Header row: active/enabled control, the disclosure summary, row actions */}
       <div className="flex items-center gap-2">
         {mode === "single" && (
@@ -321,7 +334,7 @@ function ConnectionCard({
             onChange={onSetActive}
             title={t("settings.connections.activeTitle")}
             aria-label={t("settings.connections.activeAria", { label: c.label })}
-            className="h-4 w-4 shrink-0 accent-[var(--accent)]"
+            className="h-4 w-4 shrink-0 accent-accent"
           />
         )}
         <button
@@ -329,21 +342,26 @@ function ConnectionCard({
           onClick={onToggleExpanded}
           aria-expanded={expanded}
           aria-controls={bodyId}
-          className="flex min-h-touch min-w-0 flex-1 items-center gap-2 rounded-sm px-1 text-left hover:bg-[var(--surface-3)]"
+          className="flex min-h-touch min-w-0 flex-1 items-center gap-2 rounded-sm px-1 text-left hover:bg-surface-highlight"
         >
-          <span className={`shrink-0 text-[var(--text-3)] transition-transform duration-fast ${expanded ? "rotate-180" : ""}`} aria-hidden="true">▾</span>
+          <Icon
+            name="chevron-down"
+            className={`shrink-0 text-faint transition-transform duration-fast ${expanded ? "rotate-180" : ""}`}
+          />
           <span className="min-w-0">
-            <span className="block truncate text-sm font-medium text-[var(--text)]">{c.label || t("settings.connections.connectionName")}</span>
-            {!expanded && <span className="block truncate text-xs text-[var(--text-3)]">{summary}</span>}
+            <span className="block truncate text-sm font-medium text-text">
+              {c.label || t("settings.connections.connectionName")}
+            </span>
+            {!expanded && <span className="block truncate text-xs text-faint">{summary}</span>}
           </span>
         </button>
         {mode !== "single" && (
-          <label className="flex shrink-0 items-center gap-2 text-xs text-[var(--text-2)]">
+          <label className="flex shrink-0 items-center gap-2 text-xs text-muted">
             <input
               type="checkbox"
               checked={c.enabled}
               onChange={(e) => onPatch({ enabled: e.target.checked })}
-              className="h-4 w-4 accent-[var(--accent)]"
+              className="h-4 w-4 accent-accent"
             />
             {t("settings.connections.enabled")}
           </label>
@@ -368,17 +386,22 @@ function ConnectionCard({
 
           {/* Provider */}
           <div>
-            <span id={providerGroupId} className={labelCls}>{t("settings.connections.provider")}</span>
-            <div role="group" aria-labelledby={providerGroupId} className="flex overflow-hidden rounded-sm border border-[var(--border)]">
+            <span id={providerGroupId} className={labelCls}>
+              {t("settings.connections.provider")}
+            </span>
+            <div
+              role="group"
+              aria-labelledby={providerGroupId}
+              className="flex overflow-hidden rounded-sm border border-border"
+            >
               {PROVIDERS.map((p) => (
                 <button
+                  type="button"
                   key={p}
                   onClick={() => onChangeProvider(p)}
                   aria-pressed={c.provider === p}
-                  className={`flex-1 border-r border-[var(--border)] py-2 text-xs font-medium transition-colors last:border-r-0 min-h-touch md:min-h-0 ${
-                    c.provider === p
-                      ? "bg-[var(--accent-dim)] text-[var(--accent)]"
-                      : "bg-[var(--surface)] text-[var(--text-2)] hover:text-[var(--text)]"
+                  className={`flex-1 border-r border-border py-2 text-xs font-medium transition-colors last:border-r-0 min-h-touch md:min-h-0 ${
+                    c.provider === p ? "bg-accent-soft text-accent" : "bg-surface text-muted hover:text-text"
                   }`}
                 >
                   {t(`settings.llmConnection.provider_${p}`)}
@@ -401,43 +424,63 @@ function ConnectionCard({
             <div className="flex items-end gap-2">
               <div className="min-w-0 flex-1">
                 <Field
-                  label={c.provider === "local" ? t("settings.connections.apiKeyOptional") : t("settings.connections.apiKey")}
+                  label={
+                    c.provider === "local" ? t("settings.connections.apiKeyOptional") : t("settings.connections.apiKey")
+                  }
                   value={c.apiKey === REDACTED_SECRET ? "" : c.apiKey}
                   onChange={(v) => onPatch({ apiKey: v })}
                   type={showKey ? "text" : "password"}
                   readOnly={Boolean(envPinned.apiKey)}
                   help={envPinned.apiKey ? t("settings.envPinnedNote", { name: envPinned.apiKey }) : undefined}
-                  placeholder={c.apiKey === REDACTED_SECRET ? "••••••••" : c.provider === "local" ? t("settings.connections.apiKeyPlaceholderLocal") : t("settings.connections.apiKeyPlaceholder")}
+                  placeholder={
+                    c.apiKey === REDACTED_SECRET
+                      ? "••••••••"
+                      : c.provider === "local"
+                        ? t("settings.connections.apiKeyPlaceholderLocal")
+                        : t("settings.connections.apiKeyPlaceholder")
+                  }
                 />
               </div>
               {/* An env key is never sent to the browser, so there is nothing to reveal. */}
-              {!envPinned.apiKey && <button
-                type="button"
-                onClick={onToggleShowKey}
-                aria-pressed={showKey}
-                aria-label={showKey ? t("settings.connections.hideApiKey") : t("settings.connections.showApiKey")}
-                className="flex min-h-touch shrink-0 items-center rounded-sm border border-[var(--border)] bg-[var(--surface)] px-3 text-xs text-[var(--text-2)] hover:text-[var(--text)]"
-              >
-                <Icon name={showKey ? "hide-secret" : "show-secret"} />
-              </button>}
+              {!envPinned.apiKey && (
+                <button
+                  type="button"
+                  onClick={onToggleShowKey}
+                  aria-pressed={showKey}
+                  aria-label={showKey ? t("settings.connections.hideApiKey") : t("settings.connections.showApiKey")}
+                  className="flex min-h-touch shrink-0 items-center rounded-sm border border-border bg-surface px-3 text-xs text-muted hover:text-text"
+                >
+                  <Icon name={showKey ? "hide-secret" : "show-secret"} />
+                </button>
+              )}
             </div>
           </div>
 
           {/* Model */}
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <label htmlFor={modelSelectId} className="text-xs font-medium text-[var(--text-2)]">{t("settings.connections.model")}</label>
-              <button onClick={onFetchModels} className="text-xs text-[var(--accent)]">
+              <label htmlFor={modelSelectId} className="text-xs font-medium text-muted">
+                {t("settings.connections.model")}
+              </label>
+              <button type="button" onClick={onFetchModels} className="text-xs text-accent">
                 {loadingModels ? t("common.loading") : t("settings.llmConnection.fetchModels")}
               </button>
             </div>
             {models.length > 0 ? (
-              <select id={modelSelectId} value={c.model} onChange={(e) => onPatch({ model: e.target.value })} disabled={Boolean(envPinned.model)} className={`${selectCls} disabled:cursor-not-allowed disabled:text-[var(--text-2)]`}>
+              <Select
+                id={modelSelectId}
+                value={c.model}
+                onChange={(value) => onPatch({ model: value })}
+                disabled={Boolean(envPinned.model)}
+                className="disabled:cursor-not-allowed disabled:text-muted"
+              >
                 <option value="">{t("settings.llmConnection.selectModel")}</option>
                 {models.map((m) => (
-                  <option key={m} value={m}>{m}</option>
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
                 ))}
-              </select>
+              </Select>
             ) : (
               <input
                 id={modelSelectId}
@@ -445,24 +488,33 @@ function ConnectionCard({
                 onChange={(e) => onPatch({ model: e.target.value })}
                 placeholder={t("settings.connections.modelPlaceholder")}
                 readOnly={Boolean(envPinned.model)}
-                className={`${selectCls} read-only:cursor-not-allowed read-only:text-[var(--text-2)]`}
+                className={`${selectCls} read-only:cursor-not-allowed read-only:text-muted`}
               />
             )}
-            {envPinned.model && <p className="mt-1 text-xs leading-6 text-[var(--text-3)]">{t("settings.envPinnedNote", { name: envPinned.model })}</p>}
+            {envPinned.model && (
+              <p className="mt-1 text-xs leading-6 text-faint">
+                {t("settings.envPinnedNote", { name: envPinned.model })}
+              </p>
+            )}
           </div>
 
           {/* Test */}
           <div className="flex items-center gap-3">
             <button
+              type="button"
               onClick={onTest}
-              className="min-h-touch rounded-sm border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-2)] hover:text-[var(--text)]"
+              className="min-h-touch rounded-sm border border-border bg-surface px-3 py-2 text-xs text-muted hover:text-text"
             >
               {testing ? t("settings.connections.testing") : t("settings.connections.test")}
             </button>
             {testResult && (
-              <span className={`text-xs ${testResult.ok ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                <span aria-hidden="true">{testResult.ok ? "✓ " : "✗ "}</span>
-                {testResult.ok ? testResult.message : testResult.message.includes("ECONNREFUSED") ? t("settings.connections.refused") : testResult.message}
+              <span className={`text-xs ${testResult.ok ? "text-success" : "text-danger"}`}>
+                <Icon name={testResult.ok ? "done" : "error"} />
+                {testResult.ok
+                  ? testResult.message
+                  : testResult.message.includes("ECONNREFUSED")
+                    ? t("settings.connections.refused")
+                    : testResult.message}
               </span>
             )}
           </div>

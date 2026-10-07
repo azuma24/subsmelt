@@ -1,20 +1,7 @@
-export const VIDEO_STATUSES = [
-  "new",
-  "queued",
-  "downloading",
-  "transcribing",
-  "translating",
-  "done",
-  "waiting",
-  "skipped",
-  "unavailable",
-  "failed",
-] as const;
+import type { SkipKind, UserAction, VideoStatus } from "../../shared/youtube.js";
 
-export type VideoStatus = (typeof VIDEO_STATUSES)[number];
-
-// "content": a Short or live stream on a channel whose follow leaves that kind out.
-export type SkipKind = "user" | "before_start" | "members_only" | "content";
+export { VIDEO_STATUSES } from "../../shared/youtube.js";
+export type { SkipKind, UserAction, VideoStatus };
 
 /** Every allowed move. Anything not listed is refused by the store. */
 const TRANSITIONS: Record<VideoStatus, readonly VideoStatus[]> = {
@@ -35,8 +22,6 @@ const TRANSITIONS: Record<VideoStatus, readonly VideoStatus[]> = {
 export function canTransition(from: VideoStatus, to: VideoStatus): boolean {
   return TRANSITIONS[from].includes(to);
 }
-
-export type UserAction = "download" | "retry" | "skip";
 
 /** What each row action does, and from which statuses it is offered. */
 export const USER_ACTIONS: Record<UserAction, { from: readonly VideoStatus[]; to: VideoStatus }> = {

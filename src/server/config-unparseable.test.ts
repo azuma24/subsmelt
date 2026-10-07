@@ -44,7 +44,12 @@ test("an unparseable config.json is backed up, logged, and reported to the UI", 
 
 test("a broken config is never silently replaced: background saves and settings edits leave it alone", async () => {
   config.setSetting("media_scanned", "1");
-  config.createTask({ source_lang: "Automatic", target_lang: "French", output_pattern: "{{name}}.{{lang_code}}.srt", lang_code: "fr" });
+  config.createTask({
+    source_lang: "Automatic",
+    target_lang: "French",
+    output_pattern: "{{name}}.{{lang_code}}.srt",
+    lang_code: "fr",
+  });
   const res = await fetch(`${base}/api/settings`, {
     method: "POST",
     headers: { "content-type": "application/json" },

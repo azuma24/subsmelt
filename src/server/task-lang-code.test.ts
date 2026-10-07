@@ -39,9 +39,23 @@ test("validateTaskLangCode rejects non-token codes and duplicates, accepts the r
 
 test("editing a task that kept an old spelling to avoid a duplicate never creates the duplicate", () => {
   for (const task of [...config.getTasks()]) config.deleteTask(task.id);
-  const english = Number(config.createTask({ source_lang: config.AUTO_SOURCE_LANGUAGE, target_lang: "English", output_pattern: "{{name}}.{{lang_code}}.srt", lang_code: "eng" }).lastInsertRowid);
+  const english = Number(
+    config.createTask({
+      source_lang: config.AUTO_SOURCE_LANGUAGE,
+      target_lang: "English",
+      output_pattern: "{{name}}.{{lang_code}}.srt",
+      lang_code: "eng",
+    }).lastInsertRowid,
+  );
   // A second English task, as an old config could hold it: written straight in, as loading leaves it.
-  const second = Number(config.createTask({ source_lang: config.AUTO_SOURCE_LANGUAGE, target_lang: "Klingon", output_pattern: "{{name}}.{{lang_code}}.srt", lang_code: "tlh" }).lastInsertRowid);
+  const second = Number(
+    config.createTask({
+      source_lang: config.AUTO_SOURCE_LANGUAGE,
+      target_lang: "Klingon",
+      output_pattern: "{{name}}.{{lang_code}}.srt",
+      lang_code: "tlh",
+    }).lastInsertRowid,
+  );
   Object.assign(config.getTask(second)!, { target_lang: "English", lang_code: "en" });
 
   config.updateTask(second, { enabled: 0 });
@@ -52,7 +66,14 @@ test("editing a task that kept an old spelling to avoid a duplicate never create
 
 test("a task moved to another language forgets the old language's codes", () => {
   for (const task of [...config.getTasks()]) config.deleteTask(task.id);
-  const id = Number(config.createTask({ source_lang: config.AUTO_SOURCE_LANGUAGE, target_lang: "English", output_pattern: "{{name}}.{{lang_code}}.srt", lang_code: "en" }).lastInsertRowid);
+  const id = Number(
+    config.createTask({
+      source_lang: config.AUTO_SOURCE_LANGUAGE,
+      target_lang: "English",
+      output_pattern: "{{name}}.{{lang_code}}.srt",
+      lang_code: "en",
+    }).lastInsertRowid,
+  );
   config.updateTask(id, { lang_code: "en" });
 
   config.updateTask(id, { target_lang: "Korean", lang_code: "kor" });
@@ -63,7 +84,14 @@ test("a task moved to another language forgets the old language's codes", () => 
 
 test("a spelling change within one language keeps the old code for files already on disk", () => {
   for (const task of [...config.getTasks()]) config.deleteTask(task.id);
-  const id = Number(config.createTask({ source_lang: config.AUTO_SOURCE_LANGUAGE, target_lang: "Klingon", output_pattern: "{{name}}.{{lang_code}}.srt", lang_code: "tlh" }).lastInsertRowid);
+  const id = Number(
+    config.createTask({
+      source_lang: config.AUTO_SOURCE_LANGUAGE,
+      target_lang: "Klingon",
+      output_pattern: "{{name}}.{{lang_code}}.srt",
+      lang_code: "tlh",
+    }).lastInsertRowid,
+  );
   Object.assign(config.getTask(id)!, { target_lang: "English", lang_code: "en" });
 
   config.updateTask(id, { prompt_override: "Be brief." });

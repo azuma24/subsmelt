@@ -1,8 +1,6 @@
-import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 from app import nemotron
 from app.nemotron_runtime import NemotronHandle
@@ -24,7 +22,14 @@ class ChunkPlanningTests(unittest.TestCase):
         self.assertEqual(nemotron.parse_silences(FFMPEG_STDERR), [(12.5, 13.3), (40.0, 40.7)])
 
     def test_cuts_a_1500s_file_at_the_longest_silence_near_each_10_minute_mark(self):
-        silences = [(100.0, 100.5), (590.0, 591.2), (605.0, 605.6), (1190.0, 1190.5), (1250.0, 1251.0), (1400.0, 1400.5)]
+        silences = [
+            (100.0, 100.5),
+            (590.0, 591.2),
+            (605.0, 605.6),
+            (1190.0, 1190.5),
+            (1250.0, 1251.0),
+            (1400.0, 1400.5),
+        ]
         self.assertEqual(
             nemotron.plan_chunks(1500.0, lambda: silences),
             [(0.0, 590.6), (590.6, 1250.5), (1250.5, 1500.0)],
@@ -75,11 +80,21 @@ class ChunkOffsetTests(unittest.TestCase):
                 {"type": "progress", "processedSeconds": 5.0, "totalSeconds": 5.0, "pct": 100.0},
             ],
         )
-        self.assertEqual([(w.text, w.start, w.end) for w in words], [
-            ("word0", 0.0, 0.4), ("word1", 0.5, 0.9), ("word2", 1.0, 1.4), ("word3", 1.5, 1.9),
-            ("word0", 2.0, 2.4), ("word1", 2.5, 2.9), ("word2", 3.0, 3.4), ("word3", 3.5, 3.9),
-            ("word4", 4.0, 4.4), ("word5", 4.5, 4.9),
-        ])
+        self.assertEqual(
+            [(w.text, w.start, w.end) for w in words],
+            [
+                ("word0", 0.0, 0.4),
+                ("word1", 0.5, 0.9),
+                ("word2", 1.0, 1.4),
+                ("word3", 1.5, 1.9),
+                ("word0", 2.0, 2.4),
+                ("word1", 2.5, 2.9),
+                ("word2", 3.0, 3.4),
+                ("word3", 3.5, 3.9),
+                ("word4", 4.0, 4.4),
+                ("word5", 4.5, 4.9),
+            ],
+        )
         self.assertEqual(locales, ["en-US", "en-US"])
         self.assertEqual([p.name for p in Path(tempfile.gettempdir()).glob("subsmelt-nemo-*")], [])
 
@@ -90,7 +105,9 @@ class ChunkOffsetTests(unittest.TestCase):
             audio = write_silent_wav(root / "audio.wav", 1.0)
             with self.assertRaises(RuntimeError) as ctx:
                 nemotron.transcribe_chunk(handle, audio, "en-US", "auto", None)
-        self.assertEqual(str(ctx.exception), f"nemo-speech failed: ASR model file does not exist: {root / 'absent.gguf'}")
+        self.assertEqual(
+            str(ctx.exception), f"nemo-speech failed: ASR model file does not exist: {root / 'absent.gguf'}"
+        )
 
 
 if __name__ == "__main__":

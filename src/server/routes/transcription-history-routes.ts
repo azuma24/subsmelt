@@ -6,6 +6,7 @@ import { assertMediaPathAllowed } from "../transcription-client.js";
 import { transcriptionHistory } from "../transcription-history.js";
 import { logger } from "../logger.js";
 import { runTranscriptionAttempt, transcriptionErrorStatus } from "./transcription-runtime.js";
+import { errorMessage } from "../errors.js";
 
 // ======== Transcription history (list/clear/retry) ========
 export function registerTranscriptionHistoryRoutes(app: Express): void {
@@ -37,8 +38,8 @@ export function registerTranscriptionHistoryRoutes(app: Express): void {
     // original attempt.
     try {
       assertMediaPathAllowed(attempt.inputPath, MEDIA_DIR);
-    } catch (error: any) {
-      return res.status(400).json({ error: error?.message || "Invalid media path" });
+    } catch (error) {
+      return res.status(400).json({ error: errorMessage(error) || "Invalid media path" });
     }
     try {
       const { result, attemptId } = await runTranscriptionAttempt({
@@ -55,20 +56,25 @@ export function registerTranscriptionHistoryRoutes(app: Express): void {
         },
         overwrite: attempt.overwrite === true,
       });
-      logger.info("system", `Retried transcription ${path.basename(attempt.inputPath)} → ${result.subtitle_path || "subtitle output"}`);
+      logger.info(
+        "system",
+        `Retried transcription ${path.basename(attempt.inputPath)} → ${result.subtitle_path || "subtitle output"}`,
+      );
 
-      let scanResult: ReturnType<typeof scanFolder> | null = null;
+      let scanResult: Awaited<ReturnType<typeof scanFolder>> | null = null;
       if (attempt.postAction === "transcribe_and_translate") {
-        scanResult = scanFolder(true);
+        scanResult = await scanFolder(true);
         if (scanResult.newJobs > 0) setTimeout(() => runQueueSafely(), 100);
       }
 
       const { ok: _backendOk, ...transcriptionResult } = result as { ok?: boolean } & Record<string, unknown>;
       return res.json({ ok: true, attemptId, ...transcriptionResult, postAction: attempt.postAction, scanResult });
-    } catch (error: any) {
-      logger.error("system", `Transcription retry failed: ${error?.message || error}`);
+    } catch (error) {
+      logger.error("system", `Transcription retry failed: ${errorMessage(error) || error}`);
       // 502 when the backend itself failed/was unreachable; 400 for client errors.
-      return res.status(transcriptionErrorStatus(error)).json({ error: error?.message || "Transcription retry failed" });
+      return res
+        .status(transcriptionErrorStatus(error))
+        .json({ error: errorMessage(error) || "Transcription retry failed" });
     }
   });
 }

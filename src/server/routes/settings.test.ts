@@ -25,7 +25,11 @@ const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 
 const getSettings = async () => (await fetch(`${base}/api/settings`)).json();
 const saveSettings = (body: Record<string, string>) =>
-  fetch(`${base}/api/settings`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  fetch(`${base}/api/settings`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
 
 const WEBHOOK = "https://discord.com/api/webhooks/123/secret-token";
 
@@ -73,10 +77,18 @@ test("out-of-range numeric settings are refused with the allowed range, and noth
 });
 
 test("in-range numbers save, and an out-of-range value already stored does not block unrelated saves", async () => {
-  const res = await saveSettings({ chunk_size: "40", temperature: ".7", request_timeout_s: "600", context_window: "0", transcription_max_line_length: "0" });
+  const res = await saveSettings({
+    chunk_size: "40",
+    temperature: ".7",
+    request_timeout_s: "600",
+    context_window: "0",
+    transcription_max_line_length: "0",
+  });
   assert.equal(res.status, 200);
   assert.deepEqual(
-    ["chunk_size", "temperature", "request_timeout_s", "context_window", "transcription_max_line_length"].map(getSetting),
+    ["chunk_size", "temperature", "request_timeout_s", "context_window", "transcription_max_line_length"].map(
+      getSetting,
+    ),
     ["40", ".7", "600", "0", "0"],
   );
 

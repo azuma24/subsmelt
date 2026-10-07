@@ -1,4 +1,4 @@
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { LIBRARY_STATUSES, type LibraryFilter } from "./library-model";
 import { STATUS_DOT } from "./LibraryRows";
 
@@ -26,7 +26,9 @@ export function StatusChips({ counts, active, onSelect }: StatusChipsProps) {
           >
             {filter !== "all" && <span aria-hidden="true" className={`h-2 w-2 rounded-full ${STATUS_DOT[filter]}`} />}
             {t(`library.filter.${filter}`)}
-            <span className={`font-mono text-xs tabular-nums ${selected ? "text-surface" : "text-muted"}`}>{counts[filter]}</span>
+            <span className={`font-mono text-xs tabular-nums ${selected ? "text-surface" : "text-muted"}`}>
+              {counts[filter]}
+            </span>
           </button>
         );
       })}

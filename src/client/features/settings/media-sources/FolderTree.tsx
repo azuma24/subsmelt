@@ -1,17 +1,11 @@
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../../i18n";
 import type { FolderNode, Task } from "../../../types";
-import { FileTreeView, type FolderRowContext } from "../../../components/file-tree/FileTreeView";
-import type { TreeExpansion } from "../../../components/file-tree/use-persisted-expansion";
-import type { DrillDownState } from "../../../components/file-tree/use-drill-down";
-import {
-  TRI_STATES,
-  hasDescendant,
-  pathMatchesScope,
-  type DirectoryRule,
-  type ScanMode,
-  type TriState,
-} from "./model";
+import { FileTreeView, type FolderRowContext } from "../../../ui/file-tree/FileTreeView";
+import type { TreeExpansion } from "../../../ui/file-tree/use-persisted-expansion";
+import type { DrillDownState } from "../../../ui/file-tree/use-drill-down";
+import { TRI_STATES, hasDescendant, pathMatchesScope, type DirectoryRule, type ScanMode, type TriState } from "./model";
+import { Icon } from "../../../ui/Icon";
 
 /**
  * FolderNode carries no `files` field (Settings folders have no per-file
@@ -46,7 +40,6 @@ interface FolderTreeRowSharedProps extends FolderTreeSharedProps {
 
 export interface FolderTreeProps extends FolderTreeRowSharedProps {
   nodes: SettingsTreeNode[];
-  isMobile: boolean;
   expansion: TreeExpansion;
   drill: DrillDownState<SettingsTreeNode>;
 }
@@ -57,14 +50,13 @@ export interface FolderTreeProps extends FolderTreeRowSharedProps {
  * content via FolderTreeRow. Rows are tall (checkbox + counts + rules
  * button), hence `sticky={false}` — the view's sticky offsets assume 36px.
  */
-export function FolderTree({ nodes, isMobile, expansion, drill, ...rowProps }: FolderTreeProps) {
+export function FolderTree({ nodes, expansion, drill, ...rowProps }: FolderTreeProps) {
   const { t } = useTranslation();
   return (
     <FileTreeView
       sticky={false}
       roots={nodes}
       rootFiles={[]}
-      isMobile={isMobile}
       expansion={expansion}
       drill={drill}
       homeLabel={t("common.home")}
@@ -114,19 +106,19 @@ function FolderRulesEditor({
   };
 
   return (
-    <div className="mx-1 mb-2 rounded-sm border border-[var(--border)] bg-[var(--surface)] p-3">
+    <div className="mx-1 mb-2 rounded-sm border border-border bg-surface p-3">
       <div className="mb-2">
-        <div className="mb-1 text-xs uppercase tracking-wide text-[var(--text-3)]">
+        <div className="mb-1 text-xs uppercase tracking-wide text-faint">
           {t("settings.sources.dirRules.videolessLabel")}
         </div>
-        <div className="inline-flex overflow-hidden rounded-sm border border-[var(--border)]">
+        <div className="inline-flex overflow-hidden rounded-sm border border-border">
           {TRI_STATES.map((state) => (
             <button
               key={state}
               type="button"
               onClick={() => handleTriState(state)}
               aria-pressed={currentTwv === state}
-              className={`px-3 py-1 text-xs min-h-touch md:min-h-0 ${currentTwv === state ? "bg-[var(--accent)] text-[var(--on-accent)]" : "bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)]"}`}
+              className={`px-3 py-1 text-xs min-h-touch md:min-h-0 ${currentTwv === state ? "bg-accent text-accent-text" : "bg-surface-raised text-muted hover:text-text"}`}
             >
               {triLabel(state)}
             </button>
@@ -135,23 +127,23 @@ function FolderRulesEditor({
       </div>
 
       <div className="mb-2">
-        <div className="mb-1 text-xs uppercase tracking-wide text-[var(--text-3)]">
+        <div className="mb-1 text-xs uppercase tracking-wide text-faint">
           {t("settings.sources.dirRules.languagesLabel")}
         </div>
         {tasks.length === 0 ? (
-          <p className="text-xs text-[var(--text-3)]">{t("settings.sources.dirRules.noTasks")}</p>
+          <p className="text-xs text-faint">{t("settings.sources.dirRules.noTasks")}</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {tasks.map((task) => (
               <label
                 key={task.id}
-                className={`flex min-h-touch cursor-pointer items-center gap-2 rounded-full border px-3 py-1 text-xs md:min-h-0 ${currentTaskIds.includes(task.id) ? "border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]" : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)]"}`}
+                className={`flex min-h-touch cursor-pointer items-center gap-2 rounded-full border px-3 py-1 text-xs md:min-h-0 ${currentTaskIds.includes(task.id) ? "border-accent-line bg-accent-soft text-accent" : "border-border bg-surface-raised text-muted"}`}
               >
                 <input
                   type="checkbox"
                   checked={currentTaskIds.includes(task.id)}
                   onChange={() => handleToggleTask(task.id)}
-                  className="h-3 w-3 accent-[var(--accent)]"
+                  className="h-3 w-3 accent-accent"
                 />
                 {task.target_lang}
               </label>
@@ -165,7 +157,7 @@ function FolderRulesEditor({
           <button
             type="button"
             onClick={handleRemove}
-            className="rounded-sm px-2 py-1 text-xs text-[var(--text-3)] hover:text-[var(--red)]"
+            className="rounded-sm px-2 py-1 text-xs text-faint hover:text-danger"
           >
             {t("common.delete")}
           </button>
@@ -210,7 +202,11 @@ function FolderTreeRow({
     if (!hasRule) return null;
     const parts: string[] = [];
     if (rule.translateWithoutVideo !== "inherit") {
-      parts.push(t("settings.sources.dirRules.chipNoVideo", { state: t(`settings.sources.dirRules.tri_${rule.translateWithoutVideo}`) }));
+      parts.push(
+        t("settings.sources.dirRules.chipNoVideo", {
+          state: t(`settings.sources.dirRules.tri_${rule.translateWithoutVideo}`),
+        }),
+      );
     }
     if (rule.taskIds.length > 0) {
       parts.push(t("settings.sources.dirRules.chipLangs", { count: rule.taskIds.length }));
@@ -220,17 +216,35 @@ function FolderTreeRow({
 
   const body = (
     <>
-      <div className="truncate text-xs font-medium text-[var(--text)]">
-        {ctx.ancestorHint && <span className="text-xs font-normal text-[var(--text-3)]">{ctx.ancestorHint} / </span>}
+      <div className="truncate text-xs font-medium text-text">
+        {ctx.ancestorHint && <span className="text-xs font-normal text-faint">{ctx.ancestorHint} / </span>}
         {node.name}
       </div>
-      <div className="truncate font-mono text-xs text-[var(--text-3)]">{mediaDir}/{node.path}</div>
-      <div className="mt-1 flex flex-wrap gap-1 whitespace-nowrap text-xs text-[var(--text-2)]">
-        <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-1">{t("settings.sources.folderCountVideos", { count: node.counts.videos })}</span>
-        <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-1">{t("settings.sources.folderCountSubtitles", { count: node.counts.subtitles })}</span>
-        {node.counts.pendingJobs > 0 && <span className="rounded-full border border-[var(--yellow-border)] bg-[var(--yellow-dim)] px-2 py-1 text-[var(--yellow)]">{t("settings.sources.folderCountPending", { count: node.counts.pendingJobs })}</span>}
-        {node.counts.completeJobs > 0 && <span className="rounded-full border border-[var(--green-border)] bg-[var(--green-dim)] px-2 py-1 text-[var(--green)]">{t("settings.sources.folderCountComplete", { count: node.counts.completeJobs })}</span>}
-        {node.counts.errorJobs > 0 && <span className="rounded-full border border-[var(--red-border)] bg-[var(--red-dim)] px-2 py-1 text-[var(--red)]">{t("settings.sources.folderCountErrors", { count: node.counts.errorJobs })}</span>}
+      <div className="truncate font-mono text-xs text-faint">
+        {mediaDir}/{node.path}
+      </div>
+      <div className="mt-1 flex flex-wrap gap-1 whitespace-nowrap text-xs text-muted">
+        <span className="rounded-full border border-border bg-surface px-2 py-1">
+          {t("settings.sources.folderCountVideos", { count: node.counts.videos })}
+        </span>
+        <span className="rounded-full border border-border bg-surface px-2 py-1">
+          {t("settings.sources.folderCountSubtitles", { count: node.counts.subtitles })}
+        </span>
+        {node.counts.pendingJobs > 0 && (
+          <span className="rounded-full border border-warning-line bg-warning-soft px-2 py-1 text-warning">
+            {t("settings.sources.folderCountPending", { count: node.counts.pendingJobs })}
+          </span>
+        )}
+        {node.counts.completeJobs > 0 && (
+          <span className="rounded-full border border-success-line bg-success-soft px-2 py-1 text-success">
+            {t("settings.sources.folderCountComplete", { count: node.counts.completeJobs })}
+          </span>
+        )}
+        {node.counts.errorJobs > 0 && (
+          <span className="rounded-full border border-danger-line bg-danger-soft px-2 py-1 text-danger">
+            {t("settings.sources.folderCountErrors", { count: node.counts.errorJobs })}
+          </span>
+        )}
       </div>
     </>
   );
@@ -240,10 +254,10 @@ function FolderTreeRow({
       <div
         className={`mb-1 flex items-center gap-2 rounded-sm border px-2 py-2 transition-colors ${
           excludedHere
-            ? "border-[var(--red-border)] bg-[var(--red-dim)]"
+            ? "border-danger-line bg-danger-soft"
             : checked
-              ? "border-[var(--accent-border)] bg-[var(--accent-dim)]"
-              : "border-[var(--border-sub)] bg-[var(--surface-3)]"
+              ? "border-accent-line bg-accent-soft"
+              : "border-border-subtle bg-surface-highlight"
         }`}
         style={{ paddingLeft: `${ctx.padLeftPx}px` }}
       >
@@ -252,10 +266,10 @@ function FolderTreeRow({
             type="button"
             onClick={ctx.onActivate}
             disabled={!hasChildren}
-            className="h-6 min-h-touch w-6 shrink-0 rounded-sm text-xs text-[var(--text-3)] hover:bg-[var(--surface-2)] disabled:opacity-20 md:min-h-0"
+            className="h-6 min-h-touch w-6 shrink-0 rounded-sm text-xs text-faint hover:bg-surface-raised disabled:opacity-20 md:min-h-0"
             aria-label={ctx.open ? t("settings.sources.collapseFolder") : t("settings.sources.expandFolder")}
           >
-            {hasChildren ? (ctx.open ? "▾" : "▸") : ""}
+            {hasChildren && <Icon name={ctx.open ? "chevron-down" : "chevron-right"} />}
           </button>
         )}
         {interactive && (
@@ -267,7 +281,7 @@ function FolderTreeRow({
               if (el) el.indeterminate = mixed;
             }}
             onChange={() => onToggleIncluded(node.path)}
-            className="h-4 w-4 shrink-0 accent-[var(--accent)]"
+            className="h-4 w-4 shrink-0 accent-accent"
           />
         )}
         {/* A childless folder has nothing to drill into — keep it a plain row
@@ -284,17 +298,29 @@ function FolderTreeRow({
         ) : (
           <div className="min-w-0 flex-1">{body}</div>
         )}
-        <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${
-          excludedHere ? "bg-[var(--red-dim)] text-[var(--red)]" : checked ? "bg-[var(--accent-dim)] text-[var(--accent)]" : "bg-[var(--surface)] text-[var(--text-3)]"
-        }`}>
-          {excludedHere ? t("settings.sources.excludedBadge") : checked ? t("settings.sources.includedBadge") : t("settings.sources.notIncludedBadge")}
+        <span
+          className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${
+            excludedHere
+              ? "bg-danger-soft text-danger"
+              : checked
+                ? "bg-accent-soft text-accent"
+                : "bg-surface text-faint"
+          }`}
+        >
+          {excludedHere
+            ? t("settings.sources.excludedBadge")
+            : checked
+              ? t("settings.sources.includedBadge")
+              : t("settings.sources.notIncludedBadge")}
         </span>
         {interactive && (checked || excludedHere) && (
           <button
             type="button"
             onClick={() => onToggleExcluded(node.path)}
             className={`rounded-sm px-2 py-1 text-xs font-medium ${
-              excludedHere ? "bg-[var(--surface-3)] text-[var(--text-2)] hover:text-[var(--text)]" : "bg-[var(--red-dim)] text-[var(--red)] hover:brightness-110"
+              excludedHere
+                ? "bg-surface-highlight text-muted hover:text-text"
+                : "bg-danger-soft text-danger hover:brightness-110"
             }`}
           >
             {excludedHere ? t("settings.sources.allowFolder") : t("settings.sources.excludeFolder")}
@@ -305,17 +331,19 @@ function FolderTreeRow({
           onClick={() => setRulesOpen((prev) => !prev)}
           className={`shrink-0 rounded-sm border px-2 py-1 text-xs font-medium transition-colors min-h-touch md:min-h-0 ${
             hasRule
-              ? "border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)] hover:brightness-110"
-              : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text)]"
+              ? "border-accent-line bg-accent-soft text-accent hover:brightness-110"
+              : "border-border bg-surface-raised text-faint hover:text-text"
           }`}
           aria-expanded={rulesOpen}
         >
           {t("settings.sources.dirRules.rulesButton")}
-          {hasRule && ruleSummaryChip !== null && (
-            <span className="ml-1 opacity-75">{ruleSummaryChip}</span>
-          )}
+          {hasRule && ruleSummaryChip !== null && <span className="ml-1 opacity-75">{ruleSummaryChip}</span>}
         </button>
-        {isDrill && hasChildren && <span aria-hidden="true" className="shrink-0 text-[var(--text-3)]">›</span>}
+        {isDrill && hasChildren && (
+          <span aria-hidden="true" className="shrink-0 text-faint">
+            ›
+          </span>
+        )}
       </div>
       {rulesOpen && (
         <FolderRulesEditor

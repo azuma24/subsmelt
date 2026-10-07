@@ -10,6 +10,7 @@ has ``--generate-token``, both landing here.
 Kept dependency-free (stdlib ``secrets`` only) so the tray GUI can import it
 without dragging in the server stack, and so the frozen GUI exe stays small.
 """
+
 from __future__ import annotations
 
 import secrets
@@ -43,8 +44,7 @@ def generate_token(nbytes: int = TOKEN_BYTES) -> str:
     """
     if nbytes < MIN_TOKEN_BYTES:
         raise ValueError(
-            f"refusing to generate a token with only {nbytes} bytes of entropy; "
-            f"the minimum is {MIN_TOKEN_BYTES}"
+            f"refusing to generate a token with only {nbytes} bytes of entropy; the minimum is {MIN_TOKEN_BYTES}"
         )
     return secrets.token_urlsafe(nbytes)
 

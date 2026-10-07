@@ -3,11 +3,7 @@
 // parsing, and the streaming-unsupported sentinel. Used by every transport
 // (path/shared-FS, upload, URL) and by the model-manager client.
 
-import type {
-  BackendTranscriptionResponse,
-  TranscribeStreamingOptions,
-  TranscriptionProgressUpdate,
-} from "./types.js";
+import type { BackendTranscriptionResponse, TranscribeStreamingOptions, TranscriptionProgressUpdate } from "./types.js";
 
 // Short timeout (ms) for lightweight backend calls (health, preflight).
 export const SHORT_REQUEST_TIMEOUT_MS = 10_000;
@@ -74,8 +70,7 @@ export function transcriptionAuthHeaders(token: string | undefined): Record<stri
 
 // Clear, actionable message when the backend rejects the configured token so the
 // user is pointed straight at the setting to fix.
-const TOKEN_REJECTED_MESSAGE =
-  "Whisper backend rejected the token — check Transcription backend token in Settings";
+const TOKEN_REJECTED_MESSAGE = "Whisper backend rejected the token — check Transcription backend token in Settings";
 
 // Throws the standard 401 message; otherwise returns the generic backend error.
 // Centralizes 401 handling so every backend call surfaces the same guidance.
@@ -181,7 +176,8 @@ class StreamDeadline {
   }
 
   error(): Error {
-    if (this.externalSignal?.aborted || !this.expired) return abortReasonError(this.externalSignal, this.label, this.idleMs);
+    if (this.externalSignal?.aborted || !this.expired)
+      return abortReasonError(this.externalSignal, this.label, this.idleMs);
     const seconds = Math.round(this.expired.ms / 1000);
     return new Error(`${this.label} timed out after ${seconds}s${this.expired.idle ? " without progress" : ""}`);
   }

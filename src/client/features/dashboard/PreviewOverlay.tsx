@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useJobPreview } from "../../hooks";
+import { useJobPreview, useIsMobile } from "../../hooks";
 import { formatTimecode } from "../../lib";
 import { copyText } from "../../lib/clipboard";
-import { ModalShell } from "../../components/ModalShell";
+import { ModalShell } from "../../ui/ModalShell";
 import { PageError, PageLoading } from "../../ui/QueryState";
-import { useToast } from "../../components/Toast";
+import { useToast } from "../../ui/Toast";
 import { ApiError, jobDownloadUrl, saveJobCues } from "../../api";
 import type { PreviewLine } from "../../types";
+import { Icon } from "../../ui/Icon";
+import { IconButton } from "../../ui/primitives";
 
 interface PreviewOverlayProps {
-  isMobile: boolean;
   jobId: number;
   previewSearch: string;
   setPreviewSearch: (v: string) => void;
@@ -53,7 +54,8 @@ interface EditCtx {
   editedLabel: string;
 }
 
-export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearch, onClose }: PreviewOverlayProps) {
+export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose }: PreviewOverlayProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const titleId = useId();
   const { addToast } = useToast();
@@ -76,6 +78,7 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
   }, [previewData?.lines]);
 
   // Reset edit buffer when switching jobs or when fresh data arrives.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the buffer resets when the job changes, not when its own state does
   useEffect(() => {
     setEdits(new Map());
   }, [jobId]);
@@ -100,20 +103,21 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
   const { plot, glossary } = useMemo(() => splitAnalysisSections(previewData?.analysis || ""), [previewData?.analysis]);
   // First body line of the analysis (headings skipped) as the collapsed teaser.
   const analysisHint = useMemo(
-    () => (previewData?.analysis || "").split("\n").map((line) => line.trim()).find((line) => line && !line.startsWith("#")) || "",
+    () =>
+      (previewData?.analysis || "")
+        .split("\n")
+        .map((line) => line.trim())
+        .find((line) => line && !line.startsWith("#")) || "",
     [previewData?.analysis],
   );
 
-  const getValue = useCallback(
-    (index: number): string | undefined => edits.get(index),
-    [edits]
-  );
+  const getValue = useCallback((index: number): string | undefined => edits.get(index), [edits]);
   const isDirty = useCallback(
     (index: number): boolean => {
       if (!edits.has(index)) return false;
       return (edits.get(index) ?? "") !== (baseline.get(index) ?? "");
     },
-    [edits, baseline]
+    [edits, baseline],
   );
   const onChange = useCallback((index: number, value: string) => {
     setEdits((prev) => {
@@ -131,7 +135,7 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
       placeholder: t("dashboard.preview.editPlaceholder"),
       editedLabel: t("dashboard.preview.edited"),
     }),
-    [getValue, isDirty, onChange, t]
+    [getValue, isDirty, onChange, t],
   );
 
   // The effective translated text for a line: edited value if present, else
@@ -142,7 +146,7 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
       const edited = edits.get(line.index);
       return edited !== undefined ? edited : line.translated;
     },
-    [edits]
+    [edits],
   );
 
   // Count of cues whose edited value differs from the saved baseline.
@@ -232,13 +236,19 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
       labelledBy={titleId}
       onClose={onClose}
       overlayClassName="fixed inset-0 z-50 bg-scrim p-0 md:p-4"
-      panelClassName={`mx-auto flex h-full w-full flex-col overflow-hidden border border-[var(--border)] bg-[var(--surface)] ${isMobile ? "rounded-none" : "max-w-6xl rounded-md md:max-h-[90vh]"}`}
+      panelClassName={`mx-auto flex h-full w-full flex-col overflow-hidden border border-border bg-surface ${isMobile ? "rounded-none" : "max-w-6xl rounded-md md:max-h-[90vh]"}`}
     >
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex items-center justify-between gap-4 border-b border-[var(--border)] px-6 py-4">
+        <div className="flex items-center justify-between gap-4 border-b border-border px-6 py-4">
           <div className="min-w-0">
-            <h3 id={titleId} className="break-words text-base font-semibold text-[var(--text)] [overflow-wrap:anywhere]">{title}</h3>
-            {previewData?.targetLang && <p className="text-xs text-[var(--text-3)]">→ {previewData.targetLang} • {filteredLines.length}</p>}
+            <h3 id={titleId} className="break-words text-base font-semibold text-text [overflow-wrap:anywhere]">
+              {title}
+            </h3>
+            {previewData?.targetLang && (
+              <p className="text-xs text-faint">
+                → {previewData.targetLang} • {filteredLines.length}
+              </p>
+            )}
           </div>
           <input
             type="search"
@@ -246,104 +256,158 @@ export function PreviewOverlay({ isMobile, jobId, previewSearch, setPreviewSearc
             onChange={(e) => setPreviewSearch(e.target.value)}
             placeholder={t("dashboard.preview.search")}
             aria-label={t("dashboard.preview.search")}
-            className="w-40 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text)] focus:border-[var(--accent)] md:w-56"
+            className="w-40 rounded-md border border-border bg-surface-raised px-3 py-2 text-xs text-text focus:border-accent md:w-56"
           />
-          <button onClick={onClose} aria-label={t("common.close")} className="text-base text-[var(--text-2)] hover:text-[var(--text)]">×</button>
+          <IconButton icon="close" label={t("common.close")} onClick={onClose} />
         </div>
-          <div className="border-b border-[var(--border)] px-4 py-2">
-            <div className="flex flex-wrap gap-2 text-xs">
-              <button onClick={() => setShowOnlyChanged((v) => !v)} className={`rounded-sm px-2 py-1 ${showOnlyChanged ? "bg-[var(--accent)] text-[var(--on-accent)]" : "bg-[var(--surface-2)] text-[var(--text-2)]"}`}>{t("dashboard.preview.showOnlyChanged")}</button>
-              <button onClick={() => setShowOnlyIssues((v) => !v)} className={`rounded-sm px-2 py-1 ${showOnlyIssues ? "bg-[var(--yellow)] text-[var(--bg)]" : "bg-[var(--surface-2)] text-[var(--text-2)]"}`}>{t("dashboard.preview.showOnlyIssues")}</button>
-              <button onClick={jumpToNextIssue} className="rounded-sm bg-[var(--surface-2)] px-2 py-1 text-[var(--text-2)]">{t("dashboard.preview.nextIssue")}</button>
-            </div>
+        <div className="border-b border-border px-4 py-2">
+          <div className="flex flex-wrap gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => setShowOnlyChanged((v) => !v)}
+              className={`rounded-sm px-2 py-1 ${showOnlyChanged ? "bg-accent text-accent-text" : "bg-surface-raised text-muted"}`}
+            >
+              {t("dashboard.preview.showOnlyChanged")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowOnlyIssues((v) => !v)}
+              className={`rounded-sm px-2 py-1 ${showOnlyIssues ? "bg-warning text-canvas" : "bg-surface-raised text-muted"}`}
+            >
+              {t("dashboard.preview.showOnlyIssues")}
+            </button>
+            <button
+              type="button"
+              onClick={jumpToNextIssue}
+              className="rounded-sm bg-surface-raised px-2 py-1 text-muted"
+            >
+              {t("dashboard.preview.nextIssue")}
+            </button>
           </div>
-          <div ref={listRef} className="relative flex-1 overflow-y-auto">
-            {previewQuery.isLoading && <PageLoading label={t("dashboard.preview.loading")} />}
-            {previewQuery.isError && !previewQuery.isLoading && (
-              <PageError onRetry={() => void previewQuery.refetch()} />
-            )}
-            {previewData?.analysis && (
-              <div className="mx-4 mt-4 rounded-md border border-[var(--border)] bg-[var(--surface-2)]">
-                {/* Collapsed by default: the analysis can run to hundreds of
+        </div>
+        <div ref={listRef} className="relative flex-1 overflow-y-auto">
+          {previewQuery.isLoading && <PageLoading label={t("dashboard.preview.loading")} />}
+          {previewQuery.isError && !previewQuery.isLoading && <PageError onRetry={() => void previewQuery.refetch()} />}
+          {previewData?.analysis && (
+            <div className="mx-4 mt-4 rounded-md border border-border bg-surface-raised">
+              {/* Collapsed by default: the analysis can run to hundreds of
                     lines and used to push every cue row below the fold. */}
-                <button
-                  type="button"
-                  onClick={() => setShowAnalysis((v) => !v)}
-                  aria-expanded={showAnalysis}
-                  className="flex w-full flex-col gap-1 px-4 py-3 text-left"
-                >
-                  <span className="flex w-full items-center justify-between gap-3">
-                    <span className="text-xs uppercase tracking-wide text-[var(--text-3)]">{t("dashboard.preview.analysisTitle")}</span>
-                    <span className="shrink-0 text-xs text-[var(--accent)]">{showAnalysis ? t("dashboard.preview.hideAnalysis") : t("dashboard.preview.showAnalysis")}</span>
+              <button
+                type="button"
+                onClick={() => setShowAnalysis((v) => !v)}
+                aria-expanded={showAnalysis}
+                className="flex w-full flex-col gap-1 px-4 py-3 text-left"
+              >
+                <span className="flex w-full items-center justify-between gap-3">
+                  <span className="text-xs uppercase tracking-wide text-faint">
+                    {t("dashboard.preview.analysisTitle")}
                   </span>
-                  {!showAnalysis && analysisHint && (
-                    <span className="block w-full truncate text-xs text-[var(--text-2)]">{analysisHint}</span>
-                  )}
-                </button>
-                {showAnalysis && (
-                  <div className="border-t border-[var(--border)] px-4 pb-4 pt-3">
-                    <pre className="max-h-[40vh] overflow-y-auto whitespace-pre-wrap text-xs text-[var(--text)] leading-relaxed">{previewData.analysis}</pre>
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                      <button onClick={() => handleCopy(previewData.analysis || "", t("dashboard.preview.copiedContext"))} className="rounded-sm bg-[var(--surface-2)] px-2 py-1 text-[var(--text)]">{t("dashboard.preview.copyContext")}</button>
-                      <button onClick={() => handleCopy(plot || "", t("dashboard.preview.copiedPlot"))} className="rounded-sm bg-[var(--surface-2)] px-2 py-1 text-[var(--text)]">{t("dashboard.preview.copyPlot")}</button>
-                      <button onClick={() => handleCopy(glossary || "", t("dashboard.preview.copiedGlossary"))} className="rounded-sm bg-[var(--surface-2)] px-2 py-1 text-[var(--text)]">{t("dashboard.preview.copyGlossary")}</button>
-                    </div>
+                  <span className="shrink-0 text-xs text-accent">
+                    {showAnalysis ? t("dashboard.preview.hideAnalysis") : t("dashboard.preview.showAnalysis")}
+                  </span>
+                </span>
+                {!showAnalysis && analysisHint && (
+                  <span className="block w-full truncate text-xs text-muted">{analysisHint}</span>
+                )}
+              </button>
+              {showAnalysis && (
+                <div className="border-t border-border px-4 pb-4 pt-3">
+                  <pre className="max-h-[40vh] overflow-y-auto whitespace-pre-wrap text-xs text-text leading-relaxed">
+                    {previewData.analysis}
+                  </pre>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(previewData.analysis || "", t("dashboard.preview.copiedContext"))}
+                      className="rounded-sm bg-surface-raised px-2 py-1 text-text"
+                    >
+                      {t("dashboard.preview.copyContext")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(plot || "", t("dashboard.preview.copiedPlot"))}
+                      className="rounded-sm bg-surface-raised px-2 py-1 text-text"
+                    >
+                      {t("dashboard.preview.copyPlot")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(glossary || "", t("dashboard.preview.copiedGlossary"))}
+                      className="rounded-sm bg-surface-raised px-2 py-1 text-text"
+                    >
+                      {t("dashboard.preview.copyGlossary")}
+                    </button>
                   </div>
-                )}
-              </div>
-            )}
-            {previewData && filteredLines.length === 0 && !previewQuery.isLoading && (
-              <div className="py-12 text-center text-sm text-[var(--text-3)]">{t("dashboard.preview.noLines")}</div>
-            )}
-            {previewData && filteredLines.length > 0 && (
-              <div ref={listStartRef}>
-                {shouldVirtualize ? (
-                  isMobile
-                    ? <PreviewMobileVirtual lines={filteredLines} virtualizer={virtualizer} editCtx={editCtx} effective={effectiveTranslated} />
-                    : <PreviewDesktopVirtual lines={filteredLines} virtualizer={virtualizer} editCtx={editCtx} effective={effectiveTranslated} />
-                ) : isMobile ? (
-                  <PreviewMobileList lines={filteredLines} editCtx={editCtx} effective={effectiveTranslated} />
-                ) : (
-                  <PreviewDesktopTable lines={filteredLines} editCtx={editCtx} effective={effectiveTranslated} />
-                )}
-              </div>
-            )}
-          </div>
-          {previewData && filteredLines.length > 0 && (
-            <div className="border-t border-[var(--border)] px-6 py-3 flex flex-wrap items-center justify-end gap-2">
-              <button
-                onClick={() => {
-                  const tsv = filteredLines.map((l) => `${l.index}\t${l.original}\t${effectiveTranslated(l)}`).join("\n");
-                  void handleCopy(tsv, t("dashboard.toast.copiedTSV"));
-                }}
-                className="rounded-md border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-2)] hover:text-[var(--text)]"
-              >
-                {t("dashboard.preview.copyTSV")}
-              </button>
-              <a
-                href={jobDownloadUrl(jobId)}
-                download
-                className="rounded-md border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-2)] hover:text-[var(--text)]"
-              >
-                {t("dashboard.preview.download")}
-              </a>
-              <button
-                onClick={() => void handleSave()}
-                disabled={dirtyCount === 0 || isSaving}
-                className={`rounded-md px-3 py-2 text-xs font-medium ${
-                  dirtyCount === 0 || isSaving
-                    ? "cursor-not-allowed bg-[var(--surface-2)] text-[var(--text-3)]"
-                    : "bg-[var(--accent)] text-[var(--on-accent)] hover:brightness-110"
-                }`}
-              >
-                {isSaving
-                  ? t("dashboard.preview.saving")
-                  : dirtyCount > 0
-                    ? t("dashboard.preview.saveChangesCount", { count: dirtyCount })
-                    : t("dashboard.preview.saveChanges")}
-              </button>
+                </div>
+              )}
             </div>
           )}
+          {previewData && filteredLines.length === 0 && !previewQuery.isLoading && (
+            <div className="py-12 text-center text-sm text-faint">{t("dashboard.preview.noLines")}</div>
+          )}
+          {previewData && filteredLines.length > 0 && (
+            <div ref={listStartRef}>
+              {shouldVirtualize ? (
+                isMobile ? (
+                  <PreviewMobileVirtual
+                    lines={filteredLines}
+                    virtualizer={virtualizer}
+                    editCtx={editCtx}
+                    effective={effectiveTranslated}
+                  />
+                ) : (
+                  <PreviewDesktopVirtual
+                    lines={filteredLines}
+                    virtualizer={virtualizer}
+                    editCtx={editCtx}
+                    effective={effectiveTranslated}
+                  />
+                )
+              ) : isMobile ? (
+                <PreviewMobileList lines={filteredLines} editCtx={editCtx} effective={effectiveTranslated} />
+              ) : (
+                <PreviewDesktopTable lines={filteredLines} editCtx={editCtx} effective={effectiveTranslated} />
+              )}
+            </div>
+          )}
+        </div>
+        {previewData && filteredLines.length > 0 && (
+          <div className="border-t border-border px-6 py-3 flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const tsv = filteredLines.map((l) => `${l.index}\t${l.original}\t${effectiveTranslated(l)}`).join("\n");
+                void handleCopy(tsv, t("dashboard.toast.copiedTSV"));
+              }}
+              className="rounded-md border border-border px-3 py-2 text-xs text-muted hover:text-text"
+            >
+              {t("dashboard.preview.copyTSV")}
+            </button>
+            <a
+              href={jobDownloadUrl(jobId)}
+              download
+              className="rounded-md border border-border px-3 py-2 text-xs text-muted hover:text-text"
+            >
+              {t("dashboard.preview.download")}
+            </a>
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={dirtyCount === 0 || isSaving}
+              className={`rounded-md px-3 py-2 text-xs font-medium ${
+                dirtyCount === 0 || isSaving
+                  ? "cursor-not-allowed bg-surface-raised text-faint"
+                  : "bg-accent text-accent-text hover:brightness-110"
+              }`}
+            >
+              {isSaving
+                ? t("dashboard.preview.saving")
+                : dirtyCount > 0
+                  ? t("dashboard.preview.saveChangesCount", { count: dirtyCount })
+                  : t("dashboard.preview.saveChanges")}
+            </button>
+          </div>
+        )}
       </div>
     </ModalShell>
   );
@@ -360,11 +424,7 @@ function hasIssue(line: PreviewLine, translatedOverride?: string): boolean {
   return Boolean(isUntranslated || isSuspiciousShort || isSuspiciousLong);
 }
 
-function filterLines(
-  lines: PreviewLine[],
-  search: string,
-  effective: (line: PreviewLine) => string
-): PreviewLine[] {
+function filterLines(lines: PreviewLine[], search: string, effective: (line: PreviewLine) => string): PreviewLine[] {
   if (!search) return lines;
   const q = search.toLowerCase();
   return lines.filter((l) => l.original.toLowerCase().includes(q) || effective(l).toLowerCase().includes(q));
@@ -384,8 +444,8 @@ function TranslatedEditor({ line, editCtx }: { line: PreviewLine; editCtx: EditC
       placeholder={editCtx.placeholder}
       rows={1}
       aria-label={editCtx.placeholder}
-      className={`w-full resize-y rounded-sm border bg-[var(--surface)] px-2 py-1 text-xs text-[var(--text)] focus:border-[var(--accent)] ${
-        dirty ? "border-[var(--accent-border)] bg-[var(--accent-dim)]" : "border-transparent hover:border-[var(--border)]"
+      className={`w-full resize-y rounded-sm border bg-surface px-2 py-1 text-xs text-text focus:border-accent ${
+        dirty ? "border-accent-line bg-accent-soft" : "border-transparent hover:border-border"
       }`}
       style={{ minHeight: "1.75rem", fieldSizing: "content" } as React.CSSProperties}
     />
@@ -404,7 +464,7 @@ function PreviewDesktopTable({
   const { t } = useTranslation();
   return (
     <table className="w-full text-sm">
-      <thead className="sticky top-0 bg-[var(--surface)] text-[var(--text-3)] text-xs uppercase">
+      <thead className="sticky top-0 bg-surface text-faint text-xs uppercase">
         <tr>
           <th className="px-3 py-2 text-left w-8">{t("dashboard.preview.colIndex")}</th>
           <th className="px-3 py-2 text-left w-24">{t("dashboard.preview.colTime")}</th>
@@ -413,8 +473,10 @@ function PreviewDesktopTable({
           <th className="px-3 py-2 text-left w-8"></th>
         </tr>
       </thead>
-      <tbody className="divide-y divide-[var(--border-sub)]">
-        {lines.map((line) => <PreviewLineRow key={line.index} line={line} table editCtx={editCtx} effective={effective} />)}
+      <tbody className="divide-y divide-border-subtle">
+        {lines.map((line) => (
+          <PreviewLineRow key={line.index} line={line} table editCtx={editCtx} effective={effective} />
+        ))}
       </tbody>
     </table>
   );
@@ -431,7 +493,9 @@ function PreviewMobileList({
 }) {
   return (
     <div className="space-y-3 p-4">
-      {lines.map((line) => <PreviewLineRow key={line.index} line={line} editCtx={editCtx} effective={effective} />)}
+      {lines.map((line) => (
+        <PreviewLineRow key={line.index} line={line} editCtx={editCtx} effective={effective} />
+      ))}
     </div>
   );
 }
@@ -458,7 +522,7 @@ function PreviewDesktopVirtual({
   return (
     <div className="text-sm">
       <div
-        className="sticky top-0 z-10 grid bg-[var(--surface)] text-[var(--text-3)] text-xs uppercase"
+        className="sticky top-0 z-10 grid bg-surface text-faint text-xs uppercase"
         style={{ gridTemplateColumns: DESKTOP_GRID_COLS }}
       >
         <div className={TH}>{t("dashboard.preview.colIndex")}</div>
@@ -544,29 +608,36 @@ function PreviewLineRow({
 
   if (table) {
     return (
-      <tr id={`preview-line-${line.index}`} className={issue ? "bg-[var(--yellow-dim)]" : ""}>
-        <td className="px-3 py-2 text-[var(--text-3)] text-xs align-top">{line.index}</td>
-        <td className="px-3 py-2 text-xs text-[var(--text-3)] font-mono align-top whitespace-nowrap">{formatTimecode(line.start)}</td>
-        <td className="px-3 py-2 text-[var(--text-2)] align-top text-xs">{line.original}</td>
-        <td className="px-3 py-2 align-top text-xs"><TranslatedEditor line={line} editCtx={editCtx} /></td>
-        <td className="px-3 py-2 align-top">{issue && <span className="text-[var(--yellow)] text-xs">⚠</span>}</td>
+      <tr id={`preview-line-${line.index}`} className={issue ? "bg-warning-soft" : ""}>
+        <td className="px-3 py-2 text-faint text-xs align-top">{line.index}</td>
+        <td className="px-3 py-2 text-xs text-faint font-mono align-top whitespace-nowrap">
+          {formatTimecode(line.start)}
+        </td>
+        <td className="px-3 py-2 text-muted align-top text-xs">{line.original}</td>
+        <td className="px-3 py-2 align-top text-xs">
+          <TranslatedEditor line={line} editCtx={editCtx} />
+        </td>
+        <td className="px-3 py-2 align-top">{issue && <Icon name="warning" className="text-warning" />}</td>
       </tr>
     );
   }
 
   return (
-    <div id={`preview-line-${line.index}`} className={`rounded-md border p-3 ${issue ? "border-[var(--yellow-border)] bg-[var(--yellow-dim)]" : "border-[var(--border)] bg-[var(--surface-2)]"}`}>
-      <div className="mb-2 flex items-center justify-between text-xs text-[var(--text-3)]">
+    <div
+      id={`preview-line-${line.index}`}
+      className={`rounded-md border p-3 ${issue ? "border-warning-line bg-warning-soft" : "border-border bg-surface-raised"}`}
+    >
+      <div className="mb-2 flex items-center justify-between text-xs text-faint">
         <span>#{line.index}</span>
         <span className="font-mono">{formatTimecode(line.start)}</span>
       </div>
       <div className="space-y-2 text-xs">
         <div>
-          <div className="mb-1 text-xs uppercase text-[var(--text-3)]">{t("dashboard.preview.colOriginal")}</div>
-          <div className="text-[var(--text-2)]">{line.original}</div>
+          <div className="mb-1 text-xs uppercase text-faint">{t("dashboard.preview.colOriginal")}</div>
+          <div className="text-muted">{line.original}</div>
         </div>
         <div>
-          <div className="mb-1 text-xs uppercase text-[var(--text-3)]">{t("dashboard.preview.colTranslated")}</div>
+          <div className="mb-1 text-xs uppercase text-faint">{t("dashboard.preview.colTranslated")}</div>
           <TranslatedEditor line={line} editCtx={editCtx} />
         </div>
       </div>
@@ -599,7 +670,7 @@ function PreviewLineGridRow({
       id={`preview-line-${line.index}`}
       data-index={dataIndex}
       ref={measureRef}
-      className={`grid border-b border-[var(--border-sub)] ${issue ? "bg-[var(--yellow-dim)]" : ""}`}
+      className={`grid border-b border-border-subtle ${issue ? "bg-warning-soft" : ""}`}
       style={{
         gridTemplateColumns: DESKTOP_GRID_COLS,
         position: "absolute",
@@ -609,11 +680,13 @@ function PreviewLineGridRow({
         transform: `translateY(${start}px)`,
       }}
     >
-      <div className="px-3 py-2 text-[var(--text-3)] text-xs">{line.index}</div>
-      <div className="px-3 py-2 text-xs text-[var(--text-3)] font-mono whitespace-nowrap">{formatTimecode(line.start)}</div>
-      <div className="px-3 py-2 text-[var(--text-2)] text-xs">{line.original}</div>
-      <div className="px-3 py-2 text-xs"><TranslatedEditor line={line} editCtx={editCtx} /></div>
-      <div className="px-3 py-2">{issue && <span className="text-[var(--yellow)] text-xs">⚠</span>}</div>
+      <div className="px-3 py-2 text-faint text-xs">{line.index}</div>
+      <div className="px-3 py-2 text-xs text-faint font-mono whitespace-nowrap">{formatTimecode(line.start)}</div>
+      <div className="px-3 py-2 text-muted text-xs">{line.original}</div>
+      <div className="px-3 py-2 text-xs">
+        <TranslatedEditor line={line} editCtx={editCtx} />
+      </div>
+      <div className="px-3 py-2">{issue && <Icon name="warning" className="text-warning" />}</div>
     </div>
   );
 }

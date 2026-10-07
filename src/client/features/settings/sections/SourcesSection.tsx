@@ -1,13 +1,13 @@
-import { useTranslation } from "react-i18next";
-import { Accordion, ActionButton, Field } from "../../../ui/primitives";
+import { useTranslation } from "../../../i18n";
+import { Accordion, ActionButton, Field, Select } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
 import { MediaSourcesPanel } from "../MediaSourcesPanel";
 import { NotificationsFields } from "./NotificationsFields";
-import { ToggleRow, bool, labelCls, selectCls } from "./shared";
+import { ToggleRow, bool, labelCls } from "./shared";
+import { useIsMobile } from "../../../hooks";
 
 interface SourcesSectionProps {
   settings: Record<string, unknown>;
-  isMobile: boolean;
   /** Deferred writer — the Advanced fields here still wait for the topbar Save. */
   update: (key: string, value: unknown) => void;
   updateAndSave: (key: string, value: unknown) => void;
@@ -30,7 +30,6 @@ interface SourcesSectionProps {
  */
 export function SourcesSection({
   settings,
-  isMobile,
   update,
   updateAndSave,
   updateManyAndSave,
@@ -40,11 +39,11 @@ export function SourcesSection({
   testingNotification,
   notificationTestResult,
 }: SourcesSectionProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   return (
     <>
       <MediaSourcesPanel
-        isMobile={isMobile}
         mediaDir={str(settings._media_dir, "/media")}
         scanMode={str(settings.scan_mode, "recursive")}
         scanFolders={str(settings.scan_folders)}
@@ -54,11 +53,13 @@ export function SourcesSection({
         onScanModeChange={(mode) => updateAndSave("scan_mode", mode)}
         onScanFoldersChange={(folders) => updateAndSave("scan_folders", folders)}
         onScanExcludeFoldersChange={(folders) => updateAndSave("scan_exclude_folders", folders)}
-        onScanScopeChange={(scope) => updateManyAndSave({
-          scan_mode: scope.scanMode,
-          scan_folders: scope.scanFolders,
-          scan_exclude_folders: scope.scanExcludeFolders,
-        })}
+        onScanScopeChange={(scope) =>
+          updateManyAndSave({
+            scan_mode: scope.scanMode,
+            scan_folders: scope.scanFolders,
+            scan_exclude_folders: scope.scanExcludeFolders,
+          })
+        }
         onScanProfilesChange={(profiles) => updateAndSave("scan_profiles", profiles)}
         onDirectoryRulesChange={(rules) => updateAndSave("directory_rules", rules)}
       />
@@ -69,41 +70,74 @@ export function SourcesSection({
         onChange={(checked) => updateAndSave("auto_translate", checked ? "1" : "0")}
       />
       <div className="space-y-2">
-        <label htmlFor="preferred-chinese" className={labelCls}>{t("settings.sources.preferredChinese")}</label>
-        <select
+        <label htmlFor="preferred-chinese" className={labelCls}>
+          {t("settings.sources.preferredChinese")}
+        </label>
+        <Select
           id="preferred-chinese"
           value={str(settings.preferred_chinese, "zh-TW")}
-          onChange={(e) => updateAndSave("preferred_chinese", e.target.value)}
-          className={`${selectCls} min-h-touch md:max-w-[320px]`}
+          onChange={(value) => updateAndSave("preferred_chinese", value)}
+          className="min-h-touch md:max-w-[320px]"
         >
           <option value="zh-TW">{t("settings.sources.chineseTraditional")}</option>
           <option value="zh-CN">{t("settings.sources.chineseSimplified")}</option>
-        </select>
-        <p className="text-xs leading-5 text-[var(--text-2)]">{t("settings.sources.preferredChineseHint")}</p>
+        </Select>
+        <p className="text-xs leading-5 text-muted">{t("settings.sources.preferredChineseHint")}</p>
       </div>
-      <div className="flex items-center justify-between gap-3 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-3 py-3">
+      <div className="flex items-center justify-between gap-3 rounded-sm border border-border bg-surface-raised px-3 py-3">
         <div>
-          <p className="text-sm font-medium text-[var(--text)]">{t("settings.sources.fileWatcher")}</p>
-          <p className="mt-1 text-xs text-[var(--text-2)]">{t("settings.sources.fileWatcherDesc")}</p>
+          <p className="text-sm font-medium text-text">{t("settings.sources.fileWatcher")}</p>
+          <p className="mt-1 text-xs text-muted">{t("settings.sources.fileWatcherDesc")}</p>
         </div>
-        <ActionButton variant={bool(settings._watcher_running) ? "success" : "ghost"} size="sm" onClick={onToggleWatcher}>{bool(settings._watcher_running) ? t("app.watcherActiveShort") : t("app.watcherInactiveShort")}</ActionButton>
+        <ActionButton
+          variant={bool(settings._watcher_running) ? "success" : "ghost"}
+          size="sm"
+          onClick={onToggleWatcher}
+        >
+          {bool(settings._watcher_running) ? t("app.watcherActiveShort") : t("app.watcherInactiveShort")}
+        </ActionButton>
       </div>
       {/* Video/subtitle extensions + auto-scan interval → Advanced accordion */}
       <Accordion title={t("settings.advanced")}>
         <div className="space-y-4">
           <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-2"} md:max-w-[480px]`}>
-            <Field label={t("settings.sources.videoExtensions")} value={str(settings.video_extensions)} onChange={(v) => update("video_extensions", v)} help={t("settings.sources.videoExtensionsHint")} />
-            <Field label={t("settings.sources.subtitleExtensions")} value={str(settings.subtitle_extensions)} onChange={(v) => update("subtitle_extensions", v)} help={t("settings.sources.subtitleExtensionsHint")} />
+            <Field
+              label={t("settings.sources.videoExtensions")}
+              value={str(settings.video_extensions)}
+              onChange={(v) => update("video_extensions", v)}
+              help={t("settings.sources.videoExtensionsHint")}
+            />
+            <Field
+              label={t("settings.sources.subtitleExtensions")}
+              value={str(settings.subtitle_extensions)}
+              onChange={(v) => update("subtitle_extensions", v)}
+              help={t("settings.sources.subtitleExtensionsHint")}
+            />
           </div>
           <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-2"} md:max-w-[420px]`}>
-            <Field label={t("settings.sources.autoScanInterval")} value={str(settings.auto_scan_interval, "0")} onChange={(v) => update("auto_scan_interval", v)} help={t("settings.sources.autoScanIntervalHint")} type="number" min={0} max={10080} />
-            <Field label={t("settings.sources.monthlyTokenBudget")} value={str(settings.monthly_token_budget, "0")} onChange={(v) => update("monthly_token_budget", v)} help={t("settings.sources.monthlyTokenBudgetHint")} type="number" min={0} max={1000000000000} />
+            <Field
+              label={t("settings.sources.autoScanInterval")}
+              value={str(settings.auto_scan_interval, "0")}
+              onChange={(v) => update("auto_scan_interval", v)}
+              help={t("settings.sources.autoScanIntervalHint")}
+              type="number"
+              min={0}
+              max={10080}
+            />
+            <Field
+              label={t("settings.sources.monthlyTokenBudget")}
+              value={str(settings.monthly_token_budget, "0")}
+              onChange={(v) => update("monthly_token_budget", v)}
+              help={t("settings.sources.monthlyTokenBudgetHint")}
+              type="number"
+              min={0}
+              max={1000000000000}
+            />
           </div>
         </div>
       </Accordion>
       <NotificationsFields
         settings={settings}
-        isMobile={isMobile}
         updateAndSave={updateAndSave}
         updateAndSaveDebounced={updateAndSaveDebounced}
         onTest={onNotificationTest}

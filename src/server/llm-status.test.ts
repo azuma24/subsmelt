@@ -131,10 +131,15 @@ test("the probe sends the connection's key and caches the answer", async () => {
 test("an HTTP error, a refused port, and a stalled host all read as offline", async () => {
   const unauthorized = await startLlmHost(401);
   const refused = await closedPortUrl();
-  const stalled = http.createServer(() => { /* never answers */ });
+  const stalled = http.createServer(() => {
+    /* never answers */
+  });
   stalled.listen(0, "127.0.0.1");
   await once(stalled, "listening");
-  after(() => { stalled.closeAllConnections(); stalled.close(); });
+  after(() => {
+    stalled.closeAllConnections();
+    stalled.close();
+  });
   const stalledUrl = `http://127.0.0.1:${(stalled.address() as AddressInfo).port}/v1`;
 
   const probe = createReachabilityProbe({ timeoutMs: 200 });
@@ -157,7 +162,11 @@ test("cloud connections are asked at their provider's models endpoint with their
       const url = String(input);
       const headers = Object.fromEntries(new Headers(init?.headers).entries());
       calls.push({ url, headers });
-      const key = headers.authorization?.replace("Bearer ", "") ?? headers["x-api-key"] ?? new URL(url).searchParams.get("key") ?? "";
+      const key =
+        headers.authorization?.replace("Bearer ", "") ??
+        headers["x-api-key"] ??
+        new URL(url).searchParams.get("key") ??
+        "";
       return answers[key]();
     },
   });
@@ -171,12 +180,15 @@ test("cloud connections are asked at their provider's models endpoint with their
   assert.equal(await probe(cloud("openai", "")), "offline", "a cloud connection without a key cannot work");
   assert.equal(await probe(cloud("openai", "sk-good")), "reachable");
 
-  assert.deepEqual(calls.map((c) => new URL(c.url).origin + new URL(c.url).pathname), [
-    "https://api.openai.com/v1/models",
-    "https://api.anthropic.com/v1/models",
-    "https://generativelanguage.googleapis.com/v1beta/models",
-    "https://api.openai.com/v1/models",
-  ]);
+  assert.deepEqual(
+    calls.map((c) => new URL(c.url).origin + new URL(c.url).pathname),
+    [
+      "https://api.openai.com/v1/models",
+      "https://api.anthropic.com/v1/models",
+      "https://generativelanguage.googleapis.com/v1beta/models",
+      "https://api.openai.com/v1/models",
+    ],
+  );
   assert.equal(calls[0].headers.authorization, "Bearer sk-good");
   assert.equal(calls[1].headers["x-api-key"], "sk-expired");
   assert.equal(calls[1].headers["anthropic-version"], "2023-06-01");
@@ -188,8 +200,24 @@ test("GET /api/llm/status lists the pool in order and never returns a key", asyn
   setSettings({
     llm_mode: "fallback",
     llm_connections: JSON.stringify([
-      { id: "backup", label: "Spare box", provider: "local", apiKey: "sk-backup-secret", model: "gemma", endpoint: down, order: 1 },
-      { id: "desk", label: "Desk GPU", provider: "local", apiKey: "sk-desk-secret", model: "qwen", endpoint: up.url, order: 0 },
+      {
+        id: "backup",
+        label: "Spare box",
+        provider: "local",
+        apiKey: "sk-backup-secret",
+        model: "gemma",
+        endpoint: down,
+        order: 1,
+      },
+      {
+        id: "desk",
+        label: "Desk GPU",
+        provider: "local",
+        apiKey: "sk-desk-secret",
+        model: "qwen",
+        endpoint: up.url,
+        order: 0,
+      },
       { id: "off", label: "Disabled", provider: "local", model: "x", endpoint: up.url, order: 2, enabled: false },
     ]),
   });

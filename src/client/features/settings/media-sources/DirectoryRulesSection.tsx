@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../../i18n";
 import type { Task } from "../../../types";
 import { Accordion } from "../../../ui/primitives";
 import {
@@ -42,10 +42,7 @@ export function DirectoryRulesSection({
     const taken = new Set(rules.map((r) => r.path));
     const path = ["", ...folders].find((p) => !taken.has(p));
     if (path === undefined) return;
-    commit([
-      ...rules,
-      { id: createRuleId(), path, enabled: true, translateWithoutVideo: "on", taskIds: [] },
-    ]);
+    commit([...rules, { id: createRuleId(), path, enabled: true, translateWithoutVideo: "on", taskIds: [] }]);
   };
 
   const updateRule = (id: string, patch: Partial<DirectoryRule>) => {
@@ -67,25 +64,29 @@ export function DirectoryRulesSection({
     <Accordion title={t("settings.sources.dirRules.title")} defaultOpen={rules.length > 0}>
       <div className="space-y-3">
         <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-          <p className="text-xs text-[var(--text-3)]">{t("settings.sources.dirRules.hint")}</p>
-          <button type="button" onClick={addRule} className="shrink-0 rounded-sm bg-[var(--accent)] px-3 py-2 text-xs font-medium text-[var(--on-accent)] min-h-touch md:min-h-0">
+          <p className="text-xs text-faint">{t("settings.sources.dirRules.hint")}</p>
+          <button
+            type="button"
+            onClick={addRule}
+            className="shrink-0 rounded-sm bg-accent px-3 py-2 text-xs font-medium text-accent-text min-h-touch md:min-h-0"
+          >
             {t("settings.sources.dirRules.addRule")}
           </button>
         </div>
 
         {rules.length === 0 ? (
-          <p className="text-xs text-[var(--text-3)]">{t("settings.sources.dirRules.noRules")}</p>
+          <p className="text-xs text-faint">{t("settings.sources.dirRules.noRules")}</p>
         ) : (
           <div className="space-y-3">
             {rules.map((rule) => (
-              <div key={rule.id} className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-3">
+              <div key={rule.id} className="rounded-sm border border-border bg-surface-raised p-3">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <label className="flex items-center gap-2 text-xs text-[var(--text-2)]">
+                  <label className="flex items-center gap-2 text-xs text-muted">
                     <input
                       type="checkbox"
                       checked={rule.enabled}
                       onChange={(e) => updateRule(rule.id, { enabled: e.target.checked })}
-                      className="h-4 w-4 accent-[var(--accent)]"
+                      className="h-4 w-4 accent-accent"
                     />
                     {t("settings.sources.dirRules.enabled")}
                   </label>
@@ -93,28 +94,36 @@ export function DirectoryRulesSection({
                     value={rule.path}
                     aria-label={t("settings.sources.dirRules.title")}
                     onChange={(e) => updateRule(rule.id, { path: e.target.value })}
-                    className="min-w-0 flex-1 rounded-sm border border-[var(--border)] bg-[var(--surface)] px-2 py-2 text-xs text-[var(--text)] focus:border-[var(--accent)] min-h-touch md:min-h-0"
+                    className="min-w-0 flex-1 rounded-sm border border-border bg-surface px-2 py-2 text-xs text-text focus:border-accent min-h-touch md:min-h-0"
                   >
                     <option value="">{t("settings.sources.dirRules.allFolders")}</option>
                     {folders.map((folder) => (
-                      <option key={folder} value={folder}>{folder}</option>
+                      <option key={folder} value={folder}>
+                        {folder}
+                      </option>
                     ))}
                   </select>
-                  <button type="button" onClick={() => removeRule(rule.id)} className="rounded-sm px-2 py-1 text-xs text-[var(--text-3)] hover:text-[var(--red)]">
+                  <button
+                    type="button"
+                    onClick={() => removeRule(rule.id)}
+                    className="rounded-sm px-2 py-1 text-xs text-faint hover:text-danger"
+                  >
                     {t("common.delete")}
                   </button>
                 </div>
 
                 <div className="mb-2">
-                  <div className="mb-1 text-xs uppercase tracking-wide text-[var(--text-3)]">{t("settings.sources.dirRules.videolessLabel")}</div>
-                  <div className="inline-flex overflow-hidden rounded-sm border border-[var(--border)]">
+                  <div className="mb-1 text-xs uppercase tracking-wide text-faint">
+                    {t("settings.sources.dirRules.videolessLabel")}
+                  </div>
+                  <div className="inline-flex overflow-hidden rounded-sm border border-border">
                     {TRI_STATES.map((state) => (
                       <button
                         key={state}
                         type="button"
                         onClick={() => updateRule(rule.id, { translateWithoutVideo: state })}
                         aria-pressed={rule.translateWithoutVideo === state}
-                        className={`px-3 py-1 text-xs ${rule.translateWithoutVideo === state ? "bg-[var(--accent)] text-[var(--on-accent)]" : "bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)]"}`}
+                        className={`px-3 py-1 text-xs ${rule.translateWithoutVideo === state ? "bg-accent text-accent-text" : "bg-surface-raised text-muted hover:text-text"}`}
                       >
                         {triLabel(state)}
                       </button>
@@ -123,21 +132,23 @@ export function DirectoryRulesSection({
                 </div>
 
                 <div>
-                  <div className="mb-1 text-xs uppercase tracking-wide text-[var(--text-3)]">{t("settings.sources.dirRules.languagesLabel")}</div>
+                  <div className="mb-1 text-xs uppercase tracking-wide text-faint">
+                    {t("settings.sources.dirRules.languagesLabel")}
+                  </div>
                   {tasks.length === 0 ? (
-                    <p className="text-xs text-[var(--text-3)]">{t("settings.sources.dirRules.noTasks")}</p>
+                    <p className="text-xs text-faint">{t("settings.sources.dirRules.noTasks")}</p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {tasks.map((task) => (
                         <label
                           key={task.id}
-                          className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1 text-xs ${rule.taskIds.includes(task.id) ? "border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]" : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)]"}`}
+                          className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1 text-xs ${rule.taskIds.includes(task.id) ? "border-accent-line bg-accent-soft text-accent" : "border-border bg-surface-raised text-muted"}`}
                         >
                           <input
                             type="checkbox"
                             checked={rule.taskIds.includes(task.id)}
                             onChange={() => toggleTask(rule, task.id)}
-                            className="h-3 w-3 accent-[var(--accent)]"
+                            className="h-3 w-3 accent-accent"
                           />
                           {task.target_lang}
                         </label>

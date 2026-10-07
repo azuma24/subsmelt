@@ -1,9 +1,9 @@
-import type { JobRow, ManualTranscriptionStage, ScannedFile, TaskStatus } from "../../types";
+import type { Job, ManualTranscriptionStage, ScannedFile, TaskStatus } from "../../types";
 import type { ManualTranscriptionProgress } from "../dashboard/transcription-progress";
 import { STATUS_ICON, STATUS_LABEL_KEY } from "../../app/constants";
 import type { IconName } from "../../ui/Icon";
 
-export function getTaskStatus(task: TaskStatus, jobsById: Map<number, JobRow>): string {
+export function getTaskStatus(task: TaskStatus, jobsById: Map<number, Job>): string {
   const liveJob = task.jobId === null ? null : jobsById.get(task.jobId);
   if (liveJob) return liveJob.status;
   if (task.jobId !== null && ["pending", "translating", "error"].includes(task.status)) return "new";
@@ -16,7 +16,10 @@ export function getTaskStatus(task: TaskStatus, jobsById: Map<number, JobRow>): 
  * another subtitle of the video owns the output. The first is a finished
  * language and reads "Already translated"; only the second is a real skip.
  */
-export function languageStatusDisplay(task: TaskStatus, status: string): { labelKey: string | undefined; icon: IconName | undefined } {
+export function languageStatusDisplay(
+  task: TaskStatus,
+  status: string,
+): { labelKey: string | undefined; icon: IconName | undefined } {
   if (status === "skipped" && (task.jobId !== null || task.outputExists === true))
     return { labelKey: "library.panel.alreadyTranslated", icon: STATUS_ICON.done };
   return { labelKey: STATUS_LABEL_KEY[status], icon: STATUS_ICON[status] };
@@ -25,17 +28,17 @@ export function languageStatusDisplay(task: TaskStatus, status: string): { label
 export function stageTone(stage: ManualTranscriptionStage): string {
   switch (stage) {
     case "complete":
-      return "text-[var(--green)]";
+      return "text-success";
     case "skipped":
-      return "text-[var(--yellow)]";
+      return "text-warning";
     case "failed":
-      return "text-[var(--red)]";
+      return "text-danger";
     case "cancelled":
-      return "text-[var(--text-2)]";
+      return "text-muted";
     case "cancelling":
-      return "text-[var(--yellow)]";
+      return "text-warning";
     default:
-      return "text-[var(--accent)]";
+      return "text-accent";
   }
 }
 
@@ -74,9 +77,7 @@ export function withQueuedTask(files: ScannedFile[], srtPath: string, task: Task
     return {
       ...file,
       subtitles: file.subtitles.map((sub) =>
-        sub.srtPath === srtPath
-          ? { ...sub, tasks: [...sub.tasks.filter((t) => t.taskId !== task.taskId), task] }
-          : sub,
+        sub.srtPath === srtPath ? { ...sub, tasks: [...sub.tasks.filter((t) => t.taskId !== task.taskId), task] } : sub,
       ),
     };
   });

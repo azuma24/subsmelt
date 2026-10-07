@@ -5,6 +5,7 @@ it": which engine, where its weights come from, how much memory it needs and
 which languages and options it accepts. The engine registry in transcribe.py
 answers the running part. Nothing else should hard-code a model id.
 """
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
@@ -54,19 +55,38 @@ class ModelDescriptor:
 
 
 _WHISPER_SUPPORTS = Supports(
-    prompt=True, beam_size=True, condition_on_previous_text=True, vad=True,
-    compute_type=True, word_timestamps=True, translate_task=False,
+    prompt=True,
+    beam_size=True,
+    condition_on_previous_text=True,
+    vad=True,
+    compute_type=True,
+    word_timestamps=True,
+    translate_task=False,
 )
 _NEMOTRON_SUPPORTS = Supports(
-    prompt=False, beam_size=False, condition_on_previous_text=False, vad=False,
-    compute_type=False, word_timestamps=True, translate_task=False,
+    prompt=False,
+    beam_size=False,
+    condition_on_previous_text=False,
+    vad=False,
+    compute_type=False,
+    word_timestamps=True,
+    translate_task=False,
 )
 
 
-def _whisper(model_id: str, size_mb: int, ram: tuple[int, int], vram: tuple[int, int], languages="all") -> ModelDescriptor:
+def _whisper(
+    model_id: str, size_mb: int, ram: tuple[int, int], vram: tuple[int, int], languages="all"
+) -> ModelDescriptor:
     return ModelDescriptor(
-        id=model_id, engine="whisper", label=f"Whisper {model_id}", repo_id=None, weights_file=None,
-        size_mb=size_mb, ram_mb=MemoryMb(*ram), vram_mb=MemoryMb(*vram), languages=languages,
+        id=model_id,
+        engine="whisper",
+        label=f"Whisper {model_id}",
+        repo_id=None,
+        weights_file=None,
+        size_mb=size_mb,
+        ram_mb=MemoryMb(*ram),
+        vram_mb=MemoryMb(*vram),
+        languages=languages,
         supports=_WHISPER_SUPPORTS,
     )
 

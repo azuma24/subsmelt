@@ -50,9 +50,7 @@ class LogStateTests(unittest.TestCase):
         self.assertTrue(get_log_state()["active"])
 
 
-@unittest.skipIf(
-    API_IMPORT_ERROR is not None, f"fastapi unavailable: {API_IMPORT_ERROR}"
-)
+@unittest.skipIf(API_IMPORT_ERROR is not None, f"fastapi unavailable: {API_IMPORT_ERROR}")
 class LogEndpointTests(unittest.TestCase):
     def setUp(self):
         # Local caller: /logs requires a token OR a loopback client, and
@@ -118,9 +116,7 @@ class LogEndpointTests(unittest.TestCase):
         self.assertIsNone(body["file"])
 
 
-@unittest.skipIf(
-    API_IMPORT_ERROR is not None, f"fastapi unavailable: {API_IMPORT_ERROR}"
-)
+@unittest.skipIf(API_IMPORT_ERROR is not None, f"fastapi unavailable: {API_IMPORT_ERROR}")
 class LogEndpointAuthTests(unittest.TestCase):
     """require_token is a no-op with no token configured, and the server binds
     0.0.0.0 by default — so the log tail, which discloses accumulated content,
@@ -151,16 +147,12 @@ class LogEndpointAuthTests(unittest.TestCase):
 
     def test_remote_caller_with_the_right_token_is_allowed(self):
         os.environ["SUBSMELT_WHISPER_TOKEN"] = "s3cret"
-        response = self._client("192.168.1.50").get(
-            "/logs", headers={"X-Subsmelt-Token": "s3cret"}
-        )
+        response = self._client("192.168.1.50").get("/logs", headers={"X-Subsmelt-Token": "s3cret"})
         self.assertEqual(response.status_code, 200)
 
     def test_remote_caller_with_a_wrong_token_is_refused(self):
         os.environ["SUBSMELT_WHISPER_TOKEN"] = "s3cret"
-        response = self._client("192.168.1.50").get(
-            "/logs", headers={"X-Subsmelt-Token": "nope"}
-        )
+        response = self._client("192.168.1.50").get("/logs", headers={"X-Subsmelt-Token": "nope"})
         self.assertEqual(response.status_code, 401)
 
     def test_health_stays_open_to_remote_callers(self):

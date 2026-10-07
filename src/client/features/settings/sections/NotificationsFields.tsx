@@ -1,14 +1,15 @@
 import { useRef } from "react";
-import { useTranslation } from "react-i18next";
-import { Accordion, ActionButton, Field } from "../../../ui/primitives";
+import { useTranslation } from "../../../i18n";
+import { Accordion, ActionButton, Field, Select } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
 import { NOTIFY_EVENTS, parseNotifyEvents, setNotifyEvent } from "../notify-events";
 import { REDACTED_SECRET } from "../settings-model";
-import { labelCls, selectCls } from "./shared";
+import { labelCls } from "./shared";
+import { useIsMobile } from "../../../hooks";
+import { Icon } from "../../../ui/Icon";
 
 interface NotificationsFieldsProps {
   settings: Record<string, unknown>;
-  isMobile: boolean;
   /** Immediate save, used by the format select and the event choices. */
   updateAndSave: (key: string, value: unknown) => void;
   /** Debounced autosave, used by the webhook URL. */
@@ -24,7 +25,15 @@ interface NotificationsFieldsProps {
  * The webhook URL autosaves on a debounce; the format select and the event
  * choices save immediately. Nothing here waits on the topbar Save button.
  */
-export function NotificationsFields({ settings, isMobile, updateAndSave, updateAndSaveDebounced, onTest, testing, testResult }: NotificationsFieldsProps) {
+export function NotificationsFields({
+  settings,
+  updateAndSave,
+  updateAndSaveDebounced,
+  onTest,
+  testing,
+  testResult,
+}: NotificationsFieldsProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const events = str(settings.notify_events, "job:error,queue:finished");
   const chosen = new Set(parseNotifyEvents(events));
@@ -45,37 +54,42 @@ export function NotificationsFields({ settings, isMobile, updateAndSave, updateA
           <Field
             label={t("settings.notifications.webhookUrl")}
             value={webhookSaved ? "" : webhook}
-            onChange={(v) => updateAndSaveDebounced("notify_webhook_url", v === "" && hadSavedWebhook.current ? REDACTED_SECRET : v)}
+            onChange={(v) =>
+              updateAndSaveDebounced("notify_webhook_url", v === "" && hadSavedWebhook.current ? REDACTED_SECRET : v)
+            }
             placeholder={webhookSaved ? "••••••••" : "https://discord.com/api/webhooks/…"}
             help={webhookSaved ? t("settings.notifications.webhookSaved") : t("settings.notifications.hint")}
           />
           {webhookSaved && (
-            <button type="button" onClick={removeWebhook} className="mt-1 min-h-touch text-xs text-[var(--red)] hover:underline">
+            <button
+              type="button"
+              onClick={removeWebhook}
+              className="mt-1 min-h-touch text-xs text-danger hover:underline"
+            >
               {t("settings.notifications.webhookRemove")}
             </button>
           )}
         </div>
         <div className="md:max-w-[240px]">
           <label className={labelCls}>{t("settings.notifications.format")}</label>
-          <select
-            aria-label={t("settings.notifications.format")}
+          <Select
+            ariaLabel={t("settings.notifications.format")}
             value={str(settings.notify_format, "json")}
-            onChange={(e) => updateAndSave("notify_format", e.target.value)}
-            className={selectCls}
+            onChange={(value) => updateAndSave("notify_format", value)}
           >
             <option value="json">JSON</option>
             <option value="discord">Discord</option>
             <option value="slack">Slack</option>
-          </select>
+          </Select>
         </div>
         <fieldset>
           <legend className={labelCls}>{t("settings.notifications.events")}</legend>
           <div className={`grid gap-x-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"} md:max-w-[480px]`}>
             {NOTIFY_EVENTS.map(({ event, labelKey }) => (
-              <label key={event} className="flex min-h-touch cursor-pointer items-center gap-3 text-sm text-[var(--text)]">
+              <label key={event} className="flex min-h-touch cursor-pointer items-center gap-3 text-sm text-text">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 shrink-0 accent-[var(--accent)]"
+                  className="h-4 w-4 shrink-0 accent-accent"
                   checked={chosen.has(event)}
                   onChange={(e) => updateAndSave("notify_events", setNotifyEvent(events, event, e.target.checked))}
                 />
@@ -89,7 +103,9 @@ export function NotificationsFields({ settings, isMobile, updateAndSave, updateA
             {testing ? t("app.testing") : t("settings.notifications.sendTest")}
           </ActionButton>
           {testResult && (
-            <span className={`text-sm ${testResult.ok ? "text-[var(--green)]" : "text-[var(--red)]"}`}><span aria-hidden="true">{testResult.ok ? "✓ " : "✗ "}</span>{testResult.message}</span>
+            <span className={`text-sm ${testResult.ok ? "text-success" : "text-danger"}`}>
+              <Icon name={testResult.ok ? "done" : "error"} /> {testResult.message}
+            </span>
           )}
         </div>
       </div>

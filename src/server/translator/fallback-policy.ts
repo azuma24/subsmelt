@@ -1,3 +1,4 @@
+import { errorMessage } from "../errors.js";
 /**
  * Budgets for the cascade-and-fallback path, and the loop that walks a line
  * through it.
@@ -48,10 +49,7 @@ export interface LineFallbackOptions {
  * fails the chunk rather than grinding through every remaining line at one full
  * timeout each — which is exactly what made jobs look hung.
  */
-export async function runLineFallback(
-  lines: string[],
-  options: LineFallbackOptions,
-): Promise<LineFallbackResult> {
+export async function runLineFallback(lines: string[], options: LineFallbackOptions): Promise<LineFallbackResult> {
   const limit = options.failureLimit ?? SINGLE_LINE_FAILURE_LIMIT;
   const translations: (string | null)[] = new Array(lines.length).fill(null);
   let consecutiveFailures = 0;
@@ -61,14 +59,14 @@ export async function runLineFallback(
     try {
       translations[index] = await options.translateLine(lines[index], index);
       consecutiveFailures = 0;
-    } catch (error: any) {
-      if (error?.message === "STOP_REQUESTED") throw error;
+    } catch (error) {
+      if (errorMessage(error) === "STOP_REQUESTED") throw error;
       consecutiveFailures += 1;
       failures += 1;
       if (consecutiveFailures >= limit) {
         options.onAbort?.(error, consecutiveFailures);
         throw new Error(
-          `Per-line fallback aborted after ${consecutiveFailures} consecutive failures: ${error?.message || error}`,
+          `Per-line fallback aborted after ${consecutiveFailures} consecutive failures: ${errorMessage(error) || error}`,
         );
       }
     }

@@ -17,19 +17,30 @@ const gate = await import("./gpu-gate.js");
 const base = { shared: true, transcriptionsRunning: 0, youtubeBacklog: 0, subtitlesWaiting: 3 };
 
 test("with its own GPU, translation never waits", () => {
-  assert.deepEqual(gate.translationGate({ ...base, shared: false, transcriptionsRunning: 2, youtubeBacklog: 9 }), { open: true });
+  assert.deepEqual(gate.translationGate({ ...base, shared: false, transcriptionsRunning: 2, youtubeBacklog: 9 }), {
+    open: true,
+  });
 });
 
 test("a shared GPU holds translation while videos still need Whisper", () => {
   assert.deepEqual(gate.translationGate({ ...base, youtubeBacklog: 3 }), { open: false, waitingFor: 3 });
   assert.deepEqual(gate.translationGate({ ...base, transcriptionsRunning: 1 }), { open: false, waitingFor: 1 });
-  assert.deepEqual(gate.translationGate({ ...base, transcriptionsRunning: 1, youtubeBacklog: 4 }), { open: false, waitingFor: 4 });
+  assert.deepEqual(gate.translationGate({ ...base, transcriptionsRunning: 1, youtubeBacklog: 4 }), {
+    open: false,
+    waitingFor: 4,
+  });
 });
 
 test("20 waiting subtitles open the gate after the current transcription, not during it", () => {
-  assert.deepEqual(gate.translationGate({ ...base, youtubeBacklog: 12, subtitlesWaiting: 19 }), { open: false, waitingFor: 12 });
+  assert.deepEqual(gate.translationGate({ ...base, youtubeBacklog: 12, subtitlesWaiting: 19 }), {
+    open: false,
+    waitingFor: 12,
+  });
   assert.deepEqual(gate.translationGate({ ...base, youtubeBacklog: 12, subtitlesWaiting: 20 }), { open: true });
-  assert.deepEqual(gate.translationGate({ ...base, transcriptionsRunning: 1, youtubeBacklog: 12, subtitlesWaiting: 20 }), { open: false, waitingFor: 12 });
+  assert.deepEqual(
+    gate.translationGate({ ...base, transcriptionsRunning: 1, youtubeBacklog: 12, subtitlesWaiting: 20 }),
+    { open: false, waitingFor: 12 },
+  );
 });
 
 test("with nothing left for Whisper the batch translates", () => {
@@ -43,12 +54,21 @@ test("Whisper waits for a running translation batch only on a shared GPU", () =>
 });
 
 test("processQueue asks the gate: a held start runs once the backlog clears", async (t) => {
-  const taskId = Number(config.createTask({ source_lang: "Automatic", target_lang: "Chinese", output_pattern: "{{name}}.chi.srt", lang_code: "chi" }).lastInsertRowid);
+  const taskId = Number(
+    config.createTask({
+      source_lang: "Automatic",
+      target_lang: "Chinese",
+      output_pattern: "{{name}}.chi.srt",
+      lang_code: "chi",
+    }).lastInsertRowid,
+  );
   const srt = path.join(process.env.MEDIA_DIR!, "talk.en.srt");
   const out = path.join(process.env.MEDIA_DIR!, "talk.chi.srt");
   fs.writeFileSync(srt, "1\n00:00:01,000 --> 00:00:02,000\nhello\n");
   fs.writeFileSync(out, "already translated");
-  const jobId = Number(db.createJob({ task_id: taskId, srt_path: srt, output_path: out, video_path: null }).lastInsertRowid);
+  const jobId = Number(
+    db.createJob({ task_id: taskId, srt_path: srt, output_path: out, video_path: null }).lastInsertRowid,
+  );
   let backlog = 2;
   gate.setYoutubeBacklogSource(() => backlog);
   config.setSetting("gpu_shared", "1");
@@ -88,9 +108,18 @@ test("on a shared GPU a transcription waits for the running translation batch", 
   t.after(() => config.setSetting("gpu_shared", "0"));
   let translating = true;
   let waited = 0;
-  const started = gate.waitUntilTranscriptionMayStart(() => translating, new AbortController().signal, () => { waited += 1; }, 5);
+  const started = gate.waitUntilTranscriptionMayStart(
+    () => translating,
+    new AbortController().signal,
+    () => {
+      waited += 1;
+    },
+    5,
+  );
   let settled = false;
-  void started.then(() => { settled = true; });
+  void started.then(() => {
+    settled = true;
+  });
   await new Promise((r) => setTimeout(r, 30));
   assert.equal(settled, false);
   translating = false;
@@ -101,7 +130,14 @@ test("on a shared GPU a transcription waits for the running translation batch", 
 test("without a shared GPU a transcription never waits for translation", async () => {
   config.setSetting("gpu_shared", "0");
   let waited = false;
-  await gate.waitUntilTranscriptionMayStart(() => true, new AbortController().signal, () => { waited = true; }, 5);
+  await gate.waitUntilTranscriptionMayStart(
+    () => true,
+    new AbortController().signal,
+    () => {
+      waited = true;
+    },
+    5,
+  );
   assert.equal(waited, false);
 });
 
@@ -122,7 +158,9 @@ test("a run the app abandoned keeps translation waiting until the hold ends", as
   assert.equal(gate.currentTranslationGate().open, false);
   inFlight.endTranscriptionRun("/media/abandoned.mkv", controller);
   let released = false;
-  inFlight.holdGpuForAbandonedRun(() => { released = true; }, 30);
+  inFlight.holdGpuForAbandonedRun(() => {
+    released = true;
+  }, 30);
   assert.equal(gate.currentTranslationGate().open, false, "still closed right after the app let go");
   await new Promise((r) => setTimeout(r, 60));
   assert.equal(released, true);

@@ -44,8 +44,9 @@ class GpuDetectionTests(unittest.TestCase):
 
     def test_gpu_info_returns_empty_list_on_cpu_box(self):
         # With no pynvml and no nvidia-smi the result is an empty list, not an error.
-        with mock.patch.object(gpu, "_gpu_info_via_nvml", return_value=[]), mock.patch.object(
-            gpu, "_gpu_info_via_nvidia_smi", return_value=[]
+        with (
+            mock.patch.object(gpu, "_gpu_info_via_nvml", return_value=[]),
+            mock.patch.object(gpu, "_gpu_info_via_nvidia_smi", return_value=[]),
         ):
             self.assertEqual(gpu.gpu_info(), [])
             self.assertIsNone(gpu.total_free_vram_mb())
@@ -55,8 +56,9 @@ class GpuDetectionTests(unittest.TestCase):
         smi_gpu = {"name": "SMI GPU", "total_vram_mb": 8000, "free_vram_mb": 6000}
         with mock.patch.object(gpu, "_gpu_info_via_nvml", return_value=[nvml_gpu]):
             self.assertEqual(gpu.gpu_info(), [nvml_gpu])
-        with mock.patch.object(gpu, "_gpu_info_via_nvml", return_value=[]), mock.patch.object(
-            gpu, "_gpu_info_via_nvidia_smi", return_value=[smi_gpu]
+        with (
+            mock.patch.object(gpu, "_gpu_info_via_nvml", return_value=[]),
+            mock.patch.object(gpu, "_gpu_info_via_nvidia_smi", return_value=[smi_gpu]),
         ):
             self.assertEqual(gpu.gpu_info(), [smi_gpu])
             self.assertEqual(gpu.total_free_vram_mb(), 6000)
@@ -65,8 +67,9 @@ class GpuDetectionTests(unittest.TestCase):
 @unittest.skipIf(MAIN_IMPORT_ERROR is not None, f"fastapi unavailable: {MAIN_IMPORT_ERROR}")
 class CapabilitiesTests(unittest.TestCase):
     def test_capabilities_omits_cuda_when_no_gpu(self):
-        with mock.patch.object(main, "cuda_device_count", return_value=0), mock.patch.object(
-            main, "gpu_info", return_value=[]
+        with (
+            mock.patch.object(main, "cuda_device_count", return_value=0),
+            mock.patch.object(main, "gpu_info", return_value=[]),
         ):
             caps = main.capabilities()
         self.assertEqual(caps["devices"], ["cpu"])
@@ -76,8 +79,9 @@ class CapabilitiesTests(unittest.TestCase):
 
     def test_capabilities_advertises_cuda_when_present(self):
         fake_gpu = {"name": "RTX 4090", "total_vram_mb": 24000, "free_vram_mb": 23000}
-        with mock.patch.object(main, "cuda_device_count", return_value=1), mock.patch.object(
-            main, "gpu_info", return_value=[fake_gpu]
+        with (
+            mock.patch.object(main, "cuda_device_count", return_value=1),
+            mock.patch.object(main, "gpu_info", return_value=[fake_gpu]),
         ):
             caps = main.capabilities()
         self.assertIn("cuda", caps["devices"])
@@ -131,13 +135,15 @@ class PreflightGpuRoutingTests(unittest.TestCase):
     def test_preflight_uses_vram_when_device_cuda(self):
         request = TranscribeRequest(input_path="/media/clip.mkv", model="large-v3", device="cuda")
         fake_gpu = {"name": "RTX 3060", "total_vram_mb": 12000, "free_vram_mb": 1500}
-        with mock.patch.object(main, "assert_path_under_media", return_value=Path("/media/clip.mkv")), \
-             mock.patch.object(main, "available_ram_mb", return_value=64000), \
-             mock.patch.object(main, "ffmpeg_available", return_value=True), \
-             mock.patch.object(main, "disk_free_mb", return_value=500000), \
-             mock.patch.object(main, "describe_model_cache", return_value=None), \
-             mock.patch.object(main, "gpu_info", return_value=[fake_gpu]), \
-             mock.patch.object(main, "total_free_vram_mb", return_value=1500):
+        with (
+            mock.patch.object(main, "assert_path_under_media", return_value=Path("/media/clip.mkv")),
+            mock.patch.object(main, "available_ram_mb", return_value=64000),
+            mock.patch.object(main, "ffmpeg_available", return_value=True),
+            mock.patch.object(main, "disk_free_mb", return_value=500000),
+            mock.patch.object(main, "describe_model_cache", return_value=None),
+            mock.patch.object(main, "gpu_info", return_value=[fake_gpu]),
+            mock.patch.object(main, "total_free_vram_mb", return_value=1500),
+        ):
             result = main.preflight_result(request)
         # Plenty of system RAM, but only 1.5 GB free VRAM → GPU path must block.
         self.assertFalse(result.safe)
@@ -148,13 +154,15 @@ class PreflightGpuRoutingTests(unittest.TestCase):
 
     def test_preflight_vram_unknown_fails_open_on_cuda(self):
         request = TranscribeRequest(input_path="/media/clip.mkv", model="large-v3", device="cuda")
-        with mock.patch.object(main, "assert_path_under_media", return_value=Path("/media/clip.mkv")), \
-             mock.patch.object(main, "available_ram_mb", return_value=64000), \
-             mock.patch.object(main, "ffmpeg_available", return_value=True), \
-             mock.patch.object(main, "disk_free_mb", return_value=500000), \
-             mock.patch.object(main, "describe_model_cache", return_value=None), \
-             mock.patch.object(main, "gpu_info", return_value=[]), \
-             mock.patch.object(main, "total_free_vram_mb", return_value=None):
+        with (
+            mock.patch.object(main, "assert_path_under_media", return_value=Path("/media/clip.mkv")),
+            mock.patch.object(main, "available_ram_mb", return_value=64000),
+            mock.patch.object(main, "ffmpeg_available", return_value=True),
+            mock.patch.object(main, "disk_free_mb", return_value=500000),
+            mock.patch.object(main, "describe_model_cache", return_value=None),
+            mock.patch.object(main, "gpu_info", return_value=[]),
+            mock.patch.object(main, "total_free_vram_mb", return_value=None),
+        ):
             result = main.preflight_result(request)
         # Fail open, but keep the unknown code so the UI can warn about it.
         self.assertTrue(result.safe)

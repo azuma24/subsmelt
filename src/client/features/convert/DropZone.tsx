@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { ACCEPT_ATTR } from "./download-outputs";
 import { Icon } from "../../ui/Icon";
 
@@ -38,14 +38,12 @@ export function DropZone({ onFiles }: DropZoneProps) {
       onDragLeave={() => setIsDragging(false)}
       onDrop={handleDrop}
       className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed px-6 py-12 text-center transition-colors ${
-        isDragging
-          ? "border-[var(--accent)] bg-[var(--accent-dim)]"
-          : "border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--accent-border)]"
+        isDragging ? "border-accent bg-accent-soft" : "border-border bg-surface-raised hover:border-accent-line"
       }`}
     >
       <Icon name="folder-open" size={20} />
-      <p className="text-sm font-medium text-[var(--text)]">{t("convert.dropzone")}</p>
-      <p className="text-xs text-[var(--text-3)]">{t("convert.dropzoneHint")}</p>
+      <p className="text-sm font-medium text-text">{t("convert.dropzone")}</p>
+      <p className="text-xs text-faint">{t("convert.dropzoneHint")}</p>
       <input
         ref={inputRef}
         type="file"

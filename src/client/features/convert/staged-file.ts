@@ -17,12 +17,22 @@ export function effectiveSource(s: StagedFile, globalFrom?: string): string | nu
 }
 
 /** The "skip translation" choice is only offered when the source already is the target. */
-export function isSameAsTarget(s: StagedFile, globalFrom: string | undefined, translate: boolean, targetCode: string | null): boolean {
+export function isSameAsTarget(
+  s: StagedFile,
+  globalFrom: string | undefined,
+  translate: boolean,
+  targetCode: string | null,
+): boolean {
   const source = effectiveSource(s, globalFrom);
   return translate && targetCode !== null && source !== null && source === targetCode;
 }
 
 /** What the request carries: a skip ticked while the checkbox was offered, and only then. */
-export function skipTranslation(s: StagedFile, globalFrom: string | undefined, translate: boolean, targetCode: string | null): boolean {
+export function skipTranslation(
+  s: StagedFile,
+  globalFrom: string | undefined,
+  translate: boolean,
+  targetCode: string | null,
+): boolean {
   return s.skip && isSameAsTarget(s, globalFrom, translate, targetCode);
 }

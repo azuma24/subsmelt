@@ -1,15 +1,10 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
+import { useTranslation } from "../i18n";
+import type { TFunction } from "../i18n";
 import { useLlmStatusQuery } from "../hooks";
 import type { LlmConnectionStatus, LlmStatus } from "../types";
-import {
-  connectionStateText,
-  modeLabel,
-  summarizeLlmStatus,
-  TONE_DOT_CLASS,
-} from "./llm-status-summary";
+import { connectionStateText, modeLabel, summarizeLlmStatus, TONE_DOT_CLASS } from "./llm-status-summary";
 
 const PANEL_WIDTH = 320;
 // Under a phone header the panel spans the screen, up to this width.
@@ -42,17 +37,17 @@ function placePanel(anchor: DOMRect, height: number, placement: Placement): Posi
 }
 
 const STATE_TEXT_CLASS: Record<LlmConnectionStatus["state"], string> = {
-  in_use: "text-[var(--green)]",
-  idle: "text-[var(--text-2)]",
-  offline: "text-[var(--red)]",
-  unknown: "text-[var(--text-3)]",
+  in_use: "text-success",
+  idle: "text-muted",
+  offline: "text-danger",
+  unknown: "text-faint",
 };
 
 const STATE_DOT_CLASS: Record<LlmConnectionStatus["state"], string> = {
-  in_use: "bg-[var(--green)]",
-  idle: "bg-[var(--green)]",
-  offline: "bg-[var(--red)]",
-  unknown: "bg-[var(--text-3)]",
+  in_use: "bg-success",
+  idle: "bg-success",
+  offline: "bg-danger",
+  unknown: "bg-faint",
 };
 
 function ConnectionRow({ conn, index, t }: { conn: LlmConnectionStatus; index: number; t: TFunction }) {
@@ -60,13 +55,13 @@ function ConnectionRow({ conn, index, t }: { conn: LlmConnectionStatus; index: n
     <li className="flex items-start gap-3 px-4 py-2">
       <span
         aria-hidden="true"
-        className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] font-mono text-xs text-[var(--text-2)]"
+        className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-raised font-mono text-xs text-muted"
       >
         {index + 1}
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">
-          <span className="truncate text-sm font-medium text-[var(--text)]" title={conn.label}>
+          <span className="truncate text-sm font-medium text-text" title={conn.label}>
             {conn.label}
           </span>
           <span className={`flex shrink-0 items-center gap-1 text-xs ${STATE_TEXT_CLASS[conn.state]}`}>
@@ -74,10 +69,10 @@ function ConnectionRow({ conn, index, t }: { conn: LlmConnectionStatus; index: n
             {connectionStateText(conn, t)}
           </span>
         </div>
-        <div className="truncate font-mono text-xs text-[var(--text-2)]" title={conn.model}>
+        <div className="truncate font-mono text-xs text-muted" title={conn.model}>
           {conn.model}
         </div>
-        <div className="truncate font-mono text-xs text-[var(--text-3)]" title={conn.host}>
+        <div className="truncate font-mono text-xs text-faint" title={conn.host}>
           {conn.host}
         </div>
       </div>
@@ -90,10 +85,10 @@ function SkeletonRows() {
     <ul aria-hidden="true" className="py-2">
       {[0, 1].map((row) => (
         <li key={row} className="flex items-start gap-3 px-4 py-2">
-          <span className="h-5 w-5 shrink-0 rounded-full bg-[var(--surface-2)]" />
+          <span className="h-5 w-5 shrink-0 rounded-full bg-surface-raised" />
           <div className="flex-1 space-y-2">
-            <div className="h-3 w-2/3 rounded-sm bg-[var(--surface-2)]" />
-            <div className="h-3 w-1/2 rounded-sm bg-[var(--surface-2)]" />
+            <div className="h-3 w-2/3 rounded-sm bg-surface-raised" />
+            <div className="h-3 w-1/2 rounded-sm bg-surface-raised" />
           </div>
         </li>
       ))}
@@ -111,12 +106,12 @@ interface PanelBodyProps {
 function PanelBody({ status, failed, onRetry, t }: PanelBodyProps) {
   if (!status && failed) {
     return (
-      <div className="space-y-2 px-4 py-3 text-sm text-[var(--text-2)]">
+      <div className="space-y-2 px-4 py-3 text-sm text-muted">
         <p>{t("llmStatus.errorHint")}</p>
         <button
           type="button"
           onClick={onRetry}
-          className="min-h-touch rounded-sm border border-[var(--border)] px-3 text-sm text-[var(--text)] hover:bg-[var(--surface-2)] md:min-h-0 md:py-1"
+          className="min-h-touch rounded-sm border border-border px-3 text-sm text-text hover:bg-surface-raised md:min-h-0 md:py-1"
         >
           {t("errors.retry")}
         </button>
@@ -125,7 +120,7 @@ function PanelBody({ status, failed, onRetry, t }: PanelBodyProps) {
   }
   if (!status) return <SkeletonRows />;
   if (status.connections.length === 0) {
-    return <p className="px-4 py-3 text-sm text-[var(--text-2)]">{t("llmStatus.emptyHint")}</p>;
+    return <p className="px-4 py-3 text-sm text-muted">{t("llmStatus.emptyHint")}</p>;
   }
   return (
     <ol className="max-h-[50vh] overflow-y-auto py-2">
@@ -162,6 +157,7 @@ export function LlmStatusPopover({ placement, compactBelowLg = false }: LlmStatu
   const summary = summarizeLlmStatus(status, query.isError, t);
   const tooltip = summary.detail ? `${summary.text} · ${summary.detail}` : summary.text;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the panel is re-placed when its content (status, error) changes height
   useLayoutEffect(() => {
     if (!open) {
       setPos(null);
@@ -210,9 +206,12 @@ export function LlmStatusPopover({ placement, compactBelowLg = false }: LlmStatu
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         title={tooltip}
-        className={`flex min-h-touch w-full min-w-0 ${compactBelowLg ? "items-start" : "items-center"} gap-2 rounded-sm px-1 text-left text-xs text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)] md:min-h-0 md:py-1`}
+        className={`flex min-h-touch w-full min-w-0 ${compactBelowLg ? "items-start" : "items-center"} gap-2 rounded-sm px-1 text-left text-xs text-muted transition-colors hover:bg-surface-raised hover:text-text md:min-h-0 md:py-1`}
       >
-        <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${compactBelowLg ? "mt-1" : ""} ${TONE_DOT_CLASS[summary.tone]}`} />
+        <span
+          aria-hidden="true"
+          className={`h-2 w-2 shrink-0 rounded-full ${compactBelowLg ? "mt-1" : ""} ${TONE_DOT_CLASS[summary.tone]}`}
+        />
         <span className={textClass}>{summary.text}</span>
         {summary.detail && <span className="sr-only">{summary.detail}</span>}
       </button>
@@ -223,24 +222,22 @@ export function LlmStatusPopover({ placement, compactBelowLg = false }: LlmStatu
           role="dialog"
           aria-labelledby={titleId}
           style={pos ? { top: pos.top, left: pos.left, width: pos.width } : { visibility: "hidden", top: 0, left: 0 }}
-          className="fixed z-50 overflow-hidden rounded-md border border-[var(--border)] bg-[var(--surface)] shadow-2"
+          className="fixed z-50 overflow-hidden rounded-md border border-border bg-surface shadow-2"
         >
-          <div className="border-b border-[var(--border-sub)] px-4 py-3">
-            <h2 id={titleId} className="text-sm font-semibold text-[var(--text)]">
+          <div className="border-b border-border-subtle px-4 py-3">
+            <h2 id={titleId} className="text-sm font-semibold text-text">
               {t("llmStatus.title")}
             </h2>
             {status && status.connections.length > 0 && (
-              <p className="text-xs text-[var(--text-2)]">
-                {t("llmStatus.modeLine", { mode: modeLabel(status.mode, t) })}
-              </p>
+              <p className="text-xs text-muted">{t("llmStatus.modeLine", { mode: modeLabel(status.mode, t) })}</p>
             )}
           </div>
           <PanelBody status={status} failed={query.isError} onRetry={() => void query.refetch()} t={t} />
-          <div className="border-t border-[var(--border-sub)] px-2 py-1">
+          <div className="border-t border-border-subtle px-2 py-1">
             <Link
               to="/settings?section=llm"
               onClick={() => setOpen(false)}
-              className="flex min-h-touch items-center rounded-sm px-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--surface-2)] md:min-h-0 md:py-2"
+              className="flex min-h-touch items-center rounded-sm px-2 text-sm font-medium text-accent hover:bg-surface-raised md:min-h-0 md:py-2"
             >
               {t("llmStatus.manage")}
             </Link>

@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import * as api from "../../api";
-import { useToast } from "../../components/Toast";
+import { useToast } from "../../ui/Toast";
 import { ActionButton, SettingsSection } from "../../ui/primitives";
 import { FORMATS, selectCls, type OutputFormat } from "./whisper-shared";
+import { useIsMobile } from "../../hooks";
 
 export interface UrlTranscribeSectionProps {
-  isMobile: boolean;
   effFormat: OutputFormat;
   effModel: string;
   effLang: string;
@@ -22,8 +22,15 @@ export interface UrlTranscribeSectionProps {
  * the browser since there's no local media file for a URL.
  */
 export function UrlTranscribeSection({
-  isMobile, effFormat, effModel, effLang, effDevice, effCompute, canDiarize, effDiarize,
+  effFormat,
+  effModel,
+  effLang,
+  effDevice,
+  effCompute,
+  canDiarize,
+  effDiarize,
 }: UrlTranscribeSectionProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const { addToast } = useToast();
   const [urlValue, setUrlValue] = useState("");
@@ -35,8 +42,13 @@ export function UrlTranscribeSection({
     setUrlBusy(true);
     try {
       const res = await api.transcribeUrl({
-        url, outputFormat: effFormat, model: effModel, language: effLang,
-        device: effDevice, computeType: effCompute, speakerDiarization: canDiarize && effDiarize,
+        url,
+        outputFormat: effFormat,
+        model: effModel,
+        language: effLang,
+        device: effDevice,
+        computeType: effCompute,
+        speakerDiarization: canDiarize && effDiarize,
       });
       // No local media file for a URL — hand the rendered subtitle to the browser.
       const blob = new Blob([res.content], { type: "text/plain;charset=utf-8" });
@@ -72,7 +84,9 @@ export function UrlTranscribeSection({
         <ActionButton
           variant="primary"
           size="sm"
-          onClick={() => { void transcribeFromUrl(); }}
+          onClick={() => {
+            void transcribeFromUrl();
+          }}
           disabled={!urlValue.trim()}
           busy={urlBusy}
           className={isMobile ? "w-full" : ""}

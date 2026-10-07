@@ -55,7 +55,9 @@ async function startBackend(slowRoute: string, answer: string, expectedArrivals 
       if (arrivals >= expectedArrivals) resolve();
     };
   });
-  const clientHungUp = new Promise<boolean>((resolve) => { markClosed = resolve; });
+  const clientHungUp = new Promise<boolean>((resolve) => {
+    markClosed = resolve;
+  });
   const server = http.createServer((req, res) => {
     req.resume();
     if (req.url === "/preflight") {
@@ -112,7 +114,11 @@ test("cancelling a shared-filesystem run on a backend without the stream route a
     "/transcribe",
     JSON.stringify({ ok: true, subtitle_path: "/srv/show/a.srt", language: "en", segments: 1 }),
   );
-  setSettings({ transcription_enabled: "1", transcription_backend_url: backend.url, transcription_transport: "shared" });
+  setSettings({
+    transcription_enabled: "1",
+    transcription_backend_url: backend.url,
+    transcription_transport: "shared",
+  });
   const videoPath = path.join(mediaDir, "show", "a.mkv");
   fs.writeFileSync(videoPath, "video", "utf8");
   try {
@@ -132,7 +138,11 @@ test("cancelling an upload run on a backend without the stream route writes no s
     "/transcribe/upload",
     JSON.stringify({ ok: true, content: "1\n00:00:00,000 --> 00:00:01,000\nhello\n", language: "en", segments: 1 }),
   );
-  setSettings({ transcription_enabled: "1", transcription_backend_url: backend.url, transcription_transport: "upload" });
+  setSettings({
+    transcription_enabled: "1",
+    transcription_backend_url: backend.url,
+    transcription_transport: "upload",
+  });
   const videoPath = path.join(mediaDir, "show", "b.mkv");
   fs.writeFileSync(videoPath, "video", "utf8");
   try {
@@ -154,7 +164,12 @@ test("cancel-all stops every in-flight transcription", async () => {
     JSON.stringify({ ok: true, subtitle_path: "/srv/show/x.srt", language: "en", segments: 1 }),
     2,
   );
-  setSettings({ transcription_enabled: "1", transcription_backend_url: backend.url, transcription_transport: "shared", transcription_max_concurrent: "2" });
+  setSettings({
+    transcription_enabled: "1",
+    transcription_backend_url: backend.url,
+    transcription_transport: "shared",
+    transcription_max_concurrent: "2",
+  });
   const first = path.join(mediaDir, "show", "c.mkv");
   const second = path.join(mediaDir, "show", "d.mkv");
   fs.writeFileSync(first, "video", "utf8");
@@ -179,7 +194,11 @@ test("a client that hangs up mid-run cancels the transcription", async () => {
     "/transcribe",
     JSON.stringify({ ok: true, subtitle_path: "/srv/show/e.srt", language: "en", segments: 1 }),
   );
-  setSettings({ transcription_enabled: "1", transcription_backend_url: backend.url, transcription_transport: "shared" });
+  setSettings({
+    transcription_enabled: "1",
+    transcription_backend_url: backend.url,
+    transcription_transport: "shared",
+  });
   const videoPath = path.join(mediaDir, "show", "e.mkv");
   fs.writeFileSync(videoPath, "video", "utf8");
   try {
@@ -206,7 +225,12 @@ test("a second run of a file already transcribing is refused, and the first stay
     "/transcribe",
     JSON.stringify({ ok: true, subtitle_path: "/srv/show/f.srt", language: "en", segments: 1 }),
   );
-  setSettings({ transcription_enabled: "1", transcription_backend_url: backend.url, transcription_transport: "shared", transcription_max_concurrent: "2" });
+  setSettings({
+    transcription_enabled: "1",
+    transcription_backend_url: backend.url,
+    transcription_transport: "shared",
+    transcription_max_concurrent: "2",
+  });
   const videoPath = path.join(mediaDir, "show", "f.mkv");
   fs.writeFileSync(videoPath, "video", "utf8");
   try {

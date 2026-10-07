@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { logger } from "../logger.js";
+import { errorMessage } from "../errors.js";
 
 // Per-folder sidecar caching translated media titles, mirroring the
 // .subsmelt_glossary.json series-memory sidecar in context.ts: graceful
@@ -101,8 +102,8 @@ export function saveTitleSidecar(dir: string, sidecar: TitleSidecar): void {
     const onDisk = loadTitleSidecar(dir);
     const merged = mergeSidecars(onDisk, sidecar);
     writeJsonAtomic(titleSidecarPath(dir), merged);
-  } catch (e: any) {
-    logger.warn("translate", `Title sidecar write failed: ${titleSidecarPath(dir)} — ${e?.message || e}`);
+  } catch (e) {
+    logger.warn("translate", `Title sidecar write failed: ${titleSidecarPath(dir)} — ${errorMessage(e) || e}`);
   }
 }
 
@@ -128,8 +129,8 @@ export function pruneTitleSidecar(dir: string, validBases: ReadonlySet<string>):
       return;
     }
     writeJsonAtomic(file, { version: 1, titles });
-  } catch (e: any) {
-    logger.warn("translate", `Title sidecar prune failed: ${titleSidecarPath(dir)} — ${e?.message || e}`);
+  } catch (e) {
+    logger.warn("translate", `Title sidecar prune failed: ${titleSidecarPath(dir)} — ${errorMessage(e) || e}`);
   }
 }
 
@@ -140,7 +141,8 @@ const RESOLUTION_PATTERN = /^(480p|576p|720p|1080p|2160p|4K)$/i;
 const SOURCE_PATTERN = /^(BluRay|Blu-Ray|WEB-?DL|WEBRip|HDTV|BRRip|DVDRip|HDRip|REMUX)$/i;
 const CODEC_PATTERN = /^(x264|x265|h264|h265|HEVC|AVC|AV1|XviD|DivX)$/i;
 const AUDIO_PATTERN = /^(AAC|AC3|EAC3|DTS|DDP?|DD5 1|TrueHD|Atmos|FLAC)$/i;
-const MISC_PATTERN = /^(PROPER|REPACK|EXTENDED|UNRATED|LIMITED|INTERNAL|COMPLETE|MULTi|DUBBED|SUBBED|HDR|HDR10|DV|10bit)$/i;
+const MISC_PATTERN =
+  /^(PROPER|REPACK|EXTENDED|UNRATED|LIMITED|INTERNAL|COMPLETE|MULTi|DUBBED|SUBBED|HDR|HDR10|DV|10bit)$/i;
 // SxxEyy, multi-episode SxxEyy-Eyy / SxxEyyEyy, and "1x05" style markers.
 const EPISODE_MARKER_PATTERN = /^(S\d{2}E\d{2}(-?E\d{2})?|\d{1,2}x\d{2,3})$/i;
 const BRACKET_TAG_PATTERN = /\[[^\]]*\]/g;
@@ -255,7 +257,10 @@ export function pruneTitleSidecarQueued(dir: string, validBases: ReadonlySet<str
 async function withDirLock<T>(dir: string, fn: () => Promise<T>): Promise<T> {
   const prev = dirLocks.get(dir) ?? Promise.resolve();
   const run = prev.then(fn, fn);
-  dirLocks.set(dir, run.catch(() => undefined));
+  dirLocks.set(
+    dir,
+    run.catch(() => undefined),
+  );
   return run;
 }
 

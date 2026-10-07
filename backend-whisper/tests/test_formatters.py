@@ -89,7 +89,10 @@ class CjkWrapTests(unittest.TestCase):
         self.assertEqual(_wrap_text("ああああああああああ。いい", 10), "あああああああああ\nあ。いい")
 
     def test_long_latin_token_is_not_broken_mid_word(self):
-        self.assertEqual(_wrap_text("see https://example.com/a/very/long/path now", 12), "see\nhttps://example.com/a/very/long/path\nnow")
+        self.assertEqual(
+            _wrap_text("see https://example.com/a/very/long/path now", 12),
+            "see\nhttps://example.com/a/very/long/path\nnow",
+        )
 
     def test_overlong_first_word_never_opens_with_an_empty_line(self):
         # A blank line ends an SRT/VTT cue, so the wrap must never emit one.
@@ -98,7 +101,9 @@ class CjkWrapTests(unittest.TestCase):
     def test_srt_cue_with_an_overlong_first_word_stays_one_cue(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "o.srt"
-            write_srt([SimpleNamespace(start=0.0, end=1.0, text="Supercalifragilistic is long")], out, max_line_length=10)
+            write_srt(
+                [SimpleNamespace(start=0.0, end=1.0, text="Supercalifragilistic is long")], out, max_line_length=10
+            )
             self.assertEqual(
                 out.read_text(encoding="utf-8"),
                 "1\n00:00:00,000 --> 00:00:01,000\nSupercalifragilistic\nis long\n",

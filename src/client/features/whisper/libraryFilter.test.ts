@@ -30,13 +30,19 @@ test("no filter returns the library untouched", () => {
 
 test("query matches file names case-insensitively", () => {
   const result = filterLibraryFiles(LIBRARY, { query: "PROXMOX" });
-  assert.deepEqual(result.map((f) => f.videoName), ["Proxmox Datacenter Manager.mp4"]);
+  assert.deepEqual(
+    result.map((f) => f.videoName),
+    ["Proxmox Datacenter Manager.mp4"],
+  );
 });
 
 test("query matches folder names too", () => {
   // Searching by folder is how you narrow to one source directory.
   const result = filterLibraryFiles(LIBRARY, { query: "ubiquiti" });
-  assert.deepEqual(result.map((f) => f.videoName), ["UniFi Design Center.mp4"]);
+  assert.deepEqual(
+    result.map((f) => f.videoName),
+    ["UniFi Design Center.mp4"],
+  );
 });
 
 test("multiple terms all have to match", () => {
@@ -46,10 +52,10 @@ test("multiple terms all have to match", () => {
 
 test("hiding subtitled files leaves only untranscribed ones", () => {
   const result = filterLibraryFiles(LIBRARY, { hideWithSubtitles: true });
-  assert.deepEqual(result.map((f) => f.videoName), [
-    "Build Multi-Camera 3D Tracking with DeepStream.mp4",
-    "Boris Cherny Building Claude Code.mp4",
-  ]);
+  assert.deepEqual(
+    result.map((f) => f.videoName),
+    ["Build Multi-Camera 3D Tracking with DeepStream.mp4", "Boris Cherny Building Claude Code.mp4"],
+  );
 });
 
 test("query and subtitle filter combine", () => {

@@ -53,14 +53,12 @@ export function computeLlmConfigured(
   defaultConnections: ConnectionLike[] = [],
 ): boolean {
   const raw = stored.llm_connections;
-  if (raw && raw.trim()) {
+  if (raw?.trim()) {
     try {
       const parsed: unknown = JSON.parse(raw);
       if (Array.isArray(parsed)) {
         const seeds = defaultConnections.map(fingerprint);
-        const configured = parsed.some(
-          (c) => isUsable(c) && !seeds.includes(fingerprint(c as ConnectionLike)),
-        );
+        const configured = parsed.some((c) => isUsable(c) && !seeds.includes(fingerprint(c as ConnectionLike)));
         if (configured) return true;
       }
     } catch {
@@ -69,9 +67,7 @@ export function computeLlmConfigured(
     }
   }
   // Otherwise: did the operator touch any legacy flat key away from its default?
-  return LLM_SEED_KEYS.some(
-    (key) => stored[key] !== undefined && stored[key] !== defaults[key],
-  );
+  return LLM_SEED_KEYS.some((key) => stored[key] !== undefined && stored[key] !== defaults[key]);
 }
 
 /**
@@ -99,9 +95,5 @@ function fingerprint(c: ConnectionLike): string {
   // NUL separator: it cannot occur in a provider, model or endpoint, so no pair
   // of distinct triples can collide. Written as an escape deliberately — a
   // literal NUL byte makes git treat this whole file as binary.
-  return [
-    String(c.provider ?? "local"),
-    String(c.model ?? "").trim(),
-    String(c.endpoint ?? "").trim(),
-  ].join("\u0000");
+  return [String(c.provider ?? "local"), String(c.model ?? "").trim(), String(c.endpoint ?? "").trim()].join("\u0000");
 }

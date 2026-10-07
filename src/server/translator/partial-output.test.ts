@@ -114,7 +114,11 @@ test("a failed chunk worker stops its siblings from calling the LLM and rewritin
     // One chunk request per worker, plus the three per-line calls that failed
     // the job. Siblings that kept going would have requested further chunks.
     assert.equal(chunkPrompts.length, WORKERS + 3);
-    assert.equal(fs.existsSync(partialOutputPath(outputPath)), false, "no sibling may write the partial after the job failed");
+    assert.equal(
+      fs.existsSync(partialOutputPath(outputPath)),
+      false,
+      "no sibling may write the partial after the job failed",
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }

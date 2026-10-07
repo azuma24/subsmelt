@@ -52,13 +52,7 @@ class ModelManagerEndpointTests(unittest.TestCase):
 
     def _seed_cached_model(self, model: str, *, size_bytes: int = 1024 * 1024) -> Path:
         """Create a fake HF hub snapshot dir for ``model`` and return its path."""
-        snap = (
-            Path(self._tmp.name)
-            / "hub"
-            / f"models--Systran--faster-whisper-{model}"
-            / "snapshots"
-            / "deadbeef"
-        )
+        snap = Path(self._tmp.name) / "hub" / f"models--Systran--faster-whisper-{model}" / "snapshots" / "deadbeef"
         snap.mkdir(parents=True)
         (snap / "model.bin").write_bytes(b"\0" * size_bytes)
         return snap
@@ -103,13 +97,7 @@ class ModelManagerEndpointTests(unittest.TestCase):
     def test_download_streams_progress_then_result(self):
         # Fake huggingface_hub.snapshot_download: drive the supplied tqdm_class to
         # emit progress, then create the snapshot dir so the model is "present".
-        target_snap = (
-            Path(self._tmp.name)
-            / "hub"
-            / "models--Systran--faster-whisper-tiny"
-            / "snapshots"
-            / "abc123"
-        )
+        target_snap = Path(self._tmp.name) / "hub" / "models--Systran--faster-whisper-tiny" / "snapshots" / "abc123"
 
         def fake_snapshot_download(repo_id, cache_dir, tqdm_class, **kwargs):
             self.assertEqual(repo_id, "Systran/faster-whisper-tiny")
@@ -134,9 +122,9 @@ class ModelManagerEndpointTests(unittest.TestCase):
         ):
             resp = self.client.post("/models/download", json={"model": "tiny"})
             self.assertEqual(resp.status_code, 200)
-            lines = [json.loads(l) for l in resp.text.splitlines() if l.strip()]
+            lines = [json.loads(line) for line in resp.text.splitlines() if line.strip()]
 
-        types_seen = [l["type"] for l in lines]
+        types_seen = [line["type"] for line in lines]
         self.assertIn("progress", types_seen)
         self.assertEqual(types_seen[-1], "result")
         result = lines[-1]
@@ -144,7 +132,7 @@ class ModelManagerEndpointTests(unittest.TestCase):
         self.assertEqual(result["model"], "tiny")
         self.assertIsNotNone(result["cachePath"])
         # Progress lines carry the documented shape.
-        for p in (l for l in lines if l["type"] == "progress"):
+        for p in (line for line in lines if line["type"] == "progress"):
             for key in ("pct", "downloadedMb", "totalMb"):
                 self.assertIn(key, p)
 
@@ -154,7 +142,7 @@ class ModelManagerEndpointTests(unittest.TestCase):
         # short-circuit to an immediate result.
         resp = self.client.post("/models/download", json={"model": "base"})
         self.assertEqual(resp.status_code, 200)
-        lines = [json.loads(l) for l in resp.text.splitlines() if l.strip()]
+        lines = [json.loads(line) for line in resp.text.splitlines() if line.strip()]
         self.assertEqual(len(lines), 1)
         self.assertEqual(lines[0]["type"], "result")
         self.assertTrue(lines[0]["ok"])

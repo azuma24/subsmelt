@@ -38,12 +38,16 @@ function promptTooLarge(nCtx: number): Response {
       n_ctx: nCtx,
     },
   });
-  return new Response(JSON.stringify({ error: `Engine protocol predict request returned 400: ${inner}` }), { status: 400 });
+  return new Response(JSON.stringify({ error: `Engine protocol predict request returned 400: ${inner}` }), {
+    status: 400,
+  });
 }
 
 function sharedWindowFull(): Response {
   const inner = JSON.stringify({ code: 500, message: "Context size has been exceeded.", type: "server_error" });
-  return new Response(JSON.stringify({ error: `Engine protocol predict stream returned an error: ${inner}` }), { status: 400 });
+  return new Response(JSON.stringify({ error: `Engine protocol predict stream returned an error: ${inner}` }), {
+    status: 400,
+  });
 }
 
 function messageContent(body: any, role: string): string {
@@ -133,7 +137,15 @@ test("an analysis prompt that overflows the context is resent with fewer lines",
 
   try {
     const { srtPath, outputPath } = jobFiles(200);
-    await translateFile({ ...baseOptions, srtPath, outputPath, prompt: "Translate. {{additional}}", chunkSize: 50, parallelChunks: 1, maxAnalysisLines: 200 });
+    await translateFile({
+      ...baseOptions,
+      srtPath,
+      outputPath,
+      prompt: "Translate. {{additional}}",
+      chunkSize: 50,
+      parallelChunks: 1,
+      maxAnalysisLines: 200,
+    });
 
     assert.deepEqual(analysisSampleSizes, [200, 50]);
     assert.match(chunkSystemPrompt, /Summary: a test episode\./);
@@ -169,7 +181,10 @@ test("each connection's analysis is sized to that connection's own context", asy
         { id: "big", label: "big", apiKey: "", apiHost: "http://127.0.0.1:9/v1", model: "big" },
         { id: "small", label: "small", apiKey: "", apiHost: "http://127.0.0.1:9/v1", model: "small" },
       ],
-      analysisLinesByConnection: new Map([["big", 300], ["small", 80]]),
+      analysisLinesByConnection: new Map([
+        ["big", 300],
+        ["small", 80],
+      ]),
     });
 
     assert.equal(sampleSizeByModel.get("big"), 300);

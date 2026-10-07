@@ -63,8 +63,9 @@ test("ASS: only Dialogue text, override tags and \\N stripped, Comment lines ign
 });
 
 test("caps at maxCues cues", () => {
-  const many = Array.from({ length: 100 }, (_, i) =>
-    `${i + 1}\n00:00:0${i % 9},000 --> 00:00:0${(i % 9) + 1},000\ncue number ${i}\n`,
+  const many = Array.from(
+    { length: 100 },
+    (_, i) => `${i + 1}\n00:00:0${i % 9},000 --> 00:00:0${(i % 9) + 1},000\ncue number ${i}\n`,
   ).join("\n");
   const text = sampleCueText(many, 30);
   assert.ok(text.includes("cue number 29"));

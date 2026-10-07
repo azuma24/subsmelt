@@ -1,9 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
-import { parseSync, stringifySync } from "subtitle";
-import assParser from "ass-parser";
-import assStringify from "ass-stringify";
-import { buildAssDocumentFromCues, normalizeTimeToMs, type SubtitleCue } from "./convert.js";
+import { parseAss, stringifyAss } from "./ass.js";
+import { parseSrtVtt, stringifySubtitle } from "./srt-vtt.js";
+import {
+  assField,
+  buildAssDocumentFromCues,
+  isAssDocument,
+  normalizeTimeToMs,
+  withDialogueText,
+  type ParsedSubtitle,
+  type SubtitleCue,
+} from "./convert.js";
 import { mkdirShared, shareFile } from "../shared-files.js";
 
 /** A single manual edit from the preview UI. `index` is the 1-based cue index
@@ -29,11 +36,7 @@ export interface CueEdit {
  *
  * Returns the new document string plus the number of cues actually updated.
  */
-export function applyCueEdits(
-  content: string,
-  ext: string,
-  edits: CueEdit[]
-): { output: string; updated: number } {
+export function applyCueEdits(content: string, ext: string, edits: CueEdit[]): { output: string; updated: number } {
   const normalizedExt = ext.toLowerCase().replace(/^\./, "");
 
   // Build a position→text map (0-based) from the 1-based edit indices, skipping
@@ -51,10 +54,10 @@ export function applyCueEdits(
   let updated = 0;
 
   if (["srt", "vtt"].includes(normalizedExt)) {
-    const parsed = parseSync(content);
+    const parsed = parseSrtVtt(content);
     let cuePosition = 0;
-    const rebuilt = parsed.map((node: any) => {
-      if (node?.type !== "cue") return node;
+    const rebuilt = parsed.map((node) => {
+      if (node.type !== "cue") return node;
       const pos = cuePosition++;
       if (editByPosition.has(pos)) {
         updated++;
@@ -79,29 +82,29 @@ export function applyCueEdits(
       };
     });
     const format = normalizedExt === "vtt" ? "WebVTT" : "SRT";
-    return { output: stringifySync(rebuilt, { format }), updated };
+    return { output: stringifySubtitle(rebuilt, format), updated };
   }
 
   if (["ass", "ssa"].includes(normalizedExt)) {
-    const parsedAss = assParser(content);
+    const parsedAss = parseAss(content);
     let dialogueIndex = 0;
-    const rebuilt = parsedAss.map((section: any) => {
+    const rebuilt = parsedAss.map((section) => {
       if (section.section !== "Events" || !Array.isArray(section.body)) return section;
       return {
         ...section,
-        body: section.body.map((line: any) => {
+        body: section.body.map((line) => {
           if (line.key !== "Dialogue") return line;
           const pos = dialogueIndex++;
           if (editByPosition.has(pos)) {
             updated++;
             const newText = String(editByPosition.get(pos) ?? "").replace(/\r?\n/g, "\\N");
-            return { key: "Dialogue", value: { ...line.value, Text: newText } };
+            return withDialogueText(line, newText);
           }
           return line;
         }),
       };
     });
-    return { output: assStringify(rebuilt), updated };
+    return { output: stringifyAss(rebuilt), updated };
   }
 
   throw new Error(`Unsupported extension: ${normalizedExt}`);
@@ -129,16 +132,16 @@ export function writeSubtitleFile(outputPath: string, content: string): void {
 
 export function saveTranslated(
   outputPath: string,
-  parsedSubtitle: any,
+  parsedSubtitle: ParsedSubtitle | null | undefined,
   outputExtension: string,
-  cues: SubtitleCue[]
+  cues: SubtitleCue[],
 ) {
   let newSubtitle: string;
   const ext = outputExtension.toLowerCase();
 
   if (["srt", "vtt"].includes(ext)) {
     const format = ext === "vtt" ? "WebVTT" : "SRT";
-    newSubtitle = stringifySync(
+    newSubtitle = stringifySubtitle(
       cues.map((x: SubtitleCue) => ({
         type: "cue",
         data: {
@@ -148,36 +151,27 @@ export function saveTranslated(
           text: x?.data?.translatedText || x?.data?.text || "",
         },
       })),
-      { format }
+      format,
     );
   } else if (["ass", "ssa"].includes(ext)) {
-    const hasAssStructure =
-      parsedSubtitle &&
-      typeof parsedSubtitle === "object" &&
-      !Array.isArray(parsedSubtitle) &&
-      Array.isArray(parsedSubtitle.full);
-
-    if (hasAssStructure) {
+    if (parsedSubtitle && isAssDocument(parsedSubtitle) && Array.isArray(parsedSubtitle.full)) {
       let dialogueIndex = 0;
-      newSubtitle = assStringify(
-        parsedSubtitle.full.map((section: any) => {
+      newSubtitle = stringifyAss(
+        parsedSubtitle.full.map((section) => {
           if (section.section !== "Events" || !Array.isArray(section.body)) return section;
           return {
             ...section,
-            body: section.body.map((line: any) => {
+            body: section.body.map((line) => {
               if (line.key !== "Dialogue") return line;
               const cue = cues[dialogueIndex++];
-              const translatedText = cue?.data?.translatedText || cue?.data?.text || line.value?.Text || "";
-              return {
-                key: "Dialogue",
-                value: { ...line.value, Text: translatedText },
-              };
+              const translatedText = cue?.data?.translatedText || cue?.data?.text || assField(line.value, "Text");
+              return withDialogueText(line, translatedText);
             }),
           };
-        })
+        }),
       );
     } else {
-      newSubtitle = assStringify(buildAssDocumentFromCues(cues));
+      newSubtitle = stringifyAss(buildAssDocumentFromCues(cues));
     }
   } else {
     throw new Error(`Unsupported extension: ${ext}`);

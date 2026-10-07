@@ -1,11 +1,13 @@
 """The transcription pipeline: extract audio, run the model's engine, diarize,
 render subtitles. Engines plug in through :data:`ENGINE_RUNNERS`."""
+
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Callable, Generator, Iterator
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Callable, Generator, Iterator, Literal
+from typing import Literal
 
 from . import nemotron, whisper_engine
 from .audio import extract_audio
@@ -44,8 +46,7 @@ def assert_language_supported(request: TranscribeRequest) -> None:
     raise LanguageNotSupportedError(
         request.model,
         request.language,
-        f"Model {request.model!r} does not support language {request.language!r}. "
-        f"Use large-v3 or large-v3-turbo.",
+        f"Model {request.model!r} does not support language {request.language!r}. Use large-v3 or large-v3-turbo.",
     )
 
 
@@ -149,7 +150,9 @@ def _chinese_script_for(request: TranscribeRequest, language: str, detected: str
     return request.chinese_script if is_chinese(transcript_language) else None
 
 
-def _deliver(processed: list, request: TranscribeRequest, input_path: Path, language: str, deliver: Deliver) -> tuple[int, dict]:
+def _deliver(
+    processed: list, request: TranscribeRequest, input_path: Path, language: str, deliver: Deliver
+) -> tuple[int, dict]:
     """Write the subtitle beside the input ("path") or render it to a string
     ("content"); returns (cue count, the transport's payload fields)."""
     if not any((getattr(segment, "text", "") or "").strip() for segment in processed):

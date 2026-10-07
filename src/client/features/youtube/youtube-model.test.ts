@@ -1,18 +1,48 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import type { TFunction } from "i18next";
+import type { TFunction } from "../../i18n";
 import type { YoutubePreviewEntry, YoutubeVideo } from "../../types";
-import { countByFilter, filterVideos, pickableVideos, statusCounts, videoActionLabelKey, videoActions, videoPipeline, videoStatusDescriptor } from "./video-status";
+import {
+  countByFilter,
+  filterVideos,
+  pickableVideos,
+  statusCounts,
+  videoActionLabelKey,
+  videoActions,
+  videoPipeline,
+  videoStatusDescriptor,
+} from "./video-status";
 import { estimateSelection, formatGigabytes, includedEntries, postedPerMonth } from "./estimate";
 import { followKind, followUrl } from "./format";
 
 const t = ((key: string) => `t:${key}`) as unknown as TFunction;
 
-function video(video_id: string, status: YoutubeVideo["status"], title: string, channel: string | null = null): YoutubeVideo {
+function video(
+  video_id: string,
+  status: YoutubeVideo["status"],
+  title: string,
+  channel: string | null = null,
+): YoutubeVideo {
   return {
-    video_id, playlist_id: "PL-Smx9IA029hG4XKsjwo6psQhtDfsosa8", title, channel, duration_s: 148, published_at: "2026-09-30",
-    added_at: null, status, skip_kind: null, reason: null, attempts: 0, retry_after: null, media_path: null, user_queued_at: null,
-    position: 1, removed_at: null, subtitles: null, transcript_source: null, content_kind: null,
+    video_id,
+    playlist_id: "PL-Smx9IA029hG4XKsjwo6psQhtDfsosa8",
+    title,
+    channel,
+    duration_s: 148,
+    published_at: "2026-09-30",
+    added_at: null,
+    status,
+    skip_kind: null,
+    reason: null,
+    attempts: 0,
+    retry_after: null,
+    media_path: null,
+    user_queued_at: null,
+    position: 1,
+    removed_at: null,
+    subtitles: null,
+    transcript_source: null,
+    content_kind: null,
   };
 }
 
@@ -26,36 +56,87 @@ const VIDEOS = [
 
 test("filterVideos leaves skipped and unavailable out of All, filters by tab, and searches title and channel", () => {
   // All goes group by group: in progress, then waiting, then done.
-  assert.deepEqual(filterVideos(VIDEOS, "all", "").map((v) => v.video_id), ["BHPDsGVciDk", "uXspbC2srEQ", "HiT2MyR-ZYk"]);
-  assert.deepEqual(filterVideos(VIDEOS, "off", "").map((v) => v.video_id), ["RXGzy0H0GS0", "LKsEieYbUz4"]);
+  assert.deepEqual(
+    filterVideos(VIDEOS, "all", "").map((v) => v.video_id),
+    ["BHPDsGVciDk", "uXspbC2srEQ", "HiT2MyR-ZYk"],
+  );
+  assert.deepEqual(
+    filterVideos(VIDEOS, "off", "").map((v) => v.video_id),
+    ["RXGzy0H0GS0", "LKsEieYbUz4"],
+  );
   assert.deepEqual(filterVideos(VIDEOS, "bad", ""), []);
-  assert.deepEqual(filterVideos(VIDEOS, "all", "primetime").map((v) => v.video_id), ["BHPDsGVciDk"]);
+  assert.deepEqual(
+    filterVideos(VIDEOS, "all", "primetime").map((v) => v.video_id),
+    ["BHPDsGVciDk"],
+  );
   assert.deepEqual(filterVideos(VIDEOS, "wait", "primetime"), []);
 });
 
 test("countByFilter keeps skipped and unavailable out of Kept and out of Needs attention", () => {
-  assert.deepEqual(countByFilter({ queued: 61, new: 3, downloading: 4, done: 38, failed: 1, unavailable: 7, skipped: 784 }), {
-    all: 107, run: 4, wait: 64, done: 38, bad: 1, off: 791,
-  });
+  assert.deepEqual(
+    countByFilter({ queued: 61, new: 3, downloading: 4, done: 38, failed: 1, unavailable: 7, skipped: 784 }),
+    {
+      all: 107,
+      run: 4,
+      wait: 64,
+      done: 38,
+      bad: 1,
+      off: 791,
+    },
+  );
 });
 
 test("All's first page starts with what is moving, and group headers count every matching row", () => {
-  const rows = [...Array.from({ length: 2000 }, (_, i) => video(`d${String(i).padStart(10, "0")}`, "done", `Done ${i}`)), video("q0000000000", "queued", "Next")];
+  const rows = [
+    ...Array.from({ length: 2000 }, (_, i) => video(`d${String(i).padStart(10, "0")}`, "done", `Done ${i}`)),
+    video("q0000000000", "queued", "Next"),
+  ];
   const visible = filterVideos(rows, "all", "");
   const counts = countByFilter(statusCounts(visible));
-  assert.deepEqual([counts.done, counts.wait, visible[0].video_id, visible.slice(0, 200).length], [2000, 1, "q0000000000", 200]);
+  assert.deepEqual(
+    [counts.done, counts.wait, visible[0].video_id, visible.slice(0, 200).length],
+    [2000, 1, "q0000000000", 200],
+  );
 });
 
 test("videoStatusDescriptor pairs every status with a glyph and a translated label", () => {
-  assert.deepEqual(videoStatusDescriptor({ status: "unavailable" }, t), { glyph: "∅", tone: "neutral", label: "t:youtube.status.unavailable" });
-  assert.deepEqual(videoStatusDescriptor({ status: "queued" }, t), { glyph: "··", tone: "neutral", label: "t:youtube.status.queued" });
-  assert.deepEqual(videoStatusDescriptor({ status: "transcribing" }, t), { glyph: "··", tone: "warn", label: "t:youtube.status.subtitlesNext" });
-  assert.deepEqual(videoStatusDescriptor({ status: "transcribing", pct: 40 }, t), { glyph: "≋", tone: "run", label: "t:youtube.status.transcribing" });
+  assert.deepEqual(videoStatusDescriptor({ status: "unavailable" }, t), {
+    glyph: "∅",
+    tone: "neutral",
+    label: "t:youtube.status.unavailable",
+  });
+  assert.deepEqual(videoStatusDescriptor({ status: "queued" }, t), {
+    glyph: "··",
+    tone: "neutral",
+    label: "t:youtube.status.queued",
+  });
+  assert.deepEqual(videoStatusDescriptor({ status: "transcribing" }, t), {
+    glyph: "··",
+    tone: "warn",
+    label: "t:youtube.status.subtitlesNext",
+  });
+  assert.deepEqual(videoStatusDescriptor({ status: "transcribing", pct: 40 }, t), {
+    glyph: "≋",
+    tone: "run",
+    label: "t:youtube.status.transcribing",
+  });
 });
 
 test("row actions per status mirror the server's action table", () => {
-  const offered = (["new", "queued", "waiting", "downloading", "transcribing", "translating", "done", "failed", "unavailable", "skipped"] as const)
-    .map((status) => [status, videoActions(status).map((action) => videoActionLabelKey(status, action))]);
+  const offered = (
+    [
+      "new",
+      "queued",
+      "waiting",
+      "downloading",
+      "transcribing",
+      "translating",
+      "done",
+      "failed",
+      "unavailable",
+      "skipped",
+    ] as const
+  ).map((status) => [status, videoActions(status).map((action) => videoActionLabelKey(status, action))]);
   assert.deepEqual(offered, [
     ["new", ["youtube.actions.downloadNow", "youtube.actions.skip"]],
     ["queued", ["youtube.actions.downloadNow", "youtube.actions.skip"]],
@@ -87,16 +168,36 @@ const ENTRIES: YoutubePreviewEntry[] = [
 
 test("estimateSelection counts videos, hours and disk for each backfill choice", () => {
   const audio = { type: "audio", format: "m4a" } as const;
-  assert.deepEqual(estimateSelection(ENTRIES, { kind: "none" }, audio), { videos: 0, hours: 0, gigabytes: 0, approximate: false });
+  assert.deepEqual(estimateSelection(ENTRIES, { kind: "none" }, audio), {
+    videos: 0,
+    hours: 0,
+    gigabytes: 0,
+    approximate: false,
+  });
   const posted = estimateSelection(ENTRIES, { kind: "posted_since", date: "2026-08-01" }, audio);
-  assert.deepEqual({ ...posted, gigabytes: Number(posted.gigabytes.toFixed(3)) }, { videos: 2, hours: 1.5, gigabytes: 0.087, approximate: true });
+  assert.deepEqual(
+    { ...posted, gigabytes: Number(posted.gigabytes.toFixed(3)) },
+    { videos: 2, hours: 1.5, gigabytes: 0.087, approximate: true },
+  );
   const video720 = { type: "video", maxHeight: 720, codec: "h264", container: "mp4" } as const;
-  assert.deepEqual(estimateSelection(ENTRIES, { kind: "all" }, video720), { videos: 4, hours: 3, gigabytes: 1.5, approximate: false });
+  assert.deepEqual(estimateSelection(ENTRIES, { kind: "all" }, video720), {
+    videos: 4,
+    hours: 3,
+    gigabytes: 1.5,
+    approximate: false,
+  });
   assert.deepEqual(estimateSelection(ENTRIES, { kind: "added_since", date: "2026-09-01" }, audio).videos, 2);
 });
 
 test("postedPerMonth counts posts per calendar month", () => {
-  assert.deepEqual([...postedPerMonth(ENTRIES)], [["2026-09", 1], ["2026-08", 1], ["2026-07", 1]]);
+  assert.deepEqual(
+    [...postedPerMonth(ENTRIES)],
+    [
+      ["2026-09", 1],
+      ["2026-08", 1],
+      ["2026-07", 1],
+    ],
+  );
 });
 
 test("formatGigabytes keeps one decimal under 10 GB", () => {
@@ -119,37 +220,101 @@ test("format helpers render durations, months and relative times", async () => {
 
 test("a shared GPU shows who waits: Whisper behind a translation batch, translation behind the transcriptions", async () => {
   const { gpuHold } = await import("./video-status");
-  const pipeline = (shared: boolean, held: boolean, translationRunning: boolean) => ({ gpu: { shared, held, waitingFor: 2, translationRunning }, transcription: { ready: true, waiting: 0 } });
+  const pipeline = (shared: boolean, held: boolean, translationRunning: boolean) => ({
+    gpu: { shared, held, waitingFor: 2, translationRunning },
+    transcription: { ready: true, waiting: 0 },
+  });
   assert.deepEqual(gpuHold(pipeline(false, true, true)), { whisper: false, translation: false });
   const hold = gpuHold(pipeline(true, true, false));
   assert.deepEqual(hold, { whisper: false, translation: true });
-  assert.deepEqual(videoStatusDescriptor({ status: "translating" }, t, hold), { glyph: "··", tone: "warn", label: "t:youtube.status.translationHeld" });
-  assert.deepEqual(videoPipeline({ status: "translating", media_path: "YouTube/AI/x.m4a" }, hold), ["done", "done", "wait", ""]);
-  assert.deepEqual(videoStatusDescriptor({ status: "transcribing" }, t, gpuHold(pipeline(true, false, true))), { glyph: "··", tone: "warn", label: "t:youtube.status.gpuWait" });
+  assert.deepEqual(videoStatusDescriptor({ status: "translating" }, t, hold), {
+    glyph: "··",
+    tone: "warn",
+    label: "t:youtube.status.translationHeld",
+  });
+  assert.deepEqual(videoPipeline({ status: "translating", media_path: "YouTube/AI/x.m4a" }, hold), [
+    "done",
+    "done",
+    "wait",
+    "",
+  ]);
+  assert.deepEqual(videoStatusDescriptor({ status: "transcribing" }, t, gpuHold(pipeline(true, false, true))), {
+    glyph: "··",
+    tone: "warn",
+    label: "t:youtube.status.gpuWait",
+  });
 });
 
 test("subtitleSummary names the transcript's source and each language's route", async () => {
   const { subtitleSummary, NO_HOLD } = await import("./video-status");
-  const tv = ((key: string, opts?: { lang?: string }) => `${key.replace("youtube.subs.", "")}(${opts?.lang ?? ""})`) as unknown as TFunction;
-  const plan = { spoken: "zh-Hant", routes: [{ taskId: 1, kind: "same" as const }, { taskId: 2, kind: "captions" as const }, { taskId: 3, kind: "translate" as const }] };
+  const tv = ((key: string, opts?: { lang?: string }) =>
+    `${key.replace("youtube.subs.", "")}(${opts?.lang ?? ""})`) as unknown as TFunction;
+  const plan = {
+    spoken: "zh-Hant",
+    routes: [
+      { taskId: 1, kind: "same" as const },
+      { taskId: 2, kind: "captions" as const },
+      { taskId: 3, kind: "translate" as const },
+    ],
+  };
   const translating = { subtitles: plan, transcript_source: "youtube_captions", status: "translating" as const };
-  const codes = new Map([[1, "cht"], [2, "eng"]]);
-  assert.equal(subtitleSummary(translating, codes, NO_HOLD, tv), "captions(ZH-Hant) · transcript(CHT) · creator(ENG) · translating(#3)");
-  assert.equal(subtitleSummary(translating, codes, { whisper: false, translation: true }, tv), "captions(ZH-Hant) · transcript(CHT) · creator(ENG) · waiting(#3)");
-  assert.equal(subtitleSummary({ subtitles: { spoken: "en", routes: [] }, transcript_source: "whisper:small", status: "done" }, codes, NO_HOLD, tv), "transcript(EN)");
-  assert.equal(subtitleSummary({ subtitles: { spoken: null, routes: [{ taskId: 2, kind: "translate" }] }, transcript_source: null, status: "done" }, codes, NO_HOLD, tv), "transcriptOnly() · translated(ENG)");
+  const codes = new Map([
+    [1, "cht"],
+    [2, "eng"],
+  ]);
+  assert.equal(
+    subtitleSummary(translating, codes, NO_HOLD, tv),
+    "captions(ZH-Hant) · transcript(CHT) · creator(ENG) · translating(#3)",
+  );
+  assert.equal(
+    subtitleSummary(translating, codes, { whisper: false, translation: true }, tv),
+    "captions(ZH-Hant) · transcript(CHT) · creator(ENG) · waiting(#3)",
+  );
+  assert.equal(
+    subtitleSummary(
+      { subtitles: { spoken: "en", routes: [] }, transcript_source: "whisper:small", status: "done" },
+      codes,
+      NO_HOLD,
+      tv,
+    ),
+    "transcript(EN)",
+  );
+  assert.equal(
+    subtitleSummary(
+      {
+        subtitles: { spoken: null, routes: [{ taskId: 2, kind: "translate" }] },
+        transcript_source: null,
+        status: "done",
+      },
+      codes,
+      NO_HOLD,
+      tv,
+    ),
+    "transcriptOnly() · translated(ENG)",
+  );
 });
 
 test("a followed channel is told apart from a playlist by its uploads id", () => {
   assert.equal(followKind("UUXuqSBlHAE6Xw-yeJA0Tunw"), "channel");
   assert.equal(followKind("PL-Smx9IA029hG4XKsjwo6psQhtDfsosa8"), "playlist");
   assert.equal(followUrl("UUXuqSBlHAE6Xw-yeJA0Tunw"), "https://www.youtube.com/channel/UCXuqSBlHAE6Xw-yeJA0Tunw");
-  assert.equal(followUrl("PL-Smx9IA029hG4XKsjwo6psQhtDfsosa8"), "https://www.youtube.com/playlist?list=PL-Smx9IA029hG4XKsjwo6psQhtDfsosa8");
+  assert.equal(
+    followUrl("PL-Smx9IA029hG4XKsjwo6psQhtDfsosa8"),
+    "https://www.youtube.com/playlist?list=PL-Smx9IA029hG4XKsjwo6psQhtDfsosa8",
+  );
 });
 
 test("only videos that can still be downloaded can be picked", () => {
-  const rows = [video("a", "skipped", "A"), video("b", "unavailable", "B"), video("c", "done", "C"), video("d", "skipped", "D")];
-  assert.deepEqual(pickableVideos(rows).map((v) => v.video_id), ["a", "d"]);
+  const rows = [
+    video("a", "skipped", "A"),
+    video("b", "unavailable", "B"),
+    video("c", "done", "C"),
+    video("d", "skipped", "D"),
+  ];
+  assert.deepEqual(
+    pickableVideos(rows).map((v) => v.video_id),
+    ["a", "d"],
+  );
 });
 
 test("a channel's Shorts and live streams count only when they are included", () => {

@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { jobDerived } from "./job-derived.js";
-import type { JobRow } from "../../types";
+import type { Job } from "../../types";
 
-function row(overrides: Partial<JobRow>): JobRow {
+function row(overrides: Partial<Job>): Job {
   return {
     id: 1,
     task_id: 1,
@@ -20,7 +20,7 @@ function row(overrides: Partial<JobRow>): JobRow {
     target_lang: "Chinese",
     lang_code: "chi",
     ...overrides,
-  } as JobRow;
+  } as Job;
 }
 
 test("jobDerived derives the display state both surfaces share", () => {
@@ -53,7 +53,12 @@ test("jobDerived falls back to an empty name for root-level paths", () => {
 });
 
 test("jobDerived names the machine and model translating a job", () => {
-  const connection = { id: "gpu", label: "Local 4090", host: "http://10.0.0.5:1234/v1", model: "Qwen/Qwen2.5-72B-Instruct" };
+  const connection = {
+    id: "gpu",
+    label: "Local 4090",
+    host: "http://10.0.0.5:1234/v1",
+    model: "Qwen/Qwen2.5-72B-Instruct",
+  };
   const running = jobDerived(row({ status: "translating", connection }));
   assert.equal(running.connectionText, "Local 4090 · Qwen/Qwen2.5-72B-Instruct");
   assert.equal(running.connectionTitle, "Local 4090 — Qwen/Qwen2.5-72B-Instruct — http://10.0.0.5:1234/v1");

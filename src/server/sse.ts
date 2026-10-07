@@ -53,7 +53,7 @@ export function addSSEClient(res: Response) {
   });
 }
 
-export function broadcast(event: string, data: any) {
+export function broadcast(event: string, data: object) {
   const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
   for (const client of clients) {
     try {

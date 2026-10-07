@@ -1,18 +1,16 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import * as api from "../../api";
 import type { TranslateFileRequest } from "../../api";
 import type { Task, TaskStatus } from "../../types";
 import { useMutationWithInvalidation, useTasksQuery } from "../../hooks";
-import { useToast } from "../../components/Toast";
+import { useToast } from "../../ui/Toast";
 import { getErrorMessage } from "../../lib";
 import { TargetLanguageField } from "../convert/TargetLanguageField";
 import { resolveTargetLanguage, type LanguageResolution } from "../convert/resolve-language";
 
 /** What the person picked: one of their tasks, or a language typed into the field. */
-export type TranslateChoice =
-  | { kind: "task"; task: Task }
-  | { kind: "language"; resolution: LanguageResolution };
+export type TranslateChoice = { kind: "task"; task: Task } | { kind: "language"; resolution: LanguageResolution };
 
 /** The chosen language, or null while a typed language is ambiguous or unknown. */
 function chosenLanguage(choice: TranslateChoice): { langCode: string; targetLang: string } | null {
@@ -51,9 +49,7 @@ export function TranslateFileForm({ srtPath, existingTasks, onQueued, onCancel }
 
   const shownTaskIds = new Set(existingTasks.map((task) => task.taskId));
   const quickPicks = tasks.filter((task) => !shownTaskIds.has(task.id));
-  const choice: TranslateChoice = pickedTask
-    ? { kind: "task", task: pickedTask }
-    : { kind: "language", resolution };
+  const choice: TranslateChoice = pickedTask ? { kind: "task", task: pickedTask } : { kind: "language", resolution };
   const request = translateFileRequest(srtPath, choice);
   const language = chosenLanguage(choice);
 
@@ -67,9 +63,20 @@ export function TranslateFileForm({ srtPath, existingTasks, onQueued, onCancel }
     if (!request || !language) return;
     try {
       const result = await mutation.mutateAsync(request);
-      onQueued({ taskId: result.taskId, ...language, outputName: "", status: "pending", jobId: result.jobId });
+      onQueued({
+        taskId: result.taskId,
+        ...language,
+        outputName: "",
+        outputPath: "",
+        status: "pending",
+        jobId: result.jobId,
+        translatedTitle: null,
+        outputExists: false,
+      });
       addToast(
-        t(result.created ? "scan.translateFile.queued" : "scan.translateFile.alreadyQueued", { lang: language.targetLang }),
+        t(result.created ? "scan.translateFile.queued" : "scan.translateFile.alreadyQueued", {
+          lang: language.targetLang,
+        }),
         result.created ? "success" : "info",
       );
     } catch {
@@ -78,10 +85,10 @@ export function TranslateFileForm({ srtPath, existingTasks, onQueued, onCancel }
   };
 
   return (
-    <form onSubmit={submit} className="mt-3 flex flex-col gap-3 rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-3">
+    <form onSubmit={submit} className="mt-3 flex flex-col gap-3 rounded-md border border-border bg-surface-raised p-3">
       {quickPicks.length > 0 && (
         <div className="flex flex-col gap-2">
-          <span className="text-xs font-medium text-[var(--text-2)]">{t("scan.translateFile.yourTasks")}</span>
+          <span className="text-xs font-medium text-muted">{t("scan.translateFile.yourTasks")}</span>
           <div className="flex flex-wrap gap-2">
             {quickPicks.map((task) => {
               const active = pickedTask?.id === task.id;
@@ -94,7 +101,7 @@ export function TranslateFileForm({ srtPath, existingTasks, onQueued, onCancel }
                     setPickedTask(active ? null : task);
                     setLanguageInput("");
                   }}
-                  className={`rounded-full border px-3 py-1 text-xs ${active ? "border-[var(--accent)] bg-[var(--accent-dim)] text-[var(--accent)]" : "border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:border-[var(--accent-border)]"}`}
+                  className={`rounded-full border px-3 py-1 text-xs ${active ? "border-accent bg-accent-soft text-accent" : "border-border bg-surface text-text hover:border-accent-line"}`}
                 >
                   {task.target_lang} · {task.lang_code}
                 </button>
@@ -111,22 +118,18 @@ export function TranslateFileForm({ srtPath, existingTasks, onQueued, onCancel }
         onPick={(entry) => typeLanguage(entry.code)}
       />
       {mutation.error && (
-        <p role="alert" className="text-xs text-[var(--red)]">
+        <p role="alert" className="text-xs text-danger">
           {getErrorMessage(mutation.error)}
         </p>
       )}
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className={`${buttonBase} text-[var(--text-2)] hover:text-[var(--text)]`}
-        >
+        <button type="button" onClick={onCancel} className={`${buttonBase} text-muted hover:text-text`}>
           {t("common.cancel")}
         </button>
         <button
           type="submit"
           disabled={!request || mutation.isPending}
-          className={`${buttonBase} bg-[var(--accent)] text-[var(--on-accent)] hover:brightness-110`}
+          className={`${buttonBase} bg-accent text-accent-text hover:brightness-110`}
         >
           {mutation.isPending ? t("scan.translateFile.submitting") : t("scan.translateFile.submit")}
         </button>

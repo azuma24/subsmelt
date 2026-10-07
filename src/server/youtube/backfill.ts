@@ -46,7 +46,11 @@ export function needsExactDate(publishedAt: string | null, cutoff: string, today
 }
 
 /** Decides which videos already in a playlist the backfill filter keeps. */
-export async function selectBackfill(backfill: Backfill, entries: BackfillEntry[], deps: BackfillDeps): Promise<BackfillSelection> {
+export async function selectBackfill(
+  backfill: Backfill,
+  entries: BackfillEntry[],
+  deps: BackfillDeps,
+): Promise<BackfillSelection> {
   const exactDates = new Map<string, string>();
   switch (backfill.kind) {
     case "all":

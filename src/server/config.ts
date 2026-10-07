@@ -4,6 +4,8 @@ import { migrateConnectionsFromFlat, parseConnections } from "./connections.js";
 import { standardizeTasks, standardTaskLangCode, type PreferredChinese } from "./language-codes.js";
 import { computeLlmConfigured } from "./llm-configured.js";
 import { logger } from "./logger.js";
+import type { TranslationTask } from "../shared/tasks.js";
+import { errorMessage } from "./errors.js";
 
 const CONFIG_DIR = process.env.CONFIG_DIR || "./config";
 const CONFIG_FILE = path.join(CONFIG_DIR, "config.json");
@@ -12,18 +14,7 @@ fs.mkdirSync(CONFIG_DIR, { recursive: true });
 
 // --- Schema ---
 
-export interface TranslationTask {
-  id: number;
-  source_lang: string;
-  target_lang: string;
-  output_pattern: string;
-  lang_code: string;
-  /** Codes this task wrote before it moved to the standard one; outputs named with them still count. */
-  former_lang_codes?: string[];
-  enabled: number;
-  prompt_override: string;
-  created_at: string;
-}
+export type { TranslationTask };
 
 interface ConfigData {
   settings: Record<string, string>;
@@ -202,7 +193,7 @@ function loadConfig(): ConfigData {
     // up, leave it in place, and refuse to overwrite it until the user says so.
     const backup = `${CONFIG_FILE}.broken-${new Date().toISOString().replace(/[:.]/g, "-")}`;
     fs.copyFileSync(CONFIG_FILE, backup);
-    const message = e instanceof Error ? e.message : String(e);
+    const message = e instanceof Error ? errorMessage(e) : String(e);
     configLoadFailure = { file: CONFIG_FILE, backup, message };
     logger.error(
       "system",
@@ -256,7 +247,7 @@ function saveConfig(config: ConfigData): void {
 }
 
 // In-memory cache — loaded once, written on every mutation
-let _config: ConfigData = loadConfig();
+const _config: ConfigData = loadConfig();
 
 export function getConfigLoadFailure(): ConfigLoadFailure | null {
   return configLoadFailure;
@@ -275,6 +266,11 @@ export function getSetting(key: string): string {
   return envPinnedSettings[key] ?? _config.settings[key] ?? DEFAULT_SETTINGS[key] ?? "";
 }
 
+/** The value a setting ships with, before config.json or the environment changes it. */
+export function defaultSetting(key: string): string {
+  return DEFAULT_SETTINGS[key] ?? "";
+}
+
 export function setSetting(key: string, value: string): void {
   setSettings({ [key]: value });
 }
@@ -284,9 +280,8 @@ export function setSetting(key: string, value: string): void {
 // the concurrent-request clobber window of calling setSetting in a loop.
 export function setSettings(patch: Record<string, string>): void {
   const before = preferredChinese();
-  const persistable = "llm_connections" in patch
-    ? { ...patch, llm_connections: persistableConnections(patch.llm_connections) }
-    : patch;
+  const persistable =
+    "llm_connections" in patch ? { ...patch, llm_connections: persistableConnections(patch.llm_connections) } : patch;
   _config.settings = { ..._config.settings, ...persistable };
   // .chi is the preferred script: a switch moves the Chinese tasks now, not at the next start.
   if (preferredChinese() !== before) _config.tasks = standardizeTasks(_config.tasks, preferredChinese());
@@ -307,7 +302,7 @@ export function getAllSettings(): Record<string, string> {
   const merged = { ...DEFAULT_SETTINGS, ..._config.settings, ...envPinnedSettings };
   // Backfill the connections array from legacy flat keys so the client and the
   // queue always see a populated list, even before the first multi-connection save.
-  if (!merged.llm_connections || !merged.llm_connections.trim()) {
+  if (!merged.llm_connections?.trim()) {
     merged.llm_connections = JSON.stringify(migrateConnectionsFromFlat(merged));
   } else {
     merged.llm_connections = withEnvLocalConnection(merged.llm_connections);
@@ -326,7 +321,10 @@ const ENV_LOCAL_CONNECTION_FIELDS: Record<string, "endpoint" | "apiKey" | "model
   model: "model",
 };
 
-function mapLocalConnection(json: string, fn: (connection: Record<string, unknown>) => Record<string, unknown>): string {
+function mapLocalConnection(
+  json: string,
+  fn: (connection: Record<string, unknown>) => Record<string, unknown>,
+): string {
   let connections: unknown;
   try {
     connections = JSON.parse(json);
@@ -366,7 +364,10 @@ export function persistableConnections(json: string): string {
   return mapLocalConnection(json, (c) => ({
     ...c,
     ...Object.fromEntries(
-      pinned.map(([key, field]) => [field, storedLocal ? storedLocal[field] : (_config.settings[key] ?? DEFAULT_SETTINGS[key] ?? "")]),
+      pinned.map(([key, field]) => [
+        field,
+        storedLocal ? storedLocal[field] : (_config.settings[key] ?? DEFAULT_SETTINGS[key] ?? ""),
+      ]),
     ),
   }));
 }
@@ -409,7 +410,8 @@ const LANG_CODE_RE = /^[A-Za-z0-9_-]+$/;
 export function validateTaskLangCode(langCode: string, excludeTaskId?: number): string | null {
   if (!LANG_CODE_RE.test(langCode)) return "lang_code must contain only letters, digits, dashes and underscores";
   const duplicate = _config.tasks.some((t) => t.lang_code === langCode && t.id !== excludeTaskId);
-  if (duplicate) return `A task with language code "${langCode}" already exists — two tasks sharing it would write the same output files`;
+  if (duplicate)
+    return `A task with language code "${langCode}" already exists — two tasks sharing it would write the same output files`;
   return null;
 }
 
@@ -445,7 +447,7 @@ export function updateTask(
     lang_code: string;
     enabled: number;
     prompt_override: string;
-  }>
+  }>,
 ): void {
   const task = _config.tasks.find((t) => t.id === id);
   if (!task) return;
@@ -453,7 +455,7 @@ export function updateTask(
   const previousLanguage = standardTaskLangCode(task, preferredChinese());
   for (const [k, v] of Object.entries(updates)) {
     if (v !== undefined) {
-      (task as any)[k] = v;
+      (task as unknown as Record<string, unknown>)[k] = v;
     }
   }
   const next = standardTaskLangCode(task, preferredChinese());
@@ -499,9 +501,7 @@ export const ENV_SETTING_OVERRIDES: Record<string, string> = {
 };
 
 /** Settings to seed from `env`, skipping unset and empty values. */
-export function envSettingOverrides(
-  env: Record<string, string | undefined> = process.env,
-): Record<string, string> {
+export function envSettingOverrides(env: Record<string, string | undefined> = process.env): Record<string, string> {
   const overrides: Record<string, string> = {};
   for (const [envKey, settingKey] of Object.entries(ENV_SETTING_OVERRIDES)) {
     const value = env[envKey];
@@ -521,4 +521,3 @@ const envPinnedSettings = envSettingOverrides();
 export function envPinnedSettingKeys(): string[] {
   return Object.keys(envPinnedSettings);
 }
-

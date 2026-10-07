@@ -1,11 +1,23 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import { renderPage } from "../../test-render";
 import type { ScannedFile, TaskStatus } from "../../types";
-import { ScanConfirmModal, countScanSubtitles, countUntargetedSubtitles, summarizeScanFolders, type ScanPlan } from "./ScanConfirmModal";
+import { makeTaskStatus } from "../../test-fixtures";
+import {
+  ScanConfirmModal,
+  countScanSubtitles,
+  countUntargetedSubtitles,
+  summarizeScanFolders,
+  type ScanPlan,
+} from "./ScanConfirmModal";
 
-const target: TaskStatus = { taskId: 1, targetLang: "Traditional Chinese", langCode: "chi", outputName: "", status: "new", jobId: null };
+const target: TaskStatus = makeTaskStatus({
+  taskId: 1,
+  targetLang: "Traditional Chinese",
+  langCode: "chi",
+  status: "new",
+});
 
 function subtitle(srtPath: string, tasks: TaskStatus[] = [target]): ScannedFile["subtitles"][number] {
   return { srtPath, srtName: srtPath.split("/").pop() || "", tasks };
@@ -52,20 +64,35 @@ test("with new jobs the modal offers Proceed and pluralized folder counts", () =
 test("with nothing to queue the modal says so and makes Close the primary action", () => {
   const page = renderPage(<Modal plan={{ files, newJobs: 0, topFolders }} />);
 
-  assert.ok(page.text.includes("Found 3 subtitle files, and every one already has a job or a finished output. Nothing new will be queued."));
+  assert.ok(
+    page.text.includes(
+      "Found 3 subtitle files, and every one already has a job or a finished output. Nothing new will be queued.",
+    ),
+  );
   assert.ok(!page.text.includes("0 new jobs"));
   assert.deepEqual(page.buttons.slice(1), ["Scan anyway", "Close"]);
 });
 
 test("subtitles with no applicable translation target are counted and point to Translations instead of reporting zero", () => {
   const untargeted: ScannedFile[] = [
-    { videoPath: "/media/Show/Episode 01.mkv", videoName: "Episode 01.mkv", videoMtime: 1, subtitles: [subtitle("/media/Show/Episode 01.en.srt", []), subtitle("/media/Show/Episode 01.ja.srt", [])] },
+    {
+      videoPath: "/media/Show/Episode 01.mkv",
+      videoName: "Episode 01.mkv",
+      videoMtime: 1,
+      subtitles: [subtitle("/media/Show/Episode 01.en.srt", []), subtitle("/media/Show/Episode 01.ja.srt", [])],
+    },
     { videoPath: "/media/Show/Episode 02.mkv", videoName: "Episode 02.mkv", videoMtime: 1, subtitles: [] },
     { videoPath: null, videoName: null, videoMtime: null, subtitles: [subtitle("/media/Docs/Lecture.en.srt", [])] },
   ];
-  const page = renderPage(<Modal plan={{ files: untargeted, newJobs: 0, topFolders: summarizeScanFolders(untargeted) }} />);
+  const page = renderPage(
+    <Modal plan={{ files: untargeted, newJobs: 0, topFolders: summarizeScanFolders(untargeted) }} />,
+  );
 
-  assert.ok(page.text.includes("Found 3 subtitle files, but no translation target applies to any of them. Add or enable one in Translations."));
+  assert.ok(
+    page.text.includes(
+      "Found 3 subtitle files, but no translation target applies to any of them. Add or enable one in Translations.",
+    ),
+  );
   assert.ok(!page.text.includes("Found 0"));
   assert.deepEqual(page.buttons.slice(1), ["Scan anyway", "Close"]);
 });

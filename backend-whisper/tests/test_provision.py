@@ -3,7 +3,6 @@ from unittest import mock
 
 from app import provision
 
-
 EXPECTED_CHECK_IDS = [
     "os",
     "cpu",
@@ -34,8 +33,10 @@ class ProvisionDetectTests(unittest.TestCase):
             self.assertIn("detail", check)
 
     def test_no_gpu_reflects_absence_and_cuda_is_info_not_fail(self):
-        with mock.patch.object(provision, "gpu_info", return_value=[]), \
-             mock.patch.object(provision, "cuda_device_count", return_value=0):
+        with (
+            mock.patch.object(provision, "gpu_info", return_value=[]),
+            mock.patch.object(provision, "cuda_device_count", return_value=0),
+        ):
             report = provision.detect()
         by_id = {c["id"]: c for c in report["checks"]}
         # GPU absence reflected (info, CPU-only).
@@ -51,8 +52,10 @@ class ProvisionDetectTests(unittest.TestCase):
 
     def test_gpu_present_but_old_driver_emits_fix_descriptor_with_url(self):
         fake_gpu = [{"name": "GeForce RTX 4090", "total_vram_mb": 24576, "free_vram_mb": 20000}]
-        with mock.patch.object(provision, "gpu_info", return_value=fake_gpu), \
-             mock.patch.object(provision, "_parse_driver_version", return_value="400.00"):
+        with (
+            mock.patch.object(provision, "gpu_info", return_value=fake_gpu),
+            mock.patch.object(provision, "_parse_driver_version", return_value="400.00"),
+        ):
             check = provision._check_nvidia_driver()
         self.assertEqual(check["status"], "fail")
         self.assertIn("fix", check)
@@ -62,26 +65,32 @@ class ProvisionDetectTests(unittest.TestCase):
 
     def test_gpu_present_with_new_driver_is_ok_no_fix(self):
         fake_gpu = [{"name": "RTX 4090", "total_vram_mb": 24576, "free_vram_mb": 20000}]
-        with mock.patch.object(provision, "gpu_info", return_value=fake_gpu), \
-             mock.patch.object(provision, "_parse_driver_version", return_value="560.10.10"):
+        with (
+            mock.patch.object(provision, "gpu_info", return_value=fake_gpu),
+            mock.patch.object(provision, "_parse_driver_version", return_value="560.10.10"),
+        ):
             check = provision._check_nvidia_driver()
         self.assertEqual(check["status"], "ok")
         self.assertNotIn("fix", check)
 
     def test_no_gpu_no_driver_is_info_not_fail(self):
-        with mock.patch.object(provision, "gpu_info", return_value=[]), \
-             mock.patch.object(provision, "_parse_driver_version", return_value=None):
+        with (
+            mock.patch.object(provision, "gpu_info", return_value=[]),
+            mock.patch.object(provision, "_parse_driver_version", return_value=None),
+        ):
             check = provision._check_nvidia_driver()
         self.assertEqual(check["status"], "info")
         self.assertNotIn("fix", check)
 
     def test_report_never_raises_when_everything_is_absent(self):
-        with mock.patch.object(provision, "psutil", None), \
-             mock.patch.object(provision, "gpu_info", return_value=[]), \
-             mock.patch.object(provision, "cuda_device_count", return_value=0), \
-             mock.patch.object(provision.shutil, "which", return_value=None), \
-             mock.patch.object(provision.shutil, "disk_usage", side_effect=OSError("boom")), \
-             mock.patch.dict(provision.os.environ, {}, clear=True):
+        with (
+            mock.patch.object(provision, "psutil", None),
+            mock.patch.object(provision, "gpu_info", return_value=[]),
+            mock.patch.object(provision, "cuda_device_count", return_value=0),
+            mock.patch.object(provision.shutil, "which", return_value=None),
+            mock.patch.object(provision.shutil, "disk_usage", side_effect=OSError("boom")),
+            mock.patch.dict(provision.os.environ, {}, clear=True),
+        ):
             report = provision.detect()
         # Still produces a full, well-formed report.
         self.assertEqual([c["id"] for c in report["checks"]], EXPECTED_CHECK_IDS)
@@ -122,15 +131,19 @@ class ProvisionResourceCheckTests(unittest.TestCase):
         self.assertEqual(check["status"], "warn")
 
     def test_ffmpeg_missing_emits_fix(self):
-        with mock.patch.object(provision.shutil, "which", return_value=None), \
-             mock.patch.dict(provision.os.environ, {}, clear=True):
+        with (
+            mock.patch.object(provision.shutil, "which", return_value=None),
+            mock.patch.dict(provision.os.environ, {}, clear=True),
+        ):
             check = provision._check_ffmpeg()
         self.assertEqual(check["status"], "fail")
         self.assertEqual(check["fix"]["action"], "install_ffmpeg")
 
     def test_ffmpeg_found_on_path(self):
-        with mock.patch.object(provision.shutil, "which", return_value="/usr/bin/ffmpeg"), \
-             mock.patch.dict(provision.os.environ, {}, clear=True):
+        with (
+            mock.patch.object(provision.shutil, "which", return_value="/usr/bin/ffmpeg"),
+            mock.patch.dict(provision.os.environ, {}, clear=True),
+        ):
             check = provision._check_ffmpeg()
         self.assertEqual(check["status"], "ok")
 

@@ -28,8 +28,7 @@ const SEED_CONNS = [
 ];
 
 const conns = (arr: unknown[]) => JSON.stringify(arr);
-const check = (stored: Record<string, string>) =>
-  computeLlmConfigured(stored, DEFAULTS, SEED_CONNS);
+const check = (stored: Record<string, string>) => computeLlmConfigured(stored, DEFAULTS, SEED_CONNS);
 
 test("a fresh install is not configured", () => {
   // The whole point: nothing stored, yet the merged view would show a local
@@ -113,14 +112,8 @@ test("an unrelated edit that round-trips the seed connection stays unconfigured"
 });
 
 test("editing the seed connection's model or endpoint does count", () => {
-  assert.equal(
-    check({ llm_connections: conns([{ ...SEED_CONNS[0], model: "llama3" }]) }),
-    true,
-  );
-  assert.equal(
-    check({ llm_connections: conns([{ ...SEED_CONNS[0], endpoint: "http://gpu.lan:1234/v1" }]) }),
-    true,
-  );
+  assert.equal(check({ llm_connections: conns([{ ...SEED_CONNS[0], model: "llama3" }]) }), true);
+  assert.equal(check({ llm_connections: conns([{ ...SEED_CONNS[0], endpoint: "http://gpu.lan:1234/v1" }]) }), true);
 });
 
 test("a real connection alongside the untouched seed still counts", () => {

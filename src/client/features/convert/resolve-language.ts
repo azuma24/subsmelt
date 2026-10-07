@@ -42,17 +42,14 @@ export function resolveTargetLanguage(input: string): LanguageResolution {
 
   const ambiguous = AMBIGUOUS_INPUTS.get(needle);
   if (ambiguous) {
-    const options = ambiguous
-      .map((code) => findLanguage(code))
-      .filter((l): l is LanguageEntry => Boolean(l));
+    const options = ambiguous.map((code) => findLanguage(code)).filter((l): l is LanguageEntry => Boolean(l));
     return { status: "ambiguous", options };
   }
 
   const exact = LANGUAGES.find((l) => matchTerms(l).includes(needle));
   if (exact) return { status: "resolved", language: exact };
 
-  const scored = LANGUAGES
-    .map((l) => ({ l, d: Math.min(...matchTerms(l).map((term) => editDistance(needle, term))) }))
+  const scored = LANGUAGES.map((l) => ({ l, d: Math.min(...matchTerms(l).map((term) => editDistance(needle, term))) }))
     .filter(({ d }) => d <= TYPO_DISTANCE_MAX)
     .sort((a, b) => a.d - b.d)
     .slice(0, MAX_SUGGESTIONS)

@@ -20,7 +20,7 @@ test("num parses stored strings and rejects junk", () => {
   assert.equal(num(Number.NaN, 60), 60);
 });
 
-test("flag treats the server's \"1\" as true and everything else as false", () => {
+test('flag treats the server\'s "1" as true and everything else as false', () => {
   assert.equal(flag("1"), true);
   assert.equal(flag("0"), false);
   // The server writes "1"/"0"; any other string is not a truthy flag.

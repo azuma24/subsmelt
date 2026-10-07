@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../../i18n";
 import * as api from "../../api";
-import { useConfirm } from "../../components/ConfirmModal";
-import { useToast } from "../../components/Toast";
+import { useConfirm } from "../../ui/ConfirmModal";
+import { useToast } from "../../ui/Toast";
 import { getErrorMessage } from "../../lib";
 import type { YoutubePlaylist } from "../../types";
 
@@ -21,7 +21,10 @@ export function usePlaylistActions() {
     setChecking((prev) => new Set(prev).add(playlist.id));
     try {
       const result = await api.syncYoutubePlaylist(playlist.id);
-      addToast(t("youtube.toast.checked", { title: result.title, added: result.added, removed: result.removed }), "success");
+      addToast(
+        t("youtube.toast.checked", { title: result.title, added: result.added, removed: result.removed }),
+        "success",
+      );
     } catch (error) {
       addToast(t("youtube.toast.checkFailed", { error: getErrorMessage(error) }), "error");
     } finally {

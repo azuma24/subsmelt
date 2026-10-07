@@ -6,7 +6,9 @@ import path from "node:path";
 import { TranscriptionHistoryStore, summarizeTranscriptionError } from "./transcription-history.js";
 
 test("summarizeTranscriptionError redacts filesystem paths", () => {
-  const summary = summarizeTranscriptionError("Failed to open /private/tmp/video/Episode 01.mkv because /Users/alice/media is missing");
+  const summary = summarizeTranscriptionError(
+    "Failed to open /private/tmp/video/Episode 01.mkv because /Users/alice/media is missing",
+  );
   assert.equal(summary.includes("/private/tmp/video"), false);
   assert.equal(summary.includes("/Users/alice/media"), false);
   assert.match(summary, /\[path\]/);

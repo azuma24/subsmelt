@@ -1,27 +1,29 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { renderPage, type QuerySeed } from "../../test-render";
-import type { JobRow } from "../../types";
+import type { Job } from "../../types";
+import { makeJob } from "../../test-fixtures";
 import { JobsTableDesktop } from "./JobsTableDesktop";
 
-function job(id: number, name: string, status: string): JobRow {
-  return {
+function job(id: number, name: string, status: string): Job {
+  return makeJob({
     id,
     srt_path: `/media/Show/${name}`,
     output_path: `/media/Show/${name.replace(".en.srt", ".zh-TW.srt")}`,
     status,
-    priority: 0,
     total_cues: 100,
     completed_cues: status === "done" ? 100 : 40,
     error: status === "error" ? "boom" : null,
-    duration_seconds: null,
     target_lang: "Traditional Chinese",
     lang_code: "zh-TW",
-    force: 0,
-  };
+  });
 }
 
-const jobs = [job(1, "Episode 01.en.srt", "done"), job(2, "Episode 02.en.srt", "translating"), job(3, "Episode 03.en.srt", "pending")];
+const jobs = [
+  job(1, "Episode 01.en.srt", "done"),
+  job(2, "Episode 02.en.srt", "translating"),
+  job(3, "Episode 03.en.srt", "pending"),
+];
 const seed: QuerySeed = [[["jobs"], { jobs, queueRunning: true, currentJobId: 2 }]];
 
 /** Splits the rendered table into its grid rows: header first, then one per job. */
@@ -32,7 +34,15 @@ function gridRows(html: string): string[] {
 
 function renderTable() {
   return renderPage(
-    <JobsTableDesktop jobs={jobs} currentJobId={2} selectedIds={new Set()} setSelectedIds={() => {}} onPreview={() => {}} onOpenLogs={() => {}} onOpenDetails={() => {}} />,
+    <JobsTableDesktop
+      jobs={jobs}
+      currentJobId={2}
+      selectedIds={new Set()}
+      setSelectedIds={() => {}}
+      onPreview={() => {}}
+      onOpenLogs={() => {}}
+      onOpenDetails={() => {}}
+    />,
     seed,
   );
 }
@@ -51,7 +61,7 @@ test("the active job's row is highlighted and the others are not", () => {
   const rowTags = Array.from(html.matchAll(/<div[^>]*role="row"[^>]*grid-template-columns[^>]*>/g), (m) => m[0]);
 
   assert.equal(rowTags.length, 1 + jobs.length);
-  assert.match(rowTags[2], /bg-\[var\(--accent-dim\)\]/, "translating job row");
-  assert.doesNotMatch(rowTags[1], /accent-dim/, "done job row");
-  assert.doesNotMatch(rowTags[3], /accent-dim/, "pending job row");
+  assert.match(rowTags[2], /bg-accent-soft/, "translating job row");
+  assert.doesNotMatch(rowTags[1], /accent-soft/, "done job row");
+  assert.doesNotMatch(rowTags[3], /accent-soft/, "pending job row");
 });

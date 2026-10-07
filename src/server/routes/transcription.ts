@@ -30,6 +30,7 @@ import {
 import { beginTranscriptionRun } from "../transcription/in-flight.js";
 import { registerTranscriptionModelsRoutes } from "./transcription-models.js";
 import { registerTranscriptionHistoryRoutes } from "./transcription-history-routes.js";
+import { errorMessage } from "../errors.js";
 
 // Re-exported so existing importers (`src/server/index.ts`) keep working
 // unchanged after the transcription engine moved to ./transcription-runtime.js.
@@ -39,17 +40,24 @@ export function registerTranscriptionRoutes(app: Express): void {
   app.get("/api/transcribe/health", async (_req, res) => {
     const settings = getAllSettings();
     const backendUrl = getTranscriptionBackendUrl(settings);
-    const selectedModel = typeof settings.transcription_model === "string" && settings.transcription_model.trim()
-      ? settings.transcription_model.trim()
-      : "small";
+    const selectedModel =
+      typeof settings.transcription_model === "string" && settings.transcription_model.trim()
+        ? settings.transcription_model.trim()
+        : "small";
     if (!backendUrl) {
       return res.json({ ok: false, endpointReachable: false, reason: "endpoint-missing" });
     }
     try {
       const health = await fetchTranscriptionHealth(backendUrl, selectedModel, settings.transcription_backend_token);
       return res.json({ ok: true, endpointReachable: true, backendUrl, health });
-    } catch (error: any) {
-      return res.json({ ok: false, endpointReachable: false, backendUrl, reason: "network-error", message: error?.message || "unknown" });
+    } catch (error) {
+      return res.json({
+        ok: false,
+        endpointReachable: false,
+        backendUrl,
+        reason: "network-error",
+        message: errorMessage(error) || "unknown",
+      });
     }
   });
 
@@ -68,12 +76,12 @@ export function registerTranscriptionRoutes(app: Express): void {
     try {
       const body = await fetchTranscriptionLogs(backendUrl, lines, settings.transcription_backend_token);
       return res.json({ ok: true, backendUrl, ...(body as Record<string, unknown>) });
-    } catch (error: any) {
+    } catch (error) {
       return res.json({
         ok: false,
         backendUrl,
         reason: "network-error",
-        message: error?.message || "unknown",
+        message: errorMessage(error) || "unknown",
         lines: [],
       });
     }
@@ -88,8 +96,8 @@ export function registerTranscriptionRoutes(app: Express): void {
     // Validate the path is inside MEDIA_DIR before any downstream processing.
     try {
       assertMediaPathAllowed(videoPath, MEDIA_DIR);
-    } catch (error: any) {
-      return res.status(400).json({ error: error?.message || "Invalid media path" });
+    } catch (error) {
+      return res.status(400).json({ error: errorMessage(error) || "Invalid media path" });
     }
     try {
       const request = buildTranscriptionRequest({
@@ -102,8 +110,8 @@ export function registerTranscriptionRoutes(app: Express): void {
       });
       const result = await preflightTranscription(backendUrl, request, settings.transcription_backend_token);
       return res.json(result);
-    } catch (error: any) {
-      return res.status(400).json({ error: error?.message || "Transcription preflight failed" });
+    } catch (error) {
+      return res.status(400).json({ error: errorMessage(error) || "Transcription preflight failed" });
     }
   });
 
@@ -115,11 +123,14 @@ export function registerTranscriptionRoutes(app: Express): void {
     // broadcast over SSE, or used as a map key by any downstream processing.
     try {
       assertMediaPathAllowed(videoPath, MEDIA_DIR);
-    } catch (error: any) {
-      return res.status(400).json({ error: error?.message || "Invalid media path" });
+    } catch (error) {
+      return res.status(400).json({ error: errorMessage(error) || "Invalid media path" });
     }
     const requestedPostAction = req.body?.postAction as TranscribePostAction | undefined;
-    const postAction = requestedPostAction && transcribePostActionValues.includes(requestedPostAction) ? requestedPostAction : "transcribe_only";
+    const postAction =
+      requestedPostAction && transcribePostActionValues.includes(requestedPostAction)
+        ? requestedPostAction
+        : "transcribe_only";
 
     // A client that goes away (closed tab, reload) must not leave the backend
     // transcribing: abort the run when the response closes unfinished. Only
@@ -142,18 +153,18 @@ export function registerTranscriptionRoutes(app: Express): void {
       });
       logger.info("system", `Transcribed ${path.basename(videoPath)} → ${result.subtitle_path || "subtitle output"}`);
 
-      let scanResult: ReturnType<typeof scanFolder> | null = null;
+      let scanResult: Awaited<ReturnType<typeof scanFolder>> | null = null;
       if (postAction === "transcribe_and_translate") {
-        scanResult = scanFolder(true);
+        scanResult = await scanFolder(true);
         if (scanResult.newJobs > 0) setTimeout(() => runQueueSafely(), 100);
       }
 
       const { ok: _backendOk, ...transcriptionResult } = result as { ok?: boolean } & Record<string, unknown>;
       return res.json({ ok: true, attemptId, stage: "complete", ...transcriptionResult, postAction, scanResult });
-    } catch (error: any) {
-      logger.error("system", `Transcription failed: ${error?.message || error}`);
+    } catch (error) {
+      logger.error("system", `Transcription failed: ${errorMessage(error) || error}`);
       // 502 when the backend itself failed/was unreachable; 400 for client errors.
-      return res.status(transcriptionErrorStatus(error)).json({ error: error?.message || "Transcription failed" });
+      return res.status(transcriptionErrorStatus(error)).json({ error: errorMessage(error) || "Transcription failed" });
     }
   });
 
@@ -162,7 +173,8 @@ export function registerTranscriptionRoutes(app: Express): void {
   // the client (which downloads it) rather than written next to a library file.
   app.post("/api/transcribe/url", async (req, res) => {
     const settings = getAllSettings();
-    if (settings.transcription_enabled !== "1") return res.status(400).json({ error: "Speech-to-text is disabled in settings" });
+    if (settings.transcription_enabled !== "1")
+      return res.status(400).json({ error: "Speech-to-text is disabled in settings" });
     const backendUrl = getTranscriptionBackendUrl(settings);
     if (!backendUrl) return res.status(400).json({ error: "Transcription backend URL is not configured" });
     const b = (req.body || {}) as Record<string, unknown>;
@@ -170,7 +182,11 @@ export function registerTranscriptionRoutes(app: Express): void {
     if (!url) return res.status(400).json({ error: "url is required" });
     // Only http(s) — reject file:/smb:/ftp:/data: before forwarding to yt-dlp.
     let parsedUrl: URL | null = null;
-    try { parsedUrl = new URL(url); } catch { parsedUrl = null; }
+    try {
+      parsedUrl = new URL(url);
+    } catch {
+      parsedUrl = null;
+    }
     if (!parsedUrl || (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:")) {
       return res.status(400).json({ error: "Only http:// and https:// URLs are allowed" });
     }
@@ -189,15 +205,24 @@ export function registerTranscriptionRoutes(app: Express): void {
     };
 
     // Relay progress/phase to the UI keyed by the URL (acts as the row id).
-    const onProgress = ({ pct, processedSeconds, totalSeconds }: { pct: number; processedSeconds: number; totalSeconds: number }) =>
-      broadcast("transcription:progress", { path: url, pct, processedSeconds, totalSeconds });
+    const onProgress = ({
+      pct,
+      processedSeconds,
+      totalSeconds,
+    }: {
+      pct: number;
+      processedSeconds: number;
+      totalSeconds: number;
+    }) => broadcast("transcription:progress", { path: url, pct, processedSeconds, totalSeconds });
     const onPhase = (phase: string) => broadcast("transcription:progress", { path: url, phase });
 
     let controller: AbortController;
     try {
       controller = beginTranscriptionRun(url);
-    } catch (error: any) {
-      return res.status(transcriptionErrorStatus(error)).json({ error: error?.message || "URL transcription failed" });
+    } catch (error) {
+      return res
+        .status(transcriptionErrorStatus(error))
+        .json({ error: errorMessage(error) || "URL transcription failed" });
     }
     // Same as file runs: a client that leaves must not keep the backend busy.
     res.on("close", () => {
@@ -219,13 +244,15 @@ export function registerTranscriptionRoutes(app: Express): void {
       broadcast("transcription:progress", { path: url, pct: 100, done: true });
       const content = (result as unknown as { content?: string }).content ?? "";
       return res.json({ ok: true, content, language: result.language, segments: result.segments, outputFormat, url });
-    } catch (error: any) {
+    } catch (error) {
       abandoned = reachedBackend && isAbandonedRun(error, controller);
       const cancelled = controller.signal.aborted;
       broadcast("transcription:progress", cancelled ? { path: url, cancelled: true } : { path: url, error: true });
-      logger.error("system", `URL transcription failed: ${error?.message || error}`);
+      logger.error("system", `URL transcription failed: ${errorMessage(error) || error}`);
       // 502 when the backend itself failed/was unreachable; 400 for client errors.
-      return res.status(transcriptionErrorStatus(error)).json({ error: error?.message || "URL transcription failed" });
+      return res
+        .status(transcriptionErrorStatus(error))
+        .json({ error: errorMessage(error) || "URL transcription failed" });
     } finally {
       settleTranscriptionRun(url, controller, abandoned);
     }
