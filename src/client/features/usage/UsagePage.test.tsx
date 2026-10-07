@@ -143,3 +143,55 @@ test("phones get stacked rows instead of tables", () => {
   assert.doesNotMatch(page.html, /<table/);
   assert.ok(page.text.includes("Show.S01E01.srt 30 calls · 90.0k in · 20.0k out · $1.00"));
 });
+
+const ranked: UsageReport = {
+  ...report,
+  topFiles: [
+    { jobId: 1, srtName: "Small.srt", calls: 50, inputTokens: 1_000, outputTokens: 500, costUsd: null },
+    { jobId: 2, srtName: "Big.srt", calls: 2, inputTokens: 80_000, outputTokens: 10_000, costUsd: 0.5 },
+    { jobId: 3, srtName: "Middle.srt", calls: 9, inputTokens: 20_000, outputTokens: 30_000, costUsd: 0.2 },
+  ],
+};
+
+const headerSorts = (html: string, title: string) => {
+  const section = html.slice(html.indexOf(`>${title}</h2>`));
+  const thead = section.slice(0, section.indexOf("</thead>"));
+  return Array.from(thead.matchAll(/<th([^>]*)><button[^>]*>(?:<svg.*?<\/svg>)?([^<]+)/g), ([, attrs, label]) => [
+    label,
+    /aria-sort="(\w+)"/.exec(attrs)?.[1] ?? null,
+  ]);
+};
+
+test("top files rank by total tokens with only that header marked sorted", () => {
+  const page = render(ranked);
+
+  assert.deepEqual(headerSorts(page.html, "Top files"), [
+    ["File", null],
+    ["Calls", null],
+    ["In", null],
+    ["Out", null],
+    ["Total tokens", "descending"],
+    ["Cost", null],
+  ]);
+  const topFiles = page.html.slice(page.html.indexOf(">Top files</h2>"), page.html.indexOf(">Recent calls</h2>"));
+  assert.deepEqual(
+    Array.from(topFiles.matchAll(/>(\w+\.srt)<\/a>/g), (m) => m[1]),
+    ["Big.srt", "Middle.srt", "Small.srt"],
+  );
+  assert.ok(page.text.includes("Big.srt 2 80.0k 10.0k 90.0k $0.50"));
+});
+
+test("recent calls start newest first", () => {
+  const page = render(report);
+
+  assert.deepEqual(headerSorts(page.html, "Recent calls")[0], ["Time", "descending"]);
+});
+
+test("phones sort with a column select and a direction toggle", () => {
+  const page = render(ranked, { isMobile: true });
+
+  assert.match(page.html, /<select aria-label="Sort files"[^>]*><option value="file">File<\/option>/);
+  assert.match(page.html, /<option value="tokens" selected="">Total tokens<\/option>/);
+  assert.ok(page.text.includes("Descending"));
+  assert.ok(page.text.indexOf("Big.srt") < page.text.indexOf("Small.srt"));
+});
