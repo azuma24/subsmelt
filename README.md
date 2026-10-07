@@ -6,6 +6,8 @@ Point SubSmelt at your media folders and it automatically translates every subti
 
 One subtitle file. Multiple language outputs. Fully automated.
 
+Current release: **0.6.7** — [what changed](CHANGELOG.md).
+
 ---
 
 ## Quick Start
@@ -13,7 +15,7 @@ One subtitle file. Multiple language outputs. Fully automated.
 ```yaml
 services:
   subsmelt:
-    image: ghcr.io/azuma24/subsmelt:latest
+    image: ghcr.io/azuma24/subsmelt:latest   # or pin a release: ghcr.io/azuma24/subsmelt:0.6.7
     container_name: subsmelt
     ports:
       - "3000:3000"
@@ -63,7 +65,8 @@ costs nothing against a local endpoint.
 - **Queue management** — priority pinning, force re-translate, graceful stop, already-translated detection, and resume on restart
 - **Crash safety** — work in progress goes to a `.part` file and is only renamed on completion, so an interrupted job is retried rather than left truncated
 - **Real-time progress** — live job progress over Server-Sent Events with time remaining and throughput, and failures mapped to a cause and a next step
-- **Subtitle preview** — side-by-side original vs translated with full-text search
+- **Subtitle preview** — side-by-side original vs translated with full-text search, and edits saved back to the file
+- **Convert and translate single files** — drop `.srt`, `.vtt`, `.ass` or `.ssa` files on the Convert page to change their format or translate them on the spot; legacy encodings (GBK, Big5, Shift_JIS, EUC-KR, windows-125x and more) are detected, and the results download as one ZIP
 - **Translated title sidecar** (optional) — stores each media title translated into every target language in a `.subsmelt_titles.json` next to the output, shown in the scan results; filenames on disk are never renamed
 - **YouTube to notes** — follow a playlist or a channel (Shorts and live streams optional); new videos are downloaded, subtitled, translated and saved as Markdown notes for Obsidian. Older videos stay listed so you can pick the ones you want
 - **Optional speech-to-text** — attach a Whisper backend to generate source subtitles when none exist; transcripts are named with their language, and Chinese is converted to your preferred script
@@ -84,7 +87,7 @@ Open **Settings → LLM Connection** and add one or more connections:
 
 With several connections, pick a mode: **single**, **fallback** (try them in order) or **parallel** (spread chunks across them). The sidebar shows which connection is translating and whether each one answers.
 
-For local endpoints, **↻ Fetch models** pulls the model list and **Test Connection** verifies it. In LM Studio, load the model with a context length of 16k or more.
+For local endpoints, **Fetch models** pulls the model list and **Test Connection** verifies it. In LM Studio, load the model with a context length of 16k or more.
 
 ### 2. Add translation targets
 
@@ -278,6 +281,7 @@ the parts worth understanding first, the release process, and the known gaps.
 | i18n | Own runtime (`src/client/i18n`), 32 locales |
 | Container | Single Dockerfile, no external services required |
 | Tooling | TypeScript 7, Biome, ruff |
+| Footprint | 13 runtime packages; subtitle parsing, charset detection, the ZIP writer and translations are the app's own code |
 
 ---
 

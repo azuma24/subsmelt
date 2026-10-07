@@ -1,7 +1,7 @@
 # SubSmelt — Handoff
 
-Orientation for someone picking this project up. Current as of **0.6.6**
-(2026-10-06). For what changed when, see
+Orientation for someone picking this project up. Current as of **0.6.7**
+(2026-10-07). For what changed when, see
 [../CHANGELOG.md](../CHANGELOG.md); for how to run it, see
 [../README.md](../README.md).
 

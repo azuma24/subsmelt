@@ -26,7 +26,9 @@ nothing enforces agreement:
 The Windows control GUI reads its version from `app/version.py`, so it follows
 automatically — do not add a fourth constant.
 
-**2. Move `## [Unreleased]` into a dated section** in `CHANGELOG.md`.
+**2. Move `## [Unreleased]` into a dated section** in `CHANGELOG.md`, and put
+the new number in `README.md` (the "Current release" line and the pinned image
+tag in Quick Start).
 
 **3. Verify before tagging.** CI runs all of this, but a failed release tag is
 more annoying to undo than a failed push:

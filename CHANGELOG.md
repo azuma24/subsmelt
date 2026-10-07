@@ -3,7 +3,7 @@
 All notable changes to SubSmelt. The app and the Windows Whisper backend share a
 version number and are released together (`v0.5.6` and `whisper-v0.5.6`).
 
-## [Unreleased]
+## [0.6.7] — 2026-10-07
 
 ### Added
 
