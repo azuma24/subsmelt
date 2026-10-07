@@ -18,13 +18,18 @@ import type {
 } from "../shared/usage.js";
 
 // Append-only ledger: one row per successful LLM call. Unlike the per-job
-// counters it outlives the job, so history survives clearing the queue.
+// counters it outlives the job, so history survives clearing the queue, and
+// job_id may name a job that no longer exists.
+// No release has written this table, so a dev DB from before `src` is rebuilt rather than migrated.
+const usageColumns = db.prepare("PRAGMA table_info(llm_usage)").all() as Array<{ name: string }>;
+if (usageColumns.length > 0 && !usageColumns.some((c) => c.name === "src")) db.exec("DROP TABLE llm_usage");
 db.exec(`
   CREATE TABLE IF NOT EXISTS llm_usage (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ts TEXT NOT NULL,
     job_id INTEGER,
-    srt_name TEXT,
+    src TEXT NOT NULL,
+    srt_name TEXT NOT NULL,
     kind TEXT NOT NULL,
     connection_id TEXT NOT NULL,
     connection_label TEXT NOT NULL,
@@ -45,14 +50,16 @@ export interface UsageEntry extends TokenUsage {
   kind: UsageKind;
   connection: Pick<ResolvedConnection, "id" | "label" | "provider" | "model">;
   jobId: number | null;
-  srtName: string | null;
+  /** Identifies the file across jobs: the subtitle's path, or the upload's name for Convert. */
+  src: string;
+  srtName: string;
   ts?: Date;
 }
 
 const insertRow = db.prepare(`
-  INSERT INTO llm_usage (ts, job_id, srt_name, kind, connection_id, connection_label, provider, model,
+  INSERT INTO llm_usage (ts, job_id, src, srt_name, kind, connection_id, connection_label, provider, model,
     input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, reasoning_tokens, cost_usd)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 /** Appends one call, priced now with the model that ran it (null for local or unpriced models). */
@@ -63,6 +70,7 @@ export function recordUsage(entry: UsageEntry): void {
   insertRow.run(
     (entry.ts ?? new Date()).toISOString(),
     entry.jobId,
+    entry.src,
     entry.srtName,
     entry.kind,
     conn.id,
@@ -92,6 +100,7 @@ const RECENT_CALLS = 50;
 const TOKEN_SUMS = `COUNT(*) AS calls, COALESCE(SUM(input_tokens), 0) AS inputTokens,
   COALESCE(SUM(output_tokens), 0) AS outputTokens, SUM(cost_usd) AS costUsd`;
 const BY_TOTAL = "ORDER BY SUM(input_tokens + output_tokens) DESC";
+const LIVE_JOB_ID = "(SELECT j.id FROM jobs j WHERE j.id = u.job_id)";
 
 const dayOf = (d: Date) => d.toISOString().slice(0, 10);
 const startOfUtcDay = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
@@ -132,7 +141,7 @@ export function buildUsageReport(range: UsageRange, now: Date = new Date()): Usa
         COALESCE(SUM(cache_read_tokens), 0) AS cacheReadTokens,
         COALESCE(SUM(cache_write_tokens), 0) AS cacheWriteTokens,
         COALESCE(SUM(reasoning_tokens), 0) AS reasoningTokens,
-        COUNT(DISTINCT job_id) AS jobs, COUNT(DISTINCT srt_name) AS files
+        COUNT(DISTINCT job_id) AS jobs, COUNT(DISTINCT src) AS files
       FROM llm_usage ${where}`,
     )
     .get(params) as Omit<UsageTotals, "totalTokens">;
@@ -155,15 +164,15 @@ export function buildUsageReport(range: UsageRange, now: Date = new Date()): Usa
       FROM llm_usage ${where} GROUP BY provider, model, connection_id ${BY_TOTAL}`,
     ).map(({ latest: _, ...row }) => row),
     byKind: all<UsageByKind>(`SELECT kind, ${TOKEN_SUMS} FROM llm_usage ${where} GROUP BY kind ${BY_TOTAL}`),
+    // jobId links only to jobs that still exist; a file's row links to its newest one.
     topFiles: all<UsageFile>(
-      `SELECT job_id AS jobId, srt_name AS srtName, ${TOKEN_SUMS}
-      FROM llm_usage ${where ? `${where} AND` : "WHERE"} srt_name IS NOT NULL
-      GROUP BY job_id, srt_name ${BY_TOTAL} LIMIT ${TOP_FILES}`,
+      `SELECT MAX(${LIVE_JOB_ID}) AS jobId, srt_name AS srtName, ${TOKEN_SUMS}
+      FROM llm_usage u ${where} GROUP BY src ${BY_TOTAL} LIMIT ${TOP_FILES}`,
     ),
     recent: all<UsageCall>(
-      `SELECT ts, job_id AS jobId, srt_name AS srtName, kind, model, input_tokens AS inputTokens,
+      `SELECT ts, ${LIVE_JOB_ID} AS jobId, srt_name AS srtName, kind, model, input_tokens AS inputTokens,
         output_tokens AS outputTokens, cost_usd AS costUsd
-      FROM llm_usage ${where} ORDER BY ts DESC, id DESC LIMIT ${RECENT_CALLS}`,
+      FROM llm_usage u ${where} ORDER BY ts DESC, id DESC LIMIT ${RECENT_CALLS}`,
     ),
   };
 }

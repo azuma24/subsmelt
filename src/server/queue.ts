@@ -270,7 +270,7 @@ async function repairMissingTitles() {
       temperature: typed.temperature,
       disableToolCalls: typed.disable_tool_calls,
       requestTimeoutMs,
-      onUsage: (u) => recordUsage({ ...u, jobId: job.id, srtName: path.basename(job.srt_path) }),
+      onUsage: (u) => recordUsage({ ...u, jobId: job.id, src: job.srt_path, srtName: path.basename(job.srt_path) }),
     });
   }
 }

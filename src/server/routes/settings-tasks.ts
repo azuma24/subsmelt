@@ -356,7 +356,7 @@ export function registerSettingsTasksRoutes(app: Express): void {
               const diagnostics = summarizeTranslationError(error);
               logger.warn("translate", `Convert retry ${attempt}: ${diagnostics.message} (backoff ${backoff}ms)`);
             },
-            onUsage: (u) => recordUsage({ ...u, kind: "convert", jobId: null, srtName: name }),
+            onUsage: (u) => recordUsage({ ...u, kind: "convert", jobId: null, src: name, srtName: name }),
           });
           outputs.push({ name: outName, content: fs.readFileSync(outputPath, "utf8") });
         } catch (error) {

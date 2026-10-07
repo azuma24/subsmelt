@@ -343,7 +343,7 @@ function settleJob(ctx: JobContext): void {
 /** Counts one LLM call toward the job's live totals and the usage ledger. */
 function recordJobUsage(ctx: JobContext, usage: UsageEvent): void {
   addJobUsage(ctx.job.id, usage.inputTokens, usage.outputTokens);
-  recordUsage({ ...usage, jobId: ctx.job.id, srtName: ctx.srtName });
+  recordUsage({ ...usage, jobId: ctx.job.id, src: ctx.job.srt_path, srtName: ctx.srtName });
 }
 
 /** Translates the media title into the folder's sidecar on the job's primary connection. */

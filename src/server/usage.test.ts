@@ -14,7 +14,8 @@ process.env.CONFIG_DIR = path.join(root, "config");
 process.env.DATA_DIR = path.join(root, "data");
 process.env.MEDIA_DIR = path.join(root, "media");
 const { setSetting } = await import("./config.js");
-const { recordUsage } = await import("./usage.js");
+const { createJob, deleteJob } = await import("./db.js");
+const { clearUsage, recordUsage } = await import("./usage.js");
 const { registerUsageRoutes } = await import("./routes/usage.js");
 
 const app = express();
@@ -47,24 +48,40 @@ const tokens = (inputTokens: number, outputTokens: number) => ({
   reasoningTokens: 0,
 });
 const usd = (n: number | null) => (n === null ? null : Number(n.toFixed(6)));
+const addJob = (srtPath: string, taskId = 1) =>
+  Number(
+    createJob({ task_id: taskId, srt_path: srtPath, output_path: `${srtPath}.out`, video_path: null }).lastInsertRowid,
+  );
 
 function seed() {
+  const jobA = addJob("/media/a.srt");
+  const jobB = addJob("/media/b.srt");
   recordUsage({
     ...tokens(1000, 500),
     cacheReadTokens: 400,
     reasoningTokens: 50,
     kind: "chunk",
     connection: openai,
-    jobId: 1,
+    jobId: jobA,
+    src: "/media/a.srt",
     srtName: "a.srt",
     ts: daysAgo(0),
   });
-  recordUsage({ ...tokens(300, 100), kind: "single", connection: local, jobId: 1, srtName: "a.srt", ts: daysAgo(2) });
+  recordUsage({
+    ...tokens(300, 100),
+    kind: "single",
+    connection: local,
+    jobId: jobA,
+    src: "/media/a.srt",
+    srtName: "a.srt",
+    ts: daysAgo(2),
+  });
   recordUsage({
     ...tokens(2000, 100),
     kind: "analysis",
     connection: openai,
-    jobId: 2,
+    jobId: jobB,
+    src: "/media/b.srt",
     srtName: "b.srt",
     ts: daysAgo(3),
   });
@@ -73,6 +90,7 @@ function seed() {
     kind: "convert",
     connection: claude,
     jobId: null,
+    src: "c.srt",
     srtName: "c.srt",
     ts: daysAgo(10),
   });
@@ -177,7 +195,14 @@ test("clearing empties the ledger and says how many calls went", async () => {
 
 test("a monthly budget reports this calendar month's tokens", async () => {
   setSetting("monthly_token_budget", "1000");
-  recordUsage({ ...tokens(1000, 500), kind: "chunk", connection: openai, jobId: 3, srtName: "d.srt" });
+  recordUsage({
+    ...tokens(1000, 500),
+    kind: "chunk",
+    connection: openai,
+    jobId: null,
+    src: "/media/d.srt",
+    srtName: "d.srt",
+  });
   const { budget } = await getReport("30d");
   assert.deepEqual(
     { ...budget, monthCostUsd: usd(budget?.monthCostUsd ?? null) },
@@ -187,5 +212,67 @@ test("a monthly budget reports this calendar month's tokens", async () => {
       monthCostUsd: 0.00045,
       monthStart: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString(),
     },
+  );
+});
+
+test("a deleted job's calls keep their file name but lose the link", async () => {
+  clearUsage();
+  const job = addJob("/media/gone.srt");
+  recordUsage({
+    ...tokens(100, 50),
+    kind: "chunk",
+    connection: local,
+    jobId: job,
+    src: "/media/gone.srt",
+    srtName: "gone.srt",
+  });
+  deleteJob(job);
+
+  const report = await getReport("7d");
+  assert.deepEqual(report.topFiles, [
+    { jobId: null, srtName: "gone.srt", calls: 1, inputTokens: 100, outputTokens: 50, costUsd: null },
+  ]);
+  assert.deepEqual(
+    report.recent.map((c) => [c.jobId, c.srtName]),
+    [[null, "gone.srt"]],
+  );
+});
+
+test("two files with the same name in different folders count as two", async () => {
+  clearUsage();
+  for (const src of ["/media/Show A/ep01.srt", "/media/Show B/ep01.srt"]) {
+    recordUsage({ ...tokens(100, 50), kind: "chunk", connection: local, jobId: null, src, srtName: "ep01.srt" });
+  }
+
+  const report = await getReport("7d");
+  assert.equal(report.totals.files, 2);
+  assert.deepEqual(
+    report.topFiles.map((f) => [f.srtName, f.calls]),
+    [
+      ["ep01.srt", 1],
+      ["ep01.srt", 1],
+    ],
+  );
+});
+
+test("jobs on the same file share one row linked to the newest job still there", async () => {
+  clearUsage();
+  const src = "/media/Film.srt";
+  const french = addJob(src, 1);
+  const german = addJob(src, 2);
+  for (const jobId of [french, german]) {
+    recordUsage({ ...tokens(100, 50), kind: "chunk", connection: local, jobId, src, srtName: "Film.srt" });
+  }
+
+  const both = await getReport("7d");
+  assert.equal(both.totals.files, 1);
+  assert.deepEqual(both.topFiles, [
+    { jobId: german, srtName: "Film.srt", calls: 2, inputTokens: 200, outputTokens: 100, costUsd: null },
+  ]);
+
+  deleteJob(german);
+  assert.deepEqual(
+    (await getReport("7d")).topFiles.map((f) => [f.jobId, f.calls]),
+    [[french, 2]],
   );
 });
