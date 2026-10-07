@@ -26,6 +26,7 @@ export {
   type TranslationErrorDiagnostics,
   summarizeTranslationError,
   type TranslateFileOptions,
+  type UsageEvent,
   translateFile,
   testConnection,
   partialOutputPath,
