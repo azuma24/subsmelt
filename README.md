@@ -64,6 +64,7 @@ costs nothing against a local endpoint.
 - **Batch and automatic** — scans your whole library (recursive, root-only or hand-picked subfolders), and a file watcher queues new subtitles within seconds of them appearing
 - **Queue management** — priority pinning, force re-translate, graceful stop, already-translated detection, and resume on restart
 - **Crash safety** — work in progress goes to a `.part` file and is only renamed on completion, so an interrupted job is retried rather than left truncated
+- **Token usage dashboard.** Settings → Usage records every LLM call SubSmelt makes and shows tokens and estimated cost per day, per model, per call type and per file, over the last 7, 30 or 90 days, a year or all time. The line-by-line fallback has its own row, so you can see what failed chunks cost you. History survives clearing the queue, and an optional monthly token budget shows how much of this month is left
 - **Real-time progress** — live job progress over Server-Sent Events with time remaining and throughput, and failures mapped to a cause and a next step
 - **Subtitle preview** — side-by-side original vs translated with full-text search, and edits saved back to the file
 - **Convert and translate single files** — drop `.srt`, `.vtt`, `.ass` or `.ssa` files on the Convert page to change their format or translate them on the spot; legacy encodings (GBK, Big5, Shift_JIS, EUC-KR, windows-125x and more) are detected, and the results download as one ZIP
