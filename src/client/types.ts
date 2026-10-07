@@ -61,6 +61,18 @@ export type {
   YoutubeStatus,
   YoutubeVideo,
 } from "../shared/youtube";
+export type {
+  UsageByKind,
+  UsageByModel,
+  UsageCall,
+  UsageCleared,
+  UsageDay,
+  UsageFile,
+  UsageKind,
+  UsageRange,
+  UsageReport,
+} from "../shared/usage";
+export { USAGE_KINDS, USAGE_RANGES } from "../shared/usage";
 import type { Cooldown } from "../shared/youtube";
 
 export type YoutubeCooldown = Pick<Cooldown, "until" | "cause">;

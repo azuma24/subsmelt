@@ -34,6 +34,7 @@ test("SSE invalidation keys are targeted by event type", () => {
     ["transcription-history"],
     ["llm-status"],
     ["youtube", "pipeline"],
+    ["usage"],
   ]);
   assert.deepEqual(getSSEInvalidationKeys("job:connection"), [["queue-status"], ["llm-status"]]);
   assert.deepEqual(getSSEInvalidationKeys("queue:finished"), [
@@ -44,6 +45,7 @@ test("SSE invalidation keys are targeted by event type", () => {
     ["library"],
     ["llm-status"],
     ["youtube", "pipeline"],
+    ["usage"],
   ]);
   assert.deepEqual(getSSEInvalidationKeys("scan:complete"), [
     ["jobs"],
