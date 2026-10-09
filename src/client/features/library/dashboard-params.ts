@@ -24,12 +24,9 @@ function oneOf<T extends string>(allowed: readonly T[], value: string | null, fa
   return allowed.find((candidate) => candidate === value) ?? fallback;
 }
 
-export const toDashboardView = (value: string | null): DashboardView =>
-  oneOf(DASHBOARD_VIEWS, value, DEFAULT_DASHBOARD_PARAMS.view);
-
 export function parseDashboardParams(search: URLSearchParams): DashboardParams {
   return {
-    view: toDashboardView(search.get("view")),
+    view: oneOf(DASHBOARD_VIEWS, search.get("view"), DEFAULT_DASHBOARD_PARAMS.view),
     filter: oneOf(LIBRARY_FILTERS, search.get("filter"), DEFAULT_DASHBOARD_PARAMS.filter),
     status: oneOf(JOB_STATUS_FILTERS, search.get("status"), DEFAULT_DASHBOARD_PARAMS.status),
   };

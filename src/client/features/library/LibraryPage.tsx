@@ -14,7 +14,7 @@ import {
 } from "../../hooks";
 import { useToast } from "../../ui/Toast";
 import type { Job } from "../../types";
-import { ActionButton, PageHeader, Tabs } from "../../ui/primitives";
+import { ActionButton, PageHeader } from "../../ui/primitives";
 import { Icon } from "../../ui/Icon";
 import { RefreshButton } from "../../ui/RefreshButton";
 import { LlmStatusPopover } from "../../app/LlmStatusPopover";
@@ -26,7 +26,6 @@ import { toLibraryItems } from "./library-model";
 import {
   dashboardSearchParams,
   parseDashboardParams,
-  toDashboardView,
   type DashboardParams,
   type DashboardView,
 } from "./dashboard-params";
@@ -113,11 +112,17 @@ export function LibraryPage() {
   // row as it was when opened; it closes on its own if the job is deleted.
   const detailsJob = detailsJobId === null ? null : (jobsById.get(detailsJobId) ?? null);
 
-  const tabs = [
+  const tabs: { key: DashboardView; label: string; count?: number }[] = [
     { key: "files", label: t("library.view.files") },
     { key: "jobs", label: t("library.view.jobs"), count: jobs.length },
     ...(transcriptionEnabled
-      ? [{ key: "transcriptions", label: t("library.view.transcriptions"), count: transcriptionAttempts.length }]
+      ? [
+          {
+            key: "transcriptions" as const,
+            label: t("library.view.transcriptions"),
+            count: transcriptionAttempts.length,
+          },
+        ]
       : []),
   ];
   const files = libraryQuery.data?.files;
@@ -167,8 +172,23 @@ export function LibraryPage() {
         </p>
       )}
 
-      <div className="shrink-0 border-b border-border px-4 py-2">
-        <Tabs tabs={tabs} activeKey={view} onSelect={(key) => setParams({ view: toDashboardView(key) })} />
+      <div role="tablist" className="flex shrink-0 gap-1 overflow-x-auto border-b border-border px-4">
+        {tabs.map((tab) => {
+          const selected = tab.key === view;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              onClick={() => setParams({ view: tab.key })}
+              className={`-mb-px inline-flex min-h-touch shrink-0 items-center gap-1 border-b-2 px-3 text-sm transition-colors duration-fast ${selected ? "border-accent font-medium text-text" : "border-transparent text-muted hover:text-text"}`}
+            >
+              {tab.label}
+              {tab.count !== undefined && tab.count > 0 && <span className="text-xs text-faint">{tab.count}</span>}
+            </button>
+          );
+        })}
       </div>
 
       {view === "files" && (
