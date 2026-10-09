@@ -260,3 +260,53 @@ class DownloadUrlTests(unittest.TestCase):
         with mock.patch.dict(os.environ, {fetch_url.ALLOW_UNSAFE_ENV: "1"}):
             produced = fetch_url.download_url("http://127.0.0.1/v1", self.dest)
         self.assertEqual(produced, self.dest / "v1.m4a")
+
+    def test_generic_extractor_is_disabled(self):
+        # The generic extractor follows redirects and HLS segment URLs to hosts the
+        # guard never sees; only site extractors may run.
+        _FakeYoutubeDL.info = {"id": "v1", "ext": "m4a", "webpage_url": "https://example.com/v1"}
+        fetch_url.download_url("https://example.com/v1", self.dest)
+        self.assertEqual(_FakeYoutubeDL.last_opts["allowed_extractors"], ["default", "-generic"])
+
+
+@unittest.skipUnless(fetch_url.url_fetch_available(), "yt-dlp not installed")
+class RealYtDlpRefusesArbitraryUrlsTests(unittest.TestCase):
+    """A direct media URL, a redirect and an HLS manifest all go through yt-dlp's
+    generic extractor, which fetches before the host guard can see where the
+    bytes come from. With it disabled none of them is fetched at all."""
+
+    def setUp(self):
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+
+        hits: list[str] = []
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                hits.append(self.path)
+                self.send_response(200)
+                self.end_headers()
+
+            do_HEAD = do_GET
+
+            def log_message(self, *args):
+                pass
+
+        self.hits = hits
+        self.server = HTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        self.addCleanup(self.server.shutdown)
+        self.base = f"http://127.0.0.1:{self.server.server_address[1]}"
+        # The loopback server stands in for an attacker's public host.
+        real = fetch_url._is_public_ip
+        patcher = mock.patch.object(fetch_url, "_is_public_ip", lambda ip: ip == "127.0.0.1" or real(ip))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+
+    def test_direct_redirect_and_manifest_urls_are_refused_without_a_request(self):
+        for path in ("/clip.mp3", "/redir", "/live.m3u8"):
+            with self.assertRaises(fetch_url.UrlFetchError, msg=path) as ctx:
+                fetch_url.download_url(self.base + path, Path(self._tmp.name))
+            self.assertIn("No suitable extractor", str(ctx.exception), path)
+        self.assertEqual(self.hits, [])

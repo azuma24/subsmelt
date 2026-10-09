@@ -82,6 +82,11 @@ export function throwBackendError(body: unknown, status: number): never {
   throw err;
 }
 
+function hasErrorCode(body: unknown): boolean {
+  const detail = body && typeof body === "object" ? (body as { detail?: unknown }).detail : undefined;
+  return !!detail && typeof detail === "object" && typeof (detail as { code?: unknown }).code === "string";
+}
+
 function backendErrorMessage(body: unknown, status: number): string {
   if (body && typeof body === "object") {
     const record = body as Record<string, unknown>;
@@ -206,6 +211,7 @@ async function consumeTranscriptionNdjson(
   let buffer = "";
   let result: BackendTranscriptionResponse | null = null;
   let streamError: string | null = null;
+  let streamErrorStatus = 500;
 
   const handleLine = (line: string): void => {
     const record = parseNdjsonLine(line);
@@ -224,7 +230,10 @@ async function consumeTranscriptionNdjson(
       const { type: _t, ...rest } = record;
       result = rest as unknown as BackendTranscriptionResponse;
     } else if (type === "error") {
-      streamError = typeof record.error === "string" ? record.error : "Transcription failed";
+      // Newer backends send the HTTP status their JSON route would have used;
+      // older ones only the message, which is read as an upstream failure.
+      streamError = typeof record.error === "string" && record.error ? record.error : "Transcription failed";
+      streamErrorStatus = typeof record.status === "number" ? record.status : 500;
     }
   };
 
@@ -247,7 +256,7 @@ async function consumeTranscriptionNdjson(
 
   if (streamError) {
     const err = new Error(streamError);
-    (err as Error & { backendStatus?: number }).backendStatus = 500;
+    (err as Error & { backendStatus?: number }).backendStatus = streamErrorStatus;
     throw err;
   }
   if (!result) {
@@ -281,12 +290,14 @@ export async function postTranscriptionStream(
       if (error instanceof Error && error.name === "AbortError") throw deadline.error();
       throw error;
     }
-    if (response.status === 404) throw new StreamingUnsupportedError();
     if (!response.ok || !response.body) {
       // Stop the deadline before reading the error body so a hung .json()
       // cannot fire a stray abort.
       deadline.dispose();
       const body = await response.json().catch(() => ({}));
+      // A backend without the route answers FastAPI's plain {"detail": "Not
+      // Found"}; a 404 whose detail carries a code is the route's own refusal.
+      if (response.status === 404 && !hasErrorCode(body)) throw new StreamingUnsupportedError();
       throwBackendError(body, response.status);
     }
     return await consumeTranscriptionNdjson(response.body as ReadableStream<Uint8Array>, deadline, options);

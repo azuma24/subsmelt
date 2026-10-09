@@ -1,3 +1,4 @@
+import importlib.util
 import io
 import os
 import unittest
@@ -176,6 +177,140 @@ class UploadEndpointTests(unittest.TestCase):
             self.assertEqual(resp.status_code, 401)
         finally:
             os.environ.pop("SUBSMELT_WHISPER_TOKEN", None)
+
+    def _spying_on_parsed_bytes(self) -> dict:
+        import starlette.formparsers as formparsers
+
+        seen = {"bytes": 0}
+        original = formparsers.MultiPartParser.on_part_data
+
+        def spy(parser, data, start, end):
+            seen["bytes"] += end - start
+            return original(parser, data, start, end)
+
+        patcher = mock.patch.object(formparsers.MultiPartParser, "on_part_data", spy)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return seen
+
+    def test_wrong_token_is_rejected_before_the_body_is_parsed(self):
+        seen = self._spying_on_parsed_bytes()
+        os.environ["SUBSMELT_WHISPER_TOKEN"] = "s3cr3t"
+        for route in ("/transcribe/upload", "/transcribe/upload/stream"):
+            resp = self.client.post(
+                route,
+                files={"file": ("clip.wav", io.BytesIO(b"\0" * 300_000), "audio/wav")},
+                data={"request": '{"model": "small"}'},
+                headers={"Authorization": "Bearer wrong"},
+            )
+            self.assertEqual((resp.status_code, resp.json()["detail"]["code"]), (401, "unauthorized"), route)
+        self.assertEqual(seen["bytes"], 0)
+
+    def test_correct_token_passes_the_upload_gate(self):
+        os.environ["SUBSMELT_WHISPER_TOKEN"] = "s3cr3t"
+        with (
+            mock.patch.object(main_module, "USE_FAKE_TRANSCRIBE", True),
+            mock.patch.object(main_module, "available_ram_mb", return_value=64000),
+            mock.patch.object(main_module, "ffmpeg_available", return_value=True),
+            mock.patch.object(main_module, "assert_model_downloaded", return_value=None),
+        ):
+            resp = self.client.post(
+                "/transcribe/upload",
+                files=self._file(),
+                data={"request": '{"model": "small", "language": "en"}'},
+                headers={"Authorization": "Bearer s3cr3t"},
+            )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Test transcription", resp.json()["content"])
+
+    def test_upload_over_the_cap_is_413_before_the_body_is_parsed(self):
+        seen = self._spying_on_parsed_bytes()
+        with mock.patch.dict(os.environ, {"SUBSMELT_WHISPER_MAX_UPLOAD_MB": "1"}):
+            resp = self.client.post(
+                "/transcribe/upload",
+                files={"file": ("clip.wav", io.BytesIO(b"\0" * (2 * 1024 * 1024)), "audio/wav")},
+                data={"request": '{"model": "small"}'},
+            )
+        self.assertEqual(resp.status_code, 413)
+        self.assertEqual(resp.json()["detail"], {"code": "upload_too_large", "message": "Upload exceeds 1 MB"})
+        self.assertEqual(seen["bytes"], 0)
+
+    def test_chunked_upload_without_content_length_is_capped_too(self):
+        def chunks():
+            for _ in range(3):
+                yield b"\0" * (1024 * 1024)
+
+        with mock.patch.dict(os.environ, {"SUBSMELT_WHISPER_MAX_UPLOAD_MB": "1"}):
+            resp = self.client.post(
+                "/transcribe/upload",
+                content=chunks(),
+                headers={"Content-Type": "multipart/form-data; boundary=x"},
+            )
+        self.assertEqual(resp.status_code, 413)
+        self.assertEqual(resp.json()["detail"]["code"], "upload_too_large")
+
+    def _diarization_upload(self):
+        with (
+            mock.patch.object(main_module, "available_ram_mb", return_value=64000),
+            mock.patch.object(main_module, "ffmpeg_available", return_value=True),
+            mock.patch.object(main_module, "assert_model_downloaded", return_value=None),
+            mock.patch.object(main_module, "fake_transcribe_for_tests", side_effect=AssertionError("ran")),
+            mock.patch.object(main_module, "run_transcription", side_effect=AssertionError("ran")),
+        ):
+            return self.client.post(
+                "/transcribe/upload",
+                files=self._file(),
+                data={"request": '{"model": "small", "advanced_options": {"speaker_diarization": true}}'},
+            )
+
+    def test_diarization_without_a_token_is_refused_before_transcription(self):
+        with mock.patch.dict(os.environ, {"SUBSMELT_HF_TOKEN": "", "HF_TOKEN": ""}):
+            resp = self._diarization_upload()
+        self.assertEqual((resp.status_code, resp.json()["detail"]["code"]), (422, "diarization_token_missing"))
+
+    @unittest.skipIf(importlib.util.find_spec("pyannote") is not None, "pyannote installed")
+    def test_diarization_without_pyannote_is_refused_before_transcription(self):
+        with mock.patch.dict(os.environ, {"SUBSMELT_HF_TOKEN": "hf_x"}):
+            resp = self._diarization_upload()
+        self.assertEqual((resp.status_code, resp.json()["detail"]["code"]), (400, "diarization_unavailable"))
+
+    def _validate(self, request: dict, *, upload_size_mb: int, ram: int = 64000, disk: int = 100000) -> None:
+        from app.schemas import TranscribeRequest
+
+        with (
+            mock.patch.object(main_module, "available_ram_mb", return_value=ram),
+            mock.patch.object(main_module, "disk_free_mb", return_value=disk),
+            mock.patch.object(main_module, "ffmpeg_available", return_value=True),
+            mock.patch.object(main_module, "assert_model_downloaded", return_value=None),
+        ):
+            main_module.validate_upload_request(
+                TranscribeRequest(input_path="/tmp/x/clip.wav", model="small", **request),
+                upload_size_mb,
+                Path("/tmp/x"),
+            )
+
+    def test_upload_preflight_adds_the_diarization_headroom(self):
+        from fastapi import HTTPException
+
+        # small needs 4096 MB; 5000 MB is enough alone but not with the 2048 MB pyannote headroom.
+        self._validate({}, upload_size_mb=10, ram=5000)
+        with self.assertRaises(HTTPException) as ctx:
+            self._validate({"advanced_options": {"speaker_diarization": True}}, upload_size_mb=10, ram=5000)
+        self.assertEqual(ctx.exception.status_code, 422)
+        self.assertEqual(
+            (ctx.exception.detail["code"], ctx.exception.detail["requiredRamMb"]), ("insufficient_ram", 6144)
+        )
+
+    def test_upload_disk_preflight_does_not_count_the_upload_against_itself(self):
+        from fastapi import HTTPException
+
+        # The upload already sits in the scratch dir when free space is read, so
+        # the 1.5x rule path mode applies (2250 MB for 1500 MB) is judged against
+        # free space plus the upload: 1000 + 1500 passes, 700 + 1500 does not.
+        self._validate({}, upload_size_mb=1500, disk=1000)
+        with self.assertRaises(HTTPException) as ctx:
+            self._validate({}, upload_size_mb=1500, disk=700)
+        self.assertEqual((ctx.exception.status_code, ctx.exception.detail["code"]), (422, "insufficient_disk"))
 
 
 if __name__ == "__main__":

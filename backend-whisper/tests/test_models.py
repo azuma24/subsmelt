@@ -197,6 +197,13 @@ class ModelManagerEndpointTests(unittest.TestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(resp.json()["detail"]["code"], "unknown_model")
 
+    def test_delete_409_when_a_transcription_is_using_the_model(self):
+        self._seed_cached_model("small")
+        with mock.patch.object(main_module, "delete_model", side_effect=main_module.ModelInUseError("small")):
+            resp = self.client.delete("/models/small")
+        self.assertEqual(resp.status_code, 409)
+        self.assertEqual(resp.json()["detail"], {"code": "model_in_use", "model": "small"})
+
     # --- transcribe refuses undownloaded model ----------------------------
 
     def test_transcribe_undownloaded_model_returns_409(self):

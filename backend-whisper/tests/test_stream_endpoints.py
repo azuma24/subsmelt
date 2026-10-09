@@ -3,6 +3,7 @@ that disconnects mid-stream never leaks the temp media or crashes the worker."""
 
 import asyncio
 import io
+import json
 import os
 import tempfile
 import threading
@@ -112,6 +113,34 @@ class PreStreamWorkOffLoopTests(unittest.TestCase):
         self.assertIn('"type": "result"', resp.text)
         self.assertEqual(self.seen, {"validate": False})
 
+    def test_url_stream_validates_the_request_before_downloading(self):
+        downloads: list[str] = []
+
+        def recording_download(url, dest_dir):
+            downloads.append(url)
+            raise AssertionError("downloaded before validation")
+
+        with mock.patch.object(main_module, "download_url", recording_download):
+            resp = self.client.post(
+                "/transcribe/url/stream", json={"url": "https://example.com/v1", "output_format": "pdf"}
+            )
+        self.assertEqual((resp.status_code, resp.json()["detail"]["code"]), (400, "bad_request"))
+        self.assertEqual(downloads, [])
+
+    def test_missing_input_is_400_on_the_stream_route_and_404_on_the_json_route(self):
+        # Node treats a 404 from the stream route as "no such route" and silently
+        # retries the JSON route, so a missing file must not look like that.
+        body = {"input_path": str(self.media / "absent.mkv"), "model": "small"}
+        with (
+            mock.patch.object(main_module, "MEDIA_ROOT", str(self.media)),
+            mock.patch.object(main_module, "available_ram_mb", return_value=64000),
+            mock.patch.object(main_module, "ffmpeg_available", return_value=True),
+        ):
+            streamed = self.client.post("/transcribe/stream", json=body)
+            plain = self.client.post("/transcribe", json=body)
+        self.assertEqual((streamed.status_code, streamed.json()["detail"]["code"]), (400, "input_missing"))
+        self.assertEqual((plain.status_code, plain.json()["detail"]["code"]), (404, "input_missing"))
+
 
 @unittest.skipIf(IMPORT_ERROR is not None, f"backend optional dependencies unavailable: {IMPORT_ERROR}")
 class DisconnectMidStreamTests(unittest.TestCase):
@@ -158,8 +187,46 @@ class DisconnectMidStreamTests(unittest.TestCase):
             return [line async for line in stream]
 
         lines = asyncio.run(read_all())
-        self.assertEqual(lines, [b'{"type": "progress"}\n', b'{"type": "error", "error": "decoder exploded"}\n'])
+        self.assertEqual(
+            lines,
+            [
+                b'{"type": "progress"}\n',
+                b'{"type": "error", "error": "decoder exploded", "code": "transcription_failed", "status": 500}\n',
+            ],
+        )
         self.assertTrue(cleaned.wait(2.0))
+
+    def test_error_line_carries_the_status_the_json_route_would_have_used(self):
+        from app.model_manager import ModelNotDownloadedError
+
+        def read_all(exc):
+            def failing():
+                raise exc
+                yield
+
+            async def collect():
+                stream = main_module._ndjson_stream(failing(), asyncio.Event())
+                return [json.loads(line) async for line in stream]
+
+            return asyncio.run(collect())
+
+        self.assertEqual(
+            read_all(ModelNotDownloadedError("small")),
+            [
+                {
+                    "type": "error",
+                    "error": "Model 'small' is not downloaded; download it before transcribing",
+                    "code": "model_not_downloaded",
+                    "status": 409,
+                }
+            ],
+        )
+        # An exception with no message still names itself; an empty error reads
+        # as "stream ended without a result" on the client.
+        self.assertEqual(
+            read_all(RuntimeError()),
+            [{"type": "error", "error": "RuntimeError", "code": "transcription_failed", "status": 500}],
+        )
 
     def test_cleanup_failure_is_logged_and_the_stream_still_ends(self):
         def one_line():

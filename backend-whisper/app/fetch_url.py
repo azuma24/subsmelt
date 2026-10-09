@@ -253,6 +253,11 @@ def download_url(url: str, dest_dir: Path) -> Path:
 
     opts: Any = {
         "outtmpl": str(dest_dir / "%(id)s.%(ext)s"),
+        # Only site extractors. The generic one treats any URL as media and
+        # follows redirects and HLS segment lists to hosts the guard below
+        # never sees, so a page on a public host could point it at an
+        # internal one.
+        "allowed_extractors": ["default", "-generic"],
         "noplaylist": True,
         # Leave playlist entries unresolved during the probe: a channel URL would
         # otherwise fetch metadata for every video before being refused.

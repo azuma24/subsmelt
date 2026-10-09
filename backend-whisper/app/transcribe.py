@@ -13,7 +13,14 @@ from . import nemotron, whisper_engine
 from .audio import extract_audio
 from .catalog import descriptor_for
 from .chinese_script import convert_segments, is_chinese
-from .diarize import assign_speakers, fake_assign_speakers
+from .diarize import (
+    DiarizationTokenMissingError,
+    DiarizationUnavailableError,
+    _hf_token,
+    assign_speakers,
+    diarize_available,
+    fake_assign_speakers,
+)
 from .engine import EngineRunner, LanguageNotSupportedError, TranscriptionCancelled, progress_event
 from .formatters import write_transcript
 from .nemotron_languages import fold_iso3, normalize_language
@@ -73,6 +80,19 @@ def assert_supported_advanced_features(request: TranscribeRequest) -> None:
 def _diarization_requested(request: TranscribeRequest) -> bool:
     opts = request.advanced_options
     return bool(opts and opts.speaker_diarization)
+
+
+def assert_diarization_available(request: TranscribeRequest) -> None:
+    """Refuse up front, with the error the pipeline would otherwise raise only
+    after the whole transcription, when diarization is requested but cannot run."""
+    if not _diarization_requested(request) or diarize_available():
+        return
+    if not _hf_token():
+        raise DiarizationTokenMissingError(
+            "Speaker diarization needs a Hugging Face token; set SUBSMELT_HF_TOKEN "
+            "and accept the pyannote/speaker-diarization-3.1 license"
+        )
+    raise DiarizationUnavailableError("pyannote.audio is not installed in this backend")
 
 
 def _maybe_diarize(collected: list, audio_path: Path, request: TranscribeRequest) -> list:

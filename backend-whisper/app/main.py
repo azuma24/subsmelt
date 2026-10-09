@@ -12,9 +12,11 @@ from collections.abc import AsyncIterator, Callable, Iterator
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ValidationError
 from starlette.concurrency import run_in_threadpool
+from starlette.datastructures import Headers
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from .catalog import ADVERTISED_MODELS
 from .diarize import (
@@ -72,6 +74,7 @@ from .schemas import (
     UploadTranscribeResponse,
 )
 from .transcribe import (
+    assert_diarization_available,
     assert_language_supported,
     fake_transcribe_for_tests,
     fake_transcribe_streaming_for_tests,
@@ -80,9 +83,21 @@ from .transcribe import (
 )
 from .version import TRANSPORT_MODES, backend_version
 
+try:
+    from .model_manager import ModelInUseError
+except ImportError:  # the model-manager branch that raises it has not merged yet
+
+    class ModelInUseError(RuntimeError):
+        def __init__(self, model: str) -> None:
+            super().__init__(f"Model {model!r} is in use by a running transcription")
+            self.model = model
+
+
 MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/media")
 ALLOW_UNSAFE = os.environ.get("SUBSMELT_WHISPER_ALLOW_UNSAFE", "0") == "1"
 USE_FAKE_TRANSCRIBE = os.environ.get("SUBSMELT_WHISPER_FAKE", "0") == "1"
+#: Matches the Node client's upload cap (src/server/transcription/http-upload.ts).
+DEFAULT_MAX_UPLOAD_MB = 5120
 
 app = FastAPI(title="Subsmelt Whisper Backend", version=backend_version())
 log = logging.getLogger(__name__)
@@ -119,10 +134,14 @@ def require_token(
     if not auth_required():
         return  # Auth disabled.
     if not _token_matches(_presented_token(authorization, x_subsmelt_token)):
-        raise HTTPException(
-            status_code=401,
-            detail={"code": "unauthorized", "message": "Invalid or missing whisper backend token"},
-        )
+        raise _unauthorized()
+
+
+def _unauthorized() -> HTTPException:
+    return HTTPException(
+        status_code=401,
+        detail={"code": "unauthorized", "message": "Invalid or missing whisper backend token"},
+    )
 
 
 def _presented_token(authorization: str | None, x_subsmelt_token: str | None) -> str:
@@ -138,6 +157,67 @@ def _token_matches(presented: str) -> bool:
     # would turn a bad token into a 500 instead of a 401.
     expected = _configured_token()
     return bool(presented) and secrets.compare_digest(presented.encode("utf-8"), expected.encode("utf-8"))
+
+
+def _max_upload_mb() -> int:
+    return int(os.environ.get("SUBSMELT_WHISPER_MAX_UPLOAD_MB") or DEFAULT_MAX_UPLOAD_MB)
+
+
+def _upload_too_large() -> HTTPException:
+    return HTTPException(
+        status_code=413,
+        detail={"code": "upload_too_large", "message": f"Upload exceeds {_max_upload_mb()} MB"},
+    )
+
+
+def _upload_refusal(headers: Headers) -> HTTPException | None:
+    if auth_required():
+        presented = _presented_token(headers.get("authorization"), headers.get("x-subsmelt-token"))
+        if not _token_matches(presented):
+            return _unauthorized()
+    length = headers.get("content-length") or ""
+    if length.isdigit() and int(length) > _max_upload_mb() * 1024 * 1024:
+        return _upload_too_large()
+    return None
+
+
+def _capped(receive: Receive, limit_bytes: int) -> Receive:
+    """A ``receive`` that refuses the request once more body than ``limit_bytes``
+    has arrived, for a chunked upload that carries no Content-Length."""
+    received = 0
+
+    async def capped() -> Message:
+        nonlocal received
+        message = await receive()
+        received += len(message.get("body") or b"")
+        if received > limit_bytes:
+            raise _upload_too_large()
+        return message
+
+    return capped
+
+
+class _UploadGate:
+    """Checks the token and the size cap on the upload routes before any of the
+    body is read. FastAPI parses a route's multipart body before its ``Depends``
+    run, so ``require_token`` alone fires only after a whole upload (of any
+    size) has been spooled to disk."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or not scope["path"].startswith("/transcribe/upload"):
+            await self.app(scope, receive, send)
+            return
+        refusal = _upload_refusal(Headers(scope=scope))
+        if refusal is not None:
+            await JSONResponse({"detail": refusal.detail}, status_code=refusal.status_code)(scope, receive, send)
+            return
+        await self.app(scope, _capped(receive, _max_upload_mb() * 1024 * 1024), send)
+
+
+app.add_middleware(_UploadGate)
 
 
 def capabilities() -> dict:
@@ -402,7 +482,7 @@ async def _ndjson_stream(
         except TranscriptionCancelled:
             pass  # client went away; nothing left to send
         except Exception as exc:
-            post({"type": "error", "error": str(exc)})
+            post(_stream_error_line(exc))
         finally:
             try:
                 gen.close()
@@ -422,6 +502,19 @@ async def _ndjson_stream(
             yield (json.dumps(item) + "\n").encode("utf-8")
     finally:
         cancel_event.set()
+
+
+def _stream_error_line(exc: Exception) -> dict:
+    """The terminal NDJSON error line, carrying the code and HTTP status the
+    JSON route would have answered with, so the client can tell a 4xx from a
+    5xx instead of reporting every mid-stream failure as an upstream outage."""
+    mapped = _map_transcription_error(exc)
+    return {
+        "type": "error",
+        "error": str(exc) or type(exc).__name__,
+        "code": mapped.detail["code"],
+        "status": mapped.status_code,
+    }
 
 
 @app.post("/models/download")
@@ -470,6 +563,8 @@ def models_delete(model: str, _auth: None = Depends(require_token)) -> dict:
             status_code=404,
             detail={"code": "model_not_downloaded", "model": exc.model},
         ) from exc
+    except ModelInUseError as exc:
+        raise HTTPException(status_code=409, detail={"code": "model_in_use", "model": exc.model}) from exc
     except OSError as exc:
         # Deletion failed for real (e.g. a Windows file lock from a loaded model).
         # Surface it instead of reporting a phantom success.
@@ -494,6 +589,20 @@ def _preflight_code(model_safe: bool, model_code: str, ffmpeg_ok: bool, disk_saf
     if model_code != "ok":
         return model_code
     return disk_safety["code"]
+
+
+def _with_diarization_headroom(
+    request: TranscribeRequest, on_gpu: bool, model_safe: bool, model_code: str, avail_mb: int, req_mb: int
+) -> tuple[bool, str, int]:
+    """Diarization loads a second (pyannote) model: add its headroom to the
+    requirement so a run that would OOM mid-pass is flagged up front. An
+    unmeasured reading (avail_mb <= 0) stays fail-open, as it is for the model."""
+    if not (request.advanced_options and request.advanced_options.speaker_diarization):
+        return model_safe, model_code, req_mb
+    req_mb += DIARIZATION_VRAM_MB if on_gpu else DIARIZATION_RAM_MB
+    if model_safe and 0 < avail_mb < req_mb:
+        return False, "insufficient_vram" if on_gpu else "insufficient_ram", req_mb
+    return model_safe, model_code, req_mb
 
 
 def preflight_result(request: TranscribeRequest) -> PreflightResponse:
@@ -533,15 +642,9 @@ def preflight_result(request: TranscribeRequest) -> PreflightResponse:
         req_mb = safety["required_ram_mb"]
         rec_mb = safety["recommended_ram_mb"]
 
-    # Diarization loads a second (pyannote) model — add its headroom to the
-    # requirement so a run that would OOM mid-pass is flagged up front. An
-    # unmeasured reading (avail_mb <= 0) stays fail-open, as it is for the model.
-    if request.advanced_options and request.advanced_options.speaker_diarization:
-        req_mb += DIARIZATION_VRAM_MB if on_gpu else DIARIZATION_RAM_MB
-        if model_safe and 0 < avail_mb < req_mb:
-            model_safe = False
-            model_code = "insufficient_vram" if on_gpu else "insufficient_ram"
-
+    model_safe, model_code, req_mb = _with_diarization_headroom(
+        request, on_gpu, model_safe, model_code, avail_mb, req_mb
+    )
     safe = bool(model_safe and ffmpeg_ok and disk_safety["safe"])
     code = _preflight_code(model_safe, model_code, ffmpeg_ok, disk_safety)
     return PreflightResponse(
@@ -583,11 +686,18 @@ def _assert_model_usable(request: TranscribeRequest) -> None:
         assert_language_supported(request)
         assert_model_downloaded(request.model)
         assert_engine_available(request.model)
-    except (LanguageNotSupportedError, ModelNotDownloadedError, EngineUnavailableError) as exc:
+        assert_diarization_available(request)
+    except (
+        LanguageNotSupportedError,
+        ModelNotDownloadedError,
+        EngineUnavailableError,
+        DiarizationTokenMissingError,
+        DiarizationUnavailableError,
+    ) as exc:
         raise _map_transcription_error(exc) from exc
 
 
-def validate_transcribe_request(request: TranscribeRequest) -> Path:
+def validate_transcribe_request(request: TranscribeRequest, *, missing_input_status: int = 404) -> Path:
     """Shared validation for both the JSON and streaming transcribe endpoints.
 
     Returns the resolved input path or raises the appropriate HTTPException
@@ -617,7 +727,8 @@ def validate_transcribe_request(request: TranscribeRequest) -> Path:
 
     if not input_path.exists():
         raise HTTPException(
-            status_code=404, detail={"code": "input_missing", "message": "Input media file does not exist"}
+            status_code=missing_input_status,
+            detail={"code": "input_missing", "message": "Input media file does not exist"},
         )
 
     _assert_model_usable(request)
@@ -655,7 +766,9 @@ async def transcribe_stream(
     ffmpeg dir is cleaned up by the generator's context manager either way.
     """
     # Preflight probes disk, RAM and (on CUDA) nvidia-smi; keep it off the loop.
-    input_path = await run_in_threadpool(validate_transcribe_request, request)
+    # A 404 from this route reads as "no such route" to the client, which then
+    # silently retries the JSON route, so a missing file is a 400 here.
+    input_path = await run_in_threadpool(validate_transcribe_request, request, missing_input_status=400)
 
     cancel_event = asyncio.Event()
     if USE_FAKE_TRANSCRIBE:
@@ -721,7 +834,12 @@ def validate_upload_request(request: TranscribeRequest, upload_size_mb: int, scr
         avail_ram = safety["available_ram_mb"]
         req_ram = safety["required_ram_mb"]
 
-    disk_safety = evaluate_disk_safety(upload_size_mb, disk_free_mb(scratch_dir))
+    # The upload already sits in scratch_dir, so free space has dropped by its
+    # size; add it back so the rule judges the same headroom path mode does.
+    disk_safety = evaluate_disk_safety(upload_size_mb, disk_free_mb(scratch_dir) + upload_size_mb)
+    model_safe, model_code, req_ram = _with_diarization_headroom(
+        request, on_gpu, model_safe, model_code, avail_ram, req_ram
+    )
     safe = bool(model_safe and ffmpeg_ok and disk_safety["safe"])
     code = _preflight_code(model_safe, model_code, ffmpeg_ok, disk_safety)
 
@@ -896,6 +1014,12 @@ async def transcribe_url_stream(
     tmp_ctx = tempfile.TemporaryDirectory(prefix="subsmelt-url-")
     tmp_dir = Path(tmp_ctx.name)
     try:
+        # The download is the expensive step: refuse a bad request, an absent
+        # model or a starved host before it starts. The media size is unknown
+        # until then, so the disk check sees only its floor.
+        request_json = json.dumps({k: v for k, v in payload.items() if k != "url"})
+        parsed = parse_upload_request(request_json, str(tmp_dir))
+        await run_in_threadpool(validate_upload_request, parsed, 0, tmp_dir)
         try:
             # yt-dlp is blocking — run it off the event loop so this async worker
             # keeps serving health/cancel/progress while a large URL downloads.
@@ -904,10 +1028,7 @@ async def transcribe_url_stream(
             raise HTTPException(status_code=400, detail={"code": "url_fetch_unavailable", "message": str(exc)}) from exc
         except UrlFetchError as exc:
             raise HTTPException(status_code=400, detail={"code": "url_fetch_failed", "message": str(exc)}) from exc
-        size_mb = int(saved.stat().st_size / 1024 / 1024)
-        request_json = json.dumps({k: v for k, v in payload.items() if k != "url"})
-        parsed = parse_upload_request(request_json, str(saved))
-        await run_in_threadpool(validate_upload_request, parsed, size_mb, tmp_dir)
+        parsed = parsed.model_copy(update={"input_path": str(saved)})
     except BaseException:
         tmp_ctx.cleanup()
         raise
