@@ -92,8 +92,10 @@ _ISO3_TO_SHORT: dict[str, str] = {
 
 
 def normalize_language(short: str) -> str:
-    """Lower-cased short code, with 3-letter ISO codes folded to their short form."""
-    key = (short or "").strip().lower()
+    """Lower-cased base code: 3-letter ISO codes folded to their short form and
+    regional tags dropped (``zh-TW`` -> ``zh``), which is all a speech model
+    needs; the output script is the ``chinese_script`` request field's job."""
+    key = (short or "").strip().lower().split("-", 1)[0]
     return _ISO3_TO_SHORT.get(key, key)
 
 
@@ -112,11 +114,12 @@ for _short, _locale in _LOCALES:
 
 def map_language(short: str) -> str:
     """Nemotron locale for a short code; ``auto`` (or empty) stays ``auto``.
-    Accepts 3-letter ISO codes too (``kor`` -> ``ko-KR``)."""
-    key = normalize_language(short or "auto")
-    if key == "auto":
+    Accepts 3-letter ISO codes too (``kor`` -> ``ko-KR``). A regional tag the
+    model knows (``pt-PT``) is kept; any other folds to its base code."""
+    key = (short or "").strip().lower()
+    if key in ("", "auto"):
         return "auto"
-    locale = _BY_SHORT.get(key)
+    locale = _BY_SHORT.get(key) or _BY_SHORT.get(normalize_language(key))
     if locale is None:
         raise LanguageNotSupportedError(
             NEMOTRON_MODEL_ID,

@@ -96,6 +96,13 @@ class WordsToSegmentsTests(unittest.TestCase):
             [(0.0, 0.8, "Hello 世界。"), (1.0, 1.6, "世界 hello")],
         )
 
+    def test_a_word_timed_inside_the_previous_cue_joins_it_instead_of_a_zero_length_cue(self):
+        words = _words([("Hello.", 0.0, 2.0), ("um", 1.0, 1.5), ("Next", 2.5, 3.0)])
+        self.assertEqual(_cues(words_to_segments(words, None)), [(0.0, 2.0, "Hello. um"), (2.5, 3.0, "Next")])
+
+    def test_a_lone_word_with_one_timestamp_gets_a_minimum_duration(self):
+        self.assertEqual(_cues(words_to_segments(_words([("Yes.", 5.0, 5.0)]), None)), [(5.0, 5.5, "Yes.")])
+
     def test_a_pause_over_600ms_splits(self):
         rows = [("a", 0.0, 0.3), ("b", 1.0, 1.3), ("c", 1.8, 2.1), ("d", 2.8, 3.1)]
         self.assertEqual(

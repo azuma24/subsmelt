@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 import app.transcribe as transcribe
-from app.chinese_script import convert_segments
+from app.chinese_script import convert_segments, is_chinese
 from app.schemas import TranscribeRequest, TranscribeResponse, UploadTranscribeResponse
 
 
@@ -24,6 +24,13 @@ def _runner_saying(text: str, language: str):
         return [SimpleNamespace(start=0.0, end=1.0, text=text)], SimpleNamespace(language=language, duration=1.0)
 
     return runner
+
+
+class IsChineseTests(unittest.TestCase):
+    def test_cantonese_and_regional_mandarin_count_as_chinese(self):
+        self.assertEqual(
+            [is_chinese(lang) for lang in ("yue", "zh-TW", "zho", "ja", None)], [True, True, True, False, False]
+        )
 
 
 class ConvertSegmentsTests(unittest.TestCase):

@@ -27,6 +27,11 @@ class Segment:
 # (and a candidate for merging) when it is both very brief in time and in length.
 DEFAULT_MERGE_MAX_DURATION = 1.5
 DEFAULT_MERGE_MAX_CHARS = 12
+# A short cue further than this from its neighbour is its own utterance (a
+# greeting before a long pause); folding it across the gap would show it with
+# speech from much later. Wide enough to still absorb a lead-in before a short
+# pause at the start of a sentence.
+DEFAULT_MERGE_MAX_GAP = 3.0
 
 
 def has_wide_chars(text: str) -> bool:
@@ -89,11 +94,13 @@ def merge_short_segments(
     segments: Sequence[Segment],
     max_duration: float = DEFAULT_MERGE_MAX_DURATION,
     max_chars: int = DEFAULT_MERGE_MAX_CHARS,
+    max_gap: float = DEFAULT_MERGE_MAX_GAP,
 ) -> list[Segment]:
     """Merge adjacent very-short segments into a neighbour.
 
     A short segment (brief in both time and character length) is folded into the
-    *following* segment when one exists, otherwise into the *previous* one. This
+    *following* segment when one starts within ``max_gap``, otherwise into the
+    *previous* one when that ended within ``max_gap``, otherwise kept as is. This
     avoids rapid one-word flickers. The merge concatenates text and extends the
     combined time range. The pass is conservative: only segments that satisfy
     ``_is_short`` are merged, and merging never drops or reorders content.
@@ -118,10 +125,10 @@ def merge_short_segments(
 
     for segment in segments:
         if carry is not None:
-            if _same_speaker(carry, segment):
+            if _can_merge(carry, segment, max_gap):
                 segment = _join_following(carry, segment)
             else:
-                result.append(carry)
+                _emit_carry(result, carry, max_gap)
                 run_start = segment.start
             carry = None
         else:
@@ -135,14 +142,22 @@ def merge_short_segments(
         result.append(segment)
 
     if carry is not None:
-        if result and _same_speaker(result[-1], carry):
-            result[-1] = _join(result[-1], carry)
-        else:
-            # Every segment was short (or the neighbour is another speaker);
-            # emit the accumulated carry as-is.
-            result.append(carry)
+        _emit_carry(result, carry, max_gap)
 
     return result
+
+
+def _emit_carry(result: list[Segment], carry: Segment, max_gap: float) -> None:
+    """A short cue that cannot join what follows: fold it into the previous cue
+    when that one is near, otherwise keep it as is."""
+    if result and _can_merge(result[-1], carry, max_gap):
+        result[-1] = _join(result[-1], carry)
+    else:
+        result.append(carry)
+
+
+def _can_merge(first: Segment, second: Segment, max_gap: float) -> bool:
+    return _same_speaker(first, second) and second.start - first.end <= max_gap
 
 
 def _same_speaker(first: Segment, second: Segment) -> bool:

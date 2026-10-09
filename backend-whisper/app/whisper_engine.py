@@ -14,10 +14,11 @@ from .segments import snap_start_to_words
 
 def faster_whisper_transcribe_kwargs(request: TranscribeRequest) -> dict:
     options = request.advanced_options
+    # 3-letter ISO codes a saved setting may carry ("kor") and regional tags
+    # ("zh-TW") are folded to the base code faster-whisper's tokenizer accepts.
+    language = normalize_language(request.language)
     kwargs = {
-        # 3-letter ISO codes a saved setting may carry ("kor") are folded to the
-        # short form faster-whisper's tokenizer accepts ("ko").
-        "language": None if request.language == "auto" else normalize_language(request.language),
+        "language": None if language in ("", "auto") else language,
         "vad_filter": request.use_vad,
         # Word timestamps default on: they are what lets cues snap to the
         # moment words are actually spoken — without them the opening segment

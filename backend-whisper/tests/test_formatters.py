@@ -77,6 +77,35 @@ class EmptyCueTests(unittest.TestCase):
             self.assertEqual(txt.read_text(encoding="utf-8"), "a\nb\n")
 
 
+class EscapingTests(unittest.TestCase):
+    def _one(self, text):
+        return [SimpleNamespace(start=0.0, end=1.0, text=text)]
+
+    def test_vtt_escapes_markup_characters(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "o.vtt"
+            write_vtt(self._one("Tom & Jerry <3 >"), out)
+            self.assertEqual(
+                out.read_text(encoding="utf-8"),
+                "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nTom &amp; Jerry &lt;3 &gt;\n",
+            )
+
+    def test_srt_keeps_markup_characters_as_written(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "o.srt"
+            write_srt(self._one("Tom & Jerry <3 >"), out)
+            self.assertEqual(out.read_text(encoding="utf-8"), "1\n00:00:00,000 --> 00:00:01,000\nTom & Jerry <3 >\n")
+
+    def test_ass_neutralises_override_braces_and_backslashes(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "o.ass"
+            write_transcript(self._one("say {\\b1}bold{\\b0} in C:\\new"), out, "ass")
+            dialogue = [ln for ln in out.read_text(encoding="utf-8").splitlines() if ln.startswith("Dialogue:")]
+            self.assertEqual(
+                dialogue, ["Dialogue: 0,0:00:00.00,0:00:01.00,Default,,0,0,0,,say (/b1)bold(/b0) in C:/new"]
+            )
+
+
 class CjkWrapTests(unittest.TestCase):
     def test_unspaced_text_wraps_by_character_count(self):
         text = "これは日本語の長い字幕テキストで空白がありません"

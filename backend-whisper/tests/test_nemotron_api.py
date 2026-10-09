@@ -59,7 +59,7 @@ class NemotronApiTests(unittest.TestCase):
         for patch in self._patches:
             patch.start()
         model_loader.clear_model_cache()
-        nemotron_runtime._version_of.cache_clear()
+        nemotron_runtime._known_versions.clear()
         self.client = TestClient(main_module.app)
 
     def tearDown(self):
@@ -178,15 +178,15 @@ class NemotronApiTests(unittest.TestCase):
         )
 
     def test_unsupported_language_is_a_400_before_the_stream_opens(self):
-        resp = self._upload("/transcribe/upload/stream", {"model": MODEL, "language": "zh-TW"})
+        resp = self._upload("/transcribe/upload/stream", {"model": MODEL, "language": "el"})
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(
             resp.json()["detail"],
             {
                 "code": "language_not_supported",
-                "message": "Model 'nemotron-3.5-asr' does not support language 'zh-TW'. Use large-v3 or large-v3-turbo.",
+                "message": "Model 'nemotron-3.5-asr' does not support language 'el'. Use large-v3 or large-v3-turbo.",
                 "model": MODEL,
-                "language": "zh-TW",
+                "language": "el",
             },
         )
 

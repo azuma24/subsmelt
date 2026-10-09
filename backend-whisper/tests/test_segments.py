@@ -72,6 +72,27 @@ class MergeShortSegmentsTests(unittest.TestCase):
         result = merge_short_segments(segments)
         self.assertEqual(result, [seg(float(i), float(i + 1), "a a") for i in range(1, 100, 2)])
 
+    def test_short_cue_far_from_its_neighbours_stays_on_its_own(self):
+        # "Hi." then thirty seconds of silence: folding it forward would show
+        # it with a sentence spoken half a minute later.
+        segments = [seg(0.0, 0.5, "Hi."), seg(30.0, 33.0, "This is the next long sentence spoken.")]
+        self.assertEqual(merge_short_segments(segments), segments)
+
+    def test_short_cue_before_a_long_gap_folds_back_into_the_nearby_previous_cue(self):
+        segments = [
+            seg(0.0, 3.0, "Goodbye for now"),
+            seg(3.0, 3.3, "bye"),
+            seg(30.0, 33.0, "Welcome back to part two"),
+        ]
+        self.assertEqual(
+            merge_short_segments(segments),
+            [seg(0.0, 3.3, "Goodbye for now bye"), seg(30.0, 33.0, "Welcome back to part two")],
+        )
+
+    def test_trailing_short_cue_far_from_the_previous_stays_on_its_own(self):
+        segments = [seg(0.0, 3.0, "Goodbye for now"), seg(30.0, 30.3, "bye")]
+        self.assertEqual(merge_short_segments(segments), segments)
+
     def test_long_duration_but_few_chars_is_not_merged(self):
         # 2.0s exceeds the duration threshold, so it stays even though it's short text.
         segments = [seg(0.0, 2.0, "Yes"), seg(2.0, 5.0, "I agree with that")]

@@ -20,11 +20,13 @@ from .segments import Segment
 ChineseScript = Literal["zh-TW", "zh-CN"]
 
 _OPENCC_CONVERSIONS: dict[str, str] = {"zh-TW": "s2twp", "zh-CN": "t2s"}
+# Cantonese is written in the same Han scripts, so the preference applies to it too.
+_CHINESE_CODES = frozenset({"zh", "yue"})
 
 
 def is_chinese(language: str | None) -> bool:
-    """True for ``zh``, its regional forms and the ISO-639-2 ``chi``/``zho``."""
-    return normalize_language(language or "").startswith("zh")
+    """True for ``zh``, its regional forms, the ISO-639-2 ``chi``/``zho`` and ``yue``."""
+    return normalize_language(language or "") in _CHINESE_CODES
 
 
 @cache

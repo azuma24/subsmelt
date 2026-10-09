@@ -30,6 +30,10 @@ CHUNK_MAX_S = 720.0
 CHUNK_SEARCH_S = 120.0
 SILENCE_FILTER = "silencedetect=noise=-35dB:d=0.4"
 POLL_S = 0.2
+# Child output is decoded as UTF-8 whatever the locale: ffmpeg and nemo-speech
+# echo file paths, and on Windows a non-ASCII temp path in the system codepage
+# would otherwise abort the run with a decode error instead of a transcript.
+_TEXT_OUTPUT = {"text": True, "encoding": "utf-8", "errors": "replace"}
 
 Chunk = tuple[float, float]
 Silence = tuple[float, float]
@@ -57,7 +61,7 @@ def parse_silences(ffmpeg_stderr: str) -> list[Silence]:
     return silences
 
 
-def detect_silences(audio_path: Path) -> list[Silence]:
+def detect_silences(audio_path: Path, is_cancelled: Callable[[], bool] | None = None) -> list[Silence]:
     command = [
         ffmpeg_binary(),
         "-hide_banner",
@@ -70,8 +74,9 @@ def detect_silences(audio_path: Path) -> list[Silence]:
         "null",
         "-",
     ]
-    result = subprocess.run(command, capture_output=True, text=True, check=False)
-    return parse_silences(result.stderr or "")
+    proc = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, **_TEXT_OUTPUT)
+    _, stderr = _wait_or_kill(proc, is_cancelled)
+    return parse_silences(stderr or "")
 
 
 def _cut_point(target: float, silences: Sequence[Silence]) -> float:
@@ -161,7 +166,7 @@ def transcribe_chunk(
         "--device",
         device,
     ]
-    proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
+    proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **_TEXT_OUTPUT)
     stdout, stderr = _wait_or_kill(proc, is_cancelled)
     return _parse_output(stdout, stderr, proc.returncode)
 
@@ -213,7 +218,7 @@ def run(
     # Nemotron has no compute type; a Whisper one left in settings must not fail validation.
     with lease(request.model, request.device, "") as handle:
         duration = wav_duration(audio_path)
-        chunks = plan_chunks(duration, lambda: detect_silences(audio_path))
+        chunks = plan_chunks(duration, lambda: detect_silences(audio_path, is_cancelled))
         words, locales = yield from run_chunks(
             handle, audio_path, chunks, duration, locale, _cli_device(request), is_cancelled
         )

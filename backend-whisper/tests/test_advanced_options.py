@@ -100,13 +100,22 @@ class AdvancedOptionsTests(unittest.TestCase):
         )
         assert_language_supported(request)
 
-    def test_nemotron_rejects_traditional_chinese_and_accepts_japanese(self):
-        assert_language_supported(TranscribeRequest(input_path="/media/a.mkv", model="nemotron-3.5-asr", language="ja"))
+    def test_nemotron_accepts_regional_chinese_and_japanese_and_rejects_greek(self):
+        for lang in ("ja", "zh-TW"):
+            assert_language_supported(
+                TranscribeRequest(input_path="/media/a.mkv", model="nemotron-3.5-asr", language=lang)
+            )
         with self.assertRaises(LanguageNotSupportedError) as ctx:
             assert_language_supported(
-                TranscribeRequest(input_path="/media/a.mkv", model="nemotron-3.5-asr", language="zh-TW")
+                TranscribeRequest(input_path="/media/a.mkv", model="nemotron-3.5-asr", language="el")
             )
-        self.assertEqual(ctx.exception.language, "zh-TW")
+        self.assertEqual(ctx.exception.language, "el")
+
+    def test_whisper_language_folds_regional_tags_and_auto_in_any_case(self):
+        # faster-whisper rejects "zh-tw" outright; "" and "AUTO" must mean detect.
+        for language, expected in (("zh-TW", "zh"), ("pt-BR", "pt"), ("AUTO", None), ("", None)):
+            request = TranscribeRequest(input_path="/media/lecture.mkv", language=language)
+            self.assertEqual(faster_whisper_transcribe_kwargs(request)["language"], expected, language)
 
     def test_word_timestamps_default_on_without_advanced_options(self):
         # Word timestamps are what lets cues snap to the moment words are

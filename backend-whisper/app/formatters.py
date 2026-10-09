@@ -103,12 +103,17 @@ def write_srt(segments: Iterable[SegmentLike], output_path: Path, max_line_lengt
     return count
 
 
+def _vtt_escape(text: str) -> str:
+    """WebVTT cue text is markup: a bare ``&`` or ``<`` is parsed, not shown."""
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
 def write_vtt(segments: Iterable[SegmentLike], output_path: Path, max_line_length: int | None = None) -> int:
     lines = ["WEBVTT", ""]
     count = 0
     for count, segment in enumerate(_spoken(segments), start=1):  # noqa: B007 - count is read after the loop
         lines.append(f"{_timestamp(segment.start, '.')} --> {_timestamp(segment.end, '.')}")
-        lines.append(_wrap_text(_with_speaker(segment), max_line_length))
+        lines.append(_wrap_text(_vtt_escape(_with_speaker(segment)), max_line_length))
         lines.append("")
     output_path.write_text("\n".join(lines), encoding="utf-8")
     return count
@@ -148,12 +153,20 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
 
 
+def _ass_escape(text: str) -> str:
+    """ASS has no escape for its own syntax: ``{`` opens an override block and
+    ``\\N``/``\\n``/``\\h`` are line and space controls. Look-alike ASCII
+    renders literally in libass without depending on font fallback, which the
+    fullwidth brace and backslash would need."""
+    return text.replace("{", "(").replace("}", ")").replace("\\", "/")
+
+
 def write_ass(segments: Iterable[SegmentLike], output_path: Path, max_line_length: int | None = None) -> int:
     """Write Advanced SubStation Alpha (.ass). Line breaks use ASS's ``\\N``."""
     lines = [_ASS_HEADER]
     count = 0
     for count, segment in enumerate(_spoken(segments), start=1):  # noqa: B007 - count is read after the loop
-        text = _wrap_text(segment.text, max_line_length).replace("\n", "\\N")
+        text = _wrap_text(_ass_escape(segment.text), max_line_length).replace("\n", "\\N")
         # Speaker goes in the ASS Name/actor field (not the rendered text).
         name = _speaker(segment)
         lines.append(

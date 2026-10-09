@@ -9,7 +9,6 @@ import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
-from functools import lru_cache
 from pathlib import Path
 
 from .engine import EngineUnavailableError
@@ -55,11 +54,26 @@ def resolve_binary() -> Path | None:
     return Path(found) if found else None
 
 
-@lru_cache(maxsize=8)
+# Successful probes only: a binary that failed to start (driver missing, half
+# installed) is asked again next time rather than reported broken for good.
+_known_versions: dict[str, str] = {}
+
+
 def _version_of(binary: str) -> str | None:
+    if binary not in _known_versions:
+        version = _probe_version(binary)
+        if version is None:
+            return None
+        _known_versions[binary] = version
+    return _known_versions[binary]
+
+
+def _probe_version(binary: str) -> str | None:
     try:
         result = subprocess.run([binary, "--version"], capture_output=True, text=True, timeout=_VERSION_TIMEOUT_S)
     except (OSError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode != 0:
         return None
     line = (result.stdout or result.stderr).strip().splitlines()
     if not line:

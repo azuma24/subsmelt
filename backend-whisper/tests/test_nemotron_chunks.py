@@ -1,10 +1,22 @@
+import os
+import stat
 import tempfile
+import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from app import nemotron
+from app.engine import TranscriptionCancelled
 from app.nemotron_runtime import NemotronHandle
 from tests.nemotron_fixtures import can_exec_wrappers, write_fake_binary, write_silent_wav
+
+
+def _write_script(path: Path, body: str) -> Path:
+    path.write_text(f"#!/bin/sh\n{body}", encoding="utf-8")
+    path.chmod(path.stat().st_mode | stat.S_IXUSR)
+    return path
+
 
 FFMPEG_STDERR = """\
 Input #0, wav, from 'audio.wav':
@@ -47,6 +59,29 @@ class ChunkPlanningTests(unittest.TestCase):
             raise AssertionError("silence scan must not run for a short file")
 
         self.assertEqual(nemotron.plan_chunks(700.0, never), [(0.0, 700.0)])
+
+
+@unittest.skipUnless(can_exec_wrappers(), "shell scripts need a POSIX host")
+class SilenceScanTests(unittest.TestCase):
+    def test_undecodable_bytes_in_ffmpeg_output_do_not_abort_the_scan(self):
+        # ffmpeg echoes the input path in its own codepage; \377 is a byte no
+        # strict UTF-8 decoder accepts.
+        with tempfile.TemporaryDirectory() as tmp:
+            fake = _write_script(
+                Path(tmp) / "ffmpeg",
+                "printf 'from \\377 input\\n[x] silence_start: 12.5\\n[x] silence_end: 13.3 | d\\n' >&2\n",
+            )
+            with mock.patch.dict(os.environ, {"SUBSMELT_FFMPEG": str(fake)}):
+                self.assertEqual(nemotron.detect_silences(Path(tmp) / "audio.wav"), [(12.5, 13.3)])
+
+    def test_a_cancel_during_the_scan_kills_ffmpeg(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake = _write_script(Path(tmp) / "ffmpeg", "exec sleep 30\n")
+            started = time.monotonic()
+            with mock.patch.dict(os.environ, {"SUBSMELT_FFMPEG": str(fake)}):
+                with self.assertRaises(TranscriptionCancelled):
+                    nemotron.detect_silences(Path(tmp) / "audio.wav", lambda: True)
+            self.assertLess(time.monotonic() - started, 5.0)
 
 
 class WavCuttingTests(unittest.TestCase):
@@ -97,6 +132,18 @@ class ChunkOffsetTests(unittest.TestCase):
         )
         self.assertEqual(locales, ["en-US", "en-US"])
         self.assertEqual([p.name for p in Path(tempfile.gettempdir()).glob("subsmelt-nemo-*")], [])
+
+    def test_undecodable_bytes_on_nemo_speech_stderr_do_not_abort_the_chunk(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary = _write_script(
+                root / "nemo-speech",
+                'printf \'warn \\377 path\\n\' >&2\nprintf \'{"words": [], "languages": ["en-US"]}\\n\'\n',
+            )
+            handle = NemotronHandle(binary=binary, gguf=root / "model.gguf")
+            audio = write_silent_wav(root / "audio.wav", 1.0)
+            data = nemotron.transcribe_chunk(handle, audio, "en-US", "auto", None)
+        self.assertEqual(data["languages"], ["en-US"])
 
     def test_missing_model_becomes_a_runtime_error_with_the_binary_message(self):
         with tempfile.TemporaryDirectory() as tmp:

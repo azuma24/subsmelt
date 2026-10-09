@@ -7,7 +7,6 @@ which is what matters for CJK text that carries no spaces.
 
 from __future__ import annotations
 
-import itertools
 import unicodedata
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -22,6 +21,9 @@ DEFAULT_MAX_DURATION_S = 6.0
 DEFAULT_MAX_LINE_SPACED = 42
 DEFAULT_MAX_LINE_WIDE = 16
 LINES_PER_CUE = 2
+# A lone word can arrive with one timestamp for start and end; a zero-length
+# cue is never shown, so it is given this long on screen.
+MIN_CUE_S = 0.5
 
 
 @dataclass(frozen=True)
@@ -52,12 +54,17 @@ def _wide(char: str) -> bool:
     return unicodedata.east_asian_width(char) in ("W", "F")
 
 
+def _glue(previous: str, current: str) -> str:
+    """``previous`` then ``current``, space-separated except between two wide
+    (CJK) characters."""
+    glued = previous and current and _wide(previous[-1]) and _wide(current[0])
+    return previous + current if glued else f"{previous} {current}"
+
+
 def join_words(words: Sequence[Word]) -> str:
-    """Space-separated, except between two wide (CJK) characters."""
     out = words[0].text
-    for previous, current in itertools.pairwise(words):
-        glued = previous.text and current.text and _wide(previous.text[-1]) and _wide(current.text[0])
-        out += current.text if glued else " " + current.text
+    for word in words[1:]:
+        out = _glue(out, word.text)
     return out
 
 
@@ -81,13 +88,21 @@ def _segment(run: Sequence[Word]) -> Segment:
 
 
 def _monotonic(segments: list[Segment]) -> list[Segment]:
-    """Word timings can overlap by a few ms at cue boundaries; keep cues in order."""
+    """Keep cues in order and never empty.
+
+    Word timings can overlap by a few ms at cue boundaries, so a cue starts
+    where the previous ended. A cue timed entirely inside the previous one
+    (a filler word the model placed mid-sentence) joins its text instead of
+    becoming a zero-length cue, and a cue with no duration is padded."""
     out: list[Segment] = []
     for segment in segments:
         if out and segment.start < out[-1].end:
-            segment = Segment(
-                start=out[-1].end, end=max(segment.end, out[-1].end), text=segment.text, speaker=segment.speaker
-            )
+            if segment.end <= out[-1].end:
+                out[-1] = Segment(out[-1].start, out[-1].end, _glue(out[-1].text, segment.text), out[-1].speaker)
+                continue
+            segment = Segment(start=out[-1].end, end=segment.end, text=segment.text, speaker=segment.speaker)
+        if segment.end <= segment.start:
+            segment = Segment(segment.start, segment.start + MIN_CUE_S, segment.text, segment.speaker)
         out.append(segment)
     return out
 
