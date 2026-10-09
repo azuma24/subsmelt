@@ -107,7 +107,7 @@ function ActiveJobLine({ job, others }: { job: Job; others: number }) {
         />
       </span>
       <span
-        className="shrink-0 font-mono text-xs text-muted"
+        className="min-w-0 truncate font-mono text-xs text-muted"
         title={eta ? t("dashboard.cuesPerMinute", { rate: Math.round(eta.cuesPerMinute) }) : undefined}
       >
         {analysing ? t("dashboard.analysing") : `${pct}%`}
