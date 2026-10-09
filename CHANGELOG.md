@@ -5,9 +5,15 @@ version number and are released together (`v0.5.6` and `whisper-v0.5.6`).
 
 ## [Unreleased]
 
+## [0.6.8] — 2026-10-09
+
 ### Added
 
 - **Usage page under Settings.** Every successful LLM call is now recorded with its model, connection, call type, file, input and output tokens, cache and reasoning tokens, and a cost estimate priced when the call ran. The page charts tokens and cost per day, ranks models, call types and files, and lists the last 50 calls, for 7, 30 or 90 days, a year or all time. Calls from the Convert page and title repair are counted too. `GET /api/usage?range=30d` returns the same report, and `DELETE /api/usage` clears the history.
+
+### Changed
+
+- **Library and Activity are one home page.** `/` opens the Library with the queue on one line above it (the running file, its progress and time left, how many wait, and Run all or Stop), the setup checklist cut to the steps still left, and a `Files | Jobs | Transcriptions` switch. Jobs lists every job, Convert uploads included, with the old retry, re-translate, delete and clear-finished actions and the folder and language filters. The view, file filter and job status live in the URL (`/?view=jobs&status=error`), so the failure toast opens the failed jobs and a bookmark keeps its view. A file's side panel opens its job details in place. Old `/activity` links redirect to the Jobs view. The nav loses the Activity item and the error badge moves to Library. The token and cost tiles are gone; Settings → Usage has them.
 
 ## [0.6.7] — 2026-10-07
 

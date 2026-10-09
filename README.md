@@ -6,7 +6,7 @@ Point SubSmelt at your media folders and it automatically translates every subti
 
 One subtitle file. Multiple language outputs. Fully automated.
 
-Current release: **0.6.7** — [what changed](CHANGELOG.md).
+Current release: **0.6.8** — [what changed](CHANGELOG.md).
 
 ---
 
@@ -15,7 +15,7 @@ Current release: **0.6.7** — [what changed](CHANGELOG.md).
 ```yaml
 services:
   subsmelt:
-    image: ghcr.io/azuma24/subsmelt:latest   # or pin a release: ghcr.io/azuma24/subsmelt:0.6.7
+    image: ghcr.io/azuma24/subsmelt:latest   # or pin a release: ghcr.io/azuma24/subsmelt:0.6.8
     container_name: subsmelt
     ports:
       - "3000:3000"

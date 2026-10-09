@@ -1,6 +1,6 @@
 # SubSmelt — Handoff
 
-Orientation for someone picking this project up. Current as of **0.6.7**
+Orientation for someone picking this project up. Current as of **0.6.8**
 (2026-10-07). For what changed when, see
 [../CHANGELOG.md](../CHANGELOG.md); for how to run it, see
 [../README.md](../README.md).
@@ -241,7 +241,7 @@ Nothing here is in progress. Ordered by what I would fix first.
 ### Product
 
 First run is *signposting*, not a wizard: Settings shows what is outstanding and
-Activity has a checklist, but nothing walks a new operator through the ~65
+the Library has a checklist, but nothing walks a new operator through the ~65
 settings.
 
 The Whisper control window still lacks the model manager and diagnostics the
