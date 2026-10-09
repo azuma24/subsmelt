@@ -39,9 +39,11 @@ from .model_loader import (
     CudaUnavailableError,
     InvalidComputeTypeError,
     ModelWeightsMissingError,
+    resident_cuda_model_id,
     unload_model,
 )
 from .model_manager import (
+    ModelInUseError,
     ModelNotDownloadedError,
     UnknownModelError,
     assert_engine_available,
@@ -60,6 +62,7 @@ from .preflight import (
     assert_path_under_media,
     available_ram_mb,
     disk_free_mb,
+    effective_free_vram_mb,
     evaluate_disk_safety,
     evaluate_gpu_safety,
     evaluate_model_safety,
@@ -82,16 +85,6 @@ from .transcribe import (
     run_transcription_streaming,
 )
 from .version import TRANSPORT_MODES, backend_version
-
-try:
-    from .model_manager import ModelInUseError
-except ImportError:  # the model-manager branch that raises it has not merged yet
-
-    class ModelInUseError(RuntimeError):
-        def __init__(self, model: str) -> None:
-            super().__init__(f"Model {model!r} is in use by a running transcription")
-            self.model = model
-
 
 MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/media")
 ALLOW_UNSAFE = os.environ.get("SUBSMELT_WHISPER_ALLOW_UNSAFE", "0") == "1"
@@ -605,6 +598,12 @@ def _with_diarization_headroom(
     return model_safe, model_code, req_mb
 
 
+def _free_vram_for_next_load() -> int | None:
+    """Free VRAM plus what the resident model holds: loading the next model
+    reuses or evicts it, so its footprint is available either way."""
+    return effective_free_vram_mb(total_free_vram_mb(), resident_cuda_model_id())
+
+
 def preflight_result(request: TranscribeRequest) -> PreflightResponse:
     input_path = assert_path_under_media(request.input_path, MEDIA_ROOT)
     free_ram = available_ram_mb()
@@ -623,7 +622,7 @@ def preflight_result(request: TranscribeRequest) -> PreflightResponse:
     detected_gpus = None
     if on_gpu:
         detected_gpus = gpu_info()
-        gpu_safety = evaluate_gpu_safety(request.model, total_free_vram_mb())
+        gpu_safety = evaluate_gpu_safety(request.model, _free_vram_for_next_load())
         model_safe = gpu_safety["safe"]
         model_code = gpu_safety["code"]
         suggested = gpu_safety["suggested_model"]
@@ -824,9 +823,9 @@ def validate_upload_request(request: TranscribeRequest, upload_size_mb: int, scr
     ffmpeg_ok = ffmpeg_available()
     on_gpu = (request.device or "cpu").strip().lower() == "cuda"
     if on_gpu:
-        gpu_safety = evaluate_gpu_safety(request.model, total_free_vram_mb())
+        gpu_safety = evaluate_gpu_safety(request.model, _free_vram_for_next_load())
         model_safe, model_code, suggested = gpu_safety["safe"], gpu_safety["code"], gpu_safety["suggested_model"]
-        avail_ram = total_free_vram_mb() or 0
+        avail_ram = _free_vram_for_next_load() or 0
         req_ram = gpu_safety["required_vram_mb"]
     else:
         safety = evaluate_model_safety(request.model, available_ram_mb())

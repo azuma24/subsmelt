@@ -161,6 +161,23 @@ class PreflightGpuRoutingTests(unittest.TestCase):
         self.assertEqual(result.free_vram_mb, 1500)
         self.assertEqual(result.gpus, [fake_gpu])
 
+    def test_preflight_gives_back_the_vram_of_the_resident_model(self):
+        # large-v3 already loaded holds the VRAM its next run will reuse: a second
+        # large-v3 request must not be refused for memory the first one occupies.
+        request = TranscribeRequest(input_path="/media/clip.mkv", model="large-v3", device="cuda")
+        with (
+            mock.patch.object(main, "assert_path_under_media", return_value=Path("/media/clip.mkv")),
+            mock.patch.object(main, "available_ram_mb", return_value=64000),
+            mock.patch.object(main, "ffmpeg_available", return_value=True),
+            mock.patch.object(main, "disk_free_mb", return_value=500000),
+            mock.patch.object(main, "describe_model_cache", return_value=None),
+            mock.patch.object(main, "gpu_info", return_value=[]),
+            mock.patch.object(main, "total_free_vram_mb", return_value=1500),
+            mock.patch.object(main, "resident_cuda_model_id", return_value="large-v3"),
+        ):
+            result = main.preflight_result(request)
+        self.assertEqual((result.safe, result.code, result.free_vram_mb), (True, "ok", 11740))
+
     def test_preflight_vram_unknown_fails_open_on_cuda(self):
         request = TranscribeRequest(input_path="/media/clip.mkv", model="large-v3", device="cuda")
         with (
