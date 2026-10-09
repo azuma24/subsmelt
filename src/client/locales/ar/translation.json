@@ -11,7 +11,6 @@
     "groupSystem": "النظام",
     "youtube": "YouTube",
     "library": "المكتبة",
-    "activity": "النشاط",
     "primary": "التنقل الرئيسي"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "فشلت إعادة المحاولة: {{error}}",
       "jobsFailed": "فشلت {{count}} من المهام",
       "jobCancelled": "تم إلغاء المهمة — تستمر قائمة الانتظار",
-      "openActivity": "فتح النشاط"
+      "viewFailed": "عرض المهام الفاشلة"
     },
     "confirm": {
       "clearTitle": "مسح المهام المكتملة",
@@ -195,10 +194,7 @@
       "translating": "قيد الترجمة",
       "done": "مكتملة",
       "errors": "أخطاء",
-      "tokens": "الرموز",
-      "cost": "التكلفة التقديرية",
-      "costLocal": "محلي",
-      "tokenBudget": "{{used}} / {{budget}} رمز"
+      "cost": "التكلفة التقديرية"
     },
     "noJobsEmpty": "لا توجد مهام بعد.",
     "noJobsHint": "انقر على <strong>فحص المجلدات</strong> لاكتشاف ملفات الترجمة.",
@@ -247,10 +243,6 @@
       "summaryNothingNew": "تم العثور على {{subtitles}} ملف ترجمة، ولكل منها بالفعل مهمة أو مخرجات منتهية. لن تتم إضافة أي شيء جديد إلى القائمة.",
       "summaryNoTarget": "تم العثور على {{subtitles}} ملف ترجمة، لكن لا ينطبق أي هدف ترجمة على أي منها. أضف هدفًا أو فعّله في الترجمات.",
       "scanAnyway": "المسح على أي حال"
-    },
-    "tab": {
-      "queue": "قائمة الانتظار",
-      "transcription": "النسخ"
     },
     "filtersLabel": "عوامل التصفية",
     "bulkActionsLabel": "إجراءات جماعية",
@@ -1431,8 +1423,8 @@
       "sttOff": "تحويل الكلام إلى نص متوقف، لذا لا يمكن نسخ هذا الفيديو بعد.",
       "openSttSettings": "فتح إعدادات تحويل الكلام إلى نص",
       "openLanguageSettings": "فتح إعدادات اللغات",
-      "openActivity": "فتح النشاط",
-      "alreadyTranslated": "مترجم بالفعل"
+      "alreadyTranslated": "مترجم بالفعل",
+      "openJob": "عرض تفاصيل المهمة"
     },
     "bulk": {
       "summary_zero": "الملفات المحددة: {{count}}",
@@ -1444,6 +1436,11 @@
       "transcribe": "نسخ {{count}}",
       "runPending": "تشغيل المهام المعلّقة ({{count}})",
       "clear": "مسح التحديد"
+    },
+    "view": {
+      "files": "الملفات",
+      "jobs": "المهام",
+      "transcriptions": "التفريغات النصية"
     }
   },
   "llmStatus": {

@@ -11,7 +11,6 @@
     "groupSystem": "시스템",
     "youtube": "YouTube",
     "library": "라이브러리",
-    "activity": "활동",
     "primary": "기본 탐색"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "재시도 실패: {{error}}",
       "jobsFailed": "작업 {{count}}개가 실패했습니다",
       "jobCancelled": "작업이 취소되었습니다 — 대기열 계속",
-      "openActivity": "활동 열기"
+      "viewFailed": "실패한 작업 보기"
     },
     "confirm": {
       "clearTitle": "완료된 작업 지우기",
@@ -195,10 +194,7 @@
       "translating": "번역 중",
       "done": "완료",
       "errors": "오류",
-      "tokens": "토큰",
-      "cost": "예상 비용",
-      "costLocal": "로컬",
-      "tokenBudget": "{{used}} / {{budget}} 토큰"
+      "cost": "예상 비용"
     },
     "noJobsEmpty": "아직 작업이 없습니다.",
     "noJobsHint": "<strong>폴더 스캔</strong>을 클릭해 자막 파일을 찾으세요.",
@@ -243,10 +239,6 @@
       "summaryNothingNew": "자막 파일 {{subtitles}}개를 찾았지만 모두 이미 작업이 있거나 완료된 출력이 있습니다. 새로 대기열에 추가되는 항목은 없습니다.",
       "summaryNoTarget": "자막 파일 {{subtitles}}개를 찾았지만 적용되는 번역 대상이 없습니다. 번역에서 대상을 추가하거나 활성화하세요.",
       "scanAnyway": "그래도 스캔"
-    },
-    "tab": {
-      "queue": "대기열",
-      "transcription": "전사"
     },
     "filtersLabel": "필터",
     "bulkActionsLabel": "일괄 작업",
@@ -1407,8 +1399,8 @@
       "sttOff": "음성 텍스트 변환이 꺼져 있어 이 동영상을 아직 전사할 수 없습니다.",
       "openSttSettings": "음성 텍스트 변환 설정 열기",
       "openLanguageSettings": "언어 설정 열기",
-      "openActivity": "활동 열기",
-      "alreadyTranslated": "이미 번역됨"
+      "alreadyTranslated": "이미 번역됨",
+      "openJob": "작업 세부 정보 보기"
     },
     "bulk": {
       "summary_one": "파일 {{count}}개 선택됨",
@@ -1416,6 +1408,11 @@
       "transcribe": "{{count}}개 전사",
       "runPending": "대기 중인 작업 {{count}}개 실행",
       "clear": "선택 해제"
+    },
+    "view": {
+      "files": "파일",
+      "jobs": "작업",
+      "transcriptions": "전사"
     }
   },
   "llmStatus": {

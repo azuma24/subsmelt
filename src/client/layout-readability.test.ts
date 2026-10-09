@@ -10,8 +10,8 @@ const primitives = ["Button", "Status", "Field", "Layout", "Accordion", "Drawer"
   .map((name) => readFileSync(`src/client/ui/${name}.tsx`, "utf8"))
   .join("\n");
 const dashboard = [
-  "src/client/features/dashboard/DashboardPage.tsx",
-  "src/client/features/dashboard/DashboardHero.tsx",
+  "src/client/features/library/LibraryPage.tsx",
+  "src/client/features/library/QuickStart.tsx",
   "src/client/features/dashboard/QueueToolbar.tsx",
   "src/client/features/library/ScanConfirmModal.tsx",
   "src/client/features/dashboard/TranscriptionHistoryPanel.tsx",
@@ -73,13 +73,6 @@ test("shared controls avoid tiny helper text and preserve touch-friendly targets
   assert.doesNotMatch(primitives, /text-\[\d/);
   assert.match(primitives, /min-h-touch/);
   assert.match(primitives, /leading-6/);
-});
-
-test("dashboard hero metric band stays a responsive hairline grid", () => {
-  // Cockpit Grid band: status filters + tokens in one row on desktop, wrapping
-  // to 2-3 rows on narrow screens (gap-px over a border bg draws the dividers).
-  assert.match(dashboard, /grid-cols-2 gap-px[^"]*sm:grid-cols-3 lg:grid-cols-6/);
-  assert.match(dashboard, /font-mono text-lg font-semibold tabular-nums/);
 });
 
 test("dashboard keeps small desktop layouts readable before switching to mobile", () => {

@@ -86,7 +86,7 @@ export function DesktopSidebar({ queueRunning, errorCount, watcherRunning, curre
               <ul role="list" aria-label={t(group.labelKey)} className="space-y-1">
                 {items.map((item) => {
                   const isActive = isNavActive(item, currentPath);
-                  const showBadge = item.path === "/activity" && errorCount > 0;
+                  const showBadge = item.path === "/" && errorCount > 0;
                   return (
                     <li key={item.path}>
                       <NavLink

@@ -11,7 +11,6 @@
     "groupSystem": "Sistem",
     "youtube": "YouTube",
     "library": "Kitaplık",
-    "activity": "Etkinlik",
     "primary": "Ana gezinme"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "Yeniden deneme başarısız: {{error}}",
       "jobsFailed": "{{count}} iş başarısız oldu",
       "jobCancelled": "İş iptal edildi — kuyruk devam ediyor",
-      "openActivity": "Etkinliği aç"
+      "viewFailed": "Başarısız işleri görüntüle"
     },
     "confirm": {
       "clearTitle": "Biten işleri temizle",
@@ -195,10 +194,7 @@
       "translating": "Çevriliyor",
       "done": "Tamamlandı",
       "errors": "Hatalar",
-      "tokens": "Token",
-      "cost": "Tahmini maliyet",
-      "costLocal": "yerel",
-      "tokenBudget": "{{used}} / {{budget}} token"
+      "cost": "Tahmini maliyet"
     },
     "noJobsEmpty": "Henüz iş yok.",
     "noJobsHint": "Altyazı dosyalarını keşfetmek için <strong>Klasörleri Tara</strong>'ya tıklayın.",
@@ -243,10 +239,6 @@
       "summaryNothingNew": "{{subtitles}} altyazı dosyası bulundu ve her birinin zaten bir işi veya tamamlanmış çıktısı var. Kuyruğa yeni bir şey eklenmeyecek.",
       "summaryNoTarget": "{{subtitles}} altyazı dosyası bulundu, ancak hiçbirine uygulanan bir çeviri hedefi yok. Çeviriler bölümünden bir hedef ekleyin veya etkinleştirin.",
       "scanAnyway": "Yine de tara"
-    },
-    "tab": {
-      "queue": "Kuyruk",
-      "transcription": "Transkripsiyon"
     },
     "filtersLabel": "Filtreler",
     "bulkActionsLabel": "Toplu işlemler",
@@ -1407,8 +1399,8 @@
       "sttOff": "Konuşmadan metne kapalı olduğundan bu video henüz transkribe edilemiyor.",
       "openSttSettings": "Konuşmadan metne ayarlarını aç",
       "openLanguageSettings": "Dil ayarlarını aç",
-      "openActivity": "Etkinliği aç",
-      "alreadyTranslated": "Zaten çevrildi"
+      "alreadyTranslated": "Zaten çevrildi",
+      "openJob": "İş ayrıntılarını göster"
     },
     "bulk": {
       "summary_one": "{{count}} dosya seçildi",
@@ -1416,6 +1408,11 @@
       "transcribe": "{{count}} öğeyi transkribe et",
       "runPending": "Bekleyen {{count}} işi çalıştır",
       "clear": "Seçimi temizle"
+    },
+    "view": {
+      "files": "Dosyalar",
+      "jobs": "İşler",
+      "transcriptions": "Transkripsiyonlar"
     }
   },
   "llmStatus": {

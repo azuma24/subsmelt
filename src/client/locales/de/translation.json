@@ -11,7 +11,6 @@
     "groupSystem": "System",
     "youtube": "YouTube",
     "library": "Mediathek",
-    "activity": "Aktivität",
     "primary": "Hauptnavigation"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "Wiederholung fehlgeschlagen: {{error}}",
       "jobsFailed": "{{count}} Aufträge fehlgeschlagen",
       "jobCancelled": "Job abgebrochen — die Warteschlange läuft weiter",
-      "openActivity": "Aktivität öffnen"
+      "viewFailed": "Fehlgeschlagene Aufträge anzeigen"
     },
     "confirm": {
       "clearTitle": "Erledigte Aufträge entfernen",
@@ -195,10 +194,7 @@
       "translating": "Wird übersetzt",
       "done": "Fertig",
       "errors": "Fehler",
-      "tokens": "Tokens",
-      "cost": "Geschätzte Kosten",
-      "costLocal": "lokal",
-      "tokenBudget": "{{used}} / {{budget}} Tokens"
+      "cost": "Geschätzte Kosten"
     },
     "noJobsEmpty": "Noch keine Aufträge.",
     "noJobsHint": "Klicke auf <strong>Ordner scannen</strong>, um Untertiteldateien zu finden.",
@@ -243,10 +239,6 @@
       "summaryNothingNew": "{{subtitles}} Untertiteldateien gefunden, und jede hat bereits einen Auftrag oder eine fertige Ausgabe. Es wird nichts Neues eingereiht.",
       "summaryNoTarget": "{{subtitles}} Untertiteldateien gefunden, aber für keine davon gilt ein Übersetzungsziel. Füge unter Übersetzungen eines hinzu oder aktiviere es.",
       "scanAnyway": "Trotzdem scannen"
-    },
-    "tab": {
-      "queue": "Warteschlange",
-      "transcription": "Transkription"
     },
     "filtersLabel": "Filter",
     "bulkActionsLabel": "Sammelaktionen",
@@ -1407,8 +1399,8 @@
       "sttOff": "Spracherkennung ist deaktiviert, daher kann dieses Video noch nicht transkribiert werden.",
       "openSttSettings": "Spracherkennungs-Einstellungen öffnen",
       "openLanguageSettings": "Spracheinstellungen öffnen",
-      "openActivity": "Aktivität öffnen",
-      "alreadyTranslated": "Bereits übersetzt"
+      "alreadyTranslated": "Bereits übersetzt",
+      "openJob": "Auftragsdetails anzeigen"
     },
     "bulk": {
       "summary_one": "{{count}} Datei ausgewählt",
@@ -1416,6 +1408,11 @@
       "transcribe": "{{count}} transkribieren",
       "runPending": "{{count}} ausstehende Aufträge ausführen",
       "clear": "Auswahl aufheben"
+    },
+    "view": {
+      "files": "Dateien",
+      "jobs": "Aufträge",
+      "transcriptions": "Transkriptionen"
     }
   },
   "llmStatus": {

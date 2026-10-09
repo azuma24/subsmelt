@@ -6,9 +6,9 @@ import { isNavActive, NAV_ITEMS } from "./constants";
 import { legacyRedirect } from "./redirects";
 import { SettingsSubpageLinks } from "../features/settings/SettingsSubpageLinks";
 
-const ORDER = ["Library", "Activity", "Transcribe", "YouTube", "Settings"];
+const ORDER = ["Library", "Transcribe", "YouTube", "Settings"];
 
-test("the sidebar lists the five destinations in order", () => {
+test("the sidebar lists the four destinations in order", () => {
   const page = renderPage(
     <DesktopSidebar queueRunning={false} errorCount={0} watcherRunning={false} currentPath="/" />,
   );
@@ -28,18 +28,18 @@ test("the sidebar's LLM line opens the connection list", () => {
   assert.match(page.html, /aria-expanded="false"/);
 });
 
-test("the phone bar holds exactly the same five destinations and no More sheet", () => {
-  const page = renderPage(<MobileBottomNav currentPath="/activity" />);
+test("the phone bar holds exactly the same four destinations and no More sheet", () => {
+  const page = renderPage(<MobileBottomNav currentPath="/whisper" />);
   assert.deepEqual(page.links, ORDER);
   assert.deepEqual(page.buttons, []);
   assert.ok(!page.text.includes("More"));
 });
 
-test("failed jobs badge the Activity item", () => {
+test("failed jobs badge the Library item", () => {
   const page = renderPage(
     <DesktopSidebar queueRunning={false} errorCount={3} watcherRunning={false} currentPath="/" />,
   );
-  assert.deepEqual(page.links, ["Library", "Activity 3", "Transcribe", "YouTube", "Settings"]);
+  assert.deepEqual(page.links, ["Library 3", "Transcribe", "YouTube", "Settings"]);
 });
 
 test("settings sub-pages keep Settings active; Library is active only at the root", () => {
@@ -48,7 +48,6 @@ test("settings sub-pages keep Settings active; Library is active only at the roo
   assert.deepEqual(active("/settings/logs"), ["/settings"]);
   assert.deepEqual(active("/settings/languages"), ["/settings"]);
   assert.deepEqual(active("/settings/usage"), ["/settings"]);
-  assert.deepEqual(active("/activity"), ["/activity"]);
   assert.deepEqual(active("/convert"), []);
 });
 
@@ -57,6 +56,12 @@ test("old Translations and Logs URLs redirect into Settings, keeping the query",
   assert.equal(legacyRedirect("/tasks", ""), "/settings/languages");
   assert.equal(legacyRedirect("/logs", "?job=12"), "/settings/logs?job=12");
   assert.equal(legacyRedirect("/settings", ""), null);
+});
+
+test("the old Activity URL opens the home page's Jobs view, merging its query", () => {
+  assert.equal(legacyRedirect("/activity", ""), "/?view=jobs");
+  assert.equal(legacyRedirect("/activity", "?status=error"), "/?view=jobs&status=error");
+  assert.equal(legacyRedirect("/activity", "?view=files&x=1"), "/?view=files&x=1");
 });
 
 test("Settings links its own pages in order: Languages, Usage, Logs", () => {

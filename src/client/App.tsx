@@ -17,8 +17,8 @@ import {
 import type { Job } from "./types";
 import { DesktopSidebar, MobileBottomNav } from "./app/shell";
 import { LANGUAGES } from "./app/constants";
-import { DashboardPage } from "./features/dashboard";
 import { LibraryPage } from "./features/library/LibraryPage";
+import { dashboardHref } from "./features/library/dashboard-params";
 import { LEGACY_REDIRECTS, LegacyRedirect } from "./app/redirects";
 
 const UsagePage = lazy(() => import("./features/usage/UsagePage").then((m) => ({ default: m.UsagePage })));
@@ -99,7 +99,10 @@ function AppInner() {
         {
           persistent: true,
           key: "job:error",
-          action: { label: t("dashboard.toast.openActivity"), onClick: () => navigate("/activity") },
+          action: {
+            label: t("dashboard.toast.viewFailed"),
+            onClick: () => navigate(dashboardHref({ view: "jobs", status: "error" })),
+          },
           onDismiss: () => {
             failedJobsRef.current = 0;
           },
@@ -145,7 +148,6 @@ function AppInner() {
             <Suspense fallback={<div className="p-8 text-faint">{t("common.loading")}</div>}>
               <Routes>
                 <Route path="/" element={<LibraryPage />} />
-                <Route path="/activity" element={<DashboardPage />} />
                 <Route path="/whisper" element={<WhisperPage />} />
                 <Route path="/youtube" element={<YoutubePage />} />
                 <Route path="/convert" element={<ConvertPage />} />

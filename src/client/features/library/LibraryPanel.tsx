@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import { Link } from "react-router-dom";
 import { useTranslation } from "../../i18n";
 import * as api from "../../api";
 import { useMutationWithInvalidation } from "../../hooks";
@@ -7,7 +6,7 @@ import { useToast } from "../../ui/Toast";
 import type { Job, TaskStatus } from "../../types";
 import { Icon } from "../../ui/Icon";
 import type { UseManualTranscriptionResult } from "../dashboard/useManualTranscription";
-import { itemTasks, type LibraryItem } from "./library-model";
+import { itemTasks, relevantJobId, type LibraryItem } from "./library-model";
 import { ErrorBlock, SubtitleLanguages, TranscribeBlock, type FailedTask } from "./PanelSections";
 
 /** At this width the panel sits beside the list; below it, it overlays as a drawer or sheet. */
@@ -35,6 +34,7 @@ interface LibraryPanelProps {
   onClose: () => void;
   onPreview: (jobId: number) => void;
   onQueued: (srtPath: string, task: TaskStatus) => void;
+  onOpenJob: (jobId: number) => void;
 }
 
 export function LibraryPanel({
@@ -45,6 +45,7 @@ export function LibraryPanel({
   onClose,
   onPreview,
   onQueued,
+  onOpenJob,
 }: LibraryPanelProps) {
   const { t } = useTranslation();
   const { addToast } = useToast();
@@ -98,6 +99,7 @@ export function LibraryPanel({
   };
   const videoPath = item.file.videoPath;
   const needsTranscription = item.kind === "video" && item.file.subtitles.length === 0;
+  const jobId = relevantJobId(item, jobsById);
 
   return (
     <>
@@ -157,14 +159,17 @@ export function LibraryPanel({
             />
           ))}
         </div>
-        <footer className="border-t border-border px-4 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
-          <Link
-            to="/activity"
-            className="inline-flex min-h-touch items-center text-sm font-medium text-accent underline"
-          >
-            {t("library.panel.openActivity")}
-          </Link>
-        </footer>
+        {jobId !== null && (
+          <footer className="border-t border-border px-4 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+            <button
+              type="button"
+              onClick={() => onOpenJob(jobId)}
+              className="inline-flex min-h-touch items-center text-sm font-medium text-accent underline"
+            >
+              {t("library.panel.openJob")}
+            </button>
+          </footer>
+        )}
       </aside>
     </>
   );

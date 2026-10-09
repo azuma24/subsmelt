@@ -11,7 +11,6 @@
     "groupSystem": "Rendszer",
     "youtube": "YouTube",
     "library": "Médiatár",
-    "activity": "Tevékenység",
     "primary": "Fő navigáció"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "Az újrapróbálkozás sikertelen: {{error}}",
       "jobsFailed": "{{count}} feladat sikertelen",
       "jobCancelled": "Feladat megszakítva — a sor folytatódik",
-      "openActivity": "Tevékenység megnyitása"
+      "viewFailed": "Sikertelen feladatok megtekintése"
     },
     "confirm": {
       "clearTitle": "Befejezett feladatok törlése",
@@ -195,10 +194,7 @@
       "translating": "Fordítás",
       "done": "Kész",
       "errors": "Hibák",
-      "tokens": "Tokenek",
-      "cost": "Becsült költség",
-      "costLocal": "helyi",
-      "tokenBudget": "{{used}} / {{budget}} token"
+      "cost": "Becsült költség"
     },
     "noJobsEmpty": "Még nincsenek feladatok.",
     "noJobsHint": "Kattints a <strong>Mappák átvizsgálása</strong> gombra a feliratfájlok felderítéséhez.",
@@ -243,10 +239,6 @@
       "summaryNothingNew": "{{subtitles}} feliratfájl található, és mindegyikhez már tartozik feladat vagy kész kimenet. Semmi új nem kerül a sorba.",
       "summaryNoTarget": "{{subtitles}} feliratfájl található, de egyikre sem vonatkozik fordítási cél. Adjon hozzá vagy engedélyezzen egyet a Fordításokban.",
       "scanAnyway": "Átvizsgálás mindenképp"
-    },
-    "tab": {
-      "queue": "Sor",
-      "transcription": "Átirat"
     },
     "filtersLabel": "Szűrők",
     "bulkActionsLabel": "Tömeges műveletek",
@@ -1407,8 +1399,8 @@
       "sttOff": "A beszéd szöveggé alakítása ki van kapcsolva, ezért ez a videó még nem írható át.",
       "openSttSettings": "Beszéd szöveggé alakítása beállítások megnyitása",
       "openLanguageSettings": "Nyelvi beállítások megnyitása",
-      "openActivity": "Tevékenység megnyitása",
-      "alreadyTranslated": "Már lefordítva"
+      "alreadyTranslated": "Már lefordítva",
+      "openJob": "Feladat részleteinek megjelenítése"
     },
     "bulk": {
       "summary_one": "{{count}} fájl kijelölve",
@@ -1416,6 +1408,11 @@
       "transcribe": "{{count}} átírása",
       "runPending": "{{count}} függő feladat futtatása",
       "clear": "Kijelölés törlése"
+    },
+    "view": {
+      "files": "Fájlok",
+      "jobs": "Feladatok",
+      "transcriptions": "Átiratok"
     }
   },
   "llmStatus": {

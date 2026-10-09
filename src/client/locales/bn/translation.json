@@ -11,7 +11,6 @@
     "groupSystem": "সিস্টেম",
     "youtube": "YouTube",
     "library": "লাইব্রেরি",
-    "activity": "কার্যকলাপ",
     "primary": "প্রধান নেভিগেশন"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "পুনরায় চেষ্টা ব্যর্থ হয়েছে: {{error}}",
       "jobsFailed": "{{count}}টি কাজ ব্যর্থ হয়েছে",
       "jobCancelled": "কাজ বাতিল হয়েছে — সারি চলছে",
-      "openActivity": "কার্যকলাপ খুলুন"
+      "viewFailed": "ব্যর্থ কাজ দেখুন"
     },
     "confirm": {
       "clearTitle": "সম্পন্ন কাজ মুছুন",
@@ -195,10 +194,7 @@
       "translating": "অনুবাদ হচ্ছে",
       "done": "সম্পন্ন",
       "errors": "ত্রুটি",
-      "tokens": "টোকেন",
-      "cost": "আনুমানিক খরচ",
-      "costLocal": "লোকাল",
-      "tokenBudget": "{{used}} / {{budget}} টোকেন"
+      "cost": "আনুমানিক খরচ"
     },
     "noJobsEmpty": "এখনও কোনো কাজ নেই।",
     "noJobsHint": "সাবটাইটেল ফাইল খুঁজে পেতে <strong>ফোল্ডার স্ক্যান করুন</strong> ক্লিক করুন।",
@@ -243,10 +239,6 @@
       "summaryNothingNew": "{{subtitles}}টি সাবটাইটেল ফাইল পাওয়া গেছে, এবং প্রতিটিরই ইতিমধ্যে একটি কাজ বা সম্পন্ন আউটপুট আছে। নতুন কিছু সারিতে যোগ হবে না।",
       "summaryNoTarget": "{{subtitles}}টি সাবটাইটেল ফাইল পাওয়া গেছে, কিন্তু কোনোটির জন্য কোনো অনুবাদ লক্ষ্য প্রযোজ্য নয়। অনুবাদসমূহ-এ একটি যোগ বা সক্রিয় করুন।",
       "scanAnyway": "তবুও স্ক্যান করুন"
-    },
-    "tab": {
-      "queue": "সারি",
-      "transcription": "ট্রান্সক্রিপশন"
     },
     "filtersLabel": "ফিল্টার",
     "bulkActionsLabel": "গুচ্ছ ক্রিয়া",
@@ -1407,8 +1399,8 @@
       "sttOff": "স্পিচ-টু-টেক্সট বন্ধ আছে, তাই এই ভিডিওটি এখনও ট্রান্সক্রাইব করা যাবে না।",
       "openSttSettings": "স্পিচ-টু-টেক্সট সেটিংস খুলুন",
       "openLanguageSettings": "ভাষা সেটিংস খুলুন",
-      "openActivity": "কার্যকলাপ খুলুন",
-      "alreadyTranslated": "ইতিমধ্যে অনূদিত"
+      "alreadyTranslated": "ইতিমধ্যে অনূদিত",
+      "openJob": "কাজের বিবরণ দেখুন"
     },
     "bulk": {
       "summary_one": "{{count}}টি ফাইল নির্বাচিত",
@@ -1416,6 +1408,11 @@
       "transcribe": "{{count}}টি ট্রান্সক্রাইব করুন",
       "runPending": "{{count}}টি অপেক্ষমাণ কাজ চালান",
       "clear": "নির্বাচন মুছুন"
+    },
+    "view": {
+      "files": "ফাইল",
+      "jobs": "কাজ",
+      "transcriptions": "ট্রান্সক্রিপশন"
     }
   },
   "llmStatus": {

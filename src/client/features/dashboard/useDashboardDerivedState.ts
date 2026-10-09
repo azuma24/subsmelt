@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { TFunction } from "../../i18n";
 import type { Job } from "../../types";
+import type { JobStatusFilter } from "../library/dashboard-params";
 
 export function parentFolderLabel(
   filePath: string,
@@ -22,11 +23,10 @@ export function parentFolderLabel(
 }
 
 interface StatusSegment {
-  key: string;
+  key: JobStatusFilter;
   label: string;
   count: number;
   color: string;
-  activeColor: string;
 }
 
 interface DashboardDerivedStateInput {
@@ -140,55 +140,47 @@ export function useDashboardDerivedState({
     [statusFilter, folderFilter, targetFilter],
   );
 
-  // Status band segments — the dashboard's single status filter (L1). The queue
-  // toolbar's duplicate pill row offered exactly these five values and was
-  // removed; `skipped` is appended only when such jobs exist, so the band does
-  // not grow a permanently-zero cell.
-  const statusSegments: StatusSegment[] = useMemo(
+  // The Jobs view's status filter. `skipped` is appended only when such jobs
+  // exist, so the row does not grow a permanently-zero filter.
+  const statusSegments = useMemo<StatusSegment[]>(
     () => [
       {
         key: "all",
         label: t("dashboard.filter.all"),
         count: jobs.length,
         color: "text-text",
-        activeColor: "text-accent",
       },
       {
         key: "pending",
         label: t("dashboard.stat.pending"),
         count: pendingJobs.length,
         color: "text-warning",
-        activeColor: "text-warning",
       },
       {
         key: "translating",
         label: t("dashboard.stat.translating"),
         count: activeJobs.length,
         color: "text-accent",
-        activeColor: "text-accent",
       },
       {
         key: "done",
         label: t("dashboard.stat.done"),
         count: doneJobs.length,
         color: "text-success",
-        activeColor: "text-success",
       },
       {
         key: "error",
         label: t("dashboard.stat.errors"),
         count: errorJobs.length,
         color: "text-danger",
-        activeColor: "text-danger",
       },
       ...(skippedJobs.length > 0
         ? [
             {
-              key: "skipped",
+              key: "skipped" as const,
               label: t("dashboard.status.skipped"),
               count: skippedJobs.length,
               color: "text-warning",
-              activeColor: "text-warning",
             },
           ]
         : []),

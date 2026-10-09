@@ -11,7 +11,6 @@
     "groupSystem": "Système",
     "youtube": "YouTube",
     "library": "Bibliothèque",
-    "activity": "Activité",
     "primary": "Navigation principale"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "Échec de la nouvelle tentative : {{error}}",
       "jobsFailed": "{{count}} tâches ont échoué",
       "jobCancelled": "Tâche annulée — la file continue",
-      "openActivity": "Ouvrir l’activité"
+      "viewFailed": "Voir les tâches en échec"
     },
     "confirm": {
       "clearTitle": "Effacer les tâches terminées",
@@ -195,10 +194,7 @@
       "translating": "En traduction",
       "done": "Terminées",
       "errors": "Erreurs",
-      "tokens": "Tokens",
-      "cost": "Coût estimé",
-      "costLocal": "local",
-      "tokenBudget": "{{used}} / {{budget}} tokens"
+      "cost": "Coût estimé"
     },
     "noJobsEmpty": "Aucune tâche pour l’instant.",
     "noJobsHint": "Cliquez sur <strong>Analyser les dossiers</strong> pour découvrir les fichiers de sous-titres.",
@@ -244,10 +240,6 @@
       "summaryNothingNew": "{{subtitles}} fichiers de sous-titres trouvés, et chacun a déjà une tâche ou une sortie terminée. Rien de nouveau ne sera mis en file.",
       "summaryNoTarget": "{{subtitles}} fichiers de sous-titres trouvés, mais aucune cible de traduction ne s'applique à eux. Ajoutez ou activez-en une dans Traductions.",
       "scanAnyway": "Analyser quand même"
-    },
-    "tab": {
-      "queue": "File",
-      "transcription": "Transcription"
     },
     "filtersLabel": "Filtres",
     "bulkActionsLabel": "Actions groupées",
@@ -1413,8 +1405,8 @@
       "sttOff": "La transcription vocale est désactivée, cette vidéo ne peut donc pas encore être transcrite.",
       "openSttSettings": "Ouvrir les paramètres de transcription vocale",
       "openLanguageSettings": "Ouvrir les paramètres des langues",
-      "openActivity": "Ouvrir l’activité",
-      "alreadyTranslated": "Déjà traduit"
+      "alreadyTranslated": "Déjà traduit",
+      "openJob": "Afficher les détails de la tâche"
     },
     "bulk": {
       "summary_one": "{{count}} fichier sélectionné",
@@ -1423,6 +1415,11 @@
       "transcribe": "Transcrire {{count}}",
       "runPending": "Lancer {{count}} tâches en attente",
       "clear": "Effacer la sélection"
+    },
+    "view": {
+      "files": "Fichiers",
+      "jobs": "Tâches",
+      "transcriptions": "Transcriptions"
     }
   },
   "llmStatus": {

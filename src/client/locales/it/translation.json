@@ -11,7 +11,6 @@
     "groupSystem": "Sistema",
     "youtube": "YouTube",
     "library": "Libreria",
-    "activity": "Attività",
     "primary": "Navigazione principale"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "Nuovo tentativo non riuscito: {{error}}",
       "jobsFailed": "{{count}} lavori non riusciti",
       "jobCancelled": "Lavoro annullato — la coda continua",
-      "openActivity": "Apri Attività"
+      "viewFailed": "Vedi processi non riusciti"
     },
     "confirm": {
       "clearTitle": "Cancella lavori completati",
@@ -195,10 +194,7 @@
       "translating": "In traduzione",
       "done": "Completati",
       "errors": "Errori",
-      "tokens": "Token",
-      "cost": "Costo stimato",
-      "costLocal": "locale",
-      "tokenBudget": "{{used}} / {{budget}} token"
+      "cost": "Costo stimato"
     },
     "noJobsEmpty": "Ancora nessun lavoro.",
     "noJobsHint": "Fai clic su <strong>Scansiona cartelle</strong> per trovare i file di sottotitoli.",
@@ -244,10 +240,6 @@
       "summaryNothingNew": "Trovati {{subtitles}} file di sottotitoli, e ognuno ha già un lavoro o un output completato. Nulla di nuovo verrà accodato.",
       "summaryNoTarget": "Trovati {{subtitles}} file di sottotitoli, ma nessuna destinazione di traduzione si applica a essi. Aggiungine o abilitane una in Traduzioni.",
       "scanAnyway": "Scansiona comunque"
-    },
-    "tab": {
-      "queue": "Coda",
-      "transcription": "Trascrizione"
     },
     "filtersLabel": "Filtri",
     "bulkActionsLabel": "Azioni di gruppo",
@@ -1413,8 +1405,8 @@
       "sttOff": "La trascrizione vocale è disattivata, quindi questo video non può ancora essere trascritto.",
       "openSttSettings": "Apri le impostazioni di trascrizione vocale",
       "openLanguageSettings": "Apri le impostazioni delle lingue",
-      "openActivity": "Apri Attività",
-      "alreadyTranslated": "Già tradotto"
+      "alreadyTranslated": "Già tradotto",
+      "openJob": "Mostra dettagli del processo"
     },
     "bulk": {
       "summary_one": "{{count}} file selezionato",
@@ -1423,6 +1415,11 @@
       "transcribe": "Trascrivi {{count}}",
       "runPending": "Esegui {{count}} lavori in sospeso",
       "clear": "Cancella selezione"
+    },
+    "view": {
+      "files": "File",
+      "jobs": "Processi",
+      "transcriptions": "Trascrizioni"
     }
   },
   "llmStatus": {

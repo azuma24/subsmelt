@@ -11,7 +11,6 @@
     "groupSystem": "System",
     "youtube": "YouTube",
     "library": "Biblioteka",
-    "activity": "Aktywność",
     "primary": "Główna nawigacja"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "Ponowna próba nie powiodła się: {{error}}",
       "jobsFailed": "Nieudane zadania: {{count}}",
       "jobCancelled": "Zadanie anulowane — kolejka działa dalej",
-      "openActivity": "Otwórz Aktywność"
+      "viewFailed": "Pokaż nieudane zadania"
     },
     "confirm": {
       "clearTitle": "Wyczyść zakończone zadania",
@@ -195,10 +194,7 @@
       "translating": "Tłumaczenie",
       "done": "Gotowe",
       "errors": "Błędy",
-      "tokens": "Tokeny",
-      "cost": "Szac. koszt",
-      "costLocal": "lokalnie",
-      "tokenBudget": "{{used}} / {{budget}} tokenów"
+      "cost": "Szac. koszt"
     },
     "noJobsEmpty": "Brak zadań.",
     "noJobsHint": "Kliknij <strong>Skanuj foldery</strong>, aby wykryć pliki napisów.",
@@ -245,10 +241,6 @@
       "summaryNothingNew": "Znaleziono {{subtitles}} plików napisów i każdy ma już zadanie lub gotowy wynik. Nic nowego nie trafi do kolejki.",
       "summaryNoTarget": "Znaleziono {{subtitles}} plików napisów, ale żaden cel tłumaczenia nie dotyczy żadnego z nich. Dodaj lub włącz cel w Tłumaczeniach.",
       "scanAnyway": "Skanuj mimo to"
-    },
-    "tab": {
-      "queue": "Kolejka",
-      "transcription": "Transkrypcja"
     },
     "filtersLabel": "Filtry",
     "bulkActionsLabel": "Operacje zbiorcze",
@@ -1419,8 +1411,8 @@
       "sttOff": "Mowa na tekst jest wyłączona, więc tego filmu nie można jeszcze transkrybować.",
       "openSttSettings": "Otwórz ustawienia mowy na tekst",
       "openLanguageSettings": "Otwórz ustawienia języków",
-      "openActivity": "Otwórz Aktywność",
-      "alreadyTranslated": "Już przetłumaczone"
+      "alreadyTranslated": "Już przetłumaczone",
+      "openJob": "Pokaż szczegóły zadania"
     },
     "bulk": {
       "summary_one": "Zaznaczone pliki: {{count}}",
@@ -1430,6 +1422,11 @@
       "transcribe": "Transkrybuj ({{count}})",
       "runPending": "Uruchom oczekujące zadania ({{count}})",
       "clear": "Wyczyść zaznaczenie"
+    },
+    "view": {
+      "files": "Pliki",
+      "jobs": "Zadania",
+      "transcriptions": "Transkrypcje"
     }
   },
   "llmStatus": {

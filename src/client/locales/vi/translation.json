@@ -11,7 +11,6 @@
     "groupSystem": "Hệ thống",
     "youtube": "YouTube",
     "library": "Thư viện",
-    "activity": "Hoạt động",
     "primary": "Điều hướng chính"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "Thử lại thất bại: {{error}}",
       "jobsFailed": "{{count}} tác vụ thất bại",
       "jobCancelled": "Đã hủy công việc — hàng đợi tiếp tục",
-      "openActivity": "Mở Hoạt động"
+      "viewFailed": "Xem tác vụ thất bại"
     },
     "confirm": {
       "clearTitle": "Xóa các tác vụ đã xong",
@@ -195,10 +194,7 @@
       "translating": "Đang dịch",
       "done": "Hoàn tất",
       "errors": "Lỗi",
-      "tokens": "Token",
-      "cost": "Chi phí ước tính",
-      "costLocal": "cục bộ",
-      "tokenBudget": "{{used}} / {{budget}} token"
+      "cost": "Chi phí ước tính"
     },
     "noJobsEmpty": "Chưa có tác vụ nào.",
     "noJobsHint": "Nhấn <strong>Quét thư mục</strong> để tìm tệp phụ đề.",
@@ -243,10 +239,6 @@
       "summaryNothingNew": "Đã tìm thấy {{subtitles}} tệp phụ đề và tất cả đều đã có công việc hoặc kết quả hoàn tất. Sẽ không có gì mới được xếp hàng.",
       "summaryNoTarget": "Tìm thấy {{subtitles}} tệp phụ đề, nhưng không có mục tiêu dịch nào áp dụng cho chúng. Hãy thêm hoặc bật một mục tiêu trong Bản dịch.",
       "scanAnyway": "Vẫn quét"
-    },
-    "tab": {
-      "queue": "Hàng đợi",
-      "transcription": "Phiên âm"
     },
     "filtersLabel": "Bộ lọc",
     "bulkActionsLabel": "Thao tác hàng loạt",
@@ -1407,8 +1399,8 @@
       "sttOff": "Chuyển giọng nói thành văn bản đang tắt, nên chưa thể chuyển âm video này.",
       "openSttSettings": "Mở cài đặt chuyển giọng nói thành văn bản",
       "openLanguageSettings": "Mở cài đặt ngôn ngữ",
-      "openActivity": "Mở Hoạt động",
-      "alreadyTranslated": "Đã dịch"
+      "alreadyTranslated": "Đã dịch",
+      "openJob": "Hiện chi tiết tác vụ"
     },
     "bulk": {
       "summary_one": "Đã chọn {{count}} tệp",
@@ -1416,6 +1408,11 @@
       "transcribe": "Chuyển âm {{count}}",
       "runPending": "Chạy {{count}} tác vụ đang chờ",
       "clear": "Bỏ chọn"
+    },
+    "view": {
+      "files": "Tệp",
+      "jobs": "Tác vụ",
+      "transcriptions": "Bản chép lời"
     }
   },
   "llmStatus": {

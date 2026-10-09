@@ -11,7 +11,6 @@
     "groupSystem": "系統",
     "youtube": "YouTube",
     "library": "媒體庫",
-    "activity": "活動",
     "primary": "主要導覽"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "重試失敗：{{error}}",
       "jobsFailed": "{{count}} 個任務失敗",
       "jobCancelled": "工作已取消 — 佇列繼續",
-      "openActivity": "開啟活動"
+      "viewFailed": "檢視失敗的工作"
     },
     "confirm": {
       "clearTitle": "清除已完成的任務",
@@ -195,10 +194,7 @@
       "translating": "翻譯中",
       "done": "已完成",
       "errors": "錯誤",
-      "tokens": "Token",
-      "cost": "預估費用",
-      "costLocal": "本機",
-      "tokenBudget": "{{used}} / {{budget}} token"
+      "cost": "預估費用"
     },
     "noJobsEmpty": "尚無任務。",
     "noJobsHint": "點擊「掃描資料夾」以搜尋字幕檔案。",
@@ -243,10 +239,6 @@
       "summaryNothingNew": "找到 {{subtitles}} 個字幕檔，但每個都已有工作或已完成的輸出。不會有新工作加入佇列。",
       "summaryNoTarget": "找到 {{subtitles}} 個字幕檔，但沒有適用於它們的翻譯目標。請在「翻譯」中新增或啟用一個。",
       "scanAnyway": "仍要掃描"
-    },
-    "tab": {
-      "queue": "佇列",
-      "transcription": "轉錄"
     },
     "filtersLabel": "篩選",
     "bulkActionsLabel": "批次操作",
@@ -1407,8 +1399,8 @@
       "sttOff": "語音轉字幕已關閉，因此目前無法轉錄此影片。",
       "openSttSettings": "開啟語音轉字幕設定",
       "openLanguageSettings": "開啟語言設定",
-      "openActivity": "開啟活動",
-      "alreadyTranslated": "已翻譯"
+      "alreadyTranslated": "已翻譯",
+      "openJob": "顯示工作詳情"
     },
     "bulk": {
       "summary_one": "已選取 {{count}} 個檔案",
@@ -1416,6 +1408,11 @@
       "transcribe": "轉錄 {{count}} 個",
       "runPending": "執行 {{count}} 個待處理工作",
       "clear": "清除選取"
+    },
+    "view": {
+      "files": "檔案",
+      "jobs": "工作",
+      "transcriptions": "轉錄"
     }
   },
   "llmStatus": {

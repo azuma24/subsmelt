@@ -11,7 +11,6 @@
     "groupSystem": "सिस्टम",
     "youtube": "YouTube",
     "library": "लाइब्रेरी",
-    "activity": "गतिविधि",
     "primary": "मुख्य नेविगेशन"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "पुनः प्रयास विफल: {{error}}",
       "jobsFailed": "{{count}} कार्य विफल रहे",
       "jobCancelled": "कार्य रद्द किया गया — कतार जारी है",
-      "openActivity": "गतिविधि खोलें"
+      "viewFailed": "विफल जॉब देखें"
     },
     "confirm": {
       "clearTitle": "पूरे हुए कार्य हटाएँ",
@@ -195,10 +194,7 @@
       "translating": "अनुवाद हो रहा है",
       "done": "पूर्ण",
       "errors": "त्रुटियाँ",
-      "tokens": "टोकन",
-      "cost": "अनुमानित लागत",
-      "costLocal": "लोकल",
-      "tokenBudget": "{{used}} / {{budget}} टोकन"
+      "cost": "अनुमानित लागत"
     },
     "noJobsEmpty": "अभी तक कोई कार्य नहीं।",
     "noJobsHint": "सबटाइटल फ़ाइलें खोजने के लिए <strong>फ़ोल्डर स्कैन करें</strong> पर क्लिक करें।",
@@ -243,10 +239,6 @@
       "summaryNothingNew": "{{subtitles}} उपशीर्षक फ़ाइलें मिलीं, और हर एक के लिए पहले से कार्य या पूर्ण आउटपुट मौजूद है। कतार में कुछ नया नहीं जोड़ा जाएगा।",
       "summaryNoTarget": "{{subtitles}} सबटाइटल फ़ाइलें मिलीं, लेकिन किसी पर भी कोई अनुवाद लक्ष्य लागू नहीं होता। अनुवाद में एक जोड़ें या सक्षम करें।",
       "scanAnyway": "फिर भी स्कैन करें"
-    },
-    "tab": {
-      "queue": "कतार",
-      "transcription": "ट्रांसक्रिप्शन"
     },
     "filtersLabel": "फ़िल्टर",
     "bulkActionsLabel": "सामूहिक कार्रवाइयाँ",
@@ -1407,8 +1399,8 @@
       "sttOff": "स्पीच-टू-टेक्स्ट बंद है, इसलिए इस वीडियो का अभी प्रतिलेखन नहीं हो सकता।",
       "openSttSettings": "स्पीच-टू-टेक्स्ट सेटिंग्स खोलें",
       "openLanguageSettings": "भाषा सेटिंग खोलें",
-      "openActivity": "गतिविधि खोलें",
-      "alreadyTranslated": "पहले से अनूदित"
+      "alreadyTranslated": "पहले से अनूदित",
+      "openJob": "जॉब का विवरण दिखाएँ"
     },
     "bulk": {
       "summary_one": "{{count}} फ़ाइल चुनी गई",
@@ -1416,6 +1408,11 @@
       "transcribe": "{{count}} का प्रतिलेखन करें",
       "runPending": "{{count}} लंबित कार्य चलाएँ",
       "clear": "चयन साफ़ करें"
+    },
+    "view": {
+      "files": "फ़ाइलें",
+      "jobs": "जॉब",
+      "transcriptions": "ट्रांसक्रिप्शन"
     }
   },
   "llmStatus": {

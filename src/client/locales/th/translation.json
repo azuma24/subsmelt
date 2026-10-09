@@ -11,7 +11,6 @@
     "groupSystem": "ระบบ",
     "youtube": "YouTube",
     "library": "คลัง",
-    "activity": "กิจกรรม",
     "primary": "การนำทางหลัก"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "ลองใหม่ไม่สำเร็จ: {{error}}",
       "jobsFailed": "มีงานล้มเหลว {{count}} งาน",
       "jobCancelled": "ยกเลิกงานแล้ว — คิวดำเนินต่อไป",
-      "openActivity": "เปิดกิจกรรม"
+      "viewFailed": "ดูงานที่ล้มเหลว"
     },
     "confirm": {
       "clearTitle": "ล้างงานที่เสร็จแล้ว",
@@ -195,10 +194,7 @@
       "translating": "กำลังแปล",
       "done": "เสร็จแล้ว",
       "errors": "ข้อผิดพลาด",
-      "tokens": "โทเค็น",
-      "cost": "ค่าใช้จ่ายโดยประมาณ",
-      "costLocal": "ในเครื่อง",
-      "tokenBudget": "{{used}} / {{budget}} โทเค็น"
+      "cost": "ค่าใช้จ่ายโดยประมาณ"
     },
     "noJobsEmpty": "ยังไม่มีงาน",
     "noJobsHint": "คลิก <strong>สแกนโฟลเดอร์</strong> เพื่อค้นหาไฟล์คำบรรยาย",
@@ -243,10 +239,6 @@
       "summaryNothingNew": "พบไฟล์คำบรรยาย {{subtitles}} ไฟล์ และทุกไฟล์มีงานหรือผลลัพธ์ที่เสร็จแล้วอยู่แล้ว จะไม่มีอะไรใหม่ถูกเพิ่มเข้าคิว",
       "summaryNoTarget": "พบไฟล์คำบรรยาย {{subtitles}} ไฟล์ แต่ไม่มีเป้าหมายการแปลที่ใช้กับไฟล์ใดเลย เพิ่มหรือเปิดใช้งานเป้าหมายในการแปล",
       "scanAnyway": "สแกนต่อไป"
-    },
-    "tab": {
-      "queue": "คิว",
-      "transcription": "การถอดเสียง"
     },
     "filtersLabel": "ตัวกรอง",
     "bulkActionsLabel": "การดำเนินการเป็นชุด",
@@ -1407,8 +1399,8 @@
       "sttOff": "การแปลงเสียงพูดเป็นข้อความปิดอยู่ จึงยังถอดเสียงวิดีโอนี้ไม่ได้",
       "openSttSettings": "เปิดการตั้งค่าเสียงพูดเป็นข้อความ",
       "openLanguageSettings": "เปิดการตั้งค่าภาษา",
-      "openActivity": "เปิดกิจกรรม",
-      "alreadyTranslated": "แปลแล้ว"
+      "alreadyTranslated": "แปลแล้ว",
+      "openJob": "แสดงรายละเอียดงาน"
     },
     "bulk": {
       "summary_one": "เลือกแล้ว {{count}} ไฟล์",
@@ -1416,6 +1408,11 @@
       "transcribe": "ถอดเสียง {{count}} รายการ",
       "runPending": "เรียกใช้งานที่รอ {{count}} รายการ",
       "clear": "ล้างการเลือก"
+    },
+    "view": {
+      "files": "ไฟล์",
+      "jobs": "งาน",
+      "transcriptions": "การถอดเสียง"
     }
   },
   "llmStatus": {

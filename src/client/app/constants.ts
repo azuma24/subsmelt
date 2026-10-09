@@ -36,7 +36,7 @@ export const LANGUAGES = [
 ] as const;
 
 /** Sidebar sections, rendered in this order. The grouping is data, not JSX:
- *  `operate` is the library and the live queue, `create` holds the tools that
+ *  `operate` is the library with its live queue, `create` holds the tools that
  *  produce new subtitles, and `system` is configuration. That last group is
  *  labelled "System" rather than "Configure" because several locales translate
  *  "Configure" to the same word as the Settings item itself (es
@@ -50,11 +50,10 @@ export const NAV_GROUPS = [
 export type NavGroupId = (typeof NAV_GROUPS)[number]["id"];
 
 /** Every destination, in order. The phone bottom bar shows all of them, so the
- *  list stays at five; Convert, Languages and Logs are reached from the
- *  Library header and Settings instead. */
+ *  list stays short; the queue lives on the Library page, and Convert,
+ *  Languages and Logs are reached from the Library header and Settings. */
 export const NAV_ITEMS = [
   { path: "/", labelKey: "nav.library", icon: "library", group: "operate" },
-  { path: "/activity", labelKey: "nav.activity", icon: "activity", group: "operate" },
   { path: "/whisper", labelKey: "nav.whisper", icon: "transcribe", group: "create" },
   { path: "/youtube", labelKey: "nav.youtube", icon: "youtube", group: "create" },
   { path: "/settings", labelKey: "nav.settings", icon: "settings", group: "system" },

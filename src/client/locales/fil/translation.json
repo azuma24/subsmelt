@@ -11,7 +11,6 @@
     "groupSystem": "Sistema",
     "youtube": "YouTube",
     "library": "Aklatan",
-    "activity": "Aktibidad",
     "primary": "Pangunahing nabigasyon"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "Nabigo ang muling pagsubok: {{error}}",
       "jobsFailed": "Nabigo ang {{count}} trabaho",
       "jobCancelled": "Kanselahin ang gawain — tuloy ang pila",
-      "openActivity": "Buksan ang Aktibidad"
+      "viewFailed": "Tingnan ang mga nabigong job"
     },
     "confirm": {
       "clearTitle": "I-clear ang mga tapos nang trabaho",
@@ -195,10 +194,7 @@
       "translating": "Isinasalin",
       "done": "Tapos",
       "errors": "Mga Error",
-      "tokens": "Mga token",
-      "cost": "Tantyang gastos",
-      "costLocal": "lokal",
-      "tokenBudget": "{{used}} / {{budget}} token"
+      "cost": "Tantyang gastos"
     },
     "noJobsEmpty": "Wala pang trabaho.",
     "noJobsHint": "I-click ang <strong>I-scan ang mga Folder</strong> upang matuklasan ang mga subtitle file.",
@@ -243,10 +239,6 @@
       "summaryNothingNew": "May nakitang {{subtitles}} subtitle file, at bawat isa ay may trabaho o tapos nang output. Walang bagong idaragdag sa pila.",
       "summaryNoTarget": "May nakitang {{subtitles}} subtitle file, pero walang target ng salin na tumutugma sa alinman sa mga ito. Magdagdag o mag-enable ng isa sa Mga Salin.",
       "scanAnyway": "I-scan pa rin"
-    },
-    "tab": {
-      "queue": "Queue",
-      "transcription": "Transkripsyon"
     },
     "filtersLabel": "Mga Filter",
     "bulkActionsLabel": "Maramihang aksyon",
@@ -1407,8 +1399,8 @@
       "sttOff": "Naka-off ang speech-to-text, kaya hindi pa ma-transcribe ang video na ito.",
       "openSttSettings": "Buksan ang mga setting ng speech-to-text",
       "openLanguageSettings": "Buksan ang mga setting ng wika",
-      "openActivity": "Buksan ang Aktibidad",
-      "alreadyTranslated": "Naisalin na"
+      "alreadyTranslated": "Naisalin na",
+      "openJob": "Ipakita ang detalye ng job"
     },
     "bulk": {
       "summary_one": "{{count}} file ang napili",
@@ -1416,6 +1408,11 @@
       "transcribe": "I-transcribe ang {{count}}",
       "runPending": "Patakbuhin ang {{count}} nakabinbing trabaho",
       "clear": "I-clear ang pinili"
+    },
+    "view": {
+      "files": "Mga file",
+      "jobs": "Mga job",
+      "transcriptions": "Mga transcription"
     }
   },
   "llmStatus": {

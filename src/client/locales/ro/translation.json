@@ -11,7 +11,6 @@
     "groupSystem": "Sistem",
     "youtube": "YouTube",
     "library": "Bibliotecă",
-    "activity": "Activitate",
     "primary": "Navigare principală"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "Reîncercarea a eșuat: {{error}}",
       "jobsFailed": "Sarcini eșuate: {{count}}",
       "jobCancelled": "Sarcina anulată — coada continuă",
-      "openActivity": "Deschide Activitate"
+      "viewFailed": "Vezi sarcinile eșuate"
     },
     "confirm": {
       "clearTitle": "Golește sarcinile finalizate",
@@ -195,10 +194,7 @@
       "translating": "Se traduce",
       "done": "Finalizate",
       "errors": "Erori",
-      "tokens": "Tokenuri",
-      "cost": "Cost estimat",
-      "costLocal": "local",
-      "tokenBudget": "{{used}} / {{budget}} tokenuri"
+      "cost": "Cost estimat"
     },
     "noJobsEmpty": "Nicio sarcină încă.",
     "noJobsHint": "Apasă <strong>Scanează folderele</strong> pentru a descoperi fișiere de subtitrare.",
@@ -244,10 +240,6 @@
       "summaryNothingNew": "S-au găsit {{subtitles}} fișiere de subtitrare și fiecare are deja o sarcină sau un rezultat finalizat. Nimic nou nu va fi pus în coadă.",
       "summaryNoTarget": "S-au găsit {{subtitles}} fișiere de subtitrare, dar niciun obiectiv de traducere nu se aplică vreunuia. Adaugă sau activează unul în Traduceri.",
       "scanAnyway": "Scanează oricum"
-    },
-    "tab": {
-      "queue": "Coadă",
-      "transcription": "Transcriere"
     },
     "filtersLabel": "Filtre",
     "bulkActionsLabel": "Acțiuni în masă",
@@ -1413,8 +1405,8 @@
       "sttOff": "Conversia vorbire în text este dezactivată, așa că acest video nu poate fi încă transcris.",
       "openSttSettings": "Deschide setările vorbire în text",
       "openLanguageSettings": "Deschide setările limbilor",
-      "openActivity": "Deschide Activitate",
-      "alreadyTranslated": "Deja tradus"
+      "alreadyTranslated": "Deja tradus",
+      "openJob": "Afișează detaliile sarcinii"
     },
     "bulk": {
       "summary_one": "{{count}} fișier selectat",
@@ -1423,6 +1415,11 @@
       "transcribe": "Transcrie {{count}}",
       "runPending": "Rulează {{count}} sarcini în așteptare",
       "clear": "Șterge selecția"
+    },
+    "view": {
+      "files": "Fișiere",
+      "jobs": "Sarcini",
+      "transcriptions": "Transcrieri"
     }
   },
   "llmStatus": {

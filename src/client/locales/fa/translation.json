@@ -11,7 +11,6 @@
     "groupSystem": "سیستم",
     "youtube": "YouTube",
     "library": "کتابخانه",
-    "activity": "فعالیت",
     "primary": "ناوبری اصلی"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "تلاش مجدد ناموفق بود: {{error}}",
       "jobsFailed": "{{count}} کار ناموفق بود",
       "jobCancelled": "کار لغو شد — صف ادامه دارد",
-      "openActivity": "باز کردن فعالیت"
+      "viewFailed": "مشاهده کارهای ناموفق"
     },
     "confirm": {
       "clearTitle": "پاک کردن کارهای تمام‌شده",
@@ -195,10 +194,7 @@
       "translating": "در حال ترجمه",
       "done": "انجام‌شده",
       "errors": "خطاها",
-      "tokens": "توکن‌ها",
-      "cost": "هزینه تخمینی",
-      "costLocal": "محلی",
-      "tokenBudget": "{{used}} / {{budget}} توکن"
+      "cost": "هزینه تخمینی"
     },
     "noJobsEmpty": "هنوز کاری وجود ندارد.",
     "noJobsHint": "برای یافتن فایل‌های زیرنویس روی <strong>اسکن پوشه‌ها</strong> کلیک کنید.",
@@ -243,10 +239,6 @@
       "summaryNothingNew": "{{subtitles}} فایل زیرنویس پیدا شد و همه از قبل یک کار یا خروجی تمام‌شده دارند. چیز جدیدی در صف قرار نمی‌گیرد.",
       "summaryNoTarget": "{{subtitles}} فایل زیرنویس پیدا شد، اما هیچ مقصد ترجمه‌ای برای هیچ‌کدام اعمال نمی‌شود. در ترجمه‌ها یکی اضافه یا فعال کنید.",
       "scanAnyway": "به هر حال اسکن کن"
-    },
-    "tab": {
-      "queue": "صف",
-      "transcription": "رونویسی"
     },
     "filtersLabel": "فیلترها",
     "bulkActionsLabel": "عملیات دسته‌ای",
@@ -1407,8 +1399,8 @@
       "sttOff": "گفتار به متن خاموش است، بنابراین هنوز نمی‌توان این ویدیو را رونویسی کرد.",
       "openSttSettings": "باز کردن تنظیمات گفتار به متن",
       "openLanguageSettings": "باز کردن تنظیمات زبان‌ها",
-      "openActivity": "باز کردن فعالیت",
-      "alreadyTranslated": "قبلاً ترجمه شده"
+      "alreadyTranslated": "قبلاً ترجمه شده",
+      "openJob": "نمایش جزئیات کار"
     },
     "bulk": {
       "summary_one": "{{count}} فایل انتخاب شد",
@@ -1416,6 +1408,11 @@
       "transcribe": "رونویسی {{count}} مورد",
       "runPending": "اجرای {{count}} کار در انتظار",
       "clear": "پاک کردن انتخاب"
+    },
+    "view": {
+      "files": "فایل‌ها",
+      "jobs": "کارها",
+      "transcriptions": "رونویسی‌ها"
     }
   },
   "llmStatus": {

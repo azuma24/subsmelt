@@ -11,7 +11,6 @@
     "groupSystem": "Sistem",
     "youtube": "YouTube",
     "library": "Pustaka",
-    "activity": "Aktiviti",
     "primary": "Navigasi utama"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "Cubaan semula gagal: {{error}}",
       "jobsFailed": "{{count}} kerja gagal",
       "jobCancelled": "Kerja dibatalkan — barisan diteruskan",
-      "openActivity": "Buka Aktiviti"
+      "viewFailed": "Lihat tugas yang gagal"
     },
     "confirm": {
       "clearTitle": "Kosongkan kerja yang selesai",
@@ -195,10 +194,7 @@
       "translating": "Menterjemah",
       "done": "Selesai",
       "errors": "Ralat",
-      "tokens": "Token",
-      "cost": "Anggaran kos",
-      "costLocal": "tempatan",
-      "tokenBudget": "{{used}} / {{budget}} token"
+      "cost": "Anggaran kos"
     },
     "noJobsEmpty": "Belum ada kerja.",
     "noJobsHint": "Klik <strong>Imbas Folder</strong> untuk menemui fail sari kata.",
@@ -243,10 +239,6 @@
       "summaryNothingNew": "{{subtitles}} fail sari kata ditemui, dan setiap satu sudah mempunyai tugas atau output yang selesai. Tiada yang baharu akan dibariskan.",
       "summaryNoTarget": "{{subtitles}} fail sari kata ditemui, tetapi tiada sasaran terjemahan yang terpakai pada mana-mana fail. Tambah atau dayakan satu dalam Terjemahan.",
       "scanAnyway": "Imbas juga"
-    },
-    "tab": {
-      "queue": "Baris Gilir",
-      "transcription": "Transkripsi"
     },
     "filtersLabel": "Penapis",
     "bulkActionsLabel": "Tindakan pukal",
@@ -1407,8 +1399,8 @@
       "sttOff": "Pertuturan-ke-teks dimatikan, jadi video ini belum boleh ditranskripsi.",
       "openSttSettings": "Buka tetapan pertuturan-ke-teks",
       "openLanguageSettings": "Buka tetapan bahasa",
-      "openActivity": "Buka Aktiviti",
-      "alreadyTranslated": "Sudah diterjemahkan"
+      "alreadyTranslated": "Sudah diterjemahkan",
+      "openJob": "Tunjukkan butiran tugas"
     },
     "bulk": {
       "summary_one": "{{count}} fail dipilih",
@@ -1416,6 +1408,11 @@
       "transcribe": "Transkrip {{count}}",
       "runPending": "Jalankan {{count}} kerja tertunda",
       "clear": "Kosongkan pilihan"
+    },
+    "view": {
+      "files": "Fail",
+      "jobs": "Tugas",
+      "transcriptions": "Transkripsi"
     }
   },
   "llmStatus": {

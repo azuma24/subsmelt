@@ -11,7 +11,6 @@
     "groupSystem": "システム",
     "youtube": "YouTube",
     "library": "ライブラリ",
-    "activity": "アクティビティ",
     "primary": "メインナビゲーション"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "再試行に失敗しました：{{error}}",
       "jobsFailed": "{{count}} 件のジョブが失敗しました",
       "jobCancelled": "ジョブをキャンセルしました — キューは続行します",
-      "openActivity": "アクティビティを開く"
+      "viewFailed": "失敗したジョブを表示"
     },
     "confirm": {
       "clearTitle": "完了済みジョブをクリア",
@@ -195,10 +194,7 @@
       "translating": "翻訳中",
       "done": "完了",
       "errors": "エラー",
-      "tokens": "トークン",
-      "cost": "推定コスト",
-      "costLocal": "ローカル",
-      "tokenBudget": "{{used}} / {{budget}} トークン"
+      "cost": "推定コスト"
     },
     "noJobsEmpty": "ジョブがありません。",
     "noJobsHint": "「フォルダをスキャン」をクリックして字幕ファイルを検索してください。",
@@ -243,10 +239,6 @@
       "summaryNothingNew": "{{subtitles}} 件の字幕ファイルが見つかりましたが、すべて既にジョブまたは完成した出力があります。新しくキューに追加されるものはありません。",
       "summaryNoTarget": "字幕ファイルが {{subtitles}} 件見つかりましたが、適用される翻訳ターゲットがありません。翻訳でターゲットを追加または有効にしてください。",
       "scanAnyway": "それでもスキャン"
-    },
-    "tab": {
-      "queue": "キュー",
-      "transcription": "文字起こし"
     },
     "filtersLabel": "フィルター",
     "bulkActionsLabel": "一括操作",
@@ -1407,8 +1399,8 @@
       "sttOff": "音声文字起こしがオフのため、この動画はまだ文字起こしできません。",
       "openSttSettings": "音声文字起こしの設定を開く",
       "openLanguageSettings": "言語の設定を開く",
-      "openActivity": "アクティビティを開く",
-      "alreadyTranslated": "翻訳済み"
+      "alreadyTranslated": "翻訳済み",
+      "openJob": "ジョブの詳細を表示"
     },
     "bulk": {
       "summary_one": "{{count}} 件のファイルを選択中",
@@ -1416,6 +1408,11 @@
       "transcribe": "{{count}} 件を文字起こし",
       "runPending": "保留中の {{count}} 件のジョブを実行",
       "clear": "選択を解除"
+    },
+    "view": {
+      "files": "ファイル",
+      "jobs": "ジョブ",
+      "transcriptions": "文字起こし"
     }
   },
   "llmStatus": {

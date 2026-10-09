@@ -11,7 +11,6 @@
     "groupSystem": "System",
     "youtube": "YouTube",
     "library": "Library",
-    "activity": "Activity",
     "primary": "Main navigation"
   },
   "whisper": {
@@ -275,7 +274,7 @@
       "retryFailed": "Retry failed: {{error}}",
       "jobsFailed": "{{count}} jobs failed",
       "jobCancelled": "Job cancelled — the queue continues",
-      "openActivity": "Open Activity"
+      "viewFailed": "View failed jobs"
     },
     "confirm": {
       "clearTitle": "Clear finished jobs",
@@ -340,10 +339,7 @@
       "translating": "Translating",
       "done": "Done",
       "errors": "Errors",
-      "tokens": "Tokens",
-      "cost": "Est. cost",
-      "costLocal": "local",
-      "tokenBudget": "{{used}} / {{budget}} tokens"
+      "cost": "Est. cost"
     },
     "noJobsEmpty": "No jobs yet.",
     "noJobsHint": "Click <strong>Scan Folders</strong> to discover subtitle files.",
@@ -388,10 +384,6 @@
       "summaryNothingNew": "Found {{subtitles}} subtitle files, and every one already has a job or a finished output. Nothing new will be queued.",
       "summaryNoTarget": "Found {{subtitles}} subtitle files, but no translation target applies to any of them. Add or enable one in Translations.",
       "scanAnyway": "Scan anyway"
-    },
-    "tab": {
-      "queue": "Queue",
-      "transcription": "Transcription"
     },
     "filtersLabel": "Filters",
     "bulkActionsLabel": "Bulk actions",
@@ -1407,8 +1399,8 @@
       "sttOff": "Speech-to-text is off, so this video cannot be transcribed yet.",
       "openSttSettings": "Open speech-to-text settings",
       "openLanguageSettings": "Open language settings",
-      "openActivity": "Open Activity",
-      "alreadyTranslated": "Already translated"
+      "alreadyTranslated": "Already translated",
+      "openJob": "Show job details"
     },
     "bulk": {
       "summary_one": "{{count}} file selected",
@@ -1416,6 +1408,11 @@
       "transcribe": "Transcribe {{count}}",
       "runPending": "Run {{count}} pending jobs",
       "clear": "Clear selection"
+    },
+    "view": {
+      "files": "Files",
+      "jobs": "Jobs",
+      "transcriptions": "Transcriptions"
     }
   },
   "llmStatus": {

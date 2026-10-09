@@ -11,7 +11,6 @@
     "groupSystem": "System",
     "youtube": "YouTube",
     "library": "Bibliotek",
-    "activity": "Aktivitet",
     "primary": "Huvudnavigering"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "Nytt försök misslyckades: {{error}}",
       "jobsFailed": "{{count}} jobb misslyckades",
       "jobCancelled": "Jobbet avbröts — kön fortsätter",
-      "openActivity": "Öppna Aktivitet"
+      "viewFailed": "Visa misslyckade jobb"
     },
     "confirm": {
       "clearTitle": "Rensa klara jobb",
@@ -195,10 +194,7 @@
       "translating": "Översätter",
       "done": "Klara",
       "errors": "Fel",
-      "tokens": "Tokens",
-      "cost": "Uppsk. kostnad",
-      "costLocal": "lokal",
-      "tokenBudget": "{{used}} / {{budget}} tokens"
+      "cost": "Uppsk. kostnad"
     },
     "noJobsEmpty": "Inga jobb än.",
     "noJobsHint": "Klicka på <strong>Skanna mappar</strong> för att hitta undertextfiler.",
@@ -243,10 +239,6 @@
       "summaryNothingNew": "{{subtitles}} undertextfiler hittades, och alla har redan ett jobb eller ett färdigt resultat. Inget nytt läggs i kön.",
       "summaryNoTarget": "Hittade {{subtitles}} undertextfiler, men inget översättningsmål gäller för någon av dem. Lägg till eller aktivera ett under Översättningar.",
       "scanAnyway": "Skanna ändå"
-    },
-    "tab": {
-      "queue": "Kö",
-      "transcription": "Transkribering"
     },
     "filtersLabel": "Filter",
     "bulkActionsLabel": "Massåtgärder",
@@ -1407,8 +1399,8 @@
       "sttOff": "Tal till text är avstängt, så den här videon kan inte transkriberas än.",
       "openSttSettings": "Öppna inställningar för tal till text",
       "openLanguageSettings": "Öppna språkinställningar",
-      "openActivity": "Öppna Aktivitet",
-      "alreadyTranslated": "Redan översatt"
+      "alreadyTranslated": "Redan översatt",
+      "openJob": "Visa jobbdetaljer"
     },
     "bulk": {
       "summary_one": "{{count}} fil markerad",
@@ -1416,6 +1408,11 @@
       "transcribe": "Transkribera {{count}}",
       "runPending": "Kör {{count}} väntande jobb",
       "clear": "Rensa markering"
+    },
+    "view": {
+      "files": "Filer",
+      "jobs": "Jobb",
+      "transcriptions": "Transkriptioner"
     }
   },
   "llmStatus": {

@@ -11,7 +11,6 @@
     "groupSystem": "Sistema",
     "youtube": "YouTube",
     "library": "Biblioteca",
-    "activity": "Atividade",
     "primary": "Navegação principal"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "Falha ao tentar novamente: {{error}}",
       "jobsFailed": "{{count}} trabalhos falharam",
       "jobCancelled": "Trabalho cancelado — a fila continua",
-      "openActivity": "Abrir Atividade"
+      "viewFailed": "Ver tarefas com falha"
     },
     "confirm": {
       "clearTitle": "Limpar trabalhos concluídos",
@@ -195,10 +194,7 @@
       "translating": "Traduzindo",
       "done": "Concluídos",
       "errors": "Erros",
-      "tokens": "Tokens",
-      "cost": "Custo est.",
-      "costLocal": "local",
-      "tokenBudget": "{{used}} / {{budget}} tokens"
+      "cost": "Custo est."
     },
     "noJobsEmpty": "Nenhum trabalho ainda.",
     "noJobsHint": "Clique em <strong>Escanear pastas</strong> para encontrar arquivos de legenda.",
@@ -244,10 +240,6 @@
       "summaryNothingNew": "{{subtitles}} arquivos de legenda encontrados, e todos já têm uma tarefa ou uma saída concluída. Nada novo será enfileirado.",
       "summaryNoTarget": "Foram encontrados {{subtitles}} arquivos de legenda, mas nenhum destino de tradução se aplica a eles. Adicione ou ative um em Traduções.",
       "scanAnyway": "Verificar mesmo assim"
-    },
-    "tab": {
-      "queue": "Fila",
-      "transcription": "Transcrição"
     },
     "filtersLabel": "Filtros",
     "bulkActionsLabel": "Ações em massa",
@@ -1413,8 +1405,8 @@
       "sttOff": "A conversão de fala em texto está desativada, então este vídeo ainda não pode ser transcrito.",
       "openSttSettings": "Abrir configurações de fala em texto",
       "openLanguageSettings": "Abrir configurações de idiomas",
-      "openActivity": "Abrir Atividade",
-      "alreadyTranslated": "Já traduzido"
+      "alreadyTranslated": "Já traduzido",
+      "openJob": "Mostrar detalhes da tarefa"
     },
     "bulk": {
       "summary_one": "{{count}} arquivo selecionado",
@@ -1423,6 +1415,11 @@
       "transcribe": "Transcrever {{count}}",
       "runPending": "Executar {{count}} trabalhos pendentes",
       "clear": "Limpar seleção"
+    },
+    "view": {
+      "files": "Arquivos",
+      "jobs": "Tarefas",
+      "transcriptions": "Transcrições"
     }
   },
   "llmStatus": {

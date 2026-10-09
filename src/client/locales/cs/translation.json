@@ -11,7 +11,6 @@
     "groupSystem": "Systém",
     "youtube": "YouTube",
     "library": "Knihovna",
-    "activity": "Aktivita",
     "primary": "Hlavní navigace"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "Opakování se nezdařilo: {{error}}",
       "jobsFailed": "Selhalo úloh: {{count}}",
       "jobCancelled": "Úloha zrušena — fronta pokračuje",
-      "openActivity": "Otevřít Aktivitu"
+      "viewFailed": "Zobrazit neúspěšné úlohy"
     },
     "confirm": {
       "clearTitle": "Vymazat dokončené úlohy",
@@ -195,10 +194,7 @@
       "translating": "Překládání",
       "done": "Hotovo",
       "errors": "Chyby",
-      "tokens": "Tokeny",
-      "cost": "Odhad nákladů",
-      "costLocal": "lokálně",
-      "tokenBudget": "{{used}} / {{budget}} tokenů"
+      "cost": "Odhad nákladů"
     },
     "noJobsEmpty": "Zatím žádné úlohy.",
     "noJobsHint": "Klikněte na <strong>Prohledat složky</strong> pro nalezení souborů titulků.",
@@ -245,10 +241,6 @@
       "summaryNothingNew": "Nalezeno {{subtitles}} souborů titulků a každý už má úlohu nebo hotový výstup. Nic nového se nezařadí.",
       "summaryNoTarget": "Nalezeno {{subtitles}} souborů titulků, ale žádný cíl překladu se na ně nevztahuje. Přidejte nebo povolte cíl v Překladech.",
       "scanAnyway": "Přesto prohledat"
-    },
-    "tab": {
-      "queue": "Fronta",
-      "transcription": "Přepis"
     },
     "filtersLabel": "Filtry",
     "bulkActionsLabel": "Hromadné akce",
@@ -1419,8 +1411,8 @@
       "sttOff": "Převod řeči na text je vypnutý, takže toto video zatím nelze přepsat.",
       "openSttSettings": "Otevřít nastavení převodu řeči na text",
       "openLanguageSettings": "Otevřít nastavení jazyků",
-      "openActivity": "Otevřít Aktivitu",
-      "alreadyTranslated": "Již přeloženo"
+      "alreadyTranslated": "Již přeloženo",
+      "openJob": "Zobrazit podrobnosti úlohy"
     },
     "bulk": {
       "summary_one": "Vybráno souborů: {{count}}",
@@ -1430,6 +1422,11 @@
       "transcribe": "Přepsat ({{count}})",
       "runPending": "Spustit čekající úlohy ({{count}})",
       "clear": "Zrušit výběr"
+    },
+    "view": {
+      "files": "Soubory",
+      "jobs": "Úlohy",
+      "transcriptions": "Přepisy"
     }
   },
   "llmStatus": {

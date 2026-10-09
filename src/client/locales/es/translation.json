@@ -11,7 +11,6 @@
     "groupSystem": "Sistema",
     "youtube": "YouTube",
     "library": "Biblioteca",
-    "activity": "Actividad",
     "primary": "Navegación principal"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "Error al reintentar: {{error}}",
       "jobsFailed": "Fallaron {{count}} trabajos",
       "jobCancelled": "Trabajo cancelado — la cola continúa",
-      "openActivity": "Abrir Actividad"
+      "viewFailed": "Ver trabajos fallidos"
     },
     "confirm": {
       "clearTitle": "Borrar trabajos terminados",
@@ -195,10 +194,7 @@
       "translating": "Traduciendo",
       "done": "Terminados",
       "errors": "Errores",
-      "tokens": "Tokens",
-      "cost": "Coste estimado",
-      "costLocal": "local",
-      "tokenBudget": "{{used}} / {{budget}} tokens"
+      "cost": "Coste estimado"
     },
     "noJobsEmpty": "Aún no hay trabajos.",
     "noJobsHint": "Haz clic en <strong>Escanear carpetas</strong> para encontrar archivos de subtítulos.",
@@ -244,10 +240,6 @@
       "summaryNothingNew": "Se encontraron {{subtitles}} archivos de subtítulos y todos ya tienen un trabajo o una salida terminada. No se añadirá nada nuevo a la cola.",
       "summaryNoTarget": "Se encontraron {{subtitles}} archivos de subtítulos, pero ningún destino de traducción se aplica a ninguno. Añade o activa uno en Traducciones.",
       "scanAnyway": "Escanear de todos modos"
-    },
-    "tab": {
-      "queue": "Cola",
-      "transcription": "Transcripción"
     },
     "filtersLabel": "Filtros",
     "bulkActionsLabel": "Acciones en lote",
@@ -1413,8 +1405,8 @@
       "sttOff": "La conversión de voz a texto está desactivada, así que este vídeo aún no se puede transcribir.",
       "openSttSettings": "Abrir ajustes de voz a texto",
       "openLanguageSettings": "Abrir ajustes de idiomas",
-      "openActivity": "Abrir Actividad",
-      "alreadyTranslated": "Ya traducido"
+      "alreadyTranslated": "Ya traducido",
+      "openJob": "Ver detalles del trabajo"
     },
     "bulk": {
       "summary_one": "{{count}} archivo seleccionado",
@@ -1423,6 +1415,11 @@
       "transcribe": "Transcribir {{count}}",
       "runPending": "Ejecutar {{count}} trabajos pendientes",
       "clear": "Borrar selección"
+    },
+    "view": {
+      "files": "Archivos",
+      "jobs": "Trabajos",
+      "transcriptions": "Transcripciones"
     }
   },
   "llmStatus": {

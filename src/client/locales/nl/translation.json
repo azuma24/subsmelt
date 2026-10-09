@@ -11,7 +11,6 @@
     "groupSystem": "Systeem",
     "youtube": "YouTube",
     "library": "Bibliotheek",
-    "activity": "Activiteit",
     "primary": "Hoofdnavigatie"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "Opnieuw proberen mislukt: {{error}}",
       "jobsFailed": "{{count}} taken mislukt",
       "jobCancelled": "Taak geannuleerd — de wachtrij gaat door",
-      "openActivity": "Activiteit openen"
+      "viewFailed": "Mislukte taken bekijken"
     },
     "confirm": {
       "clearTitle": "Voltooide taken wissen",
@@ -195,10 +194,7 @@
       "translating": "Vertalen",
       "done": "Klaar",
       "errors": "Fouten",
-      "tokens": "Tokens",
-      "cost": "Geschatte kosten",
-      "costLocal": "lokaal",
-      "tokenBudget": "{{used}} / {{budget}} tokens"
+      "cost": "Geschatte kosten"
     },
     "noJobsEmpty": "Nog geen taken.",
     "noJobsHint": "Klik op <strong>Mappen scannen</strong> om ondertitelbestanden te ontdekken.",
@@ -243,10 +239,6 @@
       "summaryNothingNew": "{{subtitles}} ondertitelbestanden gevonden, en elk heeft al een taak of een voltooide uitvoer. Er wordt niets nieuws in de wachtrij gezet.",
       "summaryNoTarget": "{{subtitles}} ondertitelbestanden gevonden, maar op geen ervan is een vertaaldoel van toepassing. Voeg er een toe of schakel er een in bij Vertalingen.",
       "scanAnyway": "Toch scannen"
-    },
-    "tab": {
-      "queue": "Wachtrij",
-      "transcription": "Transcriptie"
     },
     "filtersLabel": "Filters",
     "bulkActionsLabel": "Bulkacties",
@@ -1407,8 +1399,8 @@
       "sttOff": "Spraak-naar-tekst staat uit, dus deze video kan nog niet worden getranscribeerd.",
       "openSttSettings": "Instellingen voor spraak-naar-tekst openen",
       "openLanguageSettings": "Taalinstellingen openen",
-      "openActivity": "Activiteit openen",
-      "alreadyTranslated": "Al vertaald"
+      "alreadyTranslated": "Al vertaald",
+      "openJob": "Taakdetails tonen"
     },
     "bulk": {
       "summary_one": "{{count}} bestand geselecteerd",
@@ -1416,6 +1408,11 @@
       "transcribe": "{{count}} transcriberen",
       "runPending": "{{count}} wachtende taken uitvoeren",
       "clear": "Selectie wissen"
+    },
+    "view": {
+      "files": "Bestanden",
+      "jobs": "Taken",
+      "transcriptions": "Transcripties"
     }
   },
   "llmStatus": {

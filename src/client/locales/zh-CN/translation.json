@@ -11,7 +11,6 @@
     "groupSystem": "系统",
     "youtube": "YouTube",
     "library": "媒体库",
-    "activity": "活动",
     "primary": "主导航"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "重试失败：{{error}}",
       "jobsFailed": "{{count}} 个任务失败",
       "jobCancelled": "任务已取消 — 队列继续",
-      "openActivity": "打开活动"
+      "viewFailed": "查看失败的任务"
     },
     "confirm": {
       "clearTitle": "清除已完成的任务",
@@ -195,10 +194,7 @@
       "translating": "翻译中",
       "done": "已完成",
       "errors": "错误",
-      "tokens": "Token",
-      "cost": "预估费用",
-      "costLocal": "本地",
-      "tokenBudget": "{{used}} / {{budget}} token"
+      "cost": "预估费用"
     },
     "noJobsEmpty": "暂无任务。",
     "noJobsHint": "点击「扫描文件夹」以搜索字幕文件。",
@@ -243,10 +239,6 @@
       "summaryNothingNew": "找到 {{subtitles}} 个字幕文件，但每个都已有任务或已完成的输出。不会有新任务加入队列。",
       "summaryNoTarget": "找到 {{subtitles}} 个字幕文件，但没有适用于它们的翻译目标。请在“翻译”中添加或启用一个。",
       "scanAnyway": "仍然扫描"
-    },
-    "tab": {
-      "queue": "队列",
-      "transcription": "转录"
     },
     "filtersLabel": "筛选",
     "bulkActionsLabel": "批量操作",
@@ -1407,8 +1399,8 @@
       "sttOff": "语音转字幕已关闭，因此暂时无法转录此视频。",
       "openSttSettings": "打开语音转字幕设置",
       "openLanguageSettings": "打开语言设置",
-      "openActivity": "打开活动",
-      "alreadyTranslated": "已翻译"
+      "alreadyTranslated": "已翻译",
+      "openJob": "显示任务详情"
     },
     "bulk": {
       "summary_one": "已选择 {{count}} 个文件",
@@ -1416,6 +1408,11 @@
       "transcribe": "转录 {{count}} 个",
       "runPending": "运行 {{count}} 个待处理任务",
       "clear": "清除选择"
+    },
+    "view": {
+      "files": "文件",
+      "jobs": "任务",
+      "transcriptions": "转录"
     }
   },
   "llmStatus": {

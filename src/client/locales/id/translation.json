@@ -11,7 +11,6 @@
     "groupSystem": "Sistem",
     "youtube": "YouTube",
     "library": "Pustaka",
-    "activity": "Aktivitas",
     "primary": "Navigasi utama"
   },
   "common": {
@@ -130,7 +129,7 @@
       "retryFailed": "Gagal mencoba lagi: {{error}}",
       "jobsFailed": "{{count}} pekerjaan gagal",
       "jobCancelled": "Pekerjaan dibatalkan — antrean berlanjut",
-      "openActivity": "Buka Aktivitas"
+      "viewFailed": "Lihat tugas yang gagal"
     },
     "confirm": {
       "clearTitle": "Hapus pekerjaan yang selesai",
@@ -195,10 +194,7 @@
       "translating": "Menerjemahkan",
       "done": "Selesai",
       "errors": "Error",
-      "tokens": "Token",
-      "cost": "Perkiraan biaya",
-      "costLocal": "lokal",
-      "tokenBudget": "{{used}} / {{budget}} token"
+      "cost": "Perkiraan biaya"
     },
     "noJobsEmpty": "Belum ada pekerjaan.",
     "noJobsHint": "Klik <strong>Pindai Folder</strong> untuk menemukan file subtitle.",
@@ -243,10 +239,6 @@
       "summaryNothingNew": "Ditemukan {{subtitles}} file subtitle, dan semuanya sudah memiliki tugas atau hasil yang selesai. Tidak ada yang baru akan diantrekan.",
       "summaryNoTarget": "Ditemukan {{subtitles}} file subtitle, tetapi tidak ada target terjemahan yang berlaku untuk satu pun. Tambahkan atau aktifkan satu di Terjemahan.",
       "scanAnyway": "Tetap pindai"
-    },
-    "tab": {
-      "queue": "Antrean",
-      "transcription": "Transkripsi"
     },
     "filtersLabel": "Filter",
     "bulkActionsLabel": "Tindakan massal",
@@ -1407,8 +1399,8 @@
       "sttOff": "Speech-to-text nonaktif, jadi video ini belum dapat ditranskripsi.",
       "openSttSettings": "Buka pengaturan speech-to-text",
       "openLanguageSettings": "Buka pengaturan bahasa",
-      "openActivity": "Buka Aktivitas",
-      "alreadyTranslated": "Sudah diterjemahkan"
+      "alreadyTranslated": "Sudah diterjemahkan",
+      "openJob": "Tampilkan detail tugas"
     },
     "bulk": {
       "summary_one": "{{count}} file dipilih",
@@ -1416,6 +1408,11 @@
       "transcribe": "Transkripsi {{count}}",
       "runPending": "Jalankan {{count}} tugas tertunda",
       "clear": "Hapus pilihan"
+    },
+    "view": {
+      "files": "File",
+      "jobs": "Tugas",
+      "transcriptions": "Transkripsi"
     }
   },
   "llmStatus": {

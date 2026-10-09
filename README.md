@@ -96,7 +96,7 @@ Open **Settings → Languages**. Use quick-add presets or define custom targets 
 
 ### 3. Scan and translate
 
-Open **Library** and press **Scan**. Every video is listed with one chip per language; filter by errors, missing languages or in-progress work, and open a file to translate, retry or transcribe it. **Activity** shows the queue.
+Open **Library** and press **Scan**. Every video is listed with one chip per language; filter by errors, missing languages or in-progress work, and open a file to translate, retry or transcribe it. The queue runs above the list, and the **Jobs** view lists every job, including uploads from Convert.
 
 ### 4. Automate it
 
