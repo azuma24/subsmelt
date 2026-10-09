@@ -230,34 +230,44 @@ export function FilesView({
     <div className="flex min-h-[50dvh] flex-1">
       <section aria-label={t("library.view.files")} className="flex min-w-0 flex-1 flex-col">
         {files && files.length > 0 && (
-          <div className="shrink-0 space-y-3 border-b border-border px-4 py-3">
-            <label className="flex min-h-touch items-center gap-2 rounded-sm border border-border bg-surface-raised px-3 focus-within:border-accent">
-              <Icon name="search" className="text-muted" />
-              <span className="sr-only">{t("library.searchLabel")}</span>
-              <input
-                ref={searchRef}
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={t("library.search")}
-                className="min-w-0 flex-1 bg-transparent text-sm text-text outline-hidden placeholder:text-muted"
-              />
-              <kbd className="hidden rounded-sm border border-border px-1 font-mono text-xs text-muted sm:inline">
-                /
-              </kbd>
-            </label>
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="shrink-0 space-y-2 border-b border-border px-4 py-2">
+            <div className="flex items-center gap-2">
+              <label className="flex min-h-touch min-w-0 flex-1 items-center gap-2 rounded-sm border border-border bg-surface-raised px-3 focus-within:border-accent">
+                <Icon name="search" className="text-muted" />
+                <span className="sr-only">{t("library.searchLabel")}</span>
+                <input
+                  ref={searchRef}
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={t("library.search")}
+                  className="min-w-0 flex-1 bg-transparent text-sm text-text outline-hidden placeholder:text-muted"
+                />
+                <kbd className="hidden rounded-sm border border-border px-1 font-mono text-xs text-muted sm:inline">
+                  /
+                </kbd>
+              </label>
               <SortControls
                 sortBy={sortBy}
                 sortDir={sortDir}
                 onSortByChange={handleSortByChange}
                 onToggleSortDir={toggleSortDir}
               />
-              <ActionButton variant="ghost" size="sm" onClick={selectAllVisible} disabled={view.counts.all === 0}>
-                {t("whisper.selectAll")}
-              </ActionButton>
             </div>
-            <StatusChips counts={view.counts} active={filter} onSelect={onFilterChange} />
+            <div className="flex items-center gap-2">
+              {/* Clips the chips' edge-to-edge scroll so it ends before Select all. */}
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <StatusChips counts={view.counts} active={filter} onSelect={onFilterChange} />
+              </div>
+              <button
+                type="button"
+                onClick={selectAllVisible}
+                disabled={view.counts.all === 0}
+                className="min-h-touch shrink-0 px-2 text-sm font-medium text-accent hover:underline disabled:text-faint disabled:no-underline"
+              >
+                {t("whisper.selectAll")}
+              </button>
+            </div>
           </div>
         )}
         {jobsQuery.isError && (
