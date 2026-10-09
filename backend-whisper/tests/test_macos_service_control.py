@@ -31,11 +31,13 @@ com.subsmelt.whisper = {
 
 
 class _FakeLaunchctl:
-    def __init__(self, directory: Path, stdout: str = "", code: int = 0):
+    def __init__(self, directory: Path, stdout: str = "", code: int = 0, loaded: bool = True):
         self.calls = directory / "launchctl.log"
         self.stdout = stdout
         self.code = code
         script = '#!/bin/sh\necho "$*" >> "$LAUNCHCTL_LOG"\n'
+        if not loaded:
+            script += 'if [ "$1" = print ]; then echo "Could not find service" >&2; exit 113; fi\n'
         if self.stdout:
             script += f"cat <<'EOF'\n{self.stdout}\nEOF\n"
         script += f"exit {self.code}\n"
@@ -57,24 +59,60 @@ class ServiceControlTests(unittest.TestCase):
         log = self.bin / "launchctl.log"
         self._patch = mock.patch.dict(
             os.environ,
-            {"PATH": f"{self.bin}:{os.environ.get('PATH', '/usr/bin:/bin')}", "LAUNCHCTL_LOG": str(log)},
+            {
+                "PATH": f"{self.bin}:{os.environ.get('PATH', '/usr/bin:/bin')}",
+                "LAUNCHCTL_LOG": str(log),
+                "HOME": str(self.bin),
+            },
         )
         self._patch.start()
         self.addCleanup(self._patch.stop)
 
-    def test_start_runs_kickstart_on_the_user_domain(self):
+    def _install_plist(self) -> Path:
+        plist = self.bin / "Library" / "LaunchAgents" / "com.subsmelt.whisper.plist"
+        plist.parent.mkdir(parents=True)
+        plist.write_text("<plist/>", encoding="utf-8")
+        return plist
+
+    def test_start_kickstarts_a_loaded_agent(self):
         fake = _FakeLaunchctl(self.bin)
+        target = f"gui/{os.getuid()}/com.subsmelt.whisper"
 
         code, _out = service_control.start_service()
 
-        self.assertEqual((code, fake.recorded()), (0, [f"kickstart gui/{os.getuid()}/com.subsmelt.whisper"]))
+        self.assertEqual((code, fake.recorded()), (0, [f"print {target}", f"kickstart {target}"]))
 
-    def test_stop_sends_sigterm(self):
+    def test_start_loads_a_stopped_agent_before_kickstarting_it(self):
+        plist = self._install_plist()
+        fake = _FakeLaunchctl(self.bin, loaded=False)
+        domain = f"gui/{os.getuid()}"
+
+        code, _out = service_control.start_service()
+
+        self.assertEqual(
+            (code, fake.recorded()),
+            (
+                0,
+                [
+                    f"print {domain}/com.subsmelt.whisper",
+                    f"bootstrap {domain} {plist}",
+                    f"kickstart {domain}/com.subsmelt.whisper",
+                ],
+            ),
+        )
+
+    def test_stop_unloads_the_agent_so_keepalive_cannot_restart_it(self):
         fake = _FakeLaunchctl(self.bin)
 
         code, _out = service_control.stop_service()
 
-        self.assertEqual((code, fake.recorded()), (0, [f"kill SIGTERM gui/{os.getuid()}/com.subsmelt.whisper"]))
+        self.assertEqual((code, fake.recorded()), (0, [f"bootout gui/{os.getuid()}/com.subsmelt.whisper"]))
+
+    def test_a_stopped_agent_with_its_plist_installed_reads_as_stopped(self):
+        self._install_plist()
+        _fake = _FakeLaunchctl(self.bin, loaded=False)
+
+        self.assertEqual(service_control.service_status(), "stopped")
 
     def test_status_reads_the_state_line_of_a_running_agent(self):
         _fake = _FakeLaunchctl(self.bin, stdout=RUNNING)

@@ -6,12 +6,21 @@ from __future__ import annotations
 
 import os
 import subprocess
+from pathlib import Path
 
 LABEL = os.environ.get("SUBSMELT_WHISPER_SERVICE", "com.subsmelt.whisper")
 
 
+def _domain() -> str:
+    return f"gui/{os.getuid()}"
+
+
 def _target() -> str:
-    return f"gui/{os.getuid()}/{LABEL}"
+    return f"{_domain()}/{LABEL}"
+
+
+def _plist() -> Path:
+    return Path.home() / "Library" / "LaunchAgents" / f"{LABEL}.plist"
 
 
 def _run(command: list[str]) -> tuple[int, str]:
@@ -22,18 +31,28 @@ def _run(command: list[str]) -> tuple[int, str]:
         return 1, str(exc)
 
 
+def _loaded() -> tuple[int, str]:
+    return _run(["launchctl", "print", _target()])
+
+
 def start_service() -> tuple[int, str]:
+    if _loaded()[0] != 0:
+        code, out = _run(["launchctl", "bootstrap", _domain(), str(_plist())])
+        if code != 0:
+            return code, out
     return _run(["launchctl", "kickstart", _target()])
 
 
 def stop_service() -> tuple[int, str]:
-    return _run(["launchctl", "kill", "SIGTERM", _target()])
+    # Unload rather than signal: the plist's KeepAlive restarts a killed server
+    # within seconds. RunAtLoad loads it again at the next login.
+    return _run(["launchctl", "bootout", _target()])
 
 
 def service_status() -> str:
-    code, out = _run(["launchctl", "print", _target()])
+    code, out = _loaded()
     if code != 0:
-        return "not installed"
+        return "stopped" if _plist().exists() else "not installed"
     for line in out.splitlines():
         stripped = line.strip()
         if stripped.startswith("state = "):
