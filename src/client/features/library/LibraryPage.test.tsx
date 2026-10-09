@@ -171,7 +171,23 @@ test("?view=jobs&status=error shows only the failed job", () => {
 
 test("the queue band offers Run all while jobs wait, and is absent when nothing is queued", () => {
   const waiting = renderPage(<LibraryPage />, configured);
-  assert.ok(waiting.text.includes("Queue idle Pending 1"));
+  assert.ok(waiting.text.includes("Queue idle 1 more in queue ▶ Run All"));
+
+  const translating = { ...job(4, "Episode 04.en.srt", "translating"), completed_cues: 40 };
+  const running = renderPage(<LibraryPage />, [
+    [
+      ["jobs"],
+      {
+        jobs: [translating, job(5, "Episode 05.en.srt", "translating"), job(3, "Episode 03.en.srt", "pending")],
+        queueRunning: true,
+        currentJobId: 4,
+      },
+    ],
+    settings,
+    library([episode]),
+  ]);
+  assert.ok(running.text.includes("Episode 04.en.srt → zh-TW +1 40% 1 more in queue ⏹ Stop"));
+  assert.ok(!running.text.includes("Episode 05.en.srt"), "only the first translating job is named");
   assert.ok(waiting.buttons.includes("▶ Run All"));
 
   const idle = renderPage(<LibraryPage />, [noJobs, settings, library([episode])]);
