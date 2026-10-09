@@ -6,7 +6,7 @@ import threading
 from collections.abc import Callable, Iterator, Mapping
 from pathlib import Path
 
-from . import nemotron_runtime
+from . import nemotron_runtime, whispercpp_runtime
 from .catalog import ADVERTISED_MODELS, MODELS, ModelDescriptor, descriptor_for, to_wire
 from .engine import EngineUnavailableError
 from .model_cache import (
@@ -23,6 +23,7 @@ from .preflight import available_ram_mb
 # installed after startup is picked up.
 ENGINE_AVAILABILITY: dict[str, Callable[[], tuple[bool, str | None]]] = {
     "whisper": lambda: (True, None),
+    "whispercpp": whispercpp_runtime.availability,
     "nemotron": nemotron_runtime.availability,
 }
 

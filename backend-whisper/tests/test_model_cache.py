@@ -39,6 +39,19 @@ class ModelCacheTests(unittest.TestCase):
             self.assertFalse(info["cached"])
             self.assertIsNone(info["cache_path"])
 
+    def test_a_ggml_weights_file_counts_as_downloaded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            snap = Path(tmp) / "hub" / "models--ggerganov--whisper.cpp" / "snapshots" / "1234"
+            snap.mkdir(parents=True)
+            (snap / "ggml-large-v3-turbo.bin").write_bytes(b"\0")
+            info = describe_model_cache("whispercpp-large-v3-turbo", 8192, env={"HF_HOME": tmp})
+            self.assertTrue(info["cached"])
+            self.assertEqual(info["cache_path"], str(snap))
+        with tempfile.TemporaryDirectory() as tmp:
+            snap = Path(tmp) / "hub" / "models--ggerganov--whisper.cpp" / "snapshots" / "1234"
+            snap.mkdir(parents=True)
+            self.assertFalse(describe_model_cache("whispercpp-large-v3-turbo", 8192, env={"HF_HOME": tmp})["cached"])
+
     def test_prefers_the_snapshot_named_by_refs_main(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp) / "hub" / "models--Systran--faster-whisper-small"

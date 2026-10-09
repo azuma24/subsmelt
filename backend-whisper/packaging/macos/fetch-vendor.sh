@@ -10,6 +10,8 @@
 #                                          from source, linking only macOS
 #                                          system libraries (LGPL; licence
 #                                          files alongside).
+#   <vendor>/whisper-cpp/whisper-cli       whisper.cpp built from source with
+#                                          Metal embedded (one static binary).
 #
 # Usage: fetch-vendor.sh <vendor dir> [--force]
 #
@@ -28,6 +30,9 @@ FFMPEG_VERSION="7.1.2" # the pin in the root Dockerfile
 FFMPEG_ARCHIVE="ffmpeg-${FFMPEG_VERSION}.tar.xz"
 FFMPEG_URL="https://ffmpeg.org/releases/${FFMPEG_ARCHIVE}"
 FFMPEG_SHA256="089bc60fb59d6aecc5d994ff530fd0dcb3ee39aa55867849a2bbc4e555f9c304"
+
+WHISPERCPP_VERSION="v1.9.5"
+WHISPERCPP_REPO="https://github.com/ggml-org/whisper.cpp"
 # Audio extraction only: the demuxers for common video containers, the audio
 # decoders anime and TV releases use, a WAV muxer and the filters app/ runs.
 # shellcheck disable=SC2054 # the commas are configure's own list syntax
@@ -151,6 +156,51 @@ fetch_ffmpeg() {
   install_runtime ffmpeg "$staged" "$pin"
 }
 
+fetch_whisper_cpp() {
+  local pin="$WHISPERCPP_VERSION"
+  if is_current whisper-cpp "$pin"; then
+    log "whisper.cpp $WHISPERCPP_VERSION already present"
+    return
+  fi
+  # No release binaries exist for this tag, and Homebrew's whisper-cli links
+  # /opt/homebrew libraries that a user's Mac without Homebrew does not have,
+  # so build one static binary with Metal embedded. The clone is cached as a
+  # tarball so a rebuild works offline; the tag pins the source.
+  local archive="whisper.cpp-${WHISPERCPP_VERSION}.tar.gz"
+  local src="$WORK_DIR/whisper.cpp"
+  mkdir -p "${SUBSMELT_VENDOR_CACHE:-$WORK_DIR}"
+  local cached="${SUBSMELT_VENDOR_CACHE:-$WORK_DIR}/$archive"
+  if [[ -f "$cached" ]]; then
+    tar -xzf "$cached" -C "$WORK_DIR"
+  else
+    log "cloning whisper.cpp $WHISPERCPP_VERSION"
+    git clone --depth 1 --branch "$WHISPERCPP_VERSION" "$WHISPERCPP_REPO" "$src" >"$WORK_DIR/whispercpp-clone.log" 2>&1
+    tar -czf "$cached.part" -C "$WORK_DIR" whisper.cpp
+    mv "$cached.part" "$cached"
+  fi
+  log "building whisper.cpp $WHISPERCPP_VERSION"
+  (
+    cd "$WORK_DIR"
+    cmake -S whisper.cpp -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DGGML_METAL=ON \
+      -DGGML_METAL_EMBED_LIBRARY=ON -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_SERVER=OFF \
+      -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 >"$WORK_DIR/whispercpp-cmake.log" 2>&1
+    cmake --build build --target whisper-cli -j"$(sysctl -n hw.ncpu)" >>"$WORK_DIR/whispercpp-cmake.log" 2>&1
+  ) || { tail -40 "$WORK_DIR/whispercpp-cmake.log" >&2; exit 1; }
+  local staged="$WORK_DIR/whisper-cpp"
+  mkdir -p "$staged"
+  cp "$WORK_DIR/build/bin/whisper-cli" "$staged/"
+  local foreign
+  foreign="$(otool -L "$staged/whisper-cli" | awk 'NR > 1 && /^\t/ { print $1 }' |
+    grep -Ev '^(/usr/lib/|/System/Library/)' || true)"
+  if [[ -n "$foreign" ]]; then
+    echo "[fetch-vendor] whisper-cli links libraries outside macOS: $foreign" >&2
+    exit 1
+  fi
+  "$staged/whisper-cli" --version >/dev/null
+  install_runtime whisper-cpp "$staged" "$pin"
+}
+
 fetch_nemo_speech
 fetch_ffmpeg
+fetch_whisper_cpp
 log "vendor dir: $VENDOR_DIR"

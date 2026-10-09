@@ -1,6 +1,8 @@
 import unittest
+from typing import get_args
 
-from app.catalog import ADVERTISED_MODELS, descriptor_for, to_wire
+from app import catalog, model_manager, transcribe
+from app.catalog import ADVERTISED_MODELS, descriptor_for, downgrade_candidates, to_wire
 from app.engine import LanguageNotSupportedError
 from app.preflight import evaluate_gpu_safety, evaluate_model_safety, model_ram_requirements_mb
 
@@ -55,6 +57,7 @@ class CatalogTests(unittest.TestCase):
                 "distil-large-v3",
                 "large-v3-turbo",
                 "nemotron-3.5-asr",
+                "whispercpp-large-v3-turbo",
             ),
         )
 
@@ -116,6 +119,21 @@ class CatalogTests(unittest.TestCase):
             },
         )
         self.assertEqual(to_wire(descriptor_for("small"), available=True, reason=None)["languages"], "all")
+
+    def test_whispercpp_engine_is_registered_everywhere(self):
+        whispercpp = descriptor_for("whispercpp-large-v3-turbo")
+        self.assertEqual(whispercpp.engine, "whispercpp")
+        self.assertEqual(transcribe.ENGINE_RUNNERS["whispercpp"].__module__, "app.whispercpp")
+        self.assertIn("whispercpp", model_manager.ENGINE_AVAILABILITY)
+        self.assertEqual(downgrade_candidates("whispercpp-large-v3-turbo"), ())
+        self.assertIn("whispercpp", get_args(catalog.Engine))
+
+    def test_no_two_whispercpp_models_share_a_repo(self):
+        # All ggml models live in one repo and the cache check and delete work
+        # per repo dir, so a second whisper.cpp model would read as downloaded
+        # once the first was, and deleting it would remove both.
+        repos = [model.repo_id for model in catalog.MODELS if model.engine == "whispercpp"]
+        self.assertEqual(len(repos), len(set(repos)), repos)
 
     def test_unavailable_reason_is_carried(self):
         wire = to_wire(descriptor_for("nemotron-3.5-asr"), available=False, reason="nemo-speech runtime not found")

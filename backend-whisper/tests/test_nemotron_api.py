@@ -115,7 +115,7 @@ class NemotronApiTests(unittest.TestCase):
     def test_health_reports_the_nemotron_descriptor_and_binary_version(self):
         caps = self.client.get("/health").json()["capabilities"]
         self.assertEqual(caps["nemoSpeech"], {"available": True, "version": "0.1.0"})
-        self.assertEqual(caps["models"][-1], MODEL)
+        self.assertIn(MODEL, caps["models"])
         entry = {m["id"]: m for m in caps["modelInfo"]}[MODEL]
         self.assertEqual((entry["engine"], entry["available"], entry["unavailableReason"]), ("nemotron", True, None))
         self.assertEqual(entry["supports"]["wordTimestamps"], True)

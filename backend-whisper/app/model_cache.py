@@ -106,7 +106,8 @@ def _candidate_cache_paths(model: str, cache_root: Path) -> list[Path]:
 
 def dir_has_weights(d: Path) -> bool:
     """True when a model dir holds weights: CTranslate2 ``model.bin`` (or
-    ``*.safetensors``) for Whisper, a ``*.gguf`` for Nemotron.
+    ``*.safetensors``) for Whisper, a ``*.gguf`` for Nemotron, a
+    ``ggml-*.bin`` for whisper.cpp.
 
     Detection must require the actual weights, not just a snapshot directory:
     a partial/interrupted download can leave the dir present but weightless, and
@@ -114,7 +115,12 @@ def dir_has_weights(d: Path) -> bool:
     transcription.
     """
     try:
-        return (d / "model.bin").exists() or any(d.glob("*.safetensors")) or any(d.glob("*.gguf"))
+        return (
+            (d / "model.bin").exists()
+            or any(d.glob("*.safetensors"))
+            or any(d.glob("*.gguf"))
+            or any(d.glob("ggml-*.bin"))
+        )
     except OSError:  # pragma: no cover - race with deletion
         return False
 

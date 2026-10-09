@@ -13,6 +13,8 @@ from .gpu import cuda_device_count
 from .model_cache import cache_root_from_env, describe_model_cache
 from .nemotron_runtime import find_gguf, load_handle
 from .preflight import available_ram_mb
+from .whispercpp_runtime import find_weights as find_ggml_weights
+from .whispercpp_runtime import load_handle as load_whispercpp_handle
 
 # Module-level cache of loaded WhisperModel instances keyed by the parameters
 # that affect model identity. FastAPI runs sync handlers in a threadpool, so the
@@ -193,6 +195,12 @@ def _resident_locked(model: str, device: str, compute_type: str) -> Any:
         _MODEL_CACHE[key] = handle
         return handle
 
+    if descriptor is not None and descriptor.engine == "whispercpp":
+        _evict_locked(lambda other: True)
+        handle = _load_whispercpp_handle(model)
+        _MODEL_CACHE[key] = handle
+        return handle
+
     # Free the resident model before loading so the new one has its VRAM.
     _evict_locked(lambda other: True)
     model_instance = _load_whisper_model(model, device, compute_type)
@@ -245,6 +253,15 @@ def _load_nemotron_handle(model: str) -> Any:
     if gguf is None:
         raise ModelWeightsMissingError(model)
     return load_handle(gguf)
+
+
+def _load_whispercpp_handle(model: str) -> Any:
+    """A WhisperCppHandle for the cached ggml weights, same failure mapping."""
+    snapshot_dir = _resolve_snapshot_dir(model)
+    weights = find_ggml_weights(Path(snapshot_dir)) if snapshot_dir else None
+    if weights is None:
+        raise ModelWeightsMissingError(model)
+    return load_whispercpp_handle(weights)
 
 
 def _align_feature_extractor(whisper_model: Any) -> None:

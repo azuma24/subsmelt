@@ -13,7 +13,7 @@ from typing import Literal
 
 from .nemotron_languages import NEMOTRON_SHORT_CODES
 
-Engine = Literal["whisper", "nemotron"]
+Engine = Literal["whisper", "whispercpp", "nemotron"]
 
 
 @dataclass(frozen=True)
@@ -72,6 +72,15 @@ _NEMOTRON_SUPPORTS = Supports(
     word_timestamps=True,
     translate_task=False,
 )
+_WHISPERCPP_SUPPORTS = Supports(
+    prompt=True,
+    beam_size=True,
+    condition_on_previous_text=False,
+    vad=False,
+    compute_type=False,
+    word_timestamps=False,
+    translate_task=False,
+)
 
 
 def _whisper(
@@ -115,6 +124,18 @@ MODELS: tuple[ModelDescriptor, ...] = (
         languages=NEMOTRON_SHORT_CODES,
         supports=_NEMOTRON_SUPPORTS,
     ),
+    ModelDescriptor(
+        id="whispercpp-large-v3-turbo",
+        engine="whispercpp",
+        label="Whisper large-v3-turbo (Metal)",
+        repo_id="ggerganov/whisper.cpp",
+        weights_file="ggml-large-v3-turbo.bin",
+        size_mb=1549,
+        ram_mb=MemoryMb(3072, 4096),
+        vram_mb=MemoryMb(0, 0),
+        languages="all",
+        supports=_WHISPERCPP_SUPPORTS,
+    ),
 )
 
 ADVERTISED_MODELS: tuple[str, ...] = tuple(model.id for model in MODELS)
@@ -127,6 +148,7 @@ _BY_ID: dict[str, ModelDescriptor] = {model.id: model for model in MODELS}
 _DOWNGRADE_CANDIDATES: dict[str, tuple[str, ...]] = {
     "whisper": ("small", "base", "tiny"),
     "nemotron": (),
+    "whispercpp": (),
 }
 
 

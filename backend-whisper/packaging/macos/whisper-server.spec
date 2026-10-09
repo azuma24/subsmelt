@@ -13,6 +13,7 @@
 #     whisper-server/whisper-server
 #     whisper-server/nemo-speech/{bin,lib,share}   found by app/nemotron_runtime.py
 #     whisper-server/ffmpeg/{ffmpeg,ffprobe}       found by run_server.bundled_ffmpeg
+#     whisper-server/whisper-cpp/whisper-cli       found by app/whispercpp_runtime.py
 #
 # No model weights and no CUDA wheels: models download on demand through the
 # model manager into the user's model dir.
@@ -27,7 +28,7 @@ ENTRY_SCRIPT = os.path.join(BACKEND_ROOT, "run_server.py")
 APP_DIR = os.path.join(BACKEND_ROOT, "app")
 VENDOR_DIR = os.environ.get("SUBSMELT_MACOS_VENDOR") or os.path.join(SPEC_DIR, "vendor")
 
-for runtime in ("nemo-speech/bin/nemo-speech", "ffmpeg/ffmpeg"):
+for runtime in ("nemo-speech/bin/nemo-speech", "ffmpeg/ffmpeg", "whisper-cpp/whisper-cli"):
     if not os.path.isfile(os.path.join(VENDOR_DIR, runtime)):
         raise SystemExit(f"[whisper-server.spec] {runtime} missing from {VENDOR_DIR}; run fetch-vendor.sh first")
 
@@ -112,7 +113,7 @@ coll = COLLECT(
 # A datas entry would land under _internal/, where neither app/ nor run_server
 # looks, so copy the runtimes into the finished bundle (COLLECT has run).
 # symlinks=True keeps nemo-speech's versioned dylib links intact.
-for runtime in ("nemo-speech", "ffmpeg"):
+for runtime in ("nemo-speech", "ffmpeg", "whisper-cpp"):
     shutil.copytree(
         os.path.join(VENDOR_DIR, runtime),
         os.path.join(DISTPATH, "whisper-server", runtime),
