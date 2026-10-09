@@ -6,6 +6,7 @@ from collections.abc import Callable, Generator
 from pathlib import Path
 
 from .engine import TranscriptionCancelled, progress_event
+from .gpu import effective_compute_type, effective_device
 from .model_loader import CudaOutOfMemoryError, _is_cuda_oom, lease
 from .nemotron_languages import normalize_language
 from .schemas import TranscribeRequest
@@ -107,7 +108,7 @@ def run(
     ``(segments, info)`` after yielding progress. Segments are produced lazily,
     so CUDA OOM can surface at ``transcribe`` or during iteration."""
     _require_faster_whisper()
-    with lease(request.model, request.device, request.compute_type) as model:
+    with lease(request.model, effective_device(request.device), effective_compute_type(request.compute_type)) as model:
         try:
             segments_iter, info = model.transcribe(str(audio_path), **faster_whisper_transcribe_kwargs(request))
         except Exception as exc:

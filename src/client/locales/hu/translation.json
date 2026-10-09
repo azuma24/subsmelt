@@ -658,6 +658,7 @@
         "firstRunDownload": "Az első futás extra időt tölthet a modellsúlyok letöltésével, mielőtt az átirat elindulna.",
         "cachePending": "A gyorsítótár részletei akkor jelennek meg, amikor a háttérrendszer jelenti a kiválasztott modell állapotát.",
         "currentDefaults": "Aktuális kérés-alapértelmezések: {{model}} ezen: {{device}} / {{computeType}}, kimenet {{output}}.",
+        "currentDefaultsMetal": "Aktuális kérés-alapértelmezések: {{model}}, kimenet {{output}}.",
         "backendMessage": "Háttérrendszer üzenete: {{message}}",
         "firstRunQuiet": "Az első átiratfutások egy ideig csendben maradhatnak, amíg a modell letöltődik vagy bemelegszik.",
         "serverVersion": "Szerververzió",

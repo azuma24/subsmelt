@@ -658,6 +658,7 @@
         "firstRunDownload": "首次執行可能需要額外時間下載模型權重，之後才會開始轉錄。",
         "cachePending": "後端回報選取模型的健康狀態後會顯示快取詳細資料。",
         "currentDefaults": "目前請求預設值：{{model}}，{{device}} / {{computeType}}，輸出 {{output}}。",
+        "currentDefaultsMetal": "目前請求預設值：{{model}}，輸出 {{output}}。",
         "backendMessage": "後端訊息：{{message}}",
         "firstRunQuiet": "首次轉錄時，模型下載或暖機期間可能有一段時間沒有輸出。",
         "serverVersion": "伺服器版本",

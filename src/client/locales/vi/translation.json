@@ -658,6 +658,7 @@
         "firstRunDownload": "Lần chạy đầu có thể mất thêm thời gian tải trọng số mô hình trước khi bắt đầu phiên âm.",
         "cachePending": "Chi tiết bộ nhớ đệm sẽ hiện khi backend báo cáo tình trạng cho mô hình đã chọn.",
         "currentDefaults": "Mặc định yêu cầu hiện tại: {{model}} trên {{device}} / {{computeType}}, đầu ra {{output}}.",
+        "currentDefaultsMetal": "Mặc định yêu cầu hiện tại: {{model}}, đầu ra {{output}}.",
         "backendMessage": "Thông báo từ backend: {{message}}",
         "firstRunQuiet": "Các lần phiên âm đầu tiên có thể im lặng một lúc trong khi mô hình được tải xuống hoặc khởi động.",
         "serverVersion": "Phiên bản máy chủ",

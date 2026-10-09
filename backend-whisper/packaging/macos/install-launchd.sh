@@ -2,7 +2,7 @@
 # Install the SubSmelt Whisper backend as a launchd agent for the current user.
 #
 # Usage: install-launchd.sh [unzipped dir] [--port N] [--media-root PATH]
-#                           [--model-dir PATH] [--skip-launchd]
+#                           [--model-dir PATH] [--skip-launchd] [--dry-run]
 #
 #   unzipped dir    the "SubSmelt Whisper" folder from the zip (default: the
 #                   folder this script is in)
@@ -13,6 +13,9 @@
 #                   <data dir>/models)
 #   --skip-launchd  install the app, config.json and the plist, but leave
 #                   launchctl alone
+#   --dry-run       render config.json, the plist and backend-info.txt into
+#                   $HOME (override HOME to preview) and touch nothing else:
+#                   no app copy, no launchctl call
 #
 # Settings go to ~/Library/Application Support/SubSmelt/config.json (mode
 # 0600), which the backend reads on every start. The plist carries only the
@@ -44,17 +47,24 @@ PORT=""
 MEDIA_ROOT=""
 MODEL_DIR=""
 SKIP_LAUNCHD=0
+DRY_RUN=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --port) [[ $# -ge 2 ]] || usage; PORT="$2"; shift 2 ;;
     --media-root) [[ $# -ge 2 ]] || usage; MEDIA_ROOT="$2"; shift 2 ;;
     --model-dir) [[ $# -ge 2 ]] || usage; MODEL_DIR="$2"; shift 2 ;;
     --skip-launchd) SKIP_LAUNCHD=1; shift ;;
+    --dry-run) DRY_RUN=1; shift ;;
     -h | --help) usage ;;
     -*) usage ;;
     *) [[ -z "$SOURCE_DIR" ]] || usage; SOURCE_DIR="$1"; shift ;;
   esac
 done
+# A dry run renders the files into $HOME (override HOME to preview); it never
+# runs launchctl or copies the app.
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  SKIP_LAUNCHD=1
+fi
 SOURCE_DIR="$(cd "${SOURCE_DIR:-$SCRIPT_DIR}" && pwd)"
 [[ -x "$SOURCE_DIR/whisper-server/whisper-server" ]] || {
   echo "whisper-server/whisper-server not found in $SOURCE_DIR. Pass the unzipped \"SubSmelt Whisper\" folder." >&2
@@ -75,7 +85,9 @@ if [[ "$SKIP_LAUNCHD" -eq 0 ]]; then
 fi
 
 # --- App -------------------------------------------------------------------------
-if [[ "$SOURCE_DIR" != "$APP_DIR" ]]; then
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  echo "Dry run: the app itself is not copied."
+elif [[ "$SOURCE_DIR" != "$APP_DIR" ]]; then
   echo "Copying the app to $APP_DIR..."
   rm -rf "$APP_DIR/whisper-server"
   mkdir -p "$APP_DIR"
@@ -121,7 +133,10 @@ mv "$staged_config" "$CONFIG"
 if [[ -n "$(config_value token)" ]]; then
   echo "Keeping the existing token."
 else
-  env -u SUBSMELT_WHISPER_TOKEN SUBSMELT_WHISPER_CONFIG="$CONFIG" "$PROGRAM" --generate-token --save >/dev/null
+  # A dry run skips the app copy, so mint the token with the source program.
+  TOKEN_PROGRAM="$PROGRAM"
+  [[ "$DRY_RUN" -eq 1 ]] && TOKEN_PROGRAM="$SOURCE_DIR/whisper-server/whisper-server"
+  env -u SUBSMELT_WHISPER_TOKEN SUBSMELT_WHISPER_CONFIG="$CONFIG" "$TOKEN_PROGRAM" --generate-token --save >/dev/null
   [[ -n "$(config_value token)" ]] || {
     echo "Could not store a token in $CONFIG." >&2
     exit 1

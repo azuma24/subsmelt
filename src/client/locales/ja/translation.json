@@ -658,6 +658,7 @@
         "firstRunDownload": "初回は文字起こしの開始前にモデルの重みをダウンロードするため、時間がかかる場合があります。",
         "cachePending": "バックエンドが選択したモデルのヘルス情報を返すと、キャッシュの詳細が表示されます。",
         "currentDefaults": "現在のリクエスト既定値：{{model}}（{{device}} / {{computeType}}）、出力 {{output}}。",
+        "currentDefaultsMetal": "現在のリクエスト既定値：{{model}}、出力 {{output}}。",
         "backendMessage": "バックエンドのメッセージ：{{message}}",
         "firstRunQuiet": "初回の文字起こしは、モデルのダウンロードやウォームアップ中にしばらく反応がないことがあります。",
         "serverVersion": "サーバーバージョン",

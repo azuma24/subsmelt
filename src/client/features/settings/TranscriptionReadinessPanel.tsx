@@ -338,12 +338,20 @@ export function TranscriptionReadinessPanel({
       </div>
 
       <div className="mt-3 rounded-md border border-border bg-surface-raised p-3 text-xs text-muted">
-        {t("settings.transcription.readiness.currentDefaults", {
-          model: selectedModel,
-          device: selectedDevice,
-          computeType: selectedComputeType,
-          output: selectedOutput.toUpperCase(),
-        })}
+        {/* On Metal the stored device/compute type (cuda/float16 from a PC
+            setup) cannot run, so the defaults line leaves them out rather
+            than showing settings the backend will override. */}
+        {host.accelerator === "metal"
+          ? t("settings.transcription.readiness.currentDefaultsMetal", {
+              model: selectedModel,
+              output: selectedOutput.toUpperCase(),
+            })
+          : t("settings.transcription.readiness.currentDefaults", {
+              model: selectedModel,
+              device: selectedDevice,
+              computeType: selectedComputeType,
+              output: selectedOutput.toUpperCase(),
+            })}
         {health?.message && (
           <span className="ml-1 text-warning">
             {t("settings.transcription.readiness.backendMessage", { message: health.message })}

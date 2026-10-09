@@ -143,6 +143,15 @@ class GpuSafetyTests(unittest.TestCase):
 
 @unittest.skipIf(MAIN_IMPORT_ERROR is not None, f"fastapi unavailable: {MAIN_IMPORT_ERROR}")
 class PreflightGpuRoutingTests(unittest.TestCase):
+    def setUp(self):
+        # These tests model a CUDA host (a Windows box). They now also run on
+        # the Mac, where the real host_info() demotes every cuda request to
+        # the CPU path; pin the host so the scenario stays what it asserts.
+        cuda_host = {"os": "windows", "arch": "x86_64", "accelerator": "cuda", "gpuName": "RTX 3060", "memoryMb": 24576}
+        self._host = mock.patch.object(gpu, "host_info", return_value=cuda_host)
+        self._host.start()
+        self.addCleanup(self._host.stop)
+
     def test_preflight_uses_vram_when_device_cuda(self):
         request = TranscribeRequest(input_path="/media/clip.mkv", model="large-v3", device="cuda")
         fake_gpu = {"name": "RTX 3060", "total_vram_mb": 12000, "free_vram_mb": 1500}

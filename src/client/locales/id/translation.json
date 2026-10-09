@@ -658,6 +658,7 @@
         "firstRunDownload": "Proses pertama mungkin butuh waktu tambahan untuk mengunduh bobot model sebelum transkripsi dimulai.",
         "cachePending": "Detail cache akan muncul setelah backend melaporkan kesehatan untuk model terpilih.",
         "currentDefaults": "Bawaan permintaan saat ini: {{model}} di {{device}} / {{computeType}}, keluaran {{output}}.",
+        "currentDefaultsMetal": "Bawaan permintaan saat ini: {{model}}, keluaran {{output}}.",
         "backendMessage": "Pesan backend: {{message}}",
         "firstRunQuiet": "Proses transkripsi pertama bisa diam beberapa saat selagi model diunduh atau dipanaskan.",
         "serverVersion": "Versi server",

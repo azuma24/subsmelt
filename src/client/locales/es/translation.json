@@ -660,6 +660,7 @@
         "firstRunDownload": "La primera ejecución puede tardar más mientras descarga los pesos del modelo antes de empezar la transcripción.",
         "cachePending": "Los detalles de la caché aparecerán cuando el backend informe del estado del modelo seleccionado.",
         "currentDefaults": "Valores predeterminados actuales de la solicitud: {{model}} en {{device}} / {{computeType}}, salida {{output}}.",
+        "currentDefaultsMetal": "Valores predeterminados actuales de la solicitud: {{model}}, salida {{output}}.",
         "backendMessage": "Mensaje del backend: {{message}}",
         "firstRunQuiet": "Las primeras transcripciones pueden quedarse en silencio un rato mientras el modelo se descarga o se prepara.",
         "serverVersion": "Versión del servidor",

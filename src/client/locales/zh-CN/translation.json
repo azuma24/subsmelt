@@ -658,6 +658,7 @@
         "firstRunDownload": "首次运行可能需要额外时间下载模型权重，然后才开始转录。",
         "cachePending": "后端报告所选模型的健康状态后将显示缓存详情。",
         "currentDefaults": "当前请求默认值：{{model}}，{{device}} / {{computeType}}，输出 {{output}}。",
+        "currentDefaultsMetal": "当前请求默认值：{{model}}，输出 {{output}}。",
         "backendMessage": "后端消息：{{message}}",
         "firstRunQuiet": "首次转录时，模型下载或预热期间可能会有一段时间没有输出。",
         "serverVersion": "服务器版本",

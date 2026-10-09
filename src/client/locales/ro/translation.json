@@ -660,6 +660,7 @@
         "firstRunDownload": "Prima rulare poate petrece timp suplimentar descărcând ponderile modelului înainte de începerea transcrierii.",
         "cachePending": "Detaliile cache-ului vor apărea când backendul raportează starea pentru modelul selectat.",
         "currentDefaults": "Valori implicite curente ale cererii: {{model}} pe {{device}} / {{computeType}}, ieșire {{output}}.",
+        "currentDefaultsMetal": "Valori implicite curente ale cererii: {{model}}, ieșire {{output}}.",
         "backendMessage": "Mesaj backend: {{message}}",
         "firstRunQuiet": "Primele rulări de transcriere pot rămâne tăcute o vreme în timp ce modelul se descarcă sau se încălzește.",
         "serverVersion": "Versiune server",

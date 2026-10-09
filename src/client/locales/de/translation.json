@@ -658,6 +658,7 @@
         "firstRunDownload": "Beim ersten Lauf kann das Herunterladen der Modellgewichte vor Beginn der Transkription zusätzlich Zeit kosten.",
         "cachePending": "Cache-Details erscheinen, sobald das Backend den Status für das ausgewählte Modell meldet.",
         "currentDefaults": "Aktuelle Standardwerte für Anfragen: {{model}} auf {{device}} / {{computeType}}, Ausgabe {{output}}.",
+        "currentDefaultsMetal": "Aktuelle Standardwerte für Anfragen: {{model}}, Ausgabe {{output}}.",
         "backendMessage": "Backend-Meldung: {{message}}",
         "firstRunQuiet": "Die ersten Transkriptionen können eine Weile ohne Rückmeldung bleiben, während das Modell heruntergeladen oder aufgewärmt wird.",
         "serverVersion": "Serverversion",

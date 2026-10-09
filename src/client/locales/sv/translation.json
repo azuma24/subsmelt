@@ -658,6 +658,7 @@
         "firstRunDownload": "Första körningen kan ta extra tid för att ladda ner modellvikter innan transkriberingen startar.",
         "cachePending": "Cachedetaljer visas när backenden rapporterar hälsa för den valda modellen.",
         "currentDefaults": "Aktuella begäranstandarder: {{model}} på {{device}} / {{computeType}}, utdata {{output}}.",
+        "currentDefaultsMetal": "Aktuella begäranstandarder: {{model}}, utdata {{output}}.",
         "backendMessage": "Backend-meddelande: {{message}}",
         "firstRunQuiet": "De första transkriberingskörningarna kan vara tysta en stund medan modellen laddas ner eller värms upp.",
         "serverVersion": "Serverversion",

@@ -658,6 +658,7 @@
         "firstRunDownload": "Jalanan pertama mungkin mengambil masa tambahan memuat turun pemberat model sebelum transkripsi bermula.",
         "cachePending": "Butiran cache akan muncul apabila bahagian belakang melaporkan kesihatan untuk model dipilih.",
         "currentDefaults": "Lalai permintaan semasa: {{model}} pada {{device}} / {{computeType}}, output {{output}}.",
+        "currentDefaultsMetal": "Lalai permintaan semasa: {{model}}, output {{output}}.",
         "backendMessage": "Mesej bahagian belakang: {{message}}",
         "firstRunQuiet": "Jalanan transkripsi pertama boleh kekal senyap untuk seketika semasa model dimuat turun atau dipanaskan.",
         "serverVersion": "Versi pelayan",

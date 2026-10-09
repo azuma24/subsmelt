@@ -31,7 +31,7 @@ from .fetch_url import (
     download_url,
     url_fetch_available,
 )
-from .gpu import apple_gpu_info, cuda_device_count, gpu_info, host_info, total_free_vram_mb
+from .gpu import apple_gpu_info, cuda_device_count, effective_device, gpu_info, host_info, total_free_vram_mb
 from .log_state import get_log_state, log_file_path
 from .model_cache import describe_model_cache
 from .model_loader import (
@@ -620,7 +620,7 @@ def preflight_result(request: TranscribeRequest) -> PreflightResponse:
     # When the request targets CUDA, the binding constraint is VRAM, not system
     # RAM. Evaluate GPU safety against free VRAM (from gpu_info) and surface the
     # VRAM-specific fields/code; the system-RAM table is meaningless for GPU.
-    on_gpu = (request.device or "cpu").strip().lower() == "cuda"
+    on_gpu = effective_device(request.device) == "cuda"
     gpu_safety = None
     detected_gpus = None
     if on_gpu:
@@ -824,7 +824,7 @@ def validate_upload_request(request: TranscribeRequest, upload_size_mb: int, scr
     same HTTP error codes so the client handles upload and path mode identically.
     """
     ffmpeg_ok = ffmpeg_available()
-    on_gpu = (request.device or "cpu").strip().lower() == "cuda"
+    on_gpu = effective_device(request.device) == "cuda"
     if on_gpu:
         gpu_safety = evaluate_gpu_safety(request.model, _free_vram_for_next_load())
         model_safe, model_code, suggested = gpu_safety["safe"], gpu_safety["code"], gpu_safety["suggested_model"]

@@ -658,6 +658,7 @@
         "firstRunDownload": "Bij de eerste run kan er extra tijd nodig zijn om modelgewichten te downloaden voordat de transcriptie start.",
         "cachePending": "Cachedetails verschijnen wanneer de backend de status voor het geselecteerde model meldt.",
         "currentDefaults": "Huidige aanvraagstandaarden: {{model}} op {{device}} / {{computeType}}, uitvoer {{output}}.",
+        "currentDefaultsMetal": "Huidige aanvraagstandaarden: {{model}}, uitvoer {{output}}.",
         "backendMessage": "Backendbericht: {{message}}",
         "firstRunQuiet": "De eerste transcriptieruns kunnen een tijdje stil blijven terwijl het model downloadt of opwarmt.",
         "serverVersion": "Serverversie",

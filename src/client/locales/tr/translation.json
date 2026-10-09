@@ -658,6 +658,7 @@
         "firstRunDownload": "İlk çalıştırma, transkripsiyon başlamadan önce model ağırlıklarını indirmek için ekstra zaman harcayabilir.",
         "cachePending": "Önbellek ayrıntıları, arka uç seçilen model için sağlık bildirdiğinde görünür.",
         "currentDefaults": "Geçerli istek varsayılanları: {{device}} üzerinde {{model}} / {{computeType}}, çıktı {{output}}.",
+        "currentDefaultsMetal": "Geçerli istek varsayılanları: {{model}}, çıktı {{output}}.",
         "backendMessage": "Arka uç mesajı: {{message}}",
         "firstRunQuiet": "İlk transkripsiyon çalıştırmaları, model indirilirken veya ısınırken bir süre sessiz kalabilir.",
         "serverVersion": "Sunucu sürümü",

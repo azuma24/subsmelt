@@ -658,6 +658,7 @@
         "firstRunDownload": "Maaaring gumugol ng karagdagang oras ang unang pagtakbo sa pag-download ng model weights bago magsimula ang transkripsyon.",
         "cachePending": "Lalabas ang mga detalye ng cache kapag iniulat ng backend ang kalusugan para sa napiling model.",
         "currentDefaults": "Kasalukuyang request defaults: {{model}} sa {{device}} / {{computeType}}, output {{output}}.",
+        "currentDefaultsMetal": "Kasalukuyang request defaults: {{model}}, output {{output}}.",
         "backendMessage": "Mensahe ng backend: {{message}}",
         "firstRunQuiet": "Maaaring manatiling tahimik nang ilang panahon ang mga unang pagtakbo ng transkripsyon habang dina-download o pinaiinit ang model.",
         "serverVersion": "Bersyon ng server",

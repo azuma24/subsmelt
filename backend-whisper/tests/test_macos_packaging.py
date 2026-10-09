@@ -7,7 +7,6 @@ token is minted by the real ``--generate-token --save``.
 """
 
 import json
-import os
 import plistlib
 import stat
 import subprocess
@@ -47,6 +46,47 @@ class LaunchdInstallTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return result
+
+    def _run_dry(self, *args: str) -> subprocess.CompletedProcess:
+        """Runs install-launchd.sh --dry-run with a fake launchctl on PATH.
+
+        The fake records any launchctl call instead of touching the real
+        launchd domain, so the test proves --dry-run leaves launchd alone.
+        """
+        bin_dir = self.home / "fakebin"
+        bin_dir.mkdir()
+        (bin_dir / "launchctl").write_text('#!/bin/sh\necho "$*" >> "$FAKE_LAUNCHCTL_LOG"\nexit 0\n', encoding="utf-8")
+        (bin_dir / "launchctl").chmod(0o755)
+        env = {
+            "HOME": str(self.home),
+            "PATH": f"{bin_dir}:/usr/bin:/bin:/usr/sbin:/sbin",
+            "FAKE_LAUNCHCTL_LOG": str(self.home / "launchctl.log"),
+        }
+        result = subprocess.run(
+            ["/bin/bash", str(SCRIPTS / "install-launchd.sh"), str(self.unzipped), "--dry-run", *args],
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        return result
+
+    def test_dry_run_renders_the_files_and_never_touches_launchd_or_the_app(self):
+        self._run_dry("--port", "8001")
+
+        with self.plist.open("rb") as fh:
+            plist = plistlib.load(fh)
+        self.assertNotIn("EnvironmentVariables", plist)
+        self.assertNotIn("token", str(plist))
+        token = self._config()["token"]
+        self.assertGreaterEqual(len(token), 32)
+        self.assertEqual(self.config.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(self.info.stat().st_mode & 0o777, 0o600)
+        self.assertIn(f"Backend token: {token}\n", self.info.read_text(encoding="utf-8"))
+        self.assertFalse((self.app_dir / "whisper-server").exists())
+        launchctl_log = self.home / "launchctl.log"
+        if launchctl_log.exists():
+            self.fail(f"launchctl was called: {launchctl_log.read_text(encoding='utf-8')}")
 
     def _install(self, *args: str) -> subprocess.CompletedProcess:
         return self._run("install-launchd.sh", str(self.unzipped), *args)

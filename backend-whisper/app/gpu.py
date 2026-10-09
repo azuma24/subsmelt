@@ -227,3 +227,34 @@ def apple_gpu_info() -> list[GpuInfo]:
         return []
     free_mb = int(psutil.virtual_memory().available / 1024 / 1024) if psutil is not None else 0
     return [{"name": host["gpuName"] or "Apple GPU", "total_vram_mb": host["memoryMb"], "free_vram_mb": free_mb}]
+
+
+#: Compute types a CPU-only faster-whisper build accepts; anything else (the
+#: float16 a Windows install stored, say) falls back to int8.
+_CPU_COMPUTE_TYPES = ("int8", "int8_float32", "float32")
+
+
+def effective_device(device: str | None) -> str:
+    """The device a request should actually run with on this host.
+
+    A backend moved from a Windows PC still has device=cuda stored; on a Metal
+    host that must run on the CPU, since CTranslate2 has no CUDA there.
+    """
+    return (
+        "cpu"
+        if device and device.strip().lower() == "cuda" and host_info()["accelerator"] == "metal"
+        else (device or "cpu")
+    )
+
+
+def effective_compute_type(compute_type: str | None) -> str | None:
+    """The compute type a request should actually run with on this host.
+
+    Only meaningful with CPU compute types on a Metal host, where CUDA-only
+    values such as float16 would make the model load fail.
+    """
+    if host_info()["accelerator"] != "metal":
+        return compute_type
+    if compute_type and compute_type.strip().lower() in _CPU_COMPUTE_TYPES:
+        return compute_type
+    return "int8"

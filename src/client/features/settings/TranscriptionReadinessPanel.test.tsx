@@ -7,16 +7,22 @@ import { TranscriptionReadinessPanel } from "./TranscriptionReadinessPanel";
 
 type Capabilities = NonNullable<NonNullable<TranscriptionHealth["health"]>["capabilities"]>;
 
-function renderPanel(capabilities: Capabilities): string {
+function renderPanel(capabilities: Capabilities, settingsOverrides: Record<string, string> = {}): string {
   const healthQuery = {
     data: { ok: true, endpointReachable: true, health: { ffmpeg: true, capabilities } },
     isLoading: false,
     isFetching: false,
     refetch: () => {},
   } as unknown as UseQueryResult<TranscriptionHealth>;
-  const settings = { transcription_enabled: "1", transcription_backend_url: "http://whisper:8001" };
+  const settings = {
+    transcription_enabled: "1",
+    transcription_backend_url: "http://whisper:8001",
+    ...settingsOverrides,
+  };
   return renderPage(<TranscriptionReadinessPanel settings={settings} healthQuery={healthQuery} dirty={false} />).text;
 }
+
+const WINDOWS_SETTINGS = { transcription_device: "cuda", transcription_compute_type: "float16" };
 
 test("a Mac backend reads as the chip on Metal with its shared memory", () => {
   const text = renderPanel({
@@ -37,4 +43,32 @@ test("a CUDA backend keeps its VRAM line", () => {
   });
 
   assert.ok(text.includes("GPUs : RTX 4090 (20 GB / 24 GB)"), text);
+});
+
+test("a Mac backend leaves the CUDA settings out of the request defaults footer", () => {
+  const text = renderPanel(
+    {
+      devices: ["cpu"],
+      gpus: [],
+      host: { os: "macos", arch: "arm64", accelerator: "metal", gpuName: "Apple M5 Pro", memoryMb: 49152 },
+    },
+    WINDOWS_SETTINGS,
+  );
+
+  assert.ok(text.includes("Current request defaults: small, output SRT."), text);
+  assert.ok(!text.includes("cuda"), text);
+  assert.ok(!text.includes("float16"), text);
+});
+
+test("a CUDA backend keeps the device and compute type in the footer", () => {
+  const text = renderPanel(
+    {
+      devices: ["cpu", "cuda"],
+      gpus: [{ name: "RTX 4090", total_vram_mb: 24564, free_vram_mb: 20480 }],
+      host: { os: "windows", arch: "x86_64", accelerator: "cuda", gpuName: "RTX 4090", memoryMb: 24564 },
+    },
+    WINDOWS_SETTINGS,
+  );
+
+  assert.ok(text.includes("Current request defaults: small on cuda / float16, output SRT."), text);
 });

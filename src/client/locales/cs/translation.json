@@ -662,6 +662,7 @@
         "firstRunDownload": "První běh může strávit více času stahováním vah modelu, než začne přepis.",
         "cachePending": "Podrobnosti o mezipaměti se zobrazí, jakmile backend nahlásí stav pro vybraný model.",
         "currentDefaults": "Aktuální výchozí nastavení požadavku: {{model}} na {{device}} / {{computeType}}, výstup {{output}}.",
+        "currentDefaultsMetal": "Aktuální výchozí nastavení požadavku: {{model}}, výstup {{output}}.",
         "backendMessage": "Zpráva backendu: {{message}}",
         "firstRunQuiet": "První běhy přepisu mohou chvíli zůstat tiché, zatímco se model stahuje nebo zahřívá.",
         "serverVersion": "Verze serveru",
