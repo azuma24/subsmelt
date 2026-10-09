@@ -101,8 +101,7 @@ class LogFileGuardTests(LauncherTestCase):
         # The service runs as SYSTEM; a config edit must not point its log
         # anywhere on the disk.
         self._write_config({"log_file": str(self.data_dir / ".." / "elsewhere.log")})
-        expected = str(self.data_dir / "logs" / "whisper-server.log") if sys.platform == "win32" else None
-        self.assertEqual(self._load_log_file(), expected)
+        self.assertEqual(self._load_log_file(), run_server.default_log_file())
 
     def test_the_environment_log_file_is_not_guarded(self):
         # The GUI launches its own child with an explicit log path; only the

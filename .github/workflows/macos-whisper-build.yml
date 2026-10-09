@@ -1,0 +1,109 @@
+name: Build macOS Whisper App
+
+# Builds the Apple Silicon backend zip (backend-whisper/packaging/macos) on the
+# same whisper-v* tags as the Windows installer, and attaches it to the same
+# release. The zip ships no model weights.
+on:
+  push:
+    tags:
+      - 'whisper-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to create/attach release assets on tag
+
+jobs:
+  # Never ship an app that has not passed the test gate.
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: test
+    runs-on: macos-14
+    defaults:
+      run:
+        working-directory: backend-whisper
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.3
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      # build.sh names the zip from app/version.py; a tag that disagrees would
+      # publish a zip whose name and /health version contradict the release.
+      - name: Resolve version
+        id: ver
+        run: |
+          v="$(sed -n 's/^_DEFAULT_VERSION = "\(.*\)"$/\1/p' app/version.py)"
+          if [[ "$GITHUB_REF" == refs/tags/whisper-v* && "${GITHUB_REF#refs/tags/whisper-v}" != "$v" ]]; then
+            echo "::error::tag $GITHUB_REF does not match app/version.py ($v)"
+            exit 1
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: packaging/macos/build.sh "$RUNNER_TEMP/build"
+
+      # The launchd scripts' tests need plutil and ditto, so only a Mac runs them.
+      - name: Test the launchd scripts
+        run: |
+          "$RUNNER_TEMP/build/venv/bin/python" -m pip install pytest
+          "$RUNNER_TEMP/build/venv/bin/python" -m pytest tests/test_macos_packaging.py tests/test_run_server_output.py -q
+
+      - name: Check bundled runtimes
+        run: |
+          app="$RUNNER_TEMP/build/dist/whisper-server"
+          for f in whisper-server nemo-speech/bin/nemo-speech ffmpeg/ffmpeg ffmpeg/ffprobe \
+                   _internal/opencc/config/s2twp.json _internal/opencc/config/t2s.json _internal/opencc/dictionary/TWPhrases.txt; do
+            [[ -e "$app/$f" ]] || { echo "::error::build did not bundle $f"; exit 1; }
+          done
+          "$app/nemo-speech/bin/nemo-speech" --version
+          "$app/ffmpeg/ffmpeg" -hide_banner -version | head -1
+          if otool -L "$app/ffmpeg/ffmpeg" | awk 'NR > 1 { print $1 }' | grep -Ev '^(/usr/lib/|/System/Library/)'; then
+            echo "::error::bundled ffmpeg links libraries outside macOS"; exit 1
+          fi
+
+      # --print-config exits before uvicorn or the app is imported.
+      - name: Smoke test frozen launcher (--print-config)
+        run: |
+          "$RUNNER_TEMP/build/dist/whisper-server/whisper-server" --print-config
+
+      # Start the real server on a bare PATH, as launchd does. /health must
+      # answer and find the bundled nemo-speech; a tiny Whisper transcription
+      # through the bundled ffmpeg loads the OpenCC dictionaries too.
+      - name: Smoke test frozen server
+        run: |
+          app="$RUNNER_TEMP/build/dist/whisper-server/whisper-server"
+          export SUBSMELT_DATA_DIR="$RUNNER_TEMP/data" SUBSMELT_WHISPER_MODEL_DIR="$RUNNER_TEMP/models"
+          export SUBSMELT_WHISPER_HOST=127.0.0.1 SUBSMELT_WHISPER_PORT=8766
+          python3 -c "import wave; w = wave.open('tone.wav', 'wb'); w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000); w.writeframes(bytes(32000)); w.close()"
+          env PATH=/usr/bin:/bin "$app" > server.out 2>&1 &
+          pid=$!
+          trap 'kill $pid 2>/dev/null || true; tail -30 server.out; tail -30 "$SUBSMELT_DATA_DIR/logs/whisper-server.log" 2>/dev/null || true' EXIT
+          for _ in $(seq 90); do curl -sf http://127.0.0.1:8766/health -o health.json && break; sleep 1; done
+          python3 -c "import json, sys; h = json.load(open('health.json')); n = h['capabilities']['nemoSpeech']; print(n); sys.exit(0 if n['available'] else 1)"
+          curl -sf -X POST http://127.0.0.1:8766/models/download -H 'Content-Type: application/json' -d '{"model":"tiny"}' --max-time 300 > /dev/null
+          out="$(curl -sS -w '\n%{http_code}' -F file=@tone.wav \
+            -F 'request={"model":"tiny","language":"zh","chinese_script":"zh-TW","output_format":"srt","device":"cpu","compute_type":"int8"}' \
+            http://127.0.0.1:8766/transcribe/upload)"
+          echo "$out"
+          [[ "$(tail -1 <<<"$out")" == 200 ]] || { echo "::error::frozen transcription failed"; exit 1; }
+          grep -q '"chinese_script":"zh-TW"' <<<"$out" || { echo "::error::no Chinese script conversion"; exit 1; }
+
+      - name: Upload zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: subsmelt-whisper-macos-arm64-${{ steps.ver.outputs.version }}
+          path: ${{ runner.temp }}/build/dist/*.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish release asset
+        if: startsWith(github.ref, 'refs/tags/whisper-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ runner.temp }}/build/dist/*.zip
+          tag_name: ${{ github.ref_name }}

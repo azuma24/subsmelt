@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-r"""SubSmelt Whisper backend launcher (Phase 3 Windows packaging entrypoint).
+r"""SubSmelt Whisper backend launcher (the packaged apps' entrypoint).
 
 This is a *thin* programmatic launcher for the existing FastAPI app
 (``app.main:app``). It exists so the service can be frozen by PyInstaller
-(``whisper-server.spec``) into ``run_server.exe`` and run as a Windows Service,
-while remaining fully runnable on macOS/Linux for local testing.
+into ``run_server.exe`` run as a Windows Service
+(``packaging/windows/whisper-server.spec``) and into ``whisper-server`` run as
+a launchd agent on macOS (``packaging/macos/whisper-server.spec``), while
+remaining runnable from source anywhere.
 
 It does three jobs and then hands off to uvicorn:
 
@@ -15,6 +17,7 @@ It does three jobs and then hands off to uvicorn:
   3. Verify the cuDNN/cuBLAS runtime can load *early*, emitting a clear, actionable
      message instead of letting the first transcription die with a raw
      ``cudnn_ops64_9.dll not found`` — the #1 packaging footgun (plan §4).
+     On macOS the probe reports the bundled nemo-speech (Metal) instead.
 
 Config (all optional; sensible localhost defaults):
     SUBSMELT_WHISPER_HOST    bind host   (default 0.0.0.0; see note below)
@@ -22,7 +25,8 @@ Config (all optional; sensible localhost defaults):
     SUBSMELT_WHISPER_MODEL_DIR   model cache dir -> exported as HF_HOME/XDG_CACHE_HOME
     SUBSMELT_WHISPER_TOKEN   shared-secret bearer token (Phase 1 auth)
     SUBSMELT_WHISPER_MEDIA_ROOT  allowed media root -> exported as MEDIA_ROOT
-    SUBSMELT_FFMPEG          path to bundled ffmpeg.exe (consumed by app/audio.py)
+    SUBSMELT_FFMPEG          path to the bundled ffmpeg (consumed by app/audio.py).
+                             A frozen macOS app defaults to <exe dir>/ffmpeg/ffmpeg
     SUBSMELT_NEMO_SPEECH     path to the bundled nemo-speech binary that runs the
                              Nemotron ASR engine (config key "nemo_speech")
     SUBSMELT_WHISPER_CONFIG  path to a JSON config file (env vars win over it)
@@ -30,7 +34,8 @@ Config (all optional; sensible localhost defaults):
     SUBSMELT_WHISPER_LOG_LEVEL   uvicorn log level (default "info")
     SUBSMELT_WHISPER_LOG_FILE    path to a rotating log file (5MB×5)
                              Windows default: <data dir>\logs\whisper-server.log;
-                             other platforms: console only
+                             macOS: ~/Library/Logs/SubSmelt Whisper/whisper-server.log;
+                             Linux: console only
     SUBSMELT_DATA_DIR        data dir holding config.json + logs\. Defaults:
                              Windows C:\ProgramData\SubSmelt,
                              macOS ~/Library/Application Support/SubSmelt,
@@ -80,6 +85,7 @@ DEFAULT_LOG_LEVEL = "info"
 DEFAULT_WINDOWS_DATA_DIR = r"C:\ProgramData\SubSmelt"
 DEFAULT_CONFIG_FILE_NAME = "config.json"
 DEFAULT_LOG_FILE_NAME = "whisper-server.log"
+MACOS_LOG_DIR_NAME = "SubSmelt Whisper"
 
 
 def default_data_dir(env: dict[str, str] | None = None, platform: str | None = None) -> Path:
@@ -106,18 +112,41 @@ def default_config_path(env: dict[str, str] | None = None, platform: str | None 
     return str(default_data_dir(env, platform) / DEFAULT_CONFIG_FILE_NAME)
 
 
-def default_log_file(env: dict[str, str] | None = None, platform: str | None = None) -> str | None:
-    """The service's log file on Windows; None elsewhere.
+def default_log_dir(env: dict[str, str] | None = None, platform: str | None = None) -> Path:
+    """Where the backend's log files belong: ``~/Library/Logs/SubSmelt Whisper``
+    on macOS, where Console.app looks, and ``<data dir>/logs`` elsewhere or when
+    SUBSMELT_DATA_DIR moves the data dir."""
+    environ = os.environ if env is None else env
+    if platform is None:
+        platform = sys.platform
+    if platform == "darwin" and not (environ.get("SUBSMELT_DATA_DIR") or "").strip():
+        return Path.home() / "Library" / "Logs" / MACOS_LOG_DIR_NAME
+    return default_data_dir(env, platform) / "logs"
 
-    Windows-only on purpose: a file handler also turns uvicorn's console logging
-    off (``log_config=None``), and the console is how a Docker container is
-    watched. The GUI gives its own child an explicit SUBSMELT_WHISPER_LOG_FILE.
+
+def default_log_file(env: dict[str, str] | None = None, platform: str | None = None) -> str | None:
+    """The installed app's log file on Windows and macOS; None on Linux.
+
+    Linux is left out on purpose: a file handler also turns uvicorn's console
+    logging off (``log_config=None``), and the console is how a Docker container
+    is watched. The GUI gives its own child an explicit SUBSMELT_WHISPER_LOG_FILE.
     """
     if platform is None:
         platform = sys.platform
-    if platform != "win32":
+    if platform not in ("win32", "darwin"):
         return None
-    return str(default_data_dir(env, platform) / "logs" / DEFAULT_LOG_FILE_NAME)
+    return str(default_log_dir(env, platform) / DEFAULT_LOG_FILE_NAME)
+
+
+def bundled_ffmpeg() -> str | None:
+    """``<exe dir>/ffmpeg/ffmpeg`` in the frozen macOS app, else None.
+
+    launchd starts the app with a bare PATH, so a Homebrew ffmpeg is never
+    found there; the app ships its own beside the executable.
+    """
+    if sys.platform != "darwin" or not getattr(sys, "frozen", False):
+        return None
+    return str(Path(sys.executable).resolve().parent / "ffmpeg" / "ffmpeg")
 
 
 @dataclass(frozen=True)
@@ -201,7 +230,11 @@ def write_config_token(path: str, token: str) -> None:
     merged = {**existing, "token": token}
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp = target.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(merged, indent=2) + "\n", encoding="utf-8")
+    # Owner-only from the first byte: the file holds the token, and the replace
+    # below would otherwise swap a locked-down config for a world-readable one.
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write(json.dumps(merged, indent=2) + "\n")
     tmp.replace(target)
 
 
@@ -239,7 +272,7 @@ def load_config() -> ServerConfig:
         model_dir=pick("SUBSMELT_WHISPER_MODEL_DIR", "model_dir", None),
         token=token,
         media_root=pick("SUBSMELT_WHISPER_MEDIA_ROOT", "media_root", None),
-        ffmpeg=pick("SUBSMELT_FFMPEG", "ffmpeg", None),
+        ffmpeg=pick("SUBSMELT_FFMPEG", "ffmpeg", bundled_ffmpeg()),
         log_level=pick("SUBSMELT_WHISPER_LOG_LEVEL", "log_level", DEFAULT_LOG_LEVEL) or DEFAULT_LOG_LEVEL,
         log_file=os.environ.get("SUBSMELT_WHISPER_LOG_FILE") or _guarded_log_file(file_cfg.get("log_file")),
         nemo_speech=pick("SUBSMELT_NEMO_SPEECH", "nemo_speech", None),
@@ -248,7 +281,7 @@ def load_config() -> ServerConfig:
 
 
 def _guarded_log_file(candidate: object) -> str | None:
-    """A config.json ``log_file`` is honoured only inside <data dir>/logs.
+    """A config.json ``log_file`` is honoured only inside the logs folder.
 
     The installed service runs as SYSTEM and config.json is hand-editable, so
     an unrestricted path there would let a config edit make SYSTEM write
@@ -258,7 +291,7 @@ def _guarded_log_file(candidate: object) -> str | None:
     """
     if candidate is None:
         return default_log_file()
-    logs_dir = default_data_dir() / "logs"
+    logs_dir = default_log_dir()
     try:
         if Path(str(candidate)).resolve().is_relative_to(logs_dir.resolve()):
             return str(candidate)
@@ -359,6 +392,23 @@ def verify_cuda_runtime() -> tuple[bool, str]:
             "required; the bundled cuDNN/cuBLAS wheels provide the runtime)."
         )
     return True, f"CUDA runtime OK — {count} device(s) available."
+
+
+def verify_metal_runtime() -> tuple[bool, str]:
+    """The macOS counterpart of the CUDA probe: Metal is reached only through
+    the bundled nemo-speech, so its version is what the startup line reports."""
+    from app.nemotron_runtime import binary_version
+
+    version = binary_version()
+    if version is None:
+        return False, "nemo-speech runtime not found — Nemotron is unavailable; Whisper runs on the CPU."
+    return True, f"nemo-speech {version} on Metal — Nemotron runs on the GPU; Whisper runs on the CPU."
+
+
+def verify_accelerator(platform: str | None = None) -> tuple[bool, str]:
+    if (platform or sys.platform) == "darwin":
+        return verify_metal_runtime()
+    return verify_cuda_runtime()
 
 
 # ---------------------------------------------------------------------------
@@ -553,15 +603,15 @@ def tolerate_unencodable_output() -> None:
 
 def prepare_runtime(config: ServerConfig) -> tuple[bool, bool, str]:
     """Everything between a resolved config and starting uvicorn: environment,
-    DLL search path, file logging, the CUDA probe. Shared by the console
+    DLL search path, file logging, the GPU probe. Shared by the console
     launcher and the Windows service so the two cannot drift.
 
-    Returns (file_logging, gpu_ok, cuda_message).
+    Returns (file_logging, gpu_ok, gpu_message).
     """
     apply_environment(config)
     add_bundled_dll_dir()
     file_logging = configure_file_logging(config)
-    gpu_ok, message = verify_cuda_runtime()
+    gpu_ok, message = verify_accelerator()
     print(f"[run_server] {message}")
     return file_logging, gpu_ok, message
 

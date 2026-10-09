@@ -129,10 +129,9 @@ class DataDirDefaultsTests(unittest.TestCase):
                 Path("/Users/op/Library/Application Support/SubSmelt"),
             )
 
-    def test_non_windows_keeps_console_logging(self):
+    def test_linux_keeps_console_logging(self):
         # A default log file would also switch uvicorn's console logging off
         # (log_config=None), which is how Docker containers are watched.
-        self.assertIsNone(run_server.default_log_file(env={}, platform="darwin"))
         self.assertIsNone(run_server.default_log_file(env={}, platform="linux"))
 
 

@@ -115,6 +115,13 @@ class GenerateTokenCliTests(unittest.TestCase):
         self.assertNotEqual(stored, "already-in-use")
         self.assertTrue(looks_generated(stored))
 
+    @unittest.skipIf(os.name == "nt", "POSIX file modes")
+    def test_a_rotated_token_stays_readable_by_the_owner_only(self):
+        self._write_config({"token": "already-in-use"})
+        self.config.chmod(0o600)
+        self._run("--generate-token", "--save", "--force")
+        self.assertEqual(self.config.stat().st_mode & 0o777, 0o600)
+
     def test_save_warns_when_an_env_token_shadows_the_file(self):
         # run_server gives SUBSMELT_WHISPER_TOKEN precedence over config.json, so
         # a saved token would not be the one actually enforced.
