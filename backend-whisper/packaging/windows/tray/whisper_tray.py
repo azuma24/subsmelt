@@ -179,26 +179,39 @@ def quit_standalone(icon=None, _item=None) -> None:
         icon.stop()
 
 
-def start_service(icon=None, _item=None) -> None:
+def _elevated_sc(verb: str) -> list[str]:
+    """``sc.exe <verb> <service>`` behind a UAC prompt.
+
+    The tray runs unelevated and sc.exe start/stop is administrator-only, so a
+    direct call always came back "Access is denied". Start-Process -Verb RunAs
+    is ShellExecute's "runas": Windows shows the consent prompt, the elevated
+    sc.exe runs, and its exit code is passed back; a declined prompt makes
+    Start-Process throw, which exits 1 with the reason on stderr.
+    """
+    script = (
+        f"$p = Start-Process -FilePath sc.exe -ArgumentList '{verb}','{SERVICE_NAME}' "
+        "-Verb RunAs -Wait -PassThru -WindowStyle Hidden; exit $p.ExitCode"
+    )
+    return ["powershell.exe", "-NoProfile", "-Command", script]
+
+
+def _service_control(icon, verb: str) -> None:
     if not _is_windows():
-        print("[tray] start_service is a no-op off Windows.")
+        print(f"[tray] {verb}_service is a no-op off Windows.")
         return
-    code, out = _run(["sc.exe", "start", SERVICE_NAME])
+    code, out = _run(_elevated_sc(verb))
     if code != 0:
-        _report(icon, f"start service failed (rc={code}): {_last_line(out)}")
+        _report(icon, f"{verb} service failed (rc={code}): {_last_line(out)}")
     else:
-        print(f"[tray] start service rc={code}: {out.strip()}")
+        print(f"[tray] {verb} service rc={code}: {out.strip()}")
+
+
+def start_service(icon=None, _item=None) -> None:
+    _service_control(icon, "start")
 
 
 def stop_service(icon=None, _item=None) -> None:
-    if not _is_windows():
-        print("[tray] stop_service is a no-op off Windows.")
-        return
-    code, out = _run(["sc.exe", "stop", SERVICE_NAME])
-    if code != 0:
-        _report(icon, f"stop service failed (rc={code}): {_last_line(out)}")
-    else:
-        print(f"[tray] stop service rc={code}: {out.strip()}")
+    _service_control(icon, "stop")
 
 
 def service_status() -> str:

@@ -131,6 +131,11 @@ if "app.main" not in _app_modules:
     raise SystemExit(f"[whisper-server.spec] no app modules found under {APP_DIR}")
 hiddenimports += ["app", *_app_modules]
 hiddenimports += ["pynvml"]
+# run_server.exe --service hosts the Windows Service through pywin32
+# (winservice.py). servicemanager is a pyd the launcher imports lazily, and
+# win32timezone is loaded by name inside pywin32, so neither is reachable from
+# static analysis.
+hiddenimports += ["winservice", "servicemanager", "win32serviceutil", "win32service", "win32event", "win32timezone"]
 
 block_cipher = None
 

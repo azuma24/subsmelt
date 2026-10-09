@@ -87,8 +87,8 @@ def _resolve_app_version() -> str:
     package.json and the installer — deliberately not a fourth constant to keep
     in step. It is importable here because whisper-gui.spec puts backend-whisper
     on pathex and hidden-imports `app.version` (app/__init__.py is empty, so
-    this costs the bundle nothing). SUBSMELT_WHISPER_VERSION still wins, which
-    is what the installer stamps machine-wide.
+    this costs the bundle nothing). SUBSMELT_WHISPER_VERSION still wins; the
+    installer stamps the version into config.json for the service.
 
     Never fatal: a control window that cannot start because it failed to work
     out its own version number would be a poor trade.

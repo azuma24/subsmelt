@@ -10,11 +10,15 @@
 ; because it cannot be tested in this environment.
 ;
 ; What it does (plan Phase 3):
+;   * Stops a running SubSmeltWhisper service before files are copied (upgrade).
 ;   * Installs the --onedir output (dist\whisper-server\) into Program Files.
 ;   * Bundles + silently installs the VC++ redistributable.
 ;   * Runs a driver-version / hardware PRE-CHECK gate (Phase 3a provisioning).
-;   * Registers the Windows Service (install-service.ps1).
-;   * Adds a Windows Firewall rule for the chosen port.
+;   * Registers the Windows Service (install-service.ps1), which writes the
+;     settings and a fresh token to C:\ProgramData\SubSmelt\config.json, and
+;     fails the install visibly when that script fails.
+;   * Adds a Windows Firewall rule for the chosen port (private/domain only).
+;   * Shows the backend URL and token on the finish page.
 ;   * Provides a clean uninstaller (uninstall-service.ps1 + firewall removal).
 ;
 ; Models are NOT bundled (plan Phase 3/3a). First run uses the model manager.
@@ -30,6 +34,7 @@
 #define MyAppPublisher "SubSmelt"
 #define MyServiceName "SubSmeltWhisper"
 #define MyDefaultPort "8001"
+#define MyFirewallRule "SubSmelt Whisper Backend"
 
 [Setup]
 AppId={{B7E1B0C2-9D3A-4E55-9B2E-5A1F2C3D4E5F}
@@ -74,7 +79,9 @@ Source: "vendor\vc_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall;
 Name: "{group}\{#MyAppName}";           Filename: "{app}\whisper-gui.exe";  Check: GuiBundled
 Name: "{commondesktop}\{#MyAppName}";   Filename: "{app}\whisper-gui.exe";  Check: GuiBundled; Tasks: desktopicon
 Name: "{group}\Whisper Tray";           Filename: "{app}\whisper-tray.exe"; Check: TrayBundled
-Name: "{group}\Open Whisper Config";    Filename: "notepad.exe"; Parameters: """{commonappdata}\SubSmelt\config.json"""
+; config.json is readable by administrators only (it holds the token), so the
+; editor is started through a UAC prompt.
+Name: "{group}\Open Whisper Config";    Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -Command ""Start-Process notepad.exe -Verb RunAs -ArgumentList '{commonappdata}\SubSmelt\config.json'"""
 Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
 
 [Tasks]
@@ -85,26 +92,12 @@ Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
 Name: "desktopicon"; Description: "Create a desktop shortcut for the control window"; GroupDescription: "Shortcuts:"
 
 [Run]
-; ---------------------------------------------------------------------------
-; Order matters: VC++ redist -> service registration -> firewall rule.
-; The driver pre-check runs earlier in code (PrepareToInstall, see below).
-; ---------------------------------------------------------------------------
-
-; 1) VC++ redistributable, silent. /norestart so we don't reboot mid-install.
-Filename: "{tmp}\vc_redist.x64.exe"; Parameters: "/install /quiet /norestart"; \
-    StatusMsg: "Installing Visual C++ runtime..."; Check: VCRedistBundled; Flags: waituntilterminated
-
-; 2) Register the Windows Service via the bundled PowerShell script.
-;    Port comes from the wizard page (default 8001). ExecutionPolicy Bypass so an
-;    unsigned script runs; the script itself asserts admin.
-Filename: "powershell.exe"; \
-    Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\install-service.ps1"" -ExePath ""{app}\run_server.exe"" -ServiceName ""{#MyServiceName}"" -Port {code:GetPort} -Version ""{#MyAppVersion}"" -ModelDir ""{commonappdata}\SubSmelt\models"" -MediaRoot ""{commonappdata}\SubSmelt\media"""; \
-    StatusMsg: "Registering Windows Service..."; Flags: runhidden waituntilterminated
-
-; 3) Windows Firewall rule for the inbound port (only meaningful for remote use).
-Filename: "netsh.exe"; \
-    Parameters: "advfirewall firewall add rule name=""SubSmelt Whisper Backend"" dir=in action=allow protocol=TCP localport={code:GetPort}"; \
-    StatusMsg: "Adding Windows Firewall rule..."; Flags: runhidden waituntilterminated
+; The VC++ runtime, service registration and firewall rule run from [Code]
+; (CurStepChanged ssPostInstall) so their exit codes are checked; a [Run] entry
+; cannot fail the install. Only the finish-page checkbox lives here. It runs
+; elevated on purpose: backend-info.txt is readable by administrators only.
+Filename: "notepad.exe"; Parameters: """{commonappdata}\SubSmelt\backend-info.txt"""; \
+    Description: "Open backend-info.txt (backend URL and token)"; Flags: postinstall nowait skipifsilent; Check: BackendInfoWritten
 
 [UninstallRun]
 ; Remove the service first (before files are deleted).
@@ -113,7 +106,7 @@ Filename: "powershell.exe"; \
     RunOnceId: "RemoveService"; Flags: runhidden waituntilterminated
 ; Remove the firewall rule.
 Filename: "netsh.exe"; \
-    Parameters: "advfirewall firewall delete rule name=""SubSmelt Whisper Backend"""; \
+    Parameters: "advfirewall firewall delete rule name=""{#MyFirewallRule}"""; \
     RunOnceId: "RemoveFirewall"; Flags: runhidden waituntilterminated
 
 [Code]
@@ -149,6 +142,11 @@ begin
   Result := FileExists(ExpandConstant('{app}\whisper-tray.exe'));
 end;
 
+function BackendInfoWritten: Boolean;
+begin
+  Result := FileExists(ExpandConstant('{commonappdata}\SubSmelt\backend-info.txt'));
+end;
+
 { ---- True if the bundled VC++ redist was dropped in at build time ---- }
 function VCRedistBundled: Boolean;
 begin
@@ -158,6 +156,28 @@ begin
   // desired "drop it in" enforcement. (Note: avoid Inno {-constants in { } block
   // comments — the first } closes the comment early and breaks compilation.)
   Result := True;
+end;
+
+{ ---- Stop a running service so an upgrade does not hit locked files ----
+  net stop waits for the service to report STOPPED; the loop afterwards covers
+  a service that was still STOP_PENDING when net gave up. }
+procedure StopExistingService;
+var
+  ResultCode: Integer;
+  Attempt: Integer;
+begin
+  if not Exec('net.exe', 'stop {#MyServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    Exit;
+  Log(Format('net stop {#MyServiceName} exited %d', [ResultCode]));
+  for Attempt := 1 to 30 do
+  begin
+    if Exec('cmd.exe', '/C sc.exe query {#MyServiceName} | find "STOPPED"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
+      Exit;
+    if Exec('cmd.exe', '/C sc.exe query {#MyServiceName} | find "1060"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
+      Exit;  { 1060: not installed }
+    Sleep(1000);
+  end;
+  Log('{#MyServiceName} did not reach STOPPED within 30 s; continuing.');
 end;
 
 { =========================================================================
@@ -186,6 +206,8 @@ begin
   Result := '';  { empty string => proceed with install }
   NeedsRestart := False;
 
+  StopExistingService;
+
   { TODO(Phase 3a): point this at the bundled provision.exe once it exists.
     Until then we look for it next to the source bundle; if absent, we skip the
     gate rather than block (CPU-only mode is always allowed). }
@@ -213,8 +235,77 @@ begin
     Log('provision.exe not found; skipping driver pre-check (Phase 3a integration pending).');
 end;
 
-{ Ensure the shared config/data dirs exist post-install so the service + model
-  manager have a known location. }
+{ ---- VC++ runtime, silent. /norestart so we don't reboot mid-install. ---- }
+procedure InstallVCRedist;
+var
+  ResultCode: Integer;
+  Redist: String;
+begin
+  Redist := ExpandConstant('{tmp}\vc_redist.x64.exe');
+  if not FileExists(Redist) then
+    Exit;
+  if not Exec(Redist, '/install /quiet /norestart', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    Log('vc_redist.x64.exe failed to launch')
+  else
+    Log(Format('vc_redist.x64.exe exited %d', [ResultCode]));
+end;
+
+{ ---- Register the service through install-service.ps1 ----
+  -GenerateToken: a fresh install is never tokenless; the script keeps a token
+  that config.json already holds, so an upgrade does not change the key.
+  The script's output goes to install-service.log (it never prints the token
+  when -InfoFile is given); a non-zero exit is shown to the user instead of
+  letting Setup report success. }
+procedure RegisterService;
+var
+  ResultCode: Integer;
+  DataDir, LogFile, Params: String;
+begin
+  DataDir := ExpandConstant('{commonappdata}\SubSmelt');
+  LogFile := DataDir + '\logs\install-service.log';
+  Params := '/C ""powershell.exe" -NoProfile -ExecutionPolicy Bypass'
+    + ' -File "' + ExpandConstant('{app}\install-service.ps1') + '"'
+    + ' -ExePath "' + ExpandConstant('{app}\run_server.exe') + '"'
+    + ' -ServiceName "{#MyServiceName}"'
+    + ' -Port ' + GetPort('')
+    + ' -Version "{#MyAppVersion}"'
+    + ' -DataDir "' + DataDir + '"'
+    + ' -ModelDir "' + DataDir + '\models"'
+    + ' -MediaRoot "' + DataDir + '\media"'
+    + ' -InfoFile "' + DataDir + '\backend-info.txt"'
+    + ' -GenerateToken'
+    + ' > "' + LogFile + '" 2>&1"';
+  if not Exec('cmd.exe', Params, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+  begin
+    MsgBox('Could not launch install-service.ps1. The backend service was NOT registered.' + #13#10 +
+           'Run install-service.ps1 from an elevated PowerShell in ' + ExpandConstant('{app}') + '.',
+           mbError, MB_OK);
+    Exit;
+  end;
+  Log(Format('install-service.ps1 exited %d', [ResultCode]));
+  if ResultCode <> 0 then
+    MsgBox(Format('Registering the backend service failed (exit code %d).', [ResultCode]) + #13#10#13#10 +
+           'See ' + LogFile + ' for details, then run install-service.ps1 from an elevated PowerShell in '
+           + ExpandConstant('{app}') + '.', mbError, MB_OK);
+end;
+
+{ ---- Firewall: delete any rule with our name first, so an upgrade does not
+  leave one rule per install. Private and domain profiles only: a backend on a
+  public network should not be reachable from it. ---- }
+procedure AddFirewallRule;
+var
+  ResultCode: Integer;
+begin
+  Exec('netsh.exe', 'advfirewall firewall delete rule name="{#MyFirewallRule}"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  if not Exec('netsh.exe', 'advfirewall firewall add rule name="{#MyFirewallRule}" dir=in action=allow protocol=TCP localport='
+      + GetPort('') + ' profile=private,domain', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    Log('netsh failed to launch')
+  else
+    Log(Format('netsh add rule exited %d', [ResultCode]));
+end;
+
+{ Order matters: VC++ runtime -> service registration -> firewall rule. The
+  driver pre-check ran earlier (PrepareToInstall). }
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
@@ -223,5 +314,24 @@ begin
     ForceDirectories(ExpandConstant('{commonappdata}\SubSmelt\models'));
     ForceDirectories(ExpandConstant('{commonappdata}\SubSmelt\media'));
     ForceDirectories(ExpandConstant('{commonappdata}\SubSmelt\logs'));
+    InstallVCRedist;
+    RegisterService;
+    AddFirewallRule;
+  end;
+end;
+
+{ ---- Finish page: show the connection details install-service.ps1 wrote ---- }
+procedure CurPageChanged(CurPageID: Integer);
+var
+  Info: AnsiString;
+begin
+  if CurPageID = wpFinished then
+  begin
+    if LoadStringFromFile(ExpandConstant('{commonappdata}\SubSmelt\backend-info.txt'), Info) then
+      WizardForm.FinishedLabel.Caption := WizardForm.FinishedLabel.Caption + #13#10#13#10 + String(Info)
+    else
+      WizardForm.FinishedLabel.Caption := WizardForm.FinishedLabel.Caption + #13#10#13#10 +
+        'The backend service was not registered. See ' +
+        ExpandConstant('{commonappdata}\SubSmelt\logs\install-service.log') + '.';
   end;
 end;

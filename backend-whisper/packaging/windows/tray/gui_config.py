@@ -67,10 +67,11 @@ def config_path(env: dict[str, str] | None = None) -> Path:
     return data_dir(environ) / "config.json"
 
 
-# run_server gives environment variables precedence over config.json, and
-# install-service.ps1 sets these machine-wide for the installed service. When one
-# is present, saving the corresponding field here cannot change what the service
-# uses — say so rather than implying the setting took effect everywhere.
+# run_server gives environment variables precedence over config.json. Older
+# installers set these machine-wide for the installed service (the current one
+# removes them), and a shell may still export them. When one is present, saving
+# the corresponding field here cannot change what the service uses — say so
+# rather than implying the setting took effect everywhere.
 SHADOWING_ENV_VARS = {
     "host": "SUBSMELT_WHISPER_HOST",
     "port": "SUBSMELT_WHISPER_PORT",

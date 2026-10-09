@@ -59,12 +59,14 @@ jobs:
 
       # Build deps: the CPU requirements (faster-whisper pulls the CUDA-capable
       # ctranslate2 wheel on Windows), PLUS the cuDNN/cuBLAS runtime wheels so
-      # the spec's collect_dynamic_libs finds the DLLs, PLUS PyInstaller.
+      # the spec's collect_dynamic_libs finds the DLLs, PLUS PyInstaller, PLUS
+      # pywin32 for the Windows Service entry (winservice.py; Windows-only, so
+      # not in requirements.txt).
       - name: Install build dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install nvidia-cudnn-cu12 nvidia-cublas-cu12 pyinstaller
+          pip install nvidia-cudnn-cu12 nvidia-cublas-cu12 pyinstaller pywin32
           pip list
 
       # Fetch ffmpeg.exe + vc_redist.x64.exe + the pinned, SHA-256 verified

@@ -16,8 +16,9 @@ installer, a Windows Service, and a system-tray controller.
 |---|---|---|
 | `whisper-server.spec` | PyInstaller spec → `dist\whisper-server\` onedir bundle | yes |
 | `../../run_server.py` | uvicorn launcher / frozen entrypoint (cross-platform) | runnable anywhere |
+| `../../winservice.py` | Windows Service entry (`run_server.exe --service`): pywin32 `ServiceFramework` running uvicorn in-process | imports anywhere; runs on Windows |
 | `installer.iss` | Inno Setup installer (Program Files, VC++, service, firewall, driver gate, uninstaller) | yes (ISCC.exe) |
-| `install-service.ps1` / `uninstall-service.ps1` | register/remove the auto-start service with crash recovery | yes (admin) |
+| `install-service.ps1` / `uninstall-service.ps1` | register/remove the auto-start service with crash recovery; write/remove `config.json` | yes (admin) |
 | `tray/whisper_tray.py` | pystray/pillow tray controller | builds on Windows; imports anywhere |
 
 `app/audio.py` was given an additive `SUBSMELT_FFMPEG` env hook so the bundled
@@ -36,8 +37,9 @@ installer, a Windows Service, and a system-tray controller.
    .venv\Scripts\activate
    pip install -r requirements.txt
 
-   :: PyInstaller bundler
-   pip install pyinstaller
+   :: PyInstaller bundler + pywin32 for the Windows Service entry (winservice.py).
+   :: Both are Windows-build-only and deliberately not in requirements.txt.
+   pip install pyinstaller pywin32
 
    :: CUDA runtime wheels (the #1 footgun — provides cudnn_ops64_9.dll / cublas64_12.dll)
    pip install nvidia-cudnn-cu12 nvidia-cublas-cu12
@@ -63,9 +65,11 @@ installer, a Windows Service, and a system-tray controller.
 ## Vendor files (required before building)
 
 **Automatic (recommended):** run the fetch script — it downloads `ffmpeg.exe`
-(BtbN static win64), `vc_redist.x64.exe` (Microsoft permalink) and the
-NeMo-Speech.cpp runtime into `packaging\windows\vendor\`. Idempotent; `-Force`
-re-downloads. CI runs this same script.
+(a pinned, SHA-256 verified BtbN win64 release build), `vc_redist.x64.exe`
+(Microsoft permalink) and the pinned, SHA-256 verified NeMo-Speech.cpp runtime
+into `packaging\windows\vendor\`. Idempotent: each item keeps a
+`vendor\<name>.version` marker and is re-fetched when the pin at the top of the
+script changes; `-Force` re-downloads everything. CI runs this same script.
 
 ```powershell
 pwsh packaging\windows\fetch-vendor.ps1
@@ -99,9 +103,9 @@ copies only the zip's `bin\` folder (`nemo-speech.exe` and its DLLs, including
 
 - The installed layout is
   `C:\Program Files\SubSmelt\WhisperBackend\nemo-speech\bin\nemo-speech.exe`.
-- `install-service.ps1` sets the machine variable `SUBSMELT_NEMO_SPEECH` to that
-  path; `uninstall-service.ps1` clears it. Without the variable, the backend
-  looks in `<exe dir>\nemo-speech\bin\` and then on `PATH`.
+- `install-service.ps1` writes that path as `nemo_speech` in `config.json`.
+  Without it, the backend looks in `<exe dir>\nemo-speech\bin\` and then on
+  `PATH`.
 - It is a **CUDA 13** build, so GPU use needs an NVIDIA driver **R580 or newer**.
   Whisper models keep working on older drivers.
 - No model is bundled. Download Nemotron 3.5 ASR (a 742 MB GGUF) from SubSmelt ->
@@ -152,8 +156,8 @@ optional — only needed for the `.exe` installer).
   it binds wide with no token. Set a token (see **API key** above, or
   `set SUBSMELT_WHISPER_TOKEN=<secret>` before launching; or
   `SUBSMELT_WHISPER_HOST=127.0.0.1` for a local-only backend), and open the
-  firewall port:
-  `netsh advfirewall firewall add rule name="SubSmelt Whisper" dir=in action=allow protocol=TCP localport=8001`.
+  firewall port on the private and domain profiles only:
+  `netsh advfirewall firewall add rule name="SubSmelt Whisper" dir=in action=allow protocol=TCP localport=8001 profile=private,domain`.
 - **From a terminal** you can pass flags: `build-local.bat -Run`,
   `build-local.bat -Version 0.5.6`, `build-local.bat -Clean`,
   `build-local.bat -SkipInstaller`.
@@ -183,10 +187,28 @@ iscc packaging\windows\installer.iss
 - onedir bundle: `backend-whisper\dist\whisper-server\`
 - installer exe: `backend-whisper\packaging\windows\Output\`
 
-The installer copies the bundle to `C:\Program Files\SubSmelt\WhisperBackend`,
-installs VC++, runs the Phase 3a driver pre-check, registers the
-`SubSmeltWhisper` service (auto-start + crash recovery), opens the firewall port
-(default 8001), and creates `C:\ProgramData\SubSmelt\{models,media,logs}`.
+The installer stops a running `SubSmeltWhisper` service, copies the bundle to
+`C:\Program Files\SubSmelt\WhisperBackend`, installs VC++, runs the Phase 3a
+driver pre-check, registers the service through `install-service.ps1`
+(auto-start + crash recovery; a failure is shown, not swallowed), opens the
+firewall port (default 8001, private and domain profiles, replacing any rule of
+the same name), and creates `C:\ProgramData\SubSmelt\{models,media,logs}`.
+
+### Service, token and finish page
+
+- The service's binary path is `"...\run_server.exe" --service`. With that
+  flag the launcher hands the process to the Service Control Manager
+  (`winservice.py`): start reports RUNNING and runs uvicorn in-process, stop
+  reports STOP_PENDING and asks uvicorn to exit. Registering plain
+  `run_server.exe` fails with error 1053, because it never reports a status.
+- `install-service.ps1` runs with `-GenerateToken`: a fresh install always
+  gets a token. On an upgrade the token already in `config.json` is kept, so
+  SubSmelt keeps working with the key it has.
+- The finish page shows the backend URL and the token, read from
+  `C:\ProgramData\SubSmelt\backend-info.txt`, and offers to open that file.
+  Like `config.json`, it is readable by administrators and SYSTEM only.
+- The script's output goes to `C:\ProgramData\SubSmelt\logs\install-service.log`
+  (never the token).
 
 ---
 
@@ -210,8 +232,36 @@ sc.exe query SubSmeltWhisper
 Invoke-WebRequest http://127.0.0.1:8001/health
 ```
 
+### Verify on Windows
+
+The service path cannot be exercised on macOS/Linux or on the GPU-less CI
+runner, so check these by hand on a Windows box after a build:
+
+1. Install with the setup exe. The finish page shows the backend URL and token.
+2. `sc query SubSmeltWhisper` reports `RUNNING` within 60 s of the install
+   finishing (no error 1053 in the Event Log).
+3. `Invoke-WebRequest http://127.0.0.1:<port>/health` returns 200 on the port
+   chosen in the wizard.
+4. `Invoke-WebRequest http://127.0.0.1:<port>/logs`: every uvicorn line
+   appears once, not three times.
+5. `icacls C:\ProgramData\SubSmelt\config.json` lists only `NT AUTHORITY\SYSTEM`
+   and `BUILTIN\Administrators` (both `F`); `icacls C:\ProgramData\SubSmelt`
+   gives `BUILTIN\Users` `RX` only.
+6. `netsh advfirewall firewall show rule name="SubSmelt Whisper Backend"` shows
+   one rule with `Profiles: Domain,Private`.
+7. Run the installer again over the existing install: it stops the service
+   first, `config.json` keeps the same token, and the service is `RUNNING`
+   again afterwards.
+8. Tray: Start service / Stop service show a UAC prompt and change
+   `sc query` state; a declined prompt shows a notification, not silence.
+9. Uninstall from Apps & features: the service and the firewall rule are gone;
+   `config.json` and `backend-info.txt` are removed; models, media and logs
+   stay.
+
 Use the tray app (Start/Stop service, Open logs, Model manager, Open config,
-**Run diagnostics** → provision doctor). To run the tray during development:
+**Run diagnostics** → `run_server --check`). Start/Stop go through a UAC prompt:
+the tray is not elevated and `sc.exe` requires an administrator. To run the
+tray during development:
 
 ```bat
 python packaging\windows\tray\whisper_tray.py --status
@@ -237,10 +287,30 @@ optional JSON config (`SUBSMELT_WHISPER_CONFIG`):
 | `SUBSMELT_DATA_DIR` | data dir holding `config.json` + `logs\` | `C:\ProgramData\SubSmelt` |
 | `SUBSMELT_WHISPER_CONFIG` | JSON config file | `<data dir>\config.json` |
 | `SUBSMELT_WHISPER_LOG_FILE` | rotating log file (5 MB x 5) | `<data dir>\logs\whisper-server.log` |
-| `SUBSMELT_WHISPER_VERSION` | version reported by `/health` | stamped by the installer |
+| `SUBSMELT_WHISPER_VERSION` | version reported by `/health`; config key `version` | stamped by the installer |
 
-`install-service.ps1` writes these as **machine-scope** env vars so the
-LocalSystem service sees them.
+### `config.json`
+
+`install-service.ps1` writes the installed service's settings to
+`C:\ProgramData\SubSmelt\config.json` (keys `port`, `model_dir`, `media_root`,
+`ffmpeg`, `nemo_speech`, `log_file`, `version`, `token`), which `run_server.exe`
+reads on every start. Keys it does not own (`host`, `log_level`) and an existing
+`token` are preserved on upgrade. Earlier installers stored the same settings as
+machine-scope environment variables; a service only sees those after a reboot,
+and once it does they override the file, so both install and uninstall scripts
+remove them.
+
+The file holds the token, so it is readable by SYSTEM and Administrators only;
+the data dir itself is read-only for Users (`media\` stays writable, it is the
+drop folder). Edit it through the Start-menu "Open Whisper Config" shortcut,
+which elevates, or from an elevated editor, then restart the service. The
+control window (`whisper-gui.exe`) runs unelevated and cannot read or save it;
+it reports "Could not save" and uses the values in its own fields for the
+server it launches itself.
+
+A `log_file` in `config.json` is honoured only inside
+`C:\ProgramData\SubSmelt\logs`; anything else is logged as a warning and the
+default is used, so an edit cannot make the SYSTEM service write elsewhere.
 
 ---
 
@@ -252,7 +322,7 @@ Docker `v*` tags because the CUDA onedir is ~1–2 GB) and via manual
 `workflow_dispatch` (with a `version` input). Steps:
 
 1. resolve version (from the `whisper-v<ver>` tag or the dispatch input),
-2. install `requirements.txt` + `nvidia-cudnn-cu12` / `nvidia-cublas-cu12` + PyInstaller,
+2. install `requirements.txt` + `nvidia-cudnn-cu12` / `nvidia-cublas-cu12` + PyInstaller + pywin32,
    all pinned to `constraints.txt` through `PIP_CONSTRAINT` (`build-local.ps1` does the same),
 3. `fetch-vendor.ps1` → `vendor\ffmpeg.exe` + `vendor\vc_redist.x64.exe` +
    `vendor\nemo-speech\bin\`,
@@ -285,5 +355,10 @@ without a release:** run the workflow manually from the Actions tab.
   `nemo-speech\bin\nemo-speech.exe` exists next to `run_server.exe` and that
   `SUBSMELT_NEMO_SPEECH` points at it (`run_server.exe --print-config` lists it
   as `nemo_speech`). For GPU speed, update the driver to R580 or newer.
-- **Service won't start** — check `C:\ProgramData\SubSmelt\logs`; run
-  `run_server.exe --check` manually to see the startup diagnostics.
+- **Service won't start** — check `C:\ProgramData\SubSmelt\logs`
+  (`install-service.log` for the registration, `whisper-server.log` for the
+  server); run `run_server.exe --check` manually to see the startup
+  diagnostics. Error 1053 means the registered binary path lacks `--service`:
+  re-run `install-service.ps1` from an elevated PowerShell.
+- **"Access is denied" on `config.json`** — it is readable by administrators
+  only. Use the elevated "Open Whisper Config" shortcut.

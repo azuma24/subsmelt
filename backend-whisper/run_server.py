@@ -49,6 +49,8 @@ Usage:
     python run_server.py --generate-token           # print a new API key
     python run_server.py --generate-token --save    # ...and store it in config.json
                                                     # (add --force to rotate an existing key)
+    run_server.exe --service        # Windows only: run under the Service Control
+                                    # Manager (the installed service's binPath)
 """
 
 from __future__ import annotations
@@ -129,6 +131,7 @@ class ServerConfig:
     log_level: str
     log_file: str | None
     nemo_speech: str | None = None
+    version: str | None = None
 
     def redacted(self) -> dict:
         """Config safe to print/log — never leak the token."""
@@ -141,6 +144,7 @@ class ServerConfig:
             "nemo_speech": self.nemo_speech,
             "log_level": self.log_level,
             "log_file": self.log_file,
+            "version": self.version,
             "token": "<set>" if self.token else None,
         }
 
@@ -237,9 +241,34 @@ def load_config() -> ServerConfig:
         media_root=pick("SUBSMELT_WHISPER_MEDIA_ROOT", "media_root", None),
         ffmpeg=pick("SUBSMELT_FFMPEG", "ffmpeg", None),
         log_level=pick("SUBSMELT_WHISPER_LOG_LEVEL", "log_level", DEFAULT_LOG_LEVEL) or DEFAULT_LOG_LEVEL,
-        log_file=pick("SUBSMELT_WHISPER_LOG_FILE", "log_file", default_log_file()),
+        log_file=os.environ.get("SUBSMELT_WHISPER_LOG_FILE") or _guarded_log_file(file_cfg.get("log_file")),
         nemo_speech=pick("SUBSMELT_NEMO_SPEECH", "nemo_speech", None),
+        version=pick("SUBSMELT_WHISPER_VERSION", "version", None),
     )
+
+
+def _guarded_log_file(candidate: object) -> str | None:
+    """A config.json ``log_file`` is honoured only inside <data dir>/logs.
+
+    The installed service runs as SYSTEM and config.json is hand-editable, so
+    an unrestricted path there would let a config edit make SYSTEM write
+    anywhere on the disk. Anything outside the logs folder is refused with a
+    warning and the default applies. The environment variable is not guarded:
+    it is set by whoever launches the process, such as the GUI for its child.
+    """
+    if candidate is None:
+        return default_log_file()
+    logs_dir = default_data_dir() / "logs"
+    try:
+        if Path(str(candidate)).resolve().is_relative_to(logs_dir.resolve()):
+            return str(candidate)
+    except OSError:
+        pass
+    print(
+        f"[run_server] WARNING: ignoring config log_file {candidate!r}: it is outside {logs_dir}",
+        file=sys.stderr,
+    )
+    return default_log_file()
 
 
 # ---------------------------------------------------------------------------
@@ -269,6 +298,10 @@ def apply_environment(config: ServerConfig) -> None:
         os.environ["SUBSMELT_FFMPEG"] = config.ffmpeg
     if config.nemo_speech:
         os.environ["SUBSMELT_NEMO_SPEECH"] = config.nemo_speech
+    if config.version:
+        # app/version.py reads this for /health; the installer stamps it into
+        # config.json, where the service sees it without a reboot.
+        os.environ["SUBSMELT_WHISPER_VERSION"] = config.version
 
 
 def add_bundled_dll_dir() -> None:
@@ -362,6 +395,11 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         "--force",
         action="store_true",
         help="With --generate-token --save: replace an existing stored token.",
+    )
+    parser.add_argument(
+        "--service",
+        action="store_true",
+        help="Run under the Windows Service Control Manager (used by the service's binPath).",
     )
     return parser.parse_args(argv)
 
@@ -489,10 +527,12 @@ def configure_file_logging(config: ServerConfig) -> bool:
         root = logging.getLogger()
         root.setLevel(level)
         root.addHandler(handler)
+        # Root only. uvicorn's loggers propagate to root, so a handler on them
+        # as well wrote every line three times on the installed service.
         for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
             lg = logging.getLogger(name)
             lg.setLevel(level)
-            lg.addHandler(handler)
+            lg.propagate = True
         print(f"[run_server] file logging → {log_path} (level={config.log_level})")
         _record(True)
         return True
@@ -511,6 +551,39 @@ def tolerate_unencodable_output() -> None:
             stream.reconfigure(errors="replace")
 
 
+def prepare_runtime(config: ServerConfig) -> tuple[bool, bool, str]:
+    """Everything between a resolved config and starting uvicorn: environment,
+    DLL search path, file logging, the CUDA probe. Shared by the console
+    launcher and the Windows service so the two cannot drift.
+
+    Returns (file_logging, gpu_ok, cuda_message).
+    """
+    apply_environment(config)
+    add_bundled_dll_dir()
+    file_logging = configure_file_logging(config)
+    gpu_ok, message = verify_cuda_runtime()
+    print(f"[run_server] {message}")
+    return file_logging, gpu_ok, message
+
+
+def uvicorn_kwargs(config: ServerConfig, file_logging: bool) -> dict:
+    """Arguments for ``uvicorn.run`` and ``uvicorn.Config`` alike.
+
+    reload is off on purpose for a service. With a file handler installed,
+    uvicorn is told NOT to reset logging (``log_config=None``) so the rotating
+    handler stays attached; otherwise its default console logging applies.
+    """
+    kwargs = {
+        "host": config.host,
+        "port": config.port,
+        "log_level": config.log_level,
+        "reload": False,
+    }
+    if file_logging:
+        kwargs["log_config"] = None
+    return kwargs
+
+
 def main(argv: list[str] | None = None) -> int:
     tolerate_unencodable_output()
     args = _parse_args(sys.argv[1:] if argv is None else argv)
@@ -523,18 +596,20 @@ def main(argv: list[str] | None = None) -> int:
         print("[run_server] --save/--force only apply to --generate-token.", file=sys.stderr)
         return 2
 
+    if args.service:
+        # The Service Control Manager calls back into winservice, which loads
+        # config and prepares the runtime itself once the service is RUNNING.
+        import winservice
+
+        return winservice.run_as_service()
+
     config = load_config()
 
     if args.print_config:
         print(json.dumps(config.redacted(), indent=2))
         return 0
 
-    apply_environment(config)
-    add_bundled_dll_dir()
-    file_logging = configure_file_logging(config)
-
-    gpu_ok, message = verify_cuda_runtime()
-    print(f"[run_server] {message}")
+    file_logging, gpu_ok, _message = prepare_runtime(config)
 
     if args.check:
         print("[run_server] config:", json.dumps(config.redacted()))
@@ -551,20 +626,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[run_server] starting uvicorn on {config.host}:{config.port} (gpu={'yes' if gpu_ok else 'no'})")
     for line in exposure_warnings(config):
         print(line, file=sys.stderr)
-    # Pass the import string (not the app object) so uvicorn owns the lifecycle;
-    # reload is intentionally off for a service.
-    run_kwargs = {
-        "host": config.host,
-        "port": config.port,
-        "log_level": config.log_level,
-        "reload": False,
-    }
-    # When we installed a file handler, tell uvicorn NOT to reset logging
-    # (log_config=None) so our rotating handler stays attached. Otherwise let
-    # uvicorn apply its default console logging (omit the kwarg) (plan Phase 5).
-    if file_logging:
-        run_kwargs["log_config"] = None
-    uvicorn.run("app.main:app", **run_kwargs)
+    # Pass the import string (not the app object) so uvicorn owns the lifecycle.
+    uvicorn.run("app.main:app", **uvicorn_kwargs(config, file_logging))
     return 0
 
 

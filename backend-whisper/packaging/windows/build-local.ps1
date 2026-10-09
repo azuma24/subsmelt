@@ -88,9 +88,10 @@ try {
     & $VenvPy -m pip install -c $Constraints --upgrade pip
     & $VenvPy -m pip install -c $Constraints -r (Join-Path $BackendRoot "requirements.txt")
     if ($LASTEXITCODE -ne 0) { Die "pip install -r requirements.txt failed" }
-    # GPU runtime wheels (cuDNN 9 / cuBLAS) + PyInstaller. These pull large CUDA
-    # DLLs; the spec collects them next to the exe. Safe on a CPU-only box too.
-    & $VenvPy -m pip install -c $Constraints nvidia-cudnn-cu12 nvidia-cublas-cu12 pyinstaller
+    # GPU runtime wheels (cuDNN 9 / cuBLAS) + PyInstaller + pywin32 for the
+    # Windows Service entry. The CUDA wheels pull large DLLs; the spec collects
+    # them next to the exe. Safe on a CPU-only box too.
+    & $VenvPy -m pip install -c $Constraints nvidia-cudnn-cu12 nvidia-cublas-cu12 pyinstaller pywin32
     if ($LASTEXITCODE -ne 0) { Die "pip install GPU/pyinstaller deps failed" }
 
     # --- 3. vendored binaries ---

@@ -135,6 +135,40 @@ class FailureSurfacingTests(TrayTestCase):
         whisper_tray._report(None, "nothing to show it on")
 
 
+class ServiceControlTests(TrayTestCase):
+    """The tray runs unelevated; sc.exe start/stop needs an administrator."""
+
+    def _service_action(self, action, result):
+        icon = FakeIcon()
+        with (
+            mock.patch.object(whisper_tray, "_is_windows", return_value=True),
+            mock.patch.object(whisper_tray, "_run", return_value=result) as run,
+        ):
+            action(icon)
+        return run.call_args.args[0], icon
+
+    def test_start_runs_sc_through_an_elevation_prompt(self):
+        cmd, icon = self._service_action(whisper_tray.start_service, (0, ""))
+        self.assertEqual(cmd[:3], ["powershell.exe", "-NoProfile", "-Command"])
+        self.assertIn("-Verb RunAs", cmd[3])
+        self.assertIn("-FilePath sc.exe", cmd[3])
+        self.assertIn("'start','SubSmeltWhisper'", cmd[3])
+        self.assertEqual(icon.notifications, [])
+
+    def test_stop_runs_sc_through_an_elevation_prompt(self):
+        cmd, _icon = self._service_action(whisper_tray.stop_service, (0, ""))
+        self.assertIn("'stop','SubSmeltWhisper'", cmd[3])
+
+    def test_a_declined_prompt_is_reported(self):
+        declined = (
+            "Start-Process : This command cannot be run due to the error: The operation was canceled by the user."
+        )
+        _cmd, icon = self._service_action(whisper_tray.start_service, (1, declined))
+        ((message, _title),) = icon.notifications
+        self.assertIn("start service failed", message)
+        self.assertIn("canceled by the user", message)
+
+
 class DevServerScriptTests(unittest.TestCase):
     def test_a_shallow_frozen_path_does_not_break_import(self):
         # A onefile exe extracts to %TEMP%; with a shallow TEMP, parents[3] of
