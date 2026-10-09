@@ -135,16 +135,27 @@ export function LibraryPage() {
         title={t("nav.library")}
         titleHiddenBelowMd
         subtitle={files && files.length > 0 ? t("library.summary.files", { count: items.length }) : undefined}
-        middle={isMobile ? <LlmStatusPopover placement="below" /> : undefined}
+        middle={
+          isMobile ? (
+            // Zero intrinsic width: the status line truncates beside the actions instead of wrapping them.
+            <div className="w-0 min-w-full">
+              <LlmStatusPopover placement="below" />
+            </div>
+          ) : undefined
+        }
         actions={
           <>
-            <RefreshButton busy={libraryQuery.isFetching} onClick={() => void libraryQuery.refetch()} />
+            <RefreshButton
+              busy={libraryQuery.isFetching}
+              onClick={() => void libraryQuery.refetch()}
+              labelHiddenBelowMd
+            />
             <Link
               to="/convert"
-              className="inline-flex min-h-touch items-center gap-2 rounded-sm border border-border bg-surface px-3 text-sm font-medium text-text transition-colors duration-fast hover:bg-surface-raised"
+              className="inline-flex min-h-touch min-w-touch items-center justify-center gap-2 rounded-sm border border-border bg-surface px-3 text-sm font-medium text-text transition-colors duration-fast hover:bg-surface-raised"
             >
               <Icon name="upload" />
-              {t("library.upload")}
+              <span className="sr-only md:not-sr-only">{t("library.upload")}</span>
             </Link>
             <ActionButton size="md" onClick={() => void scan.start()} busy={scan.busy}>
               {scan.busy ? t("library.scanning") : t("library.scan")}
