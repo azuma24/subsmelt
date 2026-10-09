@@ -8,6 +8,7 @@ import {
   itemLanguageChips,
   itemStatus,
   relativeFolder,
+  relevantJobId,
   toLibraryItems,
   type LibraryRow,
 } from "./library-model";
@@ -314,4 +315,23 @@ test("a status filter keeps the chosen sort within its flat group", () => {
     "beta.mkv",
     "alpha.mkv",
   ]);
+});
+
+test("a file's most relevant job is its error, then translating, then pending, else the newest", () => {
+  const byPath = new Map(toLibraryItems(files, "/media").map((item) => [item.key, item]));
+  const pick = (path: string) => {
+    const item = byPath.get(path);
+    assert.ok(item, path);
+    return relevantJobId(item, jobs);
+  };
+  assert.equal(pick("/media/TV/Show/Season 01/Show.S01E02.mkv"), 1);
+  assert.equal(pick("/media/TV/Show/Season 01/Show.S01E10.mkv"), 3);
+  assert.equal(pick("/media/Movies/Dune.mkv"), 4);
+  const [twoDone] = toLibraryItems(
+    [video("/media/Twice.mkv", [task("chi", "done", 4), task("jpn", "done", 5)])],
+    "/media",
+  );
+  assert.equal(relevantJobId(twoDone, jobs), 5);
+  assert.equal(pick("/media/TV/Show/Season 01/Show.S01E01.mkv"), null);
+  assert.equal(pick("/media/Docs/Notes.srt"), null);
 });
