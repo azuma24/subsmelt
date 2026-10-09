@@ -68,12 +68,14 @@ function innerTexts(html: string, pattern: RegExp): string[] {
 export interface RenderOptions {
   /** Render the phone layout, as App does below the md breakpoint. */
   isMobile?: boolean;
+  /** The URL the router starts at, query string included. */
+  path?: string;
 }
 
 export function renderPage(
   page: ReactElement,
   seed: QuerySeed = [],
-  { isMobile = false }: RenderOptions = {},
+  { isMobile = false, path = "/" }: RenderOptions = {},
 ): RenderedPage {
   // retryOnMount: false keeps a seeded error from being reported optimistically
   // as "pending" (the observer would otherwise plan a refetch on mount).
@@ -94,7 +96,7 @@ export function renderPage(
   const html = renderToString(
     <I18nProvider i18n={i18nInstance}>
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter>
+        <MemoryRouter initialEntries={[path]}>
           <IsMobileContext.Provider value={isMobile}>
             <ToastProvider>
               <ConfirmProvider>{page}</ConfirmProvider>
