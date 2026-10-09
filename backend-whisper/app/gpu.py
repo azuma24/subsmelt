@@ -149,10 +149,14 @@ def total_free_vram_mb() -> int | None:
     return gpus[0]["free_vram_mb"] if gpus else None
 
 
+# Absolute: launchd and a frozen app often run with PATH=/usr/bin:/bin, which lacks /usr/sbin.
+_SYSCTL = "/usr/sbin/sysctl"
+
+
 def _sysctl(name: str) -> str | None:
     """One macOS ``sysctl -n`` value, or None when sysctl is missing or fails."""
     try:
-        completed = subprocess.run(["sysctl", "-n", name], capture_output=True, text=True, timeout=5, check=False)
+        completed = subprocess.run([_SYSCTL, "-n", name], capture_output=True, text=True, timeout=5, check=False)
     except Exception:
         return None
     value = completed.stdout.strip()

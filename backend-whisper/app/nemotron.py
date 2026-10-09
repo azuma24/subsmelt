@@ -19,6 +19,7 @@ from types import SimpleNamespace
 
 from .audio import ffmpeg_binary
 from .engine import TranscriptionCancelled, progress_event
+from .gpu import effective_device
 from .model_loader import lease
 from .nemotron_languages import map_language, short_code_for
 from .nemotron_runtime import NemotronHandle
@@ -117,7 +118,7 @@ def cut_chunk(source: Path, chunk: Chunk, dest_dir: Path, index: int) -> Path:
 
 
 def _cli_device(request: TranscribeRequest) -> str:
-    return "cuda" if (request.device or "").strip().lower() == "cuda" else "auto"
+    return "cuda" if effective_device(request.device) == "cuda" else "auto"
 
 
 def _wait_or_kill(proc: subprocess.Popen, is_cancelled: Callable[[], bool] | None) -> tuple[str, str]:
@@ -216,7 +217,7 @@ def run(
     """Engine runner for ``nemotron-3.5-asr``."""
     locale = map_language(request.language)
     # Nemotron has no compute type; a Whisper one left in settings must not fail validation.
-    with lease(request.model, request.device, "") as handle:
+    with lease(request.model, effective_device(request.device), "") as handle:
         duration = wav_duration(audio_path)
         chunks = plan_chunks(duration, lambda: detect_silences(audio_path, is_cancelled))
         words, locales = yield from run_chunks(

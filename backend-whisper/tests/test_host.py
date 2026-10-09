@@ -66,6 +66,17 @@ class HostInfoTests(unittest.TestCase):
     def test_macos_arm64_is_metal_with_the_chip_name(self):
         self.assertEqual(self._host(platform="darwin", machine="arm64"), MAC_HOST)
 
+    def test_sysctl_is_called_by_absolute_path_so_a_minimal_path_still_finds_it(self):
+        # launchd and `env -i` give PATH=/usr/bin:/bin, which lacks /usr/sbin.
+        calls = []
+
+        def run(argv, **kwargs):
+            calls.append(argv[0])
+            return _sysctl_ok(argv, **kwargs)
+
+        self._host(platform="darwin", machine="arm64", run=run)
+        self.assertEqual(set(calls), {"/usr/sbin/sysctl"})
+
     def test_windows_with_one_cuda_device_is_cuda_with_the_nvml_name_and_vram(self):
         card = {"name": "NVIDIA GeForce RTX 4090", "total_vram_mb": 24564, "free_vram_mb": 20000}
         host = self._host(platform="win32", machine="AMD64", cuda=1, nvml=[card], ram_mb=65536)
