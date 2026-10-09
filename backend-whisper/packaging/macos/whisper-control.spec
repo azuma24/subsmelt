@@ -12,12 +12,20 @@
 #
 # Tiny build on purpose: no faster-whisper/ctranslate2, no model weights.
 import os
+import re
 
 from PyInstaller.utils.hooks import collect_submodules
 
 SPEC_DIR = os.path.abspath(SPECPATH)  # .../packaging/macos
+BACKEND_ROOT = os.path.abspath(os.path.join(SPEC_DIR, "..", ".."))
 TRAY_DIR = os.path.abspath(os.path.join(SPEC_DIR, "..", "windows", "tray"))
 TRAY_SCRIPT = os.path.join(TRAY_DIR, "whisper_tray.py")
+
+# Crash reports read the bundle's version; stamp the backend's so a report
+# says which build crashed instead of PyInstaller's default 0.0.0.
+_version_py = os.path.join(BACKEND_ROOT, "app", "version.py")
+_match = re.search(r'_DEFAULT_VERSION = "([^"]+)"', open(_version_py, encoding="utf-8").read())
+APP_VERSION = _match.group(1) if _match else "0.0.0"
 
 # pystray picks its backend dynamically (darwin here); pull its submodules, the
 # image library, and the shared modules the tray and the window import.
@@ -82,6 +90,8 @@ app = BUNDLE(
         "CFBundleName": "SubSmelt Whisper",
         "CFBundleDisplayName": "SubSmelt Whisper",
         "CFBundleIdentifier": "com.subsmelt.whisper.control",
+        "CFBundleShortVersionString": APP_VERSION,
+        "CFBundleVersion": APP_VERSION,
         # Lives in the menu bar, not the Dock.
         "LSUIElement": True,
         "NSHighResolutionCapable": True,
