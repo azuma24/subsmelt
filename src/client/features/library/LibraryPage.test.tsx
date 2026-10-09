@@ -138,7 +138,7 @@ test("the home page opens on the Files view with Jobs one tab away", () => {
 test("a fresh install shows the setup checklist, and its Jobs view says the queue is empty", () => {
   const fresh: QuerySeed = [noJobs, [["tasks"], []], [["settings"], {}]];
   const files = renderPage(<LibraryPage />, fresh);
-  assert.ok(files.text.includes("Setup checklist"));
+  assert.ok(files.text.includes("Setup checklist 0 of 4 done Dismiss"));
   assert.ok(files.text.includes("LLM connection Configure endpoint and model."));
   assert.ok(files.text.includes("Translation targets Add at least one enabled translation target."));
   assert.ok(files.text.includes("Media discovered Run scan to discover subtitle files. Scan now"));
@@ -154,7 +154,6 @@ test("?view=jobs lists every seeded job with its status filters and bulk actions
   assert.ok(page.text.includes("Episode 01.en.srt Traditional Chinese · zh-TW Done 100/100 cues"));
   assert.ok(page.text.includes("Episode 02.en.srt Traditional Chinese · zh-TW Error"));
   assert.ok(page.text.includes("Episode 03.en.srt Traditional Chinese · zh-TW Pending"));
-  assert.ok(page.text.includes("LLM connection Ready"));
   assert.ok(!page.text.includes("No jobs matching filter"));
   for (const label of ["All 3", "Pending 1", "Done 1", "Errors 1", "Retry visible errors (1)", "Clear finished"]) {
     assert.ok(page.buttons.includes(label), `missing button ${label}`);
@@ -221,4 +220,12 @@ test("the phone header carries the LLM status beside Scan", () => {
   assert.equal(page.buttons[0], "Translating on Desk GPU 1 offline");
   assert.ok(page.buttons.includes("Scan"));
   assert.ok(page.buttons.includes("▶ Run All"));
+});
+
+test("the setup checklist lists only the steps left, with progress beside its title", () => {
+  const page = renderPage(<LibraryPage />, configured);
+  assert.ok(page.text.includes("Setup checklist 3 of 4 done Dismiss Queue status Queue is idle. Run queue"));
+  for (const finished of ["LLM connection", "Translation targets", "Media discovered"]) {
+    assert.ok(!page.text.includes(finished), `${finished} is done and hidden`);
+  }
 });

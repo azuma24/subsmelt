@@ -160,7 +160,6 @@ export function LibraryPage() {
         queueRunning={queueRunning}
         onScan={() => void scan.start()}
         onRunAll={() => void runAll()}
-        onStop={() => void stop()}
       />
       {!autoTranslate && (
         <p className="shrink-0 border-b border-border px-4 py-2 text-xs text-muted">

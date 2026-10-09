@@ -8,6 +8,14 @@ import { Icon } from "../../ui/Icon";
 
 const SETUP_DISMISSED_KEY = "subsmelt_setup_dismissed";
 
+// Side by side on wide screens, stacked on phones; written out in full so Tailwind's scanner sees them.
+const COLUMNS: Record<number, string> = {
+  1: "",
+  2: "lg:grid-cols-2",
+  3: "lg:grid-cols-3",
+  4: "lg:grid-cols-2 xl:grid-cols-4",
+};
+
 function readDismissed(): boolean {
   try {
     return localStorage.getItem(SETUP_DISMISSED_KEY) === "1";
@@ -29,11 +37,13 @@ interface QuickStartProps {
   queueRunning: boolean;
   onScan: () => void;
   onRunAll: () => void;
-  onStop: () => void;
 }
 
-/** First-run checklist; hides itself for good once a job finishes or the person dismisses it. */
-export function QuickStart({ jobs, queueRunning, onScan, onRunAll, onStop }: QuickStartProps) {
+/**
+ * First-run checklist listing only the steps left; hides itself for good once
+ * a job finishes or the person dismisses it.
+ */
+export function QuickStart({ jobs, queueRunning, onScan, onRunAll }: QuickStartProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const settings = useSettingsQuery().data || {};
@@ -63,68 +73,73 @@ export function QuickStart({ jobs, queueRunning, onScan, onRunAll, onStop }: Qui
     {
       done: hasLlmConfig,
       title: t("dashboard.quickStart.llmTitle"),
-      hint: hasLlmConfig ? t("dashboard.quickStart.done") : t("dashboard.quickStart.llmHint"),
+      hint: t("dashboard.quickStart.llmHint"),
       action: t("dashboard.quickStart.openSettings"),
       onClick: () => navigate("/settings"),
     },
     {
       done: enabledTaskCount > 0,
       title: t("dashboard.quickStart.tasksTitle"),
-      hint: enabledTaskCount > 0 ? t("dashboard.quickStart.done") : t("dashboard.quickStart.tasksHint"),
+      hint: t("dashboard.quickStart.tasksHint"),
       action: t("dashboard.quickStart.openTranslations"),
       onClick: () => navigate("/settings/languages"),
     },
     {
       done: mediaFound,
       title: t("dashboard.quickStart.mediaTitle"),
-      hint: mediaFound ? t("dashboard.quickStart.done") : t("dashboard.quickStart.mediaHint"),
+      hint: t("dashboard.quickStart.mediaHint"),
       action: t("dashboard.quickStart.scanNow"),
       onClick: onScan,
     },
     {
       done: queueRunning,
       title: t("dashboard.quickStart.queueTitle"),
-      hint: queueRunning ? t("dashboard.quickStart.queueRunning") : t("dashboard.quickStart.queueIdle"),
-      action: queueRunning ? t("dashboard.quickStart.stopQueue") : t("dashboard.quickStart.runQueue"),
-      onClick: queueRunning ? onStop : onRunAll,
+      hint: t("dashboard.quickStart.queueIdle"),
+      action: t("dashboard.quickStart.runQueue"),
+      onClick: onRunAll,
     },
   ];
-  if (dismissed || steps.every((step) => step.done)) return null;
+  const remaining = steps.filter((step) => !step.done);
+  if (dismissed || remaining.length === 0) return null;
 
   return (
-    <section aria-label={t("dashboard.quickStart.title")} className="shrink-0 border-b border-border px-4 py-3">
-      <div className="mb-1 flex items-center justify-between">
-        <span className="text-xs text-faint">{t("dashboard.quickStart.title")}</span>
+    <section aria-label={t("dashboard.quickStart.title")} className="shrink-0 border-b border-border px-4 pb-3">
+      <div className="flex items-center gap-2">
+        <h2 className="text-xs font-semibold text-muted">{t("dashboard.quickStart.title")}</h2>
+        <span className="text-xs text-faint">
+          {t("settings.setup.progress", { done: steps.length - remaining.length, total: steps.length })}
+        </span>
         <button
           type="button"
           onClick={() => {
             persistDismissed();
             setDismissed(true);
           }}
-          className="text-xs text-faint hover:text-text"
+          className="ml-auto min-h-touch px-2 text-xs text-faint hover:text-text"
         >
           {t("dashboard.quickStart.dismiss")}
         </button>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {steps.map((step) => (
-          <div
-            key={step.title}
-            className={`rounded-md border p-3 ${step.done ? "border-success-line bg-success-soft" : "border-border bg-surface"}`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <div className="text-xs font-semibold text-text">{step.title}</div>
-              <Icon name={step.done ? "done" : "pending"} className={step.done ? "text-success" : "text-warning"} />
-            </div>
-            <div className="mt-1 text-xs text-muted">{step.hint}</div>
-            {!step.done && (
-              <button type="button" onClick={step.onClick} className="mt-2 text-xs text-accent">
-                {step.action}
-              </button>
-            )}
-          </div>
+      <ul
+        className={`grid gap-px overflow-hidden rounded-md border border-border bg-border ${COLUMNS[remaining.length]}`}
+      >
+        {remaining.map((step) => (
+          <li key={step.title} className="flex min-h-touch min-w-0 items-center gap-2 bg-surface pl-3">
+            <Icon name="pending" className="shrink-0 text-warning" />
+            <span className="shrink-0 text-sm font-medium text-text">{step.title}</span>
+            <span className="min-w-0 flex-1 truncate text-sm text-muted" title={step.hint}>
+              {step.hint}
+            </span>
+            <button
+              type="button"
+              onClick={step.onClick}
+              className="min-h-touch shrink-0 px-3 text-sm font-medium text-accent hover:underline"
+            >
+              {step.action}
+            </button>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }
