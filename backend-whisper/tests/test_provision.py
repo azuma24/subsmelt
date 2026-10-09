@@ -17,6 +17,9 @@ EXPECTED_CHECK_IDS = [
     "port",
 ]
 
+LINUX_CPU_HOST = {"os": "linux", "arch": "x86_64", "accelerator": "cpu", "gpuName": None, "memoryMb": 8192}
+MAC_HOST = {"os": "macos", "arch": "arm64", "accelerator": "metal", "gpuName": "Apple M5 Pro", "memoryMb": 49152}
+
 
 class ProvisionDetectTests(unittest.TestCase):
     def test_detect_returns_all_expected_check_ids_and_bool_ready(self):
@@ -37,6 +40,7 @@ class ProvisionDetectTests(unittest.TestCase):
         with (
             mock.patch.object(provision, "gpu_info", return_value=[]),
             mock.patch.object(provision, "cuda_device_count", return_value=0),
+            mock.patch.object(provision, "host_info", return_value=LINUX_CPU_HOST),
         ):
             report = provision.detect()
         by_id = {c["id"]: c for c in report["checks"]}
@@ -50,6 +54,14 @@ class ProvisionDetectTests(unittest.TestCase):
         self.assertNotIn("gpu", provision._READINESS_BLOCKERS)
         self.assertNotIn("cuda_runtime", provision._READINESS_BLOCKERS)
         self.assertNotIn("nvidia_driver", provision._READINESS_BLOCKERS)
+
+    def test_apple_silicon_reports_the_metal_gpu(self):
+        with (
+            mock.patch.object(provision, "gpu_info", return_value=[]),
+            mock.patch.object(provision, "host_info", return_value=MAC_HOST),
+        ):
+            check = provision._check_gpu()
+        self.assertEqual(check, {"status": "ok", "detail": "Apple GPU (Metal), unified memory"})
 
     def test_gpu_present_but_old_driver_emits_fix_descriptor_with_url(self):
         fake_gpu = [{"name": "GeForce RTX 4090", "total_vram_mb": 24576, "free_vram_mb": 20000}]

@@ -34,7 +34,7 @@ except Exception:  # pragma: no cover - psutil may be absent in minimal envs
 
 # gpu.py already provides import-guarded NVML / nvidia-smi / CTranslate2 probes
 # that degrade to "no GPU" on a CPU box. Reuse them rather than re-implementing.
-from .gpu import cuda_device_count, gpu_info
+from .gpu import cuda_device_count, gpu_info, host_info
 from .model_cache import cache_root_from_env
 from .preflight import DISK_FREE_UNKNOWN, disk_free_mb
 
@@ -193,6 +193,8 @@ def _check_ram() -> Check:
 
 def _check_gpu() -> Check:
     gpus = gpu_info()
+    if not gpus and host_info()["accelerator"] == "metal":
+        return {"status": "ok", "detail": "Apple GPU (Metal), unified memory"}
     if not gpus:
         # No NVIDIA GPU is a valid CPU-only outcome — info, not fail.
         return {

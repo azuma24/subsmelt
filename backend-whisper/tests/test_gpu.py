@@ -79,6 +79,7 @@ class CapabilitiesTests(unittest.TestCase):
         with (
             mock.patch.object(main, "cuda_device_count", return_value=0),
             mock.patch.object(main, "gpu_info", return_value=[]),
+            mock.patch.object(main, "apple_gpu_info", return_value=[]),
         ):
             caps = main.capabilities()
         self.assertEqual(caps["devices"], ["cpu"])
@@ -91,6 +92,7 @@ class CapabilitiesTests(unittest.TestCase):
         with (
             mock.patch.object(main, "cuda_device_count", return_value=1),
             mock.patch.object(main, "gpu_info", return_value=[fake_gpu]),
+            mock.patch.object(main, "apple_gpu_info", return_value=[]),
         ):
             caps = main.capabilities()
         self.assertIn("cuda", caps["devices"])
@@ -177,6 +179,26 @@ class PreflightGpuRoutingTests(unittest.TestCase):
         ):
             result = main.preflight_result(request)
         self.assertEqual((result.safe, result.code, result.free_vram_mb), (True, "ok", 11740))
+
+    def test_preflight_on_a_mac_gates_on_ram_not_the_apple_gpu(self):
+        # The Apple GPU shows in capabilities.gpus, but Mac requests run on
+        # device=cpu, so preflight must gate on system RAM and report no VRAM.
+        request = TranscribeRequest(input_path="/media/clip.mkv", model="large-v3", device="cpu")
+        apple = {"name": "Apple M5 Pro", "total_vram_mb": 49152, "free_vram_mb": 48000}
+        with (
+            mock.patch.object(main, "assert_path_under_media", return_value=Path("/media/clip.mkv")),
+            mock.patch.object(main, "available_ram_mb", return_value=1000),
+            mock.patch.object(main, "ffmpeg_available", return_value=True),
+            mock.patch.object(main, "disk_free_mb", return_value=500000),
+            mock.patch.object(main, "describe_model_cache", return_value=None),
+            mock.patch.object(main, "gpu_info", return_value=[]),
+            mock.patch.object(main, "apple_gpu_info", return_value=[apple]),
+        ):
+            result = main.preflight_result(request)
+        self.assertEqual(
+            (result.safe, result.code, result.available_ram_mb, result.free_vram_mb, result.gpus),
+            (False, "insufficient_ram", 1000, None, None),
+        )
 
     def test_preflight_vram_unknown_fails_open_on_cuda(self):
         request = TranscribeRequest(input_path="/media/clip.mkv", model="large-v3", device="cuda")

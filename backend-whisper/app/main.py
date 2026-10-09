@@ -31,7 +31,7 @@ from .fetch_url import (
     download_url,
     url_fetch_available,
 )
-from .gpu import cuda_device_count, gpu_info, total_free_vram_mb
+from .gpu import apple_gpu_info, cuda_device_count, gpu_info, host_info, total_free_vram_mb
 from .log_state import get_log_state, log_file_path
 from .model_cache import describe_model_cache
 from .model_loader import (
@@ -245,7 +245,10 @@ def capabilities() -> dict:
         "nemoSpeech": {"available": nemo_speech_availability()[0], "version": nemo_speech_version()},
         "devices": devices,
         "computeTypes": compute_types,
-        "gpus": gpu_info(),
+        # The Apple GPU is listed here only; gpu_info() stays NVIDIA-only so the
+        # VRAM preflight never gates a Mac, where memory is shared with the CPU.
+        "gpus": gpu_info() + apple_gpu_info(),
+        "host": host_info(),
         "outputFormats": ["srt", "vtt", "txt", "ass"],
         # urlInput true only when yt-dlp is installed → frontend shows the URL box
         # only when the backend can actually fetch.
