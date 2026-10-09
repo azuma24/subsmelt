@@ -63,6 +63,15 @@ class GpuDetectionTests(unittest.TestCase):
             self.assertEqual(gpu.gpu_info(), [smi_gpu])
             self.assertEqual(gpu.total_free_vram_mb(), 6000)
 
+    def test_free_vram_is_device_zero_not_the_sum_across_gpus(self):
+        # CTranslate2 loads on device 0; a second card's VRAM is not available to it.
+        gpus = [
+            {"name": "A", "total_vram_mb": 24000, "free_vram_mb": 20000},
+            {"name": "B", "total_vram_mb": 8000, "free_vram_mb": 6000},
+        ]
+        with mock.patch.object(gpu, "_gpu_info_via_nvml", return_value=gpus):
+            self.assertEqual(gpu.total_free_vram_mb(), 20000)
+
 
 @unittest.skipIf(MAIN_IMPORT_ERROR is not None, f"fastapi unavailable: {MAIN_IMPORT_ERROR}")
 class CapabilitiesTests(unittest.TestCase):

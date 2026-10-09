@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from app.model_cache import describe_model_cache
 
@@ -37,6 +38,27 @@ class ModelCacheTests(unittest.TestCase):
             info = describe_model_cache("small", 8192, env={"HF_HOME": tmp})
             self.assertFalse(info["cached"])
             self.assertIsNone(info["cache_path"])
+
+    def test_prefers_the_snapshot_named_by_refs_main(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "hub" / "models--Systran--faster-whisper-small"
+            for name in ("1111", "9999"):
+                snap = repo / "snapshots" / name
+                snap.mkdir(parents=True)
+                (snap / "model.bin").write_bytes(b"\0")
+            (repo / "refs").mkdir()
+            (repo / "refs" / "main").write_text("1111\n")
+            info = describe_model_cache("small", 8192, env={"HF_HOME": tmp})
+            self.assertEqual(info["cache_path"], str(repo / "snapshots" / "1111"))
+
+    def test_unreadable_snapshots_dir_reads_as_not_cached(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            snap = Path(tmp) / "hub" / "models--Systran--faster-whisper-small" / "snapshots" / "1234"
+            snap.mkdir(parents=True)
+            (snap / "model.bin").write_bytes(b"\0")
+            with mock.patch.object(Path, "iterdir", side_effect=PermissionError("denied")):
+                info = describe_model_cache("small", 8192, env={"HF_HOME": tmp})
+            self.assertEqual((info["cached"], info["cache_path"]), (False, None))
 
     def test_uses_xdg_cache_home_huggingface_fallback(self):
         with tempfile.TemporaryDirectory() as tmp:

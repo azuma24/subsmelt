@@ -16,6 +16,7 @@ from .model_cache import (
     dir_has_weights,
     repo_id_for_model,
 )
+from .model_loader import is_model_leased
 from .preflight import available_ram_mb
 
 # Whether each engine can run on this host, probed at request time so a binary
@@ -58,6 +59,17 @@ class ModelNotDownloadedError(RuntimeError):
         self.model = model
 
 
+class ModelInUseError(RuntimeError):
+    """A model was asked to be deleted while a transcription holds a lease on it.
+
+    Mapped to HTTP 409 by the API layer; the files stay until the lease ends.
+    """
+
+    def __init__(self, model: str) -> None:
+        super().__init__(f"Model {model!r} is in use by a running transcription; retry when it finishes")
+        self.model = model
+
+
 class UnknownModelError(ValueError):
     """A model id outside :data:`ADVERTISED_MODELS` was supplied."""
 
@@ -89,18 +101,25 @@ def repo_id_for(model: str) -> str:
 
 
 def _dir_size_mb(path: Path) -> int:
-    """Total size (MB) of all files under ``path``, following the real files.
+    """Total size (MB) of the files under ``path``, each counted once.
 
-    Hugging Face snapshots are symlinks into the blob store; ``stat`` follows the
-    link so the reported size reflects the actual bytes on disk.
+    Hugging Face snapshots are symlinks into the blob store, so a repo dir names
+    every weight twice; deduping on inode counts the bytes once whether ``path``
+    is the repo dir or the snapshot inside it.
     """
+    seen: set[tuple[int, int]] = set()
     total = 0
     for child in path.rglob("*"):
         try:
-            if child.is_file():
-                total += child.stat().st_size
+            if not child.is_file():
+                continue
+            stat = child.stat()
         except OSError:  # pragma: no cover - race with deletion
             continue
+        if (stat.st_dev, stat.st_ino) in seen:
+            continue
+        seen.add((stat.st_dev, stat.st_ino))
+        total += stat.st_size
     return int(total / 1024 / 1024)
 
 
@@ -187,46 +206,46 @@ def _download_scope(model: str) -> dict:
 def _make_progress_tqdm(progress_queue: queue.Queue[dict]):
     """Build a tqdm subclass that pushes download progress into ``progress_queue``.
 
-    huggingface_hub drives downloads through tqdm; passing ``tqdm_class`` lets us
-    intercept every update. Each bar reports bytes (``n`` / ``total``); we
-    aggregate across concurrently-updating bars by summing their latest values so
-    the emitted percentage reflects the whole snapshot, not a single file.
+    huggingface_hub 1.x builds three bars from ``tqdm_class`` per snapshot: bytes
+    received ("Downloading bytes", a transfer estimate whose total is inflated
+    and then snapped to whatever arrived), bytes written to disk
+    ("Reconstructing ..."), and a file counter. Only bytes written measure the
+    snapshot, so that bar alone feeds the stream; summing them double-counted
+    every byte.
     """
     from tqdm.auto import tqdm as _base_tqdm  # type: ignore
 
-    # Shared aggregate state across all bar instances for this download.
-    state = {"bars": {}, "lock": threading.Lock()}
+    # The bar the stream reports from, shared across bar instances for this download.
+    state = {"writer": None, "lock": threading.Lock()}
 
     class _QueueTqdm(_base_tqdm):  # type: ignore[misc]
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            is_bytes = kwargs.get("unit") == "B"
+            is_written = is_bytes and str(kwargs.get("desc") or "").startswith("Reconstruct")
+            with state["lock"]:
+                # The first byte bar stands in until the bytes-written bar appears.
+                if is_written or (is_bytes and state["writer"] is None):
+                    state["writer"] = self
+
         def update(self, n=1):
             result = super().update(n)
-            self._publish()
+            with state["lock"]:
+                reports = state["writer"] is self
+            if reports:
+                self._publish()
             return result
 
-        def close(self):
-            # Drop this bar so its total isn't double-counted in the aggregate
-            # after it finishes (multi-file downloads create many bars).
-            with state["lock"]:
-                state["bars"].pop(id(self), None)
-            return super().close()
-
         def _publish(self) -> None:
-            with state["lock"]:
-                state["bars"][id(self)] = (
-                    float(getattr(self, "n", 0) or 0),
-                    float(getattr(self, "total", 0) or 0),
-                )
-                downloaded = sum(n for n, _ in state["bars"].values())
-                total = sum(t for _, t in state["bars"].values())
-            downloaded_mb = downloaded / 1024 / 1024
-            total_mb = total / 1024 / 1024
+            downloaded = float(getattr(self, "n", 0) or 0)
+            total = float(getattr(self, "total", 0) or 0)
             pct = (downloaded / total * 100.0) if total > 0 else 0.0
             progress_queue.put(
                 {
                     "type": "progress",
                     "pct": round(max(0.0, min(100.0, pct)), 2),
-                    "downloadedMb": round(downloaded_mb, 2),
-                    "totalMb": round(total_mb, 2),
+                    "downloadedMb": round(downloaded / 1024 / 1024, 2),
+                    "totalMb": round(total / 1024 / 1024, 2),
                 }
             )
 
@@ -351,18 +370,24 @@ def delete_model(model: str, env: Mapping[str, str] | None = None) -> dict:
 
     Removes the whole ``models--Systran--faster-whisper-<model>`` cache entry
     (snapshots + blobs + refs) so the space is actually reclaimed, not just the
-    snapshot symlink dir. Raises :class:`UnknownModelError` for a bad id and
-    :class:`ModelNotDownloadedError` (→ 404) when nothing is cached.
+    snapshot symlink dir. The bare-name layouts (``<root>/<id>``,
+    ``<root>/faster-whisper-<id>``) go only when they hold weights, since a
+    directory merely named like a model may be anything. Raises
+    :class:`UnknownModelError` for a bad id, :class:`ModelNotDownloadedError`
+    (→ 404) when nothing is cached and :class:`ModelInUseError` (→ 409) while a
+    transcription leases the model.
     """
     normalized = normalize_model(model)
     if not is_model_downloaded(normalized, env=env):
         raise ModelNotDownloadedError(normalized)
+    if is_model_leased(normalized):
+        raise ModelInUseError(normalized)
 
     cache_root = cache_root_from_env(env)
     repo_dir_name = cache_dir_name_for_model(normalized)
+    repo_dirs = {cache_root / "hub" / repo_dir_name, cache_root / repo_dir_name}
     candidates = [
-        cache_root / "hub" / repo_dir_name,
-        cache_root / repo_dir_name,
+        *repo_dirs,
         cache_root / f"faster-whisper-{normalized}",
         cache_root / normalized,
     ]
@@ -384,7 +409,7 @@ def delete_model(model: str, env: Mapping[str, str] | None = None) -> dict:
     freed_mb = 0
     removed_any = False
     for candidate in candidates:
-        if candidate.is_dir():
+        if candidate.is_dir() and (candidate in repo_dirs or dir_has_weights(candidate)):
             freed_mb += _try_remove(candidate)
             removed_any = True
 

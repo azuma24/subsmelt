@@ -119,18 +119,35 @@ def dir_has_weights(d: Path) -> bool:
         return False
 
 
+def _snapshot_with_weights(snapshots_dir: Path) -> Path | None:
+    """The snapshot ``refs/main`` names when it holds weights, else the
+    newest-named one that does (an incomplete download leaves a weightless dir)."""
+    try:
+        ref = (snapshots_dir.parent / "refs" / "main").read_text(encoding="utf-8").strip()
+    except OSError:
+        ref = ""
+    if ref and dir_has_weights(snapshots_dir / ref):
+        return snapshots_dir / ref
+    try:
+        snapshots = sorted((path for path in snapshots_dir.iterdir() if path.is_dir()), key=lambda path: path.name)
+    except OSError:  # deleted or unreadable mid-scan: not cached
+        return None
+    for snapshot in reversed(snapshots):
+        if dir_has_weights(snapshot):
+            return snapshot
+    return None
+
+
 def _first_existing_path(candidates: list[Path]) -> Path | None:
     for candidate in candidates:
-        if candidate.is_dir():
-            if candidate.name == "snapshots":
-                snapshots = sorted((path for path in candidate.iterdir() if path.is_dir()), key=lambda path: path.name)
-                # Newest snapshot that actually contains weights (skip incomplete ones).
-                for snapshot in reversed(snapshots):
-                    if dir_has_weights(snapshot):
-                        return snapshot
-                continue
-            if dir_has_weights(candidate):
-                return candidate
+        if not candidate.is_dir():
+            continue
+        if candidate.name == "snapshots":
+            found = _snapshot_with_weights(candidate)
+        else:
+            found = candidate if dir_has_weights(candidate) else None
+        if found is not None:
+            return found
     return None
 
 

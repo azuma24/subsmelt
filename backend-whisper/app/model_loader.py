@@ -297,6 +297,20 @@ def lease(model: str, device: str, compute_type: str) -> Iterator[Any]:
             release_device_memory(retired)
 
 
+def is_model_leased(model: str) -> bool:
+    """True while a transcription holds a lease on ``model`` (any device or compute type)."""
+    wanted = _cache_key(model, "", "")[0]
+    with _CACHE_LOCK:
+        return any(count > 0 for key, count in _LEASES.items() if key[0] == wanted)
+
+
+def resident_cuda_model_id() -> str | None:
+    """The id of the model loaded on CUDA, whose VRAM a free-memory reading
+    counts as used even though the next request reuses or evicts it."""
+    with _CACHE_LOCK:
+        return next((key[0] for key in _MODEL_CACHE if key[1].strip().lower() == "cuda"), None)
+
+
 def unload_model(model: str) -> bool:
     """Evict every resident variant of ``model`` (any device/compute type).
 

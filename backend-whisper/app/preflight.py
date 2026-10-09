@@ -142,6 +142,18 @@ def evaluate_model_safety(model: str, available_ram_mb: int) -> SafetyResult:
     }
 
 
+def effective_free_vram_mb(free_mb: int | None, resident_model: str | None) -> int | None:
+    """Free VRAM once the resident model is accounted for.
+
+    A reading taken while a model is loaded counts that model as used, yet the
+    request either reuses it or evicts it before loading, so its footprint is
+    available either way. An unmeasured reading stays unmeasured.
+    """
+    if free_mb is None or resident_model is None:
+        return free_mb
+    return free_mb + model_vram_requirements_mb(resident_model)["required"]
+
+
 def evaluate_gpu_safety(model: str, free_vram_mb: int | None) -> GpuSafetyResult:
     """Mirror of :func:`evaluate_model_safety` against VRAM for the CUDA path.
 

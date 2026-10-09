@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 from unittest import mock
 
@@ -117,6 +118,14 @@ class ProvisionResourceCheckTests(unittest.TestCase):
         with mock.patch.object(provision, "psutil", None):
             check = provision._check_ram()
         self.assertEqual(check["status"], "unknown")
+
+    def test_disk_check_measures_the_hf_cache_root(self):
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            mock.patch.dict(provision.os.environ, {"HF_HOME": tmp, "MODEL_DIR": "/nonexistent/other"}),
+        ):
+            check = provision._check_disk()
+        self.assertIn(f" MB free at {tmp}", check["detail"])
 
     def test_disk_fail_when_under_floor(self):
         usage = mock.Mock(free=100 * 1024 * 1024)  # 100 MB

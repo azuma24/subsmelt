@@ -148,6 +148,21 @@ class GetWhisperModelTests(unittest.TestCase):
         model_loader._align_feature_extractor(w)
         self.assertIs(w.feature_extractor, fe)
 
+    def test_is_model_leased_tracks_the_lease_lifetime(self):
+        self._seed("small", layout="hub")
+        self.assertFalse(model_loader.is_model_leased("small"))
+        with model_loader.lease("small", "cuda", "float16"):
+            self.assertTrue(model_loader.is_model_leased("Small"))
+        self.assertFalse(model_loader.is_model_leased("small"))
+
+    def test_resident_cuda_model_id_names_the_model_holding_vram(self):
+        self._seed("small", layout="hub")
+        self.assertIsNone(model_loader.resident_cuda_model_id())
+        model_loader.get_whisper_model("small", "cpu", "int8")
+        self.assertIsNone(model_loader.resident_cuda_model_id())
+        model_loader.get_whisper_model("small", "cuda", "float16")
+        self.assertEqual(model_loader.resident_cuda_model_id(), "small")
+
     def test_loading_a_different_model_evicts_the_resident_one(self):
         self._seed("tiny", layout="hub")
         self._seed("base", layout="hub")

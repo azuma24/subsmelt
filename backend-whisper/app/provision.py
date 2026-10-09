@@ -35,6 +35,8 @@ except Exception:  # pragma: no cover - psutil may be absent in minimal envs
 # gpu.py already provides import-guarded NVML / nvidia-smi / CTranslate2 probes
 # that degrade to "no GPU" on a CPU box. Reuse them rather than re-implementing.
 from .gpu import cuda_device_count, gpu_info
+from .model_cache import cache_root_from_env
+from .preflight import DISK_FREE_UNKNOWN, disk_free_mb
 
 # ---------------------------------------------------------------------------
 # Editable constants — keep these at the top so they can be tuned without
@@ -65,15 +67,6 @@ MIN_DISK_FREE_MB_FAIL = 1024  # under 1 GiB → model download will fail
 
 # Windows build requirement (informational on other OSes).
 MIN_WINDOWS_RELEASE = 10  # Win10+ x64
-
-
-def _default_model_dir() -> str:
-    """Model/cache directory: env MODEL_DIR, else HF_HOME, else ~/.cache/huggingface."""
-    return (
-        os.environ.get("MODEL_DIR")
-        or os.environ.get("HF_HOME")
-        or os.path.join(os.path.expanduser("~"), ".cache", "huggingface")
-    )
 
 
 def _default_port() -> int:
@@ -312,19 +305,12 @@ def _check_cuda_runtime() -> Check:
 
 
 def _check_disk() -> Check:
-    model_dir = _default_model_dir()
-    # disk_usage needs an existing path; walk up to the first that exists.
-    probe = model_dir
-    while probe and not os.path.exists(probe):
-        parent = os.path.dirname(probe)
-        if parent == probe:
-            break
-        probe = parent
-    try:
-        usage = shutil.disk_usage(probe or os.path.expanduser("~"))
-    except Exception:
+    # The same root the downloader writes to, so the check measures the disk a
+    # download would fill rather than a directory nothing uses.
+    model_dir = cache_root_from_env()
+    free_mb = disk_free_mb(model_dir)
+    if free_mb == DISK_FREE_UNKNOWN:
         return {"status": "unknown", "detail": f"could not measure free disk for {model_dir}"}
-    free_mb = int(usage.free / 1024 / 1024)
     detail = f"{free_mb} MB free at {model_dir}"
     if free_mb < MIN_DISK_FREE_MB_FAIL:
         return {

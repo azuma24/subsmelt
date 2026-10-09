@@ -9,7 +9,9 @@ from app.paths import output_path_for
 from app.preflight import (
     DISK_FREE_UNKNOWN,
     disk_free_mb,
+    effective_free_vram_mb,
     evaluate_disk_safety,
+    evaluate_gpu_safety,
     evaluate_model_safety,
     ffmpeg_available,
     model_ram_requirements_mb,
@@ -31,6 +33,15 @@ class PreflightTests(unittest.TestCase):
         result = evaluate_model_safety(model="base", available_ram_mb=8192)
         self.assertTrue(result["safe"])
         self.assertEqual(result["code"], "ok")
+
+    def test_effective_free_vram_adds_back_the_resident_model(self):
+        # small needs 2048 MB; a reading of 1000 MB taken while small is loaded
+        # counts small's own VRAM as used, yet the request reuses or evicts it.
+        self.assertEqual(effective_free_vram_mb(1000, "small"), 3048)
+        self.assertEqual(effective_free_vram_mb(1000, None), 1000)
+        self.assertIsNone(effective_free_vram_mb(None, "small"))
+        self.assertEqual(evaluate_gpu_safety("small", 1000)["code"], "insufficient_vram")
+        self.assertEqual(evaluate_gpu_safety("small", effective_free_vram_mb(1000, "small"))["code"], "ok")
 
     def test_disk_safety_requires_scratch_space(self):
         result = evaluate_disk_safety(input_size_mb=6000, available_disk_mb=3000)

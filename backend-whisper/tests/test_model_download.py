@@ -49,6 +49,38 @@ def _hub_writing_weights(calls=None):
     return mod
 
 
+MIB = 1024 * 1024
+
+
+def _hub_driving_hf_bars(sizes_mib, chunks_mib):
+    """Drive ``tqdm_class`` the way huggingface_hub 1.x does: a transfer bar
+    (network bytes), a reconstruct bar (bytes written) and a file counter, the
+    two byte bars growing their totals as each file starts."""
+
+    def fake_dl(repo_id, cache_dir, tqdm_class, **kw):
+        transfer = tqdm_class(desc="Downloading bytes", total=0, initial=0, unit="B", unit_scale=True)
+        written = tqdm_class(desc="Reconstructing (incomplete total...)", total=0, initial=0, unit="B", unit_scale=True)
+        files = tqdm_class(desc=f"Fetching {len(sizes_mib)} files", total=len(sizes_mib))
+        for size in sizes_mib:
+            transfer.total += size * MIB
+            written.total += size * MIB
+        for chunk in chunks_mib:
+            written.update(chunk * MIB)
+            transfer.update(chunk * MIB)
+        for _ in sizes_mib:
+            files.update(1)
+        for bar in (transfer, written, files):
+            bar.close()
+        snap = Path(cache_dir) / ("models--" + repo_id.replace("/", "--")) / "snapshots" / "abc"
+        snap.mkdir(parents=True)
+        (snap / "model.bin").write_bytes(b"\0" * 2048)
+        return str(snap)
+
+    mod = types.ModuleType("huggingface_hub")
+    mod.snapshot_download = fake_dl
+    return mod
+
+
 def _hub_writing_no_weights():
     def fake_dl(repo_id, cache_dir, tqdm_class, **kw):
         snap = Path(cache_dir) / ("models--" + repo_id.replace("/", "--")) / "snapshots" / "x"
@@ -134,6 +166,63 @@ class DownloadDeleteTests(unittest.TestCase):
         self.assertTrue(result["ok"])
         self.assertGreaterEqual(result["freedMb"], 0)
         self.assertFalse(self.mm.is_model_downloaded("tiny"))
+
+    def test_progress_reports_bytes_written_once_across_hf_bars(self):
+        with mock.patch.dict(sys.modules, {"huggingface_hub": _hub_driving_hf_bars((64, 10), (37, 27, 10))}):
+            events = list(self.mm.download_model_events("tiny"))
+        self.assertEqual(
+            [event for event in events if event["type"] == "progress"],
+            [
+                {"type": "progress", "pct": 50.0, "downloadedMb": 37.0, "totalMb": 74.0},
+                {"type": "progress", "pct": 86.49, "downloadedMb": 64.0, "totalMb": 74.0},
+                {"type": "progress", "pct": 100.0, "downloadedMb": 74.0, "totalMb": 74.0},
+            ],
+        )
+        self.assertEqual(events[-1]["type"], "result")
+
+    @unittest.skipIf(os.name == "nt", "symlinks need privileges on Windows")
+    def test_sizes_count_symlinked_blobs_once(self):
+        repo = Path(self._tmp.name) / "hub" / "models--Systran--faster-whisper-tiny"
+        blob = repo / "blobs" / "sha256-abc"
+        blob.parent.mkdir(parents=True)
+        blob.write_bytes(b"\0" * 2 * MIB)
+        snap = repo / "snapshots" / "deadbeef"
+        snap.mkdir(parents=True)
+        (snap / "model.bin").symlink_to(Path("..") / ".." / "blobs" / "sha256-abc")
+        tiny = next(entry for entry in self.mm.describe_models() if entry["id"] == "tiny")
+        self.assertEqual(tiny["sizeMb"], 2)
+        self.assertEqual(self.mm.delete_model("tiny"), {"ok": True, "freedMb": 2})
+
+    def test_delete_refuses_while_a_transcription_leases_the_model(self):
+        import app.model_loader as model_loader
+
+        fake_fw = types.ModuleType("faster_whisper")
+        fake_fw.WhisperModel = lambda *a, **k: types.SimpleNamespace(model=None)
+        with mock.patch.dict(sys.modules, {"huggingface_hub": _hub_writing_weights()}):
+            list(self.mm.download_model_events("tiny"))
+        weights = Path(self._tmp.name) / "models--Systran--faster-whisper-tiny" / "snapshots" / "abc" / "model.bin"
+        model_loader.clear_model_cache()
+        try:
+            with mock.patch.dict(sys.modules, {"faster_whisper": fake_fw}), model_loader.lease("tiny", "cpu", "int8"):
+                with self.assertRaises(self.mm.ModelInUseError) as ctx:
+                    self.mm.delete_model("tiny")
+                self.assertEqual(ctx.exception.model, "tiny")
+                self.assertTrue(weights.exists())
+            self.assertEqual(self.mm.delete_model("tiny")["ok"], True)
+        finally:
+            model_loader.clear_model_cache()
+        self.assertFalse(weights.exists())
+
+    def test_delete_leaves_weightless_dirs_that_share_the_model_name(self):
+        with mock.patch.dict(sys.modules, {"huggingface_hub": _hub_writing_weights()}):
+            list(self.mm.download_model_events("tiny"))
+        root = Path(self._tmp.name)
+        (root / "tiny").mkdir()
+        (root / "tiny" / "notes.txt").write_text("not a model")
+        (root / "faster-whisper-tiny").mkdir()
+        self.mm.delete_model("tiny")
+        self.assertFalse((root / "models--Systran--faster-whisper-tiny").exists())
+        self.assertEqual(sorted(path.name for path in root.iterdir()), ["faster-whisper-tiny", "tiny"])
 
 
 if __name__ == "__main__":

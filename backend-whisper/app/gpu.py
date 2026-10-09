@@ -127,8 +127,7 @@ def gpu_info() -> list[GpuInfo]:
 
 
 def total_free_vram_mb() -> int | None:
-    """Total free VRAM across detected GPUs, or None when it can't be measured."""
+    """Free VRAM on device 0, the card CTranslate2 loads on, or None when it
+    can't be measured. A second card's memory is not available to the model."""
     gpus = gpu_info()
-    if not gpus:
-        return None
-    return sum(gpu["free_vram_mb"] for gpu in gpus)
+    return gpus[0]["free_vram_mb"] if gpus else None
