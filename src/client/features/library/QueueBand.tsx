@@ -34,7 +34,7 @@ export function QueueBand({ jobs, queueRunning, onRunAll, onStop, busy }: QueueB
   return (
     <section
       aria-label={stateLabel}
-      className="flex min-h-touch shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-border bg-surface-raised px-4 py-1"
+      className="flex min-h-touch shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-border bg-surface-raised px-4"
     >
       <span
         aria-hidden="true"
