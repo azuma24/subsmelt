@@ -203,51 +203,70 @@ def _download_scope(model: str) -> dict:
     return {"allow_patterns": [weights_file]} if weights_file else {}
 
 
-def _make_progress_tqdm(progress_queue: queue.Queue[dict]):
+def _make_progress_tqdm(progress_queue: queue.Queue[dict], expected_bytes: float = 0.0):
     """Build a tqdm subclass that pushes download progress into ``progress_queue``.
 
     huggingface_hub 1.x builds three bars from ``tqdm_class`` per snapshot: bytes
-    received ("Downloading bytes", a transfer estimate whose total is inflated
-    and then snapped to whatever arrived), bytes written to disk
-    ("Reconstructing ..."), and a file counter. Only bytes written measure the
-    snapshot, so that bar alone feeds the stream; summing them double-counted
-    every byte.
+    received ("Downloading bytes", updated often but against an inflated total
+    estimate), bytes written to disk ("Reconstructing ...", whose total is the
+    true size but which updates rarely and late), and a file counter. Summing
+    them double-counted every byte; following the written bar alone left the
+    stream silent for most of a download. So progress is the furthest either
+    byte bar has got, and it never goes backwards. Totals grow as each file
+    starts, so the catalog size of the model (``expected_bytes``) is the
+    denominator until a bar knows better; otherwise the small config files
+    would read as 100% before the weights begin. ``finish()``, called once the
+    download returns, reports one last event against the true size.
     """
     from tqdm.auto import tqdm as _base_tqdm  # type: ignore
 
-    # The bar the stream reports from, shared across bar instances for this download.
-    state = {"writer": None, "lock": threading.Lock()}
+    state = {"transfer": None, "written": None, "pct": 0.0, "last": None, "lock": threading.Lock()}
 
     class _QueueTqdm(_base_tqdm):  # type: ignore[misc]
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            is_bytes = kwargs.get("unit") == "B"
-            is_written = is_bytes and str(kwargs.get("desc") or "").startswith("Reconstruct")
+            if kwargs.get("unit") != "B":
+                return
+            role = "written" if str(kwargs.get("desc") or "").startswith("Reconstruct") else "transfer"
             with state["lock"]:
-                # The first byte bar stands in until the bytes-written bar appears.
-                if is_written or (is_bytes and state["writer"] is None):
-                    state["writer"] = self
+                if state[role] is None:
+                    state[role] = self
 
         def update(self, n=1):
             result = super().update(n)
-            with state["lock"]:
-                reports = state["writer"] is self
-            if reports:
+            if self is state["transfer"] or self is state["written"]:
                 self._publish()
             return result
 
-        def _publish(self) -> None:
-            downloaded = float(getattr(self, "n", 0) or 0)
-            total = float(getattr(self, "total", 0) or 0)
-            pct = (downloaded / total * 100.0) if total > 0 else 0.0
-            progress_queue.put(
-                {
+        def _publish(self, final: bool = False) -> None:
+            with state["lock"]:
+                bars = [bar for bar in (state["transfer"], state["written"]) if bar is not None]
+                written = state["written"]
+                total = float(written.total or 0) if written is not None else 0.0
+                if total <= 0:
+                    total = max(float(bar.total or 0) for bar in bars)
+                if not final:
+                    total = max(total, expected_bytes)
+                if total <= 0:
+                    return
+                downloaded = min(total, max(float(bar.n or 0) for bar in bars))
+                state["pct"] = max(state["pct"], min(100.0, downloaded / total * 100.0))
+                event = {
                     "type": "progress",
-                    "pct": round(max(0.0, min(100.0, pct)), 2),
+                    "pct": round(state["pct"], 2),
                     "downloadedMb": round(downloaded / 1024 / 1024, 2),
                     "totalMb": round(total / 1024 / 1024, 2),
                 }
-            )
+                if event == state["last"]:
+                    return
+                state["last"] = event
+            progress_queue.put(event)
+
+        @classmethod
+        def finish(cls) -> None:
+            bar = state["written"] or state["transfer"]
+            if bar is not None:
+                bar._publish(final=True)
 
     return _QueueTqdm
 
@@ -304,13 +323,14 @@ def download_model_events(
             try:
                 from huggingface_hub import snapshot_download  # type: ignore
 
-                tqdm_class = _make_progress_tqdm(progress_queue)
+                tqdm_class = _make_progress_tqdm(progress_queue, descriptor_for(model).size_mb * 1024 * 1024)
                 path = snapshot_download(
                     repo_id=repo_id_for(normalized),
                     cache_dir=str(_download_cache_dir(env)),
                     tqdm_class=tqdm_class,
                     **_download_scope(normalized),
                 )
+                tqdm_class.finish()
                 result_holder["path"] = path
             except Exception as exc:
                 result_holder["error"] = str(exc)

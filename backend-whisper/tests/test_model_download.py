@@ -81,6 +81,38 @@ def _hub_driving_hf_bars(sizes_mib, chunks_mib):
     return mod
 
 
+def _hub_driving_live_xet_bars(size_mib, inflated_mib, chunk_mib):
+    """The order a real 486 MB xet download produced on huggingface_hub 1.33:
+    an update before any total is known, small files finishing before the
+    weights' size is known, the transfer bar updating often against an
+    inflated estimate, and the bytes-written bar learning its true total late
+    and catching up in one update."""
+
+    def fake_dl(repo_id, cache_dir, tqdm_class, **kw):
+        transfer = tqdm_class(desc="Downloading bytes", total=0, initial=0, unit="B", unit_scale=True)
+        written = tqdm_class(desc="Reconstructing (incomplete total...)", total=0, initial=0, unit="B", unit_scale=True)
+        written.update(1 * MIB)
+        # Small files (config, tokenizer) arrive before the weights' size is known.
+        transfer.total = 2 * MIB
+        transfer.update(2 * MIB)
+        transfer.total += inflated_mib * MIB
+        for _ in range(size_mib // chunk_mib):
+            transfer.update(chunk_mib * MIB)
+        written.total = (2 + size_mib) * MIB
+        written.update((2 + size_mib - 1) * MIB)
+        transfer.total = (2 + size_mib) * MIB
+        for bar in (transfer, written):
+            bar.close()
+        snap = Path(cache_dir) / ("models--" + repo_id.replace("/", "--")) / "snapshots" / "abc"
+        snap.mkdir(parents=True)
+        (snap / "model.bin").write_bytes(b"\0" * 2048)
+        return str(snap)
+
+    mod = types.ModuleType("huggingface_hub")
+    mod.snapshot_download = fake_dl
+    return mod
+
+
 def _hub_writing_no_weights():
     def fake_dl(repo_id, cache_dir, tqdm_class, **kw):
         snap = Path(cache_dir) / ("models--" + repo_id.replace("/", "--")) / "snapshots" / "x"
@@ -173,12 +205,29 @@ class DownloadDeleteTests(unittest.TestCase):
         self.assertEqual(
             [event for event in events if event["type"] == "progress"],
             [
-                {"type": "progress", "pct": 50.0, "downloadedMb": 37.0, "totalMb": 74.0},
-                {"type": "progress", "pct": 86.49, "downloadedMb": 64.0, "totalMb": 74.0},
+                {"type": "progress", "pct": 49.33, "downloadedMb": 37.0, "totalMb": 75.0},
+                {"type": "progress", "pct": 85.33, "downloadedMb": 64.0, "totalMb": 75.0},
+                {"type": "progress", "pct": 98.67, "downloadedMb": 74.0, "totalMb": 75.0},
                 {"type": "progress", "pct": 100.0, "downloadedMb": 74.0, "totalMb": 74.0},
             ],
         )
         self.assertEqual(events[-1]["type"], "result")
+
+    def test_progress_follows_the_transfer_and_never_goes_backwards(self):
+        with mock.patch.dict(sys.modules, {"huggingface_hub": _hub_driving_live_xet_bars(80, 100, 20)}):
+            events = list(self.mm.download_model_events("tiny"))
+        self.assertEqual(
+            [event for event in events if event["type"] == "progress"],
+            [
+                {"type": "progress", "pct": 1.33, "downloadedMb": 1.0, "totalMb": 75.0},
+                {"type": "progress", "pct": 2.67, "downloadedMb": 2.0, "totalMb": 75.0},
+                {"type": "progress", "pct": 21.57, "downloadedMb": 22.0, "totalMb": 102.0},
+                {"type": "progress", "pct": 41.18, "downloadedMb": 42.0, "totalMb": 102.0},
+                {"type": "progress", "pct": 60.78, "downloadedMb": 62.0, "totalMb": 102.0},
+                {"type": "progress", "pct": 80.39, "downloadedMb": 82.0, "totalMb": 102.0},
+                {"type": "progress", "pct": 100.0, "downloadedMb": 82.0, "totalMb": 82.0},
+            ],
+        )
 
     @unittest.skipIf(os.name == "nt", "symlinks need privileges on Windows")
     def test_sizes_count_symlinked_blobs_once(self):
