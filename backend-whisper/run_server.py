@@ -26,13 +26,15 @@ Config (all optional; sensible localhost defaults):
     SUBSMELT_NEMO_SPEECH     path to the bundled nemo-speech binary that runs the
                              Nemotron ASR engine (config key "nemo_speech")
     SUBSMELT_WHISPER_CONFIG  path to a JSON config file (env vars win over it)
-                             Windows default: %SUBSMELT_DATA_DIR%\config.json
-                             (C:\ProgramData\SubSmelt\config.json)
+                             default: <data dir>/config.json
     SUBSMELT_WHISPER_LOG_LEVEL   uvicorn log level (default "info")
     SUBSMELT_WHISPER_LOG_FILE    path to a rotating log file (5MB×5)
                              Windows default: <data dir>\logs\whisper-server.log;
                              other platforms: console only
-    SUBSMELT_DATA_DIR        Windows data dir holding config.json + logs\
+    SUBSMELT_DATA_DIR        data dir holding config.json + logs\. Defaults:
+                             Windows C:\ProgramData\SubSmelt,
+                             macOS ~/Library/Application Support/SubSmelt,
+                             Linux ${XDG_DATA_HOME:-~/.local/share}/subsmelt
 
 Binding note: the default bind is 0.0.0.0, because SubSmelt normally runs in a
 container or on another machine and a loopback-only backend is unreachable from
@@ -69,36 +71,51 @@ LOOPBACK_HOST = "127.0.0.1"
 DEFAULT_PORT = 8001
 DEFAULT_LOG_LEVEL = "info"
 
-# Windows packaging defaults. The installer, the tray app and the GUI all treat
-# %ProgramData%\SubSmelt as the data dir — without these defaults the server read
-# no config.json and wrote no log file unless SUBSMELT_WHISPER_CONFIG /
-# SUBSMELT_WHISPER_LOG_FILE were set by hand, so the "Open config" / "Open logs"
-# buttons showed an empty config and an empty logs folder. Windows-only on
-# purpose: containers keep env-only config and console logging.
+# Packaging defaults. The installer, the tray app and the GUI all treat the data
+# dir as the home of config.json — without these defaults the server read no
+# config.json unless SUBSMELT_WHISPER_CONFIG was set by hand, so "Open config"
+# edited a file nothing read and `--generate-token --save` had nowhere to save.
 DEFAULT_WINDOWS_DATA_DIR = r"C:\ProgramData\SubSmelt"
 DEFAULT_CONFIG_FILE_NAME = "config.json"
 DEFAULT_LOG_FILE_NAME = "whisper-server.log"
 
 
-def default_data_dir(env: dict[str, str] | None = None, windows: bool | None = None) -> Path | None:
-    """Data dir the Windows packaging writes to, or None on other platforms."""
+def default_data_dir(env: dict[str, str] | None = None, platform: str | None = None) -> Path:
+    """SUBSMELT_DATA_DIR, else the platform's application-data directory.
+
+    Mirrors gui_config.data_dir in the control apps, which are frozen into
+    separate exes and cannot import this; test_gui_config pins the two together.
+    """
     environ = os.environ if env is None else env
-    if windows is None:
-        windows = os.name == "nt"
-    if not windows:
-        return None
     override = (environ.get("SUBSMELT_DATA_DIR") or "").strip()
-    return Path(override) if override else Path(DEFAULT_WINDOWS_DATA_DIR)
+    if override:
+        return Path(override)
+    if platform is None:
+        platform = sys.platform
+    if platform == "win32":
+        return Path(DEFAULT_WINDOWS_DATA_DIR)
+    if platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "SubSmelt"
+    xdg = (environ.get("XDG_DATA_HOME") or "").strip()
+    return (Path(xdg) if xdg else Path.home() / ".local" / "share") / "subsmelt"
 
 
-def default_config_path(env: dict[str, str] | None = None, windows: bool | None = None) -> str | None:
-    base = default_data_dir(env, windows)
-    return str(base / DEFAULT_CONFIG_FILE_NAME) if base else None
+def default_config_path(env: dict[str, str] | None = None, platform: str | None = None) -> str:
+    return str(default_data_dir(env, platform) / DEFAULT_CONFIG_FILE_NAME)
 
 
-def default_log_file(env: dict[str, str] | None = None, windows: bool | None = None) -> str | None:
-    base = default_data_dir(env, windows)
-    return str(base / "logs" / DEFAULT_LOG_FILE_NAME) if base else None
+def default_log_file(env: dict[str, str] | None = None, platform: str | None = None) -> str | None:
+    """The service's log file on Windows; None elsewhere.
+
+    Windows-only on purpose: a file handler also turns uvicorn's console logging
+    off (``log_config=None``), and the console is how a Docker container is
+    watched. The GUI gives its own child an explicit SUBSMELT_WHISPER_LOG_FILE.
+    """
+    if platform is None:
+        platform = sys.platform
+    if platform != "win32":
+        return None
+    return str(default_data_dir(env, platform) / "logs" / DEFAULT_LOG_FILE_NAME)
 
 
 @dataclass(frozen=True)
@@ -150,13 +167,12 @@ def _load_config_file(path: str | None) -> dict:
         return {}
 
 
-def resolve_config_path() -> str | None:
-    """The config file this launcher reads, or None when there is no default.
+def resolve_config_path() -> str:
+    """The config file this launcher reads.
 
-    An explicit ``SUBSMELT_WHISPER_CONFIG`` always wins; otherwise the Windows
-    packaging default applies and non-Windows installs have no config file at
-    all (env-only by design). ``--generate-token --save`` needs exactly this
-    path, and resolving it twice by hand is how the two drift apart.
+    An explicit ``SUBSMELT_WHISPER_CONFIG`` always wins; otherwise the platform
+    data dir's config.json. ``--generate-token --save`` needs exactly this path,
+    and resolving it twice by hand is how the two drift apart.
     """
     return os.environ.get("SUBSMELT_WHISPER_CONFIG") or default_config_path()
 
@@ -396,14 +412,6 @@ def generate_token_command(save: bool, force: bool) -> int:
             file=sys.stderr,
         )
         return 2
-    if save and not config_path:
-        print(
-            "[run_server] ERROR: no config file to save into on this platform. "
-            "Set SUBSMELT_WHISPER_CONFIG=<path> to choose one, or export "
-            "SUBSMELT_WHISPER_TOKEN=<key> instead. Nothing was changed.",
-            file=sys.stderr,
-        )
-        return 1
     if save and not force:
         existing = str(_load_config_file(config_path).get("token") or "").strip()
         if existing:

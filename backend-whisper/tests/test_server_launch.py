@@ -6,9 +6,11 @@ and GUI exes, not into the server), so it is loaded here by path.
 
 import importlib.util
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import run_server
 
@@ -77,33 +79,61 @@ class ServerExeLookupTests(unittest.TestCase):
     def test_dev_command_requires_an_existing_script(self):
         with self.assertRaises(server_launch.ServerExecutableNotFound):
             server_launch.resolve_server_command(self.root / "missing_run_server.py")
+        with self.assertRaises(server_launch.ServerExecutableNotFound):
+            server_launch.resolve_server_command(None)
 
         script = self._touch(self.root / "run_server.py")
         command = server_launch.resolve_server_command(script)
         self.assertEqual(command[-1], str(script))
 
 
-class WindowsDataDirDefaultsTests(unittest.TestCase):
+class DataDirDefaultsTests(unittest.TestCase):
     def test_windows_defaults_point_at_the_packaging_data_dir(self):
         self.assertEqual(
-            run_server.default_config_path(env={}, windows=True),
+            run_server.default_config_path(env={}, platform="win32"),
             str(Path(run_server.DEFAULT_WINDOWS_DATA_DIR) / "config.json"),
         )
         self.assertEqual(
-            run_server.default_log_file(env={}, windows=True),
+            run_server.default_log_file(env={}, platform="win32"),
             str(Path(run_server.DEFAULT_WINDOWS_DATA_DIR) / "logs" / "whisper-server.log"),
         )
 
     def test_data_dir_env_override_is_honoured(self):
         env = {"SUBSMELT_DATA_DIR": str(Path("D:/SubSmeltData"))}
         self.assertEqual(
-            run_server.default_config_path(env=env, windows=True),
+            run_server.default_config_path(env=env, platform="win32"),
             str(Path("D:/SubSmeltData") / "config.json"),
         )
 
-    def test_non_windows_keeps_env_only_config_and_console_logging(self):
-        self.assertIsNone(run_server.default_config_path(env={}, windows=False))
-        self.assertIsNone(run_server.default_log_file(env={}, windows=False))
+    def test_macos_and_linux_have_a_config_file_too(self):
+        # `--generate-token --save` used to refuse off Windows: there was no
+        # default config path at all, so the macOS port had nowhere to save.
+        with mock.patch.dict(os.environ, {"HOME": "/Users/op"}):
+            self.assertEqual(
+                run_server.default_config_path(env={}, platform="darwin"),
+                str(Path("/Users/op/Library/Application Support/SubSmelt/config.json")),
+            )
+            self.assertEqual(
+                run_server.default_config_path(env={}, platform="linux"),
+                str(Path("/Users/op/.local/share/subsmelt/config.json")),
+            )
+            self.assertEqual(
+                run_server.default_config_path(env={"XDG_DATA_HOME": "/srv/xdg"}, platform="linux"),
+                str(Path("/srv/xdg/subsmelt/config.json")),
+            )
+
+    def test_the_default_platform_is_the_running_one(self):
+        with mock.patch.dict(os.environ, {"HOME": "/Users/op"}), mock.patch.object(sys, "platform", "darwin"):
+            self.assertEqual(
+                run_server.default_data_dir(env={}),
+                Path("/Users/op/Library/Application Support/SubSmelt"),
+            )
+
+    def test_non_windows_keeps_console_logging(self):
+        # A default log file would also switch uvicorn's console logging off
+        # (log_config=None), which is how Docker containers are watched.
+        self.assertIsNone(run_server.default_log_file(env={}, platform="darwin"))
+        self.assertIsNone(run_server.default_log_file(env={}, platform="linux"))
 
 
 class BindDefaultTests(unittest.TestCase):

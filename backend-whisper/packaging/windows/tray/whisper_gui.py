@@ -11,7 +11,8 @@ A small Tkinter control window that OWNS a run_server.exe child process:
 
 Native: Tkinter uses Win32 widgets and ships with CPython, so the frozen exe is
 self-contained with no heavy GUI deps. The server's own console is hidden
-(CREATE_NO_WINDOW); point SUBSMELT_WHISPER_LOG_FILE at a file to keep its logs.
+(CREATE_NO_WINDOW); the child is given its own log file (whisper-server-gui.log
+next to the service's log) and "View log" shows it.
 
 Deps: pystray + pillow (tray) are tray-build-only; tkinter is stdlib. All three
 imports are guarded so this file syntax-checks anywhere.
@@ -52,11 +53,14 @@ try:
     from gui_config import (
         bind_warning,
         config_path,
+        data_dir,
+        dev_server_script,
         generate_token,
         load_config,
         save_config,
         shadowed_by_env,
         shadowed_note,
+        source_backend_root,
     )
     from server_launch import ServerExecutableNotFound, resolve_server_command
 except ImportError:  # pragma: no cover - this file's dir isn't on sys.path yet
@@ -64,11 +68,14 @@ except ImportError:  # pragma: no cover - this file's dir isn't on sys.path yet
     from gui_config import (
         bind_warning,
         config_path,
+        data_dir,
+        dev_server_script,
         generate_token,
         load_config,
         save_config,
         shadowed_by_env,
         shadowed_note,
+        source_backend_root,
     )
     from server_launch import ServerExecutableNotFound, resolve_server_command
 
@@ -94,8 +101,10 @@ def _resolve_app_version() -> str:
 
         return backend_version()
     except Exception:
-        try:  # source checkout: backend-whisper/ is three levels up from tray/
-            sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+        try:
+            root = source_backend_root()
+            if root:
+                sys.path.insert(0, str(root))
             from app.version import backend_version  # type: ignore
 
             return backend_version()
@@ -104,11 +113,12 @@ def _resolve_app_version() -> str:
 
 
 APP_VERSION = _resolve_app_version()
-DATA_DIR = Path(os.environ.get("SUBSMELT_DATA_DIR", r"C:\ProgramData\SubSmelt"))
-LOG_DIR = DATA_DIR / "logs"
 # Matches run_server.DEFAULT_LOG_FILE_NAME. Kept as a literal rather than
 # imported so the log viewer still works if app/ is unavailable for any reason.
 DEFAULT_LOG_FILE_NAME = "whisper-server.log"
+# The child this window launches logs here, beside the service's log, so the
+# two never interleave in one file.
+GUI_LOG_FILE_NAME = "whisper-server-gui.log"
 LOG_TAIL_LINES = 500
 #: Character the API key field masks with. A single glyph rather than the real
 #: value, so the window is safe to leave open on a shared screen.
@@ -121,8 +131,12 @@ PASTE_LOCATION = "SubSmelt → Settings → Speech to Text → Backend token"
 LOG_TAIL_MAX_BYTES = 512 * 1024
 
 
+def log_dir() -> Path:
+    return data_dir() / "logs"
+
+
 def resolve_log_file() -> Path:
-    """Where the server actually logs, using run_server's own precedence.
+    """Where the installed service logs, using run_server's own precedence.
 
     run_server picks SUBSMELT_WHISPER_LOG_FILE, then the ``log_file`` key in
     config.json, then <data dir>/logs/whisper-server.log. The viewer has to
@@ -146,7 +160,14 @@ def resolve_log_file() -> Path:
             return Path(value)
     except Exception:
         pass  # missing/unreadable/malformed config — fall through to the default
-    return LOG_DIR / DEFAULT_LOG_FILE_NAME
+    return log_dir() / DEFAULT_LOG_FILE_NAME
+
+
+def gui_log_file() -> Path:
+    """The log file for a server this window launches: next to the service's
+    log, under its own name. Sharing the service's file meant both wrote into
+    it and "View log" showed whichever server spoke last."""
+    return resolve_log_file().with_name(GUI_LOG_FILE_NAME)
 
 
 def read_log_tail(path: Path, lines: int) -> tuple[list[str], str]:
@@ -176,10 +197,7 @@ def read_log_tail(path: Path, lines: int) -> tuple[list[str], str]:
         return [], f"Could not read {path}: {exc}"
 
 
-CONFIG_PATH = DATA_DIR / "config.json"
 CREATE_NO_WINDOW = 0x08000000  # Windows: don't open a console for the child
-# Unfrozen fallback: the repo's own launcher script.
-DEV_SERVER_SCRIPT = Path(__file__).resolve().parents[3] / "run_server.py"
 
 
 # ---------------------------------------------------------------------------
@@ -198,10 +216,13 @@ class ServerController:
 
     def __init__(self) -> None:
         self._proc: subprocess.Popen | None = None
+        # Where the most recent child was told to log. Kept after it stops so
+        # "View log" can still show why it died.
+        self.log_file: Path | None = None
 
     @staticmethod
     def _command() -> list[str]:
-        return resolve_server_command(DEV_SERVER_SCRIPT)
+        return resolve_server_command(dev_server_script())
 
     def running(self) -> bool:
         return self._proc is not None and self._proc.poll() is None
@@ -216,6 +237,10 @@ class ServerController:
             env["SUBSMELT_WHISPER_TOKEN"] = token.strip()
         else:
             env.pop("SUBSMELT_WHISPER_TOKEN", None)
+        # Always set, overriding a machine-wide SUBSMELT_WHISPER_LOG_FILE: that
+        # one belongs to the installed service, and the child must not share it.
+        self.log_file = gui_log_file()
+        env["SUBSMELT_WHISPER_LOG_FILE"] = str(self.log_file)
         flags = CREATE_NO_WINDOW if os.name == "nt" else 0
         # Resolve first: a missing server exe gets a path-by-path explanation
         # instead of a bare "[WinError 2] The system cannot find the file specified".
@@ -366,12 +391,17 @@ def status_label(
     return label
 
 
+def health_url(host: str, port: str) -> str:
+    """A wide bind is reached over loopback; anything else is used as given."""
+    url_host = "127.0.0.1" if host == "0.0.0.0" else host
+    return f"http://{url_host}:{port}/health"
+
+
 def fetch_health(host: str, port: str, token: str) -> dict | None:
     """GET /health (open route). Returns parsed JSON or None on failure."""
     import json
 
-    url_host = "127.0.0.1" if host == "0.0.0.0" else host
-    req = urllib.request.Request(f"http://{url_host}:{port}/health")
+    req = urllib.request.Request(health_url(host, port))
     if token.strip():
         req.add_header("Authorization", f"Bearer {token.strip()}")
     try:
@@ -709,11 +739,19 @@ class WhisperGuiApp:
         self.ctl.stop()
         self.on_start()
 
+    def _server_settings(self) -> tuple[str, str, str]:
+        """host/port/token of the running child, else the form.
+
+        The fields stay editable while the server runs, so Refresh and the
+        health link built from them would hit a port nothing is bound to.
+        """
+        return self.active or (self.host_var.get(), self.port_var.get(), self.token_var.get())
+
     def on_refresh(self) -> None:
         if not self.ctl.running():
             self._set_info("Server is not running.")
             return
-        health = fetch_health(self.host_var.get(), self.port_var.get(), self.token_var.get())
+        health = fetch_health(*self._server_settings())
         if not health:
             self._set_info("Could not reach /health yet (still starting?). Try again.")
             return
@@ -757,15 +795,19 @@ class WhisperGuiApp:
                 pass
 
     def open_health(self) -> None:
-        host = "127.0.0.1" if self.host_var.get() == "0.0.0.0" else self.host_var.get()
-        webbrowser.open(f"http://{host}:{self.port_var.get()}/health")
+        host, port, _token = self._server_settings()
+        webbrowser.open(health_url(host, port))
 
     def open_logs(self) -> None:
-        LOG_DIR.mkdir(parents=True, exist_ok=True)
-        self._open(LOG_DIR)
+        log_dir().mkdir(parents=True, exist_ok=True)
+        self._open(log_dir())
+
+    def _log_file(self) -> Path:
+        """The log of the server this window launched (or would launch)."""
+        return self.ctl.log_file or gui_log_file()
 
     def view_log(self) -> None:
-        """Show the tail of the log in a window.
+        """Show the tail of this window's server log in a window.
 
         "Open logs" only ever opened Explorer at the folder, which is no help
         when the question is "what did the server just say". Reads the file
@@ -773,7 +815,7 @@ class WhisperGuiApp:
         still works when the server is down — which is exactly when the log
         matters most.
         """
-        log_file = resolve_log_file()
+        log_file = self._log_file()
         win = tk.Toplevel(self.root)
         win.title(f"SubSmelt Whisper log — {log_file}")
         win.geometry("900x520")
@@ -792,9 +834,9 @@ class WhisperGuiApp:
         text.pack(side="left", fill="both", expand=True, padx=(8, 0), pady=(0, 8))
 
         def reload_log() -> None:
-            # Re-resolve each time: the operator may point the server at a new
-            # path (env or config) without restarting the window.
-            lines, note = read_log_tail(resolve_log_file(), LOG_TAIL_LINES)
+            # Re-resolve each time: a Start since this window opened may have
+            # given the child a different path.
+            lines, note = read_log_tail(self._log_file(), LOG_TAIL_LINES)
             text.configure(state="normal")
             text.delete("1.0", "end")
             text.insert("1.0", "\n".join(lines) if lines else note)
@@ -807,10 +849,10 @@ class WhisperGuiApp:
         reload_log()
 
     def open_config(self) -> None:
-        CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        if not CONFIG_PATH.exists():
-            CONFIG_PATH.write_text("{}\n", encoding="utf-8")
-        self._open(CONFIG_PATH)
+        self.config_file.parent.mkdir(parents=True, exist_ok=True)
+        if not self.config_file.exists():
+            self.config_file.write_text("{}\n", encoding="utf-8")
+        self._open(self.config_file)
 
     @staticmethod
     def _open(path: Path) -> None:

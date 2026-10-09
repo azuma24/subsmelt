@@ -81,14 +81,16 @@ try {
 
     # --- 2. dependencies ---
     Info "installing dependencies (this can take a few minutes the first time)"
-    # Same exact versions as the CI installer build.
-    $env:PIP_CONSTRAINT = Join-Path $WinDir "constraints.txt"
-    & $VenvPy -m pip install --upgrade pip
-    & $VenvPy -m pip install -r (Join-Path $BackendRoot "requirements.txt")
+    # Same exact versions as the CI installer build. Passed as -c on each pip
+    # call rather than via PIP_CONSTRAINT: pip splits that env var on
+    # whitespace, so a repo under a path with a space in it failed to install.
+    $Constraints = Join-Path $WinDir "constraints.txt"
+    & $VenvPy -m pip install -c $Constraints --upgrade pip
+    & $VenvPy -m pip install -c $Constraints -r (Join-Path $BackendRoot "requirements.txt")
     if ($LASTEXITCODE -ne 0) { Die "pip install -r requirements.txt failed" }
     # GPU runtime wheels (cuDNN 9 / cuBLAS) + PyInstaller. These pull large CUDA
     # DLLs; the spec collects them next to the exe. Safe on a CPU-only box too.
-    & $VenvPy -m pip install nvidia-cudnn-cu12 nvidia-cublas-cu12 pyinstaller
+    & $VenvPy -m pip install -c $Constraints nvidia-cudnn-cu12 nvidia-cublas-cu12 pyinstaller
     if ($LASTEXITCODE -ne 0) { Die "pip install GPU/pyinstaller deps failed" }
 
     # --- 3. vendored binaries ---
@@ -116,7 +118,7 @@ try {
     # so its sibling lookup works.
     if (-not $SkipTray) {
         Info "building system-tray exe (pystray + pillow)"
-        & $VenvPy -m pip install pystray pillow
+        & $VenvPy -m pip install -c $Constraints pystray pillow
         if ($LASTEXITCODE -ne 0) { Warn "could not install pystray/pillow - skipping tray build" }
         else {
             & $VenvPy -m PyInstaller (Join-Path $WinDir "whisper-tray.spec") --clean --noconfirm

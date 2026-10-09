@@ -105,7 +105,7 @@ class ResolveLogFileTests(unittest.TestCase):
         os.environ["SUBSMELT_WHISPER_CONFIG"] = str(cfg)
         self.assertEqual(
             whisper_gui.resolve_log_file(),
-            whisper_gui.LOG_DIR / whisper_gui.DEFAULT_LOG_FILE_NAME,
+            whisper_gui.log_dir() / whisper_gui.DEFAULT_LOG_FILE_NAME,
         )
 
     def test_malformed_config_falls_back_rather_than_raising(self):
@@ -114,8 +114,15 @@ class ResolveLogFileTests(unittest.TestCase):
         os.environ["SUBSMELT_WHISPER_CONFIG"] = str(cfg)
         self.assertEqual(
             whisper_gui.resolve_log_file(),
-            whisper_gui.LOG_DIR / whisper_gui.DEFAULT_LOG_FILE_NAME,
+            whisper_gui.log_dir() / whisper_gui.DEFAULT_LOG_FILE_NAME,
         )
+
+    def test_the_gui_log_sits_next_to_the_service_log(self):
+        # A GUI-launched child must not write into the service's log: the two
+        # interleave, and View log then shows lines from the wrong server.
+        os.environ["SUBSMELT_WHISPER_LOG_FILE"] = str(Path(self._dir.name) / "custom.log")
+        self.assertEqual(whisper_gui.gui_log_file(), Path(self._dir.name) / "whisper-server-gui.log")
+        self.assertNotEqual(whisper_gui.gui_log_file(), whisper_gui.resolve_log_file())
 
 
 @unittest.skipIf(IMPORT_ERROR is not None, f"whisper_gui unavailable: {IMPORT_ERROR}")

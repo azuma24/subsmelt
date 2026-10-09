@@ -3,7 +3,10 @@
 
 Scaffold using `pystray` + `pillow`. Shows a status icon and a menu:
     Start service / Stop service / Open logs / Model manager /
-    Open config / Run diagnostics (provision doctor) / Quit.
+    Open config / Run diagnostics (run_server --check) / Quit.
+
+Failures are shown as a notification on the tray icon: the windowed exe has no
+console, so anything only printed is lost.
 
 DEPENDENCIES: pystray and pillow are EXTRA deps for the tray build ONLY — they are
 NOT in the backend's requirements.txt and not needed to run the server. The
@@ -38,18 +41,17 @@ except Exception:  # pragma: no cover - deps absent outside the tray build
     _HAS_TRAY = False
 
 try:
+    from gui_config import config_path, data_dir, dev_server_script, effective_config
     from server_launch import ServerExecutableNotFound, resolve_server_command
 except ImportError:  # pragma: no cover - this file's dir isn't on sys.path yet
     sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from gui_config import config_path, data_dir, dev_server_script, effective_config
     from server_launch import ServerExecutableNotFound, resolve_server_command
 
 SERVICE_NAME = os.environ.get("SUBSMELT_WHISPER_SERVICE", "SubSmeltWhisper")
-DATA_DIR = Path(os.environ.get("SUBSMELT_DATA_DIR", r"C:\ProgramData\SubSmelt"))
-CONFIG_PATH = DATA_DIR / "config.json"
-LOG_DIR = DATA_DIR / "logs"
-DEFAULT_PORT = os.environ.get("SUBSMELT_WHISPER_PORT", "8001")
-# Unfrozen fallback: the repo's own launcher script.
-DEV_SERVER_SCRIPT = Path(__file__).resolve().parents[3] / "run_server.py"
+NOTIFY_TITLE = "SubSmelt Whisper"
+# Windows balloon notifications truncate silently past about this length.
+NOTIFY_MAX_CHARS = 200
 
 
 # ---------------------------------------------------------------------------
@@ -70,6 +72,27 @@ def _run(cmd: list[str]) -> tuple[int, str]:
         return 1, str(exc)
 
 
+def _report(icon, text: str) -> None:
+    """Tell the operator something. The windowed exe has no console, so a
+    print alone is silence; the tray icon's notification is what they see."""
+    print(f"[tray] {text}")
+    if icon is None or not hasattr(icon, "notify"):
+        return
+    try:
+        icon.notify(text[:NOTIFY_MAX_CHARS], NOTIFY_TITLE)
+    except Exception:  # pragma: no cover - backend without notification support
+        pass
+
+
+def _last_line(output: str) -> str:
+    lines = [line.strip() for line in output.splitlines() if line.strip()]
+    return lines[-1] if lines else ""
+
+
+def log_dir() -> Path:
+    return data_dir() / "logs"
+
+
 # ---------------------------------------------------------------------------
 # Standalone mode: the tray OWNS a run_server.exe child process (no Windows
 # Service). This is what you get when you run the built bundle directly instead
@@ -86,14 +109,14 @@ def _server_command() -> list[str]:
     layouts the build can produce. Dev: the repo's run_server.py with the current
     interpreter. Raises ServerExecutableNotFound when nothing resolves.
     """
-    return resolve_server_command(DEV_SERVER_SCRIPT)
+    return resolve_server_command(dev_server_script())
 
 
 def server_process_running() -> bool:
     return _server_proc is not None and _server_proc.poll() is None
 
 
-def start_server_process(_icon=None, _item=None) -> None:
+def start_server_process(icon=None, _item=None) -> None:
     """Launch run_server.exe as a child process (standalone mode)."""
     global _server_proc
     if server_process_running():
@@ -102,7 +125,7 @@ def start_server_process(_icon=None, _item=None) -> None:
     try:
         cmd = _server_command()
     except ServerExecutableNotFound as exc:
-        print(f"[tray] failed to start server: {exc}")
+        _report(icon, f"failed to start server: {exc}")
         return
     try:
         # CREATE_NEW_PROCESS_GROUP lets us signal it independently on Windows.
@@ -110,10 +133,10 @@ def start_server_process(_icon=None, _item=None) -> None:
         _server_proc = subprocess.Popen(cmd, creationflags=creationflags)
         print(f"[tray] started server: {' '.join(cmd)} (pid {_server_proc.pid})")
     except Exception as exc:  # pragma: no cover - environment dependent
-        print(f"[tray] failed to start server: {exc}")
+        _report(icon, f"failed to start server: {exc}")
 
 
-def stop_server_process(_icon=None, _item=None) -> None:
+def stop_server_process(icon=None, _item=None) -> None:
     """Terminate the server child process (standalone mode)."""
     global _server_proc
     if not server_process_running():
@@ -129,41 +152,53 @@ def stop_server_process(_icon=None, _item=None) -> None:
             proc.kill()
         print("[tray] server stopped.")
     except Exception as exc:  # pragma: no cover
-        print(f"[tray] failed to stop server: {exc}")
+        _report(icon, f"failed to stop server: {exc}")
     finally:
         _server_proc = None
 
 
-def restart_server_process(_icon=None, _item=None) -> None:
-    stop_server_process()
-    start_server_process()
+def restart_server_process(icon=None, _item=None) -> None:
+    stop_server_process(icon)
+    start_server_process(icon)
+
+
+def _server_port() -> str:
+    """The port the server binds, resolved as run_server does: env, then
+    config.json, then the default. Read per click so a config edit counts."""
+    return effective_config()["port"]
 
 
 def open_health(_icon=None, _item=None) -> None:
-    webbrowser.open(f"http://127.0.0.1:{DEFAULT_PORT}/health")
+    webbrowser.open(f"http://127.0.0.1:{_server_port()}/health")
 
 
 def quit_standalone(icon=None, _item=None) -> None:
     """Quit the tray AND stop the owned server process."""
-    stop_server_process()
+    stop_server_process(icon)
     if icon is not None and hasattr(icon, "stop"):
         icon.stop()
 
 
-def start_service(_icon=None, _item=None) -> None:
+def start_service(icon=None, _item=None) -> None:
     if not _is_windows():
         print("[tray] start_service is a no-op off Windows.")
         return
     code, out = _run(["sc.exe", "start", SERVICE_NAME])
-    print(f"[tray] start service rc={code}: {out.strip()}")
+    if code != 0:
+        _report(icon, f"start service failed (rc={code}): {_last_line(out)}")
+    else:
+        print(f"[tray] start service rc={code}: {out.strip()}")
 
 
-def stop_service(_icon=None, _item=None) -> None:
+def stop_service(icon=None, _item=None) -> None:
     if not _is_windows():
         print("[tray] stop_service is a no-op off Windows.")
         return
     code, out = _run(["sc.exe", "stop", SERVICE_NAME])
-    print(f"[tray] stop service rc={code}: {out.strip()}")
+    if code != 0:
+        _report(icon, f"stop service failed (rc={code}): {_last_line(out)}")
+    else:
+        print(f"[tray] stop service rc={code}: {out.strip()}")
 
 
 def service_status() -> str:
@@ -179,16 +214,27 @@ def service_status() -> str:
     return "unknown"
 
 
-def open_logs(_icon=None, _item=None) -> None:
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
-    _open_path(LOG_DIR)
+def open_logs(icon=None, _item=None) -> None:
+    try:
+        log_dir().mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        _report(icon, f"could not create {log_dir()}: {exc}")
+        return
+    _open_path(log_dir(), icon)
 
 
-def open_config(_icon=None, _item=None) -> None:
-    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    if not CONFIG_PATH.exists():
-        CONFIG_PATH.write_text("{}\n", encoding="utf-8")
-    _open_path(CONFIG_PATH)
+def open_config(icon=None, _item=None) -> None:
+    """Open the config file the server reads (gui_config.config_path, which
+    honours SUBSMELT_WHISPER_CONFIG the way run_server does)."""
+    target = config_path()
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if not target.exists():
+            target.write_text("{}\n", encoding="utf-8")
+    except OSError as exc:
+        _report(icon, f"could not create {target}: {exc}")
+        return
+    _open_path(target, icon)
 
 
 def open_model_manager(_icon=None, _item=None) -> None:
@@ -199,22 +245,37 @@ def open_model_manager(_icon=None, _item=None) -> None:
     (served by the backend) so the tray is wired even before the dedicated UI
     ships.
     """
-    webbrowser.open(f"http://127.0.0.1:{DEFAULT_PORT}/")
+    webbrowser.open(f"http://127.0.0.1:{_server_port()}/")
 
 
-def run_diagnostics(_icon=None, _item=None) -> None:
-    """Re-runnable 'doctor' (plan Phase 3a).
+def _diagnostics_command() -> list[str]:
+    """The doctor to run: a bundled provision.exe if one is next to us, else the
+    server's own ``--check`` (config + CUDA/cuDNN probe).
 
-    Calls the provisioning doctor — preferred bundled provision.exe, falling back
-    to `python -m app.provision`. INTEGRATION POINT: wire to the real module once
-    Phase 3a lands; for now it reports whichever is available.
+    The server is resolved the same way Start is. When frozen, sys.executable
+    is whisper-tray.exe itself, so the old ``sys.executable -m app.provision``
+    fallback relaunched the tray instead of running any check.
     """
     provision_exe = Path(sys.executable).parent / "provision.exe"
     if provision_exe.exists():
-        code, out = _run([str(provision_exe), "doctor"])
-    else:
-        code, out = _run([sys.executable, "-m", "app.provision", "doctor"])
+        return [str(provision_exe), "--doctor"]
+    return [*_server_command(), "--check"]
+
+
+def run_diagnostics(icon=None, _item=None) -> None:
+    """Re-runnable 'doctor' (plan Phase 3a)."""
+    try:
+        cmd = _diagnostics_command()
+    except ServerExecutableNotFound as exc:
+        _report(icon, f"diagnostics unavailable: {exc}")
+        return
+    code, out = _run(cmd)
     print(f"[tray] diagnostics rc={code}:\n{out.strip()}")
+    # The CUDA verdict is the first thing --check prints; an error is the last.
+    if code == 0:
+        _report(icon, f"diagnostics passed: {out.strip()}")
+    else:
+        _report(icon, f"diagnostics failed (rc={code}): {_last_line(out)}")
 
 
 def quit_app(icon=None, _item=None) -> None:
@@ -222,7 +283,7 @@ def quit_app(icon=None, _item=None) -> None:
         icon.stop()
 
 
-def _open_path(path: Path) -> None:
+def _open_path(path: Path, icon=None) -> None:
     """Open a file/folder with the OS default handler (cross-platform)."""
     try:
         if _is_windows():
@@ -232,7 +293,7 @@ def _open_path(path: Path) -> None:
         else:
             _run(["xdg-open", str(path)])
     except Exception as exc:  # pragma: no cover
-        print(f"[tray] could not open {path}: {exc}")
+        _report(icon, f"could not open {path}: {exc}")
 
 
 # ---------------------------------------------------------------------------

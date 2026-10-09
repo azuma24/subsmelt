@@ -28,10 +28,29 @@ DEFAULT_PORT = "8001"
 OWNED_KEYS = ("host", "port", "token")
 
 
-def data_dir(env: dict[str, str] | None = None) -> Path:
+DEFAULT_WINDOWS_DATA_DIR = r"C:\ProgramData\SubSmelt"
+
+
+def data_dir(env: dict[str, str] | None = None, platform: str | None = None) -> Path:
+    """Where config.json and logs/ live: SUBSMELT_DATA_DIR, else the platform's
+    application-data directory.
+
+    Mirrors run_server.default_data_dir. The server and the control apps are
+    frozen into separate exes, so the function cannot be shared; test_gui_config
+    pins the two copies together.
+    """
     environ = os.environ if env is None else env
     override = (environ.get("SUBSMELT_DATA_DIR") or "").strip()
-    return Path(override) if override else Path(r"C:\ProgramData\SubSmelt")
+    if override:
+        return Path(override)
+    if platform is None:
+        platform = sys.platform
+    if platform == "win32":
+        return Path(DEFAULT_WINDOWS_DATA_DIR)
+    if platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "SubSmelt"
+    xdg = (environ.get("XDG_DATA_HOME") or "").strip()
+    return (Path(xdg) if xdg else Path.home() / ".local" / "share") / "subsmelt"
 
 
 def config_path(env: dict[str, str] | None = None) -> Path:
@@ -63,6 +82,18 @@ def shadowed_by_env(env: dict[str, str] | None = None) -> list[str]:
     """Environment variables that will override the saved config, if any."""
     environ = os.environ if env is None else env
     return [name for name in SHADOWING_ENV_VARS.values() if (environ.get(name) or "").strip()]
+
+
+def effective_config(env: dict[str, str] | None = None) -> dict[str, str]:
+    """host/port/token as run_server will resolve them: env, then config.json,
+    then the defaults. What a "open the health page" link has to use."""
+    environ = os.environ if env is None else env
+    values = load_config(config_path(environ))
+    for key, name in SHADOWING_ENV_VARS.items():
+        override = (environ.get(name) or "").strip()
+        if override:
+            values[key] = override
+    return values
 
 
 def shadowed_note(names: list[str]) -> str | None:
@@ -123,23 +154,40 @@ def save_config(path: Path, host: str, port: str, token: str) -> None:
     tmp.replace(target)
 
 
-#: backend-whisper/ — app/token_gen.py is the single definition of how strong a
-#: generated key is, and duplicating it here to avoid one import is exactly how
-#: the two would drift apart. Mirrors whisper_gui.py's path handling for
-#: app.version; the frozen build gets it via the spec's pathex + hiddenimports.
-_BACKEND_ROOT = str(Path(__file__).resolve().parents[3])
+def source_backend_root(module_file: str = __file__) -> Path | None:
+    """backend-whisper/ of a source checkout, three levels above tray/.
+
+    None in a frozen build, where the bundle supplies app.* via the spec's
+    pathex + hiddenimports and there is no checkout to find. Also None when the
+    path is too shallow to climb: a onefile exe extracts to %TEMP%, and under a
+    short TEMP ``parents[3]`` raised IndexError at import time, so the tray and
+    the GUI never started.
+    """
+    if getattr(sys, "frozen", False):
+        return None
+    parents = Path(module_file).resolve().parents
+    return parents[3] if len(parents) > 3 else None
+
+
+def dev_server_script(module_file: str = __file__) -> Path | None:
+    """The repo's own run_server.py, for launching the server unfrozen."""
+    root = source_backend_root(module_file)
+    return root / "run_server.py" if root else None
 
 
 def generate_token() -> str:
     """Mint a fresh backend API key for the operator to copy into SubSmelt.
 
+    app/token_gen.py is the single definition of how strong a generated key is;
+    duplicating it here to avoid one import is exactly how the two would drift.
     Imported lazily so a bundle missing ``app.token_gen`` still opens the
     control window — the operator loses the Generate button, not the app. The
     caller is expected to surface the ImportError rather than fall back to a
     home-made secret: a weak token that looks generated is worse than none.
     """
-    if _BACKEND_ROOT not in sys.path:
-        sys.path.insert(0, _BACKEND_ROOT)
+    root = source_backend_root()
+    if root and str(root) not in sys.path:
+        sys.path.insert(0, str(root))
     from app.token_gen import generate_token as _generate
 
     return _generate()

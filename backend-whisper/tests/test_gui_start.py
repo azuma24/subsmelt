@@ -11,8 +11,10 @@ ServerController is exercised here.
 
 import importlib.util
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 _MODULE_PATH = Path(__file__).resolve().parents[1] / "packaging" / "windows" / "tray" / "whisper_gui.py"
 _spec = importlib.util.spec_from_file_location("whisper_gui", _MODULE_PATH)
@@ -63,6 +65,25 @@ class StartFailureTests(unittest.TestCase):
     def test_stop_is_safe_when_nothing_is_running(self):
         controller = self._controller([sys.executable, "-c", "pass"])
         self.assertEqual(controller.stop(), "not running")
+
+    def test_the_child_logs_to_the_windows_own_file(self):
+        # The service and a GUI-launched child used to share one log file;
+        # both wrote into it and "View log" showed whichever spoke last.
+        with tempfile.TemporaryDirectory() as tmp:
+            witness = Path(tmp) / "seen.txt"
+            log_file = Path(tmp) / "logs" / "whisper-server-gui.log"
+            controller = self._controller(
+                [
+                    sys.executable,
+                    "-c",
+                    "import os, sys; open(sys.argv[1], 'w').write(os.environ['SUBSMELT_WHISPER_LOG_FILE'])",
+                    str(witness),
+                ]
+            )
+            with mock.patch.object(whisper_gui, "gui_log_file", return_value=log_file):
+                controller.start("0.0.0.0", "8001", "")
+            self.assertEqual(witness.read_text(), str(log_file))
+            self.assertEqual(controller.log_file, log_file)
 
 
 if __name__ == "__main__":

@@ -86,12 +86,13 @@ def find_server_exe(
     return None, searched
 
 
-def resolve_server_command(dev_script: Path) -> list[str]:
+def resolve_server_command(dev_script: Path | None) -> list[str]:
     """Build the argv that starts the server.
 
     Frozen: a resolved run_server executable. Dev: the repo's run_server.py run
-    with the current interpreter. Raises ServerExecutableNotFound when neither
-    is available, so callers can surface a real explanation to the user.
+    with the current interpreter (None when the checkout could not be located).
+    Raises ServerExecutableNotFound when neither is available, so callers can
+    surface a real explanation to the user.
     """
     if getattr(sys, "frozen", False):
         found, searched = find_server_exe(Path(sys.executable).parent)
@@ -99,6 +100,8 @@ def resolve_server_command(dev_script: Path) -> list[str]:
             raise ServerExecutableNotFound(searched)
         return [str(found)]
 
+    if dev_script is None:
+        raise ServerExecutableNotFound([])
     script = Path(dev_script)
     if not script.is_file():
         raise ServerExecutableNotFound([script])
