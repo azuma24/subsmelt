@@ -33,7 +33,14 @@ import { UrlTranscribeSection } from "./UrlTranscribeSection";
 import { LibraryPicker } from "./LibraryPicker";
 import { InlineError } from "../../ui/QueryState";
 import { applyTranscriptionProgress, cancelBatch, runBatch, useBatchState } from "./batch-store";
-import { baseName, COMPUTE_BY_DEVICE, descriptorsFrom, FORMATS, type OutputFormat } from "./whisper-shared";
+import {
+  baseName,
+  COMPUTE_BY_DEVICE,
+  descriptorsFrom,
+  FORMATS,
+  type OutputFormat,
+  transcriptionHost,
+} from "./whisper-shared";
 import { PageHeader } from "../../ui/primitives";
 import { Icon } from "../../ui/Icon";
 
@@ -193,6 +200,7 @@ export function WhisperPage() {
   // URL/YouTube input offered only when the backend has yt-dlp installed.
   const canUrl = Boolean((caps as { urlInput?: boolean } | undefined)?.urlInput);
   const modelDescriptors = useMemo(() => descriptorsFrom(caps), [caps]);
+  const host = transcriptionHost(caps);
   const deviceOptions = caps?.devices?.length ? caps.devices : ["cpu"];
   const eff = (v: string, fallbackKey: string, fb: string) => v || str(settings[fallbackKey], fb);
   const effModel = eff(model, "transcription_model", "small");
@@ -444,6 +452,7 @@ export function WhisperPage() {
               settings and live behind the Advanced disclosure. */}
               <RunOptionsSection
                 modelDescriptors={modelDescriptors}
+                host={host}
                 effModel={effModel}
                 onModelChange={handleModelChange}
                 isModelDownloaded={isModelDownloaded}

@@ -8,8 +8,8 @@ import { useToast } from "../../ui/Toast";
 import { useConfirm } from "../../ui/ConfirmModal";
 import { ActionButton, ProgressSmall } from "../../ui/primitives";
 import { InlineError } from "../../ui/QueryState";
-import type { WhisperModel } from "../../types";
-import { groupByEngine, modelEngine } from "../whisper/whisper-shared";
+import type { TranscriptionHost, WhisperModel } from "../../types";
+import { engineLabelKey, groupByEngine, isMetal, modelEngine } from "../whisper/whisper-shared";
 import { Icon } from "../../ui/Icon";
 
 function formatMb(value?: number, unknownLabel = "—"): string {
@@ -49,7 +49,7 @@ function ModelStatus({ model }: { model: WhisperModel }) {
   );
 }
 
-export function ModelManagerPanel({ enabled }: { enabled: boolean }) {
+export function ModelManagerPanel({ enabled, host }: { enabled: boolean; host: TranscriptionHost }) {
   const { t } = useTranslation();
   const { addToast } = useToast();
   const { confirm } = useConfirm();
@@ -100,7 +100,10 @@ export function ModelManagerPanel({ enabled }: { enabled: boolean }) {
 
   const groups = groupByEngine(
     (modelsQuery.data?.models ?? []).map((model) => ({ ...model, engine: model.engine ?? modelEngine(model.id) })),
+    host,
   );
+  // On a Mac the GPU shares system memory, so a VRAM figure says nothing the RAM column does not.
+  const showVram = !isMetal(host);
 
   return (
     <div className="rounded-md border border-border bg-surface-raised p-4">
@@ -137,7 +140,7 @@ export function ModelManagerPanel({ enabled }: { enabled: boolean }) {
                 <th className="py-2 pr-3 font-medium">{t("settings.models.colModel")}</th>
                 <th className="py-2 pr-3 font-medium">{t("settings.models.size")}</th>
                 <th className="py-2 pr-3 font-medium">{t("settings.models.ram")}</th>
-                <th className="py-2 pr-3 font-medium">{t("settings.models.vram")}</th>
+                {showVram && <th className="py-2 pr-3 font-medium">{t("settings.models.vram")}</th>}
                 <th className="py-2 pr-3 font-medium">{t("settings.models.colStatus")}</th>
                 <th className="py-2 pr-0 text-right font-medium">{t("settings.models.colActions")}</th>
               </tr>
@@ -145,8 +148,12 @@ export function ModelManagerPanel({ enabled }: { enabled: boolean }) {
             {groups.map((group) => (
               <tbody key={group.engine}>
                 <tr className="border-t border-border">
-                  <th colSpan={6} scope="colgroup" className="pb-1 pt-3 text-left text-xs font-semibold text-muted">
-                    {t(`stt.engine.${group.engine}`)}
+                  <th
+                    colSpan={showVram ? 6 : 5}
+                    scope="colgroup"
+                    className="pb-1 pt-3 text-left text-xs font-semibold text-muted"
+                  >
+                    {t(engineLabelKey(group.engine, host))}
                   </th>
                 </tr>
                 {group.items.map((model) => {
@@ -164,7 +171,7 @@ export function ModelManagerPanel({ enabled }: { enabled: boolean }) {
                       </td>
                       <td className="py-3 pr-3 text-muted">{formatMb(model.sizeMb)}</td>
                       <td className="py-3 pr-3 text-muted">{formatMb(model.requiredRamMb)}</td>
-                      <td className="py-3 pr-3 text-muted">{formatMb(model.requiredVramMb)}</td>
+                      {showVram && <td className="py-3 pr-3 text-muted">{formatMb(model.requiredVramMb)}</td>}
                       <td className="py-3 pr-3">
                         <ModelStatus model={model} />
                       </td>

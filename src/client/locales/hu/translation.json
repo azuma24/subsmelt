@@ -1321,14 +1321,22 @@
   "stt": {
     "engineStrength": {
       "whisper": "99 nyelv. Kínaihoz és ritka nyelvekhez a legjobb.",
-      "nemotron": "Gyors, írásjelekkel. Angol, japán, koreai és a legtöbb európai nyelv."
+      "nemotron": "Gyors, írásjelekkel. Angol, japán, koreai és a legtöbb európai nyelv.",
+      "whispercpp": "99 nyelv, a Mac GPU-ján fut.",
+      "whisperCpu": "99 nyelv. A CPU-n fut, ezért Macen lassabb."
     },
     "languageUnsupported": "A(z) {{model}} nem támogatja ezt a nyelvet: {{language}}. Válasszon Whisper-modellt.",
     "optionsDecidedByModel": "A(z) {{model}} maga határozza meg a beam méretét, a promptot és a számítási típust.",
     "modelUnavailable": "A(z) {{model}} itt nem futtatható: {{reason}}",
     "engine": {
       "whisper": "Whisper",
-      "nemotron": "NVIDIA Nemotron"
+      "nemotron": "NVIDIA Nemotron",
+      "whispercpp": "Whisper (Metal)",
+      "whisperCpu": "Whisper (CPU)"
+    },
+    "host": {
+      "mac": "Mac, {{gpu}}, Metal",
+      "sharedMemory": "{{memory}} megosztott memória"
     }
   },
   "library": {

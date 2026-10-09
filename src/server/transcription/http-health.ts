@@ -16,7 +16,7 @@ import {
   throwBackendError,
   transcriptionAuthHeaders,
 } from "./http-shared.js";
-import { modelEngine } from "./model-engine.js";
+import { modelEngine } from "../../shared/transcription.js";
 
 function lowRamBehavior(raw: string | undefined): LowRamBehavior {
   return raw === "downgrade" || raw === "skip" || raw === "run_anyway" ? raw : "ask";

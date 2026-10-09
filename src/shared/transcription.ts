@@ -44,7 +44,38 @@ export interface TranscriptionHistoryEntry {
   overwrite?: boolean;
 }
 
-export type ModelEngine = "whisper" | "nemotron";
+export type ModelEngine = "whisper" | "whispercpp" | "nemotron";
+
+/** Fallback for a model the backend sent no `engine` for; the backend's field wins. */
+export function modelEngine(id: string): ModelEngine {
+  const lower = id.toLowerCase();
+  if (lower.startsWith("whispercpp")) return "whispercpp";
+  if (lower.startsWith("nemotron")) return "nemotron";
+  return "whisper";
+}
+
+/** The machine a speech-to-text backend runs on, as capabilities.host reports it. */
+export interface BackendHost {
+  os: "macos" | "windows" | "linux";
+  arch: string;
+  accelerator: "metal" | "cuda" | "cpu";
+  gpuName: string | null;
+  memoryMb: number;
+}
+
+/** A backend that predates capabilities.host only tells us whether it offers cuda. */
+export interface LegacyHost {
+  os: "unknown";
+  accelerator: "cuda" | "cpu";
+}
+
+export type TranscriptionHost = BackendHost | LegacyHost;
+
+/** What the connected backend can do; every screen decides what to show from this. */
+export function transcriptionHost(capabilities?: { host?: BackendHost; devices?: string[] }): TranscriptionHost {
+  if (capabilities?.host) return capabilities.host;
+  return { os: "unknown", accelerator: capabilities?.devices?.includes("cuda") ? "cuda" : "cpu" };
+}
 
 export interface ModelSupports {
   prompt: boolean;
@@ -156,6 +187,7 @@ export interface TranscriptionHealth {
     modelCache?: TranscriptionPreflightResponse["modelCache"];
     capabilities?: {
       version?: string;
+      host?: BackendHost;
       transportModes?: string[];
       gpus?: { name?: string; total_vram_mb?: number; free_vram_mb?: number }[];
       models?: string[];

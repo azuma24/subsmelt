@@ -1321,14 +1321,22 @@
   "stt": {
     "engineStrength": {
       "whisper": "99 γλώσσες. Ιδανικό για κινεζικά και σπάνιες γλώσσες.",
-      "nemotron": "Γρήγορο, με στίξη. Αγγλικά, ιαπωνικά, κορεατικά και οι περισσότερες ευρωπαϊκές γλώσσες."
+      "nemotron": "Γρήγορο, με στίξη. Αγγλικά, ιαπωνικά, κορεατικά και οι περισσότερες ευρωπαϊκές γλώσσες.",
+      "whispercpp": "99 γλώσσες, εκτελείται στη GPU του Mac.",
+      "whisperCpu": "99 γλώσσες. Εκτελείται στη CPU, οπότε είναι πιο αργό σε Mac."
     },
     "languageUnsupported": "Το {{model}} δεν υποστηρίζει {{language}}. Επιλέξτε ένα μοντέλο Whisper.",
     "optionsDecidedByModel": "Το {{model}} ορίζει μόνο του το μέγεθος beam, την προτροπή και τον τύπο υπολογισμού.",
     "modelUnavailable": "Το {{model}} δεν μπορεί να εκτελεστεί εδώ: {{reason}}",
     "engine": {
       "whisper": "Whisper",
-      "nemotron": "NVIDIA Nemotron"
+      "nemotron": "NVIDIA Nemotron",
+      "whispercpp": "Whisper (Metal)",
+      "whisperCpu": "Whisper (CPU)"
+    },
+    "host": {
+      "mac": "Mac, {{gpu}}, Metal",
+      "sharedMemory": "{{memory}} κοινόχρηστη μνήμη"
     }
   },
   "library": {

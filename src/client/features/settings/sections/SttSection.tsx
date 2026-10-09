@@ -9,7 +9,7 @@ import { TranscriptionReadinessPanel } from "../TranscriptionReadinessPanel";
 import { PathMappingFields } from "./PathMappingFields";
 import { RawConfigDrawer } from "./RawConfigDrawer";
 import { SttAdvancedFields } from "./SttAdvancedFields";
-import { descriptorsFrom, findDescriptor } from "../../whisper/whisper-shared";
+import { descriptorsFrom, findDescriptor, transcriptionHost } from "../../whisper/whisper-shared";
 import { LanguageSupportWarning, ModelPicker } from "../../whisper/ModelPicker";
 import { ToggleRow, labelCls, selectCls } from "./shared";
 import { useIsMobile } from "../../../hooks";
@@ -65,7 +65,9 @@ export function SttSection({
 
   // Before health loads this falls back to the known Whisper sizes; the picker
   // always lists the saved model so a value like large-v3 is never dropped.
-  const modelDescriptors = descriptorsFrom(healthQuery.data?.health?.capabilities);
+  const capabilities = healthQuery.data?.health?.capabilities;
+  const modelDescriptors = descriptorsFrom(capabilities);
+  const host = transcriptionHost(capabilities);
   const selectedSttModel = str(settings.transcription_model, "small");
   const selectedDescriptor = findDescriptor(modelDescriptors, selectedSttModel);
   const selectedLanguage = str(settings.transcription_language, "auto");
@@ -126,6 +128,7 @@ export function SttSection({
           <ModelPicker
             ariaLabel={t("settings.transcription.model")}
             descriptors={modelDescriptors}
+            host={host}
             value={selectedSttModel}
             onChange={(modelId) => update("transcription_model", modelId)}
             className={selectCls}
@@ -169,11 +172,11 @@ export function SttSection({
 
       {/* Speech-to-text model manager — proxied to the configured backend. Requires a
           backend URL to be set; download progress streams over SSE. */}
-      <ModelManagerPanel enabled={Boolean(str(settings.transcription_backend_url))} />
+      <ModelManagerPanel enabled={Boolean(str(settings.transcription_backend_url))} host={host} />
 
       <PathMappingFields settings={settings} update={update} />
 
-      <SttAdvancedFields settings={settings} update={update} model={selectedDescriptor} />
+      <SttAdvancedFields settings={settings} update={update} model={selectedDescriptor} host={host} />
 
       {/* Raw config (L4) — the two STT JSON blobs, behind an explicit Save. */}
       <RawConfigDrawer settings={settings} update={update} onSave={onSave} dirty={dirty} saving={saving} />

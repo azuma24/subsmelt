@@ -1325,14 +1325,22 @@
   "stt": {
     "engineStrength": {
       "whisper": "99 de limbi. Cel mai bun pentru chineză și limbi rare.",
-      "nemotron": "Rapid, cu punctuație. Engleză, japoneză, coreeană și majoritatea limbilor europene."
+      "nemotron": "Rapid, cu punctuație. Engleză, japoneză, coreeană și majoritatea limbilor europene.",
+      "whispercpp": "99 de limbi, rulează pe GPU-ul Mac-ului.",
+      "whisperCpu": "99 de limbi. Rulează pe CPU, deci este mai lent pe un Mac."
     },
     "languageUnsupported": "{{model}} nu acceptă {{language}}. Alege un model Whisper.",
     "optionsDecidedByModel": "{{model}} stabilește singur dimensiunea beam, promptul și tipul de calcul.",
     "modelUnavailable": "{{model}} nu poate rula aici: {{reason}}",
     "engine": {
       "whisper": "Whisper",
-      "nemotron": "NVIDIA Nemotron"
+      "nemotron": "NVIDIA Nemotron",
+      "whispercpp": "Whisper (Metal)",
+      "whisperCpu": "Whisper (CPU)"
+    },
+    "host": {
+      "mac": "Mac, {{gpu}}, Metal",
+      "sharedMemory": "{{memory}} memorie partajată"
     }
   },
   "library": {

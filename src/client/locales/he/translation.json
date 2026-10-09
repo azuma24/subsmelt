@@ -1325,14 +1325,22 @@
   "stt": {
     "engineStrength": {
       "whisper": "99 שפות. הכי טוב לסינית ולשפות נדירות.",
-      "nemotron": "מהיר, עם פיסוק. אנגלית, יפנית, קוריאנית ורוב השפות האירופיות."
+      "nemotron": "מהיר, עם פיסוק. אנגלית, יפנית, קוריאנית ורוב השפות האירופיות.",
+      "whispercpp": "99 שפות, רץ על מעבד הגרפיקה של ה-Mac.",
+      "whisperCpu": "99 שפות. רץ על המעבד, ולכן איטי יותר ב-Mac."
     },
     "languageUnsupported": "{{model}} אינו תומך ב{{language}}. בחר מודל Whisper.",
     "optionsDecidedByModel": "{{model}} קובע בעצמו את גודל ה-beam, ההנחיה וסוג החישוב.",
     "modelUnavailable": "לא ניתן להריץ את {{model}} כאן: {{reason}}",
     "engine": {
       "whisper": "Whisper",
-      "nemotron": "NVIDIA Nemotron"
+      "nemotron": "NVIDIA Nemotron",
+      "whispercpp": "Whisper (Metal)",
+      "whisperCpu": "Whisper (מעבד)"
+    },
+    "host": {
+      "mac": "Mac, {{gpu}}, Metal",
+      "sharedMemory": "{{memory}} זיכרון משותף"
     }
   },
   "library": {

@@ -1321,14 +1321,22 @@
   "stt": {
     "engineStrength": {
       "whisper": "99 dil. Çince ve nadir diller için en iyisi.",
-      "nemotron": "Hızlı, noktalamalı. İngilizce, Japonca, Korece ve çoğu Avrupa dili."
+      "nemotron": "Hızlı, noktalamalı. İngilizce, Japonca, Korece ve çoğu Avrupa dili.",
+      "whispercpp": "99 dil, Mac'in GPU'sunda çalışır.",
+      "whisperCpu": "99 dil. CPU'da çalıştığı için Mac'te daha yavaştır."
     },
     "languageUnsupported": "{{model}}, {{language}} dilini desteklemiyor. Bir Whisper modeli seçin.",
     "optionsDecidedByModel": "{{model}}, beam boyutunu, istemi ve hesaplama türünü kendisi belirler.",
     "modelUnavailable": "{{model}} burada çalışamıyor: {{reason}}",
     "engine": {
       "whisper": "Whisper",
-      "nemotron": "NVIDIA Nemotron"
+      "nemotron": "NVIDIA Nemotron",
+      "whispercpp": "Whisper (Metal)",
+      "whisperCpu": "Whisper (CPU)"
+    },
+    "host": {
+      "mac": "Mac, {{gpu}}, Metal",
+      "sharedMemory": "{{memory}} paylaşılan bellek"
     }
   },
   "library": {

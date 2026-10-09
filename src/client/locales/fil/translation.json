@@ -1321,14 +1321,22 @@
   "stt": {
     "engineStrength": {
       "whisper": "99 wika. Pinakamainam para sa Chinese at mga bihirang wika.",
-      "nemotron": "Mabilis, may bantas. English, Japanese, Korean, at karamihan ng mga wikang European."
+      "nemotron": "Mabilis, may bantas. English, Japanese, Korean, at karamihan ng mga wikang European.",
+      "whispercpp": "99 wika, tumatakbo sa GPU ng Mac.",
+      "whisperCpu": "99 wika. Tumatakbo sa CPU, kaya mas mabagal ito sa Mac."
     },
     "languageUnsupported": "Hindi sinusuportahan ng {{model}} ang {{language}}. Pumili ng Whisper model.",
     "optionsDecidedByModel": "Ang {{model}} mismo ang nagpapasya ng beam size, prompt at compute type.",
     "modelUnavailable": "Hindi mapapatakbo rito ang {{model}}: {{reason}}",
     "engine": {
       "whisper": "Whisper",
-      "nemotron": "NVIDIA Nemotron"
+      "nemotron": "NVIDIA Nemotron",
+      "whispercpp": "Whisper (Metal)",
+      "whisperCpu": "Whisper (CPU)"
+    },
+    "host": {
+      "mac": "Mac, {{gpu}}, Metal",
+      "sharedMemory": "{{memory}} na shared memory"
     }
   },
   "library": {

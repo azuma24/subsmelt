@@ -41,6 +41,8 @@ export type {
   TranscriptionOutputFormat,
   TranscriptionPreflightResponse,
   WhisperModelDeleteResult,
+  BackendHost,
+  TranscriptionHost,
   WhisperModelDescriptor,
   WhisperModelDownloadResult,
   WhisperModelInfo as WhisperModel,

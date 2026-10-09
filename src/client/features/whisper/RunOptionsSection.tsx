@@ -1,14 +1,23 @@
 import { useTranslation } from "../../i18n";
 import { Accordion, ProgressSmall, SettingsSection, Select } from "../../ui/primitives";
-import type { WhisperModelDescriptor } from "../../types";
+import type { TranscriptionHost, WhisperModelDescriptor } from "../../types";
 import type { ModelDownloadProgress } from "../../hooks";
-import { COMMON_LANGS, findDescriptor, FORMATS, hidesOptions, selectCls, type OutputFormat } from "./whisper-shared";
+import {
+  COMMON_LANGS,
+  findDescriptor,
+  FORMATS,
+  hidesOptions,
+  isMetal,
+  selectCls,
+  type OutputFormat,
+} from "./whisper-shared";
 import { LanguageSupportWarning, ModelPicker, OptionsDecidedNote } from "./ModelPicker";
 import { useIsMobile } from "../../hooks";
 import { Icon } from "../../ui/Icon";
 
 export interface RunOptionsSectionProps {
   modelDescriptors: WhisperModelDescriptor[];
+  host: TranscriptionHost;
   effModel: string;
   onModelChange: (modelId: string) => Promise<void>;
   isModelDownloaded: (modelId: string) => boolean | undefined;
@@ -39,6 +48,7 @@ const optionLabelCls = "flex flex-col gap-1 text-xs text-muted";
  */
 export function RunOptionsSection({
   modelDescriptors,
+  host,
   effModel,
   onModelChange,
   isModelDownloaded,
@@ -70,6 +80,7 @@ export function RunOptionsSection({
           {t("whisper.model")}
           <ModelPicker
             descriptors={modelDescriptors}
+            host={host}
             value={effModel}
             onChange={(modelId) => {
               void onModelChange(modelId);
@@ -115,27 +126,31 @@ export function RunOptionsSection({
           </div>
         )}
         <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
-          <label className={optionLabelCls}>
-            {t("whisper.device")}
-            <Select value={effDevice} onChange={(value) => onDeviceChange(value)}>
-              {deviceOptions.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </Select>
-          </label>
-          {selectedModel.supports.computeType && (
-            <label className={optionLabelCls}>
-              {t("whisper.compute")}
-              <Select value={effCompute} onChange={(value) => onComputeChange(value)}>
-                {computeOptions.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </Select>
-            </label>
+          {!isMetal(host) && (
+            <>
+              <label className={optionLabelCls}>
+                {t("whisper.device")}
+                <Select value={effDevice} onChange={(value) => onDeviceChange(value)}>
+                  {deviceOptions.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+              {selectedModel.supports.computeType && (
+                <label className={optionLabelCls}>
+                  {t("whisper.compute")}
+                  <Select value={effCompute} onChange={(value) => onComputeChange(value)}>
+                    {computeOptions.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </Select>
+                </label>
+              )}
+            </>
           )}
           {canDiarize ? (
             <label className="flex items-center gap-2 self-end pb-2 text-xs text-muted">

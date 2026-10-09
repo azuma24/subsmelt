@@ -1,7 +1,14 @@
 import type { TFunction } from "../../i18n";
 import { useTranslation } from "../../i18n";
-import type { WhisperModelDescriptor } from "../../types";
-import { findDescriptor, groupByEngine, MODEL_LABEL_KEYS, supportsLanguage } from "./whisper-shared";
+import type { TranscriptionHost, WhisperModelDescriptor } from "../../types";
+import {
+  engineLabelKey,
+  engineStrengthKey,
+  findDescriptor,
+  groupByEngine,
+  MODEL_LABEL_KEYS,
+  supportsLanguage,
+} from "./whisper-shared";
 import { Icon } from "../../ui/Icon";
 
 export function modelLabel(t: TFunction, model: WhisperModelDescriptor): string {
@@ -11,6 +18,8 @@ export function modelLabel(t: TFunction, model: WhisperModelDescriptor): string 
 
 interface ModelPickerProps {
   descriptors: WhisperModelDescriptor[];
+  /** Orders and labels the engine groups for the connected backend. */
+  host: TranscriptionHost;
   value: string;
   onChange: (modelId: string) => void;
   className: string;
@@ -24,7 +33,15 @@ interface ModelPickerProps {
  * strength underneath. A model whose runtime is missing stays listed but
  * cannot be picked.
  */
-export function ModelPicker({ descriptors, value, onChange, className, ariaLabel, isDownloaded }: ModelPickerProps) {
+export function ModelPicker({
+  descriptors,
+  host,
+  value,
+  onChange,
+  className,
+  ariaLabel,
+  isDownloaded,
+}: ModelPickerProps) {
   const { t } = useTranslation();
   const selected = findDescriptor(descriptors, value);
   const listed = descriptors.some((d) => d.id === value) ? descriptors : [selected, ...descriptors];
@@ -38,8 +55,8 @@ export function ModelPicker({ descriptors, value, onChange, className, ariaLabel
   return (
     <>
       <select aria-label={ariaLabel} value={value} onChange={(e) => onChange(e.target.value)} className={className}>
-        {groupByEngine(listed).map((group) => (
-          <optgroup key={group.engine} label={t(`stt.engine.${group.engine}`)}>
+        {groupByEngine(listed, host).map((group) => (
+          <optgroup key={group.engine} label={t(engineLabelKey(group.engine, host))}>
             {group.items.map((model) => (
               <option key={model.id} value={model.id} disabled={!model.available}>
                 {modelLabel(t, model)}
@@ -49,7 +66,7 @@ export function ModelPicker({ descriptors, value, onChange, className, ariaLabel
           </optgroup>
         ))}
       </select>
-      <p className="mt-1 text-xs leading-snug text-faint">{t(`stt.engineStrength.${selected.engine}`)}</p>
+      <p className="mt-1 text-xs leading-snug text-faint">{t(engineStrengthKey(selected.engine, host))}</p>
       {!selected.available && (
         <p className="mt-1 text-xs leading-snug text-danger">
           <Icon name="error" />

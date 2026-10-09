@@ -1321,14 +1321,22 @@
   "stt": {
     "engineStrength": {
       "whisper": "99 言語に対応。中国語や少数言語に最適です。",
-      "nemotron": "高速で句読点付き。英語、日本語、韓国語、主要な欧州言語に対応。"
+      "nemotron": "高速で句読点付き。英語、日本語、韓国語、主要な欧州言語に対応。",
+      "whispercpp": "99 言語に対応。Mac の GPU で動作します。",
+      "whisperCpu": "99 言語に対応。CPU で動作するため、Mac では遅くなります。"
     },
     "languageUnsupported": "{{model}} は{{language}}に対応していません。Whisper モデルを選んでください。",
     "optionsDecidedByModel": "{{model}} はビームサイズ、プロンプト、計算タイプを自動で決定します。",
     "modelUnavailable": "{{model}} はここでは実行できません：{{reason}}",
     "engine": {
       "whisper": "Whisper",
-      "nemotron": "NVIDIA Nemotron"
+      "nemotron": "NVIDIA Nemotron",
+      "whispercpp": "Whisper（Metal）",
+      "whisperCpu": "Whisper（CPU）"
+    },
+    "host": {
+      "mac": "Mac、{{gpu}}、Metal",
+      "sharedMemory": "共有メモリ {{memory}}"
     }
   },
   "library": {

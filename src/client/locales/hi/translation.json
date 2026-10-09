@@ -1321,14 +1321,22 @@
   "stt": {
     "engineStrength": {
       "whisper": "99 भाषाएँ। चीनी और दुर्लभ भाषाओं के लिए सबसे अच्छा।",
-      "nemotron": "तेज़, विराम चिह्नों के साथ। अंग्रेज़ी, जापानी, कोरियाई और अधिकांश यूरोपीय भाषाएँ।"
+      "nemotron": "तेज़, विराम चिह्नों के साथ। अंग्रेज़ी, जापानी, कोरियाई और अधिकांश यूरोपीय भाषाएँ।",
+      "whispercpp": "99 भाषाएँ, Mac के GPU पर चलता है।",
+      "whisperCpu": "99 भाषाएँ। CPU पर चलता है, इसलिए Mac पर धीमा है।"
     },
     "languageUnsupported": "{{model}} {{language}} का समर्थन नहीं करता। कोई Whisper मॉडल चुनें।",
     "optionsDecidedByModel": "{{model}} बीम साइज़, प्रॉम्प्ट और कंप्यूट टाइप खुद तय करता है।",
     "modelUnavailable": "{{model}} यहाँ नहीं चल सकता: {{reason}}",
     "engine": {
       "whisper": "Whisper",
-      "nemotron": "NVIDIA Nemotron"
+      "nemotron": "NVIDIA Nemotron",
+      "whispercpp": "Whisper (Metal)",
+      "whisperCpu": "Whisper (CPU)"
+    },
+    "host": {
+      "mac": "Mac, {{gpu}}, Metal",
+      "sharedMemory": "{{memory}} साझा मेमोरी"
     }
   },
   "library": {

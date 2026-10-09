@@ -1321,14 +1321,22 @@
   "stt": {
     "engineStrength": {
       "whisper": "99 ภาษา เหมาะที่สุดสำหรับภาษาจีนและภาษาที่พบน้อย",
-      "nemotron": "รวดเร็ว ใส่เครื่องหมายวรรคตอนให้ รองรับอังกฤษ ญี่ปุ่น เกาหลี และภาษายุโรปส่วนใหญ่"
+      "nemotron": "รวดเร็ว ใส่เครื่องหมายวรรคตอนให้ รองรับอังกฤษ ญี่ปุ่น เกาหลี และภาษายุโรปส่วนใหญ่",
+      "whispercpp": "99 ภาษา ทำงานบน GPU ของ Mac",
+      "whisperCpu": "99 ภาษา ทำงานบน CPU จึงช้ากว่าบน Mac"
     },
     "languageUnsupported": "{{model}} ไม่รองรับ{{language}} โปรดเลือกโมเดล Whisper",
     "optionsDecidedByModel": "{{model}} กำหนดขนาด beam, พรอมต์ และประเภทการประมวลผลเอง",
     "modelUnavailable": "{{model}} ไม่สามารถทำงานที่นี่ได้: {{reason}}",
     "engine": {
       "whisper": "Whisper",
-      "nemotron": "NVIDIA Nemotron"
+      "nemotron": "NVIDIA Nemotron",
+      "whispercpp": "Whisper (Metal)",
+      "whisperCpu": "Whisper (CPU)"
+    },
+    "host": {
+      "mac": "Mac, {{gpu}}, Metal",
+      "sharedMemory": "หน่วยความจำร่วม {{memory}}"
     }
   },
   "library": {

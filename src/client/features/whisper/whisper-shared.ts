@@ -2,7 +2,8 @@
 // split-out sections (RunOptionsSection, UrlTranscribeSection, LibraryPicker)
 // and WhisperPage itself.
 
-import type { ModelEngine, ModelSupports, WhisperModelDescriptor } from "../../types";
+import type { BackendHost, ModelEngine, ModelSupports, TranscriptionHost, WhisperModelDescriptor } from "../../types";
+import { modelEngine } from "../../../shared/transcription";
 
 export const baseName = (p: string): string => p.split(/[\\/]/).pop() || p;
 
@@ -34,12 +35,22 @@ export const MODEL_LABEL_KEYS: Record<string, string> = {
   "large-v3-turbo": "settings.transcription.modelLargeV3Turbo",
 };
 
-export const MODEL_ENGINES: ModelEngine[] = ["whisper", "nemotron"];
+export { modelEngine, transcriptionHost } from "../../../shared/transcription";
 
-// Same rule as src/server/transcription/model-engine.ts; the client build
-// cannot import server modules.
-export const modelEngine = (id: string): ModelEngine =>
-  id.toLowerCase().startsWith("nemotron") ? "nemotron" : "whisper";
+/** On a Mac, faster-whisper runs on the CPU while whisper.cpp and Nemotron use Metal. */
+export const isMetal = (host: TranscriptionHost): host is BackendHost => host.accelerator === "metal";
+
+export function modelEngines(host: TranscriptionHost): ModelEngine[] {
+  return isMetal(host) ? ["whispercpp", "nemotron", "whisper"] : ["whisper", "whispercpp", "nemotron"];
+}
+
+export function engineLabelKey(engine: ModelEngine, host: TranscriptionHost): string {
+  return engine === "whisper" && isMetal(host) ? "stt.engine.whisperCpu" : `stt.engine.${engine}`;
+}
+
+export function engineStrengthKey(engine: ModelEngine, host: TranscriptionHost): string {
+  return engine === "whisper" && isMetal(host) ? "stt.engineStrength.whisperCpu" : `stt.engineStrength.${engine}`;
+}
 
 const ALL_SUPPORTED: ModelSupports = {
   prompt: true,
@@ -78,11 +89,14 @@ export function findDescriptor(descriptors: WhisperModelDescriptor[], id: string
   return descriptors.find((d) => d.id === id) ?? synthesizeDescriptor(id);
 }
 
-/** Items grouped by engine in MODEL_ENGINES order; engines with no items are left out. */
-export function groupByEngine<T extends { engine: ModelEngine }>(items: T[]): { engine: ModelEngine; items: T[] }[] {
-  return MODEL_ENGINES.map((engine) => ({ engine, items: items.filter((item) => item.engine === engine) })).filter(
-    (group) => group.items.length > 0,
-  );
+/** Items grouped by engine in the host's engine order; engines with no items are left out. */
+export function groupByEngine<T extends { engine: ModelEngine }>(
+  items: T[],
+  host: TranscriptionHost,
+): { engine: ModelEngine; items: T[] }[] {
+  return modelEngines(host)
+    .map((engine) => ({ engine, items: items.filter((item) => item.engine === engine) }))
+    .filter((group) => group.items.length > 0);
 }
 
 export function supportsLanguage(model: WhisperModelDescriptor, language: string): boolean {

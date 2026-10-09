@@ -1329,14 +1329,22 @@
   "stt": {
     "engineStrength": {
       "whisper": "99 мов. Найкраще для китайської та рідкісних мов.",
-      "nemotron": "Швидко, з пунктуацією. Англійська, японська, корейська та більшість європейських мов."
+      "nemotron": "Швидко, з пунктуацією. Англійська, японська, корейська та більшість європейських мов.",
+      "whispercpp": "99 мов, працює на GPU Mac.",
+      "whisperCpu": "99 мов. Працює на CPU, тому на Mac повільніший."
     },
     "languageUnsupported": "{{model}} не підтримує {{language}}. Виберіть модель Whisper.",
     "optionsDecidedByModel": "{{model}} сам визначає розмір beam, підказку та тип обчислень.",
     "modelUnavailable": "{{model}} не може працювати тут: {{reason}}",
     "engine": {
       "whisper": "Whisper",
-      "nemotron": "NVIDIA Nemotron"
+      "nemotron": "NVIDIA Nemotron",
+      "whispercpp": "Whisper (Metal)",
+      "whisperCpu": "Whisper (CPU)"
+    },
+    "host": {
+      "mac": "Mac, {{gpu}}, Metal",
+      "sharedMemory": "{{memory}} спільної пам’яті"
     }
   },
   "library": {

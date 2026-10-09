@@ -1321,14 +1321,22 @@
   "stt": {
     "engineStrength": {
       "whisper": "99 ngôn ngữ. Tốt nhất cho tiếng Trung và các ngôn ngữ hiếm.",
-      "nemotron": "Nhanh, có dấu câu. Tiếng Anh, Nhật, Hàn và hầu hết ngôn ngữ châu Âu."
+      "nemotron": "Nhanh, có dấu câu. Tiếng Anh, Nhật, Hàn và hầu hết ngôn ngữ châu Âu.",
+      "whispercpp": "99 ngôn ngữ, chạy trên GPU của Mac.",
+      "whisperCpu": "99 ngôn ngữ. Chạy trên CPU nên chậm hơn trên Mac."
     },
     "languageUnsupported": "{{model}} không hỗ trợ {{language}}. Hãy chọn một mô hình Whisper.",
     "optionsDecidedByModel": "{{model}} tự quyết định kích thước beam, prompt và kiểu tính toán.",
     "modelUnavailable": "{{model}} không thể chạy ở đây: {{reason}}",
     "engine": {
       "whisper": "Whisper",
-      "nemotron": "NVIDIA Nemotron"
+      "nemotron": "NVIDIA Nemotron",
+      "whispercpp": "Whisper (Metal)",
+      "whisperCpu": "Whisper (CPU)"
+    },
+    "host": {
+      "mac": "Mac, {{gpu}}, Metal",
+      "sharedMemory": "{{memory}} bộ nhớ dùng chung"
     }
   },
   "library": {

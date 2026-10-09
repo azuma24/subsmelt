@@ -1325,14 +1325,22 @@
   "stt": {
     "engineStrength": {
       "whisper": "99 idiomas. Ideal para chinês e idiomas raros.",
-      "nemotron": "Rápido e com pontuação. Inglês, japonês, coreano e a maioria dos idiomas europeus."
+      "nemotron": "Rápido e com pontuação. Inglês, japonês, coreano e a maioria dos idiomas europeus.",
+      "whispercpp": "99 idiomas, roda na GPU do Mac.",
+      "whisperCpu": "99 idiomas. Roda na CPU, então é mais lento no Mac."
     },
     "languageUnsupported": "{{model}} não suporta {{language}}. Escolha um modelo Whisper.",
     "optionsDecidedByModel": "{{model}} define sozinho o tamanho do beam, o prompt e o tipo de computação.",
     "modelUnavailable": "{{model}} não pode ser executado aqui: {{reason}}",
     "engine": {
       "whisper": "Whisper",
-      "nemotron": "NVIDIA Nemotron"
+      "nemotron": "NVIDIA Nemotron",
+      "whispercpp": "Whisper (Metal)",
+      "whisperCpu": "Whisper (CPU)"
+    },
+    "host": {
+      "mac": "Mac, {{gpu}}, Metal",
+      "sharedMemory": "{{memory}} de memória compartilhada"
     }
   },
   "library": {

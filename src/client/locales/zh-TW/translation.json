@@ -1321,14 +1321,22 @@
   "stt": {
     "engineStrength": {
       "whisper": "支援 99 種語言，最適合中文與少見語言。",
-      "nemotron": "速度快，自帶標點。支援英文、日文、韓文與多數歐洲語言。"
+      "nemotron": "速度快，自帶標點。支援英文、日文、韓文與多數歐洲語言。",
+      "whispercpp": "支援 99 種語言，在 Mac 的 GPU 上執行。",
+      "whisperCpu": "支援 99 種語言。在 CPU 上執行，因此在 Mac 上較慢。"
     },
     "languageUnsupported": "{{model}} 不支援{{language}}，請改選 Whisper 模型。",
     "optionsDecidedByModel": "{{model}} 會自行決定 beam 大小、提示詞與運算類型。",
     "modelUnavailable": "{{model}} 無法在此執行：{{reason}}",
     "engine": {
       "whisper": "Whisper",
-      "nemotron": "NVIDIA Nemotron"
+      "nemotron": "NVIDIA Nemotron",
+      "whispercpp": "Whisper（Metal）",
+      "whisperCpu": "Whisper（CPU）"
+    },
+    "host": {
+      "mac": "Mac，{{gpu}}，Metal",
+      "sharedMemory": "{{memory}} 共享記憶體"
     }
   },
   "library": {

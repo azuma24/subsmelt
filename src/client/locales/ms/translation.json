@@ -1321,14 +1321,22 @@
   "stt": {
     "engineStrength": {
       "whisper": "99 bahasa. Terbaik untuk bahasa Cina dan bahasa yang jarang digunakan.",
-      "nemotron": "Pantas, dengan tanda baca. Bahasa Inggeris, Jepun, Korea dan kebanyakan bahasa Eropah."
+      "nemotron": "Pantas, dengan tanda baca. Bahasa Inggeris, Jepun, Korea dan kebanyakan bahasa Eropah.",
+      "whispercpp": "99 bahasa, berjalan pada GPU Mac.",
+      "whisperCpu": "99 bahasa. Berjalan pada CPU, jadi lebih perlahan pada Mac."
     },
     "languageUnsupported": "{{model}} tidak menyokong {{language}}. Pilih model Whisper.",
     "optionsDecidedByModel": "{{model}} menentukan sendiri saiz beam, gesaan dan jenis pengiraan.",
     "modelUnavailable": "{{model}} tidak boleh dijalankan di sini: {{reason}}",
     "engine": {
       "whisper": "Whisper",
-      "nemotron": "NVIDIA Nemotron"
+      "nemotron": "NVIDIA Nemotron",
+      "whispercpp": "Whisper (Metal)",
+      "whisperCpu": "Whisper (CPU)"
+    },
+    "host": {
+      "mac": "Mac, {{gpu}}, Metal",
+      "sharedMemory": "{{memory}} memori kongsi"
     }
   },
   "library": {

@@ -1329,14 +1329,22 @@
   "stt": {
     "engineStrength": {
       "whisper": "99 jazyků. Nejlepší pro čínštinu a vzácné jazyky.",
-      "nemotron": "Rychlý, s interpunkcí. Angličtina, japonština, korejština a většina evropských jazyků."
+      "nemotron": "Rychlý, s interpunkcí. Angličtina, japonština, korejština a většina evropských jazyků.",
+      "whispercpp": "99 jazyků, běží na GPU Macu.",
+      "whisperCpu": "99 jazyků. Běží na CPU, takže je na Macu pomalejší."
     },
     "languageUnsupported": "{{model}} nepodporuje jazyk {{language}}. Vyberte model Whisper.",
     "optionsDecidedByModel": "{{model}} si sám určuje velikost beam, prompt a typ výpočtu.",
     "modelUnavailable": "{{model}} zde nelze spustit: {{reason}}",
     "engine": {
       "whisper": "Whisper",
-      "nemotron": "NVIDIA Nemotron"
+      "nemotron": "NVIDIA Nemotron",
+      "whispercpp": "Whisper (Metal)",
+      "whisperCpu": "Whisper (CPU)"
+    },
+    "host": {
+      "mac": "Mac, {{gpu}}, Metal",
+      "sharedMemory": "{{memory}} sdílené paměti"
     }
   },
   "library": {

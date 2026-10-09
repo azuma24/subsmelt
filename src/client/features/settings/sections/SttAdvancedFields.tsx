@@ -2,8 +2,8 @@ import { useTranslation } from "../../../i18n";
 import { Accordion, Field, Select } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
 import { ToggleRow, labelCls } from "./shared";
-import type { WhisperModelDescriptor } from "../../../types";
-import { hidesOptions } from "../../whisper/whisper-shared";
+import type { TranscriptionHost, WhisperModelDescriptor } from "../../../types";
+import { hidesOptions, isMetal } from "../../whisper/whisper-shared";
 import { OptionsDecidedNote } from "../../whisper/ModelPicker";
 import { useIsMobile } from "../../../hooks";
 
@@ -13,13 +13,41 @@ interface SttAdvancedFieldsProps {
   update: (key: string, value: unknown) => void;
   /** The default model; options it decides itself are hidden. */
   model: WhisperModelDescriptor;
+  host: TranscriptionHost;
+}
+
+/**
+ * Device and compute type. A Metal backend picks both itself, so they are
+ * hidden there; the stored values stay for when a PC backend is connected again.
+ */
+export function SttDeviceFields({ settings, update, model, host }: SttAdvancedFieldsProps) {
+  const { t } = useTranslation();
+  if (isMetal(host)) return null;
+  return (
+    <>
+      <Field
+        label={t("settings.transcription.device")}
+        value={str(settings.transcription_device, "cpu")}
+        onChange={(v) => update("transcription_device", v)}
+        help={t("settings.transcription.deviceHelp")}
+      />
+      {model.supports.computeType && (
+        <Field
+          label={t("settings.transcription.computeType")}
+          value={str(settings.transcription_compute_type, "int8")}
+          onChange={(v) => update("transcription_compute_type", v)}
+          help={t("settings.transcription.computeTypeHelp")}
+        />
+      )}
+    </>
+  );
 }
 
 /**
  * Device/compute/concurrency, line shaping, VAD and the two fallback
  * behaviours. Collapsed by default, like every other "Advanced" accordion.
  */
-export function SttAdvancedFields({ settings, update, model }: SttAdvancedFieldsProps) {
+export function SttAdvancedFields({ settings, update, model, host }: SttAdvancedFieldsProps) {
   const isMobile = useIsMobile();
   const { t } = useTranslation();
   return (
@@ -27,20 +55,7 @@ export function SttAdvancedFields({ settings, update, model }: SttAdvancedFields
       <div className="space-y-4">
         {hidesOptions(model) && <OptionsDecidedNote model={model} />}
         <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
-          <Field
-            label={t("settings.transcription.device")}
-            value={str(settings.transcription_device, "cpu")}
-            onChange={(v) => update("transcription_device", v)}
-            help={t("settings.transcription.deviceHelp")}
-          />
-          {model.supports.computeType && (
-            <Field
-              label={t("settings.transcription.computeType")}
-              value={str(settings.transcription_compute_type, "int8")}
-              onChange={(v) => update("transcription_compute_type", v)}
-              help={t("settings.transcription.computeTypeHelp")}
-            />
-          )}
+          <SttDeviceFields settings={settings} update={update} model={model} host={host} />
           <Field
             label={t("settings.transcription.maxConcurrent")}
             value={str(settings.transcription_max_concurrent, "1")}

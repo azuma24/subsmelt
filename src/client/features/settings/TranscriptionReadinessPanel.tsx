@@ -1,9 +1,16 @@
 import type { UseQueryResult } from "@tanstack/react-query";
-import { useTranslation } from "../../i18n";
-import type { TranscriptionHealth } from "../../types";
+import { type TFunction, useTranslation } from "../../i18n";
+import type { TranscriptionHealth, TranscriptionHost } from "../../types";
 import { ActionButton } from "../../ui/primitives";
 import { str } from "../../lib/settings-value";
-import { descriptorsFrom, findDescriptor, groupByEngine } from "../whisper/whisper-shared";
+import {
+  descriptorsFrom,
+  engineLabelKey,
+  findDescriptor,
+  groupByEngine,
+  isMetal,
+  transcriptionHost,
+} from "../whisper/whisper-shared";
 import { Icon } from "../../ui/Icon";
 
 const MODEL_RAM_MB: Record<string, { required: number; recommended: number }> = {
@@ -39,6 +46,18 @@ function suggestCpuModel(availableRamMb?: number): string | null {
     if (availableRamMb >= MODEL_RAM_MB[model].required) return model;
   }
   return null;
+}
+
+type GpuList = NonNullable<NonNullable<TranscriptionHealth["health"]>["capabilities"]>["gpus"];
+
+// A Mac's GPU is part of the chip and shares system memory, so it reads as one line, not a VRAM figure.
+function gpuSummary(t: TFunction, host: TranscriptionHost, gpus: GpuList): string {
+  if (isMetal(host)) {
+    const chip = t("stt.host.mac", { gpu: host.gpuName ?? "Apple silicon" });
+    return `${chip} (${t("stt.host.sharedMemory", { memory: formatMb(host.memoryMb) })})`;
+  }
+  if (!gpus?.length) return t("settings.transcription.readiness.noGpu");
+  return gpus.map((g) => `${g.name || "GPU"} (${formatMb(g.free_vram_mb)} / ${formatMb(g.total_vram_mb)})`).join("; ");
 }
 
 function StatusBadge({
@@ -103,10 +122,7 @@ export function TranscriptionReadinessPanel({
   const suggestedModel = cacheInfo?.suggestedModel ?? localSuggestion;
   const transportSetting = str(settings.transcription_transport, "auto");
   const transportLabel = t(`settings.transcription.readiness.transport_${transportSetting}`, transportSetting);
-  const gpus = capabilities?.gpus;
-  const gpuSummary = gpus?.length
-    ? gpus.map((g) => `${g.name || "GPU"} (${formatMb(g.free_vram_mb)} / ${formatMb(g.total_vram_mb)})`).join("; ")
-    : t("settings.transcription.readiness.noGpu");
+  const host = transcriptionHost(capabilities);
   const models = capabilities?.models;
   const outputFormats = capabilities?.outputFormats;
   const selectedModelAdvertised = models?.length ? models.includes(selectedModel) : undefined;
@@ -228,16 +244,17 @@ export function TranscriptionReadinessPanel({
               {t("settings.transcription.readiness.transportMode")}: <span className="text-text">{transportLabel}</span>
             </div>
             <div>
-              {t("settings.transcription.readiness.gpus")}: <span className="text-text">{gpuSummary}</span>
+              {t("settings.transcription.readiness.gpus")}:{" "}
+              <span className="text-text">{gpuSummary(t, host, capabilities?.gpus)}</span>
             </div>
             {modelDescriptors.length === 0 ? (
               <div>
                 {t("settings.transcription.readiness.models")}: <span className="text-text">{unknownLabel}</span>
               </div>
             ) : (
-              groupByEngine(modelDescriptors).map((group) => (
+              groupByEngine(modelDescriptors, host).map((group) => (
                 <div key={group.engine}>
-                  {t(`stt.engine.${group.engine}`)}:{" "}
+                  {t(engineLabelKey(group.engine, host))}:{" "}
                   <span className="text-text">{group.items.map((d) => d.label).join(", ")}</span>
                 </div>
               ))

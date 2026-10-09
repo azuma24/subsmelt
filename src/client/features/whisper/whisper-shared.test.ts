@@ -1,7 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import type { WhisperModelDescriptor } from "../../types";
-import { descriptorsFrom, findDescriptor, groupByEngine, hidesOptions, supportsLanguage } from "./whisper-shared";
+import type { TranscriptionHost, WhisperModelDescriptor } from "../../types";
+import {
+  descriptorsFrom,
+  engineLabelKey,
+  engineStrengthKey,
+  findDescriptor,
+  groupByEngine,
+  hidesOptions,
+  modelEngine,
+  supportsLanguage,
+} from "./whisper-shared";
 
 const nemotron: WhisperModelDescriptor = {
   id: "nemotron-3.5-asr",
@@ -53,22 +62,64 @@ test("findDescriptor synthesizes a saved model the backend does not list", () =>
   assert.equal(findDescriptor([nemotron], "large-v2").engine, "whisper");
 });
 
-test("groupByEngine orders Whisper first and drops empty engines", () => {
-  const groups = groupByEngine([
-    { id: "nemotron-3.5-asr", engine: "nemotron" as const },
-    { id: "small", engine: "whisper" as const },
-  ]);
+const macHost: TranscriptionHost = {
+  os: "macos",
+  arch: "arm64",
+  accelerator: "metal",
+  gpuName: "Apple M5 Pro",
+  memoryMb: 49152,
+};
+const cudaHost: TranscriptionHost = {
+  os: "windows",
+  arch: "x86_64",
+  accelerator: "cuda",
+  gpuName: "NVIDIA GeForce RTX 4090",
+  memoryMb: 24564,
+};
+const legacyHost: TranscriptionHost = { os: "unknown", accelerator: "cuda" };
+const oneOfEach = [
+  { id: "nemotron-3.5-asr", engine: "nemotron" as const },
+  { id: "small", engine: "whisper" as const },
+  { id: "whispercpp-large-v3-turbo", engine: "whispercpp" as const },
+];
+
+test("groupByEngine leads with the Metal engines on a Mac host", () => {
   assert.deepEqual(
-    groups.map((g) => [g.engine, g.items.map((i) => i.id)]),
+    groupByEngine(oneOfEach, macHost).map((g) => [g.engine, g.items.map((i) => i.id)]),
     [
-      ["whisper", ["small"]],
+      ["whispercpp", ["whispercpp-large-v3-turbo"]],
       ["nemotron", ["nemotron-3.5-asr"]],
+      ["whisper", ["small"]],
     ],
   );
+});
+
+test("groupByEngine orders faster-whisper first on a CUDA or legacy host and drops empty engines", () => {
+  for (const host of [cudaHost, legacyHost]) {
+    assert.deepEqual(
+      groupByEngine(oneOfEach, host).map((g) => g.engine),
+      ["whisper", "whispercpp", "nemotron"],
+    );
+  }
   assert.deepEqual(
-    groupByEngine([{ id: "small", engine: "whisper" as const }]).map((g) => g.engine),
+    groupByEngine([{ id: "small", engine: "whisper" as const }], cudaHost).map((g) => g.engine),
     ["whisper"],
   );
+});
+
+test("engineLabelKey calls faster-whisper Whisper (CPU) only on a Mac host", () => {
+  assert.equal(engineLabelKey("whisper", macHost), "stt.engine.whisperCpu");
+  assert.equal(engineLabelKey("whisper", cudaHost), "stt.engine.whisper");
+  assert.equal(engineLabelKey("whispercpp", macHost), "stt.engine.whispercpp");
+  assert.equal(engineStrengthKey("whisper", macHost), "stt.engineStrength.whisperCpu");
+  assert.equal(engineStrengthKey("whisper", legacyHost), "stt.engineStrength.whisper");
+  assert.equal(engineStrengthKey("nemotron", macHost), "stt.engineStrength.nemotron");
+});
+
+test("modelEngine maps whispercpp ids to the whisper.cpp engine", () => {
+  assert.equal(modelEngine("whispercpp-large-v3-turbo"), "whispercpp");
+  assert.equal(modelEngine("nemotron-3.5-asr"), "nemotron");
+  assert.equal(modelEngine("small"), "whisper");
 });
 
 test("supportsLanguage checks the model's language list, case-insensitively, and always allows auto", () => {
