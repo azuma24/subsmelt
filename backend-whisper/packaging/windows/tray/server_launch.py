@@ -50,12 +50,18 @@ def server_exe_name(windows: bool | None = None) -> str:
 def server_exe_candidates(exe_dir: Path, windows: bool | None = None) -> list[Path]:
     """Paths to probe, most specific first, for an app living in exe_dir."""
     name = server_exe_name(windows)
-    return [
+    candidates = [
         exe_dir / name,  # installed bundle / dist\whisper-server
         exe_dir / BUNDLE_DIR_NAME / name,  # launched from dist\
         exe_dir.parent / BUNDLE_DIR_NAME / name,  # launched from a sibling folder
         exe_dir / "_internal" / name,  # PyInstaller >= 6 onedir layout
     ]
+    # A macOS .app nests its binary under Contents/MacOS, and the installed
+    # server sits in the folder that holds the .app; probe the nearby ancestors
+    # so the menu-bar app finds it without hard-coding the install layout.
+    for ancestor in list(exe_dir.parents)[:5]:
+        candidates.append(ancestor / BUNDLE_DIR_NAME / name)
+    return candidates
 
 
 def find_server_exe(

@@ -891,6 +891,11 @@ class WhisperGuiApp:
     def _start_tray(self) -> None:
         if not _HAS_TRAY:
             return
+        if sys.platform == "darwin":
+            # NSStatusItem must be created on the main thread, which Tk's
+            # mainloop owns here. The macOS menu-bar app is the tray instead;
+            # a second icon would SIGTRAP the process at setMenu:.
+            return
         menu = pystray.Menu(
             pystray.MenuItem("Show window", self.show_window, default=True),
             pystray.MenuItem("Quit (stops server)", self.quit_app),

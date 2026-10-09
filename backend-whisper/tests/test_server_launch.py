@@ -50,6 +50,12 @@ class ServerExeLookupTests(unittest.TestCase):
         found, _searched = server_launch.find_server_exe(self.root / "tools", env={}, windows=False)
         self.assertEqual(found, expected)
 
+    def test_finds_the_server_from_inside_a_macos_app_bundle(self):
+        expected = self._touch(self.root / "SubSmelt Whisper" / "whisper-server" / "run_server")
+        exe_dir = self.root / "SubSmelt Whisper" / "SubSmelt Whisper.app" / "Contents" / "MacOS"
+        found, _searched = server_launch.find_server_exe(exe_dir, env={}, windows=False)
+        self.assertEqual(found, expected)
+
     def test_env_override_wins_over_probed_locations(self):
         self._touch(self.root / "run_server")
         override = self._touch(self.root / "custom" / "run_server")

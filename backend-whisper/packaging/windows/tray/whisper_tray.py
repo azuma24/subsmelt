@@ -45,6 +45,9 @@ try:
     from server_launch import ServerExecutableNotFound, resolve_server_command
 except ImportError:  # pragma: no cover - this file's dir isn't on sys.path yet
     sys.path.insert(0, str(Path(__file__).resolve().parent))
+    if sys.platform == "darwin":
+        # service_control.py lives beside the macOS packaging, not here.
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "macos"))
     from gui_config import config_path, data_dir, dev_server_script, effective_config
     from server_launch import ServerExecutableNotFound, resolve_server_command
 
@@ -61,6 +64,10 @@ NOTIFY_MAX_CHARS = 200
 
 def _is_windows() -> bool:
     return os.name == "nt"
+
+
+def _is_macos() -> bool:
+    return sys.platform == "darwin"
 
 
 def _run(cmd: list[str]) -> tuple[int, str]:
@@ -196,14 +203,24 @@ def _elevated_sc(verb: str) -> list[str]:
 
 
 def _service_control(icon, verb: str) -> None:
-    if not _is_windows():
-        print(f"[tray] {verb}_service is a no-op off Windows.")
+    if _is_windows():
+        code, out = _run(_elevated_sc(verb))
+        if code != 0:
+            _report(icon, f"{verb} service failed (rc={code}): {_last_line(out)}")
+        else:
+            print(f"[tray] {verb} service rc={code}: {out.strip()}")
         return
-    code, out = _run(_elevated_sc(verb))
-    if code != 0:
-        _report(icon, f"{verb} service failed (rc={code}): {_last_line(out)}")
-    else:
-        print(f"[tray] {verb} service rc={code}: {out.strip()}")
+    if _is_macos():
+        # The LaunchAgent belongs to the user; launchctl needs no elevation.
+        from service_control import start_service, stop_service
+
+        code, out = start_service() if verb == "start" else stop_service()
+        if code != 0:
+            _report(icon, f"{verb} service failed (rc={code}): {_last_line(out)}")
+        else:
+            print(f"[tray] {verb} service rc={code}: {out.strip()}")
+        return
+    print(f"[tray] {verb}_service is a no-op off Windows.")
 
 
 def start_service(icon=None, _item=None) -> None:
@@ -215,16 +232,40 @@ def stop_service(icon=None, _item=None) -> None:
 
 
 def service_status() -> str:
-    if not _is_windows():
-        return "unknown (non-Windows)"
-    code, out = _run(["sc.exe", "query", SERVICE_NAME])
-    if code != 0:
-        return "not installed"
-    if "RUNNING" in out:
-        return "running"
-    if "STOPPED" in out:
-        return "stopped"
-    return "unknown"
+    if _is_windows():
+        code, out = _run(["sc.exe", "query", SERVICE_NAME])
+        if code != 0:
+            return "not installed"
+        if "RUNNING" in out:
+            return "running"
+        if "STOPPED" in out:
+            return "stopped"
+        return "unknown"
+    if _is_macos():
+        from service_control import service_status as launchd_status
+
+        return launchd_status()
+    return "unknown (non-Windows)"
+
+
+def status_line() -> str:
+    """The menu's status text: the state plus the port it answers on."""
+    state = service_status()
+    if state == "running":
+        return f"Running, port {_server_port()}"
+    return state
+
+
+def open_control_window(_icon=None, _item=None) -> None:
+    """Open the Tk control window in its own process.
+
+    Tk wants the main thread, and pystray owns this process's main loop, so the
+    window runs as a child: the same frozen binary re-executed with --window.
+    """
+    if getattr(sys, "frozen", False):
+        subprocess.Popen([sys.executable, "--window"])
+    else:
+        subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "--window"])
 
 
 def open_logs(icon=None, _item=None) -> None:
@@ -326,11 +367,15 @@ def build_tray():
     """Construct the pystray.Icon. Requires pystray + pillow."""
     if not _HAS_TRAY:
         raise RuntimeError("pystray and pillow are required for the tray app. Install with: pip install pystray pillow")
-    menu = pystray.Menu(
-        pystray.MenuItem(lambda _: f"Status: {service_status()}", None, enabled=False),
+    menu_items = [
+        pystray.MenuItem(lambda _: f"Status: {status_line()}", None, enabled=False),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Start service", start_service),
         pystray.MenuItem("Stop service", stop_service),
+    ]
+    if _is_macos():
+        menu_items.append(pystray.MenuItem("Open control window", open_control_window))
+    menu_items += [
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Open logs", open_logs),
         pystray.MenuItem("Model manager", open_model_manager),
@@ -338,8 +383,8 @@ def build_tray():
         pystray.MenuItem("Run diagnostics", run_diagnostics),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Quit", quit_app),
-    )
-    return pystray.Icon("subsmelt_whisper", _make_icon_image(), "SubSmelt Whisper Backend", menu)
+    ]
+    return pystray.Icon("subsmelt_whisper", _make_icon_image(), "SubSmelt Whisper Backend", pystray.Menu(*menu_items))
 
 
 def build_standalone_tray():
@@ -383,8 +428,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--status", action="store_true", help="Print service status and exit (no tray).")
     parser.add_argument("--diagnostics", action="store_true", help="Run the provisioning doctor and exit (no tray).")
+    parser.add_argument(
+        "--window", action="store_true", help="Open the Tk control window and exit (how the menu-bar app opens it)."
+    )
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
 
+    if args.window:
+        from whisper_gui import main as gui_main
+
+        return gui_main()
     if args.status:
         print(f"service '{SERVICE_NAME}': {service_status()}")
         return 0

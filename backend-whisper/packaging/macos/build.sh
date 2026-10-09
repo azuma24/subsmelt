@@ -50,10 +50,23 @@ VIRTUAL_ENV="$VENV" uv pip install \
     --clean --noconfirm --distpath "$DIST" --workpath "$OUT_DIR/pyinstaller"
 )
 
+# The menu-bar control app: a separate tiny bundle with pystray, Pillow, PyObjC
+# and Tk, sharing no code path with the server bundle.
+CONTROL_DIST="$OUT_DIR/dist-control"
+CONTROL_VENV="$OUT_DIR/venv-control"
+uv venv --allow-existing -p "$PYTHON_VERSION" "$CONTROL_VENV"
+VIRTUAL_ENV="$CONTROL_VENV" uv pip install pyinstaller pystray pillow pyobjc
+(
+  cd "$BACKEND_ROOT"
+  "$CONTROL_VENV/bin/pyinstaller" "$SCRIPT_DIR/whisper-control.spec" \
+    --clean --noconfirm --distpath "$CONTROL_DIST" --workpath "$OUT_DIR/pyinstaller-control"
+)
+
 STAGE="$OUT_DIR/stage"
 rm -rf "$STAGE" "$ZIP"
 mkdir -p "$STAGE/$APP_FOLDER"
 ditto "$DIST/whisper-server" "$STAGE/$APP_FOLDER/whisper-server"
+ditto "$CONTROL_DIST/SubSmelt Whisper.app" "$STAGE/$APP_FOLDER/SubSmelt Whisper.app"
 cp "$SCRIPT_DIR/install-launchd.sh" "$SCRIPT_DIR/uninstall-launchd.sh" \
   "$SCRIPT_DIR/com.subsmelt.whisper.plist.template" "$SCRIPT_DIR/README.md" \
   "$STAGE/$APP_FOLDER/"

@@ -92,6 +92,10 @@ elif [[ "$SOURCE_DIR" != "$APP_DIR" ]]; then
   rm -rf "$APP_DIR/whisper-server"
   mkdir -p "$APP_DIR"
   ditto "$SOURCE_DIR/whisper-server" "$APP_DIR/whisper-server"
+  if [[ -d "$SOURCE_DIR/SubSmelt Whisper.app" ]]; then
+    rm -rf "$APP_DIR/SubSmelt Whisper.app"
+    ditto "$SOURCE_DIR/SubSmelt Whisper.app" "$APP_DIR/SubSmelt Whisper.app"
+  fi
   for file in install-launchd.sh uninstall-launchd.sh "$LABEL.plist.template" README.md; do
     [[ -f "$SCRIPT_DIR/$file" ]] && cp "$SCRIPT_DIR/$file" "$APP_DIR/"
   done
@@ -183,6 +187,22 @@ fi
 
 echo "Starting $LABEL..."
 launchctl bootstrap "$DOMAIN" "$PLIST"
+
+# --- Menu-bar app --------------------------------------------------------------
+CONTROL_APP="$APP_DIR/SubSmelt Whisper.app"
+if [[ -d "$CONTROL_APP" ]] && [[ -t 0 ]]; then
+  read -r -p "Add the SubSmelt Whisper menu-bar app to Login Items? [y/N] " answer || answer=""
+  if [[ "$answer" =~ ^[Yy] ]]; then
+    if osascript -e "tell application \"System Events\" to make login item at end with properties {path:\"$CONTROL_APP\", hidden:true}" >/dev/null 2>&1; then
+      echo "Added to Login Items."
+    else
+      echo "Could not add the Login Item; add \"$CONTROL_APP\" in System Settings > Login Items."
+    fi
+  fi
+elif [[ -d "$CONTROL_APP" ]]; then
+  echo "Menu-bar app installed at $CONTROL_APP (add it to Login Items to start it at login)."
+fi
+
 health_url="http://127.0.0.1:$PORT/health"
 for ((i = 0; i < HEALTH_TIMEOUT_S; i++)); do
   if curl -sf -o /dev/null --max-time 2 "$health_url"; then
