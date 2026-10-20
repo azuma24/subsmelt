@@ -24,6 +24,7 @@ import {
   type NoteExportFailure,
 } from "../youtube/note-export.js";
 import { secondBrainFolders } from "../youtube/second-brain.js";
+import { getNote, listNotes, parseNotesQuery } from "../youtube/notes-read.js";
 import { cookiesStatus, parseCookies, removeCookies, saveCookies } from "../youtube/cookies.js";
 import { IllegalTransitionError, type YoutubeStore } from "../youtube/store.js";
 import {
@@ -141,6 +142,20 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore, worker:
         ? req.query.path.trim()
         : getSetting("youtube_notes_dir");
     res.json(notesFolderStatus(dir));
+  });
+
+  app.get("/api/youtube/notes", (req, res) => {
+    const playlists = readPlaylists();
+    const options = parseNotesQuery(req.query, new Set(playlists.map((p) => p.id)));
+    if (typeof options === "string") return res.status(400).json({ error: options });
+    res.json(listNotes(store, playlists, options));
+  });
+
+  app.get("/api/youtube/notes/:videoId", (req, res) => {
+    const { videoId } = req.params;
+    const result = isVideoId(videoId) ? getNote(store, readPlaylists(), videoId) : null;
+    if (!result) return res.status(404).json({ error: "Note not found" });
+    res.json(result);
   });
 
   app.post("/api/youtube/videos/:videoId/note", async (req, res) => {

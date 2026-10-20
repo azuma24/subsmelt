@@ -168,6 +168,37 @@ export interface YoutubeNotesFolder {
   writable: boolean;
 }
 
+export type YoutubeNotesState = "all" | "saved" | "blocked";
+
+/** A generated note owned by a currently followed playlist. Paths are relative to the notes root. */
+export interface YoutubeNote {
+  videoId: string;
+  title: string;
+  channel: string | null;
+  playlistId: string;
+  playlistTitle: string;
+  publishedAt: string | null;
+  notePath: string | null;
+  exportedAt: string | null;
+  status: "saved" | "blocked";
+  reason: string | null;
+}
+
+/** GET /api/youtube/notes. */
+export interface YoutubeNotesList {
+  notes: YoutubeNote[];
+  total: number;
+  health: YoutubeNotesFolder & { blocked: boolean };
+  /** Unfiltered export totals for each followed playlist, independent of list pagination. */
+  countsByPlaylist: Record<string, { saved: number; blocked: number }>;
+}
+
+/** GET /api/youtube/notes/:videoId. */
+export interface YoutubeNoteDetail {
+  note: YoutubeNote;
+  content: string;
+}
+
 /** GET /api/youtube/status. */
 export interface YoutubeStatus {
   ytdlp: { available: boolean; version: string | null; path: string | null };

@@ -17,6 +17,8 @@ services:
       - ./config:/app/config
       # Data (jobs + logs — disposable, safe to wipe)
       - ./data:/app/data
+      # Generated YouTube notes — persistent and writable; create ./notes first.
+      - ./notes:/notes
     environment:
       - TZ=America/New_York                  # Timezone for log timestamps
       # Optional: run as your host user instead of root. On start the container

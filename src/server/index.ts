@@ -260,7 +260,7 @@ app.get("/api/health", (_req, res) => {
 
 // ======== SPA Fallback ========
 app.get("/{*splat}", (_req, res) => {
-  res.sendFile(path.join(staticDir, "index.html"));
+  res.sendFile(path.join(staticDir, "index.html"), { dotfiles: "allow" });
 });
 
 // ======== Start ========

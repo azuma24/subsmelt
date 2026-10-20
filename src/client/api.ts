@@ -334,6 +334,42 @@ export const deleteWhisperModel = (model: string) =>
 export const getYoutubeStatus = (opts?: FetchOpts) => fetchJSON<YoutubeStatus>("/youtube/status", opts);
 export const getYoutubeNotesFolder = (path: string, opts?: FetchOpts) =>
   fetchJSON<YoutubeNotesFolder>(`/youtube/notes-folder?path=${encodeURIComponent(path)}`, opts);
+export interface YoutubeNote {
+  videoId: string;
+  title: string;
+  channel: string | null;
+  playlistId: string;
+  playlistTitle: string;
+  publishedAt: string | null;
+  notePath: string | null;
+  exportedAt: string | null;
+  status: "saved" | "blocked";
+  reason: string | null;
+}
+export interface YoutubeNotesResponse {
+  notes: YoutubeNote[];
+  total: number;
+  health: { path: string; exists: boolean; writable: boolean; blocked: boolean };
+  countsByPlaylist: Record<string, { saved: number; blocked: number }>;
+}
+export interface YoutubeNotesParams {
+  query?: string;
+  playlistId?: string;
+  state?: "all" | "saved" | "blocked";
+  limit?: number;
+  offset?: number;
+}
+export const getYoutubeNotes = (params: YoutubeNotesParams, opts?: FetchOpts) => {
+  const query = new URLSearchParams();
+  if (params.query) query.set("query", params.query);
+  if (params.playlistId) query.set("playlistId", params.playlistId);
+  if (params.state) query.set("state", params.state);
+  if (params.limit !== undefined) query.set("limit", String(params.limit));
+  if (params.offset !== undefined) query.set("offset", String(params.offset));
+  return fetchJSON<YoutubeNotesResponse>(`/youtube/notes?${query}`, opts);
+};
+export const getYoutubeNote = (videoId: string, opts?: FetchOpts) =>
+  fetchJSON<{ note: YoutubeNote; content: string }>(`/youtube/notes/${encodeURIComponent(videoId)}`, opts);
 export const getYoutubePipeline = (opts?: FetchOpts) => fetchJSON<YoutubePipeline>("/youtube/pipeline", opts);
 export const getYoutubePlaylists = (opts?: FetchOpts) =>
   fetchJSON<{ playlists: YoutubePlaylist[] }>("/youtube/playlists", opts);

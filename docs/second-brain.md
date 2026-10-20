@@ -1,9 +1,9 @@
-# Second-brain selection
+# Knowledge-base selection
 
 SubSmelt writes one Markdown note per finished YouTube video into the notes
 folder (`youtube_notes_dir`, `/notes` by default), inside a folder named after
 the playlist's folder. It does this for **every** followed playlist and
-channel. The second-brain choice does not change that.
+channel. The knowledge-base choice does not change that.
 
 The choice decides which of those note folders a separate, read-only mirror
 (for example a Mac-side copy that a QMD collection indexes) may pick up. That
@@ -12,9 +12,9 @@ index or delete anything because of this setting.
 
 ## Choosing playlists
 
-Open **Follow** or **Edit** on a playlist and tick **Send notes to my second
-brain**. Selected playlists show a **Second brain** tag in the list and on
-their page.
+Open **Follow** or **Edit** on a playlist and tick **Enable for knowledge base**.
+Selected playlists show a **Selected for knowledge base** tag in the list and
+on their page. This is a future-sync selection, not a running sync.
 
 - New follows start unselected.
 - Playlists followed before this setting existed read as unselected.
@@ -26,6 +26,20 @@ The value is stored on the playlist as `secondBrainExport` (`true` or
 `false`). `POST /api/youtube/playlists` and `PUT /api/youtube/playlists/:id`
 accept it, reject anything that is not a boolean, and an edit that leaves it
 out keeps the current value. `GET /api/youtube/playlists` returns it.
+
+## Browse exported notes
+
+Open **YouTube → Notes** to browse, read, and search generated Markdown notes
+from followed playlists. Search also matches note content. Filter by playlist,
+saved notes, or blocked note exports; select a result to read it in SubSmelt.
+The reader is read-only because a re-export can replace generated files.
+Missing/unwritable notes folders and failed exports are shown as health issues,
+not as translation in progress. This does not mirror notes to another device.
+
+The read-only `GET /api/youtube/notes` and `GET /api/youtube/notes/:videoId`
+endpoints only return notes belonging to followed playlists. A detail read
+requires a file inside the configured notes root and rejects unsafe, missing,
+or oversized files. The default `/notes` must be mounted writable in Docker.
 
 ## The allowlist
 

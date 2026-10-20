@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "../../i18n";
 import * as api from "../../api";
 import { useToast } from "../../ui/Toast";
-import { useTasksQuery, useYoutubePipelineQuery, useYoutubeVideosQuery } from "../../hooks";
+import { useTasksQuery, useYoutubePipelineQuery, useYoutubeVideosQuery, useYoutubeNotesQuery } from "../../hooks";
 import { getErrorMessage } from "../../lib";
 import type { YoutubePlaylist, YoutubeVideo, YoutubeVideoAction } from "../../types";
 import { ActionButton, RowActionsMenu, StatusBadge, Tabs } from "../../ui/primitives";
@@ -26,13 +26,13 @@ import {
   filterVideos,
   gpuHold,
   pickableVideos,
-  statusCounts,
   subtitleSummary,
   videoActionLabelKey,
   videoActions,
   videoFilterOf,
   videoPipeline,
   videoStatusDescriptor,
+  displayStatusCounts,
   type GpuHold,
   type PipeStep,
   type VideoFilter,
@@ -53,10 +53,27 @@ const BAR_SEGMENTS: { filter: VideoFilter; color: string }[] = [
   { filter: "bad", color: "var(--red)" },
 ];
 
-export function PlaylistDetail({ playlist, folderRoot }: { playlist: YoutubePlaylist; folderRoot: string }) {
+export function PlaylistDetail({
+  playlist,
+  folderRoot,
+  onOpenNotes,
+}: {
+  playlist: YoutubePlaylist;
+  folderRoot: string;
+  onOpenNotes: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const videosQuery = useYoutubeVideosQuery(playlist.id);
   const pipelineQuery = useYoutubePipelineQuery();
+  const [blockedOffset, setBlockedOffset] = useState(0);
+  const [query, setQuery] = useState("");
+  const blockedNotes = useYoutubeNotesQuery({
+    playlistId: playlist.id,
+    state: "blocked",
+    query,
+    limit: 30,
+    offset: blockedOffset,
+  });
   const tasksQuery = useTasksQuery();
   const hold = gpuHold(pipelineQuery.data);
   const langCodes = useMemo(
@@ -64,18 +81,21 @@ export function PlaylistDetail({ playlist, folderRoot }: { playlist: YoutubePlay
     [tasksQuery.data],
   );
   const context: RowContext = { hold, langCodes };
-  const [filter, setFilter] = useState<VideoFilter | "all">("all");
-  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<VideoFilter | "all" | "blockedNotes">("all");
   const [limit, setLimit] = useState(PAGE_SIZE);
   // Videos picked on the Skipped tab to download together; kept while searching, cleared with the tab.
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
 
   const videos = videosQuery.data?.videos ?? [];
   // Every count includes removed videos, as the list and the server's counts do; Kept is counts.all.
-  const counts = countByFilter(videosQuery.data ? statusCounts(videos) : playlist.counts.byStatus);
-  const visible = useMemo(() => filterVideos(videos, filter, query), [videos, filter, query]);
+  const counts = countByFilter(videosQuery.data ? displayStatusCounts(videos) : playlist.counts.byStatus);
+  const blockedCount = blockedNotes.data?.countsByPlaylist[playlist.id]?.blocked ?? 0;
+  const visible = useMemo(
+    () => filterVideos(videos, filter === "blockedNotes" ? "all" : filter, query),
+    [videos, filter, query],
+  );
   // A group header counts every matching row, not only the page shown.
-  const groupCounts = useMemo(() => countByFilter(statusCounts(visible)), [visible]);
+  const groupCounts = useMemo(() => countByFilter(displayStatusCounts(visible)), [visible]);
   const shown = visible.slice(0, limit);
   const picking = filter === "off";
   const pickable = useMemo(() => pickableVideos(shown), [shown]);
@@ -90,10 +110,11 @@ export function PlaylistDetail({ playlist, folderRoot }: { playlist: YoutubePlay
 
   const tabs = [
     { key: "all", label: t("youtube.tabs.all"), count: counts.all },
+    ...(blockedCount ? [{ key: "blockedNotes", label: t("youtube.notes.blocked"), count: blockedCount }] : []),
     ...VIDEO_FILTERS.map((f) => ({ key: f, label: t(`youtube.tabs.${f}`), count: counts[f] })),
   ];
   const selectTab = (key: string) => {
-    setFilter(key as VideoFilter | "all");
+    setFilter(key as VideoFilter | "all" | "blockedNotes");
     setLimit(PAGE_SIZE);
     setPicked(new Set());
   };
@@ -108,6 +129,11 @@ export function PlaylistDetail({ playlist, folderRoot }: { playlist: YoutubePlay
         <Banner tone="bad" title={t("youtube.toast.checkFailed", { error: playlist.sync.lastError })} />
       )}
 
+      {blockedCount > 0 && (
+        <Banner tone="bad" title={t("youtube.notes.blockedCount", { count: blockedCount })}>
+          {blockedNotes.data?.health.writable ? null : t("youtube.notes.healthFix")}
+        </Banner>
+      )}
       <section className="grid gap-4 rounded-md border border-border bg-surface p-4 md:grid-cols-[1fr_auto]">
         <div className="min-w-0 space-y-2">
           <h2 className="flex flex-wrap items-center gap-2 text-lg font-semibold text-text">
@@ -116,7 +142,14 @@ export function PlaylistDetail({ playlist, folderRoot }: { playlist: YoutubePlay
             {availability && <Tag>{availability}</Tag>}
             <Tag>{profileLabel(playlist.media, t)}</Tag>
             <Tag>{playlist.mode === "auto" ? t("youtube.modeAuto") : t("youtube.modeManual")}</Tag>
-            {playlist.secondBrainExport && <Tag>{t("youtube.secondBrainTag")}</Tag>}
+            {playlist.secondBrainExport && <Tag>{t("youtube.notes.selectedOnly")}</Tag>}
+            <button
+              type="button"
+              onClick={onOpenNotes}
+              className="min-h-touch text-sm font-medium text-accent hover:underline"
+            >
+              {t("youtube.notes.title")} →
+            </button>
           </h2>
           <p className="break-words text-xs leading-5 text-faint">
             {[
@@ -168,6 +201,7 @@ export function PlaylistDetail({ playlist, folderRoot }: { playlist: YoutubePlay
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
+            setBlockedOffset(0);
             setLimit(PAGE_SIZE);
           }}
           placeholder={t("youtube.search")}
@@ -176,7 +210,49 @@ export function PlaylistDetail({ playlist, folderRoot }: { playlist: YoutubePlay
         />
       </div>
 
-      {videosQuery.isError ? (
+      {filter === "blockedNotes" ? (
+        blockedNotes.isError ? (
+          <InlineError onRetry={() => void blockedNotes.refetch()} />
+        ) : blockedNotes.isLoading ? (
+          <VideoSkeleton />
+        ) : (
+          <div className="rounded-md border border-border bg-surface">
+            {blockedNotes.data?.notes.map((note) => (
+              <div key={note.videoId} className="border-b border-border p-4">
+                <a
+                  href={`https://www.youtube.com/watch?v=${encodeURIComponent(note.videoId)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-text hover:text-accent"
+                >
+                  {note.title} ↗
+                </a>
+                <p className="mt-1 text-xs text-danger">
+                  {t("youtube.notes.blocked")} · {note.reason || t("youtube.notes.healthFix")}
+                </p>
+              </div>
+            ))}
+            <div className="flex justify-between p-2 text-xs text-muted">
+              <button
+                type="button"
+                disabled={blockedOffset === 0}
+                onClick={() => setBlockedOffset(Math.max(0, blockedOffset - 30))}
+                className="min-h-touch px-3 disabled:opacity-40"
+              >
+                {t("youtube.notes.previous")}
+              </button>
+              <button
+                type="button"
+                disabled={blockedOffset + (blockedNotes.data?.notes.length ?? 0) >= (blockedNotes.data?.total ?? 0)}
+                onClick={() => setBlockedOffset(blockedOffset + 30)}
+                className="min-h-touch px-3 disabled:opacity-40"
+              >
+                {t("youtube.notes.next")}
+              </button>
+            </div>
+          </div>
+        )
+      ) : videosQuery.isError ? (
         <InlineError onRetry={() => void videosQuery.refetch()} />
       ) : videosQuery.isLoading ? (
         <VideoSkeleton />
@@ -210,7 +286,7 @@ export function PlaylistDetail({ playlist, folderRoot }: { playlist: YoutubePlay
         <div className="overflow-hidden rounded-md border border-border bg-surface">
           {filter === "all" ? (
             ALL_GROUPS.map((group) => {
-              const rows = shown.filter((v) => videoFilterOf(v.status) === group);
+              const rows = shown.filter((v) => videoFilterOf(v.status, v.reason) === group);
               if (rows.length === 0) return null;
               return (
                 <section key={group}>

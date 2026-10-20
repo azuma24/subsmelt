@@ -162,6 +162,30 @@ export function useYoutubeVideosQuery(playlistId: string | null) {
   });
 }
 
+export function useYoutubeNotesQuery(params: api.YoutubeNotesParams, enabled = true) {
+  return useQuery({
+    queryKey: [
+      "youtube",
+      "notes",
+      params.query ?? "",
+      params.playlistId ?? "",
+      params.state ?? "all",
+      params.limit ?? 30,
+      params.offset ?? 0,
+    ],
+    queryFn: ({ signal }) => api.getYoutubeNotes(params, { signal }),
+    enabled,
+  });
+}
+
+export function useYoutubeNoteQuery(videoId: string | null) {
+  return useQuery({
+    queryKey: ["youtube", "note", videoId],
+    queryFn: ({ signal }) => api.getYoutubeNote(videoId as string, { signal }),
+    enabled: Boolean(videoId),
+  });
+}
+
 export function useYoutubePipelineQuery() {
   return useQuery({
     queryKey: ["youtube", "pipeline"],

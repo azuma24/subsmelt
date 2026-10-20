@@ -348,6 +348,19 @@ export class YoutubeStore {
     return this.db.prepare("SELECT * FROM youtube_videos WHERE video_id = ?").get(videoId) as VideoRow | undefined;
   }
 
+  /** Only possible note exports, scoped to current owning playlists (not filesystem discovery). */
+  noteCandidates(playlistIds: string[]): VideoRow[] {
+    if (playlistIds.length === 0) return [];
+    return this.db
+      .prepare(`
+      SELECT * FROM youtube_videos
+      WHERE playlist_id IN (SELECT value FROM json_each(?))
+        AND (note_path IS NOT NULL OR (status = 'translating' AND reason IS NOT NULL))
+      ORDER BY published_at DESC, video_id
+    `)
+      .all(JSON.stringify(playlistIds)) as VideoRow[];
+  }
+
   /** Changes why a skipped video is skipped; it stays skipped. */
   setSkipKind(videoId: string, skipKind: SkipKind, now: string): void {
     this.db

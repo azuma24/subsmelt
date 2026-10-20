@@ -37,16 +37,16 @@ const dialog = (edited?: YoutubePlaylist) =>
   );
 
 const secondBrainBox = (html: string) => {
-  const label = html.indexOf("Send notes to my second brain");
+  const label = html.indexOf("Enable for knowledge base");
   const input = html.lastIndexOf("<input", label);
   return html.slice(input, html.indexOf(">", input) + 1);
 };
 
-test("the second-brain choice sits outside More, unchecked for a new follow, with its hint", () => {
+test("the knowledge-base choice sits outside More, unchecked for a new follow, with its hint", () => {
   const { html, text } = dialog();
-  assert.ok(html.indexOf("Send notes to my second brain") < html.indexOf("<details"));
+  assert.ok(html.indexOf("Enable for knowledge base") < html.indexOf("<details"));
   assert.doesNotMatch(secondBrainBox(html), /checked/);
-  assert.match(text, /Turning it off deletes nothing already written or copied\./);
+  assert.match(text, /nothing is copied or indexed yet\./);
 });
 
 test("editing shows the playlist's saved second-brain choice", () => {
@@ -66,6 +66,6 @@ test("the playlist list tags only playlists selected for the second brain", () =
         onEdit={() => undefined}
       />,
     ).text;
-  assert.match(list(true), /Second brain/);
-  assert.doesNotMatch(list(false), /Second brain/);
+  assert.equal((list(true).match(/Selected for knowledge base/g) ?? []).length, 2);
+  assert.equal((list(false).match(/Selected for knowledge base/g) ?? []).length, 1);
 });
