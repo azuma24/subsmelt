@@ -298,7 +298,8 @@ export async function exportNoteForVideo(
   writeFileAtomic(file, renderNote(noteInfo, cues, translations));
   if (video.note_path && video.note_path !== file && isInside(root, video.note_path))
     fs.rmSync(video.note_path, { force: true });
-  deps.store.setNotePath(videoId, file, new Date().toISOString());
+  // The row and the change journal commit together, after the file is in place.
+  deps.store.setNotePath(videoId, file, new Date().toISOString(), root);
 
   const payload: NoteReadyPayload = {
     videoId,

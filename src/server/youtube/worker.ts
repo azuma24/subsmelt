@@ -21,6 +21,7 @@ import { findPlaylist, readPlaylists, savePlaylist, type YoutubePlaylist } from 
 import type { Cooldown, CooldownCause, VideoRow, YoutubeStore } from "./store.js";
 import { fetchCaptionWithYtdlp, produceSubtitles, type TranscribeRequest, type TranscribeResult } from "./subtitles.js";
 import { exportNoteForVideo } from "./note-export.js";
+import { reconcileSavedNotes } from "./note-reconcile.js";
 import {
   exactUploadDateWithYtdlp,
   listFollowedWithYtdlp,
@@ -40,6 +41,9 @@ const NOT_YET_MS = 2 * 60_000;
 const NOT_YET_AFTER_YOUTUBE_MS = 60 * 60_000;
 const PROGRESS_EVERY_MS = 500;
 const PROGRESS_STEP = 5;
+// Saved notes are checked against the notes folder this often, this many at a time.
+const NOTE_RECONCILE_EVERY_MS = 10 * 60_000;
+const NOTE_RECONCILE_BATCH = 200;
 
 type Lane = <T>(task: () => Promise<T>) => Promise<T>;
 
@@ -198,6 +202,8 @@ export class YoutubeWorker {
   private subtitleLane: Promise<unknown> = Promise.resolve();
   private stopped = false;
   private timer: ReturnType<typeof setInterval> | null = null;
+  private notesReconciledAt = 0;
+  private notesReconcileAfter: string | null = null;
 
   constructor(
     private readonly store: YoutubeStore,
@@ -234,6 +240,7 @@ export class YoutubeWorker {
     this.finishTranslated().catch((error) =>
       logger.error("youtube", `Finishing translated videos failed: ${message(error)}`),
     );
+    this.reconcileNotes();
     this.queue.startHeld();
   }
 
@@ -394,8 +401,33 @@ export class YoutubeWorker {
       this.move(video, "done", { now: this.now().toISOString() });
       logger.info("youtube", `Subtitles and translations of ${video.title} are finished`);
     } catch (error) {
-      this.store.setReason(videoId, message(error), this.now().toISOString());
+      this.store.noteExportFailed(videoId, message(error), this.now().toISOString());
       this.announce("youtube:video", { videoId, playlistId: video.playlist_id, status: video.status });
+    }
+  }
+
+  /**
+   * Checks a batch of saved notes against the notes folder every few minutes,
+   * so a note deleted or restored outside SubSmelt reaches the change journal.
+   * Nothing is checked while the folder is missing or empty: an unmounted
+   * folder must never read as every note deleted.
+   */
+  private reconcileNotes(): void {
+    const now = this.now();
+    if (now.getTime() - this.notesReconciledAt < NOTE_RECONCILE_EVERY_MS) return;
+    this.notesReconciledAt = now.getTime();
+    try {
+      const result = reconcileSavedNotes(this.store, {
+        root: getSetting("youtube_notes_dir"),
+        now: now.toISOString(),
+        after: this.notesReconcileAfter,
+        limit: NOTE_RECONCILE_BATCH,
+      });
+      this.notesReconcileAfter = result.next;
+      if (result.events > 0)
+        logger.info("youtube", `Note check: ${result.events} change(s) among ${result.checked} saved note(s)`);
+    } catch (error) {
+      logger.error("youtube", `Note check failed: ${message(error)}`);
     }
   }
 

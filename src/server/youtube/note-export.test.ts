@@ -205,11 +205,19 @@ test("a re-export overwrites the note and leaves no temp file behind", async () 
   assert.deepEqual(fs.readdirSync(path.dirname(NOTE_FILE)), [`Short talk (${VIDEO}).md`]);
 });
 
-test("a renamed video moves its note instead of leaving the old one", async () => {
+test("a renamed video moves its note instead of leaving the old one, and the journal names both paths", async () => {
+  const head = store.journal.head();
   await exportNoteForVideo(deps, VIDEO);
   fs.writeFileSync(path.join(MEDIA_FOLDER, `${BASE}.info.json`), JSON.stringify({ ...INFO, title: "Short talk #2" }));
   await exportNoteForVideo(deps, VIDEO);
   assert.deepEqual(fs.readdirSync(path.dirname(NOTE_FILE)), [`Short talk 2 (${VIDEO}).md`]);
+  assert.deepEqual(
+    store.journal.page(head, 10).changes.map((c) => [c.kind, c.playlistId, c.notePath, c.previousNotePath]),
+    [
+      ["upsert", PL, PAYLOAD.notePath, null],
+      ["upsert", PL, `AI talks/Short talk 2 (${VIDEO}).md`, PAYLOAD.notePath],
+    ],
+  );
 });
 
 test("a translation identical to the transcript gets no second section", async () => {

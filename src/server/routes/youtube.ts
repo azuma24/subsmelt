@@ -25,6 +25,8 @@ import {
 } from "../youtube/note-export.js";
 import { secondBrainFolders } from "../youtube/second-brain.js";
 import { getNote, listNotes, parseNotesQuery } from "../youtube/notes-read.js";
+import { notesChanges, notesSyncState, parseChangesQuery } from "../youtube/notes-sync.js";
+import { NoteCursorError } from "../youtube/note-journal.js";
 import { cookiesStatus, parseCookies, removeCookies, saveCookies } from "../youtube/cookies.js";
 import { IllegalTransitionError, type YoutubeStore } from "../youtube/store.js";
 import {
@@ -149,6 +151,29 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore, worker:
     const options = parseNotesQuery(req.query, new Set(playlists.map((p) => p.id)));
     if (typeof options === "string") return res.status(400).json({ error: options });
     res.json(listNotes(store, playlists, options));
+  });
+
+  // For a mirror: the note changes since a cursor, and the selection it applies them to.
+  // Both are registered before /notes/:videoId so the detail route never captures them.
+  app.get("/api/youtube/notes/changes", (req, res) => {
+    const query = parseChangesQuery(req.query);
+    if (typeof query === "string") return res.status(400).json({ error: query });
+    try {
+      res.json(notesChanges(store, query));
+    } catch (error) {
+      if (!(error instanceof NoteCursorError)) throw error;
+      // A cursor from another generation or beyond the head is gone for good: 410, with where to start again.
+      res.status(error.code === "cursor_malformed" ? 400 : 410).json({
+        error: error.message,
+        code: error.code,
+        generation: store.journal.generation(),
+        head: store.journal.headCursor(),
+      });
+    }
+  });
+
+  app.get("/api/youtube/notes/sync-state", (_req, res) => {
+    res.json(notesSyncState(store, readPlaylists(), getSetting("youtube_notes_dir")));
   });
 
   app.get("/api/youtube/notes/:videoId", (req, res) => {

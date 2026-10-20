@@ -3,12 +3,21 @@ import path from "node:path";
 import type { YoutubeNote, YoutubeNotesList, YoutubeNotesState } from "../../shared/youtube.js";
 import { getSetting } from "../config.js";
 import { notesFolderStatus } from "./note-export.js";
+import { blockedNoteReason, type YoutubeNoteChangeReason } from "./note-journal.js";
 import type { YoutubePlaylist } from "./playlists.js";
 import type { VideoRow, YoutubeStore } from "./store.js";
 
 const MAX_NOTE_BYTES = 1024 * 1024;
 const MAX_QUERY_LENGTH = 200;
 const MAX_LIMIT = 100;
+
+const BLOCKED_LABELS: Record<YoutubeNoteChangeReason, string> = {
+  notes_root_missing: "Notes folder is not mounted",
+  notes_root_unwritable: "Notes folder is not writable",
+  export_failed: "Note export failed",
+  note_missing: "Saved note is missing or unreadable",
+  note_unreadable: "Saved note is missing or unreadable",
+};
 
 export interface NotesQuery {
   query: string;
@@ -108,16 +117,9 @@ function noteOf(
     };
   }
   // A missing/unsafe path must not disappear silently from export health.
-  const stalePath = Boolean(row.note_path);
-  if (!stalePath && (row.status !== "translating" || !row.reason || !/notes folder|note export/i.test(row.reason)))
-    return null;
-  const reason = stalePath
-    ? "Saved note is missing or unreadable"
-    : /not mounted/i.test(row.reason ?? "")
-      ? "Notes folder is not mounted"
-      : /not writable/i.test(row.reason ?? "")
-        ? "Notes folder is not writable"
-        : "Note export failed";
+  const blocked = row.note_path ? "note_unreadable" : blockedNoteReason(row.status, row.reason);
+  if (!blocked) return null;
+  const reason = BLOCKED_LABELS[blocked];
   return {
     note: {
       videoId: row.video_id,

@@ -80,9 +80,9 @@ test("saved content search, state filter, deterministic pagination and followed 
   seed(ids[1], PL);
   seed(ids[2], PL);
   seed(ids[3], SECOND);
-  store.setNotePath(ids[1], path.join(root, "Talks", "one.md"), new Date().toISOString());
-  store.setNotePath(ids[2], path.join(root, "Talks", "two.md"), new Date().toISOString());
-  store.setNotePath(ids[3], path.join(root, "Talks", "one.md"), new Date().toISOString());
+  store.setNotePath(ids[1], path.join(root, "Talks", "one.md"), new Date().toISOString(), root);
+  store.setNotePath(ids[2], path.join(root, "Talks", "two.md"), new Date().toISOString(), root);
+  store.setNotePath(ids[3], path.join(root, "Talks", "one.md"), new Date().toISOString(), root);
   const search = await get("/api/youtube/notes?query=SEMANTIC&state=saved");
   assert.deepEqual(
     search.body.notes.map((n: { videoId: string }) => n.videoId),
@@ -132,13 +132,13 @@ test("rejects paths outside root, symlink escapes, missing and oversized files",
   ];
   seed(ids[4], PL);
   for (const file of unsafe) {
-    store.setNotePath(ids[4], file, new Date().toISOString());
+    store.setNotePath(ids[4], file, new Date().toISOString(), root);
     assert.equal((await get(`/api/youtube/notes/${ids[4]}`)).status, 404, file);
     assert.equal((await get("/api/youtube/notes?query=secret%20outside")).body.total, 0, file);
   }
   const huge = path.join(root, "Talks", "large.md");
   fs.writeFileSync(huge, Buffer.alloc(1024 * 1024 + 1));
-  store.setNotePath(ids[4], huge, new Date().toISOString());
+  store.setNotePath(ids[4], huge, new Date().toISOString(), root);
   assert.equal((await get(`/api/youtube/notes/${ids[4]}`)).status, 404);
   assert.equal((await get("/api/youtube/notes?state=saved")).body.total, 2);
   const blocked = await get("/api/youtube/notes?state=blocked");

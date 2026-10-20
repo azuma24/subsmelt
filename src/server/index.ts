@@ -236,7 +236,7 @@ registerUsageRoutes(app);
 
 registerTranscriptionRoutes(app);
 
-const youtubeStore = new YoutubeStore(db);
+const youtubeStore = new YoutubeStore(db, { notesRoot: getSetting("youtube_notes_dir") });
 const youtubeWorker = new YoutubeWorker(youtubeStore);
 registerYoutubeRoutes(app, youtubeStore, youtubeWorker);
 
