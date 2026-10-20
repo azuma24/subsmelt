@@ -1255,6 +1255,8 @@
       "routeCaptions": "Autor nahrál titulky v tomto jazyce: SubSmelt je stáhne.",
       "routeTranslate": "Jinak: přepsat a pak přeložit.",
       "languagesHint": "Jazyky se berou ze seznamu Překlady. Přepis v mluveném jazyce se pro vaše poznámky vždy zachová.",
+      "secondBrain": "Posílat poznámky do mého druhého mozku",
+      "secondBrainHint": "Poznámky se zapisují pro každé video v každém případě. Tato volba pouze dovoluje zrcadlu druhého mozku kopírovat složku poznámek tohoto playlistu. Vypnutí nesmaže nic, co již bylo zapsáno nebo zkopírováno.",
       "more": "Další možnosti: načasování stahování, titulky, složka",
       "modeLabel": "Stahovat nová videa",
       "modeAuto": "Automaticky",
@@ -1312,6 +1314,7 @@
     },
     "followChannel": "Přidat kanál",
     "channelTag": "Kanál",
+    "secondBrainTag": "Druhý mozek",
     "contentOff": {
       "video": "Video, nesledováno",
       "short": "Short, nesledováno",

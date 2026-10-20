@@ -1247,6 +1247,8 @@
       "routeCaptions": "创作者已上传该语言的字幕：SubSmelt 会下载它们。",
       "routeTranslate": "否则：先转录，再翻译。",
       "languagesHint": "语言来自你的翻译列表。口语语言的转录文本始终会保留，供你的笔记使用。",
+      "secondBrain": "将笔记发送到我的第二大脑",
+      "secondBrainHint": "无论是否勾选，每个视频都会写出笔记。此选项只允许第二大脑镜像复制此播放列表的笔记文件夹。取消勾选不会删除已写出或已复制的文件。",
       "more": "更多选项：下载时机、字幕、文件夹",
       "modeLabel": "下载新视频",
       "modeAuto": "自动",
@@ -1304,6 +1306,7 @@
     },
     "followChannel": "添加频道",
     "channelTag": "频道",
+    "secondBrainTag": "第二大脑",
     "contentOff": {
       "video": "视频，未关注",
       "short": "Short，未关注",

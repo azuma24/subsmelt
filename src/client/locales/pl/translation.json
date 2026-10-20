@@ -1255,6 +1255,8 @@
       "routeCaptions": "Twórca przesłał napisy w tym języku: SubSmelt je pobiera.",
       "routeTranslate": "W pozostałych przypadkach: transkrypcja, a potem tłumaczenie.",
       "languagesHint": "Języki pochodzą z Twojej listy Tłumaczenia. Transkrypcja w języku mówionym jest zawsze zachowywana na potrzeby notatek.",
+      "secondBrain": "Wysyłaj notatki do mojego drugiego mózgu",
+      "secondBrainHint": "Notatki są zapisywane dla każdego filmu w każdym przypadku. Ta opcja jedynie pozwala kopii lustrzanej drugiego mózgu kopiować folder notatek tej playlisty. Wyłączenie nie usuwa niczego, co już zapisano lub skopiowano.",
       "more": "Więcej opcji: moment pobierania, napisy, folder",
       "modeLabel": "Pobieraj nowe filmy",
       "modeAuto": "Automatycznie",
@@ -1312,6 +1314,7 @@
     },
     "followChannel": "Dodaj kanał",
     "channelTag": "Kanał",
+    "secondBrainTag": "Drugi mózg",
     "contentOff": {
       "video": "Film, nieobserwowany",
       "short": "Short, nieobserwowany",

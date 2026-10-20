@@ -1251,6 +1251,8 @@
       "routeCaptions": "Le créateur a mis en ligne des sous-titres dans cette langue : SubSmelt les télécharge.",
       "routeTranslate": "Sinon : transcription, puis traduction.",
       "languagesHint": "Les langues viennent de votre liste Traductions. La transcription dans la langue parlée est toujours conservée pour vos notes.",
+      "secondBrain": "Envoyer les notes vers mon second cerveau",
+      "secondBrainHint": "Les notes sont écrites pour chaque vidéo dans tous les cas. Ceci autorise seulement un miroir du second cerveau à copier le dossier de notes de cette playlist. Le désactiver ne supprime rien de ce qui a déjà été écrit ou copié.",
       "more": "Plus d’options : moment du téléchargement, sous-titres, dossier",
       "modeLabel": "Télécharger les nouvelles vidéos",
       "modeAuto": "Automatiquement",
@@ -1308,6 +1310,7 @@
     },
     "followChannel": "Ajouter une chaîne",
     "channelTag": "Chaîne",
+    "secondBrainTag": "Second cerveau",
     "contentOff": {
       "video": "Vidéo, non suivie",
       "short": "Short, non suivi",

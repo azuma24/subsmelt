@@ -1247,6 +1247,8 @@
       "routeCaptions": "Skaparen har laddat upp undertexter på det språket: SubSmelt laddar ner dem.",
       "routeTranslate": "Annars: transkribera och översätt sedan.",
       "languagesHint": "Språken kommer från din lista med Översättningar. Transkriptionen på det talade språket behålls alltid för dina anteckningar.",
+      "secondBrain": "Skicka anteckningar till min andra hjärna",
+      "secondBrainHint": "Anteckningar skrivs för varje video i vilket fall som helst. Detta tillåter bara en spegel av den andra hjärnan att kopiera spellistans anteckningsmapp. Att stänga av det tar inte bort något som redan skrivits eller kopierats.",
       "more": "Fler alternativ: nedladdningstid, undertexter, mapp",
       "modeLabel": "Ladda ner nya videor",
       "modeAuto": "Automatiskt",
@@ -1304,6 +1306,7 @@
     },
     "followChannel": "Lägg till kanal",
     "channelTag": "Kanal",
+    "secondBrainTag": "Andra hjärna",
     "contentOff": {
       "video": "Video, följs inte",
       "short": "Short, följs inte",

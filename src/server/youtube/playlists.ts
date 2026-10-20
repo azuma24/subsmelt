@@ -135,6 +135,11 @@ export function parsePlaylistFields(body: unknown, base: PlaylistFields, today: 
     }
     out.include = { shorts: include.shorts, live: include.live };
   }
+  if (body.secondBrainExport !== undefined) {
+    if (typeof body.secondBrainExport !== "boolean")
+      return { ok: false, error: "secondBrainExport must be true or false" };
+    out.secondBrainExport = body.secondBrainExport;
+  }
   return { ok: true, value: out };
 }
 
@@ -149,6 +154,7 @@ export function defaultPlaylistFields(folder: string): PlaylistFields {
     subtitleTaskIds: [],
     checkEveryMinutes: DEFAULT_CHECK_MINUTES,
     include: { shorts: false, live: false },
+    secondBrainExport: false,
   };
 }
 
@@ -175,7 +181,10 @@ export function parseStoredPlaylists(raw: string): YoutubePlaylist[] {
   for (const entry of data) {
     if (!isObj(entry) || typeof entry.id !== "string" || !isPlaylistId(entry.id)) continue;
     const title = typeof entry.title === "string" ? entry.title : entry.id;
-    const fields = parsePlaylistFields(entry, defaultPlaylistFields(folderFromTitle(title, entry.id)), "9999-12-31");
+    // A second-brain choice that is not true or false reads as off, rather than dropping the follow.
+    const { secondBrainExport, ...rest } = entry;
+    const stored = typeof secondBrainExport === "boolean" ? entry : rest;
+    const fields = parsePlaylistFields(stored, defaultPlaylistFields(folderFromTitle(title, entry.id)), "9999-12-31");
     if (fields.ok) playlists.push({ id: entry.id, title, ...fields.value });
   }
   return playlists;

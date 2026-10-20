@@ -1251,6 +1251,8 @@
       "routeCaptions": "Creatorul a încărcat subtitrări în acea limbă: SubSmelt le descarcă.",
       "routeTranslate": "Altfel: se transcrie, apoi se traduce.",
       "languagesHint": "Limbile provin din lista ta de Traduceri. Transcrierea în limba vorbită este păstrată întotdeauna pentru notițele tale.",
+      "secondBrain": "Trimite notițele în al doilea meu creier",
+      "secondBrainHint": "Notițele sunt scrise pentru fiecare videoclip oricum. Aceasta doar permite unei oglinzi a celui de-al doilea creier să copieze dosarul de notițe al acestui playlist. Dezactivarea nu șterge nimic deja scris sau copiat.",
       "more": "Mai multe opțiuni: momentul descărcării, subtitrări, dosar",
       "modeLabel": "Descarcă videoclipurile noi",
       "modeAuto": "Automat",
@@ -1308,6 +1310,7 @@
     },
     "followChannel": "Adaugă canal",
     "channelTag": "Canal",
+    "secondBrainTag": "Al doilea creier",
     "contentOff": {
       "video": "Videoclip, neurmărit",
       "short": "Short, neurmărit",

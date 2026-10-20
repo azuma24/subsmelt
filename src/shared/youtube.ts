@@ -61,6 +61,13 @@ export interface YoutubePlaylist {
   checkEveryMinutes: number;
   /** For a channel: whether its Shorts and live streams are followed too. Ignored for a playlist. */
   include: ChannelInclude;
+  /**
+   * Whether a second-brain mirror may copy this playlist's note folder. Notes are
+   * written for every playlist either way; this only puts the folder on the
+   * GET /api/youtube/second-brain allowlist. Off by default, and turning it off
+   * deletes nothing already written or mirrored.
+   */
+  secondBrainExport: boolean;
 }
 
 /** The fields a user sets when following or editing. id and title come from YouTube. */
@@ -92,6 +99,18 @@ export interface PlaylistCounts {
 export interface YoutubePlaylistSummary extends YoutubePlaylist {
   sync: Omit<PlaylistSyncState, "firstSyncAt"> & { checking: boolean; nextCheckAt: string | null };
   counts: PlaylistCounts;
+}
+
+/**
+ * GET /api/youtube/second-brain: the note folders a mirror may copy, relative to
+ * the notes folder. A selected folder that also holds, or contains, the notes of
+ * an unselected playlist is withheld instead, so sharing a folder never widens
+ * what the mirror sees.
+ */
+export interface YoutubeSecondBrain {
+  folders: string[];
+  /** Selected playlists whose note folder is withheld. */
+  withheld: { id: string; title: string }[];
 }
 
 /** How a video's picked languages were made, kept for the row's summary. */

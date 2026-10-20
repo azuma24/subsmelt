@@ -1247,6 +1247,8 @@
       "routeCaptions": "Creator uploaded captions in that language: SubSmelt downloads them.",
       "routeTranslate": "Otherwise: transcribe, then translate.",
       "languagesHint": "Languages come from your Translations list. The transcript in the spoken language is always kept for your notes.",
+      "secondBrain": "Send notes to my second brain",
+      "secondBrainHint": "Notes are written for every video either way. This only allows a second-brain mirror to copy this playlist's note folder. Turning it off deletes nothing already written or copied.",
       "more": "More options: download timing, subtitles, folder",
       "modeLabel": "Download new videos",
       "modeAuto": "Automatically",
@@ -1304,6 +1306,7 @@
     },
     "followChannel": "Add channel",
     "channelTag": "Channel",
+    "secondBrainTag": "Second brain",
     "contentOff": {
       "video": "Video, not followed",
       "short": "Short, not followed",

@@ -1247,6 +1247,8 @@
       "routeCaptions": "Pencipta memuat naik kapsyen dalam bahasa itu: SubSmelt memuat turunnya.",
       "routeTranslate": "Jika tidak: transkripsi, kemudian terjemah.",
       "languagesHint": "Bahasa diambil daripada senarai Terjemahan anda. Transkrip dalam bahasa yang dituturkan sentiasa disimpan untuk nota anda.",
+      "secondBrain": "Hantar nota ke otak kedua saya",
+      "secondBrainHint": "Nota tetap ditulis untuk setiap video. Ini hanya membenarkan cermin otak kedua menyalin folder nota senarai main ini. Mematikannya tidak memadam apa-apa yang telah ditulis atau disalin.",
       "more": "Pilihan lain: masa muat turun, sarikata, folder",
       "modeLabel": "Muat turun video baharu",
       "modeAuto": "Secara automatik",
@@ -1304,6 +1306,7 @@
     },
     "followChannel": "Tambah saluran",
     "channelTag": "Saluran",
+    "secondBrainTag": "Otak kedua",
     "contentOff": {
       "video": "Video, tidak diikuti",
       "short": "Short, tidak diikuti",

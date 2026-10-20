@@ -1247,6 +1247,8 @@
       "routeCaptions": "創作者已上傳該語言的字幕：SubSmelt 會下載。",
       "routeTranslate": "否則：先轉錄，再翻譯。",
       "languagesHint": "語言來自你的翻譯清單。口語語言的轉錄文字一律會保留，供你的筆記使用。",
+      "secondBrain": "將筆記送到我的第二大腦",
+      "secondBrainHint": "無論是否勾選，每部影片都會寫出筆記。此選項只允許第二大腦鏡像複製此播放清單的筆記資料夾。取消勾選不會刪除已寫出或已複製的檔案。",
       "more": "更多選項：下載時機、字幕、資料夾",
       "modeLabel": "下載新影片",
       "modeAuto": "自動",
@@ -1304,6 +1306,7 @@
     },
     "followChannel": "新增頻道",
     "channelTag": "頻道",
+    "secondBrainTag": "第二大腦",
     "contentOff": {
       "video": "影片，未追蹤",
       "short": "Short，未追蹤",

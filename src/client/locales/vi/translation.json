@@ -1247,6 +1247,8 @@
       "routeCaptions": "Người đăng đã tải lên phụ đề bằng ngôn ngữ đó: SubSmelt sẽ tải về.",
       "routeTranslate": "Nếu không: chuyển âm rồi dịch.",
       "languagesHint": "Các ngôn ngữ lấy từ danh sách Bản dịch của bạn. Bản ghi bằng ngôn ngữ được nói luôn được giữ lại cho ghi chú của bạn.",
+      "secondBrain": "Gửi ghi chú vào bộ não thứ hai của tôi",
+      "secondBrainHint": "Ghi chú vẫn được viết cho mọi video dù thế nào. Tùy chọn này chỉ cho phép bản sao gương của bộ não thứ hai sao chép thư mục ghi chú của danh sách phát này. Tắt nó không xóa gì đã được viết hoặc sao chép.",
       "more": "Tùy chọn khác: thời điểm tải, phụ đề, thư mục",
       "modeLabel": "Tải video mới",
       "modeAuto": "Tự động",
@@ -1304,6 +1306,7 @@
     },
     "followChannel": "Thêm kênh",
     "channelTag": "Kênh",
+    "secondBrainTag": "Bộ não thứ hai",
     "contentOff": {
       "video": "Video, không theo dõi",
       "short": "Short, không theo dõi",

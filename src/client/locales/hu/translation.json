@@ -1247,6 +1247,8 @@
       "routeCaptions": "A készítő feltöltött feliratot azon a nyelven: a SubSmelt letölti.",
       "routeTranslate": "Egyébként: átírás, majd fordítás.",
       "languagesHint": "A nyelvek a Fordítások listádból származnak. A beszélt nyelvű átirat a jegyzeteidhez mindig megmarad.",
+      "secondBrain": "Jegyzetek küldése a második agyamba",
+      "secondBrainHint": "A jegyzetek minden videóhoz mindenképp elkészülnek. Ez csak azt engedi, hogy a második agy tükre átmásolja a lejátszási lista jegyzetmappáját. Kikapcsolása semmit sem töröl, ami már elkészült vagy át lett másolva.",
       "more": "További beállítások: letöltés időzítése, feliratok, mappa",
       "modeLabel": "Új videók letöltése",
       "modeAuto": "Automatikusan",
@@ -1304,6 +1306,7 @@
     },
     "followChannel": "Csatorna hozzáadása",
     "channelTag": "Csatorna",
+    "secondBrainTag": "Második agy",
     "contentOff": {
       "video": "Videó, nem követett",
       "short": "Short, nem követett",

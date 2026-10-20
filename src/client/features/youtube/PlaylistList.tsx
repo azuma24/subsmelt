@@ -68,6 +68,7 @@ function PlaylistRow({
           {availability && <Tag>{availability}</Tag>}
           <Tag>{profileLabel(playlist.media, t)}</Tag>
           <Tag>{playlist.mode === "auto" ? t("youtube.modeAuto") : t("youtube.modeManual")}</Tag>
+          {playlist.secondBrainExport && <Tag>{t("youtube.secondBrainTag")}</Tag>}
         </div>
         <p className="break-words text-xs leading-5 text-faint">{meta.join(" · ")}</p>
         {playlist.sync.lastError && (

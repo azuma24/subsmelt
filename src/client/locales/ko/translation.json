@@ -1247,6 +1247,8 @@
       "routeCaptions": "제작자가 해당 언어의 자막을 올린 경우: SubSmelt가 다운로드합니다.",
       "routeTranslate": "그 외: 전사한 뒤 번역합니다.",
       "languagesHint": "언어는 번역 목록에서 가져옵니다. 음성 언어의 전사본은 노트용으로 항상 보관됩니다.",
+      "secondBrain": "노트를 세컨드 브레인으로 보내기",
+      "secondBrainHint": "선택 여부와 관계없이 모든 동영상의 노트가 작성됩니다. 이 옵션은 세컨드 브레인 미러가 이 재생목록의 노트 폴더를 복사하도록 허용할 뿐입니다. 끄더라도 이미 작성되거나 복사된 파일은 삭제되지 않습니다.",
       "more": "추가 옵션: 다운로드 시점, 자막, 폴더",
       "modeLabel": "새 동영상 다운로드",
       "modeAuto": "자동으로",
@@ -1304,6 +1306,7 @@
     },
     "followChannel": "채널 추가",
     "channelTag": "채널",
+    "secondBrainTag": "세컨드 브레인",
     "contentOff": {
       "video": "동영상, 팔로우 안 함",
       "short": "Short, 팔로우 안 함",

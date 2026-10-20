@@ -1247,6 +1247,8 @@
       "routeCaptions": "İçerik sahibi o dilde altyazı yüklemiş: SubSmelt onları indirir.",
       "routeTranslate": "Aksi halde: transkribe et, sonra çevir.",
       "languagesHint": "Diller Çeviriler listenizden gelir. Konuşulan dildeki transkript notlarınız için her zaman saklanır.",
+      "secondBrain": "Notları ikinci beynime gönder",
+      "secondBrainHint": "Notlar her durumda her video için yazılır. Bu yalnızca bir ikinci beyin yansısının bu oynatma listesinin not klasörünü kopyalamasına izin verir. Kapatmak, önceden yazılmış veya kopyalanmış hiçbir şeyi silmez.",
       "more": "Diğer seçenekler: indirme zamanı, altyazılar, klasör",
       "modeLabel": "Yeni videoları indir",
       "modeAuto": "Otomatik olarak",
@@ -1304,6 +1306,7 @@
     },
     "followChannel": "Kanal ekle",
     "channelTag": "Kanal",
+    "secondBrainTag": "İkinci beyin",
     "contentOff": {
       "video": "Video, takip edilmiyor",
       "short": "Short, takip edilmiyor",

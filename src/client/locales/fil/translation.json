@@ -1247,6 +1247,8 @@
       "routeCaptions": "Nag-upload ang creator ng mga caption sa wikang iyon: dina-download ito ng SubSmelt.",
       "routeTranslate": "Kung hindi: i-transcribe, saka isalin.",
       "languagesHint": "Galing sa listahan mo ng Mga Salin ang mga wika. Laging pinananatili ang transcript sa wikang sinasalita para sa mga tala mo.",
+      "secondBrain": "Ipadala ang mga tala sa aking pangalawang utak",
+      "secondBrainHint": "Isinusulat pa rin ang mga tala para sa bawat video. Pinapayagan lang nito ang isang mirror ng pangalawang utak na kopyahin ang folder ng mga tala ng playlist na ito. Hindi nito binubura ang anumang naisulat o nakopya na kapag pinatay.",
       "more": "Higit pang opsyon: timing ng download, mga subtitle, folder",
       "modeLabel": "I-download ang mga bagong video",
       "modeAuto": "Awtomatiko",
@@ -1304,6 +1306,7 @@
     },
     "followChannel": "Magdagdag ng channel",
     "channelTag": "Channel",
+    "secondBrainTag": "Pangalawang utak",
     "contentOff": {
       "video": "Video, hindi fino-follow",
       "short": "Short, hindi fino-follow",

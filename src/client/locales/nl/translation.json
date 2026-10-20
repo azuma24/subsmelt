@@ -1247,6 +1247,8 @@
       "routeCaptions": "De maker heeft ondertitels in die taal geüpload: SubSmelt downloadt ze.",
       "routeTranslate": "Anders: transcribeer en vertaal daarna.",
       "languagesHint": "Talen komen uit je lijst met Vertalingen. Het transcript in de gesproken taal wordt altijd bewaard voor je notities.",
+      "secondBrain": "Notities naar mijn tweede brein sturen",
+      "secondBrainHint": "Notities worden hoe dan ook voor elke video geschreven. Dit staat alleen toe dat een spiegel van het tweede brein de notitiemap van deze playlist kopieert. Uitzetten verwijdert niets wat al geschreven of gekopieerd is.",
       "more": "Meer opties: downloadmoment, ondertitels, map",
       "modeLabel": "Nieuwe video's downloaden",
       "modeAuto": "Automatisch",
@@ -1304,6 +1306,7 @@
     },
     "followChannel": "Kanaal toevoegen",
     "channelTag": "Kanaal",
+    "secondBrainTag": "Tweede brein",
     "contentOff": {
       "video": "Video, niet gevolgd",
       "short": "Short, niet gevolgd",

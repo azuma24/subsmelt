@@ -166,6 +166,11 @@ test("Added since cannot be chosen without an API key", async () => {
   assert.deepEqual(follow, { status: 400, body: { error: "Added since needs a YouTube Data API key in Settings" } });
 });
 
+test("a follow refuses a second-brain choice that is not true or false", async () => {
+  const follow = await call("POST", "/api/youtube/playlists", { url: PL, title: "AI", secondBrainExport: "yes" });
+  assert.deepEqual(follow, { status: 400, body: { error: "secondBrainExport must be true or false" } });
+});
+
 test("following with backfill None stores every listed video without queueing old ones", async () => {
   const follow = await call("POST", "/api/youtube/playlists", {
     url: `https://www.youtube.com/playlist?list=${PL}`,
@@ -175,6 +180,8 @@ test("following with backfill None stores every listed video without queueing ol
   });
   assert.equal(follow.status, 201);
   assert.equal(follow.body.folder, "AI");
+  assert.equal(follow.body.secondBrainExport, false);
+  assert.deepEqual((await call("GET", "/api/youtube/second-brain")).body, { folders: [], withheld: [] });
 
   // Joins the check the follow started.
   const sync = await call("POST", `/api/youtube/playlists/${PL}/sync`);
@@ -277,6 +284,28 @@ test("editing changes settings but never the backfill", async () => {
   );
   const bad = await call("PUT", `/api/youtube/playlists/${PL}`, { media: { type: "audio", format: "mp3" } });
   assert.deepEqual(bad, { status: 400, body: { error: "media.format must be m4a or opus" } });
+});
+
+test("selecting a playlist for the second brain lists only its relative note folder", async () => {
+  const on = await call("PUT", `/api/youtube/playlists/${PL}`, { secondBrainExport: true });
+  assert.equal(on.status, 200);
+  assert.equal(on.body.secondBrainExport, true);
+  assert.equal(on.body.mode, "manual");
+  const [summary] = (await call("GET", "/api/youtube/playlists")).body.playlists;
+  assert.equal(summary.secondBrainExport, true);
+  assert.deepEqual((await call("GET", "/api/youtube/second-brain")).body, { folders: ["AI"], withheld: [] });
+
+  const bad = await call("PUT", `/api/youtube/playlists/${PL}`, { secondBrainExport: 1 });
+  assert.deepEqual(bad, { status: 400, body: { error: "secondBrainExport must be true or false" } });
+  // Leaving the field out of an edit keeps the choice.
+  assert.equal(
+    (await call("PUT", `/api/youtube/playlists/${PL}`, { checkEveryMinutes: 60 })).body.secondBrainExport,
+    true,
+  );
+
+  const off = await call("PUT", `/api/youtube/playlists/${PL}`, { secondBrainExport: false });
+  assert.equal(off.body.secondBrainExport, false);
+  assert.deepEqual((await call("GET", "/api/youtube/second-brain")).body, { folders: [], withheld: [] });
 });
 
 test("the Settings endpoints never expose or overwrite the playlists, and redact the API key", async () => {

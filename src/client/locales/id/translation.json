@@ -1247,6 +1247,8 @@
       "routeCaptions": "Kreator mengunggah teks dalam bahasa tersebut: SubSmelt mengunduhnya.",
       "routeTranslate": "Selain itu: transkripsikan, lalu terjemahkan.",
       "languagesHint": "Bahasa diambil dari daftar Terjemahan Anda. Transkrip dalam bahasa yang diucapkan selalu disimpan untuk catatan Anda.",
+      "secondBrain": "Kirim catatan ke otak kedua saya",
+      "secondBrainHint": "Catatan tetap ditulis untuk setiap video. Ini hanya mengizinkan mirror otak kedua menyalin folder catatan playlist ini. Mematikannya tidak menghapus apa pun yang sudah ditulis atau disalin.",
       "more": "Opsi lainnya: waktu pengunduhan, subjudul, folder",
       "modeLabel": "Unduh video baru",
       "modeAuto": "Secara otomatis",
@@ -1304,6 +1306,7 @@
     },
     "followChannel": "Tambah channel",
     "channelTag": "Kanal",
+    "secondBrainTag": "Otak kedua",
     "contentOff": {
       "video": "Video, tidak diikuti",
       "short": "Short, tidak diikuti",

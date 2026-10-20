@@ -58,6 +58,11 @@ export function safeNoteName(name: string): string {
     .replace(/^[.\s]+|[.\s]+$/g, "");
 }
 
+/** The note folder of a playlist folder, as path segments under the notes folder. */
+export function noteFolderSegments(folder: string): string[] {
+  return folder.split("/").map(safeNoteName).filter(Boolean);
+}
+
 function truncateBytes(text: string, maxBytes: number): string {
   let out = "";
   let bytes = 0;

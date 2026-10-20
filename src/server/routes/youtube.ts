@@ -23,6 +23,7 @@ import {
   notesFolderStatus,
   type NoteExportFailure,
 } from "../youtube/note-export.js";
+import { secondBrainFolders } from "../youtube/second-brain.js";
 import { cookiesStatus, parseCookies, removeCookies, saveCookies } from "../youtube/cookies.js";
 import { IllegalTransitionError, type YoutubeStore } from "../youtube/store.js";
 import {
@@ -195,6 +196,11 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore, worker:
 
   app.get("/api/youtube/playlists", (_req, res) => {
     res.json({ playlists: readPlaylists().map((p) => playlistSummary(store, worker, p)) });
+  });
+
+  // For a second-brain mirror: relative note folders only, never a host path.
+  app.get("/api/youtube/second-brain", (_req, res) => {
+    res.json(secondBrainFolders(readPlaylists()));
   });
 
   // A channel is followed as its uploads playlist, so both kinds share the rest of the pipeline.

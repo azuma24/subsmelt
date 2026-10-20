@@ -1247,6 +1247,8 @@
       "routeCaptions": "Der Ersteller hat Untertitel in dieser Sprache hochgeladen: SubSmelt lädt sie herunter.",
       "routeTranslate": "Sonst: transkribieren, dann übersetzen.",
       "languagesHint": "Die Sprachen stammen aus deiner Liste unter „Übersetzungen“. Das Transkript in der gesprochenen Sprache bleibt für deine Notizen immer erhalten.",
+      "secondBrain": "Notizen an mein zweites Gehirn senden",
+      "secondBrainHint": "Notizen werden in jedem Fall für jedes Video geschrieben. Dies erlaubt nur einem Spiegel des zweiten Gehirns, den Notizordner dieser Playlist zu kopieren. Ausschalten löscht nichts, was bereits geschrieben oder kopiert wurde.",
       "more": "Weitere Optionen: Download-Zeitpunkt, Untertitel, Ordner",
       "modeLabel": "Neue Videos herunterladen",
       "modeAuto": "Automatisch",
@@ -1304,6 +1306,7 @@
     },
     "followChannel": "Kanal hinzufügen",
     "channelTag": "Kanal",
+    "secondBrainTag": "Zweites Gehirn",
     "contentOff": {
       "video": "Video, nicht gefolgt",
       "short": "Short, nicht gefolgt",

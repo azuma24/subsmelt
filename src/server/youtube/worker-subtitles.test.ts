@@ -88,6 +88,7 @@ function rig(
     subtitleTaskIds: opts.taskIds,
     checkEveryMinutes: 60,
     include: { shorts: false, live: false },
+    secondBrainExport: false,
   });
   const store = new YoutubeStore(new Database(":memory:"));
   store.applyListing(

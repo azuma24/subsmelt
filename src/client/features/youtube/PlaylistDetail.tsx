@@ -116,6 +116,7 @@ export function PlaylistDetail({ playlist, folderRoot }: { playlist: YoutubePlay
             {availability && <Tag>{availability}</Tag>}
             <Tag>{profileLabel(playlist.media, t)}</Tag>
             <Tag>{playlist.mode === "auto" ? t("youtube.modeAuto") : t("youtube.modeManual")}</Tag>
+            {playlist.secondBrainExport && <Tag>{t("youtube.secondBrainTag")}</Tag>}
           </h2>
           <p className="break-words text-xs leading-5 text-faint">
             {[

@@ -11,7 +11,7 @@ import { readSubtitleFileText } from "../translator/encoding.js";
 import {
   noteFileName,
   renderNote,
-  safeNoteName,
+  noteFolderSegments,
   type Chapter,
   type Cue,
   type NoteInfo,
@@ -291,7 +291,7 @@ export async function exportNoteForVideo(
     chapters: chaptersOf(info),
   };
 
-  const folder = (playlist?.folder ?? path.basename(dir)).split("/").map(safeNoteName).filter(Boolean);
+  const folder = noteFolderSegments(playlist?.folder ?? path.basename(dir));
   const noteDir = path.join(root, ...folder);
   mkdirShared(noteDir);
   const file = path.join(noteDir, noteFileName(title, videoId));
