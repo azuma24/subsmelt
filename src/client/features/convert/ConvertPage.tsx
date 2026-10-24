@@ -21,6 +21,10 @@ import { effectiveSource, skipTranslation, type StagedFile } from "./staged-file
 import { detectSampleLanguage, readSubtitleFile } from "./lazy-analysis";
 import { isSupported, triggerDownload, buildZipBlob, type OutputFile } from "./download-outputs";
 
+const BATCH_KEY = "subsmelt.convert.batch";
+const MAX_FILES = 10;
+const MAX_BYTES = 1024 * 1024;
+
 const TARGET_FORMATS: ConvertTargetFormat[] = ["srt", "vtt", "ass", "ssa"];
 
 function getBrowserStorage(): KeyValueStorage | null {
@@ -42,7 +46,9 @@ export function ConvertPage() {
   const [targetFormat, setTargetFormat] = useState<ConvertTargetFormat>("srt");
   const [converting, setConverting] = useState(false);
   const [fileErrors, setFileErrors] = useState<{ name: string; error: string }[]>([]);
-  const [lastOutputs, setLastOutputs] = useState<OutputFile[]>([]);
+  const [batchId, setBatchId] = useState<string | null>(() => getBrowserStorage()?.getItem(BATCH_KEY) ?? null);
+  const [batch, setBatch] = useState<api.ConvertBatch | null>(null);
+  const [batchError, setBatchError] = useState("");
   const [fileStatus, setFileStatus] = useState<Record<string, FileRunStatus>>({});
 
   const storage = useMemo(getBrowserStorage, []);
@@ -106,7 +112,7 @@ export function ConvertPage() {
       // The staged set changed, so any prior per-file errors/outputs now refer to
       // a stale list — clear them (mirrors clearFiles).
       setFileErrors([]);
-      setLastOutputs([]);
+      // Existing server batch remains available until expiry.
     },
     [addToast, t],
   );
@@ -114,88 +120,95 @@ export function ConvertPage() {
   const removeFile = (id: string) => {
     setStaged((prev) => prev.filter((f) => f.id !== id));
     setFileErrors([]);
-    setLastOutputs([]);
     setFileStatus({});
   };
   const clearFiles = () => {
     setStaged([]);
     setFileErrors([]);
-    setLastOutputs([]);
     setFileStatus({});
   };
 
-  const downloadOutputs = async (files = lastOutputs) => {
-    if (files.length === 0) return;
-    if (files.length === 1) {
-      const out = files[0];
-      triggerDownload(new Blob([out.content], { type: "text/plain;charset=utf-8" }), out.name);
-      return;
+  useEffect(() => {
+    if (!batchId) return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const next = await api.getConvertBatch(batchId);
+        if (!cancelled) {
+          setBatch(next);
+          setBatchError("");
+        }
+      } catch (error) {
+        if (!cancelled)
+          setBatchError(
+            error instanceof ApiError && error.status === 404 ? "Batch expired or unavailable" : t("convert.failed"),
+          );
+      }
+    };
+    void poll();
+    const timer = setInterval(() => void poll(), 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [batchId, t]);
+
+  const downloadOutputs = async () => {
+    if (!batchId || !batch) return;
+    try {
+      const outputs = await Promise.all(
+        batch.files.map(async (file, index) =>
+          file.status === "done"
+            ? { name: file.outputName!, content: await api.getConvertBatchFile(batchId, index) }
+            : null,
+        ),
+      );
+      const files = outputs.filter((file): file is OutputFile => file !== null);
+      if (files.length === 1)
+        triggerDownload(new Blob([files[0].content], { type: "text/plain;charset=utf-8" }), files[0].name);
+      else if (files.length > 1) triggerDownload(await buildZipBlob(files), "subtitles.zip");
+    } catch {
+      addToast(t("convert.failed"), "error");
     }
-    const blob = await buildZipBlob(files);
-    triggerDownload(blob, "subtitles.zip");
   };
 
   const handleConvert = async () => {
-    if (staged.length === 0 || converting) return;
-    if (translate && !resolvedTarget) return;
-    setConverting(true);
-    setFileErrors([]);
-    setLastOutputs([]);
-    setFileStatus({});
-
-    // One request per file: per-file progress, and one failure never aborts
-    // the rest of the batch.
-    const outputs: OutputFile[] = [];
-    const errors: { name: string; error: string }[] = [];
-    for (const item of staged) {
-      setFileStatus((prev) => ({ ...prev, [item.id]: "working" }));
-      let ok = false;
-      try {
-        const content = await readSubtitleFile(item.file);
-        const source = effectiveSource(item, fromCode);
-        const res = await api.convertSubtitles({
-          files: [
-            {
-              name: item.file.name,
-              content,
-              sourceLang: source ? (findLanguage(source)?.promptName ?? AUTO_SOURCE_LANG) : AUTO_SOURCE_LANG,
-              skip: skipTranslation(item, fromCode, translate, resolvedTarget?.code ?? null),
-            },
-          ],
-          targetFormat,
-          translate,
-          sourceLang: AUTO_SOURCE_LANG,
-          targetLang: resolvedTarget?.promptName,
-          targetCode: resolvedTarget?.code,
-        });
-        outputs.push(...res.files);
-        errors.push(...res.errors);
-        ok = res.errors.length === 0 && res.files.length > 0;
-      } catch (error) {
-        errors.push({ name: item.file.name, error: error instanceof ApiError ? error.message : t("convert.failed") });
-      }
-      setFileStatus((prev) => ({ ...prev, [item.id]: ok ? "done" : "error" }));
-    }
-
-    setConverting(false);
-    if (errors.length > 0) setFileErrors(errors);
-    if (outputs.length === 0) {
-      addToast(t("convert.allFailed"), "error", { persistent: true });
+    if (staged.length === 0 || converting || (translate && !resolvedTarget)) return;
+    if (staged.length > MAX_FILES || staged.some((item) => item.file.size > MAX_BYTES)) {
+      addToast(`Maximum ${MAX_FILES} files, ${MAX_BYTES / 1024 / 1024} MB each`, "error");
       return;
     }
-
-    if (translate && resolvedTarget && storage) {
-      setRecents(pushRecentTarget(storage, resolvedTarget.code));
+    setConverting(true);
+    setBatchError("");
+    try {
+      const files = await Promise.all(
+        staged.map(async (item) => {
+          const source = effectiveSource(item, fromCode);
+          return {
+            name: item.file.name,
+            content: await readSubtitleFile(item.file),
+            sourceLang: source ? (findLanguage(source)?.promptName ?? AUTO_SOURCE_LANG) : AUTO_SOURCE_LANG,
+            skip: skipTranslation(item, fromCode, translate, resolvedTarget?.code ?? null),
+          };
+        }),
+      );
+      const { id } = await api.createConvertBatch({
+        files,
+        targetFormat,
+        translate,
+        sourceLang: AUTO_SOURCE_LANG,
+        targetLang: resolvedTarget?.promptName,
+        targetCode: resolvedTarget?.code,
+      });
+      storage?.setItem(BATCH_KEY, id);
+      setBatch(null);
+      setBatchId(id);
+      if (translate && resolvedTarget && storage) setRecents(pushRecentTarget(storage, resolvedTarget.code));
+    } catch (error) {
+      addToast(error instanceof ApiError ? error.message : t("convert.failed"), "error");
+    } finally {
+      setConverting(false);
     }
-    setLastOutputs(outputs);
-    await downloadOutputs(outputs);
-    addToast(
-      t(translate ? "convert.translateDownloadReady" : "convert.downloadReady", {
-        count: outputs.length,
-        format: targetFormat.toUpperCase(),
-      }),
-      "success",
-    );
   };
 
   return (
@@ -323,39 +336,50 @@ export function ConvertPage() {
             </ActionButton>
           </div>
 
-          {lastOutputs.length > 0 && (
+          {batchId && (
             <div className="rounded-md border border-success-line bg-success-soft p-4" role="status" aria-live="polite">
-              <div className={`flex gap-3 ${isMobile ? "flex-col items-stretch" : "items-center justify-between"}`}>
-                <div>
-                  <p className="text-sm font-semibold text-success">
-                    {t("convert.downloadsReady", { count: lastOutputs.length })}
-                  </p>
-                  <p className="mt-1 text-xs leading-6 text-muted">{t("convert.downloadsReadyHelp")}</p>
-                </div>
-                <ActionButton
-                  variant="success"
-                  size="sm"
-                  onClick={() => void downloadOutputs()}
-                  className={isMobile ? "w-full" : ""}
-                >
-                  {lastOutputs.length === 1 ? t("convert.downloadFile") : t("convert.downloadZip")}
-                </ActionButton>
-              </div>
-              {lastOutputs.length > 1 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {lastOutputs.map((out) => (
+              <p className="text-sm font-semibold text-success">
+                {batch?.status === "done"
+                  ? t("convert.downloadsReady", { count: batch.files.filter((file) => file.status === "done").length })
+                  : t("convert.converting")}
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                {batchError ||
+                  (batch?.status === "done"
+                    ? t("convert.downloadsReadyHelp")
+                    : "Processing on server — you can close this tab and return later.")}
+              </p>
+              {batch?.files.map((file, index) => (
+                <div key={`${index}-${file.name}`} className="mt-2 text-xs text-muted">
+                  {file.name}: {file.status}
+                  {file.error ? ` — ${file.error}` : ""}
+                  {file.status === "done" && (
                     <button
-                      key={out.name}
                       type="button"
+                      className="ml-2 underline"
                       onClick={() =>
-                        triggerDownload(new Blob([out.content], { type: "text/plain;charset=utf-8" }), out.name)
+                        void api
+                          .getConvertBatchFile(batchId, index)
+                          .then((content) =>
+                            triggerDownload(
+                              new Blob([content], { type: "text/plain;charset=utf-8" }),
+                              file.outputName!,
+                            ),
+                          )
+                          .catch(() => addToast(t("convert.failed"), "error"))
                       }
-                      className="rounded-sm border border-success-line bg-surface px-3 py-1 text-xs text-muted hover:text-text"
                     >
-                      {out.name}
+                      {t("convert.downloadFile")}
                     </button>
-                  ))}
+                  )}
                 </div>
+              ))}
+              {batch?.files.some((file) => file.status === "done") && (
+                <ActionButton variant="success" size="sm" onClick={() => void downloadOutputs()}>
+                  {batch.files.filter((file) => file.status === "done").length === 1
+                    ? t("convert.downloadFile")
+                    : t("convert.downloadZip")}
+                </ActionButton>
               )}
             </div>
           )}

@@ -17,6 +17,7 @@ import { parseLogsQuery } from "./routes/validation.js";
 import { readSettings } from "./settings-schema.js";
 
 import { registerSettingsTasksRoutes } from "./routes/settings-tasks.js";
+import { registerConvertBatchRoutes } from "./routes/convert-batches.js";
 import { registerJobsRoutes } from "./routes/jobs.js";
 import { registerModelsRoutes } from "./routes/models.js";
 import { registerLlmStatusRoutes } from "./routes/llm-status.js";
@@ -79,6 +80,7 @@ app.get("/api/events", (_req, res) => {
 });
 
 registerSettingsTasksRoutes(app);
+registerConvertBatchRoutes(app);
 
 app.get("/api/folders/tree", async (_req, res) => {
   res.json({ root: await listFolderTree() });

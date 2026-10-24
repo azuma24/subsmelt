@@ -246,6 +246,22 @@ export const convertSubtitles = (body: ConvertRequest, opts?: FetchOpts) =>
     body: JSON.stringify(body),
   });
 
+export interface ConvertBatch {
+  id: string;
+  status: "pending" | "running" | "done";
+  createdAt: number;
+  finishedAt?: number;
+  files: { name: string; status: "pending" | "working" | "done" | "error"; outputName?: string; error?: string }[];
+}
+export const createConvertBatch = (body: ConvertRequest) =>
+  fetchJSON<{ id: string }>("/convert/batches", { method: "POST", body: JSON.stringify(body) });
+export const getConvertBatch = (id: string) => fetchJSON<ConvertBatch>(`/convert/batches/${encodeURIComponent(id)}`);
+export const getConvertBatchFile = async (id: string, index: number) => {
+  const response = await fetch(`/api/convert/batches/${encodeURIComponent(id)}/files/${index}`);
+  if (!response.ok) throw new ApiError("Output unavailable", response.status, response.url);
+  return response.text();
+};
+
 // Speech-to-text
 export interface TranscriptionWork {
   id: string;
