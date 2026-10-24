@@ -50,6 +50,7 @@ function playlist(overrides: Partial<YoutubePlaylist> = {}): YoutubePlaylist {
     subtitleTaskIds: [],
     checkEveryMinutes: 60,
     include: { shorts: false, live: false },
+    secondBrainExport: false,
     ...overrides,
   };
 }

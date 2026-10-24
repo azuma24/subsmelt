@@ -5,6 +5,12 @@ version number and are released together (`v0.5.6` and `whisper-v0.5.6`).
 
 ## [Unreleased]
 
+## [0.7.1] — 2026-10-21
+
+### Added
+
+- **A change feed for second-brain mirrors.** SubSmelt now keeps an append-only journal of note changes in its database. `GET /api/youtube/notes/changes?after=<cursor>&limit=1..100` returns the events since a cursor (`upsert`, `unavailable` or `remove`, with the video, its owning playlist and the note's path relative to the notes folder, never a host path or the body), snapshotted at a high-water mark so paging while notes are written skips nothing. `GET /api/youtube/notes/sync-state` returns the playlists ticked for the knowledge base by id with their relative folders, a revision that moves when that list does, the journal head and whether the notes folder is mounted. Notes written before this version are journaled once on the first start, so a new mirror bootstraps from the feed alone. A malformed cursor is a 400; a cursor from another journal or beyond its head is a 410 that says where to start again. The worker checks saved notes against the notes folder in batches, so a note deleted by hand is reported unavailable and, after a day, removed; a missing or empty notes folder is never read as every note deleted. See [docs/second-brain.md](docs/second-brain.md).
+
 ## [0.6.8] — 2026-10-09
 
 ### Added

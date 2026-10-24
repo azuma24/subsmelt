@@ -23,6 +23,10 @@ import {
   notesFolderStatus,
   type NoteExportFailure,
 } from "../youtube/note-export.js";
+import { secondBrainFolders } from "../youtube/second-brain.js";
+import { getNote, listNotes, parseNotesQuery } from "../youtube/notes-read.js";
+import { notesChanges, notesSyncState, parseChangesQuery } from "../youtube/notes-sync.js";
+import { NoteCursorError } from "../youtube/note-journal.js";
 import { cookiesStatus, parseCookies, removeCookies, saveCookies } from "../youtube/cookies.js";
 import { IllegalTransitionError, type YoutubeStore } from "../youtube/store.js";
 import {
@@ -141,6 +145,43 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore, worker:
     res.json(notesFolderStatus(dir));
   });
 
+  app.get("/api/youtube/notes", (req, res) => {
+    const playlists = readPlaylists();
+    const options = parseNotesQuery(req.query, new Set(playlists.map((p) => p.id)));
+    if (typeof options === "string") return res.status(400).json({ error: options });
+    res.json(listNotes(store, playlists, options));
+  });
+
+  // For a mirror: the note changes since a cursor, and the selection it applies them to.
+  // Both are registered before /notes/:videoId so the detail route never captures them.
+  app.get("/api/youtube/notes/changes", (req, res) => {
+    const query = parseChangesQuery(req.query);
+    if (typeof query === "string") return res.status(400).json({ error: query });
+    try {
+      res.json(notesChanges(store, query));
+    } catch (error) {
+      if (!(error instanceof NoteCursorError)) throw error;
+      // A cursor from another generation or beyond the head is gone for good: 410, with where to start again.
+      res.status(error.code === "cursor_malformed" ? 400 : 410).json({
+        error: error.message,
+        code: error.code,
+        generation: store.journal.generation(),
+        head: store.journal.headCursor(),
+      });
+    }
+  });
+
+  app.get("/api/youtube/notes/sync-state", (_req, res) => {
+    res.json(notesSyncState(store, readPlaylists(), getSetting("youtube_notes_dir")));
+  });
+
+  app.get("/api/youtube/notes/:videoId", (req, res) => {
+    const { videoId } = req.params;
+    const result = isVideoId(videoId) ? getNote(store, readPlaylists(), videoId) : null;
+    if (!result) return res.status(404).json({ error: "Note not found" });
+    res.json(result);
+  });
+
   app.post("/api/youtube/videos/:videoId/note", async (req, res) => {
     const { videoId } = req.params;
     if (!isVideoId(videoId) || !store.getVideo(videoId)) return res.status(404).json({ error: "Unknown video" });
@@ -194,6 +235,11 @@ export function registerYoutubeRoutes(app: Express, store: YoutubeStore, worker:
 
   app.get("/api/youtube/playlists", (_req, res) => {
     res.json({ playlists: readPlaylists().map((p) => playlistSummary(store, worker, p)) });
+  });
+
+  // For a second-brain mirror: relative note folders only, never a host path.
+  app.get("/api/youtube/second-brain", (_req, res) => {
+    res.json(secondBrainFolders(readPlaylists()));
   });
 
   // A channel is followed as its uploads playlist, so both kinds share the rest of the pipeline.

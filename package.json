@@ -1,6 +1,6 @@
 {
   "name": "subsmelt",
-  "version": "0.6.8",
+  "version": "0.7.1",
   "type": "module",
   "description": "Self-hosted batch subtitle translator using LLM",
   "license": "MIT",
@@ -29,6 +29,7 @@
     "chokidar": "^5.0.0",
     "express": "^5.2.1",
     "franc-min": "^6.2.0",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.18.1",
     "zod": "^4.6.5"
   },

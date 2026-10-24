@@ -7,6 +7,7 @@ import {
   useSettingsQuery,
   useTasksQuery,
   useYoutubePipelineQuery,
+  useYoutubeNotesQuery,
   useYoutubePlaylistsQuery,
   useYoutubeStatusQuery,
   useIsMobile,
@@ -20,6 +21,7 @@ import { FollowPlaylistDialog } from "./FollowPlaylistDialog";
 import type { FollowKind } from "./format";
 import { PlaylistDetail } from "./PlaylistDetail";
 import { PlaylistList } from "./PlaylistList";
+import { NotesPage, NotesHealth } from "./NotesPage";
 import { usePlaylistActions } from "./usePlaylistActions";
 import { Icon } from "../../ui/Icon";
 
@@ -33,6 +35,8 @@ export function YoutubePage() {
   const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
   const selectedId = params.get("playlist");
+  const notesTab = params.get("tab") === "notes";
+  const notesSummary = useYoutubeNotesQuery({ limit: 1, offset: 0 }, !notesTab);
   const playlistsQuery = useYoutubePlaylistsQuery();
   const statusQuery = useYoutubeStatusQuery();
   const pipelineQuery = useYoutubePipelineQuery();
@@ -52,6 +56,7 @@ export function YoutubePage() {
       const next = new URLSearchParams(prev);
       if (playlist) next.set("playlist", playlist.id);
       else next.delete("playlist");
+      next.delete("tab");
       return next;
     });
 
@@ -62,75 +67,78 @@ export function YoutubePage() {
     if (created) setParams({ playlist: playlistId });
   };
 
-  const topbar = selectedId ? (
-    <PageHeader
-      title={
-        <span className="flex min-w-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={() => openPlaylist(null)}
-            className="min-h-touch shrink-0 text-muted hover:text-accent"
-          >
-            {t("youtube.title")}
-          </button>
-          <span aria-hidden="true" className="text-faint">
-            /
-          </span>
-          <span className="truncate">{selected?.title ?? ""}</span>
-        </span>
-      }
-      actions={
-        selected && (
-          <>
-            <ActionButton
-              variant="ghost"
-              size="sm"
-              onClick={() => void actions.checkNow(selected)}
-              busy={actions.isChecking(selected)}
-            >
-              {actions.isChecking(selected) ? t("youtube.checking") : t("youtube.checkNow")}
-            </ActionButton>
+  const topbar =
+    selectedId && !notesTab ? (
+      <PageHeader
+        title={
+          <span className="flex min-w-0 items-center gap-2">
             <button
               type="button"
-              onClick={() => setDialog({ kind: "edit", playlist: selected })}
-              className="min-h-touch rounded-sm px-3 text-xs font-medium text-muted hover:bg-surface-raised hover:text-text"
+              onClick={() => openPlaylist(null)}
+              className="min-h-touch shrink-0 text-muted hover:text-accent"
             >
-              {t("common.edit")}
+              {t("youtube.title")}
             </button>
-          </>
-        )
-      }
-    />
-  ) : (
-    <PageHeader
-      title={t("youtube.title")}
-      actions={
-        playlists.length > 0 && (
-          <>
-            <ActionButton
-              variant="ghost"
-              size="sm"
-              onClick={() => setDialog({ kind: "follow", follow: "channel" })}
-              disabled={ytdlpMissing}
-            >
-              <Icon name="new" /> {t("youtube.followChannel")}
-            </ActionButton>
-            <ActionButton
-              size="sm"
-              onClick={() => setDialog({ kind: "follow", follow: "playlist" })}
-              disabled={ytdlpMissing}
-            >
-              <Icon name="new" /> {t("youtube.follow")}
-            </ActionButton>
-          </>
-        )
-      }
-    />
-  );
+            <span aria-hidden="true" className="text-faint">
+              /
+            </span>
+            <span className="truncate">{selected?.title ?? ""}</span>
+          </span>
+        }
+        actions={
+          selected && (
+            <>
+              <ActionButton
+                variant="ghost"
+                size="sm"
+                onClick={() => void actions.checkNow(selected)}
+                busy={actions.isChecking(selected)}
+              >
+                {actions.isChecking(selected) ? t("youtube.checking") : t("youtube.checkNow")}
+              </ActionButton>
+              <button
+                type="button"
+                onClick={() => setDialog({ kind: "edit", playlist: selected })}
+                className="min-h-touch rounded-sm px-3 text-xs font-medium text-muted hover:bg-surface-raised hover:text-text"
+              >
+                {t("common.edit")}
+              </button>
+            </>
+          )
+        }
+      />
+    ) : (
+      <PageHeader
+        title={t("youtube.title")}
+        actions={
+          !notesTab &&
+          playlists.length > 0 && (
+            <>
+              <ActionButton
+                variant="ghost"
+                size="sm"
+                onClick={() => setDialog({ kind: "follow", follow: "channel" })}
+                disabled={ytdlpMissing}
+              >
+                <Icon name="new" /> {t("youtube.followChannel")}
+              </ActionButton>
+              <ActionButton
+                size="sm"
+                onClick={() => setDialog({ kind: "follow", follow: "playlist" })}
+                disabled={ytdlpMissing}
+              >
+                <Icon name="new" /> {t("youtube.follow")}
+              </ActionButton>
+            </>
+          )
+        }
+      />
+    );
 
   const body = (() => {
     if (playlistsQuery.isError) return <PageError onRetry={() => void playlistsQuery.refetch()} />;
     if (playlistsQuery.isLoading) return <ListSkeleton />;
+    if (notesTab) return <NotesPage playlists={playlists} initialPlaylistId={selectedId ?? undefined} />;
     if (selectedId && !selected) {
       return (
         <div className="rounded-md border border-dashed border-border px-4 py-12 text-center text-sm text-muted">
@@ -145,13 +153,22 @@ export function YoutubePage() {
         </div>
       );
     }
-    if (selected) return <PlaylistDetail key={selected.id} playlist={selected} folderRoot={folderRoot} />;
+    if (selected)
+      return (
+        <PlaylistDetail
+          key={selected.id}
+          playlist={selected}
+          folderRoot={folderRoot}
+          onOpenNotes={() => setParams({ tab: "notes", playlist: selected.id })}
+        />
+      );
     if (playlists.length === 0)
       return <EmptyState onFollow={(follow) => setDialog({ kind: "follow", follow })} disabled={ytdlpMissing} />;
     return (
       <PlaylistList
         playlists={playlists}
         folderRoot={folderRoot}
+        noteCounts={notesSummary.data?.countsByPlaylist}
         actions={actions}
         onOpen={openPlaylist}
         onEdit={(p) => setDialog({ kind: "edit", playlist: p })}
@@ -174,6 +191,32 @@ export function YoutubePage() {
           onAddCookies={() => navigate("/settings?section=youtube")}
         />
         <PipelineBanners pipeline={pipelineQuery.data} onOpenSettings={() => navigate("/settings?section=stt")} />
+        <div className="flex gap-1 border-b border-border" role="tablist" aria-label={t("youtube.title")}>
+          {(["playlists", "notes"] as const).map((tab) => (
+            <button
+              type="button"
+              role="tab"
+              key={tab}
+              aria-selected={notesTab === (tab === "notes")}
+              onClick={() =>
+                setParams((prev) => {
+                  const next = new URLSearchParams(prev);
+                  if (tab === "notes") {
+                    next.set("tab", "notes");
+                  } else {
+                    next.delete("tab");
+                    next.delete("playlist");
+                  }
+                  return next;
+                })
+              }
+              className={`min-h-touch border-b-2 px-4 text-sm ${notesTab === (tab === "notes") ? "border-accent text-accent" : "border-transparent text-muted hover:text-text"}`}
+            >
+              {t(tab === "notes" ? "youtube.notes.title" : "youtube.notes.playlists")}
+            </button>
+          ))}
+        </div>
+        {!notesTab && <NotesHealth health={notesSummary.data?.health} />}
         {body}
       </div>
       {dialog && (

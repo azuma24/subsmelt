@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import { blockedNoteReason, NoteJournal, relativeNotePath } from "./note-journal.js";
 import { isChannelUploads } from "./urls.js";
 import { isSoftRateLimit } from "./ytdlp.js";
 import { canTransition, USER_ACTIONS, type SkipKind, type UserAction, type VideoStatus } from "./video-status.js";
@@ -33,6 +34,8 @@ const SCHEMA = `
     updated_at    TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_youtube_videos_playlist ON youtube_videos (playlist_id, status);
+  -- The note reconciliation walks saved notes in id order, a batch at a time.
+  CREATE INDEX IF NOT EXISTS idx_youtube_videos_saved_notes ON youtube_videos (video_id) WHERE note_path IS NOT NULL;
   CREATE TABLE IF NOT EXISTS youtube_playlist_items (
     playlist_id   TEXT NOT NULL,
     video_id      TEXT NOT NULL REFERENCES youtube_videos(video_id),
@@ -166,6 +169,15 @@ interface ExistingVideo {
   skip_kind: SkipKind | null;
   reason: string | null;
   user_queued_at: string | null;
+  note_path: string | null;
+}
+
+export interface StoreOptions {
+  /**
+   * The notes folder, so notes written before the change journal existed get
+   * their first journal event at construction. Left out, nothing is seeded.
+   */
+  notesRoot?: string;
 }
 
 interface ListedState {
@@ -223,7 +235,13 @@ function listedState(
 }
 
 export class YoutubeStore {
-  constructor(private readonly db: Database.Database) {
+  /** The append-only journal of note changes behind GET /api/youtube/notes/changes. */
+  readonly journal: NoteJournal;
+
+  constructor(
+    private readonly db: Database.Database,
+    options: StoreOptions = {},
+  ) {
     db.exec(SCHEMA);
     const columns = db.prepare("PRAGMA table_info(youtube_videos)").all() as { name: string }[];
     if (!columns.some((c) => c.name === "user_queued_at"))
@@ -231,6 +249,8 @@ export class YoutubeStore {
     for (const column of ["subtitle_plan", "transcript_source", "content_kind"]) {
       if (!columns.some((c) => c.name === column)) db.exec(`ALTER TABLE youtube_videos ADD COLUMN ${column} TEXT`);
     }
+    this.journal = new NoteJournal(db);
+    if (options.notesRoot) this.journal.seed(options.notesRoot, new Date().toISOString());
   }
 
   /**
@@ -247,7 +267,7 @@ export class YoutubeStore {
   ): ApplyListingResult {
     const isFollowed = opts.isFollowed ?? (() => true);
     const existingVideo = this.db.prepare(
-      "SELECT playlist_id, status, skip_kind, reason, user_queued_at FROM youtube_videos WHERE video_id = ?",
+      "SELECT playlist_id, status, skip_kind, reason, user_queued_at, note_path FROM youtube_videos WHERE video_id = ?",
     );
     const insertVideo = this.db.prepare(`
       INSERT INTO youtube_videos (video_id, playlist_id, title, channel, duration_s, published_at, added_at, status, skip_kind, reason, content_kind, created_at, updated_at)
@@ -310,6 +330,9 @@ export class YoutubeStore {
           now: opts.now,
         });
         upsertItem.run({ playlistId, videoId: video.videoId, position: video.position, now: opts.now });
+        // A note's owner decides whether a mirror may copy it, so a takeover is a note change.
+        if (existing?.note_path && state.playlistId !== existing.playlist_id)
+          this.journal.ownerChanged(video.videoId, state.playlistId, opts.now);
       }
       const removed = opts.complete
         ? markRemoved.run({ playlistId, now: opts.now, listed: JSON.stringify(videos.map((v) => v.videoId)) }).changes
@@ -346,6 +369,19 @@ export class YoutubeStore {
 
   getVideo(videoId: string): VideoRow | undefined {
     return this.db.prepare("SELECT * FROM youtube_videos WHERE video_id = ?").get(videoId) as VideoRow | undefined;
+  }
+
+  /** Only possible note exports, scoped to current owning playlists (not filesystem discovery). */
+  noteCandidates(playlistIds: string[]): VideoRow[] {
+    if (playlistIds.length === 0) return [];
+    return this.db
+      .prepare(`
+      SELECT * FROM youtube_videos
+      WHERE playlist_id IN (SELECT value FROM json_each(?))
+        AND (note_path IS NOT NULL OR (status = 'translating' AND reason IS NOT NULL))
+      ORDER BY published_at DESC, video_id
+    `)
+      .all(JSON.stringify(playlistIds)) as VideoRow[];
   }
 
   /** Changes why a skipped video is skipped; it stays skipped. */
@@ -423,10 +459,52 @@ export class YoutubeStore {
       });
   }
 
-  setNotePath(videoId: string, notePath: string, now: string): void {
-    this.db
-      .prepare("UPDATE youtube_videos SET note_path = ?, updated_at = ? WHERE video_id = ?")
-      .run(notePath, now, videoId);
+  /**
+   * Records where the note was written and journals the change in the same
+   * transaction, so a mirror never learns of a note the row does not have. A
+   * file outside the notes folder cannot be served and journals as unavailable.
+   */
+  setNotePath(videoId: string, file: string, now: string, notesRoot: string): void {
+    this.db.transaction(() => {
+      const current = this.getVideo(videoId);
+      if (!current) throw new Error(`Unknown video ${videoId}`);
+      this.db
+        .prepare("UPDATE youtube_videos SET note_path = ?, updated_at = ? WHERE video_id = ?")
+        .run(file, now, videoId);
+      const notePath = relativeNotePath(notesRoot, file);
+      const previous = current.note_path ? relativeNotePath(notesRoot, current.note_path) : null;
+      const event = { videoId, playlistId: current.playlist_id, title: current.title, now };
+      if (notePath) {
+        this.journal.noteWritten({ ...event, notePath, previousNotePath: previous !== notePath ? previous : null });
+      } else {
+        this.journal.noteUnavailable({ ...event, notePath: null, reason: "note_unreadable" });
+      }
+    })();
+  }
+
+  /** The export failed; the video stays translating with `reason`. A notes-folder block is journaled once. */
+  noteExportFailed(videoId: string, reason: string, now: string): void {
+    this.db.transaction(() => {
+      this.setReason(videoId, reason, now);
+      const video = this.getVideo(videoId);
+      const blocked = video && blockedNoteReason(video.status, reason);
+      if (!video || !blocked) return;
+      this.journal.noteUnavailable({
+        videoId,
+        playlistId: video.playlist_id,
+        title: video.title,
+        notePath: this.journal.latest(videoId)?.note_path ?? null,
+        reason: blocked,
+        now,
+      });
+    })();
+  }
+
+  /** Videos with a saved note, in id order, from after `afterVideoId`; the reconciliation walks them a batch at a time. */
+  savedNotes(afterVideoId: string | null, limit: number): VideoRow[] {
+    return this.db
+      .prepare("SELECT * FROM youtube_videos WHERE note_path IS NOT NULL AND video_id > ? ORDER BY video_id LIMIT ?")
+      .all(afterVideoId ?? "", limit) as VideoRow[];
   }
 
   /** How many videos, across every playlist, sit in each status. */

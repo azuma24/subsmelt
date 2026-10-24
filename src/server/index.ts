@@ -172,7 +172,7 @@ registerUsageRoutes(app);
 
 registerTranscriptionRoutes(app);
 
-const youtubeStore = new YoutubeStore(db);
+const youtubeStore = new YoutubeStore(db, { notesRoot: getSetting("youtube_notes_dir") });
 const youtubeWorker = new YoutubeWorker(youtubeStore);
 registerYoutubeRoutes(app, youtubeStore, youtubeWorker);
 
@@ -196,7 +196,7 @@ app.get("/api/health", (_req, res) => {
 
 // ======== SPA Fallback ========
 app.get("/{*splat}", (_req, res) => {
-  res.sendFile(path.join(staticDir, "index.html"));
+  res.sendFile(path.join(staticDir, "index.html"), { dotfiles: "allow" });
 });
 
 // ======== Start ========

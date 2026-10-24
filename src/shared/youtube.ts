@@ -61,6 +61,13 @@ export interface YoutubePlaylist {
   checkEveryMinutes: number;
   /** For a channel: whether its Shorts and live streams are followed too. Ignored for a playlist. */
   include: ChannelInclude;
+  /**
+   * Whether a second-brain mirror may copy this playlist's note folder. Notes are
+   * written for every playlist either way; this only puts the folder on the
+   * GET /api/youtube/second-brain allowlist. Off by default, and turning it off
+   * deletes nothing already written or mirrored.
+   */
+  secondBrainExport: boolean;
 }
 
 /** The fields a user sets when following or editing. id and title come from YouTube. */
@@ -92,6 +99,18 @@ export interface PlaylistCounts {
 export interface YoutubePlaylistSummary extends YoutubePlaylist {
   sync: Omit<PlaylistSyncState, "firstSyncAt"> & { checking: boolean; nextCheckAt: string | null };
   counts: PlaylistCounts;
+}
+
+/**
+ * GET /api/youtube/second-brain: the note folders a mirror may copy, relative to
+ * the notes folder. A selected folder that also holds, or contains, the notes of
+ * an unselected playlist is withheld instead, so sharing a folder never widens
+ * what the mirror sees.
+ */
+export interface YoutubeSecondBrain {
+  folders: string[];
+  /** Selected playlists whose note folder is withheld. */
+  withheld: { id: string; title: string }[];
 }
 
 /** How a video's picked languages were made, kept for the row's summary. */
@@ -147,6 +166,91 @@ export interface YoutubeNotesFolder {
   path: string;
   exists: boolean;
   writable: boolean;
+}
+
+export type YoutubeNotesState = "all" | "saved" | "blocked";
+
+/** A generated note owned by a currently followed playlist. Paths are relative to the notes root. */
+export interface YoutubeNote {
+  videoId: string;
+  title: string;
+  channel: string | null;
+  playlistId: string;
+  playlistTitle: string;
+  publishedAt: string | null;
+  notePath: string | null;
+  exportedAt: string | null;
+  status: "saved" | "blocked";
+  reason: string | null;
+}
+
+/** GET /api/youtube/notes. */
+export interface YoutubeNotesList {
+  notes: YoutubeNote[];
+  total: number;
+  health: YoutubeNotesFolder & { blocked: boolean };
+  /** Unfiltered export totals for each followed playlist, independent of list pagination. */
+  countsByPlaylist: Record<string, { saved: number; blocked: number }>;
+}
+
+/** GET /api/youtube/notes/:videoId. */
+export interface YoutubeNoteDetail {
+  note: YoutubeNote;
+  content: string;
+}
+
+/**
+ * What happened to a video's note. `upsert`: the note at `notePath` was written;
+ * fetch its body from GET /api/youtube/notes/:videoId. `unavailable`: SubSmelt
+ * cannot write or serve the note for `reason`; keep what you have. `remove`:
+ * the note has been missing from the notes folder long enough that SubSmelt
+ * no longer expects it back.
+ */
+export type YoutubeNoteChangeKind = "upsert" | "remove" | "unavailable";
+
+export type YoutubeNoteChangeReason =
+  | "notes_root_missing"
+  | "notes_root_unwritable"
+  | "export_failed"
+  | "note_missing"
+  | "note_unreadable";
+
+/** One event of GET /api/youtube/notes/changes. Paths are relative to the notes folder; there is never a host path. */
+export interface YoutubeNoteChange {
+  sequence: number;
+  /** The cursor that names this event; `after=` it to continue past it. */
+  cursor: string;
+  kind: YoutubeNoteChangeKind;
+  videoId: string;
+  /** The playlist that owned the video's row when the event was recorded. */
+  playlistId: string;
+  notePath: string | null;
+  /** The path a re-export under a new title replaced, when it did. */
+  previousNotePath: string | null;
+  title: string;
+  reason: YoutubeNoteChangeReason | null;
+  at: string;
+}
+
+/** GET /api/youtube/notes/changes. */
+export interface YoutubeNoteChanges {
+  generation: string;
+  /** The newest event when the page was read; `after=head` returns nothing until the next event. */
+  head: string;
+  changes: YoutubeNoteChange[];
+  nextCursor: string;
+  hasMore: boolean;
+}
+
+/** GET /api/youtube/notes/sync-state. */
+export interface YoutubeNotesSyncState {
+  generation: string;
+  head: string;
+  /** Changes whenever `selection` changes; compare it before diffing the list. */
+  selectionRevision: string;
+  /** Followed playlists ticked for the knowledge base, with the relative note folder each writes into. */
+  selection: { playlistId: string; title: string; folder: string }[];
+  notesRoot: { exists: boolean; writable: boolean };
 }
 
 /** GET /api/youtube/status. */

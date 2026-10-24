@@ -115,6 +115,7 @@ export function FollowPlaylistDialog({
     subs: useId(),
     every: useId(),
     folder: useId(),
+    secondBrain: useId(),
   };
   const editing = Boolean(playlist);
   const today = currentMonth();
@@ -146,6 +147,7 @@ export function FollowPlaylistDialog({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [confirmedCount, setConfirmedCount] = useState<number | null>(null);
   const [include, setInclude] = useState(playlist?.include ?? { shorts: false, live: false });
+  const [secondBrain, setSecondBrain] = useState(playlist?.secondBrainExport ?? false);
 
   const backfill: YoutubeBackfill =
     backfillKind === "posted_since" || backfillKind === "added_since"
@@ -201,6 +203,7 @@ export function FollowPlaylistDialog({
     subtitleTaskIds: taskIds,
     checkEveryMinutes: every,
     include,
+    secondBrainExport: secondBrain,
   };
   // Videos this save can start downloading: the preview's estimate for a new follow; for an
   // edit that widens the backfill, at most the ones skipped so far.
@@ -540,6 +543,26 @@ export function FollowPlaylistDialog({
             ))}
           </ul>
           <p className={hintCls}>{t("youtube.dialog.languagesHint")}</p>
+        </div>
+
+        <div className="space-y-2">
+          <label
+            htmlFor={ids.secondBrain}
+            className="flex min-h-touch cursor-pointer items-center gap-3 rounded-sm border border-border bg-surface-raised px-3 text-sm text-text has-[:checked]:border-accent has-[:checked]:bg-accent-soft"
+          >
+            <input
+              id={ids.secondBrain}
+              type="checkbox"
+              checked={secondBrain}
+              onChange={(e) => setSecondBrain(e.target.checked)}
+              aria-describedby={`${ids.secondBrain}-hint`}
+              className="accent-accent"
+            />
+            {t("youtube.dialog.secondBrain")}
+          </label>
+          <p id={`${ids.secondBrain}-hint`} className={hintCls}>
+            {t("youtube.dialog.secondBrainHint")}
+          </p>
         </div>
 
         <details className="rounded-sm border border-border px-3">

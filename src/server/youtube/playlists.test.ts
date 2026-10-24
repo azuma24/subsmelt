@@ -44,6 +44,7 @@ test("parsePlaylistFields fills defaults and accepts a full video profile", () =
       subtitleTaskIds: [2, 1],
       checkEveryMinutes: 60,
       include: { shorts: false, live: false },
+      secondBrainExport: false,
     },
   });
 });
@@ -109,4 +110,35 @@ test("a channel's Shorts and live choice must be two true or false values", () =
   const parsed = parsePlaylistFields({ include: { shorts: true, live: false } }, base, "2026-10-01");
   assert.deepEqual(parsed.ok && parsed.value.include, { shorts: true, live: false });
   assert.equal(parsePlaylistFields({ include: { shorts: "yes" } }, base, "2026-10-01").ok, false);
+});
+
+test("the second-brain choice is off by default and must be true or false", () => {
+  const base = defaultPlaylistFields("AI");
+  assert.equal(base.secondBrainExport, false);
+  const on = parsePlaylistFields({ secondBrainExport: true }, base, TODAY);
+  assert.equal(on.ok && on.value.secondBrainExport, true);
+  const kept = on.ok ? parsePlaylistFields({ mode: "manual" }, on.value, TODAY) : null;
+  assert.equal(kept?.ok && kept.value.secondBrainExport, true);
+  for (const value of ["true", 1, null, {}]) {
+    assert.deepEqual(parsePlaylistFields({ secondBrainExport: value }, base, TODAY), {
+      ok: false,
+      error: "secondBrainExport must be true or false",
+    });
+  }
+});
+
+test("playlists stored before the second-brain choice, or with a broken one, read as not selected", () => {
+  const stored = JSON.stringify([
+    { id: PL, title: "AI", folder: "AI", media: { type: "audio", format: "opus" } },
+    { id: "PLolder00000", title: "Old", folder: "Old", secondBrainExport: "yes" },
+    { id: "PLchosen0000", title: "Chosen", folder: "Chosen", secondBrainExport: true },
+  ]);
+  assert.deepEqual(
+    parseStoredPlaylists(stored).map((p) => [p.id, p.secondBrainExport]),
+    [
+      [PL, false],
+      ["PLolder00000", false],
+      ["PLchosen0000", true],
+    ],
+  );
 });

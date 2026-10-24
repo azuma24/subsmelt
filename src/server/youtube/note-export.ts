@@ -11,7 +11,7 @@ import { readSubtitleFileText } from "../translator/encoding.js";
 import {
   noteFileName,
   renderNote,
-  safeNoteName,
+  noteFolderSegments,
   type Chapter,
   type Cue,
   type NoteInfo,
@@ -291,14 +291,15 @@ export async function exportNoteForVideo(
     chapters: chaptersOf(info),
   };
 
-  const folder = (playlist?.folder ?? path.basename(dir)).split("/").map(safeNoteName).filter(Boolean);
+  const folder = noteFolderSegments(playlist?.folder ?? path.basename(dir));
   const noteDir = path.join(root, ...folder);
   mkdirShared(noteDir);
   const file = path.join(noteDir, noteFileName(title, videoId));
   writeFileAtomic(file, renderNote(noteInfo, cues, translations));
   if (video.note_path && video.note_path !== file && isInside(root, video.note_path))
     fs.rmSync(video.note_path, { force: true });
-  deps.store.setNotePath(videoId, file, new Date().toISOString());
+  // The row and the change journal commit together, after the file is in place.
+  deps.store.setNotePath(videoId, file, new Date().toISOString(), root);
 
   const payload: NoteReadyPayload = {
     videoId,

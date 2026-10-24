@@ -6,7 +6,7 @@ Point SubSmelt at your media folders and it automatically translates every subti
 
 One subtitle file. Multiple language outputs. Fully automated.
 
-Current release: **0.6.8** — [what changed](CHANGELOG.md).
+Current release: **0.7.1** — [what changed](CHANGELOG.md).
 
 ---
 
@@ -15,7 +15,7 @@ Current release: **0.6.8** — [what changed](CHANGELOG.md).
 ```yaml
 services:
   subsmelt:
-    image: ghcr.io/azuma24/subsmelt:latest   # or pin a release: ghcr.io/azuma24/subsmelt:0.6.8
+    image: ghcr.io/azuma24/subsmelt:latest   # or pin a release: ghcr.io/azuma24/subsmelt:0.7.1
     container_name: subsmelt
     ports:
       - "3000:3000"
@@ -70,6 +70,7 @@ costs nothing against a local endpoint.
 - **Convert and translate single files** — drop `.srt`, `.vtt`, `.ass` or `.ssa` files on the Convert page to change their format or translate them on the spot; legacy encodings (GBK, Big5, Shift_JIS, EUC-KR, windows-125x and more) are detected, and the results download as one ZIP
 - **Translated title sidecar** (optional) — stores each media title translated into every target language in a `.subsmelt_titles.json` next to the output, shown in the scan results; filenames on disk are never renamed
 - **YouTube to notes** — follow a playlist or a channel (Shorts and live streams optional); new videos are downloaded, subtitled, translated and saved as Markdown notes for Obsidian. Older videos stay listed so you can pick the ones you want
+- **Second-brain selection** — tick *Send notes to my second brain* on a followed playlist to put its note folder on a relative-folder allowlist (`GET /api/youtube/second-brain`) for a separate read-only mirror. A cursor feed of note changes (`GET /api/youtube/notes/changes`) and a sync-state endpoint let that mirror fetch only the notes that changed. Notes are still written for every playlist; SubSmelt itself mirrors and indexes nothing. See [docs/second-brain.md](docs/second-brain.md)
 - **Optional speech-to-text** — attach a Whisper backend to generate source subtitles when none exist; transcripts are named with their language, and Chinese is converted to your preferred script
 - **Formats** — `.srt`, `.vtt`, `.ass`, `.ssa` · **UI** — 32 locales
 

@@ -40,8 +40,14 @@ const STATUS_VIEW: Record<YoutubeVideoStatus, StatusView> = {
   skipped: { glyph: "–", tone: "neutral", filter: "off", actions: ["download"], pipe: NOT_STARTED },
 };
 
-export function videoFilterOf(status: YoutubeVideoStatus): VideoFilter {
-  return STATUS_VIEW[status].filter;
+export function noteExportBlocked(
+  video: Pick<YoutubeVideo, "status"> & Partial<Pick<YoutubeVideo, "reason">>,
+): boolean {
+  return video.status === "translating" && /notes folder|note export/i.test(video.reason ?? "");
+}
+
+export function videoFilterOf(status: YoutubeVideoStatus, reason?: string | null): VideoFilter {
+  return noteExportBlocked({ status, reason }) ? "bad" : STATUS_VIEW[status].filter;
 }
 
 /** A transcribing video with no live progress is waiting for its subtitle step, not running it. */
@@ -64,10 +70,11 @@ export function gpuHold(pipeline: YoutubePipeline | undefined): GpuHold {
 }
 
 export function videoStatusDescriptor(
-  video: Pick<YoutubeVideo, "status" | "pct">,
+  video: Pick<YoutubeVideo, "status" | "pct"> & Partial<Pick<YoutubeVideo, "reason">>,
   t: TFunction,
   hold: GpuHold = NO_HOLD,
 ): StatusDescriptor {
+  if (noteExportBlocked(video)) return { glyph: "✕", tone: "bad", label: t("youtube.notes.blocked") };
   if (awaitingSubtitles(video))
     return {
       glyph: "··",
@@ -96,9 +103,10 @@ export function videoActionLabelKey(status: YoutubeVideoStatus, action: YoutubeV
 }
 
 export function videoPipeline(
-  video: Pick<YoutubeVideo, "status" | "pct" | "media_path">,
+  video: Pick<YoutubeVideo, "status" | "pct" | "media_path"> & Partial<Pick<YoutubeVideo, "reason">>,
   hold: GpuHold = NO_HOLD,
 ): readonly PipeStep[] {
+  if (noteExportBlocked(video)) return ["done", "done", "done", "fail"];
   if (video.status === "failed" && video.media_path) return ["done", "fail", "", ""];
   if (awaitingSubtitles(video)) return ["done", "wait", "", ""];
   if (video.status === "translating" && hold.translation) return ["done", "done", "wait", ""];
@@ -112,6 +120,11 @@ export function statusCounts(
   const counts: Partial<Record<YoutubeVideoStatus, number>> = {};
   for (const video of videos) counts[video.status] = (counts[video.status] ?? 0) + 1;
   return counts;
+}
+
+/** Reclassify a persisted translating row only for display; do not change worker state. */
+export function displayStatusCounts(videos: readonly YoutubeVideo[]): Partial<Record<YoutubeVideoStatus, number>> {
+  return statusCounts(videos.map((video) => (noteExportBlocked(video) ? { status: "failed" as const } : video)));
 }
 
 /** Video counts per filter tab. "all" leaves skipped videos out, as its list does. */
@@ -137,12 +150,12 @@ export const ALL_GROUPS: readonly VideoFilter[] = ["run", "bad", "wait", "done"]
 export function filterVideos(videos: YoutubeVideo[], filter: VideoFilter | "all", query: string): YoutubeVideo[] {
   const needle = query.trim().toLowerCase();
   const matching = videos.filter((video) => {
-    const group = STATUS_VIEW[video.status].filter;
+    const group = videoFilterOf(video.status, video.reason);
     if (filter === "all" ? group === "off" : group !== filter) return false;
     return !needle || `${video.title} ${video.channel ?? ""}`.toLowerCase().includes(needle);
   });
   if (filter !== "all") return matching;
-  const rank = (video: YoutubeVideo) => ALL_GROUPS.indexOf(STATUS_VIEW[video.status].filter);
+  const rank = (video: YoutubeVideo) => ALL_GROUPS.indexOf(videoFilterOf(video.status, video.reason));
   return matching.sort((a, b) => rank(a) - rank(b));
 }
 

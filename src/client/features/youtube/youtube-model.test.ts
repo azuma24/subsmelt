@@ -4,12 +4,14 @@ import type { TFunction } from "../../i18n";
 import type { YoutubePreviewEntry, YoutubeVideo } from "../../types";
 import {
   countByFilter,
+  displayStatusCounts,
   filterVideos,
   pickableVideos,
   statusCounts,
   videoActionLabelKey,
   videoActions,
   videoPipeline,
+  videoFilterOf,
   videoStatusDescriptor,
 } from "./video-status";
 import { estimateSelection, formatGigabytes, includedEntries, postedPerMonth } from "./estimate";
@@ -119,6 +121,34 @@ test("videoStatusDescriptor pairs every status with a glyph and a translated lab
     glyph: "≋",
     tone: "run",
     label: "t:youtube.status.transcribing",
+  });
+});
+
+test("a note export failure is blocked throughout the row, pipeline, counts and filters", () => {
+  const blocked = { ...video("abc12345678", "translating", "Blocked"), reason: "Notes folder /notes is not mounted" };
+  const running = video("def12345678", "translating", "Running");
+  assert.deepEqual(videoStatusDescriptor(blocked, t), {
+    glyph: "✕",
+    tone: "bad",
+    label: "t:youtube.notes.blocked",
+  });
+  assert.deepEqual(videoPipeline(blocked), ["done", "done", "done", "fail"]);
+  assert.equal(videoFilterOf(blocked.status, blocked.reason), "bad");
+  assert.deepEqual(
+    filterVideos([blocked, running], "bad", "").map((v) => v.video_id),
+    [blocked.video_id],
+  );
+  assert.deepEqual(
+    filterVideos([blocked, running], "run", "").map((v) => v.video_id),
+    [running.video_id],
+  );
+  assert.deepEqual(countByFilter(displayStatusCounts([blocked, running])), {
+    all: 2,
+    run: 1,
+    wait: 0,
+    done: 0,
+    bad: 1,
+    off: 0,
   });
 });
 

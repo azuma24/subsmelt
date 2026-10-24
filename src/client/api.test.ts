@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { ApiError, fetchJSON, getSettings, saveSettings } from "./api.js";
+import { ApiError, fetchJSON, getSettings, getYoutubeNote, getYoutubeNotes, saveSettings } from "./api.js";
 
 function jsonResponse(body: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(body), {
@@ -55,6 +55,35 @@ test("fetchJSON throws ApiError with HTTP status and safe server message", async
       fetchJSON("/settings"),
       (error) => error instanceof ApiError && error.status === 422 && error.message === "Bad settings",
     );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("YouTube note queries encode filters and page offsets; detail encodes the video ID", async () => {
+  const originalFetch = globalThis.fetch;
+  const urls: string[] = [];
+  globalThis.fetch = async (input) => {
+    urls.push(String(input));
+    return jsonResponse({
+      notes: [],
+      total: 0,
+      health: { path: "/notes", exists: true, writable: true, blocked: false },
+    });
+  };
+  try {
+    await getYoutubeNotes({ query: "title & text", playlistId: "PL /", state: "blocked", limit: 30, offset: 30 });
+    await getYoutubeNote("id /?");
+    const url = new URL(urls[0], "http://localhost");
+    assert.equal(url.pathname, "/api/youtube/notes");
+    assert.deepEqual(Object.fromEntries(url.searchParams), {
+      query: "title & text",
+      playlistId: "PL /",
+      state: "blocked",
+      limit: "30",
+      offset: "30",
+    });
+    assert.equal(urls[1], "/api/youtube/notes/id%20%2F%3F");
   } finally {
     globalThis.fetch = originalFetch;
   }
