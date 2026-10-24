@@ -12,7 +12,6 @@ import type {
   ScanResult,
   Task,
   TranscribeRequest,
-  TranscribeResponse,
   TranscriptionHealth,
   TranscriptionHistoryEntry,
   TranscriptionPreflightResponse,
@@ -235,16 +234,6 @@ export interface ConvertRequest {
   /** Canonical BCP-47 code for output filenames (e.g. "zh-TW"). */
   targetCode?: string;
 }
-export interface ConvertResponse {
-  files: { name: string; content: string }[];
-  errors: { name: string; error: string }[];
-}
-export const convertSubtitles = (body: ConvertRequest, opts?: FetchOpts) =>
-  fetchJSON<ConvertResponse>("/convert", {
-    ...opts,
-    method: "POST",
-    body: JSON.stringify(body),
-  });
 
 export interface ConvertBatch {
   id: string;
@@ -311,33 +300,6 @@ export const preflightTranscription = (payload: TranscribeRequest) =>
     method: "POST",
     body: JSON.stringify(payload),
   });
-export const transcribeVideo = (payload: TranscribeRequest) =>
-  fetchJSON<TranscribeResponse>("/transcribe", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-export interface TranscribeUrlRequest {
-  url: string;
-  outputFormat?: "srt" | "vtt" | "txt" | "ass";
-  model?: string;
-  language?: string;
-  device?: string;
-  computeType?: string;
-  speakerDiarization?: boolean;
-}
-export interface TranscribeUrlResponse {
-  ok: boolean;
-  content: string;
-  language?: string;
-  segments?: number;
-  outputFormat: string;
-  url: string;
-}
-export const transcribeUrl = (payload: TranscribeUrlRequest) =>
-  fetchJSON<TranscribeUrlResponse>("/transcribe/url", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
 export const getTranscriptionHistory = (limit = 10, opts?: FetchOpts) =>
   fetchJSON<{ attempts: TranscriptionHistoryEntry[] }>(`/transcribe/history?limit=${limit}`, opts);
 export const clearTranscriptionHistory = () =>
@@ -346,10 +308,6 @@ export const clearTranscriptionHistory = () =>
   });
 export const deleteTranscriptionAttempt = (id: string) =>
   fetchJSON<{ ok: boolean; removed: number }>(`/transcribe/history/${encodeURIComponent(id)}`, { method: "DELETE" });
-export const retryTranscriptionAttempt = (id: string) =>
-  fetchJSON<TranscribeResponse>(`/transcribe/history/${id}/retry`, {
-    method: "POST",
-  });
 export const cancelTranscription = (payload: { path: string }) =>
   fetchJSON<{ ok: boolean }>("/transcribe/cancel", {
     method: "POST",

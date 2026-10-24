@@ -35,7 +35,6 @@ export type {
   ModelSupports,
   TranscribePostAction,
   TranscribeRequest,
-  TranscribeResponse,
   TranscriptionHealth,
   TranscriptionHistoryEntry,
   TranscriptionOutputFormat,

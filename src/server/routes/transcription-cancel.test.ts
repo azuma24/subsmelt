@@ -18,6 +18,7 @@ fs.mkdirSync(path.join(mediaDir, "show"), { recursive: true });
 const { default: express } = await import("express");
 const { setSettings } = await import("../config.js");
 const { registerTranscriptionRoutes } = await import("./transcription.js");
+const { transcriptionWork } = await import("../transcription/work.js");
 
 // Long enough that a cancel sent after the backend sees the request always lands first.
 const BACKEND_ANSWER_DELAY_MS = 1000;
@@ -90,19 +91,29 @@ async function startBackend(slowRoute: string, answer: string, expectedArrivals 
   };
 }
 
-test("a URL transcription is cancelled by the URL it was started with", async () => {
+async function queueWork(kind: "file" | "url", input: string): Promise<string> {
+  const queued = await post("/api/transcribe/work", { inputs: [{ kind, input, request: {} }] });
+  assert.equal(queued.status, 202);
+  return (queued.body as { items: Array<{ id: string }> }).items[0].id;
+}
+
+async function workStatus(id: string): Promise<string> {
+  return (await fetch(`${appUrl}/api/transcribe/work/${id}`).then((res) => res.json())).status;
+}
+
+test("cancelling queued URL work aborts the backend stream", async () => {
   const backend = await startBackend(
     "/transcribe/url/stream",
     `${JSON.stringify({ type: "result", ok: true, content: "hello", language: "en", segments: 1 })}\n`,
   );
   setSettings({ transcription_enabled: "1", transcription_backend_url: backend.url });
   try {
-    const url = "https://example.com/watch?v=abc";
-    const run = post("/api/transcribe/url", { url });
+    const id = await queueWork("url", "https://example.com/watch?v=abc");
     await backend.received;
 
-    assert.deepEqual(await post("/api/transcribe/cancel", { path: url }), { status: 200, body: { ok: true } });
-    assert.deepEqual(await run, { status: 400, body: { error: "Transcription cancelled" } });
+    assert.deepEqual(await post(`/api/transcribe/work/${id}/cancel`, {}), { status: 200, body: { ok: true } });
+    await transcriptionWork.idle();
+    assert.equal(await workStatus(id), "cancelled");
     assert.equal(await backend.clientHungUp, true);
   } finally {
     backend.close();
@@ -122,11 +133,12 @@ test("cancelling a shared-filesystem run on a backend without the stream route a
   const videoPath = path.join(mediaDir, "show", "a.mkv");
   fs.writeFileSync(videoPath, "video", "utf8");
   try {
-    const run = post("/api/transcribe", { videoPath });
+    const id = await queueWork("file", videoPath);
     await backend.received;
 
     assert.deepEqual(await post("/api/transcribe/cancel", { path: videoPath }), { status: 200, body: { ok: true } });
-    assert.deepEqual(await run, { status: 400, body: { error: "Transcription cancelled" } });
+    await transcriptionWork.idle();
+    assert.equal(await workStatus(id), "cancelled");
     assert.equal(await backend.clientHungUp, true);
   } finally {
     backend.close();
@@ -146,11 +158,12 @@ test("cancelling an upload run on a backend without the stream route writes no s
   const videoPath = path.join(mediaDir, "show", "b.mkv");
   fs.writeFileSync(videoPath, "video", "utf8");
   try {
-    const run = post("/api/transcribe", { videoPath });
+    const id = await queueWork("file", videoPath);
     await backend.received;
 
-    assert.deepEqual(await post("/api/transcribe/cancel", { path: videoPath }), { status: 200, body: { ok: true } });
-    assert.deepEqual(await run, { status: 400, body: { error: "Transcription cancelled" } });
+    assert.deepEqual(await post(`/api/transcribe/work/${id}/cancel`, {}), { status: 200, body: { ok: true } });
+    await transcriptionWork.idle();
+    assert.equal(await workStatus(id), "cancelled");
     assert.equal(await backend.clientHungUp, true);
     assert.equal(fs.existsSync(path.join(mediaDir, "show", "b.srt")), false);
   } finally {
@@ -158,69 +171,39 @@ test("cancelling an upload run on a backend without the stream route writes no s
   }
 });
 
-test("cancel-all stops every in-flight transcription", async () => {
+test("cancel-all stops the running work and the work queued behind it", async () => {
   const backend = await startBackend(
     "/transcribe",
     JSON.stringify({ ok: true, subtitle_path: "/srv/show/x.srt", language: "en", segments: 1 }),
-    2,
   );
   setSettings({
     transcription_enabled: "1",
     transcription_backend_url: backend.url,
     transcription_transport: "shared",
-    transcription_max_concurrent: "2",
   });
   const first = path.join(mediaDir, "show", "c.mkv");
   const second = path.join(mediaDir, "show", "d.mkv");
   fs.writeFileSync(first, "video", "utf8");
   fs.writeFileSync(second, "video", "utf8");
   try {
-    const runA = post("/api/transcribe", { videoPath: first });
-    const runB = post("/api/transcribe", { videoPath: second });
+    const queued = await post("/api/transcribe/work", {
+      inputs: [
+        { kind: "file", input: first, request: {} },
+        { kind: "file", input: second, request: {} },
+      ],
+    });
+    const ids = (queued.body as { items: Array<{ id: string }> }).items.map((item) => item.id);
     await backend.received;
 
     assert.deepEqual(await post("/api/transcribe/cancel-all", {}), { status: 200, body: { ok: true, cancelled: 2 } });
-    const results = await Promise.all([runA, runB]);
-    for (const result of results) {
-      assert.deepEqual(result, { status: 400, body: { error: "Transcription cancelled" } });
-    }
+    await transcriptionWork.idle();
+    assert.deepEqual(await Promise.all(ids.map(workStatus)), ["cancelled", "cancelled"]);
   } finally {
     backend.close();
   }
 });
 
-test("a client that hangs up mid-run does not cancel the transcription", async () => {
-  const backend = await startBackend(
-    "/transcribe",
-    JSON.stringify({ ok: true, subtitle_path: "/srv/show/e.srt", language: "en", segments: 1 }),
-  );
-  setSettings({
-    transcription_enabled: "1",
-    transcription_backend_url: backend.url,
-    transcription_transport: "shared",
-  });
-  const videoPath = path.join(mediaDir, "show", "e.mkv");
-  fs.writeFileSync(videoPath, "video", "utf8");
-  try {
-    const client = new AbortController();
-    const run = fetch(`${appUrl}/api/transcribe`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ videoPath }),
-      signal: client.signal,
-    });
-    await backend.received;
-    client.abort();
-
-    await assert.rejects(run);
-    // HTTP response lifecycle no longer owns the backend operation.
-    assert.equal(await backend.clientHungUp, false);
-  } finally {
-    backend.close();
-  }
-});
-
-test("a second run of a file already transcribing is refused, and the first stays cancellable", async () => {
+test("queueing a file already queued returns the existing work, which stays cancellable", async () => {
   const backend = await startBackend(
     "/transcribe",
     JSON.stringify({ ok: true, subtitle_path: "/srv/show/f.srt", language: "en", segments: 1 }),
@@ -229,20 +212,18 @@ test("a second run of a file already transcribing is refused, and the first stay
     transcription_enabled: "1",
     transcription_backend_url: backend.url,
     transcription_transport: "shared",
-    transcription_max_concurrent: "2",
   });
   const videoPath = path.join(mediaDir, "show", "f.mkv");
   fs.writeFileSync(videoPath, "video", "utf8");
   try {
-    const first = post("/api/transcribe", { videoPath });
+    const id = await queueWork("file", videoPath);
     await backend.received;
 
-    const second = await post("/api/transcribe", { videoPath });
-    assert.equal(second.status, 409);
-    assert.match((second.body as { error: string }).error, /already running/);
+    assert.equal(await queueWork("file", videoPath), id);
 
     assert.deepEqual(await post("/api/transcribe/cancel", { path: videoPath }), { status: 200, body: { ok: true } });
-    assert.deepEqual(await first, { status: 400, body: { error: "Transcription cancelled" } });
+    await transcriptionWork.idle();
+    assert.equal(await workStatus(id), "cancelled");
   } finally {
     backend.close();
   }

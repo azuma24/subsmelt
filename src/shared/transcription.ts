@@ -1,5 +1,3 @@
-import type { ScanResult } from "./scan.js";
-
 export const transcribePostActionValues = ["transcribe_only", "transcribe_and_translate"] as const;
 export type TranscribePostAction = (typeof transcribePostActionValues)[number];
 export type TranscriptionOutputFormat = "srt" | "vtt" | "txt" | "ass";
@@ -159,18 +157,6 @@ export interface TranscriptionPreflightResponse {
     suggestedModel?: string | null;
     warning?: string;
   };
-}
-
-export interface TranscribeResponse {
-  ok: boolean;
-  attemptId?: string;
-  stage?: "complete";
-  subtitle_path?: string;
-  language?: string;
-  segments?: number;
-  duration_seconds?: number;
-  postAction?: TranscribePostAction;
-  scanResult?: ScanResult | null;
 }
 
 /** GET /api/transcription/health. */

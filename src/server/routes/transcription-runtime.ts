@@ -322,7 +322,7 @@ export async function runTranscriptionAttempt(opts: {
   overrides?: TranscriptionOverrides;
   settings?: Record<string, string>;
   onProgress?: (pct: number) => void;
-  /** Aborting it cancels the run, as POST /api/transcribe/cancel does (a client hang-up). */
+  /** Aborting it cancels the run, as POST /api/transcribe/cancel does. */
   signal?: AbortSignal;
   /**
    * The user confirmed replacing existing subtitles, so the transcript takes
