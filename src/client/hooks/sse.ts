@@ -56,7 +56,7 @@ export function parseSSEData(raw: string): Record<string, unknown> {
   }
 }
 
-export function getSSEInvalidationKeys(name: SSEEventName): QueryKey[] {
+export function getSSEInvalidationKeys(name: SSEEventName, data: Record<string, unknown> = {}): QueryKey[] {
   switch (name) {
     // The jobs list is unpaginated (megabytes on a large library), so events
     // that carry what changed patch it (withJobEvent) instead of refetching it.
@@ -104,7 +104,11 @@ export function getSSEInvalidationKeys(name: SSEEventName): QueryKey[] {
       // onEvent; it should not trigger query refetches on every tick.
       return [];
     case "transcription:work":
-      return [["transcription-work"], ["transcription-history"]];
+      // A finished transcript is a new subtitle in the Library; queued, running
+      // and progress events leave the Library as it was.
+      return data.status === "succeeded"
+        ? [["transcription-work"], ["transcription-history"], ["library"]]
+        : [["transcription-work"], ["transcription-history"]];
     case "model:download":
       // Per-model download progress is consumed directly by the Model Manager
       // via onEvent; it should not trigger query refetches on every tick.
@@ -294,10 +298,10 @@ function ensureSse(queryClient: ReturnType<typeof useQueryClient>): SseSingleton
   const invalidator = createSseInvalidator((queryKey) => {
     queryClient.invalidateQueries({ queryKey });
   });
-  const refresh = (name?: SSEEventName) => {
+  const refresh = (name?: SSEEventName, data?: Record<string, unknown>) => {
     invalidator.schedule(
       name
-        ? getSSEInvalidationKeys(name)
+        ? getSSEInvalidationKeys(name, data)
         : [["jobs"], ["queue-status"], ["logs"], ["transcription-history"], ["usage"]],
     );
   };
@@ -351,7 +355,7 @@ function ensureSse(queryClient: ReturnType<typeof useQueryClient>): SseSingleton
         if (name.startsWith("job:"))
           queryClient.setQueryData<JobsResponse>(["jobs"], (old) => withJobEvent(old, name, data));
 
-        refresh(name);
+        refresh(name, data);
       });
     };
 

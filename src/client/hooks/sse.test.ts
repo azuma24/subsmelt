@@ -20,7 +20,16 @@ test("parseSSEData returns parsed object payloads and ignores invalid JSON", () 
 
 test("SSE invalidation keys are targeted by event type", () => {
   assert.ok(SSE_EVENT_NAMES.includes("transcription:work"));
-  assert.deepEqual(getSSEInvalidationKeys("transcription:work"), [["transcription-work"], ["transcription-history"]]);
+  assert.deepEqual(getSSEInvalidationKeys("transcription:work", { status: "running" }), [
+    ["transcription-work"],
+    ["transcription-history"],
+  ]);
+  // A finished transcript refreshes the Library, so the file no longer shows as missing subtitles.
+  assert.deepEqual(getSSEInvalidationKeys("transcription:work", { status: "succeeded" }), [
+    ["transcription-work"],
+    ["transcription-history"],
+    ["library"],
+  ]);
   // Progress, connection and analysis events patch the cached jobs list instead of refetching it.
   assert.deepEqual(getSSEInvalidationKeys("job:progress"), [["queue-status"]]);
   assert.deepEqual(getSSEInvalidationKeys("job:analysis"), []);

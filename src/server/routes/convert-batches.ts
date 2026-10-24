@@ -7,6 +7,7 @@ import { resolveConnectionPool } from "../connections.js";
 import { convertSubtitle, translateFile, planJobContext } from "../translator.js";
 import { sanitizeLanguageName } from "./validation.js";
 import { logger } from "../logger.js";
+import { recordUsage } from "../usage.js";
 import { acquireGpuForConvert, releaseGpuForConvert } from "../gpu-gate.js";
 
 // JSON uploads are constrained independently of the global Express 25mb parser.
@@ -348,6 +349,7 @@ async function processConvert(
       disableToolCalls: settings.disable_tool_calls === "1",
       refinePass: settings.refine_pass === "1",
       seriesMemory: false,
+      onUsage: (u) => recordUsage({ ...u, kind: "convert", jobId: null, src: input.name, srtName: input.name }),
     });
     if (!regular(translatedOutput) || fs.statSync(translatedOutput).size > MAX_BATCH_FILE_BYTES)
       throw new Error("Output size limit exceeded");

@@ -50,7 +50,8 @@ jobs:
       # The launchd scripts' tests need plutil and ditto, so only a Mac runs them.
       - name: Test the launchd scripts
         run: |
-          "$RUNNER_TEMP/build/venv/bin/python" -m pip install pytest
+          # build.sh makes the venv with uv and no pip, so install through uv too.
+          VIRTUAL_ENV="$RUNNER_TEMP/build/venv" uv pip install pytest
           "$RUNNER_TEMP/build/venv/bin/python" -m pytest tests/test_macos_packaging.py tests/test_run_server_output.py -q
 
       - name: Check bundled runtimes
