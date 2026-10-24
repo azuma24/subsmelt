@@ -38,9 +38,9 @@ param(
 # To bump: `gh release list --repo BtbN/FFmpeg-Builds`, pick a win64-gpl (static,
 # non-shared) zip from `gh release view <tag> --repo BtbN/FFmpeg-Builds --json
 # assets`, and copy its sha256 digest here.
-$FfmpegRelease = "autobuild-2026-10-08-13-05"
-$FfmpegZip = "ffmpeg-n8.1.3-14-g330caae0c1-win64-gpl-8.1.zip"
-$FfmpegSha256 = "6e63b4f8aae35949f4a5b471784f97a51b29b2466038769e3f8ecf513316ec6c"
+$FfmpegRelease = "autobuild-2026-10-24-13-02"
+$FfmpegZip = "ffmpeg-n8.1.3-24-g92611900bb-win64-gpl-8.1.zip"
+$FfmpegSha256 = "0b1a903367bfbe906125aad78069e3b9dfecac74ea76db05ada2e667c80ac2c9"
 
 $NemoSpeechVersion = "0.1.0"
 $NemoSpeechSha256 = "ba024204e76ca2fa4eefa8787506c3c49e418147f627f60cf9206a582b60089c"
