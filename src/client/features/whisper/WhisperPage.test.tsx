@@ -49,7 +49,14 @@ test("a configured backend shows run options and the library grouped by folder",
     emptyHistory,
   ]);
 
-  assert.deepEqual(page.headings, ["Transcribe", "Run options", "Transcribe library files", "Recent transcriptions"]);
+  assert.deepEqual(page.headings, [
+    "Transcribe",
+    "Run options",
+    "When subtitles are missing",
+    "Transcribe library files",
+    "Recent transcriptions",
+  ]);
+  assert.ok(page.text.includes("Auto-transcribe"));
   assert.ok(page.buttons.includes("Movies ( 2 )"));
   assert.ok(page.buttons.includes("Select all"));
   assert.ok(!page.text.includes("Speech-to-text is disabled."));

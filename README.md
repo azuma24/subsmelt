@@ -205,7 +205,7 @@ Three mounts, all of which have an environment override:
 | Mount | Variable | Default | Purpose |
 |-------|----------|---------|---------|
 | `/app/config` | `CONFIG_DIR` | `/app/config` | `config.json` — all settings and translation tasks. **Back this up.** |
-| `/app/data` | `DATA_DIR` | `/app/data` | SQLite DB and log files. Safe to delete if the queue gets stuck. |
+| `/app/data` | `DATA_DIR` | `/app/data` | SQLite DB, logs, queued transcription work, and retained Convert batches (including private subtitle contents). Do not version-control or delete while work/results are needed. |
 | `/media` | `MEDIA_DIR` | `/media` | Your video and subtitle files (read/write). |
 
 Everything else:

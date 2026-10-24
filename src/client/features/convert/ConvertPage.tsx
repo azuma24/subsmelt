@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "../../i18n";
 import { Link } from "react-router-dom";
 import * as api from "../../api";
@@ -20,6 +20,7 @@ import { StagedFileList, type FileRunStatus } from "./StagedFileList";
 import { effectiveSource, skipTranslation, type StagedFile } from "./staged-file";
 import { detectSampleLanguage, readSubtitleFile } from "./lazy-analysis";
 import { isSupported, triggerDownload, buildZipBlob, type OutputFile } from "./download-outputs";
+import { shouldAutoDownload } from "./batch-auto-download";
 
 const BATCH_KEY = "subsmelt.convert.batch";
 const MAX_FILES = 10;
@@ -48,6 +49,9 @@ export function ConvertPage() {
   const [fileErrors, setFileErrors] = useState<{ name: string; error: string }[]>([]);
   const [batchId, setBatchId] = useState<string | null>(() => getBrowserStorage()?.getItem(BATCH_KEY) ?? null);
   const [batch, setBatch] = useState<api.ConvertBatch | null>(null);
+  const [history, setHistory] = useState<api.ConvertBatch[]>([]);
+  const autoDownloadId = useRef<string | null>(null);
+  const [autoDownloadedId, setAutoDownloadedId] = useState<string | null>(null);
   const [batchError, setBatchError] = useState("");
   const [fileStatus, setFileStatus] = useState<Record<string, FileRunStatus>>({});
 
@@ -129,6 +133,27 @@ export function ConvertPage() {
   };
 
   useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const { batches } = await api.listConvertBatches();
+        if (!cancelled) {
+          setHistory(batches);
+          setBatchId((current) => current ?? batches[0]?.id ?? null);
+        }
+      } catch {
+        // Keep polling a selected batch if listing is temporarily unavailable.
+      }
+    };
+    void refresh();
+    const timer = setInterval(() => void refresh(), 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!batchId) return;
     let cancelled = false;
     const poll = async () => {
@@ -141,7 +166,7 @@ export function ConvertPage() {
       } catch (error) {
         if (!cancelled)
           setBatchError(
-            error instanceof ApiError && error.status === 404 ? "Batch expired or unavailable" : t("convert.failed"),
+            error instanceof ApiError && error.status === 404 ? t("convert.batchUnavailable") : t("convert.failed"),
           );
       }
     };
@@ -153,7 +178,7 @@ export function ConvertPage() {
     };
   }, [batchId, t]);
 
-  const downloadOutputs = async () => {
+  const downloadOutputs = useCallback(async () => {
     if (!batchId || !batch) return;
     try {
       const outputs = await Promise.all(
@@ -170,12 +195,19 @@ export function ConvertPage() {
     } catch {
       addToast(t("convert.failed"), "error");
     }
-  };
+  }, [batchId, batch, addToast, t]);
+
+  useEffect(() => {
+    if (!batch || !shouldAutoDownload(batch, autoDownloadId.current)) return;
+    autoDownloadId.current = null;
+    setAutoDownloadedId(batch.id);
+    void downloadOutputs();
+  }, [batch, downloadOutputs]);
 
   const handleConvert = async () => {
     if (staged.length === 0 || converting || (translate && !resolvedTarget)) return;
     if (staged.length > MAX_FILES || staged.some((item) => item.file.size > MAX_BYTES)) {
-      addToast(`Maximum ${MAX_FILES} files, ${MAX_BYTES / 1024 / 1024} MB each`, "error");
+      addToast(t("convert.batchLimit"), "error");
       return;
     }
     setConverting(true);
@@ -201,6 +233,7 @@ export function ConvertPage() {
         targetCode: resolvedTarget?.code,
       });
       storage?.setItem(BATCH_KEY, id);
+      autoDownloadId.current = id;
       setBatch(null);
       setBatchId(id);
       if (translate && resolvedTarget && storage) setRecents(pushRecentTarget(storage, resolvedTarget.code));
@@ -336,6 +369,29 @@ export function ConvertPage() {
             </ActionButton>
           </div>
 
+          {history.length > 0 && (
+            <div className="rounded-md border border-border bg-surface p-3">
+              <p className="text-xs font-medium text-muted">{t("convert.recentBatches")}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {history.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      autoDownloadId.current = null;
+                      setBatch(null);
+                      setBatchId(item.id);
+                      storage?.setItem(BATCH_KEY, item.id);
+                    }}
+                    aria-pressed={batchId === item.id}
+                    className={`rounded-sm border px-2 py-1 text-xs ${batchId === item.id ? "border-success text-text" : "border-border text-muted"}`}
+                  >
+                    {item.files[0]?.name} · {t(`convert.batchStatus.${item.status}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {batchId && (
             <div className="rounded-md border border-success-line bg-success-soft p-4" role="status" aria-live="polite">
               <p className="text-sm font-semibold text-success">
@@ -346,12 +402,12 @@ export function ConvertPage() {
               <p className="mt-1 text-xs text-muted">
                 {batchError ||
                   (batch?.status === "done"
-                    ? t("convert.downloadsReadyHelp")
-                    : "Processing on server — you can close this tab and return later.")}
+                    ? t(batch.id === autoDownloadedId ? "convert.downloadsReadyHelp" : "convert.downloadsAvailableHelp")
+                    : t("convert.serverProcessing"))}
               </p>
               {batch?.files.map((file, index) => (
                 <div key={`${index}-${file.name}`} className="mt-2 text-xs text-muted">
-                  {file.name}: {file.status}
+                  {file.name}: {t(`convert.batchStatus.${file.status}`)}
                   {file.error ? ` — ${file.error}` : ""}
                   {file.status === "done" && (
                     <button

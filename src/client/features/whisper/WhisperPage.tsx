@@ -29,6 +29,7 @@ import { TranscriptionHistoryPanel } from "../dashboard/TranscriptionHistoryPane
 import { str } from "../../lib/settings-value";
 import { useModelGate } from "./useModelGate";
 import { RunOptionsSection } from "./RunOptionsSection";
+import { AutoTranscriptionControl } from "./AutoTranscriptionControl";
 import { UrlTranscribeSection } from "./UrlTranscribeSection";
 import { LibraryPicker } from "./LibraryPicker";
 import { InlineError } from "../../ui/QueryState";
@@ -533,6 +534,8 @@ export function WhisperPage() {
                 onDiarizeChange={handleDiarizeChange}
                 hasCaps={Boolean(caps)}
               />
+
+              <AutoTranscriptionControl settings={settings} />
 
               {/* ── 2. Transcribe from URL (only when backend has yt-dlp) ────── */}
               {canUrl && (

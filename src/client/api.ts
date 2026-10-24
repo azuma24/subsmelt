@@ -253,6 +253,7 @@ export interface ConvertBatch {
   finishedAt?: number;
   files: { name: string; status: "pending" | "working" | "done" | "error"; outputName?: string; error?: string }[];
 }
+export const listConvertBatches = () => fetchJSON<{ batches: ConvertBatch[] }>("/convert/batches");
 export const createConvertBatch = (body: ConvertRequest) =>
   fetchJSON<{ id: string }>("/convert/batches", { method: "POST", body: JSON.stringify(body) });
 export const getConvertBatch = (id: string) => fetchJSON<ConvertBatch>(`/convert/batches/${encodeURIComponent(id)}`);

@@ -15,7 +15,7 @@ services:
       #
       # Config (settings + translation tasks — version-control this)
       - ./config:/app/config
-      # Data (jobs + logs — disposable, safe to wipe)
+      # Data (jobs, logs, and queued transcription work — keep across restarts)
       - ./data:/app/data
     environment:
       - TZ=America/New_York                  # Timezone for log timestamps

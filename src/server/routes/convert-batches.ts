@@ -17,9 +17,10 @@ export const MAX_BATCH_JOBS = 20;
 export const BATCH_TTL_MS = 24 * 60 * 60 * 1000;
 const FORMATS = ["srt", "vtt", "ass", "ssa"];
 const ID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
-const ROOT = path.resolve(
-  process.env.CONVERT_BATCH_DIR || path.join(process.env.CONFIG_DIR || "./config", "convert-batches"),
-);
+export function convertBatchRoot(env: NodeJS.ProcessEnv): string {
+  return path.resolve(env.CONVERT_BATCH_DIR || path.join(env.DATA_DIR || "./data", "convert-batches"));
+}
+const ROOT = convertBatchRoot(process.env);
 
 type Input = { name: string; content: string; sourceLang?: string; skip?: boolean };
 type Options = {
@@ -47,7 +48,10 @@ type Job = {
 
 function safeName(value: string): string {
   // Input names have already passed path/control-character validation.
-  return value.replace(/:/g, "_").slice(0, 180);
+  const sanitized = value.replace(/:/g, "_");
+  if (sanitized.length <= 180) return sanitized;
+  const ext = sanitized.match(/\.(?:srt|vtt|ass|ssa)$/i)?.[0] ?? "";
+  return sanitized.slice(0, 180 - ext.length) + ext;
 }
 function jobDir(id: string): string {
   if (!ID.test(id)) throw new Error("Invalid job ID");
@@ -85,8 +89,8 @@ function entries(): string[] {
 function clean(): void {
   for (const id of entries()) {
     const job = load(id);
-    // Incomplete jobs are also bounded from creation, including after repeated restarts.
-    if (!job || Date.now() - (job.finishedAt ?? job.createdAt) > BATCH_TTL_MS) {
+    // Retention starts on completion. Active work can exceed the TTL.
+    if (!job || (job.status === "done" && Date.now() - (job.finishedAt ?? job.createdAt) > BATCH_TTL_MS)) {
       fs.rmSync(jobDir(id), { recursive: true, force: true });
     }
   }
@@ -191,7 +195,17 @@ export class ConvertBatchStore {
   }
   get(id: string): Job | null {
     const job = load(id);
-    return job && Date.now() - (job.finishedAt ?? job.createdAt) <= BATCH_TTL_MS ? job : null;
+    return job && (job.status !== "done" || Date.now() - (job.finishedAt ?? job.createdAt) <= BATCH_TTL_MS)
+      ? job
+      : null;
+  }
+  list(): Pick<Job, "id" | "status" | "createdAt" | "finishedAt" | "files">[] {
+    clean();
+    return entries()
+      .map((id) => this.get(id))
+      .filter((job): job is Job => job !== null)
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .map(({ id, status, createdAt, finishedAt, files }) => ({ id, status, createdAt, finishedAt, files }));
   }
   output(id: string, index: number): { name: string; content: Buffer } | null {
     const job = this.get(id);
@@ -246,13 +260,15 @@ export class ConvertBatchStore {
             const base = file.name.replace(/\.[^.]*$/, "");
             file.outputName = `${base}${job.options.translate && !metadata.skip ? `.${job.options.targetCode || "translated"}` : ""}.${job.options.targetFormat}`;
             file.status = "done";
+            // Commit the result before discarding its only recoverable input.
+            save(job);
           } catch (error) {
             file.status = "error";
             file.error = error instanceof Error ? error.message.slice(0, 300) : "Conversion failed";
             fs.rmSync(path.join(jobDir(id), `output-${i}`), { force: true });
           } finally {
-            fs.rmSync(path.join(jobDir(id), `input-${i}`), { force: true });
             save(job);
+            fs.rmSync(path.join(jobDir(id), `input-${i}`), { force: true });
           }
         }
         fs.rmSync(path.join(jobDir(id), "inputs.json"), { force: true });
@@ -335,6 +351,10 @@ export function registerConvertBatchRoutes(app: Express): void {
     store.kick();
   }, 60_000);
   timer.unref();
+  app.get("/api/convert/batches", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ batches: store.list() });
+  });
   app.post("/api/convert/batches", (req, res) => {
     try {
       const id = store.create(req.body);

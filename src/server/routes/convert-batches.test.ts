@@ -8,6 +8,17 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-convert-test-"));
 process.env.CONVERT_BATCH_DIR = root;
 const { ConvertBatchStore, registerConvertBatchRoutes, MAX_BATCH_FILES, MAX_BATCH_FILE_BYTES, BATCH_TTL_MS } =
   await import("./convert-batches.js");
+test("default storage avoids config and explicit override wins", async () => {
+  const { convertBatchRoot } = await import("./convert-batches.js");
+  assert.equal(
+    convertBatchRoot({ CONFIG_DIR: "/private/config", DATA_DIR: "/private/data" }),
+    "/private/data/convert-batches",
+  );
+  assert.equal(
+    convertBatchRoot({ DATA_DIR: "/private/data", CONVERT_BATCH_DIR: "/secure/batches" }),
+    "/secure/batches",
+  );
+});
 const file = (name = "a.srt") => ({ name, content: "1\n00:00:01,000 --> 00:00:02,000\nHi\n", skip: false });
 const request = (files = [file()]) => ({ files, targetFormat: "vtt", translate: false });
 const wait = async (store: InstanceType<typeof ConvertBatchStore>, id: string) => {
@@ -135,6 +146,49 @@ test("oversized generated output is discarded without blocking following files",
   assert.equal(fs.existsSync(path.join(dir, "input-1")), false);
 });
 
+test("active batches remain visible past TTL; long names retain their extension", async () => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const store = new ConvertBatchStore(async (input) => {
+    await gate;
+    return input.content;
+  });
+  const id = store.create(request([file(`${"x".repeat(210)}.srt`)]));
+  const dir = path.join(root, id);
+  const job = JSON.parse(fs.readFileSync(path.join(dir, "job.json"), "utf8"));
+  job.createdAt = Date.now() - BATCH_TTL_MS - 1000;
+  fs.writeFileSync(path.join(dir, "job.json"), JSON.stringify(job));
+  assert.equal(store.get(id)?.files[0].name.endsWith(".srt"), true);
+  assert.equal(store.get(id)?.files[0].name.length, 180);
+  assert.equal(
+    store.list().some((entry) => entry.id === id),
+    true,
+  );
+  assert.equal(fs.existsSync(dir), true);
+  release();
+  await wait(store, id);
+  assert.ok(store.output(id, 0));
+});
+
+test("persisted result survives interruption before input cleanup", async () => {
+  const store = new ConvertBatchStore(async (input) => input.content);
+  const id = store.create(request());
+  await wait(store, id);
+  const dir = path.join(root, id);
+  fs.writeFileSync(path.join(dir, "input-0"), file().content);
+  const job = JSON.parse(fs.readFileSync(path.join(dir, "job.json"), "utf8"));
+  job.status = "running";
+  delete job.finishedAt;
+  fs.writeFileSync(path.join(dir, "job.json"), JSON.stringify(job));
+  const resumed = new ConvertBatchStore(async () => {
+    throw new Error("Completed output reprocessed");
+  });
+  await wait(resumed, id);
+  assert.ok(resumed.output(id, 0));
+});
+
 test("HTTP route returns promptly, survives dropped client and restricts output to completed files", async () => {
   const { default: express } = await import("express");
   const app = express();
@@ -153,6 +207,9 @@ test("HTTP route returns promptly, survives dropped client and restricts output 
     });
     assert.equal(response.status, 202);
     const { id } = (await response.json()) as { id: string };
+    const listing = (await (await fetch(base)).json()) as { batches: { id: string }[] };
+    assert.ok(listing.batches.some((entry) => entry.id === id));
+    assert.equal(JSON.stringify(listing).includes(file().content), false);
     assert.equal((await fetch(`${base}/${id}/files/999`)).status, 404);
     // The POST response is gone; a new request still sees server-owned progress/output.
     for (let i = 0; i < 100; i++) {
