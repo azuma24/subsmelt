@@ -2,10 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { getAllSettings, getSetting } from "../config.js";
 import { countOpenJobsForSubtitle } from "../db.js";
-import { convertHoldsGpu, gpuShared, setYoutubeBacklogSource, transcriptionMayStart } from "../gpu-gate.js";
+import { gpuShared, setYoutubeBacklogSource, transcriptionMayStart, translationHoldsGpu } from "../gpu-gate.js";
 import { logger } from "../logger.js";
 import { normalizeMediaSubfolder, resolveMediaSubfolder } from "../media-paths.js";
-import { isQueueRunning, runQueueSafely, startHeldQueue } from "../queue.js";
+import { runQueueSafely, startHeldQueue } from "../queue.js";
 import { getTranscriptionBackendUrl, runTranscriptionAttempt } from "../routes/transcription-runtime.js";
 import { MEDIA_DIR } from "../scanner.js";
 import { broadcast } from "../sse.js";
@@ -134,6 +134,7 @@ export interface QueueControl {
   start: () => void;
   /** Starts a run the gate held back, if it has opened. */
   startHeld: () => void;
+  /** Translation holds the shared GPU, so Whisper waits. */
   running: () => boolean;
 }
 
@@ -144,11 +145,10 @@ export interface WorkerOptions {
   queue?: QueueControl;
 }
 
-// "Running" means translation holds the shared GPU: the queue, or a Convert batch.
 const liveQueue: QueueControl = {
   start: () => runQueueSafely(),
   startHeld: startHeldQueue,
-  running: () => isQueueRunning() || convertHoldsGpu(),
+  running: translationHoldsGpu,
 };
 
 export function transcriptionReady(settings = getAllSettings()): boolean {

@@ -6,6 +6,7 @@ import { runQueueSafely } from "../queue.js";
 import { getAllSettings } from "../config.js";
 import {
   assertMediaPathAllowed,
+  buildUrlTranscriptionRequest,
   transcribeUrlWithBackendStreaming,
   transcribeTimeoutSeconds,
   type TranscribePostAction,
@@ -13,14 +14,10 @@ import {
 } from "../transcription-client.js";
 import {
   getTranscriptionBackendUrl,
-  isAbandonedRun,
   overridesFromBody,
   runTranscriptionAttempt,
-  settleTranscriptionRun,
-  waitForGpu,
-  withTranscriptionSlot,
+  withTranscriptionRun,
 } from "../routes/transcription-runtime.js";
-import { beginTranscriptionRun } from "./in-flight.js";
 import { broadcast } from "../sse.js";
 import { errorMessage } from "../errors.js";
 import { logger } from "../logger.js";
@@ -301,38 +298,22 @@ async function executeWork(
   }
   const backendUrl = getTranscriptionBackendUrl(settings);
   if (settings.transcription_enabled !== "1" || !backendUrl) throw new Error("Transcription backend is not configured");
-  const controller = beginTranscriptionRun(item.input);
-  const abort = () => controller.abort();
-  signal.addEventListener("abort", abort, { once: true });
-  if (signal.aborted) abort();
-  let abandoned = false;
-  // Only a run that reached the backend can still be busy there after the app lets go.
-  let reachedBackend = false;
-  try {
-    const b = item.request;
-    const pick = (key: string, fallback: string) =>
-      typeof b[key] === "string" && b[key] ? (b[key] as string) : fallback;
-    const outputFormat = pick("outputFormat", settings.transcription_output_format || "srt");
-    // Counts against transcription_max_concurrent like every file run.
-    const result = await withTranscriptionSlot(async () => {
-      await waitForGpu(item.input, controller.signal);
-      reachedBackend = true;
+  const request = buildUrlTranscriptionRequest({
+    url: item.input,
+    settings,
+    outputFormat: item.request.outputFormat as TranscriptionOutputFormat | undefined,
+    overrides: overridesFromBody(item.request),
+  });
+  return withTranscriptionRun(item.input, signal, async (run) => {
+    const result = await run.withGpu(() => {
+      run.markReachedBackend();
       return transcribeUrlWithBackendStreaming(
         backendUrl,
-        {
-          url: item.input,
-          output_format: outputFormat,
-          model: pick("model", settings.transcription_model || "small"),
-          language: pick("language", settings.transcription_language || "auto"),
-          device: pick("device", settings.transcription_device || "cpu"),
-          compute_type: pick("computeType", settings.transcription_compute_type || "int8"),
-          post_action: "transcribe_only",
-          ...(b.speakerDiarization === true ? { advanced_options: { speaker_diarization: true } } : {}),
-        },
+        { ...request },
         {
           timeoutSeconds: transcribeTimeoutSeconds(settings),
           token: settings.transcription_backend_token,
-          signal: controller.signal,
+          signal: run.controller.signal,
           onProgress: ({ pct }) => onProgress(pct),
           onPhase: (phase) => broadcast("transcription:progress", { path: item.input, phase }),
         },
@@ -341,14 +322,8 @@ async function executeWork(
     const content = (result as { content?: string }).content;
     if (typeof content !== "string" || Buffer.byteLength(content) > 50 * 1024 * 1024)
       throw new Error("Invalid URL transcript content");
-    return { content, outputFormat, segments: result.segments };
-  } catch (error) {
-    abandoned = reachedBackend && isAbandonedRun(error, controller);
-    throw error;
-  } finally {
-    signal.removeEventListener("abort", abort);
-    settleTranscriptionRun(item.input, controller, abandoned);
-  }
+    return { content, outputFormat: request.output_format, segments: result.segments };
+  });
 }
 
 export const transcriptionWork = new WorkRunner(

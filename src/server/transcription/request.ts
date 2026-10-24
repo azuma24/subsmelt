@@ -300,7 +300,35 @@ function advancedSttOptions(
 export function buildTranscriptionRequest(options: BuildTranscriptionRequestOptions): BackendTranscriptionRequest {
   const localInputPath = assertMediaPathAllowed(options.videoPath, options.mediaDir);
   const folderDefaults = matchingFolderDefaults(localInputPath, options.mediaDir, options.settings);
-  const backendInputPath = mapPathForBackend(localInputPath, options.settings);
+  return {
+    input_path: mapPathForBackend(localInputPath, options.settings),
+    ...transcriptionRunOptions(options, folderDefaults),
+  };
+}
+
+/**
+ * The backend request for remote media the backend fetches itself. It runs
+ * with the same Settings as a library file, minus per-folder defaults (a URL
+ * has no folder), and transcribes only: there is no library file to
+ * translate beside. Like an upload, it has no /preflight, so run_anyway is
+ * passed on as allow_unsafe.
+ */
+export function buildUrlTranscriptionRequest(
+  options: Omit<BuildTranscriptionRequestOptions, "videoPath" | "mediaDir" | "postAction"> & { url: string },
+): Omit<BackendTranscriptionRequest, "input_path"> & { url: string } {
+  const runAnyway = (options.settings.transcription_low_ram_behavior || "").trim() === "run_anyway";
+  return {
+    url: options.url,
+    ...transcriptionRunOptions({ ...options, postAction: "transcribe_only" }, undefined),
+    ...(runAnyway ? { allow_unsafe: true } : {}),
+  };
+}
+
+/** Everything a backend request carries except where the media is: Settings, folder defaults, then per-run overrides. */
+function transcriptionRunOptions(
+  options: Pick<BuildTranscriptionRequestOptions, "settings" | "outputFormat" | "postAction" | "overrides">,
+  folderDefaults: TranscriptionFolderDefaults | undefined,
+): Omit<BackendTranscriptionRequest, "input_path"> {
   const requestedAction = options.postAction ?? "transcribe_only";
   const postAction = transcribePostActionValues.includes(requestedAction) ? requestedAction : "transcribe_only";
   const subtitleQuality = subtitleQualitySettings(options.settings, folderDefaults);
@@ -331,7 +359,6 @@ export function buildTranscriptionRequest(options: BuildTranscriptionRequestOpti
   if (!LANGUAGE_PATTERN.test(normalizedLanguage)) throw new Error(`Unsupported transcription language: ${language}`);
 
   return {
-    input_path: backendInputPath,
     output_format:
       options.outputFormat ??
       outputFormat(folderDefaults?.output_format ?? options.settings.transcription_output_format, "srt"),

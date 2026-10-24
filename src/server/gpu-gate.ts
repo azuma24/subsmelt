@@ -112,6 +112,18 @@ export function releaseGpuForConvert(): void {
   convertTranslating = false;
 }
 
+let queueRunning: () => boolean = () => false;
+
+/** queue.ts reports whether its run is live; the gate cannot import it back. */
+export function setTranslationQueueSource(source: () => boolean): void {
+  queueRunning = source;
+}
+
+/** Translation holds the shared GPU: the queue's run, or a Convert batch when convert_gpu_shared is on. */
+export function translationHoldsGpu(): boolean {
+  return queueRunning() || convertHoldsGpu();
+}
+
 let youtubeBacklog: () => number = () => 0;
 
 /** The YouTube worker reports how many videos still need Whisper. */

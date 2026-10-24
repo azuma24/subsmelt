@@ -308,15 +308,6 @@ export const clearTranscriptionHistory = () =>
   });
 export const deleteTranscriptionAttempt = (id: string) =>
   fetchJSON<{ ok: boolean; removed: number }>(`/transcribe/history/${encodeURIComponent(id)}`, { method: "DELETE" });
-export const cancelTranscription = (payload: { path: string }) =>
-  fetchJSON<{ ok: boolean }>("/transcribe/cancel", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-export const cancelAllTranscriptions = () =>
-  fetchJSON<{ ok: boolean; cancelled: number }>("/transcribe/cancel-all", {
-    method: "POST",
-  });
 
 // Whisper Model Manager — proxied through the SubSmelt server to the configured
 // whisper backend. Download progress arrives via the "model:download" SSE event

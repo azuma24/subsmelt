@@ -35,8 +35,8 @@ import {
 import { broadcast } from "../sse.js";
 import { mkdirShared, shareFile } from "../shared-files.js";
 import { standardLangCode } from "../language-codes.js";
-import { isQueueRunning, startHeldQueue } from "../queue.js";
-import { convertHoldsGpu, waitUntilTranscriptionMayStart } from "../gpu-gate.js";
+import { startHeldQueue } from "../queue.js";
+import { translationHoldsGpu, waitUntilTranscriptionMayStart } from "../gpu-gate.js";
 import {
   beginTranscriptionRun,
   endTranscriptionRun,
@@ -54,11 +54,10 @@ export function getTranscriptionBackendUrl(settings = getAllSettings()): string 
 }
 
 // --- Shared transcription concurrency gate ---
-// A minimal async semaphore so EVERY transcription entry point (scan auto-
-// transcribe, manual POST /api/transcribe, history retry) honors
-// transcription_max_concurrent — not just the scan loop. Permits are re-read
-// from settings at acquire time so changing the setting takes effect for new
-// work without a restart. No deadlocks: a release always follows acquire via
+// A minimal async semaphore so every transcription (the work queue's file and
+// URL runs, the YouTube worker's) honors transcription_max_concurrent. Permits
+// are re-read from settings at acquire time so changing the setting takes
+// effect for new work without a restart. No deadlocks: a release always follows acquire via
 // try/finally, and waiters are resolved FIFO.
 function transcriptionMaxConcurrent(settings = getAllSettings()): number {
   return Math.max(1, Math.min(4, parseInt(settings.transcription_max_concurrent || "1", 10) || 1));
@@ -93,7 +92,7 @@ function releaseTranscriptionSlot(): void {
   }
 }
 
-export async function withTranscriptionSlot<T>(fn: () => Promise<T>): Promise<T> {
+async function withTranscriptionSlot<T>(fn: () => Promise<T>): Promise<T> {
   await acquireTranscriptionSlot();
   try {
     return await fn();
@@ -113,13 +112,9 @@ export { inFlightTranscriptions, TranscriptionInFlightError };
  * it calls in, so its runs rarely wait here.
  */
 export function waitForGpu(runId: string, signal: AbortSignal): Promise<void> {
-  return waitUntilTranscriptionMayStart(
-    () => isQueueRunning() || convertHoldsGpu(),
-    signal,
-    () => {
-      broadcast("transcription:progress", { path: runId, phase: "waiting_for_gpu" });
-    },
-  );
+  return waitUntilTranscriptionMayStart(translationHoldsGpu, signal, () => {
+    broadcast("transcription:progress", { path: runId, phase: "waiting_for_gpu" });
+  });
 }
 
 /**
@@ -127,16 +122,70 @@ export function waitForGpu(runId: string, signal: AbortSignal): Promise<void> {
  * backend, so the GPU gate keeps counting it for a while; either way a
  * translation start the gate held back gets another look.
  */
-export function settleTranscriptionRun(runId: string, controller: AbortController, abandoned: boolean): void {
+function settleTranscriptionRun(runId: string, controller: AbortController, abandoned: boolean): void {
   endTranscriptionRun(runId, controller);
   if (abandoned) holdGpuForAbandonedRun(startHeldQueue);
   else startHeldQueue();
 }
 
 /** A cancel or a timeout: the app let go of a run the backend may still be working on. */
-export function isAbandonedRun(error: unknown, controller: AbortController): boolean {
-  const message = error instanceof Error ? errorMessage(error) : String(error ?? "");
-  return controller.signal.aborted || /timed out/i.test(message);
+function isAbandonedRun(error: unknown, controller: AbortController): boolean {
+  if (controller.signal.aborted) return true;
+  for (let cause: unknown = error; cause; cause = cause instanceof Error ? cause.cause : undefined) {
+    const message = cause instanceof Error ? errorMessage(cause) : String(cause);
+    if (/timed out/i.test(message)) return true;
+  }
+  return false;
+}
+
+/** One transcription as withTranscriptionRun hands it to its caller. */
+export interface TranscriptionRun {
+  /** Aborted by the caller's signal, POST /api/transcribe/cancel or cancel-all. */
+  readonly controller: AbortController;
+  /** Takes a transcription slot, waits until the shared GPU is free, then calls `call` with the slot held. */
+  withGpu<T>(call: () => Promise<T>): Promise<T>;
+  /** From here the backend may stay busy after the app lets go, so a cancel or timeout keeps the GPU counted. */
+  markReachedBackend(): void;
+}
+
+/**
+ * Runs one transcription the way every entry point must: registered under
+ * `runId` (one run per input, cancellable), counted against
+ * transcription_max_concurrent, held behind translation on a shared GPU, and
+ * settled at the end so a translation start the GPU gate held back gets
+ * another look.
+ */
+export async function withTranscriptionRun<T>(
+  runId: string,
+  signal: AbortSignal | undefined,
+  body: (run: TranscriptionRun) => Promise<T>,
+): Promise<T> {
+  const controller = beginTranscriptionRun(runId);
+  const onCallerAbort = () => controller.abort();
+  if (signal?.aborted) controller.abort();
+  else signal?.addEventListener("abort", onCallerAbort, { once: true });
+  let reachedBackend = false;
+  let abandoned = false;
+  const run: TranscriptionRun = {
+    controller,
+    withGpu: (call) =>
+      withTranscriptionSlot(async () => {
+        await waitForGpu(runId, controller.signal);
+        return call();
+      }),
+    markReachedBackend: () => {
+      reachedBackend = true;
+    },
+  };
+  try {
+    return await body(run);
+  } catch (error) {
+    abandoned = reachedBackend && isAbandonedRun(error, controller);
+    throw error;
+  } finally {
+    signal?.removeEventListener("abort", onCallerAbort);
+    settleTranscriptionRun(runId, controller, abandoned);
+  }
 }
 
 // Resolves to true when a streaming run succeeded, so we know whether to skip
@@ -351,155 +400,145 @@ export async function runTranscriptionAttempt(opts: {
   });
   const outputPath = localTranscriptionOutputPath(opts.videoPath, request.language, request.output_format);
   // Refuses a second run of the same file before anything is recorded.
-  const controller = beginTranscriptionRun(opts.videoPath);
-  const onCallerAbort = () => controller.abort();
-  if (opts.signal?.aborted) controller.abort();
-  else opts.signal?.addEventListener("abort", onCallerAbort, { once: true });
+  return withTranscriptionRun(opts.videoPath, opts.signal, async (run) => {
+    const attempt = transcriptionHistory.startAttempt({
+      // Store the local SubSmelt media path so history retries re-run through
+      // MEDIA_DIR validation and optional backend path mapping correctly.
+      inputPath: opts.videoPath,
+      outputPath,
+      model: request.model,
+      language: request.language,
+      outputFormat: request.output_format,
+      postAction: request.post_action,
+      subtitleQuality: request.subtitle_quality,
+      advancedOptions: request.advanced_options,
+      device: request.device,
+      computeType: request.compute_type,
+      overwrite: opts.overwrite === true,
+    });
 
-  const attempt = transcriptionHistory.startAttempt({
-    // Store the local SubSmelt media path so history retries re-run through
-    // MEDIA_DIR validation and optional backend path mapping correctly.
-    inputPath: opts.videoPath,
-    outputPath,
-    model: request.model,
-    language: request.language,
-    outputFormat: request.output_format,
-    postAction: request.post_action,
-    subtitleQuality: request.subtitle_quality,
-    advancedOptions: request.advanced_options,
-    device: request.device,
-    computeType: request.compute_type,
-    overwrite: opts.overwrite === true,
-  });
+    const transport = resolveTransportMode(settings);
 
-  const transport = resolveTransportMode(settings);
-  let abandoned = false;
-  // Only a run that reached the backend can still be busy there after the app lets go.
-  let reachedBackend = false;
-
-  try {
-    const startedAtMs = Date.parse(attempt.startedAt);
-    const { result, checkedRequest } = await withTranscriptionSlot(async () => {
+    try {
+      const startedAtMs = Date.parse(attempt.startedAt);
       // A translation batch on a shared GPU finishes first, and the preflight
       // waits with it: it measures free VRAM, which the batch's model holds.
-      await waitForGpu(opts.videoPath, controller.signal);
-      // Upload mode (Model B) skips the HTTP /preflight: that endpoint validates a
-      // server-side media path, which does not exist in upload mode. The upload
-      // endpoint runs its own resource preflight (422/409). We still honour
-      // run_anyway by sending allow_unsafe so the backend won't block a low-RAM run.
-      let checked = request;
-      if (transport === "upload") {
-        if ((settings.transcription_low_ram_behavior || "").trim() === "run_anyway") {
-          checked = { ...request, allow_unsafe: true };
+      const { result, checkedRequest } = await run.withGpu(async () => {
+        // Upload mode (Model B) skips the HTTP /preflight: that endpoint validates a
+        // server-side media path, which does not exist in upload mode. The upload
+        // endpoint runs its own resource preflight (422/409). We still honour
+        // run_anyway by sending allow_unsafe so the backend won't block a low-RAM run.
+        let checked = request;
+        if (transport === "upload") {
+          if ((settings.transcription_low_ram_behavior || "").trim() === "run_anyway") {
+            checked = { ...request, allow_unsafe: true };
+          }
+        } else {
+          checked = await applyPreflightPolicy(backendUrl, request, settings);
         }
-      } else {
-        checked = await applyPreflightPolicy(backendUrl, request, settings);
-      }
-      reachedBackend = true;
-      const transcribed = await transcribeRelayingProgress(
-        backendUrl,
-        checked,
-        settings,
-        opts.videoPath,
-        controller,
-        transport,
-        opts.onProgress,
-      );
-      return { result: transcribed, checkedRequest: checked };
-    });
-    if (await foundNoSpeech(result, transport, outputPath, startedAtMs)) throw new NoSpeechError();
-    // Named with the standard code of its language (Movie.eng.srt), the one Whisper
-    // was given or the one it detected, unless a subtitle is already there under
-    // it and the user did not confirm an overwrite.
-    const namedPath = languageNamedPath(
-      opts.videoPath,
-      request.language,
-      result.language,
-      request.output_format,
-      opts.overwrite === true,
-    );
-    let finalPath = outputPath;
-    // Upload mode returns subtitle CONTENT; write it to the local output path
-    // (path mode wrote it on the shared filesystem already).
-    if (transport === "upload") {
-      finalPath = namedPath ?? outputPath;
-      if (typeof result.content !== "string") {
-        throw new Error("Upload transcription returned no subtitle content");
-      }
-      const contentBytes = Buffer.byteLength(result.content, "utf-8");
-      if (contentBytes > MAX_SUBTITLE_BYTES) {
-        throw new Error(`Subtitle content too large (${contentBytes} bytes, max ${MAX_SUBTITLE_BYTES})`);
-      }
-      // Atomic write: write to a temp file in the same dir, then rename. This
-      // avoids leaving a half-written subtitle file if the process dies mid-write.
-      mkdirShared(path.dirname(finalPath));
-      // Unique tmp name (pid + timestamp): one run per file is enforced, but
-      // two files can share a transcript name (Movie.mkv, Movie.mp4).
-      const tmpPath = `${finalPath}.${process.pid}.${Date.now()}.tmp`;
-      await fs.promises.writeFile(tmpPath, result.content, "utf-8");
-      try {
-        await fs.promises.rename(tmpPath, finalPath);
-        shareFile(finalPath);
-      } catch (renameError) {
-        await fs.promises.unlink(tmpPath).catch(() => {});
-        throw renameError;
-      }
-    }
-    if (transport !== "upload" && namedPath && namedPath !== outputPath && fs.existsSync(outputPath)) {
-      await fs.promises.rename(outputPath, namedPath);
-      finalPath = namedPath;
-    }
-    const finishedAt = new Date().toISOString();
-    const durationSeconds =
-      typeof result.duration_seconds === "number"
-        ? result.duration_seconds
-        : Number.isFinite(startedAtMs)
-          ? Math.max(0, (Date.now() - startedAtMs) / 1000)
-          : null;
-    noSpeechVideos.clear(opts.videoPath);
-    transcriptionHistory.finishAttempt(attempt.id, {
-      status: "succeeded",
-      finishedAt,
-      durationSeconds,
-      outputPath: finalPath,
-    });
-    broadcast("transcription:progress", { path: opts.videoPath, pct: 100, done: true });
-    return { attemptId: attempt.id, result, outputPath: finalPath, model: checkedRequest.model };
-  } catch (error: unknown) {
-    if (error instanceof NoSpeechError) {
-      // Not retried by scans: the video stays silent until it changes.
-      noSpeechVideos.mark(opts.videoPath);
-      transcriptionHistory.finishAttempt(attempt.id, {
-        status: "failed",
-        finishedAt: new Date().toISOString(),
-        errorSummary: NO_SPEECH_SUMMARY,
+        run.markReachedBackend();
+        const transcribed = await transcribeRelayingProgress(
+          backendUrl,
+          checked,
+          settings,
+          opts.videoPath,
+          run.controller,
+          transport,
+          opts.onProgress,
+        );
+        return { result: transcribed, checkedRequest: checked };
       });
-      broadcast("transcription:progress", { path: opts.videoPath, error: true, noSpeech: true });
-      throw error;
+      if (await foundNoSpeech(result, transport, outputPath, startedAtMs)) throw new NoSpeechError();
+      // Named with the standard code of its language (Movie.eng.srt), the one Whisper
+      // was given or the one it detected, unless a subtitle is already there under
+      // it and the user did not confirm an overwrite.
+      const namedPath = languageNamedPath(
+        opts.videoPath,
+        request.language,
+        result.language,
+        request.output_format,
+        opts.overwrite === true,
+      );
+      let finalPath = outputPath;
+      // Upload mode returns subtitle CONTENT; write it to the local output path
+      // (path mode wrote it on the shared filesystem already).
+      if (transport === "upload") {
+        finalPath = namedPath ?? outputPath;
+        if (typeof result.content !== "string") {
+          throw new Error("Upload transcription returned no subtitle content");
+        }
+        const contentBytes = Buffer.byteLength(result.content, "utf-8");
+        if (contentBytes > MAX_SUBTITLE_BYTES) {
+          throw new Error(`Subtitle content too large (${contentBytes} bytes, max ${MAX_SUBTITLE_BYTES})`);
+        }
+        // Atomic write: write to a temp file in the same dir, then rename. This
+        // avoids leaving a half-written subtitle file if the process dies mid-write.
+        mkdirShared(path.dirname(finalPath));
+        // Unique tmp name (pid + timestamp): one run per file is enforced, but
+        // two files can share a transcript name (Movie.mkv, Movie.mp4).
+        const tmpPath = `${finalPath}.${process.pid}.${Date.now()}.tmp`;
+        await fs.promises.writeFile(tmpPath, result.content, "utf-8");
+        try {
+          await fs.promises.rename(tmpPath, finalPath);
+          shareFile(finalPath);
+        } catch (renameError) {
+          await fs.promises.unlink(tmpPath).catch(() => {});
+          throw renameError;
+        }
+      }
+      if (transport !== "upload" && namedPath && namedPath !== outputPath && fs.existsSync(outputPath)) {
+        await fs.promises.rename(outputPath, namedPath);
+        finalPath = namedPath;
+      }
+      const finishedAt = new Date().toISOString();
+      const durationSeconds =
+        typeof result.duration_seconds === "number"
+          ? result.duration_seconds
+          : Number.isFinite(startedAtMs)
+            ? Math.max(0, (Date.now() - startedAtMs) / 1000)
+            : null;
+      noSpeechVideos.clear(opts.videoPath);
+      transcriptionHistory.finishAttempt(attempt.id, {
+        status: "succeeded",
+        finishedAt,
+        durationSeconds,
+        outputPath: finalPath,
+      });
+      broadcast("transcription:progress", { path: opts.videoPath, pct: 100, done: true });
+      return { attemptId: attempt.id, result, outputPath: finalPath, model: checkedRequest.model };
+    } catch (error: unknown) {
+      if (error instanceof NoSpeechError) {
+        // Not retried by scans: the video stays silent until it changes.
+        noSpeechVideos.mark(opts.videoPath);
+        transcriptionHistory.finishAttempt(attempt.id, {
+          status: "failed",
+          finishedAt: new Date().toISOString(),
+          errorSummary: NO_SPEECH_SUMMARY,
+        });
+        broadcast("transcription:progress", { path: opts.videoPath, error: true, noSpeech: true });
+        throw error;
+      }
+      const cancelled = isCancellationError(error) || run.controller.signal.aborted;
+      const summary = summarizeTranscriptionError(error);
+      transcriptionHistory.finishAttempt(attempt.id, {
+        status: cancelled ? "cancelled" : "failed",
+        finishedAt: new Date().toISOString(),
+        errorSummary: cancelled ? "Transcription cancelled" : summary,
+      });
+      // A cancel is not a failure: broadcast {cancelled:true} WITHOUT error so the
+      // client renders "cancelled" rather than an error state. Real failures still
+      // carry error:true.
+      broadcast(
+        "transcription:progress",
+        cancelled ? { path: opts.videoPath, cancelled: true } : { path: opts.videoPath, error: true },
+      );
+      // The cause keeps the full message, so withTranscriptionRun still sees a timeout the summary cut off.
+      const rethrown = new Error(cancelled ? "Transcription cancelled" : summary, { cause: error });
+      // Preserve the backend HTTP status so the route can still map a 5xx upstream
+      // failure to 502 even though we summarize the message here.
+      const carried = (error as { backendStatus?: number } | null)?.backendStatus;
+      if (typeof carried === "number") (rethrown as Error & { backendStatus?: number }).backendStatus = carried;
+      throw rethrown;
     }
-    abandoned = reachedBackend && isAbandonedRun(error, controller);
-    const cancelled = isCancellationError(error) || controller.signal.aborted;
-    const summary = summarizeTranscriptionError(error);
-    transcriptionHistory.finishAttempt(attempt.id, {
-      status: cancelled ? "cancelled" : "failed",
-      finishedAt: new Date().toISOString(),
-      errorSummary: cancelled ? "Transcription cancelled" : summary,
-    });
-    // A cancel is not a failure: broadcast {cancelled:true} WITHOUT error so the
-    // client renders "cancelled" rather than an error state. Real failures still
-    // carry error:true.
-    broadcast(
-      "transcription:progress",
-      cancelled ? { path: opts.videoPath, cancelled: true } : { path: opts.videoPath, error: true },
-    );
-    const rethrown = new Error(cancelled ? "Transcription cancelled" : summary);
-    // Preserve the backend HTTP status so the route can still map a 5xx upstream
-    // failure to 502 even though we summarize the message here.
-    const carried = (error as { backendStatus?: number } | null)?.backendStatus;
-    if (typeof carried === "number") (rethrown as Error & { backendStatus?: number }).backendStatus = carried;
-    throw rethrown;
-  } finally {
-    opts.signal?.removeEventListener("abort", onCallerAbort);
-    settleTranscriptionRun(opts.videoPath, controller, abandoned);
-  }
+  });
 }

@@ -9,7 +9,7 @@ import { broadcast } from "./sse.js";
 import { notify } from "./notify.js";
 import { acquireConnectionLock, resetConnectionLocks } from "./connection-lock.js";
 import { existingTaskOutput, standardOutputFor } from "./scanner.js";
-import { currentTranslationGate, holdQueueStart, takeHeldStart } from "./gpu-gate.js";
+import { currentTranslationGate, holdQueueStart, setTranslationQueueSource, takeHeldStart } from "./gpu-gate.js";
 import { errorMessage } from "./errors.js";
 import {
   abortAllJobs,
@@ -68,6 +68,7 @@ function availablePool(pool: ResolvedConnection[]): ResolvedConnection[] {
 export function isQueueRunning() {
   return isRunning;
 }
+setTranslationQueueSource(isQueueRunning);
 
 export function requestStop() {
   if (isRunning) {

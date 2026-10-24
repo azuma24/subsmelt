@@ -229,20 +229,6 @@ test("queueing a file already queued returns the existing work, which stays canc
   }
 });
 
-test("a scan does not claim a video that is already transcribing", async () => {
-  const { claimAutoTranscriptions, releaseAutoTranscription } = await import("../auto-transcription.js");
-  const { beginTranscriptionRun, endTranscriptionRun } = await import("../transcription/in-flight.js");
-  const running = path.join(mediaDir, "show", "g.mkv");
-  const idle = path.join(mediaDir, "show", "h.mkv");
-  const controller = beginTranscriptionRun(running);
-  try {
-    assert.deepEqual(claimAutoTranscriptions([running, idle]), [idle]);
-  } finally {
-    endTranscriptionRun(running, controller);
-    releaseAutoTranscription(idle);
-  }
-});
-
 test("queued URL work survives browser disconnect and exposes its completed output", async () => {
   const backend = await startBackend(
     "/transcribe/url/stream",

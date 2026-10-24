@@ -17,7 +17,7 @@ fs.mkdirSync(process.env.MEDIA_DIR, { recursive: true });
 const { setSettings } = await import("../config.js");
 const { holdQueueStart, isQueueStartHeld } = await import("../gpu-gate.js");
 const { transcriptionWork } = await import("../transcription/work.js");
-const { withTranscriptionSlot } = await import("./transcription-runtime.js");
+const { withTranscriptionRun } = await import("./transcription-runtime.js");
 
 let arrivals = 0;
 let answer!: () => void;
@@ -64,7 +64,9 @@ test("URL work waits for a free transcription slot like a file run", async () =>
   const before = arrivals;
   let releaseSlot!: () => void;
   // Another run, an auto-transcription say, holds the only slot.
-  const other = withTranscriptionSlot(() => new Promise<void>((resolve) => (releaseSlot = resolve)));
+  const other = withTranscriptionRun("auto-run.mkv", undefined, (run) =>
+    run.withGpu(() => new Promise<void>((resolve) => (releaseSlot = resolve))),
+  );
   const [item] = transcriptionWork.store.enqueue([{ kind: "url", input: "https://example.net/slot", request: {} }]);
   transcriptionWork.start();
 

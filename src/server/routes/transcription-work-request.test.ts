@@ -47,7 +47,7 @@ async function startBackend(subtitlePath: string) {
       return;
     }
     bodies.push(JSON.parse(raw));
-    const result = { type: "result", ok: true, subtitle_path: subtitlePath, language: "en", segments: 3 };
+    const result = { type: "result", ok: true, subtitle_path: subtitlePath, content: "1", language: "en", segments: 3 };
     res.writeHead(200, { "Content-Type": "application/x-ndjson" }).end(`${JSON.stringify(result)}\n`);
   });
   server.listen(0, "127.0.0.1");
@@ -63,11 +63,11 @@ async function startBackend(subtitlePath: string) {
 }
 
 // The Transcribe page retries a history attempt by queueing this request.
-async function queueRetry(input: string, request: Record<string, unknown>): Promise<string> {
+async function queueRetry(input: string, request: Record<string, unknown>, kind = "file"): Promise<string> {
   const res = await fetch(`${appUrl}/api/transcribe/work`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ inputs: [{ kind: "file", input, request }] }),
+    body: JSON.stringify({ inputs: [{ kind, input, request }] }),
   });
   assert.equal(res.status, 202);
   const id = ((await res.json()) as { items: Array<{ id: string }> }).items[0].id;
@@ -139,6 +139,46 @@ test("a retry replays the attempt's device, compute type, format and advanced op
       ],
     );
   } finally {
+    backend.close();
+  }
+});
+
+test("a URL run takes the same Settings as a library file", async () => {
+  const backend = await startBackend("/unused");
+  setSettings({
+    transcription_enabled: "1",
+    transcription_backend_url: backend.url,
+    transcription_model: "large-v3",
+    transcription_language: "ja",
+    transcription_advanced_stt: JSON.stringify({ beam_size: 6 }),
+    transcription_low_ram_behavior: "run_anyway",
+  });
+  try {
+    await queueRetry("https://example.org/talk", { speakerDiarization: true }, "url");
+    assert.deepEqual(
+      backend.bodies.map(({ url, model, language, use_vad, post_action, allow_unsafe, advanced_options }) => ({
+        url,
+        model,
+        language,
+        use_vad,
+        post_action,
+        allow_unsafe,
+        advanced_options,
+      })),
+      [
+        {
+          url: "https://example.org/talk",
+          model: "large-v3",
+          language: "ja",
+          use_vad: true,
+          post_action: "transcribe_only",
+          allow_unsafe: true,
+          advanced_options: { beam_size: 6, speaker_diarization: true },
+        },
+      ],
+    );
+  } finally {
+    setSettings({ transcription_advanced_stt: "", transcription_low_ram_behavior: "" });
     backend.close();
   }
 });

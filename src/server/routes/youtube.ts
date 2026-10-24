@@ -2,7 +2,7 @@ import type { Express, Response } from "express";
 import { getSetting } from "../config.js";
 import { REDACTED_SECRET } from "../connections.js";
 import { countPendingJobs } from "../db.js";
-import { convertHoldsGpu, currentTranslationGate, gpuShared } from "../gpu-gate.js";
+import { currentTranslationGate, gpuShared, translationHoldsGpu } from "../gpu-gate.js";
 import { logger } from "../logger.js";
 import { broadcast } from "../sse.js";
 import { fetchAddedDates, testApiKey } from "../youtube/data-api.js";
@@ -36,7 +36,6 @@ import {
 import { isChannelUploads, isPlaylistId, isVideoId, parseChannelInput, parsePlaylistInput } from "../youtube/urls.js";
 import type { UserAction } from "../youtube/video-status.js";
 import type { YoutubePipeline, YoutubePlaylistSummary, YoutubeStatus } from "../../shared/youtube.js";
-import { isQueueRunning } from "../queue.js";
 import { CooldownError, nextCheckAt, transcriptionReady, type YoutubeWorker } from "../youtube/worker.js";
 import { ffmpegVersion, resolveYtdlpBin, updateYtdlp, ytdlpVersion } from "../youtube/ytdlp.js";
 import { errorMessage } from "../errors.js";
@@ -75,7 +74,7 @@ export function pipelineStatus(store: YoutubeStore): YoutubePipeline {
       shared: gpuShared(),
       held: !gate.open && countPendingJobs() > 0,
       waitingFor: gate.open ? 0 : gate.waitingFor,
-      translationRunning: isQueueRunning() || convertHoldsGpu(),
+      translationRunning: translationHoldsGpu(),
     },
     transcription: { ready, waiting: ready ? 0 : (store.statusTotals().transcribing ?? 0) },
   };

@@ -162,7 +162,7 @@ export function registerTranscriptionRoutes(app: Express): void {
   });
 
   // Stops every queued and in-flight transcription, including runs outside the
-  // work queue such as auto-transcriptions.
+  // work queue such as the YouTube worker's.
   app.post("/api/transcribe/cancel-all", (_req, res) => {
     let cancelled = transcriptionWork.cancelAll();
     for (const [runId, controller] of inFlightTranscriptions) {
