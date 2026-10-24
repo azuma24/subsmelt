@@ -71,10 +71,14 @@ SOURCE_DIR="$(cd "${SOURCE_DIR:-$SCRIPT_DIR}" && pwd)"
   exit 1
 }
 
-# Prints a key's value from config.json, or nothing.
+# Prints a key's value from config.json, or nothing. Only a successful
+# extract counts: on some macOS versions plutil reports a missing key on
+# stdout, which would otherwise read as a stored value.
 config_value() {
   [[ -f "$CONFIG" ]] || return 0
-  plutil -extract "$1" raw -o - "$CONFIG" 2>/dev/null || true
+  local value
+  value="$(plutil -extract "$1" raw -o - "$CONFIG" 2>/dev/null)" || return 0
+  printf '%s' "$value"
 }
 
 umask 077
