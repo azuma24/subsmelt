@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, readFileSync, existsSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync, readdirSync, existsSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -153,6 +153,22 @@ test("legacy inline URL output migrates to an artifact without losing download",
     const migrated = new WorkStore(file);
     assert.equal(migrated.get(item.id)?.content, "legacy transcript");
     assert.doesNotMatch(readFileSync(file, "utf8"), /legacy transcript/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("an unreadable work file is set aside and the store starts empty", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "subsmelt-work-"));
+  try {
+    const file = path.join(dir, "work.json");
+    writeFileSync(file, '[{"id":"half-writ');
+    const store = new WorkStore(file);
+    assert.deepEqual(store.list(), []);
+    const aside = readdirSync(dir).filter((name) => name.startsWith("work.json.unreadable-"));
+    assert.equal(aside.length, 1);
+    assert.equal(readFileSync(path.join(dir, aside[0]), "utf8"), '[{"id":"half-writ');
+    assert.equal(store.enqueue([{ kind: "url", input: "https://example.org/after", request: {} }]).length, 1);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -13,13 +13,17 @@ import {
 } from "../transcription-client.js";
 import {
   getTranscriptionBackendUrl,
+  isAbandonedRun,
   overridesFromBody,
   runTranscriptionAttempt,
+  settleTranscriptionRun,
   waitForGpu,
+  withTranscriptionSlot,
 } from "../routes/transcription-runtime.js";
-import { beginTranscriptionRun, endTranscriptionRun } from "./in-flight.js";
+import { beginTranscriptionRun } from "./in-flight.js";
 import { broadcast } from "../sse.js";
 import { errorMessage } from "../errors.js";
+import { logger } from "../logger.js";
 
 export type WorkStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
 export interface WorkItem {
@@ -43,13 +47,31 @@ const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_COMPLETED = 500;
 const PROGRESS_WRITE_MS = 5000;
 
+/**
+ * The saved work. An unreadable file is set aside rather than deleted, so a
+ * bad file costs its queue but never the server's start.
+ */
+function readItems(file: string): WorkItem[] {
+  if (!fs.existsSync(file)) return [];
+  try {
+    const items: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
+    if (Array.isArray(items)) return items as WorkItem[];
+  } catch {
+    // Unparseable: set aside below.
+  }
+  const aside = `${file}.unreadable-${Date.now()}`;
+  fs.renameSync(file, aside);
+  logger.error("system", `Transcription work file was unreadable; moved it to ${aside} and started empty`);
+  return [];
+}
+
 /** Synchronous atomic persistence: a submission is on disk before its ID is returned. */
 export class WorkStore {
   private items: WorkItem[];
   private progressWrites = new Map<string, number>();
   constructor(private readonly file: string) {
     fs.mkdirSync(path.dirname(file), { recursive: true });
-    this.items = fs.existsSync(file) ? (JSON.parse(fs.readFileSync(file, "utf8")) as WorkItem[]) : [];
+    this.items = readItems(file);
     // One-time migration of old inline URL results; keep the manifest small.
     let migrated = false;
     for (const item of this.items) {
@@ -183,7 +205,10 @@ export class WorkRunner {
     ) => Promise<Partial<WorkItem>> = executeWork,
   ) {}
   start(): void {
-    if (!this.active) this.draining = this.drain();
+    if (!this.active)
+      this.draining = this.drain().catch((error) =>
+        logger.error("system", `Transcription work stopped: ${errorMessage(error) || error}`),
+      );
   }
   idle(): Promise<void> {
     return this.draining;
@@ -280,39 +305,49 @@ async function executeWork(
   const abort = () => controller.abort();
   signal.addEventListener("abort", abort, { once: true });
   if (signal.aborted) abort();
+  let abandoned = false;
+  // Only a run that reached the backend can still be busy there after the app lets go.
+  let reachedBackend = false;
   try {
-    await waitForGpu(item.input, controller.signal);
     const b = item.request;
     const pick = (key: string, fallback: string) =>
       typeof b[key] === "string" && b[key] ? (b[key] as string) : fallback;
     const outputFormat = pick("outputFormat", settings.transcription_output_format || "srt");
-    const result = await transcribeUrlWithBackendStreaming(
-      backendUrl,
-      {
-        url: item.input,
-        output_format: outputFormat,
-        model: pick("model", settings.transcription_model || "small"),
-        language: pick("language", settings.transcription_language || "auto"),
-        device: pick("device", settings.transcription_device || "cpu"),
-        compute_type: pick("computeType", settings.transcription_compute_type || "int8"),
-        post_action: "transcribe_only",
-        ...(b.speakerDiarization === true ? { advanced_options: { speaker_diarization: true } } : {}),
-      },
-      {
-        timeoutSeconds: transcribeTimeoutSeconds(settings),
-        token: settings.transcription_backend_token,
-        signal: controller.signal,
-        onProgress: ({ pct }) => onProgress(pct),
-        onPhase: (phase) => broadcast("transcription:progress", { path: item.input, phase }),
-      },
-    );
+    // Counts against transcription_max_concurrent like every file run.
+    const result = await withTranscriptionSlot(async () => {
+      await waitForGpu(item.input, controller.signal);
+      reachedBackend = true;
+      return transcribeUrlWithBackendStreaming(
+        backendUrl,
+        {
+          url: item.input,
+          output_format: outputFormat,
+          model: pick("model", settings.transcription_model || "small"),
+          language: pick("language", settings.transcription_language || "auto"),
+          device: pick("device", settings.transcription_device || "cpu"),
+          compute_type: pick("computeType", settings.transcription_compute_type || "int8"),
+          post_action: "transcribe_only",
+          ...(b.speakerDiarization === true ? { advanced_options: { speaker_diarization: true } } : {}),
+        },
+        {
+          timeoutSeconds: transcribeTimeoutSeconds(settings),
+          token: settings.transcription_backend_token,
+          signal: controller.signal,
+          onProgress: ({ pct }) => onProgress(pct),
+          onPhase: (phase) => broadcast("transcription:progress", { path: item.input, phase }),
+        },
+      );
+    });
     const content = (result as { content?: string }).content;
     if (typeof content !== "string" || Buffer.byteLength(content) > 50 * 1024 * 1024)
       throw new Error("Invalid URL transcript content");
     return { content, outputFormat, segments: result.segments };
+  } catch (error) {
+    abandoned = reachedBackend && isAbandonedRun(error, controller);
+    throw error;
   } finally {
     signal.removeEventListener("abort", abort);
-    endTranscriptionRun(item.input, controller);
+    settleTranscriptionRun(item.input, controller, abandoned);
   }
 }
 

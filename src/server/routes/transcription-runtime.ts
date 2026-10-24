@@ -93,7 +93,7 @@ function releaseTranscriptionSlot(): void {
   }
 }
 
-async function withTranscriptionSlot<T>(fn: () => Promise<T>): Promise<T> {
+export async function withTranscriptionSlot<T>(fn: () => Promise<T>): Promise<T> {
   await acquireTranscriptionSlot();
   try {
     return await fn();
