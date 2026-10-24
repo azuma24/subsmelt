@@ -682,7 +682,9 @@
       "languageChinese": "Chinees",
       "languageKorean": "Koreaans",
       "gpuSharedLabel": "Transcriptie en vertaling delen één GPU",
-      "gpuSharedHelp": "Vertaal in batches na openstaande transcripties, zodat de GPU minder vaak van model wisselt. Bij 20 wachtende ondertitels begint de vertaling toch."
+      "gpuSharedHelp": "Vertaal in batches na openstaande transcripties, zodat de GPU minder vaak van model wisselt. Bij 20 wachtende ondertitels begint de vertaling toch.",
+      "convertGpuSharedLabel": "Vertalingen van de pagina Converteren wisselen ook af",
+      "convertGpuSharedHelp": "Vertalingen die op de pagina Converteren starten wachten op lopende transcripties, en transcripties wachten op hen. Laat uit als je GPU beide aankan."
     },
     "connections": {
       "mode": "Verbindingsmodus",
@@ -991,7 +993,7 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {"pending": "Pending", "waiting": "Wacht op GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
     "downloadFile": "Bestand downloaden",
     "downloadZip": "ZIP downloaden",
     "detecting": "Taal detecteren…",

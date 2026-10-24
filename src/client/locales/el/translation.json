@@ -682,7 +682,9 @@
       "languageChinese": "Κινεζικά",
       "languageKorean": "Κορεατικά",
       "gpuSharedLabel": "Απομαγνητοφώνηση και μετάφραση μοιράζονται μία GPU",
-      "gpuSharedHelp": "Μετάφραση σε παρτίδες μετά τις εκκρεμείς απομαγνητοφωνήσεις, ώστε η GPU να αλλάζει μοντέλο λιγότερο συχνά. Με 20 υπότιτλους σε αναμονή η μετάφραση ξεκινά ούτως ή άλλως."
+      "gpuSharedHelp": "Μετάφραση σε παρτίδες μετά τις εκκρεμείς απομαγνητοφωνήσεις, ώστε η GPU να αλλάζει μοντέλο λιγότερο συχνά. Με 20 υπότιτλους σε αναμονή η μετάφραση ξεκινά ούτως ή άλλως.",
+      "convertGpuSharedLabel": "Οι μεταφράσεις της σελίδας Μετατροπής εναλλάσσονται επίσης",
+      "convertGpuSharedHelp": "Οι μεταφράσεις που ξεκινούν από τη σελίδα Μετατροπής περιμένουν τις μεταγραφές που εκτελούνται, και οι μεταγραφές περιμένουν αυτές. Αφήστε το απενεργοποιημένο αν η GPU χωράει και τα δύο."
     },
     "connections": {
       "mode": "Λειτουργία σύνδεσης",
@@ -991,7 +993,7 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {"pending": "Pending", "waiting": "Αναμονή για GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
     "downloadFile": "Λήψη αρχείου",
     "downloadZip": "Λήψη ZIP",
     "detecting": "Ανίχνευση γλώσσας…",

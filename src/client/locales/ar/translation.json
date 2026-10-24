@@ -690,7 +690,9 @@
       "languageChinese": "الصينية",
       "languageKorean": "الكورية",
       "gpuSharedLabel": "التفريغ والترجمة يتشاركان وحدة GPU واحدة",
-      "gpuSharedHelp": "ترجم على دفعات بعد انتهاء التفريغ المعلّق كي تبدّل وحدة GPU النموذج أقل. تبدأ الترجمة على أي حال عند انتظار 20 ملف ترجمة."
+      "gpuSharedHelp": "ترجم على دفعات بعد انتهاء التفريغ المعلّق كي تبدّل وحدة GPU النموذج أقل. تبدأ الترجمة على أي حال عند انتظار 20 ملف ترجمة.",
+      "convertGpuSharedLabel": "ترجمات صفحة التحويل تتناوب أيضًا",
+      "convertGpuSharedHelp": "تنتظر الترجمات التي تبدأ من صفحة التحويل انتهاء التفريغ الجاري، وينتظرها التفريغ بدوره. اترك هذا الخيار متوقفًا إذا كانت وحدة GPU تتسع للاثنين."
     },
     "connections": {
       "mode": "وضع الاتصال",
@@ -1007,7 +1009,7 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {"pending": "Pending", "waiting": "بانتظار GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
     "downloadFile": "تنزيل الملف",
     "downloadZip": "تنزيل ZIP",
     "detecting": "جاري الكشف عن اللغة…",

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { getAllSettings, getSetting } from "../config.js";
 import { countOpenJobsForSubtitle } from "../db.js";
-import { gpuShared, setYoutubeBacklogSource, transcriptionMayStart } from "../gpu-gate.js";
+import { convertHoldsGpu, gpuShared, setYoutubeBacklogSource, transcriptionMayStart } from "../gpu-gate.js";
 import { logger } from "../logger.js";
 import { normalizeMediaSubfolder, resolveMediaSubfolder } from "../media-paths.js";
 import { isQueueRunning, runQueueSafely, startHeldQueue } from "../queue.js";
@@ -144,7 +144,12 @@ export interface WorkerOptions {
   queue?: QueueControl;
 }
 
-const liveQueue: QueueControl = { start: () => runQueueSafely(), startHeld: startHeldQueue, running: isQueueRunning };
+// "Running" means translation holds the shared GPU: the queue, or a Convert batch.
+const liveQueue: QueueControl = {
+  start: () => runQueueSafely(),
+  startHeld: startHeldQueue,
+  running: () => isQueueRunning() || convertHoldsGpu(),
+};
 
 export function transcriptionReady(settings = getAllSettings()): boolean {
   return settings.transcription_enabled === "1" && Boolean(getTranscriptionBackendUrl(settings));

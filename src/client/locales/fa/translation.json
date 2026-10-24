@@ -682,7 +682,9 @@
       "languageChinese": "چینی",
       "languageKorean": "کره‌ای",
       "gpuSharedLabel": "پیاده‌سازی و ترجمه یک GPU مشترک دارند",
-      "gpuSharedHelp": "پس از پیاده‌سازی‌های در صف، دسته‌ای ترجمه می‌کند تا GPU کمتر مدل عوض کند. وقتی ۲۰ زیرنویس منتظر باشند ترجمه به هر حال شروع می‌شود."
+      "gpuSharedHelp": "پس از پیاده‌سازی‌های در صف، دسته‌ای ترجمه می‌کند تا GPU کمتر مدل عوض کند. وقتی ۲۰ زیرنویس منتظر باشند ترجمه به هر حال شروع می‌شود.",
+      "convertGpuSharedLabel": "ترجمه‌های صفحهٔ تبدیل هم نوبتی اجرا شوند",
+      "convertGpuSharedHelp": "ترجمه‌هایی که از صفحهٔ تبدیل شروع می‌شوند منتظر رونویسی‌های در حال اجرا می‌مانند و رونویسی‌ها هم منتظر آن‌ها. اگر GPU برای هر دو جا دارد، خاموش بگذارید."
     },
     "connections": {
       "mode": "حالت اتصال",
@@ -991,7 +993,7 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {"pending": "Pending", "waiting": "در انتظار GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
     "downloadFile": "دانلود پرونده",
     "downloadZip": "دانلود ZIP",
     "detecting": "درحال تشخیص زبان…",

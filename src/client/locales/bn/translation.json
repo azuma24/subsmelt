@@ -682,7 +682,9 @@
       "languageChinese": "চীনা",
       "languageKorean": "কোরীয়",
       "gpuSharedLabel": "ট্রান্সক্রিপশন ও অনুবাদ একটি GPU ভাগ করে",
-      "gpuSharedHelp": "অপেক্ষমাণ ট্রান্সক্রিপশনের পরে ব্যাচে অনুবাদ করে, যাতে GPU কম বার মডেল বদলায়। ২০টি সাবটাইটেল অপেক্ষায় থাকলে অনুবাদ তবুও শুরু হয়।"
+      "gpuSharedHelp": "অপেক্ষমাণ ট্রান্সক্রিপশনের পরে ব্যাচে অনুবাদ করে, যাতে GPU কম বার মডেল বদলায়। ২০টি সাবটাইটেল অপেক্ষায় থাকলে অনুবাদ তবুও শুরু হয়।",
+      "convertGpuSharedLabel": "কনভার্ট পাতার অনুবাদও পালা করে চলবে",
+      "convertGpuSharedHelp": "কনভার্ট পাতা থেকে শুরু হওয়া অনুবাদ চলমান ট্রান্সক্রিপশন শেষ হওয়ার অপেক্ষা করে, আর ট্রান্সক্রিপশনও সেগুলোর অপেক্ষা করে। আপনার GPU-তে দুটোরই জায়গা থাকলে এটি বন্ধ রাখুন।"
     },
     "connections": {
       "mode": "সংযোগ মোড",
@@ -991,7 +993,7 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {"pending": "Pending", "waiting": "GPU-র অপেক্ষায়", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
     "downloadFile": "ফাইল ডাউনলোড",
     "downloadZip": "ZIP ডাউনলোড",
     "detecting": "ভাষা সনাক্ত করছি…",

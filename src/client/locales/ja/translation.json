@@ -682,7 +682,9 @@
       "languageChinese": "中国語",
       "languageKorean": "韓国語",
       "gpuSharedLabel": "文字起こしと翻訳で 1 枚の GPU を共有する",
-      "gpuSharedHelp": "保留中の文字起こしが終わってからまとめて翻訳し、GPU のモデル切り替えを減らします。字幕が 20 件たまった場合は翻訳を始めます。"
+      "gpuSharedHelp": "保留中の文字起こしが終わってからまとめて翻訳し、GPU のモデル切り替えを減らします。字幕が 20 件たまった場合は翻訳を始めます。",
+      "convertGpuSharedLabel": "変換ページの翻訳も交代で実行",
+      "convertGpuSharedHelp": "変換ページで開始した翻訳は実行中の文字起こしを待ち、文字起こしも翻訳を待ちます。GPU に両方を動かす余裕があればオフのままにしてください。"
     },
     "connections": {
       "mode": "接続モード",
@@ -991,7 +993,7 @@
     "batchUnavailable": "バッチの期限が切れたか、利用できません",
     "batchLimit": "最大10ファイル、各1 MBまで",
     "serverProcessing": "サーバーで処理中です。このタブを閉じて後で戻れます。",
-    "batchStatus": {"pending": "待機中", "running": "実行中", "done": "完了", "working": "処理中", "error": "失敗"},
+    "batchStatus": {"pending": "待機中", "waiting": "GPU 待ち", "running": "実行中", "done": "完了", "working": "処理中", "error": "失敗"},
     "downloadFile": "ファイルをダウンロード",
     "downloadZip": "ZIP をダウンロード",
     "detecting": "言語を検出中…",

@@ -684,7 +684,9 @@
       "languageChinese": "סינית",
       "languageKorean": "קוריאנית",
       "gpuSharedLabel": "תמלול ותרגום חולקים GPU אחד",
-      "gpuSharedHelp": "מתרגם באצוות אחרי התמלולים הממתינים, כך שה-GPU מחליף מודל פחות פעמים. כש-20 כתוביות ממתינות התרגום מתחיל בכל זאת."
+      "gpuSharedHelp": "מתרגם באצוות אחרי התמלולים הממתינים, כך שה-GPU מחליף מודל פחות פעמים. כש-20 כתוביות ממתינות התרגום מתחיל בכל זאת.",
+      "convertGpuSharedLabel": "גם תרגומים מדף ההמרה מתחלפים בתור",
+      "convertGpuSharedHelp": "תרגומים שהתחילו בדף ההמרה ממתינים לתמלולים שרצים, ותמלולים ממתינים להם. השאירו כבוי אם ב-GPU יש מקום לשניהם."
     },
     "connections": {
       "mode": "מצב חיבור",
@@ -995,7 +997,7 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {"pending": "Pending", "waiting": "ממתין ל-GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
     "downloadFile": "הורד קובץ",
     "downloadZip": "הורד ZIP",
     "detecting": "זיהוי שפה…",

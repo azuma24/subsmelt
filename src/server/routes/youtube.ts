@@ -2,7 +2,7 @@ import type { Express, Response } from "express";
 import { getSetting } from "../config.js";
 import { REDACTED_SECRET } from "../connections.js";
 import { countPendingJobs } from "../db.js";
-import { currentTranslationGate, gpuShared } from "../gpu-gate.js";
+import { convertHoldsGpu, currentTranslationGate, gpuShared } from "../gpu-gate.js";
 import { logger } from "../logger.js";
 import { broadcast } from "../sse.js";
 import { fetchAddedDates, testApiKey } from "../youtube/data-api.js";
@@ -75,7 +75,7 @@ export function pipelineStatus(store: YoutubeStore): YoutubePipeline {
       shared: gpuShared(),
       held: !gate.open && countPendingJobs() > 0,
       waitingFor: gate.open ? 0 : gate.waitingFor,
-      translationRunning: isQueueRunning(),
+      translationRunning: isQueueRunning() || convertHoldsGpu(),
     },
     transcription: { ready, waiting: ready ? 0 : (store.statusTotals().transcribing ?? 0) },
   };

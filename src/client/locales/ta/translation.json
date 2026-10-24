@@ -682,7 +682,9 @@
       "languageChinese": "சீனம்",
       "languageKorean": "கொரியம்",
       "gpuSharedLabel": "எழுத்துப்படியாக்கமும் மொழிபெயர்ப்பும் ஒரே GPU-வைப் பகிர்கின்றன",
-      "gpuSharedHelp": "நிலுவையில் உள்ள எழுத்துப்படியாக்கங்களுக்குப் பிறகு தொகுப்பாக மொழிபெயர்க்கும், இதனால் GPU குறைவாக மாதிரி மாற்றும். 20 வசனங்கள் காத்திருந்தால் மொழிபெயர்ப்பு தொடங்கும்."
+      "gpuSharedHelp": "நிலுவையில் உள்ள எழுத்துப்படியாக்கங்களுக்குப் பிறகு தொகுப்பாக மொழிபெயர்க்கும், இதனால் GPU குறைவாக மாதிரி மாற்றும். 20 வசனங்கள் காத்திருந்தால் மொழிபெயர்ப்பு தொடங்கும்.",
+      "convertGpuSharedLabel": "மாற்றுப் பக்க மொழிபெயர்ப்புகளும் முறைவைத்து இயங்கும்",
+      "convertGpuSharedHelp": "மாற்றுப் பக்கத்தில் தொடங்கிய மொழிபெயர்ப்புகள் இயங்கும் எழுத்துப்பெயர்ப்புகளுக்காகக் காத்திருக்கும்; எழுத்துப்பெயர்ப்புகளும் அவற்றுக்காகக் காத்திருக்கும். உங்கள் GPU இரண்டையும் தாங்கினால் இதை அணைத்தே வைக்கவும்."
     },
     "connections": {
       "mode": "இணைப்பு முறை",
@@ -991,7 +993,7 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {"pending": "Pending", "waiting": "GPU-க்காகக் காத்திருக்கிறது", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
     "downloadFile": "கோப்பைப் பதிவிறக்கு",
     "downloadZip": "ZIP பதிவிறக்கு",
     "detecting": "மொழிக் கண்டறிந்து கொண்டுள்ளது…",

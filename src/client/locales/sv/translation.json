@@ -682,7 +682,9 @@
       "languageChinese": "Kinesiska",
       "languageKorean": "Koreanska",
       "gpuSharedLabel": "Transkription och översättning delar en GPU",
-      "gpuSharedHelp": "Översätt i omgångar efter väntande transkriptioner så att GPU:n byter modell mer sällan. Översättningen startar ändå när 20 undertexter väntar."
+      "gpuSharedHelp": "Översätt i omgångar efter väntande transkriptioner så att GPU:n byter modell mer sällan. Översättningen startar ändå när 20 undertexter väntar.",
+      "convertGpuSharedLabel": "Översättningar från sidan Konvertera turas också om",
+      "convertGpuSharedHelp": "Översättningar som startas på sidan Konvertera väntar på pågående transkriptioner, och transkriptioner väntar på dem. Låt vara av om GPU:n klarar båda."
     },
     "connections": {
       "mode": "Anslutningsläge",
@@ -991,7 +993,7 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {"pending": "Pending", "waiting": "Väntar på GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
     "downloadFile": "Ladda ned fil",
     "downloadZip": "Ladda ned ZIP",
     "detecting": "Detekterar språk…",

@@ -682,7 +682,9 @@
       "languageChinese": "중국어",
       "languageKorean": "한국어",
       "gpuSharedLabel": "전사와 번역이 GPU 하나를 함께 사용",
-      "gpuSharedHelp": "대기 중인 전사가 끝난 뒤 묶어서 번역해 GPU의 모델 교체를 줄입니다. 자막 20개가 대기하면 번역을 시작합니다."
+      "gpuSharedHelp": "대기 중인 전사가 끝난 뒤 묶어서 번역해 GPU의 모델 교체를 줄입니다. 자막 20개가 대기하면 번역을 시작합니다.",
+      "convertGpuSharedLabel": "변환 페이지 번역도 차례로 실행",
+      "convertGpuSharedHelp": "변환 페이지에서 시작한 번역은 실행 중인 전사를 기다리고, 전사도 번역을 기다립니다. GPU가 둘 다 감당할 수 있다면 꺼 두세요."
     },
     "connections": {
       "mode": "연결 모드",
@@ -991,7 +993,7 @@
     "batchUnavailable": "작업이 만료되었거나 사용할 수 없습니다",
     "batchLimit": "최대 10개 파일, 각 1 MB",
     "serverProcessing": "서버에서 처리 중입니다. 탭을 닫고 나중에 돌아와도 됩니다.",
-    "batchStatus": {"pending": "대기 중", "running": "실행 중", "done": "완료", "working": "처리 중", "error": "실패"},
+    "batchStatus": {"pending": "대기 중", "waiting": "GPU 대기 중", "running": "실행 중", "done": "완료", "working": "처리 중", "error": "실패"},
     "downloadFile": "파일 다운로드",
     "downloadZip": "ZIP 다운로드",
     "detecting": "언어 감지 중…",

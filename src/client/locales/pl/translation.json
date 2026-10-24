@@ -686,7 +686,9 @@
       "languageChinese": "Chiński",
       "languageKorean": "Koreański",
       "gpuSharedLabel": "Transkrypcja i tłumaczenie dzielą jeden GPU",
-      "gpuSharedHelp": "Tłumacz partiami po oczekujących transkrypcjach, aby GPU rzadziej zmieniał model. Tłumaczenie i tak rusza, gdy czeka 20 napisów."
+      "gpuSharedHelp": "Tłumacz partiami po oczekujących transkrypcjach, aby GPU rzadziej zmieniał model. Tłumaczenie i tak rusza, gdy czeka 20 napisów.",
+      "convertGpuSharedLabel": "Tłumaczenia ze strony Konwersja też czekają na swoją kolej",
+      "convertGpuSharedHelp": "Tłumaczenia uruchomione na stronie Konwersja czekają na trwające transkrypcje, a transkrypcje czekają na nie. Zostaw wyłączone, jeśli GPU zmieści oba zadania."
     },
     "connections": {
       "mode": "Tryb połączenia",
@@ -999,7 +1001,7 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {"pending": "Pending", "waiting": "Czeka na GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
     "downloadFile": "Pobierz plik",
     "downloadZip": "Pobierz ZIP",
     "detecting": "Wykrywanie języka…",

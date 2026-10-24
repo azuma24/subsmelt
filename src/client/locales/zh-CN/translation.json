@@ -682,7 +682,9 @@
       "languageChinese": "中文",
       "languageKorean": "韩语",
       "gpuSharedLabel": "转录与翻译共用一块 GPU",
-      "gpuSharedHelp": "先完成待处理的转录再分批翻译，减少 GPU 切换模型的次数。累积 20 份字幕待翻译时仍会开始翻译。"
+      "gpuSharedHelp": "先完成待处理的转录再分批翻译，减少 GPU 切换模型的次数。累积 20 份字幕待翻译时仍会开始翻译。",
+      "convertGpuSharedLabel": "转换页面的翻译也轮流使用",
+      "convertGpuSharedHelp": "从转换页面开始的翻译会等待正在进行的转录，转录也会等待这些翻译。如果你的 GPU 能同时运行两者，请保持关闭。"
     },
     "connections": {
       "mode": "连接模式",
@@ -991,7 +993,7 @@
     "batchUnavailable": "批次已过期或不可用",
     "batchLimit": "最多 10 个文件，每个不超过 1 MB",
     "serverProcessing": "服务器正在处理，您可以关闭标签页，稍后再回来。",
-    "batchStatus": {"pending": "等待中", "running": "运行中", "done": "完成", "working": "处理中", "error": "失败"},
+    "batchStatus": {"pending": "等待中", "waiting": "等待 GPU", "running": "运行中", "done": "完成", "working": "处理中", "error": "失败"},
     "downloadFile": "下载文件",
     "downloadZip": "下载 ZIP",
     "detecting": "正在检测语言…",

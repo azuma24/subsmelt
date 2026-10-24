@@ -684,7 +684,9 @@
       "languageChinese": "Chineză",
       "languageKorean": "Coreeană",
       "gpuSharedLabel": "Transcrierea și traducerea folosesc același GPU",
-      "gpuSharedHelp": "Traduce în loturi după transcrierile în așteptare, ca GPU-ul să schimbe modelul mai rar. Traducerea pornește oricum când 20 de subtitrări așteaptă."
+      "gpuSharedHelp": "Traduce în loturi după transcrierile în așteptare, ca GPU-ul să schimbe modelul mai rar. Traducerea pornește oricum când 20 de subtitrări așteaptă.",
+      "convertGpuSharedLabel": "Și traducerile din pagina Conversie se alternează",
+      "convertGpuSharedHelp": "Traducerile pornite din pagina Conversie așteaptă transcrierile în curs, iar transcrierile le așteaptă pe ele. Lăsați dezactivat dacă GPU-ul face față ambelor."
     },
     "connections": {
       "mode": "Mod conexiune",
@@ -995,7 +997,7 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {"pending": "Pending", "waiting": "Așteaptă GPU-ul", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
     "downloadFile": "Descarcă fișier",
     "downloadZip": "Descarcă ZIP",
     "detecting": "Detectarea limbii…",

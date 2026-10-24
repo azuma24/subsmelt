@@ -97,6 +97,7 @@ export const SETTINGS = {
   transcription_path_map_to: s,
   transcription_transport: oneOf(["auto", "shared", "upload"]),
   gpu_shared: flag,
+  convert_gpu_shared: flag,
   // YouTube
   youtube_playlists: json,
   youtube_download_dir: s,

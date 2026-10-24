@@ -7,6 +7,7 @@ import { resolveConnectionPool } from "../connections.js";
 import { convertSubtitle, translateFile, planJobContext } from "../translator.js";
 import { sanitizeLanguageName } from "./validation.js";
 import { logger } from "../logger.js";
+import { acquireGpuForConvert, releaseGpuForConvert } from "../gpu-gate.js";
 
 // JSON uploads are constrained independently of the global Express 25mb parser.
 // No input or output bytes are returned by the status endpoint.
@@ -41,7 +42,7 @@ type Job = {
   id: string;
   createdAt: number;
   finishedAt?: number;
-  status: "pending" | "running" | "done";
+  status: "pending" | "waiting" | "running" | "done";
   files: FileState[];
   options: Omit<Options, "files">;
 };
@@ -235,46 +236,18 @@ export class ConvertBatchStore {
       for (const id of entries()) {
         const job = this.get(id);
         if (!job || job.status === "done") continue;
-        job.status = "running";
-        save(job);
-        for (let i = 0; i < job.files.length; i++) {
-          const file = job.files[i];
-          if (file.status === "done" || file.status === "error") continue;
-          file.status = "working";
-          save(job);
-          try {
-            const dir = jobDir(id);
-            const input = path.join(dir, `input-${i}`);
-            if (!regular(input) || !regular(path.join(dir, "inputs.json")))
-              throw new Error("Uploaded input unavailable");
-            const metadata = JSON.parse(fs.readFileSync(path.join(dir, "inputs.json"), "utf8"))[i] as Input;
-            const content = fs.readFileSync(input, "utf8");
-            const result = await this.processFile(
-              { ...metadata, content },
-              job.options,
-              input,
-              path.join(dir, `output-${i}`),
-            );
-            if (Buffer.byteLength(result, "utf8") > MAX_BATCH_FILE_BYTES) throw new Error("Output size limit exceeded");
-            fs.writeFileSync(path.join(dir, `output-${i}`), result, { mode: 0o600 });
-            const base = file.name.replace(/\.[^.]*$/, "");
-            file.outputName = `${base}${job.options.translate && !metadata.skip ? `.${job.options.targetCode || "translated"}` : ""}.${job.options.targetFormat}`;
-            file.status = "done";
-            // Commit the result before discarding its only recoverable input.
+        // Translation may have to take turns with Whisper on a shared GPU.
+        const usesGpu = job.options.translate;
+        if (usesGpu)
+          await acquireGpuForConvert(() => {
+            job.status = "waiting";
             save(job);
-          } catch (error) {
-            file.status = "error";
-            file.error = error instanceof Error ? error.message.slice(0, 300) : "Conversion failed";
-            fs.rmSync(path.join(jobDir(id), `output-${i}`), { force: true });
-          } finally {
-            save(job);
-            fs.rmSync(path.join(jobDir(id), `input-${i}`), { force: true });
-          }
+          });
+        try {
+          await this.runJob(id, job);
+        } finally {
+          if (usesGpu) releaseGpuForConvert();
         }
-        fs.rmSync(path.join(jobDir(id), "inputs.json"), { force: true });
-        job.status = "done";
-        job.finishedAt = Date.now();
-        save(job);
       }
     } finally {
       this.running = false;
@@ -283,6 +256,47 @@ export class ConvertBatchStore {
         this.kick();
       }
     }
+  }
+  private async runJob(id: string, job: Job): Promise<void> {
+    job.status = "running";
+    save(job);
+    for (let i = 0; i < job.files.length; i++) {
+      const file = job.files[i];
+      if (file.status === "done" || file.status === "error") continue;
+      file.status = "working";
+      save(job);
+      try {
+        const dir = jobDir(id);
+        const input = path.join(dir, `input-${i}`);
+        if (!regular(input) || !regular(path.join(dir, "inputs.json"))) throw new Error("Uploaded input unavailable");
+        const metadata = JSON.parse(fs.readFileSync(path.join(dir, "inputs.json"), "utf8"))[i] as Input;
+        const content = fs.readFileSync(input, "utf8");
+        const result = await this.processFile(
+          { ...metadata, content },
+          job.options,
+          input,
+          path.join(dir, `output-${i}`),
+        );
+        if (Buffer.byteLength(result, "utf8") > MAX_BATCH_FILE_BYTES) throw new Error("Output size limit exceeded");
+        fs.writeFileSync(path.join(dir, `output-${i}`), result, { mode: 0o600 });
+        const base = file.name.replace(/\.[^.]*$/, "");
+        file.outputName = `${base}${job.options.translate && !metadata.skip ? `.${job.options.targetCode || "translated"}` : ""}.${job.options.targetFormat}`;
+        file.status = "done";
+        // Commit the result before discarding its only recoverable input.
+        save(job);
+      } catch (error) {
+        file.status = "error";
+        file.error = error instanceof Error ? error.message.slice(0, 300) : "Conversion failed";
+        fs.rmSync(path.join(jobDir(id), `output-${i}`), { force: true });
+      } finally {
+        save(job);
+        fs.rmSync(path.join(jobDir(id), `input-${i}`), { force: true });
+      }
+    }
+    fs.rmSync(path.join(jobDir(id), "inputs.json"), { force: true });
+    job.status = "done";
+    job.finishedAt = Date.now();
+    save(job);
   }
 }
 

@@ -686,7 +686,9 @@
       "languageChinese": "Китайська",
       "languageKorean": "Корейська",
       "gpuSharedLabel": "Розшифровка й переклад ділять одну GPU",
-      "gpuSharedHelp": "Перекладати пакетами після розшифровок у черзі, щоб GPU рідше змінював модель. Коли чекають 20 субтитрів, переклад однаково починається."
+      "gpuSharedHelp": "Перекладати пакетами після розшифровок у черзі, щоб GPU рідше змінював модель. Коли чекають 20 субтитрів, переклад однаково починається.",
+      "convertGpuSharedLabel": "Переклади зі сторінки «Конвертація» теж ідуть по черзі",
+      "convertGpuSharedHelp": "Переклади, запущені на сторінці «Конвертація», чекають поточних транскрипцій, а транскрипції чекають на них. Залиште вимкненим, якщо GPU впорається з обома."
     },
     "connections": {
       "mode": "Режим з'єднання",
@@ -999,7 +1001,7 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {"pending": "Pending", "waiting": "Очікує GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
     "downloadFile": "Завантажити файл",
     "downloadZip": "Завантажити ZIP",
     "detecting": "Визначення мови…",

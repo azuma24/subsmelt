@@ -682,7 +682,9 @@
       "languageChinese": "Kínai",
       "languageKorean": "Koreai",
       "gpuSharedLabel": "Az átírás és a fordítás egy GPU-n osztozik",
-      "gpuSharedHelp": "A függő átírások után kötegekben fordít, így a GPU ritkábban vált modellt. 20 várakozó feliratnál a fordítás mindenképp elindul."
+      "gpuSharedHelp": "A függő átírások után kötegekben fordít, így a GPU ritkábban vált modellt. 20 várakozó feliratnál a fordítás mindenképp elindul.",
+      "convertGpuSharedLabel": "Az Átalakítás oldal fordításai is váltakoznak",
+      "convertGpuSharedHelp": "Az Átalakítás oldalon indított fordítások megvárják a futó átírásokat, és az átírások is megvárják őket. Hagyja kikapcsolva, ha a GPU mindkettőt elbírja."
     },
     "connections": {
       "mode": "Kapcsolati mód",
@@ -991,7 +993,7 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {"pending": "Pending", "waiting": "GPU-ra vár", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
     "downloadFile": "Fájl letöltése",
     "downloadZip": "ZIP letöltése",
     "detecting": "Nyelv felismerése…",

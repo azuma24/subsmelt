@@ -237,7 +237,7 @@ export interface ConvertRequest {
 
 export interface ConvertBatch {
   id: string;
-  status: "pending" | "running" | "done";
+  status: "pending" | "waiting" | "running" | "done";
   createdAt: number;
   finishedAt?: number;
   files: { name: string; status: "pending" | "working" | "done" | "error"; outputName?: string; error?: string }[];

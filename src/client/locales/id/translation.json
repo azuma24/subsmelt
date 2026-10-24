@@ -682,7 +682,9 @@
       "languageChinese": "Mandarin",
       "languageKorean": "Korea",
       "gpuSharedLabel": "Transkripsi dan terjemahan berbagi satu GPU",
-      "gpuSharedHelp": "Terjemahkan per batch setelah transkripsi yang tertunda agar GPU lebih jarang berganti model. Terjemahan tetap dimulai saat 20 subtitle menunggu."
+      "gpuSharedHelp": "Terjemahkan per batch setelah transkripsi yang tertunda agar GPU lebih jarang berganti model. Terjemahan tetap dimulai saat 20 subtitle menunggu.",
+      "convertGpuSharedLabel": "Terjemahan halaman Konversi juga bergantian",
+      "convertGpuSharedHelp": "Terjemahan yang dimulai di halaman Konversi menunggu transkripsi yang berjalan, dan transkripsi menunggu terjemahan itu. Biarkan mati jika GPU Anda cukup untuk keduanya."
     },
     "connections": {
       "mode": "Mode koneksi",
@@ -991,7 +993,7 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {"pending": "Pending", "waiting": "Menunggu GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
     "downloadFile": "Unduh file",
     "downloadZip": "Unduh ZIP",
     "detecting": "Mendeteksi bahasa…",

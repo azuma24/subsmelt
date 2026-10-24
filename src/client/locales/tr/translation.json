@@ -682,7 +682,9 @@
       "languageChinese": "Çince",
       "languageKorean": "Korece",
       "gpuSharedLabel": "Döküm ve çeviri tek bir GPU'yu paylaşıyor",
-      "gpuSharedHelp": "Bekleyen dökümlerden sonra toplu çeviri yapar, böylece GPU daha az model değiştirir. 20 altyazı beklediğinde çeviri yine de başlar."
+      "gpuSharedHelp": "Bekleyen dökümlerden sonra toplu çeviri yapar, böylece GPU daha az model değiştirir. 20 altyazı beklediğinde çeviri yine de başlar.",
+      "convertGpuSharedLabel": "Dönüştür sayfası çevirileri de sırayla çalışsın",
+      "convertGpuSharedHelp": "Dönüştür sayfasında başlatılan çeviriler süren transkripsiyonları bekler, transkripsiyonlar da onları bekler. GPU'nuz ikisini birden kaldırabiliyorsa kapalı bırakın."
     },
     "connections": {
       "mode": "Bağlantı modu",
@@ -991,7 +993,7 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {"pending": "Pending", "waiting": "GPU bekleniyor", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
     "downloadFile": "Dosyayı indir",
     "downloadZip": "ZIP indir",
     "detecting": "Dil algılanıyor…",

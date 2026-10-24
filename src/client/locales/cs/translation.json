@@ -686,7 +686,9 @@
       "languageChinese": "Čínština",
       "languageKorean": "Korejština",
       "gpuSharedLabel": "Přepis a překlad sdílejí jednu GPU",
-      "gpuSharedHelp": "Překládat po dávkách po čekajících přepisech, aby GPU méně často měnila model. Při 20 čekajících titulcích se překlad přesto spustí."
+      "gpuSharedHelp": "Překládat po dávkách po čekajících přepisech, aby GPU méně často měnila model. Při 20 čekajících titulcích se překlad přesto spustí.",
+      "convertGpuSharedLabel": "Překlady ze stránky Převod se také střídají",
+      "convertGpuSharedHelp": "Překlady spuštěné na stránce Převod počkají na běžící přepisy a přepisy počkají na ně. Pokud GPU zvládne obojí, nechte vypnuté."
     },
     "connections": {
       "mode": "Režim připojení",
@@ -999,7 +1001,7 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {"pending": "Pending", "waiting": "Čeká na GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
     "downloadFile": "Stáhnout soubor",
     "downloadZip": "Stáhnout ZIP",
     "detecting": "Detekuje se jazyk…",

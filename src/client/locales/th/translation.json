@@ -682,7 +682,9 @@
       "languageChinese": "จีน",
       "languageKorean": "เกาหลี",
       "gpuSharedLabel": "การถอดเสียงและการแปลใช้ GPU ตัวเดียวกัน",
-      "gpuSharedHelp": "แปลเป็นชุดหลังการถอดเสียงที่ค้างอยู่ เพื่อให้ GPU สลับโมเดลน้อยลง เมื่อมีคำบรรยายรอ 20 ไฟล์ การแปลจะเริ่มอยู่ดี"
+      "gpuSharedHelp": "แปลเป็นชุดหลังการถอดเสียงที่ค้างอยู่ เพื่อให้ GPU สลับโมเดลน้อยลง เมื่อมีคำบรรยายรอ 20 ไฟล์ การแปลจะเริ่มอยู่ดี",
+      "convertGpuSharedLabel": "การแปลจากหน้าแปลงไฟล์ก็ผลัดกันทำงานด้วย",
+      "convertGpuSharedHelp": "การแปลที่เริ่มจากหน้าแปลงไฟล์จะรอการถอดเสียงที่กำลังทำงาน และการถอดเสียงก็จะรอการแปลเหล่านั้น ปิดไว้หาก GPU รองรับทั้งสองอย่างได้"
     },
     "connections": {
       "mode": "โหมดการเชื่อมต่อ",
@@ -991,7 +993,7 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {"pending": "Pending", "waiting": "กำลังรอ GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
     "downloadFile": "ดาวน์โหลดไฟล์",
     "downloadZip": "ดาวน์โหลด ZIP",
     "detecting": "กำลังตรวจสอบภาษา…",

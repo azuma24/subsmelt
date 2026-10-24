@@ -123,7 +123,7 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {"pending": "Pending", "waiting": "Waiting for GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
     "downloadFile": "Download file",
     "downloadZip": "Download ZIP",
     "detecting": "Detecting language…",
@@ -834,7 +834,9 @@
       "languageChinese": "Chinese",
       "languageKorean": "Korean",
       "gpuSharedLabel": "Transcription and translation share one GPU",
-      "gpuSharedHelp": "Translate in batches after pending transcriptions, so the GPU swaps models less often. Translation still starts once 20 subtitles are waiting."
+      "gpuSharedHelp": "Translate in batches after pending transcriptions, so the GPU swaps models less often. Translation still starts once 20 subtitles are waiting.",
+      "convertGpuSharedLabel": "Convert page translations take turns too",
+      "convertGpuSharedHelp": "Translations started on the Convert page wait for running transcriptions, and transcriptions wait for them. Leave this off if your GPU has room for both."
     },
     "connections": {
       "mode": "Connection mode",

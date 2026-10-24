@@ -9,6 +9,7 @@ import { TranscriptionReadinessPanel } from "../TranscriptionReadinessPanel";
 import { PathMappingFields } from "./PathMappingFields";
 import { RawConfigDrawer } from "./RawConfigDrawer";
 import { SttAdvancedFields } from "./SttAdvancedFields";
+import { GpuSharingFields } from "./GpuSharingFields";
 import { descriptorsFrom, findDescriptor, transcriptionHost } from "../../whisper/whisper-shared";
 import { LanguageSupportWarning, ModelPicker } from "../../whisper/ModelPicker";
 import { ToggleRow, labelCls, selectCls } from "./shared";
@@ -162,12 +163,7 @@ export function SttSection({
           </Select>
         </div>
       </div>
-      <ToggleRow
-        title={t("settings.transcription.gpuSharedLabel")}
-        description={t("settings.transcription.gpuSharedHelp")}
-        checked={str(settings.gpu_shared, "0") === "1"}
-        onChange={(checked) => update("gpu_shared", checked ? "1" : "0")}
-      />
+      <GpuSharingFields settings={settings} update={update} />
       <TranscriptionReadinessPanel settings={settings} healthQuery={healthQuery} dirty={dirty} />
 
       {/* Speech-to-text model manager — proxied to the configured backend. Requires a

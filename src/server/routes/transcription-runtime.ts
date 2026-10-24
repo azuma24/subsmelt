@@ -36,7 +36,7 @@ import { broadcast } from "../sse.js";
 import { mkdirShared, shareFile } from "../shared-files.js";
 import { standardLangCode } from "../language-codes.js";
 import { isQueueRunning, startHeldQueue } from "../queue.js";
-import { waitUntilTranscriptionMayStart } from "../gpu-gate.js";
+import { convertHoldsGpu, waitUntilTranscriptionMayStart } from "../gpu-gate.js";
 import {
   beginTranscriptionRun,
   endTranscriptionRun,
@@ -107,14 +107,19 @@ export async function withTranscriptionSlot<T>(fn: () => Promise<T>): Promise<T>
 export { inFlightTranscriptions, TranscriptionInFlightError };
 
 /**
- * Holds a run until the GPU is free of translation (gpu_shared), telling the
- * page why it has not started. The YouTube worker checks the same rule before
+ * Holds a run until the GPU is free of translation (gpu_shared): the queue's,
+ * and a Convert batch's when convert_gpu_shared is on. Tells the page why the
+ * run has not started. The YouTube worker checks the same rule before
  * it calls in, so its runs rarely wait here.
  */
 export function waitForGpu(runId: string, signal: AbortSignal): Promise<void> {
-  return waitUntilTranscriptionMayStart(isQueueRunning, signal, () => {
-    broadcast("transcription:progress", { path: runId, phase: "waiting_for_gpu" });
-  });
+  return waitUntilTranscriptionMayStart(
+    () => isQueueRunning() || convertHoldsGpu(),
+    signal,
+    () => {
+      broadcast("transcription:progress", { path: runId, phase: "waiting_for_gpu" });
+    },
+  );
 }
 
 /**

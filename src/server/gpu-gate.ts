@@ -75,6 +75,43 @@ export async function waitUntilTranscriptionMayStart(
   if (signal.aborted) throw new Error("Transcription cancelled");
 }
 
+/**
+ * Whether Convert-page translations take turns with Whisper too. Off by
+ * default: a GPU with room for both runs them side by side.
+ */
+export function convertSharesGpu(): boolean {
+  return gpuShared() && getSetting("convert_gpu_shared") === "1";
+}
+
+let convertTranslating = false;
+
+/** A Convert batch is translating on the shared GPU, so transcriptions wait for it. */
+export function convertHoldsGpu(): boolean {
+  return convertTranslating && convertSharesGpu();
+}
+
+/**
+ * Takes the shared GPU for a Convert batch's translations once no
+ * transcription is running, and holds it until releaseGpuForConvert. The
+ * check and the take happen in one step, so no transcription slips between.
+ * onWaiting runs once if the batch has to wait.
+ */
+export async function acquireGpuForConvert(onWaiting?: () => void, pollMs = GPU_WAIT_POLL_MS): Promise<void> {
+  let announced = false;
+  while (convertSharesGpu() && gpuTranscriptionCount() > 0) {
+    if (!announced) {
+      announced = true;
+      onWaiting?.();
+    }
+    await new Promise<void>((resolve) => setTimeout(resolve, pollMs));
+  }
+  convertTranslating = true;
+}
+
+export function releaseGpuForConvert(): void {
+  convertTranslating = false;
+}
+
 let youtubeBacklog: () => number = () => 0;
 
 /** The YouTube worker reports how many videos still need Whisper. */

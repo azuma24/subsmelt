@@ -682,7 +682,9 @@
       "languageChinese": "Tiếng Trung",
       "languageKorean": "Tiếng Hàn",
       "gpuSharedLabel": "Chép lời và dịch dùng chung một GPU",
-      "gpuSharedHelp": "Dịch theo lô sau các bản chép lời đang chờ để GPU ít phải đổi mô hình. Khi có 20 phụ đề chờ, việc dịch vẫn bắt đầu."
+      "gpuSharedHelp": "Dịch theo lô sau các bản chép lời đang chờ để GPU ít phải đổi mô hình. Khi có 20 phụ đề chờ, việc dịch vẫn bắt đầu.",
+      "convertGpuSharedLabel": "Bản dịch ở trang Chuyển đổi cũng chạy luân phiên",
+      "convertGpuSharedHelp": "Bản dịch bắt đầu từ trang Chuyển đổi sẽ chờ các phiên chép lời đang chạy, và việc chép lời cũng chờ chúng. Hãy để tắt nếu GPU đủ chỗ cho cả hai."
     },
     "connections": {
       "mode": "Chế độ kết nối",
@@ -991,7 +993,7 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {"pending": "Pending", "waiting": "Đang chờ GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
     "downloadFile": "Tải tệp",
     "downloadZip": "Tải ZIP",
     "detecting": "Đang phát hiện ngôn ngữ…",

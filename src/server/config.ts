@@ -129,6 +129,9 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   // "1" when Whisper and the translation model share one GPU: translation then
   // runs in batches after pending transcriptions (gpu-gate.ts).
   gpu_shared: "0",
+  // "1" when, on that shared GPU, Convert-page translations also take turns
+  // with Whisper instead of running beside it (gpu-gate.ts).
+  convert_gpu_shared: "0",
   // YouTube. youtube_playlists is a JSON array owned by the playlist routes
   // (youtube/playlists.ts); the generic settings endpoints never read or write it.
   youtube_playlists: "[]",
