@@ -5,6 +5,35 @@ version number and are released together (`v0.5.6` and `whisper-v0.5.6`).
 
 ## [Unreleased]
 
+## [0.7.2] — 2026-10-24
+
+### Added
+
+- **A speech-to-text backend for Apple Silicon Macs.** `subsmelt-whisper-macos-arm64-0.7.2.zip` is a frozen app with no model weights: download models from SubSmelt's model manager as on Windows. It runs Nemotron and the new whisper.cpp engine (`whispercpp-large-v3-turbo`) on Metal, and faster-whisper on the CPU. A menu-bar app starts and stops the backend (Stop unloads the LaunchAgent, so it stays stopped) and opens its health page, config and log.
+- **The backend says what machine it is.** `/health` reports `capabilities.host` (OS, architecture, accelerator, GPU name, memory). On a Mac, Settings and the Transcribe page hide device and compute type, the readiness panel reads "Mac, <chip>, Metal" and the model manager drops the VRAM column. An older backend without `host` looks as before.
+- **Convert page translations can take turns with Whisper.** With **Transcription and translation share one GPU** on, the new option **Convert page translations take turns too** makes a translating Convert batch wait while a transcription runs (shown as "Waiting for GPU"), and transcriptions wait for that batch. It is off by default; format-only batches never wait.
+
+### Changed
+
+- **Transcription and subtitle conversion run on the server, not in the browser tab.** File, folder, URL and retry transcriptions and Convert batches are saved on the server when you submit them and run to the end with the tab closed. Reopen the page to see progress, cancel, or download a URL transcript or Convert output later (kept 7 days and 24 hours). A server restart picks queued and interrupted work back up.
+- **URL transcriptions use your transcription Settings.** They now apply advanced speech-to-text options, VAD, subtitle quality, the Chinese script and the low-RAM "run anyway" choice, like library files. Before, they sent fixed defaults.
+- **A translation run interrupted by a restart resumes** even with auto-translate off. Pending jobs nobody started still wait.
+- **The Windows backend runs as a real Windows service** and keeps its settings in `C:\ProgramData\SubSmelt\config.json` instead of machine environment variables, with the data folder and config locked to administrators. Upgrades keep the existing token. The tray's Start and Stop ask for elevation.
+
+### Fixed
+
+- Cancel all on the Transcribe page no longer lets the next queued file start.
+- A URL transcription now counts against the transcription concurrency limit, keeps the shared GPU counted after it is cancelled or times out, and lets a translation run held back for it start when it ends.
+- A damaged `transcription-work.json` no longer stops the server from starting; it is set aside and the queue starts empty.
+- Backend: short cues no longer merge across long gaps; regional language codes (`zh-TW`, `pt-BR`) work with Nemotron and faster-whisper; VTT and ASS escape special characters; Nemotron never writes a zero-length cue and runs on a Mac that carries CUDA settings from Windows.
+- Backend: model download progress moves steadily to 100%; model sizes and freed space are counted once; a model in use cannot be deleted (409); free VRAM counts the model already loaded.
+- Backend: uploads are authenticated and size-capped before they are read; URL fetches cannot be redirected past the address check; diarization that cannot run is refused before the download.
+- Backend (Windows): the tray and settings window find the right config, port and log, and report failures on the tray icon.
+
+### Removed
+
+- `POST /api/transcribe`, `POST /api/transcribe/url`, `POST /api/transcribe/history/:id/retry` and `POST /api/convert`. They held the request open for the whole run. Use `POST /api/transcribe/work` and `POST /api/convert/batches`, which return at once and keep running server-side.
+
 ## [0.7.1] — 2026-10-21
 
 ### Added
