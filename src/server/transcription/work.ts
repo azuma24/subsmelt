@@ -39,18 +39,65 @@ export interface WorkItem {
   segments?: number;
 }
 
+const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+const MAX_COMPLETED = 500;
+const PROGRESS_WRITE_MS = 5000;
+
 /** Synchronous atomic persistence: a submission is on disk before its ID is returned. */
 export class WorkStore {
   private items: WorkItem[];
+  private progressWrites = new Map<string, number>();
   constructor(private readonly file: string) {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     this.items = fs.existsSync(file) ? (JSON.parse(fs.readFileSync(file, "utf8")) as WorkItem[]) : [];
+    // One-time migration of old inline URL results; keep the manifest small.
+    let migrated = false;
+    for (const item of this.items) {
+      if (item.content === undefined) continue;
+      this.saveContent(item.id, item.content);
+      delete item.content;
+      migrated = true;
+    }
+    if (migrated) this.persist();
+    this.prune();
   }
   list(): WorkItem[] {
+    this.prune();
     return this.items.map((item) => ({ ...item, request: { ...item.request } }));
   }
   get(id: string): WorkItem | undefined {
-    return this.list().find((item) => item.id === id);
+    const item = this.list().find((entry) => entry.id === id);
+    if (item?.kind !== "url" || item.status !== "succeeded") return item;
+    const output = this.contentPath(id);
+    return fs.existsSync(output) ? { ...item, content: fs.readFileSync(output, "utf8") } : item;
+  }
+  private contentPath(id: string): string {
+    return path.join(`${this.file}.outputs`, id);
+  }
+  private saveContent(id: string, content: string): void {
+    const output = this.contentPath(id);
+    fs.mkdirSync(path.dirname(output), { recursive: true, mode: 0o700 });
+    const tmp = `${output}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, content, { mode: 0o600 });
+    fs.renameSync(tmp, output);
+  }
+  private prune(): void {
+    const now = Date.now();
+    const completed = this.items.filter((item) => !["queued", "running"].includes(item.status));
+    const newest = new Set(completed.slice(-MAX_COMPLETED).map((item) => item.id));
+    const removed = this.items.filter(
+      (item) =>
+        !["queued", "running"].includes(item.status) &&
+        (now - Date.parse(item.updatedAt) > RETENTION_MS || !newest.has(item.id)),
+    );
+    if (!removed.length) return;
+    const ids = new Set(removed.map((item) => item.id));
+    this.items = this.items.filter((item) => !ids.has(item.id));
+    this.persist();
+    for (const item of removed) {
+      fs.rmSync(this.contentPath(item.id), { force: true });
+      this.progressWrites.delete(item.id);
+    }
   }
   private persist(): void {
     const tmp = `${this.file}.${process.pid}.tmp`;
@@ -58,6 +105,7 @@ export class WorkStore {
     fs.renameSync(tmp, this.file);
   }
   enqueue(inputs: Array<{ kind: "file" | "url"; input: string; request: Record<string, unknown> }>): WorkItem[] {
+    this.prune();
     const batchId = crypto.randomUUID();
     const now = new Date().toISOString();
     const created: WorkItem[] = [];
@@ -95,10 +143,19 @@ export class WorkStore {
   update(id: string, patch: Partial<WorkItem>): WorkItem | undefined {
     const item = this.items.find((entry) => entry.id === id);
     if (!item) return undefined;
-    Object.assign(item, patch, { updatedAt: new Date().toISOString() });
-    this.persist();
-    broadcast("transcription:work", { id: item.id, input: item.input, status: item.status });
-    return this.get(id);
+    const now = Date.now();
+    if (patch.content !== undefined) this.saveContent(id, patch.content);
+    const { content: _content, ...metadata } = patch;
+    Object.assign(item, metadata, { updatedAt: new Date(now).toISOString() });
+    const progressOnly = Object.keys(metadata).length === 1 && metadata.progress !== undefined;
+    const shouldPersist = !progressOnly || now - (this.progressWrites.get(id) ?? 0) >= PROGRESS_WRITE_MS;
+    if (shouldPersist) {
+      this.persist();
+      this.progressWrites.set(id, now);
+    }
+    if (shouldPersist) broadcast("transcription:work", { id: item.id, input: item.input, status: item.status });
+    if (!["queued", "running"].includes(item.status)) this.prune();
+    return { ...item };
   }
   recover(): number {
     let count = 0;

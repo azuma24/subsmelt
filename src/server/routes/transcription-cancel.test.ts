@@ -281,6 +281,11 @@ test("queued URL work survives browser disconnect and exposes its completed outp
     const result = await fetch(`${appUrl}/api/transcribe/work/${id}`).then((res) => res.json());
     assert.equal(result.status, "succeeded");
     assert.equal(result.content, "hello");
+    assert.equal(result.request, undefined);
+    const listed = await fetch(`${appUrl}/api/transcribe/work`).then((res) => res.json());
+    const row = listed.items.find((item: { id: string }) => item.id === id);
+    assert.equal(row.content, undefined);
+    assert.equal(row.request, undefined);
   } finally {
     backend.close();
   }

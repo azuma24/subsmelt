@@ -79,7 +79,7 @@ app.get("/api/events", (_req, res) => {
   addSSEClient(res);
 });
 
-registerSettingsTasksRoutes(app);
+registerSettingsTasksRoutes(app, scanAndEnqueue);
 registerConvertBatchRoutes(app);
 
 app.get("/api/folders/tree", async (_req, res) => {

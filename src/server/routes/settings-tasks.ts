@@ -73,7 +73,10 @@ function redactSettings(settings: Record<string, string>): Record<string, string
   return redacted;
 }
 
-export function registerSettingsTasksRoutes(app: Express): void {
+export function registerSettingsTasksRoutes(
+  app: Express,
+  scanAndEnqueue: () => Promise<{ newJobs: number; totalSubtitles: number }> = scanFolder,
+): void {
   // ======== Settings ========
   app.get("/api/settings", (_req, res) => {
     res.json({
@@ -181,7 +184,7 @@ export function registerSettingsTasksRoutes(app: Express): void {
     }
 
     const interval = parseInt(getSetting("auto_scan_interval") || "0", 10);
-    if (interval > 0) startAutoScan(interval, scanFolder);
+    if (interval > 0) startAutoScan(interval, scanAndEnqueue);
     else stopAutoScan();
 
     if (changedKeys.includes("watch_enabled")) {

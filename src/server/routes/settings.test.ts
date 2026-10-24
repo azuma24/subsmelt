@@ -96,3 +96,33 @@ test("in-range numbers save, and an out-of-range value already stored does not b
   assert.equal((await saveSettings({ chunk_size: "0", model: "unrelated-edit" })).status, 200);
   assert.equal(getSetting("model"), "unrelated-edit");
 });
+
+test("saving settings restarts scheduled scan with the enqueue callback", async (t) => {
+  t.mock.timers.enable({ apis: ["setInterval"] });
+  let calls = 0;
+  const injected = express();
+  injected.use(express.json());
+  registerSettingsTasksRoutes(injected, async () => {
+    calls++;
+    return { newJobs: 0, totalSubtitles: 0 };
+  });
+  const listener = injected.listen(0, "127.0.0.1");
+  await once(listener, "listening");
+  const url = `http://127.0.0.1:${(listener.address() as AddressInfo).port}/api/settings`;
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ auto_scan_interval: "1" }),
+    });
+    assert.equal(response.status, 200);
+    t.mock.timers.tick(60_000);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(calls, 1);
+  } finally {
+    const { stopAutoScan } = await import("../queue.js");
+    stopAutoScan();
+    listener.close();
+    t.mock.timers.reset();
+  }
+});

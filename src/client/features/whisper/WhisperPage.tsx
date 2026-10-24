@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "../../i18n";
 import { Link } from "react-router-dom";
@@ -36,6 +36,7 @@ import { InlineError } from "../../ui/QueryState";
 import { COMPUTE_BY_DEVICE, descriptorsFrom, FORMATS, type OutputFormat, transcriptionHost } from "./whisper-shared";
 import { PageHeader } from "../../ui/primitives";
 import { Icon } from "../../ui/Icon";
+import { cancellableBatchIds } from "./work-batch.js";
 
 const validSortBy = (value: unknown): SortBy => (value === "name" || value === "date" ? value : "date");
 const validSortDir = (value: unknown): SortDir => (value === "asc" || value === "desc" ? value : "desc");
@@ -166,6 +167,16 @@ export function WhisperPage() {
 
   // Library file list (non-mutating preview scan of MEDIA_DIR).
   const queryClient = useQueryClient();
+  const completedWork = useRef(new Set<string>());
+  useEffect(() => {
+    const finished = (workQuery.data?.items ?? []).filter(
+      (item) => item.kind === "file" && item.status === "succeeded",
+    );
+    if (finished.some((item) => !completedWork.current.has(item.id))) {
+      for (const item of finished) completedWork.current.add(item.id);
+      void queryClient.invalidateQueries({ queryKey: LIBRARY_QUERY_KEY });
+    }
+  }, [workQuery.data, queryClient]);
   const scanQuery = useLibraryQuery(enabled && backendConfigured);
   const videoFiles: ScannedFile[] = useMemo(
     () => (scanQuery.data?.files ?? []).filter((f) => Boolean(f.videoPath)),
@@ -332,7 +343,9 @@ export function WhisperPage() {
     [selected, visiblePaths],
   );
 
-  const activeWork = work.filter((item) => item.status === "queued" || item.status === "running");
+  const activeWork = work.filter(
+    (item) => item.kind === "file" && (item.status === "queued" || item.status === "running"),
+  );
   const running = activeWork.length > 0;
   const activePath = activeWork.find((item) => item.status === "running")?.input ?? null;
   const currentBatch = activeWork.length ? work.filter((item) => item.batchId === activeWork[0].batchId) : [];
@@ -357,7 +370,7 @@ export function WhisperPage() {
       ]),
   );
   const cancelBatch = async () => {
-    await Promise.all(activeWork.map((item) => api.cancelTranscriptionWork(item.id)));
+    await Promise.all(cancellableBatchIds(work, currentBatch[0]?.batchId).map((id) => api.cancelTranscriptionWork(id)));
     void workQuery.refetch();
   };
 
@@ -388,7 +401,7 @@ export function WhisperPage() {
   useSSE(
     useCallback(
       (type, data) => {
-        if (type === "transcription:progress") {
+        if (type === "transcription:work") {
           void queryClient.invalidateQueries({ queryKey: ["transcription-work"] });
           if (data.status === "succeeded") void queryClient.invalidateQueries({ queryKey: LIBRARY_QUERY_KEY });
         }

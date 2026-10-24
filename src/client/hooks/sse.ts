@@ -15,6 +15,7 @@ export type SSEEventName =
   | "scan:complete"
   | "job:stopped"
   | "transcription:progress"
+  | "transcription:work"
   | "model:download"
   | "youtube:playlist"
   | "youtube:video"
@@ -22,7 +23,7 @@ export type SSEEventName =
 
 export type SSEEventHandler = (type: SSEEventName, data: Record<string, unknown>) => void;
 
-const SSE_EVENT_NAMES: readonly SSEEventName[] = [
+export const SSE_EVENT_NAMES: readonly SSEEventName[] = [
   "job:progress",
   "job:start",
   "job:analysis",
@@ -35,6 +36,7 @@ const SSE_EVENT_NAMES: readonly SSEEventName[] = [
   "scan:complete",
   "job:stopped",
   "transcription:progress",
+  "transcription:work",
   "model:download",
   "youtube:playlist",
   "youtube:video",
@@ -101,6 +103,8 @@ export function getSSEInvalidationKeys(name: SSEEventName): QueryKey[] {
       // Per-path progress is consumed directly by the dashboard component via
       // onEvent; it should not trigger query refetches on every tick.
       return [];
+    case "transcription:work":
+      return [["transcription-work"], ["transcription-history"]];
     case "model:download":
       // Per-model download progress is consumed directly by the Model Manager
       // via onEvent; it should not trigger query refetches on every tick.

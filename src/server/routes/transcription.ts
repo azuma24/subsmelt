@@ -39,11 +39,15 @@ export { getTranscriptionBackendUrl, runTranscriptionAttempt, transcriptionError
 
 export function registerTranscriptionRoutes(app: Express): void {
   app.get("/api/transcribe/work", (_req, res) =>
-    res.json({ items: transcriptionWork.store.list().map(({ content: _content, ...item }) => item) }),
+    res.json({
+      items: transcriptionWork.store.list().map(({ request: _request, content: _content, ...item }) => item),
+    }),
   );
   app.get("/api/transcribe/work/:id", (req, res) => {
     const item = transcriptionWork.store.get(req.params.id);
-    return item ? res.json(item) : res.status(404).json({ error: "Transcription work not found" });
+    if (!item) return res.status(404).json({ error: "Transcription work not found" });
+    const { request: _request, ...publicItem } = item;
+    return res.json(publicItem);
   });
   app.post("/api/transcribe/work", (req, res) => {
     const inputs = req.body?.inputs;
@@ -69,7 +73,7 @@ export function registerTranscriptionRoutes(app: Express): void {
       });
       const items = transcriptionWork.store.enqueue(prepared);
       transcriptionWork.start();
-      return res.status(202).json({ items: items.map(({ content: _content, ...item }) => item) });
+      return res.status(202).json({ items: items.map(({ request: _request, content: _content, ...item }) => item) });
     } catch (error) {
       return res.status(400).json({ error: errorMessage(error) });
     }

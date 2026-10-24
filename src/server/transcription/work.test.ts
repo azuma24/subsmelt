@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync, existsSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -94,6 +94,65 @@ test("scheduled and manual scans share durable claims and respect silence", () =
     assert.equal(store.list()[0].request.postAction, "transcribe_and_translate");
     enqueueMissingTranscripts(scan, "ask", runner, () => false);
     assert.equal(store.list().length, 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("large URL results stay outside the manifest; progress writes are throttled and output survives restart", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "subsmelt-work-output-"));
+  try {
+    const file = path.join(dir, "work.json");
+    const store = new WorkStore(file);
+    const [item] = store.enqueue([{ kind: "url", input: "https://example.org/long", request: {} }]);
+    store.update(item.id, { status: "running" });
+    store.update(item.id, { progress: 1 });
+    const onDisk = readFileSync(file, "utf8");
+    store.update(item.id, { progress: 2 });
+    assert.equal(readFileSync(file, "utf8"), onDisk);
+    const content = "line\n".repeat(200_000);
+    store.update(item.id, { status: "succeeded", content, progress: 100 });
+    assert.ok(readFileSync(file, "utf8").length < 2000);
+    assert.equal(new WorkStore(file).get(item.id)?.content, content);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("retention prunes completed outputs but keeps active work regardless of age", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "subsmelt-work-retain-"));
+  try {
+    const file = path.join(dir, "work.json");
+    const store = new WorkStore(file);
+    const [done, active] = store.enqueue(
+      ["done", "active"].map((input) => ({ kind: "url" as const, input, request: {} })),
+    );
+    store.update(done.id, { status: "succeeded", content: "saved" });
+    const entries = JSON.parse(readFileSync(file, "utf8"));
+    for (const entry of entries) entry.updatedAt = "2000-01-01T00:00:00.000Z";
+    writeFileSync(file, JSON.stringify(entries));
+    const reloaded = new WorkStore(file);
+    assert.equal(reloaded.get(done.id), undefined);
+    assert.equal(existsSync(path.join(`${file}.outputs`, done.id)), false);
+    assert.equal(reloaded.get(active.id)?.status, "queued");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("legacy inline URL output migrates to an artifact without losing download", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "subsmelt-work-migrate-"));
+  try {
+    const file = path.join(dir, "work.json");
+    const store = new WorkStore(file);
+    const [item] = store.enqueue([{ kind: "url", input: "legacy", request: {} }]);
+    const entries = JSON.parse(readFileSync(file, "utf8"));
+    entries[0].status = "succeeded";
+    entries[0].content = "legacy transcript";
+    writeFileSync(file, JSON.stringify(entries));
+    const migrated = new WorkStore(file);
+    assert.equal(migrated.get(item.id)?.content, "legacy transcript");
+    assert.doesNotMatch(readFileSync(file, "utf8"), /legacy transcript/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

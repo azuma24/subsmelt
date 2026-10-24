@@ -2,6 +2,7 @@ import test, { mock } from "node:test";
 import assert from "node:assert/strict";
 import {
   getSSEInvalidationKeys,
+  SSE_EVENT_NAMES,
   parseSSEData,
   createDebouncedInvalidator,
   createSseInvalidator,
@@ -18,6 +19,8 @@ test("parseSSEData returns parsed object payloads and ignores invalid JSON", () 
 });
 
 test("SSE invalidation keys are targeted by event type", () => {
+  assert.ok(SSE_EVENT_NAMES.includes("transcription:work"));
+  assert.deepEqual(getSSEInvalidationKeys("transcription:work"), [["transcription-work"], ["transcription-history"]]);
   // Progress, connection and analysis events patch the cached jobs list instead of refetching it.
   assert.deepEqual(getSSEInvalidationKeys("job:progress"), [["queue-status"]]);
   assert.deepEqual(getSSEInvalidationKeys("job:analysis"), []);
