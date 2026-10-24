@@ -7,7 +7,7 @@ import type { TreeExpansion } from "../../ui/file-tree/use-persisted-expansion";
 import type { DrillDownState } from "../../ui/file-tree/use-drill-down";
 import type { SortBy, SortDir, TreeNode } from "./folderTree";
 import { baseName, type FileProgress } from "./whisper-shared";
-import { hasLiveTranscriptions } from "./batch-store";
+
 import { Icon } from "../../ui/Icon";
 import { SortControls } from "../../ui/SortControls";
 import { RefreshButton } from "../../ui/RefreshButton";
@@ -91,7 +91,9 @@ export function LibraryPicker({
   // Progress events land here for every server-side run, batch-owned or not:
   // show Cancel while any run is live, or an orphan run (another tab, a
   // reload survivor) would have no way to be stopped from this page.
-  const liveTranscribing = hasLiveTranscriptions(fileProgress);
+  const liveTranscribing = Object.values(fileProgress).some(
+    (fp) => !fp.done && !fp.error && !fp.cancelled && (fp.pct !== undefined || fp.phase !== undefined),
+  );
 
   return (
     <SettingsSection title={t("whisper.pickerTitle")} description={t("whisper.pickerHint")}>

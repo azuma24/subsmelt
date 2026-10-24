@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "../../i18n";
 import { Link } from "react-router-dom";
 import * as api from "../../api";
@@ -32,15 +32,8 @@ import { RunOptionsSection } from "./RunOptionsSection";
 import { UrlTranscribeSection } from "./UrlTranscribeSection";
 import { LibraryPicker } from "./LibraryPicker";
 import { InlineError } from "../../ui/QueryState";
-import { applyTranscriptionProgress, cancelBatch, runBatch, useBatchState } from "./batch-store";
-import {
-  baseName,
-  COMPUTE_BY_DEVICE,
-  descriptorsFrom,
-  FORMATS,
-  type OutputFormat,
-  transcriptionHost,
-} from "./whisper-shared";
+
+import { COMPUTE_BY_DEVICE, descriptorsFrom, FORMATS, type OutputFormat, transcriptionHost } from "./whisper-shared";
 import { PageHeader } from "../../ui/primitives";
 import { Icon } from "../../ui/Icon";
 
@@ -54,6 +47,12 @@ export function WhisperPage() {
   const { confirm } = useConfirm();
   const settingsQuery = useSettingsQuery();
   const settings = (settingsQuery.data ?? {}) as Record<string, unknown>;
+  const workQuery = useQuery({
+    queryKey: ["transcription-work"],
+    queryFn: () => api.listTranscriptionWork(),
+    refetchInterval: 1500,
+  });
+  const work = workQuery.data?.items ?? [];
   const backendConfigured = Boolean(str(settings.transcription_backend_url));
   const enabled = str(settings.transcription_enabled, "0") === "1";
   const mediaDir = str(settings._media_dir, "/media");
@@ -63,7 +62,6 @@ export function WhisperPage() {
   const attempts = historyQuery.data?.attempts ?? [];
   const caps = healthQuery.data?.health?.capabilities;
 
-  const retryMutation = useMutationWithInvalidation((id: string) => api.retryTranscriptionAttempt(id));
   // One retry at a time: the panel disables Retry while this is set, so a
   // second click cannot start an overlapping run of the same file.
   const [retryingPath, setRetryingPath] = useState<string | null>(null);
@@ -71,7 +69,23 @@ export function WhisperPage() {
     if (retryingPath) return;
     setRetryingPath(attempt.inputPath);
     try {
-      await retryMutation.mutateAsync(attempt.id);
+      await api.queueTranscriptionWork([
+        {
+          kind: "file",
+          input: attempt.inputPath,
+          request: {
+            postAction: attempt.postAction,
+            outputFormat: attempt.outputFormat,
+            model: attempt.model,
+            language: attempt.language,
+            device: attempt.device,
+            computeType: attempt.computeType,
+            advancedOptions: attempt.advancedOptions,
+            overwrite: attempt.overwrite === true,
+          },
+        },
+      ]);
+      void workQuery.refetch();
     } catch (e: unknown) {
       addToast(t("transcriptionHistory.retryFailed", { message: getErrorMessage(e) }), "error");
     } finally {
@@ -103,23 +117,30 @@ export function WhisperPage() {
     historyQuery.refetch();
   };
 
-  // Retries run one after another: firing every failed file at once would stack
-  // concurrent transcriptions on a backend that just demonstrated it is unhappy.
+  // Submit the entire retry set in one request; the server persists and drains it.
   const onRetryAllFailed = async (targets: TranscriptionHistoryEntry[]) => {
     if (retryingPath) return;
-    let ok = 0;
-    for (const target of targets) {
-      setRetryingPath(target.inputPath);
-      try {
-        await retryMutation.mutateAsync(target.id);
-        ok += 1;
-      } catch (e: unknown) {
-        addToast(`${baseName(target.inputPath)}: ${getErrorMessage(e)}`, "error");
-      }
+    try {
+      await api.queueTranscriptionWork(
+        targets.map((target) => ({
+          kind: "file",
+          input: target.inputPath,
+          request: {
+            postAction: target.postAction,
+            outputFormat: target.outputFormat,
+            model: target.model,
+            language: target.language,
+            device: target.device,
+            computeType: target.computeType,
+            advancedOptions: target.advancedOptions,
+            overwrite: target.overwrite === true,
+          },
+        })),
+      );
+      void workQuery.refetch();
+    } catch (e: unknown) {
+      addToast(t("transcriptionHistory.retryFailed", { message: getErrorMessage(e) }), "error");
     }
-    setRetryingPath(null);
-    addToast(t("transcriptionHistory.retriedAll", { ok, total: targets.length }), ok > 0 ? "success" : "error");
-    historyQuery.refetch();
   };
 
   const onRemoveAttempt = async (attempt: TranscriptionHistoryEntry) => {
@@ -311,9 +332,34 @@ export function WhisperPage() {
     [selected, visiblePaths],
   );
 
-  // The batch itself lives in batch-store so it keeps running, with progress
-  // and Cancel intact, while the user is on another page.
-  const { running, progress, activePath, fileProgress } = useBatchState();
+  const activeWork = work.filter((item) => item.status === "queued" || item.status === "running");
+  const running = activeWork.length > 0;
+  const activePath = activeWork.find((item) => item.status === "running")?.input ?? null;
+  const currentBatch = activeWork.length ? work.filter((item) => item.batchId === activeWork[0].batchId) : [];
+  const progress = running
+    ? {
+        done: currentBatch.filter((item) => !["queued", "running"].includes(item.status)).length,
+        total: currentBatch.length,
+      }
+    : null;
+  const fileProgress = Object.fromEntries(
+    work
+      .filter((item) => item.kind === "file")
+      .map((item) => [
+        item.input,
+        {
+          pct: item.progress,
+          done: item.status === "succeeded",
+          error: item.status === "failed",
+          cancelled: item.status === "cancelled",
+          phase: item.status === "queued" ? "waiting_for_gpu" : undefined,
+        },
+      ]),
+  );
+  const cancelBatch = async () => {
+    await Promise.all(activeWork.map((item) => api.cancelTranscriptionWork(item.id)));
+    void workQuery.refetch();
+  };
 
   // Expand/collapse is persisted per folder in localStorage (default collapsed)
   // and pruned against the folders present after each scan. Prune against the
@@ -338,12 +384,17 @@ export function WhisperPage() {
     });
   }, [videoFiles]);
 
-  // Live per-file progress from the server's SSE broadcast. Stable callback so
-  // useSSE's ref-sync effect doesn't churn every render.
+  // Progress is always re-fetched after reconnect; SSE only speeds up updates.
   useSSE(
-    useCallback((type, data) => {
-      if (type === "transcription:progress") applyTranscriptionProgress(data);
-    }, []),
+    useCallback(
+      (type, data) => {
+        if (type === "transcription:progress") {
+          void queryClient.invalidateQueries({ queryKey: ["transcription-work"] });
+          if (data.status === "succeeded") void queryClient.invalidateQueries({ queryKey: LIBRARY_QUERY_KEY });
+        }
+      },
+      [queryClient],
+    ),
   );
 
   const toggle = (vp: string) =>
@@ -385,31 +436,28 @@ export function WhisperPage() {
       });
       if (!ok) return;
     }
-    // Everything the run needs is captured now; the callbacks still work
-    // after this page unmounts because the toast provider is app-level and
-    // invalidation marks the queries stale for their next mount.
-    await runBatch({
-      paths,
-      transcribe: api.transcribeVideo,
-      request: (videoPath) => ({
-        videoPath,
-        outputFormat: effFormat,
-        postAction: "transcribe_only",
-        model: effModel,
-        language: effLang,
-        device: effDevice,
-        computeType: effCompute,
-        speakerDiarization: canDiarize && effDiarize,
-        overwrite: overwritten.has(videoPath),
-      }),
-      onFileError: (path, message) => addToast(`${baseName(path)}: ${message}`, "error"),
-      onFinished: (ok, total) => {
-        setSelected(new Set());
-        addToast(t("whisper.batchDone", { ok, total, format: effFormat.toUpperCase() }), ok > 0 ? "success" : "error");
-        void queryClient.invalidateQueries({ queryKey: LIBRARY_QUERY_KEY });
-        void queryClient.invalidateQueries({ queryKey: ["transcription-history"] });
-      },
-    });
+    try {
+      await api.queueTranscriptionWork(
+        paths.map((videoPath) => ({
+          kind: "file",
+          input: videoPath,
+          request: {
+            outputFormat: effFormat,
+            postAction: "transcribe_only",
+            model: effModel,
+            language: effLang,
+            device: effDevice,
+            computeType: effCompute,
+            speakerDiarization: canDiarize && effDiarize,
+            overwrite: overwritten.has(videoPath),
+          },
+        })),
+      );
+      setSelected(new Set());
+      void workQuery.refetch();
+    } catch (e: unknown) {
+      addToast(getErrorMessage(e), "error");
+    }
   };
 
   const downloadsActive = Object.values(modelDownloads).some((dl) => dl.active);

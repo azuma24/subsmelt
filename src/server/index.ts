@@ -1,11 +1,12 @@
 import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { forEachConcurrent } from "./async-pool.js";
 import { getAllSettings, setSetting, getSetting } from "./config.js";
 import { scanFolder, listFolderTree, MEDIA_DIR } from "./scanner.js";
 import { runQueueSafely, isQueueRunning, startAutoScan, resumeQueueOnBoot } from "./queue.js";
-import { noSpeechVideos, transcriptionHistory } from "./transcription-history.js";
+import { transcriptionHistory } from "./transcription-history.js";
+import { transcriptionWork } from "./transcription/work.js";
+import { enqueueMissingTranscripts } from "./transcription/scheduled.js";
 import { logger } from "./logger.js";
 import { crossSiteGuard } from "./cross-site-guard.js";
 import db, { getLogs, clearLogs } from "./db.js";
@@ -14,7 +15,7 @@ import { notifyTest } from "./notify.js";
 import { startWatcher, stopWatcher, isWatcherRunning } from "./watcher.js";
 import { parseLogsQuery } from "./routes/validation.js";
 import { readSettings } from "./settings-schema.js";
-import type { TranscribePostAction } from "./transcription-client.js";
+
 import { registerSettingsTasksRoutes } from "./routes/settings-tasks.js";
 import { registerJobsRoutes } from "./routes/jobs.js";
 import { registerModelsRoutes } from "./routes/models.js";
@@ -23,14 +24,7 @@ import { registerYoutubeRoutes } from "./routes/youtube.js";
 import { registerUsageRoutes } from "./routes/usage.js";
 import { YoutubeStore } from "./youtube/store.js";
 import { YoutubeWorker } from "./youtube/worker.js";
-import {
-  registerTranscriptionRoutes,
-  getTranscriptionBackendUrl,
-  runTranscriptionAttempt,
-} from "./routes/transcription.js";
-import { claimAutoTranscriptions, releaseAutoTranscription } from "./auto-transcription.js";
-import { TranscriptionInFlightError } from "./transcription/in-flight.js";
-import { NoSpeechError } from "./routes/transcription-runtime.js";
+import { registerTranscriptionRoutes, getTranscriptionBackendUrl } from "./routes/transcription.js";
 import { errorMessage } from "./errors.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -95,81 +89,15 @@ app.get("/api/folders/tree", async (_req, res) => {
 // already in flight and receive its result instead of starting another.
 let scanInFlight: ReturnType<typeof scanFolder> | null = null;
 
-app.post("/api/scan", async (_req, res) => {
-  if (scanInFlight) {
-    // A walk is already running: share it instead of queueing another
-    // full-tree walk behind it.
-    try {
-      return res.json(await scanInFlight);
-    } catch (error) {
-      return res.status(400).json({ error: errorMessage(error) });
-    }
-  }
+async function scanAndEnqueue() {
+  if (scanInFlight) return scanInFlight;
   const run = (async (): ReturnType<typeof scanFolder> => {
-    let result = await scanFolder(true);
+    const result = await scanFolder(true);
     const settings = getAllSettings();
     const typed = readSettings();
     const behavior = typed.transcription_missing_subtitle_behavior;
-    const backendUrl = getTranscriptionBackendUrl(settings);
-    if (typed.transcription_enabled && backendUrl && behavior !== "ask") {
-      const postAction: TranscribePostAction =
-        behavior === "auto_transcribe_and_translate" ? "transcribe_and_translate" : "transcribe_only";
-      // Claimed in the same tick as the scan, so an overlapping scan either
-      // finds a video claimed here or already sees its new subtitle.
-      const missingVideos = claimAutoTranscriptions(
-        result.files
-          // A video a run found silent is not retried until it changes.
-          .filter((file) => file.videoPath && file.subtitles.length === 0 && !noSpeechVideos.has(file.videoPath))
-          .map((file) => file.videoPath as string),
-      );
-      // Per-file isolation: a single failure must NOT abort the whole scan
-      // batch. Each file is transcribed through runTranscriptionAttempt (which
-      // records a history entry and acquires the shared concurrency slot), and
-      // any hard failure is caught + logged here so remaining files continue.
-      // Bound the fan-out so a huge library doesn't spin up hundreds of attempts
-      // (each registering a history row + in-flight entry) before the slot gate
-      // can even hold them back.
-      const scanConcurrency = typed.transcription_max_concurrent;
-      await forEachConcurrent(scanConcurrency, missingVideos, async (videoPath) => {
-        try {
-          const { result: transcribed } = await runTranscriptionAttempt({
-            videoPath,
-            postAction,
-            settings,
-          });
-          logger.info(
-            "system",
-            `Auto-transcribed ${path.basename(videoPath)} → ${transcribed.subtitle_path || "subtitle output"}`,
-          );
-        } catch (error) {
-          const message = errorMessage(error) || String(error);
-          if (error instanceof NoSpeechError) {
-            logger.info(
-              "system",
-              `Auto-transcription of ${path.basename(videoPath)} found no speech; later scans skip it`,
-            );
-            return;
-          }
-          if (error instanceof TranscriptionInFlightError) {
-            // Someone started this video by hand after the scan queued it.
-            logger.info(
-              "system",
-              `Skipped auto-transcription for ${path.basename(videoPath)}: already being transcribed`,
-            );
-            return;
-          }
-          if (typed.transcription_low_ram_behavior === "skip" && message.startsWith("Transcription skipped:")) {
-            logger.info("system", `Skipped auto-transcription for ${path.basename(videoPath)}: ${message}`);
-            return;
-          }
-          logger.error("system", `Auto-transcription failed for ${path.basename(videoPath)}: ${message}`);
-        } finally {
-          releaseAutoTranscription(videoPath);
-        }
-      });
-      if (missingVideos.length > 0) {
-        result = await scanFolder(postAction === "transcribe_and_translate");
-      }
+    if (typed.transcription_enabled && getTranscriptionBackendUrl(settings) && behavior !== "ask") {
+      enqueueMissingTranscripts(result, behavior);
     }
     if (result.newJobs > 0 && getSetting("auto_translate") === "1") {
       setTimeout(() => runQueueSafely(), 100);
@@ -182,11 +110,17 @@ app.post("/api/scan", async (_req, res) => {
   })();
   scanInFlight = run;
   try {
-    res.json(await run);
-  } catch (error) {
-    res.status(400).json({ error: errorMessage(error) });
+    return await run;
   } finally {
     scanInFlight = null;
+  }
+}
+
+app.post("/api/scan", async (_req, res) => {
+  try {
+    res.json(await scanAndEnqueue());
+  } catch (error) {
+    res.status(400).json({ error: errorMessage(error) });
   }
 });
 
@@ -279,7 +213,9 @@ app.listen(PORT, HOST, () => {
   console.log(`  → http://localhost:${PORT}\n`);
 
   const interval = parseInt(getSetting("auto_scan_interval") || "0", 10);
-  if (interval > 0) startAutoScan(interval, scanFolder);
+  transcriptionWork.store.recover();
+  transcriptionWork.start();
+  if (interval > 0) startAutoScan(interval, scanAndEnqueue);
   if (getSetting("watch_enabled") === "1") startWatcher();
   resumeQueueOnBoot();
   youtubeWorker.start();

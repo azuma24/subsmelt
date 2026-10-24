@@ -1,18 +1,11 @@
-import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "../../i18n";
 import * as api from "../../api";
 import { getErrorMessage } from "../../lib";
-import { LIBRARY_QUERY_KEY, useMutationWithInvalidation, useSSE } from "../../hooks";
+import { LIBRARY_QUERY_KEY } from "../../hooks";
 import { useToast } from "../../ui/Toast";
-import type { ScanResult, TranscriptionHistoryEntry } from "../../types";
-import {
-  createManualTranscriptionProgress,
-  isManualTranscriptionBusy,
-  transitionManualTranscriptionProgress,
-  type ManualTranscriptionProgress,
-  type TranscribePostAction,
-} from "./transcription-progress";
+import type { TranscriptionHistoryEntry } from "../../types";
+import type { ManualTranscriptionProgress, TranscribePostAction } from "./transcription-progress";
 
 export interface UseManualTranscriptionResult {
   transcriptionProgressByPath: Record<string, ManualTranscriptionProgress>;
@@ -29,162 +22,75 @@ export interface UseManualTranscriptionResult {
   handleRetryTranscription: (attempt: TranscriptionHistoryEntry) => Promise<void>;
 }
 
-/**
- * Owns the manual transcription flow (single-file, batch, cancel, and
- * history retry) plus the per-path progress state machine. A finished
- * transcription changes the library (a new subtitle), so the hook writes the
- * server's fresh scan into the shared library cache, or refetches it.
- */
+/** Commands and observation only: the server owns every file in a batch. */
 export function useManualTranscription(): UseManualTranscriptionResult {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const storeLibrary = (result: ScanResult | null | undefined) => {
-    if (result?.files) queryClient.setQueryData(LIBRARY_QUERY_KEY, result);
-    else void queryClient.invalidateQueries({ queryKey: LIBRARY_QUERY_KEY });
-  };
   const { addToast } = useToast();
-  const [transcriptionProgressByPath, setTranscriptionProgressByPath] = useState<
-    Record<string, ManualTranscriptionProgress>
-  >({});
-  const [transcribingPath, setTranscribingPath] = useState<string | null>(null);
-
-  const transcribeMutation = useMutationWithInvalidation(
-    (payload: { videoPath: string; postAction: TranscribePostAction }) => api.transcribeVideo(payload),
-  );
-  const retryTranscriptionMutation = useMutationWithInvalidation((id: string) => api.retryTranscriptionAttempt(id));
-  const cancelTranscriptionMutation = useMutationWithInvalidation((videoPath: string) =>
-    api.cancelTranscription({ path: videoPath }),
-  );
-
-  const updateTranscriptionProgress = (
-    videoPath: string,
-    updater: ManualTranscriptionProgress | ((current: ManualTranscriptionProgress) => ManualTranscriptionProgress),
-  ) => {
-    setTranscriptionProgressByPath((prev) => {
-      const current = prev[videoPath];
-      if (!current) return prev;
-      const next =
-        typeof updater === "function"
-          ? (updater as (current: ManualTranscriptionProgress) => ManualTranscriptionProgress)(current)
-          : updater;
-      return { ...prev, [videoPath]: next };
-    });
-  };
-
-  // Subscribe to live per-segment transcription progress. The backend emits
-  // transcription:progress { path, pct, processedSeconds, totalSeconds } as it
-  // processes the faster-whisper segment generator; we match by path and feed
-  // the real percentage into the progress state machine.
-  useSSE((type, data) => {
-    if (type !== "transcription:progress") return;
-    const videoPath = typeof data.path === "string" ? data.path : "";
-    if (!videoPath) return;
-    if (data.cancelled === true) {
-      updateTranscriptionProgress(videoPath, (current) =>
-        transitionManualTranscriptionProgress(current, { type: "cancelled" }),
-      );
-      return;
-    }
-    if (typeof data.pct === "number") {
-      const pct = data.pct;
-      updateTranscriptionProgress(videoPath, (current) =>
-        transitionManualTranscriptionProgress(current, { type: "progress", pct }),
-      );
-    }
+  const client = useQueryClient();
+  const query = useQuery({
+    queryKey: ["transcription-work"],
+    queryFn: api.listTranscriptionWork,
+    refetchInterval: 1500,
   });
-
-  const handleCancelTranscription = async (videoPath: string) => {
-    updateTranscriptionProgress(videoPath, (current) =>
-      transitionManualTranscriptionProgress(current, { type: "cancel-requested" }),
-    );
+  const items = query.data?.items ?? [];
+  const active = items.filter((item) => item.status === "running" || item.status === "queued");
+  const transcriptionProgressByPath: Record<string, ManualTranscriptionProgress> = {};
+  for (const item of items.filter((entry) => entry.kind === "file")) {
+    transcriptionProgressByPath[item.input] = {
+      stage:
+        item.status === "queued"
+          ? "preflighting"
+          : item.status === "running"
+            ? "transcribing"
+            : item.status === "succeeded"
+              ? "complete"
+              : item.status === "cancelled"
+                ? "cancelled"
+                : "failed",
+      pct: item.progress,
+      postAction:
+        item.request?.postAction === "transcribe_and_translate" ? "transcribe_and_translate" : "transcribe_only",
+      message: item.error,
+    };
+  }
+  const submit = async (paths: string[], postAction: TranscribePostAction, extra: Record<string, unknown> = {}) => {
     try {
-      await cancelTranscriptionMutation.mutateAsync(videoPath);
-    } catch (e: unknown) {
-      addToast(t("dashboard.toast.cancelFailed", { error: getErrorMessage(e) }), "error");
+      await api.queueTranscriptionWork(
+        paths.map((input) => ({ kind: "file", input, request: { postAction, ...extra } })),
+      );
+      void query.refetch();
+    } catch (error) {
+      addToast(t("dashboard.toast.transcriptionFailed", { message: getErrorMessage(error) }), "error");
     }
   };
-
-  const handleTranscribe = async (
-    videoPath: string,
-    postAction: TranscribePostAction,
-    opts?: { skipRescan?: boolean },
-  ) => {
-    setTranscriptionProgressByPath((prev) => ({
-      ...prev,
-      [videoPath]: createManualTranscriptionProgress(postAction),
-    }));
-    try {
-      await api.preflightTranscription({ videoPath, postAction });
-      updateTranscriptionProgress(videoPath, (current) =>
-        transitionManualTranscriptionProgress(current, { type: "preflight-passed" }),
-      );
-
-      const result = await transcribeMutation.mutateAsync({ videoPath, postAction });
-      if (postAction === "transcribe_and_translate") {
-        updateTranscriptionProgress(videoPath, (current) =>
-          transitionManualTranscriptionProgress(current, { type: "backend-finished" }),
-        );
-      }
-
-      // A batch refreshes once after all files finish, instead of once per file.
-      if (!opts?.skipRescan) storeLibrary(result.scanResult);
-      updateTranscriptionProgress(videoPath, (current) =>
-        transitionManualTranscriptionProgress(
-          current,
-          postAction === "transcribe_and_translate" ? { type: "scan-queued" } : { type: "backend-finished" },
-        ),
-      );
-      addToast(
-        postAction === "transcribe_and_translate"
-          ? t("dashboard.toast.transcriptionCompleteQueued")
-          : t("dashboard.toast.transcriptionCompleteGenerated"),
-        "success",
-      );
-    } catch (e: unknown) {
-      const message = getErrorMessage(e);
-      updateTranscriptionProgress(videoPath, (current) =>
-        transitionManualTranscriptionProgress(current, { type: "error", message }),
-      );
-      addToast(t("dashboard.toast.transcriptionFailed", { message }), "error");
-    }
-  };
-
-  // Batch transcription: run the same single-file flow for each selected video,
-  // sequentially so per-file progress is visible and the server's transcription
-  // semaphore still bounds concurrency. Reuses handleTranscribe wholesale.
-  const handleBatchTranscribe = async (videoPaths: string[], postAction: TranscribePostAction) => {
-    // Skip files already transcribing so we don't clobber their live progress or
-    // double-issue requests. Each file is isolated (handleTranscribe catches its
-    // own errors), so one failure never aborts the rest.
-    const runnable = videoPaths.filter((p) => !isManualTranscriptionBusy(transcriptionProgressByPath[p]));
-    if (runnable.length === 0) return;
-    for (const videoPath of runnable) {
-      await handleTranscribe(videoPath, postAction, { skipRescan: true });
-    }
-    storeLibrary(null);
-  };
-
-  const handleRetryTranscription = async (attempt: TranscriptionHistoryEntry) => {
-    setTranscribingPath(attempt.inputPath);
-    try {
-      const result = await retryTranscriptionMutation.mutateAsync(attempt.id);
-      storeLibrary(result.scanResult);
-      addToast(t("dashboard.toast.transcriptionRetried"), "success");
-    } catch (e: unknown) {
-      addToast(t("dashboard.toast.retryFailed", { error: getErrorMessage(e) }), "error");
-    } finally {
-      setTranscribingPath(null);
-    }
-  };
-
   return {
     transcriptionProgressByPath,
-    transcribingPath,
-    isTranscribePending: transcribeMutation.isPending,
-    isRetryPending: retryTranscriptionMutation.isPending,
-    handleTranscribe,
-    handleCancelTranscription,
-    handleBatchTranscribe,
-    handleRetryTranscription,
+    transcribingPath: active.find((item) => item.status === "running")?.input ?? null,
+    isTranscribePending: active.length > 0,
+    isRetryPending: false,
+    handleTranscribe: (path, action) => submit([path], action),
+    handleBatchTranscribe: (paths, action) => submit(paths, action),
+    handleCancelTranscription: async (path) => {
+      try {
+        await Promise.all(
+          active.filter((item) => item.input === path).map((item) => api.cancelTranscriptionWork(item.id)),
+        );
+        void query.refetch();
+      } catch (error) {
+        addToast(t("dashboard.toast.cancelFailed", { error: getErrorMessage(error) }), "error");
+      }
+    },
+    handleRetryTranscription: async (attempt) => {
+      await submit([attempt.inputPath], attempt.postAction, {
+        outputFormat: attempt.outputFormat,
+        model: attempt.model,
+        language: attempt.language,
+        device: attempt.device,
+        computeType: attempt.computeType,
+        advancedOptions: attempt.advancedOptions,
+        overwrite: attempt.overwrite === true,
+      });
+      void client.invalidateQueries({ queryKey: LIBRARY_QUERY_KEY });
+    },
   };
 }

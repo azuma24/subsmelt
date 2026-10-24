@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "../../i18n";
 import * as api from "../../api";
 import { useToast } from "../../ui/Toast";
@@ -18,8 +19,7 @@ export interface UrlTranscribeSectionProps {
 
 /**
  * "Transcribe from URL" settings section. Rendered by the caller only when the
- * backend has yt-dlp installed. Downloads the rendered subtitle straight to
- * the browser since there's no local media file for a URL.
+ * backend has yt-dlp installed. Outputs are persisted server-side until fetched.
  */
 export function UrlTranscribeSection({
   effFormat,
@@ -35,33 +35,45 @@ export function UrlTranscribeSection({
   const { addToast } = useToast();
   const [urlValue, setUrlValue] = useState("");
   const [urlBusy, setUrlBusy] = useState(false);
+  const workQuery = useQuery({
+    queryKey: ["transcription-work"],
+    queryFn: api.listTranscriptionWork,
+    refetchInterval: 1500,
+  });
+  const urlWork = (workQuery.data?.items ?? []).filter((item) => item.kind === "url").reverse();
+  const download = async (id: string) => {
+    const res = await api.getTranscriptionWork(id);
+    if (res.status !== "succeeded" || !res.content) return;
+    const href = URL.createObjectURL(new Blob([res.content], { type: "text/plain;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = href;
+    a.download = `transcript.${(FORMATS as string[]).includes(res.outputFormat ?? "") ? res.outputFormat : effFormat}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(href);
+  };
 
   const transcribeFromUrl = async () => {
     const url = urlValue.trim();
     if (!url) return;
     setUrlBusy(true);
     try {
-      const res = await api.transcribeUrl({
-        url,
-        outputFormat: effFormat,
-        model: effModel,
-        language: effLang,
-        device: effDevice,
-        computeType: effCompute,
-        speakerDiarization: canDiarize && effDiarize,
-      });
-      // No local media file for a URL — hand the rendered subtitle to the browser.
-      const blob = new Blob([res.content], { type: "text/plain;charset=utf-8" });
-      const href = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = href;
-      const safeExt = (FORMATS as string[]).includes(res.outputFormat) ? res.outputFormat : effFormat;
-      a.download = `transcript.${safeExt}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(href);
-      addToast(t("whisper.urlDone", { segments: res.segments ?? 0 }), "success");
+      await api.queueTranscriptionWork([
+        {
+          kind: "url",
+          input: url,
+          request: {
+            outputFormat: effFormat,
+            model: effModel,
+            language: effLang,
+            device: effDevice,
+            computeType: effCompute,
+            speakerDiarization: canDiarize && effDiarize,
+          },
+        },
+      ]);
+      void workQuery.refetch();
       setUrlValue("");
     } catch (e: unknown) {
       addToast(`${t("whisper.urlFailed")}: ${e instanceof Error ? e.message : t("whisper.failedFallback")}`, "error");
@@ -93,6 +105,37 @@ export function UrlTranscribeSection({
         >
           {urlBusy ? t("whisper.urlBusy") : t("whisper.urlButton")}
         </ActionButton>
+      </div>
+      <div className="space-y-2">
+        {urlWork.map((item) => (
+          <div key={item.id} className="flex items-center gap-2 text-sm text-muted">
+            <span className="min-w-0 flex-1 truncate" title={item.input}>
+              {item.input}
+            </span>
+            <span>
+              {item.status === "running"
+                ? `${t("transcriptionHistory.status.running")} ${item.progress}%`
+                : item.status === "queued"
+                  ? t("dashboard.status.pending")
+                  : t(`transcriptionHistory.status.${item.status}`)}
+            </span>
+            {item.status === "succeeded" && (
+              <button type="button" className="underline" onClick={() => void download(item.id)}>
+                {t("settings.models.download")}
+              </button>
+            )}
+            {(item.status === "running" || item.status === "queued") && (
+              <button
+                type="button"
+                className="underline"
+                onClick={() => void api.cancelTranscriptionWork(item.id).then(() => workQuery.refetch())}
+              >
+                {t("whisper.cancel")}
+              </button>
+            )}
+            {item.error && <span title={item.error}>{item.error}</span>}
+          </div>
+        ))}
       </div>
     </SettingsSection>
   );

@@ -247,6 +247,31 @@ export const convertSubtitles = (body: ConvertRequest, opts?: FetchOpts) =>
   });
 
 // Speech-to-text
+export interface TranscriptionWork {
+  id: string;
+  batchId: string;
+  kind: "file" | "url";
+  input: string;
+  request: Record<string, unknown>;
+  status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+  progress: number;
+  error?: string;
+  outputPath?: string;
+  outputFormat?: string;
+  content?: string;
+  segments?: number;
+  createdAt: string;
+}
+export const queueTranscriptionWork = (
+  inputs: Array<{ kind: "file" | "url"; input: string; request: Record<string, unknown> }>,
+) =>
+  fetchJSON<{ items: TranscriptionWork[] }>("/transcribe/work", { method: "POST", body: JSON.stringify({ inputs }) });
+export const listTranscriptionWork = (opts?: FetchOpts) =>
+  fetchJSON<{ items: TranscriptionWork[] }>("/transcribe/work", opts);
+export const getTranscriptionWork = (id: string) =>
+  fetchJSON<TranscriptionWork>(`/transcribe/work/${encodeURIComponent(id)}`);
+export const cancelTranscriptionWork = (id: string) =>
+  fetchJSON<{ ok: boolean }>(`/transcribe/work/${encodeURIComponent(id)}/cancel`, { method: "POST" });
 export const getTranscriptionHealth = (opts?: FetchOpts) => fetchJSON<TranscriptionHealth>("/transcribe/health", opts);
 export interface TranscriptionLogs {
   ok: boolean;

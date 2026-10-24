@@ -189,7 +189,7 @@ test("cancel-all stops every in-flight transcription", async () => {
   }
 });
 
-test("a client that hangs up mid-run cancels the transcription", async () => {
+test("a client that hangs up mid-run does not cancel the transcription", async () => {
   const backend = await startBackend(
     "/transcribe",
     JSON.stringify({ ok: true, subtitle_path: "/srv/show/e.srt", language: "en", segments: 1 }),
@@ -213,8 +213,8 @@ test("a client that hangs up mid-run cancels the transcription", async () => {
     client.abort();
 
     await assert.rejects(run);
-    // The hangup must reach the backend as a closed connection, not leave it transcribing.
-    assert.equal(await backend.clientHungUp, true);
+    // HTTP response lifecycle no longer owns the backend operation.
+    assert.equal(await backend.clientHungUp, false);
   } finally {
     backend.close();
   }
@@ -259,5 +259,29 @@ test("a scan does not claim a video that is already transcribing", async () => {
   } finally {
     endTranscriptionRun(running, controller);
     releaseAutoTranscription(idle);
+  }
+});
+
+test("queued URL work survives browser disconnect and exposes its completed output", async () => {
+  const backend = await startBackend(
+    "/transcribe/url/stream",
+    `${JSON.stringify({ type: "result", ok: true, content: "hello", language: "en", segments: 1 })}\n`,
+  );
+  setSettings({ transcription_enabled: "1", transcription_backend_url: backend.url });
+  try {
+    const url = "https://example.org/video";
+    const queued = await post("/api/transcribe/work", { inputs: [{ kind: "url", input: url, request: {} }] });
+    assert.equal(queued.status, 202);
+    const id = (queued.body as { items: Array<{ id: string }> }).items[0].id;
+    await backend.received;
+    // The submitting response is already closed; no browser remains waiting.
+    const duplicate = await post("/api/transcribe/work", { inputs: [{ kind: "url", input: url, request: {} }] });
+    assert.equal((duplicate.body as { items: Array<{ id: string }> }).items[0].id, id);
+    assert.equal(await backend.clientHungUp, false);
+    const result = await fetch(`${appUrl}/api/transcribe/work/${id}`).then((res) => res.json());
+    assert.equal(result.status, "succeeded");
+    assert.equal(result.content, "hello");
+  } finally {
+    backend.close();
   }
 });

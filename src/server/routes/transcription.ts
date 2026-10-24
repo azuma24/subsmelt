@@ -31,12 +31,54 @@ import { beginTranscriptionRun } from "../transcription/in-flight.js";
 import { registerTranscriptionModelsRoutes } from "./transcription-models.js";
 import { registerTranscriptionHistoryRoutes } from "./transcription-history-routes.js";
 import { errorMessage } from "../errors.js";
+import { transcriptionWork, validateWorkInput } from "../transcription/work.js";
 
 // Re-exported so existing importers (`src/server/index.ts`) keep working
 // unchanged after the transcription engine moved to ./transcription-runtime.js.
 export { getTranscriptionBackendUrl, runTranscriptionAttempt, transcriptionErrorStatus };
 
 export function registerTranscriptionRoutes(app: Express): void {
+  app.get("/api/transcribe/work", (_req, res) =>
+    res.json({ items: transcriptionWork.store.list().map(({ content: _content, ...item }) => item) }),
+  );
+  app.get("/api/transcribe/work/:id", (req, res) => {
+    const item = transcriptionWork.store.get(req.params.id);
+    return item ? res.json(item) : res.status(404).json({ error: "Transcription work not found" });
+  });
+  app.post("/api/transcribe/work", (req, res) => {
+    const inputs = req.body?.inputs;
+    if (!Array.isArray(inputs) || inputs.length < 1 || inputs.length > 500)
+      return res.status(400).json({ error: "Expected 1–500 inputs" });
+    try {
+      const prepared = inputs.map((entry: unknown) => {
+        if (!entry || typeof entry !== "object") throw new Error("Invalid input");
+        const row = entry as Record<string, unknown>;
+        const kind = row.kind;
+        const input = row.input;
+        if ((kind !== "file" && kind !== "url") || typeof input !== "string" || !input.trim())
+          throw new Error("Invalid input");
+        validateWorkInput(kind, input);
+        return {
+          kind: kind as "file" | "url",
+          input,
+          request:
+            row.request && typeof row.request === "object" && !Array.isArray(row.request)
+              ? (row.request as Record<string, unknown>)
+              : {},
+        };
+      });
+      const items = transcriptionWork.store.enqueue(prepared);
+      transcriptionWork.start();
+      return res.status(202).json({ items: items.map(({ content: _content, ...item }) => item) });
+    } catch (error) {
+      return res.status(400).json({ error: errorMessage(error) });
+    }
+  });
+  app.post("/api/transcribe/work/:id/cancel", (req, res) => {
+    return transcriptionWork.cancel(req.params.id)
+      ? res.json({ ok: true })
+      : res.status(404).json({ error: "Active work not found" });
+  });
   app.get("/api/transcribe/health", async (_req, res) => {
     const settings = getAllSettings();
     const backendUrl = getTranscriptionBackendUrl(settings);
@@ -132,15 +174,6 @@ export function registerTranscriptionRoutes(app: Express): void {
         ? requestedPostAction
         : "transcribe_only";
 
-    // A client that goes away (closed tab, reload) must not leave the backend
-    // transcribing: abort the run when the response closes unfinished. Only
-    // this request's own run: a refused second request must not cancel the
-    // run it collided with.
-    const clientGone = new AbortController();
-    res.on("close", () => {
-      if (!res.writableEnded) clientGone.abort();
-    });
-
     try {
       const { result, attemptId } = await runTranscriptionAttempt({
         videoPath,
@@ -148,7 +181,7 @@ export function registerTranscriptionRoutes(app: Express): void {
         outputFormat: req.body?.outputFormat as TranscriptionOutputFormat | undefined,
         overrides: overridesFromBody(req.body),
         settings,
-        signal: clientGone.signal,
+
         overwrite: req.body?.overwrite === true,
       });
       logger.info("system", `Transcribed ${path.basename(videoPath)} → ${result.subtitle_path || "subtitle output"}`);
@@ -224,10 +257,7 @@ export function registerTranscriptionRoutes(app: Express): void {
         .status(transcriptionErrorStatus(error))
         .json({ error: errorMessage(error) || "URL transcription failed" });
     }
-    // Same as file runs: a client that leaves must not keep the backend busy.
-    res.on("close", () => {
-      if (!res.writableEnded) controller.abort();
-    });
+
     let abandoned = false;
     // Only a run that reached the backend can still be busy there after the app lets go.
     let reachedBackend = false;
