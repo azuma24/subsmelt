@@ -14,6 +14,7 @@ fs.mkdirSync(process.env.MEDIA_DIR);
 const db = await import("./db.js");
 const config = await import("./config.js");
 const queue = await import("./queue.js");
+const runMarker = await import("./queue/run-marker.js");
 const usage = await import("./usage.js");
 
 (globalThis as any).AI_SDK_LOG_WARNINGS = false;
@@ -78,13 +79,6 @@ function addJob(opts: { srtExists: boolean; outputExists: boolean }) {
   const result = db.createJob({ task_id: taskId, srt_path: srtPath, output_path: outputPath, video_path: null });
   return Number(result.lastInsertRowid);
 }
-
-test("the queue resumes at boot only when auto-translate is on and jobs are pending", () => {
-  assert.equal(queue.shouldResumeQueueOnBoot("1", 3), true);
-  assert.equal(queue.shouldResumeQueueOnBoot("1", 0), false);
-  assert.equal(queue.shouldResumeQueueOnBoot("0", 3), false);
-  assert.equal(queue.shouldResumeQueueOnBoot("", 3), false);
-});
 
 test("a job queued while the run repairs titles is processed by that run", async () => {
   config.setSetting("title_sidecar", "1");
@@ -329,6 +323,53 @@ test("resuming at boot processes the pending jobs a previous process left behind
   await waitFor(() => !queue.isQueueRunning(), "the resumed queue run to finish");
 
   assert.equal(db.getJob(orphan)?.status, "error");
+});
+
+test("with auto-translate off, boot resumes only the run the previous process died during", async () => {
+  config.setSetting("auto_translate", "0");
+  const selected = addJob({ srtExists: true, outputExists: false });
+  const untouched = addJob({ srtExists: false, outputExists: false });
+  try {
+    const run = queue.processQueue([selected]);
+    await waitFor(() => release.length > 0, "the selected job to call the LLM");
+    // The process dies here: nothing ends the run, and the next process's
+    // startup puts the translating job back to pending.
+    const interrupted = runMarker.interruptedQueueRun();
+    queue.requestStop();
+    await run;
+    release.length = 0;
+    assert.deepEqual(interrupted, { ids: [selected] });
+    assert.equal(runMarker.interruptedQueueRun(), null, "a finished or stopped run leaves nothing to resume");
+
+    // A stopped job goes back to pending, as startup does to a translating one.
+    assert.equal(db.getJob(selected)?.status, "pending");
+    fs.rmSync(db.getJob(selected)!.srt_path, { force: true });
+    runMarker.markQueueRun(interrupted?.ids ?? undefined);
+    queue.resumeQueueOnBoot();
+    await waitFor(() => !queue.isQueueRunning(), "the resumed queue run to finish");
+
+    // Processed: its now-missing source fails it.
+    assert.equal(db.getJob(selected)?.status, "error");
+    assert.equal(db.getJob(untouched)?.status, "pending");
+    assert.equal(runMarker.interruptedQueueRun(), null);
+  } finally {
+    config.setSetting("auto_translate", "1");
+    db.deleteJob(selected);
+    db.deleteJob(untouched);
+  }
+});
+
+test("with auto-translate off and no interrupted run, boot leaves pending jobs alone", () => {
+  config.setSetting("auto_translate", "0");
+  const pending = addJob({ srtExists: false, outputExists: false });
+  try {
+    queue.resumeQueueOnBoot();
+    assert.equal(queue.isQueueRunning(), false);
+    assert.equal(db.getJob(pending)?.status, "pending");
+  } finally {
+    config.setSetting("auto_translate", "1");
+    db.deleteJob(pending);
+  }
 });
 
 test("a run asked for while a run of selected jobs is active starts when that run ends", async () => {

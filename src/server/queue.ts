@@ -23,6 +23,7 @@ import {
 } from "./queue/state.js";
 import { DEFAULT_LLM_ENDPOINT, runJob } from "./queue/run-job.js";
 import { writeJobTitle } from "./queue/titles.js";
+import { clearQueueRun, interruptedQueueRun, markQueueRun } from "./queue/run-marker.js";
 import { recordUsage } from "./usage.js";
 
 // The per-job state (what translates now, on which connection, what was
@@ -89,19 +90,22 @@ export function requestJobCancel(jobId: number): boolean {
 }
 
 /**
- * Whether a fresh process should pick up the jobs it finds pending. Startup
- * resets jobs left translating by the previous process to pending, and without
- * this nothing restarted them until the next scan or manual start.
+ * Picks up, in a fresh process, the jobs startup reset from translating back
+ * to pending. With auto-translate on that is every pending job; otherwise only
+ * the run the previous process died during, so jobs nobody started stay put.
  */
-export function shouldResumeQueueOnBoot(autoTranslate: string, pendingCount: number): boolean {
-  return autoTranslate === "1" && pendingCount > 0;
-}
-
 export function resumeQueueOnBoot() {
-  const pending = countPendingJobs();
-  if (!shouldResumeQueueOnBoot(getSetting("auto_translate"), pending)) return;
+  const autoTranslate = getSetting("auto_translate") === "1";
+  const interrupted = interruptedQueueRun();
+  if (!autoTranslate && !interrupted) return;
+  const ids = autoTranslate ? undefined : (interrupted?.ids ?? undefined);
+  const pending = countPendingJobs(ids ? new Set(ids) : null);
+  if (pending === 0) {
+    clearQueueRun();
+    return;
+  }
   logger.info("queue", `Resuming ${pending} pending job(s) found at startup`);
-  runQueueSafely();
+  runQueueSafely(ids);
 }
 
 /**
@@ -117,6 +121,7 @@ export function runQueueSafely(onlyIds?: number[]): void {
 }
 
 export async function processQueue(onlyIds?: number[]) {
+  markQueueRun(onlyIds && onlyIds.length > 0 ? onlyIds : undefined);
   if (isRunning) {
     // A run of all jobs already re-checks for pending work before it ends.
     if (runFilter) rememberRunRequest(onlyIds && onlyIds.length > 0 ? onlyIds : undefined);
@@ -170,6 +175,7 @@ export async function processQueue(onlyIds?: number[]) {
       void notify("queue:finished", {});
     }
   } finally {
+    clearQueueRun();
     titleRepairJobs.length = 0;
     isRunning = false;
     runFilter = null;
