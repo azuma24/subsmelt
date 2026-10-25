@@ -5,6 +5,8 @@ version number and are released together (`v0.5.6` and `whisper-v0.5.6`).
 
 ## [Unreleased]
 
+## [0.7.3] — 2026-10-25
+
 ### Fixed
 
 - **A wrong backend token is now reported.** `/health` answers without a token, so readiness said "Ready" while the model manager failed with a generic "Something went wrong". The backend now reports `tokenAccepted`. Readiness shows "Token rejected", and the model manager shows the real error.
