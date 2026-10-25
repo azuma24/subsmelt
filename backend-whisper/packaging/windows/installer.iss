@@ -270,6 +270,33 @@ begin
   Result := '';  { empty string => proceed with install }
   NeedsRestart := False;
 
+  { TODO(Phase 3a): point this at the bundled provision.exe once it exists.
+    Until then we look for it next to the source bundle; if absent, we skip the
+    gate rather than block (CPU-only mode is always allowed). }
+  DoctorExe := ExpandConstant('{src}\provision.exe');
+  if FileExists(DoctorExe) then
+  begin
+    if not Exec(DoctorExe, 'doctor --quiet', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+      { Could not even launch the doctor — warn but continue (non-fatal). }
+      Log('Provisioning doctor failed to launch; continuing (CPU-only fallback available).')
+    else if ResultCode <> 0 then
+    begin
+      { Driver missing/too old. Inform the user but allow continue -> CPU-only.
+        A future revision can offer the guided driver install from Phase 3a here. }
+      if MsgBox('GPU prerequisites are not fully met (NVIDIA driver missing or too old).' + #13#10 +
+                'You can continue and run in CPU-only mode, then fix the driver later' + #13#10 +
+                'via the tray app''s "Run diagnostics".' + #13#10#13#10 +
+                'Continue installation?', mbConfirmation, MB_YESNO) = IDNO then
+        Result := 'Installation cancelled: resolve the NVIDIA driver and re-run setup.';
+    end;
+  end
+  else
+    Log('provision.exe not found; skipping driver pre-check (Phase 3a integration pending).');
+  if Result <> '' then
+    Exit;
+
+  { Destructive steps last, after every check that can still cancel setup:
+    a cancel after the old files were deleted would leave no working backend. }
   if not StopExistingService then
   begin
     Result := 'The {#MyServiceName} service did not stop within 30 seconds, so its files cannot be replaced.' + #13#10 +
@@ -284,32 +311,6 @@ begin
               'Close any program using it (or reboot), then run setup again. Your settings, token and models are unchanged.';
     Exit;
   end;
-
-  { TODO(Phase 3a): point this at the bundled provision.exe once it exists.
-    Until then we look for it next to the source bundle; if absent, we skip the
-    gate rather than block (CPU-only mode is always allowed). }
-  DoctorExe := ExpandConstant('{src}\provision.exe');
-  if FileExists(DoctorExe) then
-  begin
-    if not Exec(DoctorExe, 'doctor --quiet', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-    begin
-      { Could not even launch the doctor — warn but continue (non-fatal). }
-      Log('Provisioning doctor failed to launch; continuing (CPU-only fallback available).');
-      Exit;
-    end;
-    if ResultCode <> 0 then
-    begin
-      { Driver missing/too old. Inform the user but allow continue -> CPU-only.
-        A future revision can offer the guided driver install from Phase 3a here. }
-      if MsgBox('GPU prerequisites are not fully met (NVIDIA driver missing or too old).' + #13#10 +
-                'You can continue and run in CPU-only mode, then fix the driver later' + #13#10 +
-                'via the tray app''s "Run diagnostics".' + #13#10#13#10 +
-                'Continue installation?', mbConfirmation, MB_YESNO) = IDNO then
-        Result := 'Installation cancelled: resolve the NVIDIA driver and re-run setup.';
-    end;
-  end
-  else
-    Log('provision.exe not found; skipping driver pre-check (Phase 3a integration pending).');
 end;
 
 { ---- VC++ runtime, silent. /norestart so we don't reboot mid-install. ---- }

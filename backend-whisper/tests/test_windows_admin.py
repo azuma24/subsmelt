@@ -7,6 +7,7 @@ replaced by a recording runner fed captured Windows output.
 """
 
 import importlib.util
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -15,6 +16,8 @@ from unittest import mock
 _MODULE_PATH = Path(__file__).resolve().parents[1] / "packaging" / "windows" / "tray" / "windows_admin.py"
 _spec = importlib.util.spec_from_file_location("windows_admin", _MODULE_PATH)
 windows_admin = importlib.util.module_from_spec(_spec)
+# dataclasses resolves annotations through sys.modules, so register first.
+sys.modules["windows_admin"] = windows_admin
 _spec.loader.exec_module(windows_admin)
 
 SC_RUNNING = """
