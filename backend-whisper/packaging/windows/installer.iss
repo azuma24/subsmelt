@@ -203,7 +203,7 @@ begin
 end;
 
 { ---- Delete the previous program files ----
-  [Files] only copies over the app folder, so a DLL or module the new bundle dropped
+  The [Files] section only copies over the app folder, so a DLL or module the new bundle dropped
   would stay behind and could be loaded instead of the right one. Only runs
   when that folder holds run_server.exe, so a folder that is not ours is never
   emptied, and keeps Inno's own unins* files so the uninstaller still works.
@@ -226,7 +226,7 @@ begin
       if (FindRec.Name <> '.') and (FindRec.Name <> '..') and (Pos('unins', Lowercase(FindRec.Name)) <> 1) then
       begin
         Path := Dir + '\' + FindRec.Name;
-        if (FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0 then
+        if DirExists(Path) then
           Deleted := DelTree(Path, True, True, True)
         else
           Deleted := DeleteFile(Path);
