@@ -123,7 +123,14 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "waiting": "Waiting for GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {
+      "pending": "Pending",
+      "waiting": "Waiting for GPU",
+      "running": "Running",
+      "done": "Done",
+      "working": "Working",
+      "error": "Failed"
+    },
     "downloadFile": "Download file",
     "downloadZip": "Download ZIP",
     "detecting": "Detecting language…",
@@ -827,7 +834,9 @@
         "currentDefaults": "Current request defaults: {{model}} on {{device}} / {{computeType}}, output {{output}}.",
         "currentDefaultsMetal": "Current request defaults: {{model}}, output {{output}}.",
         "backendMessage": "Backend message: {{message}}",
-        "firstRunQuiet": "First transcription runs can stay quiet for a while while the model downloads or warms up."
+        "firstRunQuiet": "First transcription runs can stay quiet for a while while the model downloads or warms up.",
+        "tokenRejected": "Token rejected",
+        "tokenRejectedSummary": "The backend is reachable but rejected the backend token. Copy the token from the backend's config and save it here."
       },
       "languageEnglish": "English",
       "languageJapanese": "Japanese",

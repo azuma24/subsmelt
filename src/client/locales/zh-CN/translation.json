@@ -667,7 +667,9 @@
         "transport_shared": "共享文件系统",
         "transport_upload": "上传",
         "gpus": "GPU",
-        "noGpu": "未检测到（CPU）"
+        "noGpu": "未检测到（CPU）",
+        "tokenRejected": "令牌被拒绝",
+        "tokenRejectedSummary": "后端可以连接，但拒绝了后端令牌。请从后端配置中复制令牌并保存到这里。"
       },
       "transport": "文件传输",
       "transportAuto": "自动（推荐）",
@@ -993,7 +995,14 @@
     "batchUnavailable": "批次已过期或不可用",
     "batchLimit": "最多 10 个文件，每个不超过 1 MB",
     "serverProcessing": "服务器正在处理，您可以关闭标签页，稍后再回来。",
-    "batchStatus": {"pending": "等待中", "waiting": "等待 GPU", "running": "运行中", "done": "完成", "working": "处理中", "error": "失败"},
+    "batchStatus": {
+      "pending": "等待中",
+      "waiting": "等待 GPU",
+      "running": "运行中",
+      "done": "完成",
+      "working": "处理中",
+      "error": "失败"
+    },
     "downloadFile": "下载文件",
     "downloadZip": "下载 ZIP",
     "detecting": "正在检测语言…",

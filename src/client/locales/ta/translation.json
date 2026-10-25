@@ -667,7 +667,9 @@
         "transport_shared": "பகிரப்பட்ட கோப்பு முறைமை",
         "transport_upload": "பதிவேற்றம்",
         "gpus": "GPU-கள்",
-        "noGpu": "எதுவும் கண்டறியப்படவில்லை (CPU)"
+        "noGpu": "எதுவும் கண்டறியப்படவில்லை (CPU)",
+        "tokenRejected": "டோக்கன் நிராகரிக்கப்பட்டது",
+        "tokenRejectedSummary": "பேக்எண்டை அணுக முடிகிறது, ஆனால் அது பேக்எண்ட் டோக்கனை நிராகரித்தது. பேக்எண்ட் அமைப்பிலிருந்து டோக்கனை நகலெடுத்து இங்கே சேமிக்கவும்."
       },
       "transport": "கோப்புப் பரிமாற்றம்",
       "transportAuto": "தானியங்கு (பரிந்துரைக்கப்படுகிறது)",
@@ -993,7 +995,14 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "waiting": "GPU-க்காகக் காத்திருக்கிறது", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {
+      "pending": "Pending",
+      "waiting": "GPU-க்காகக் காத்திருக்கிறது",
+      "running": "Running",
+      "done": "Done",
+      "working": "Working",
+      "error": "Failed"
+    },
     "downloadFile": "கோப்பைப் பதிவிறக்கு",
     "downloadZip": "ZIP பதிவிறக்கு",
     "detecting": "மொழிக் கண்டறிந்து கொண்டுள்ளது…",

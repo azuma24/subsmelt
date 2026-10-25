@@ -675,7 +675,9 @@
         "transport_shared": "نظام ملفات مشترك",
         "transport_upload": "رفع",
         "gpus": "وحدات GPU",
-        "noGpu": "لم يُكتشف أي منها (CPU)"
+        "noGpu": "لم يُكتشف أي منها (CPU)",
+        "tokenRejected": "تم رفض الرمز",
+        "tokenRejectedSummary": "الخادم متاح لكنه رفض رمز الخادم. انسخ الرمز من إعدادات الخادم واحفظه هنا."
       },
       "transport": "نقل الملفات",
       "transportAuto": "تلقائي (موصى به)",
@@ -1009,7 +1011,14 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "waiting": "بانتظار GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {
+      "pending": "Pending",
+      "waiting": "بانتظار GPU",
+      "running": "Running",
+      "done": "Done",
+      "working": "Working",
+      "error": "Failed"
+    },
     "downloadFile": "تنزيل الملف",
     "downloadZip": "تنزيل ZIP",
     "detecting": "جاري الكشف عن اللغة…",

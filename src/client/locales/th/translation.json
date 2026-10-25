@@ -667,7 +667,9 @@
         "transport_shared": "ระบบไฟล์ที่ใช้ร่วมกัน",
         "transport_upload": "อัปโหลด",
         "gpus": "GPU",
-        "noGpu": "ไม่พบ (CPU)"
+        "noGpu": "ไม่พบ (CPU)",
+        "tokenRejected": "โทเค็นถูกปฏิเสธ",
+        "tokenRejectedSummary": "เข้าถึงแบ็กเอนด์ได้ แต่แบ็กเอนด์ปฏิเสธโทเค็น คัดลอกโทเค็นจากการตั้งค่าแบ็กเอนด์แล้วบันทึกที่นี่"
       },
       "transport": "การส่งไฟล์",
       "transportAuto": "อัตโนมัติ (แนะนำ)",
@@ -993,7 +995,14 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "waiting": "กำลังรอ GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {
+      "pending": "Pending",
+      "waiting": "กำลังรอ GPU",
+      "running": "Running",
+      "done": "Done",
+      "working": "Working",
+      "error": "Failed"
+    },
     "downloadFile": "ดาวน์โหลดไฟล์",
     "downloadZip": "ดาวน์โหลด ZIP",
     "detecting": "กำลังตรวจสอบภาษา…",

@@ -127,6 +127,8 @@ export function TranscriptionReadinessPanel({
   const outputFormats = capabilities?.outputFormats;
   const selectedModelAdvertised = models?.length ? models.includes(selectedModel) : undefined;
   const selectedOutputAdvertised = outputFormats?.length ? outputFormats.includes(selectedOutput) : undefined;
+  // /health answers without a token, so reachable alone does not mean the gated calls will work.
+  const tokenRejected = Boolean(health?.endpointReachable) && backendHealth?.tokenAccepted === false;
 
   const summary = !enabled
     ? t("settings.transcription.readiness.disabledSummary")
@@ -134,9 +136,11 @@ export function TranscriptionReadinessPanel({
       ? t("settings.transcription.readiness.needsBackendSummary")
       : healthQuery.isLoading
         ? t("settings.transcription.readiness.checkingSummary")
-        : health?.ok
-          ? t("settings.transcription.readiness.readySummary")
-          : t("settings.transcription.readiness.unreachableSummary");
+        : tokenRejected
+          ? t("settings.transcription.readiness.tokenRejectedSummary")
+          : health?.ok
+            ? t("settings.transcription.readiness.readySummary")
+            : t("settings.transcription.readiness.unreachableSummary");
 
   return (
     <div className="rounded-md border border-border bg-surface-raised p-4">
@@ -174,15 +178,17 @@ export function TranscriptionReadinessPanel({
         />
         <StatusBadge
           label={t("settings.transcription.readiness.backendReachability")}
-          state={!configured ? "info" : health?.endpointReachable ? "ok" : "fail"}
+          state={!configured ? "info" : tokenRejected ? "fail" : health?.endpointReachable ? "ok" : "fail"}
           detail={
             !configured
               ? t("settings.transcription.readiness.skipped")
-              : health?.endpointReachable
-                ? t("settings.transcription.readiness.reachable")
-                : health?.reason === "endpoint-missing"
-                  ? t("settings.transcription.readiness.missingUrl")
-                  : t("settings.transcription.readiness.notReachable")
+              : tokenRejected
+                ? t("settings.transcription.readiness.tokenRejected")
+                : health?.endpointReachable
+                  ? t("settings.transcription.readiness.reachable")
+                  : health?.reason === "endpoint-missing"
+                    ? t("settings.transcription.readiness.missingUrl")
+                    : t("settings.transcription.readiness.notReachable")
           }
         />
         <StatusBadge

@@ -667,7 +667,9 @@
         "transport_shared": "Delat filsystem",
         "transport_upload": "Uppladdning",
         "gpus": "GPU:er",
-        "noGpu": "ingen hittad (CPU)"
+        "noGpu": "ingen hittad (CPU)",
+        "tokenRejected": "Token avvisad",
+        "tokenRejectedSummary": "Backend nås men avvisade backend-token. Kopiera token från backendens konfiguration och spara den här."
       },
       "transport": "Filöverföring",
       "transportAuto": "Automatiskt (rekommenderas)",
@@ -993,7 +995,14 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "waiting": "Väntar på GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {
+      "pending": "Pending",
+      "waiting": "Väntar på GPU",
+      "running": "Running",
+      "done": "Done",
+      "working": "Working",
+      "error": "Failed"
+    },
     "downloadFile": "Ladda ned fil",
     "downloadZip": "Ladda ned ZIP",
     "detecting": "Detekterar språk…",

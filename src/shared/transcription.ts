@@ -171,6 +171,8 @@ export interface TranscriptionHealth {
     totalRamMb?: number;
     availableRamMb?: number;
     modelCache?: TranscriptionPreflightResponse["modelCache"];
+    /** False when the backend needs a token and ours did not match; null when it needs none. */
+    tokenAccepted?: boolean | null;
     capabilities?: {
       version?: string;
       host?: BackendHost;

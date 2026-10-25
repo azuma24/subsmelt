@@ -667,7 +667,9 @@
         "transport_shared": "Sistem fail kongsi",
         "transport_upload": "Muat naik",
         "gpus": "GPU",
-        "noGpu": "tiada dikesan (CPU)"
+        "noGpu": "tiada dikesan (CPU)",
+        "tokenRejected": "Token ditolak",
+        "tokenRejectedSummary": "Backend boleh dicapai tetapi menolak token backend. Salin token daripada konfigurasi backend dan simpan di sini."
       },
       "transport": "Pengangkutan fail",
       "transportAuto": "Auto (disyorkan)",
@@ -993,7 +995,14 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "waiting": "Menunggu GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {
+      "pending": "Pending",
+      "waiting": "Menunggu GPU",
+      "running": "Running",
+      "done": "Done",
+      "working": "Working",
+      "error": "Failed"
+    },
     "downloadFile": "Muat turun fail",
     "downloadZip": "Muat turun ZIP",
     "detecting": "Mengesan bahasa…",

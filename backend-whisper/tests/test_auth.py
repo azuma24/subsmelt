@@ -96,6 +96,18 @@ class AuthTokenTests(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(resp.json()["capabilities"]["authRequired"])
 
+    def test_health_says_whether_the_token_matched(self):
+        os.environ["SUBSMELT_WHISPER_TOKEN"] = "s3cr3t"
+        good = self.client.get("/health", headers={"Authorization": "Bearer s3cr3t"})
+        wrong = self.client.get("/health", headers={"Authorization": "Bearer nope"})
+        missing = self.client.get("/health")
+        self.assertIs(good.json()["tokenAccepted"], True)
+        self.assertIs(wrong.json()["tokenAccepted"], False)
+        self.assertIs(missing.json()["tokenAccepted"], False)
+
+        os.environ.pop("SUBSMELT_WHISPER_TOKEN", None)
+        self.assertIsNone(self.client.get("/health").json()["tokenAccepted"])
+
 
 if __name__ == "__main__":
     unittest.main()

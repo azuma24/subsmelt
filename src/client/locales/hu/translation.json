@@ -667,7 +667,9 @@
         "transport_shared": "Megosztott fájlrendszer",
         "transport_upload": "Feltöltés",
         "gpus": "GPU-k",
-        "noGpu": "nincs észlelve (CPU)"
+        "noGpu": "nincs észlelve (CPU)",
+        "tokenRejected": "Token elutasítva",
+        "tokenRejectedSummary": "A backend elérhető, de elutasította a backend tokent. Másolja ki a tokent a backend konfigurációjából, és mentse ide."
       },
       "transport": "Fájlátvitel",
       "transportAuto": "Automatikus (ajánlott)",
@@ -993,7 +995,14 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "waiting": "GPU-ra vár", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {
+      "pending": "Pending",
+      "waiting": "GPU-ra vár",
+      "running": "Running",
+      "done": "Done",
+      "working": "Working",
+      "error": "Failed"
+    },
     "downloadFile": "Fájl letöltése",
     "downloadZip": "ZIP letöltése",
     "detecting": "Nyelv felismerése…",

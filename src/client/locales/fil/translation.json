@@ -667,7 +667,9 @@
         "transport_shared": "Shared na filesystem",
         "transport_upload": "Upload",
         "gpus": "Mga GPU",
-        "noGpu": "walang natukoy (CPU)"
+        "noGpu": "walang natukoy (CPU)",
+        "tokenRejected": "Tinanggihan ang token",
+        "tokenRejectedSummary": "Naaabot ang backend pero tinanggihan nito ang backend token. Kopyahin ang token mula sa config ng backend at i-save dito."
       },
       "transport": "Paglipat ng file",
       "transportAuto": "Auto (inirerekomenda)",
@@ -993,7 +995,14 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "waiting": "Naghihintay sa GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {
+      "pending": "Pending",
+      "waiting": "Naghihintay sa GPU",
+      "running": "Running",
+      "done": "Done",
+      "working": "Working",
+      "error": "Failed"
+    },
     "downloadFile": "I-download ang file",
     "downloadZip": "I-download ang ZIP",
     "detecting": "Nag-detect ng wika…",

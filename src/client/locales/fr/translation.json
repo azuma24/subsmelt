@@ -669,7 +669,9 @@
         "transport_shared": "Système de fichiers partagé",
         "transport_upload": "Envoi",
         "gpus": "GPU",
-        "noGpu": "aucun détecté (CPU)"
+        "noGpu": "aucun détecté (CPU)",
+        "tokenRejected": "Jeton refusé",
+        "tokenRejectedSummary": "Le backend est joignable mais a refusé le jeton du backend. Copiez le jeton depuis la configuration du backend et enregistrez-le ici."
       },
       "transport": "Transport des fichiers",
       "transportAuto": "Auto (recommandé)",
@@ -997,7 +999,14 @@
     "batchUnavailable": "Lot expiré ou indisponible",
     "batchLimit": "10 fichiers maximum, 1 Mo chacun",
     "serverProcessing": "Traitement sur le serveur : vous pouvez fermer cet onglet et revenir plus tard.",
-    "batchStatus": {"pending": "En attente", "waiting": "En attente du GPU", "running": "En cours", "done": "Terminé", "working": "Traitement", "error": "Échec"},
+    "batchStatus": {
+      "pending": "En attente",
+      "waiting": "En attente du GPU",
+      "running": "En cours",
+      "done": "Terminé",
+      "working": "Traitement",
+      "error": "Échec"
+    },
     "downloadFile": "Télécharger le fichier",
     "downloadZip": "Télécharger le ZIP",
     "detecting": "Détection de la langue…",

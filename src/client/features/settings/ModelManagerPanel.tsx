@@ -126,7 +126,7 @@ export function ModelManagerPanel({ enabled, host }: { enabled: boolean; host: T
         <p className="mt-3 text-xs text-faint">{t("settings.models.needsBackend")}</p>
       ) : modelsQuery.isError ? (
         <div className="mt-3">
-          <InlineError onRetry={() => void modelsQuery.refetch()} />
+          <InlineError message={getErrorMessage(modelsQuery.error)} onRetry={() => void modelsQuery.refetch()} />
         </div>
       ) : modelsQuery.isLoading ? (
         <p className="mt-3 text-xs text-faint">{t("settings.models.loading")}</p>

@@ -667,7 +667,9 @@
         "transport_shared": "Hệ thống tệp dùng chung",
         "transport_upload": "Tải lên",
         "gpus": "GPU",
-        "noGpu": "không phát hiện (CPU)"
+        "noGpu": "không phát hiện (CPU)",
+        "tokenRejected": "Token bị từ chối",
+        "tokenRejectedSummary": "Có thể kết nối backend nhưng backend đã từ chối token. Hãy sao chép token từ cấu hình backend và lưu tại đây."
       },
       "transport": "Cách truyền tệp",
       "transportAuto": "Tự động (khuyên dùng)",
@@ -993,7 +995,14 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "waiting": "Đang chờ GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {
+      "pending": "Pending",
+      "waiting": "Đang chờ GPU",
+      "running": "Running",
+      "done": "Done",
+      "working": "Working",
+      "error": "Failed"
+    },
     "downloadFile": "Tải tệp",
     "downloadZip": "Tải ZIP",
     "detecting": "Đang phát hiện ngôn ngữ…",

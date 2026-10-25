@@ -667,7 +667,9 @@
         "transport_shared": "শেয়ার্ড ফাইলসিস্টেম",
         "transport_upload": "আপলোড",
         "gpus": "GPU",
-        "noGpu": "কোনোটি পাওয়া যায়নি (CPU)"
+        "noGpu": "কোনোটি পাওয়া যায়নি (CPU)",
+        "tokenRejected": "টোকেন প্রত্যাখ্যাত",
+        "tokenRejectedSummary": "ব্যাকএন্ডে পৌঁছানো যাচ্ছে, কিন্তু এটি ব্যাকএন্ড টোকেন প্রত্যাখ্যান করেছে। ব্যাকএন্ডের কনফিগ থেকে টোকেন কপি করে এখানে সংরক্ষণ করুন।"
       },
       "transport": "ফাইল ট্রান্সপোর্ট",
       "transportAuto": "স্বয়ংক্রিয় (প্রস্তাবিত)",
@@ -993,7 +995,14 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "waiting": "GPU-র অপেক্ষায়", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {
+      "pending": "Pending",
+      "waiting": "GPU-র অপেক্ষায়",
+      "running": "Running",
+      "done": "Done",
+      "working": "Working",
+      "error": "Failed"
+    },
     "downloadFile": "ফাইল ডাউনলোড",
     "downloadZip": "ZIP ডাউনলোড",
     "detecting": "ভাষা সনাক্ত করছি…",

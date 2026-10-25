@@ -669,7 +669,9 @@
         "transport_shared": "Sistema de archivos compartido",
         "transport_upload": "Subida",
         "gpus": "GPU",
-        "noGpu": "ninguna detectada (CPU)"
+        "noGpu": "ninguna detectada (CPU)",
+        "tokenRejected": "Token rechazado",
+        "tokenRejectedSummary": "El backend está accesible pero rechazó el token del backend. Copia el token de la configuración del backend y guárdalo aquí."
       },
       "transport": "Transporte de archivos",
       "transportAuto": "Automático (recomendado)",
@@ -997,7 +999,14 @@
     "batchUnavailable": "El lote caducó o no está disponible",
     "batchLimit": "Máximo 10 archivos de 1 MB cada uno",
     "serverProcessing": "Procesando en el servidor. Puedes cerrar esta pestaña y volver después.",
-    "batchStatus": {"pending": "Pendiente", "waiting": "Esperando la GPU", "running": "En curso", "done": "Terminado", "working": "Procesando", "error": "Error"},
+    "batchStatus": {
+      "pending": "Pendiente",
+      "waiting": "Esperando la GPU",
+      "running": "En curso",
+      "done": "Terminado",
+      "working": "Procesando",
+      "error": "Error"
+    },
     "downloadFile": "Descargar archivo",
     "downloadZip": "Descargar ZIP",
     "detecting": "Detectando idioma…",

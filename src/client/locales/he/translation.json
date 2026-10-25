@@ -669,7 +669,9 @@
         "transport_shared": "מערכת קבצים משותפת",
         "transport_upload": "העלאה",
         "gpus": "מעבדי GPU",
-        "noGpu": "לא זוהה (CPU)"
+        "noGpu": "לא זוהה (CPU)",
+        "tokenRejected": "האסימון נדחה",
+        "tokenRejectedSummary": "השרת זמין אך דחה את אסימון השרת. העתיקו את האסימון מהגדרות השרת ושמרו אותו כאן."
       },
       "transport": "העברת קבצים",
       "transportAuto": "אוטומטי (מומלץ)",
@@ -997,7 +999,14 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "waiting": "ממתין ל-GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {
+      "pending": "Pending",
+      "waiting": "ממתין ל-GPU",
+      "running": "Running",
+      "done": "Done",
+      "working": "Working",
+      "error": "Failed"
+    },
     "downloadFile": "הורד קובץ",
     "downloadZip": "הורד ZIP",
     "detecting": "זיהוי שפה…",

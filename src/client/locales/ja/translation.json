@@ -667,7 +667,9 @@
         "transport_shared": "共有ファイルシステム",
         "transport_upload": "アップロード",
         "gpus": "GPU",
-        "noGpu": "検出なし（CPU）"
+        "noGpu": "検出なし（CPU）",
+        "tokenRejected": "トークンが拒否されました",
+        "tokenRejectedSummary": "バックエンドには接続できますが、バックエンドトークンが拒否されました。バックエンドの設定からトークンをコピーしてここに保存してください。"
       },
       "transport": "ファイル転送",
       "transportAuto": "自動（推奨）",
@@ -993,7 +995,14 @@
     "batchUnavailable": "バッチの期限が切れたか、利用できません",
     "batchLimit": "最大10ファイル、各1 MBまで",
     "serverProcessing": "サーバーで処理中です。このタブを閉じて後で戻れます。",
-    "batchStatus": {"pending": "待機中", "waiting": "GPU 待ち", "running": "実行中", "done": "完了", "working": "処理中", "error": "失敗"},
+    "batchStatus": {
+      "pending": "待機中",
+      "waiting": "GPU 待ち",
+      "running": "実行中",
+      "done": "完了",
+      "working": "処理中",
+      "error": "失敗"
+    },
     "downloadFile": "ファイルをダウンロード",
     "downloadZip": "ZIP をダウンロード",
     "detecting": "言語を検出中…",

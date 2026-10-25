@@ -667,7 +667,9 @@
         "transport_shared": "Gedeeld bestandssysteem",
         "transport_upload": "Uploaden",
         "gpus": "GPU's",
-        "noGpu": "geen gevonden (CPU)"
+        "noGpu": "geen gevonden (CPU)",
+        "tokenRejected": "Token geweigerd",
+        "tokenRejectedSummary": "De backend is bereikbaar maar heeft het backend-token geweigerd. Kopieer het token uit de backendconfiguratie en sla het hier op."
       },
       "transport": "Bestandstransport",
       "transportAuto": "Automatisch (aanbevolen)",
@@ -993,7 +995,14 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "waiting": "Wacht op GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {
+      "pending": "Pending",
+      "waiting": "Wacht op GPU",
+      "running": "Running",
+      "done": "Done",
+      "working": "Working",
+      "error": "Failed"
+    },
     "downloadFile": "Bestand downloaden",
     "downloadZip": "ZIP downloaden",
     "detecting": "Taal detecteren…",

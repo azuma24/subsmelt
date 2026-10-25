@@ -667,7 +667,9 @@
         "transport_shared": "سیستم فایل مشترک",
         "transport_upload": "بارگذاری",
         "gpus": "GPUها",
-        "noGpu": "شناسایی نشد (CPU)"
+        "noGpu": "شناسایی نشد (CPU)",
+        "tokenRejected": "توکن رد شد",
+        "tokenRejectedSummary": "بک‌اند در دسترس است اما توکن بک‌اند را رد کرد. توکن را از پیکربندی بک‌اند کپی کرده و اینجا ذخیره کنید."
       },
       "transport": "انتقال فایل",
       "transportAuto": "خودکار (پیشنهادی)",
@@ -993,7 +995,14 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "waiting": "در انتظار GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {
+      "pending": "Pending",
+      "waiting": "در انتظار GPU",
+      "running": "Running",
+      "done": "Done",
+      "working": "Working",
+      "error": "Failed"
+    },
     "downloadFile": "دانلود پرونده",
     "downloadZip": "دانلود ZIP",
     "detecting": "درحال تشخیص زبان…",

@@ -671,7 +671,9 @@
         "transport_shared": "Sdílený souborový systém",
         "transport_upload": "Nahrávání",
         "gpus": "GPU",
-        "noGpu": "nenalezeno (CPU)"
+        "noGpu": "nenalezeno (CPU)",
+        "tokenRejected": "Token odmítnut",
+        "tokenRejectedSummary": "Backend je dostupný, ale odmítl token backendu. Zkopírujte token z konfigurace backendu a uložte jej zde."
       },
       "transport": "Přenos souborů",
       "transportAuto": "Automaticky (doporučeno)",
@@ -1001,7 +1003,14 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "waiting": "Čeká na GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {
+      "pending": "Pending",
+      "waiting": "Čeká na GPU",
+      "running": "Running",
+      "done": "Done",
+      "working": "Working",
+      "error": "Failed"
+    },
     "downloadFile": "Stáhnout soubor",
     "downloadZip": "Stáhnout ZIP",
     "detecting": "Detekuje se jazyk…",

@@ -671,7 +671,9 @@
         "transport_shared": "Спільна файлова система",
         "transport_upload": "Вивантаження",
         "gpus": "GPU",
-        "noGpu": "не виявлено (CPU)"
+        "noGpu": "не виявлено (CPU)",
+        "tokenRejected": "Токен відхилено",
+        "tokenRejectedSummary": "Бекенд доступний, але відхилив токен бекенда. Скопіюйте токен із конфігурації бекенда та збережіть його тут."
       },
       "transport": "Передавання файлів",
       "transportAuto": "Авто (рекомендовано)",
@@ -1001,7 +1003,14 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "waiting": "Очікує GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {
+      "pending": "Pending",
+      "waiting": "Очікує GPU",
+      "running": "Running",
+      "done": "Done",
+      "working": "Working",
+      "error": "Failed"
+    },
     "downloadFile": "Завантажити файл",
     "downloadZip": "Завантажити ZIP",
     "detecting": "Визначення мови…",

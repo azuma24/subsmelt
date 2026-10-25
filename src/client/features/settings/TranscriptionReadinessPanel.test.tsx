@@ -7,9 +7,13 @@ import { TranscriptionReadinessPanel } from "./TranscriptionReadinessPanel";
 
 type Capabilities = NonNullable<NonNullable<TranscriptionHealth["health"]>["capabilities"]>;
 
-function renderPanel(capabilities: Capabilities, settingsOverrides: Record<string, string> = {}): string {
+function renderPanel(
+  capabilities: Capabilities,
+  settingsOverrides: Record<string, string> = {},
+  tokenAccepted?: boolean | null,
+): string {
   const healthQuery = {
-    data: { ok: true, endpointReachable: true, health: { ffmpeg: true, capabilities } },
+    data: { ok: true, endpointReachable: true, health: { ffmpeg: true, capabilities, tokenAccepted } },
     isLoading: false,
     isFetching: false,
     refetch: () => {},
@@ -71,4 +75,20 @@ test("a CUDA backend keeps the device and compute type in the footer", () => {
   );
 
   assert.ok(text.includes("Current request defaults: small on cuda / float16, output SRT."), text);
+});
+
+test("a backend that rejects our token is not reported as ready", () => {
+  const text = renderPanel({ devices: ["cpu"] }, {}, false);
+
+  assert.ok(text.includes("Token rejected"), text);
+  assert.ok(text.includes("rejected the backend token"), text);
+  assert.ok(!text.includes("Ready to transcribe"), text);
+});
+
+test("an accepted token, or a backend without one, still reads as ready", () => {
+  for (const tokenAccepted of [true, null]) {
+    const text = renderPanel({ devices: ["cpu"] }, {}, tokenAccepted);
+    assert.ok(text.includes("Ready to transcribe"), text);
+    assert.ok(!text.includes("Token rejected"), text);
+  }
 });

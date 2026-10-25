@@ -667,7 +667,9 @@
         "transport_shared": "Κοινόχρηστο σύστημα αρχείων",
         "transport_upload": "Αποστολή",
         "gpus": "GPU",
-        "noGpu": "δεν εντοπίστηκε (CPU)"
+        "noGpu": "δεν εντοπίστηκε (CPU)",
+        "tokenRejected": "Το token απορρίφθηκε",
+        "tokenRejectedSummary": "Το backend είναι προσβάσιμο αλλά απέρριψε το token του backend. Αντιγράψτε το token από τις ρυθμίσεις του backend και αποθηκεύστε το εδώ."
       },
       "transport": "Μεταφορά αρχείων",
       "transportAuto": "Αυτόματα (συνιστάται)",
@@ -993,7 +995,14 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "waiting": "Αναμονή για GPU", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {
+      "pending": "Pending",
+      "waiting": "Αναμονή για GPU",
+      "running": "Running",
+      "done": "Done",
+      "working": "Working",
+      "error": "Failed"
+    },
     "downloadFile": "Λήψη αρχείου",
     "downloadZip": "Λήψη ZIP",
     "detecting": "Ανίχνευση γλώσσας…",

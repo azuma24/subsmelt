@@ -304,7 +304,8 @@ def health(
     x_subsmelt_token: str | None = Header(default=None, alias="X-Subsmelt-Token"),
 ) -> HealthResponse:
     free_ram = available_ram_mb()
-    trusted = _is_trusted_caller(request, _presented_token(authorization, x_subsmelt_token))
+    presented = _presented_token(authorization, x_subsmelt_token)
+    trusted = _is_trusted_caller(request, presented)
     return HealthResponse(
         ffmpeg=ffmpeg_available(),
         total_ram_mb=total_ram_mb(),
@@ -312,6 +313,7 @@ def health(
         capabilities=capabilities(),
         model_cache=_health_model_cache(model, free_ram, disclose_paths=trusted),
         log_state=get_log_state(),
+        token_accepted=_token_matches(presented) if auth_required() else None,
     )
 
 

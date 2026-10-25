@@ -57,6 +57,10 @@ class HealthResponse(BaseModel):
     # attached. A Windows service and the GUI's CREATE_NO_WINDOW child have no
     # console, so this is the only way a client can tell logging is off and why.
     log_state: dict | None = Field(default=None, alias="logging")
+    # Whether the caller's token matched; None when the backend needs no token.
+    # /health stays open, so this is how a client learns its token is wrong
+    # before a gated call such as /models fails with 401.
+    token_accepted: bool | None = Field(default=None, alias="tokenAccepted")
 
     class Config:
         populate_by_name = True

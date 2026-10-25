@@ -667,7 +667,9 @@
         "transport_shared": "Paylaşılan dosya sistemi",
         "transport_upload": "Yükleme",
         "gpus": "GPU'lar",
-        "noGpu": "algılanmadı (CPU)"
+        "noGpu": "algılanmadı (CPU)",
+        "tokenRejected": "Belirteç reddedildi",
+        "tokenRejectedSummary": "Arka uca erişilebiliyor ancak arka uç belirtecini reddetti. Belirteci arka uç yapılandırmasından kopyalayıp buraya kaydedin."
       },
       "transport": "Dosya aktarımı",
       "transportAuto": "Otomatik (önerilen)",
@@ -993,7 +995,14 @@
     "batchUnavailable": "Batch expired or unavailable",
     "batchLimit": "Maximum 10 files, 1 MB each",
     "serverProcessing": "Processing on server — you can close this tab and return later.",
-    "batchStatus": {"pending": "Pending", "waiting": "GPU bekleniyor", "running": "Running", "done": "Done", "working": "Working", "error": "Failed"},
+    "batchStatus": {
+      "pending": "Pending",
+      "waiting": "GPU bekleniyor",
+      "running": "Running",
+      "done": "Done",
+      "working": "Working",
+      "error": "Failed"
+    },
     "downloadFile": "Dosyayı indir",
     "downloadZip": "ZIP indir",
     "detecting": "Dil algılanıyor…",

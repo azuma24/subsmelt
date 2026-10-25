@@ -671,7 +671,9 @@
         "transport_shared": "Общая файловая система",
         "transport_upload": "Отправка",
         "gpus": "GPU",
-        "noGpu": "не обнаружены (CPU)"
+        "noGpu": "не обнаружены (CPU)",
+        "tokenRejected": "Токен отклонён",
+        "tokenRejectedSummary": "Бэкенд доступен, но отклонил токен бэкенда. Скопируйте токен из конфигурации бэкенда и сохраните его здесь."
       },
       "transport": "Передача файлов",
       "transportAuto": "Авто (рекомендуется)",
@@ -1001,7 +1003,14 @@
     "batchUnavailable": "Задание устарело или недоступно",
     "batchLimit": "Не более 10 файлов по 1 МБ",
     "serverProcessing": "Обработка на сервере. Можно закрыть вкладку и вернуться позже.",
-    "batchStatus": {"pending": "Ожидание", "waiting": "Ожидает GPU", "running": "Выполняется", "done": "Готово", "working": "Обработка", "error": "Ошибка"},
+    "batchStatus": {
+      "pending": "Ожидание",
+      "waiting": "Ожидает GPU",
+      "running": "Выполняется",
+      "done": "Готово",
+      "working": "Обработка",
+      "error": "Ошибка"
+    },
     "downloadFile": "Скачать файл",
     "downloadZip": "Скачать ZIP",
     "detecting": "Определение языка…",

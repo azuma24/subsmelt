@@ -667,7 +667,9 @@
         "transport_shared": "공유 파일 시스템",
         "transport_upload": "업로드",
         "gpus": "GPU",
-        "noGpu": "감지되지 않음 (CPU)"
+        "noGpu": "감지되지 않음 (CPU)",
+        "tokenRejected": "토큰 거부됨",
+        "tokenRejectedSummary": "백엔드에 연결되지만 백엔드 토큰을 거부했습니다. 백엔드 설정에서 토큰을 복사해 여기에 저장하세요."
       },
       "transport": "파일 전송",
       "transportAuto": "자동 (권장)",
@@ -993,7 +995,14 @@
     "batchUnavailable": "작업이 만료되었거나 사용할 수 없습니다",
     "batchLimit": "최대 10개 파일, 각 1 MB",
     "serverProcessing": "서버에서 처리 중입니다. 탭을 닫고 나중에 돌아와도 됩니다.",
-    "batchStatus": {"pending": "대기 중", "waiting": "GPU 대기 중", "running": "실행 중", "done": "완료", "working": "처리 중", "error": "실패"},
+    "batchStatus": {
+      "pending": "대기 중",
+      "waiting": "GPU 대기 중",
+      "running": "실행 중",
+      "done": "완료",
+      "working": "처리 중",
+      "error": "실패"
+    },
     "downloadFile": "파일 다운로드",
     "downloadZip": "ZIP 다운로드",
     "detecting": "언어 감지 중…",
