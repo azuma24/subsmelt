@@ -3,6 +3,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 # Import whisper_gui without executing its tkinter/pystray paths — those guards
 # already fall back to None, so the module imports on a headless box.
@@ -123,6 +124,23 @@ class ResolveLogFileTests(unittest.TestCase):
         os.environ["SUBSMELT_WHISPER_LOG_FILE"] = str(Path(self._dir.name) / "custom.log")
         self.assertEqual(whisper_gui.gui_log_file(), Path(self._dir.name) / "whisper-server-gui.log")
         self.assertNotEqual(whisper_gui.gui_log_file(), whisper_gui.resolve_log_file())
+
+    @unittest.skipIf(os.name == "nt" or os.geteuid() == 0, "needs POSIX permissions and a non-root user")
+    def test_falls_back_to_the_users_folder_when_the_service_folder_is_locked(self):
+        # The installer locks the data folder to administrators; the window's
+        # server used to log nothing at all.
+        locked = Path(self._dir.name) / "locked"
+        locked.mkdir()
+        local = Path(self._dir.name) / "LocalAppData"
+        locked.chmod(0o500)
+        try:
+            with (
+                mock.patch.object(whisper_gui, "resolve_log_file", return_value=locked / "whisper-server.log"),
+                mock.patch.dict(os.environ, {"LOCALAPPDATA": str(local)}),
+            ):
+                self.assertEqual(whisper_gui.gui_log_file(), local / "SubSmelt" / "logs" / "whisper-server-gui.log")
+        finally:
+            locked.chmod(0o700)
 
 
 @unittest.skipIf(IMPORT_ERROR is not None, f"whisper_gui unavailable: {IMPORT_ERROR}")

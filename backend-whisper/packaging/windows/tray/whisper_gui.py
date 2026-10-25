@@ -171,11 +171,36 @@ def resolve_log_file() -> Path:
     return log_dir() / DEFAULT_LOG_FILE_NAME
 
 
+def user_log_dir() -> Path:
+    """A log folder this user can always write: %LOCALAPPDATA%\\SubSmelt\\logs."""
+    local = (os.environ.get("LOCALAPPDATA") or "").strip()
+    base = Path(local) / "SubSmelt" if local else Path.home() / ".cache" / "subsmelt"
+    return base / "logs"
+
+
+def _can_append(path: Path) -> bool:
+    """Open for append as the real test: os.access ignores Windows ACLs."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8"):
+            return True
+    except OSError:
+        return False
+
+
 def gui_log_file() -> Path:
     """The log file for a server this window launches: next to the service's
     log, under its own name. Sharing the service's file meant both wrote into
-    it and "View log" showed whichever server spoke last."""
-    return resolve_log_file().with_name(GUI_LOG_FILE_NAME)
+    it and "View log" showed whichever server spoke last.
+
+    The installer locks the data folder to administrators, so the unelevated
+    window usually cannot write there; its server then logged nothing at all.
+    In that case the log goes to the user's own folder instead.
+    """
+    beside_service = resolve_log_file().with_name(GUI_LOG_FILE_NAME)
+    if _can_append(beside_service):
+        return beside_service
+    return user_log_dir() / GUI_LOG_FILE_NAME
 
 
 def read_log_tail(path: Path, lines: int) -> tuple[list[str], str]:
@@ -908,11 +933,14 @@ class WhisperGuiApp:
         webbrowser.open(health_url(host, port))
 
     def open_logs(self) -> None:
+        # The folder of this window's server log: the service's folder may be
+        # administrators-only, and then this window's log lives elsewhere.
+        folder = self._log_file().parent
         try:
-            log_dir().mkdir(parents=True, exist_ok=True)
-            self._open(log_dir())
+            folder.mkdir(parents=True, exist_ok=True)
+            self._open(folder)
         except Exception as exc:
-            self._set_info(f"Could not open {log_dir()}: {exc}")
+            self._set_info(f"Could not open {folder}: {exc}")
 
     def _log_file(self) -> Path:
         """The log of the server this window launched (or would launch)."""
