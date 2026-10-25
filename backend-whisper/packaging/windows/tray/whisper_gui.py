@@ -60,6 +60,7 @@ try:
         dev_server_script,
         generate_token,
         load_config,
+        read_only_config_note,
         save_config,
         shadowed_by_env,
         shadowed_note,
@@ -79,6 +80,7 @@ except ImportError:  # pragma: no cover - this file's dir isn't on sys.path yet
         dev_server_script,
         generate_token,
         load_config,
+        read_only_config_note,
         save_config,
         shadowed_by_env,
         shadowed_note,
@@ -519,7 +521,7 @@ class WhisperGuiApp:
         # so one can outlive the launch it was watching; its messages are
         # stamped with the generation and dropped once superseded.
         self._generation = 0
-        # An unreadable config.json (the installed service's, which only
+        # An unreadable config.json (an older install's, which only
         # administrators can read) must not pass for an empty one; see
         # gui_config.ConfigUnreadable.
         self.config_error: ConfigUnreadable | None = None
@@ -653,6 +655,8 @@ class WhisperGuiApp:
         except ConfigUnreadable as exc:
             # Nothing was written: the existing file (token included) is intact.
             saved_note = f"\n\nNot saved to config.json: {exc}. This run uses the fields above."
+        except PermissionError:
+            saved_note = f"\n\n{read_only_config_note(self.config_file)}"
         except OSError as exc:
             saved_note = f"\n\nCould not save {self.config_file}: {exc}"
 

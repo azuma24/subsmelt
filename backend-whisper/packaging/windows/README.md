@@ -137,10 +137,11 @@ optional — only needed for the `.exe` installer).
   port, Start says so and points at the **Start / Stop / Restart service**
   buttons, which each ask for administrator approval (UAC). Killing the
   service's process does not free the port; Windows restarts it.
-  The installed `config.json` is administrators-only, so the unelevated window
-  cannot read it: it then shows defaults with a blank API key, says why, and
-  does not save. **Open config** opens that file in Notepad behind a UAC
-  prompt, and reports a declined prompt or any other failure.
+  The installed `config.json` is readable by Users, so the unelevated window
+  shows the service's real settings and token, but only administrators can
+  change it: Start then says it did not save. **Open config** opens that file
+  in Notepad behind a UAC prompt, and reports a declined prompt or any other
+  failure.
 - **Tray-only (no window):** double-click `run-tray.bat` — a tray icon with
   Start / Stop / Restart / Open health page / Open logs / Quit. `build-local.bat`
   builds `whisper-tray.exe`. Skip both extra exes with `-SkipTray`.
@@ -215,7 +216,7 @@ the same name), and creates `C:\ProgramData\SubSmelt\{models,media,logs}`.
   SubSmelt keeps working with the key it has.
 - The finish page shows the backend URL and the token, read from
   `C:\ProgramData\SubSmelt\backend-info.txt`, and offers to open that file.
-  Like `config.json`, it is readable by administrators and SYSTEM only.
+  It is readable by administrators and SYSTEM only.
 - The script's output goes to `C:\ProgramData\SubSmelt\logs\install-service.log`
   (never the token).
 
@@ -253,9 +254,9 @@ runner, so check these by hand on a Windows box after a build:
    chosen in the wizard.
 4. `Invoke-WebRequest http://127.0.0.1:<port>/logs`: every uvicorn line
    appears once, not three times.
-5. `icacls C:\ProgramData\SubSmelt\config.json` lists only `NT AUTHORITY\SYSTEM`
-   and `BUILTIN\Administrators` (both `F`); `icacls C:\ProgramData\SubSmelt`
-   gives `BUILTIN\Users` `RX` only.
+5. `icacls C:\ProgramData\SubSmelt\config.json` lists `NT AUTHORITY\SYSTEM`
+   and `BUILTIN\Administrators` (both `F`) and `BUILTIN\Users` (`R`);
+   `icacls C:\ProgramData\SubSmelt` gives `BUILTIN\Users` `RX` only.
 6. `netsh advfirewall firewall show rule name="SubSmelt Whisper Backend"` shows
    one rule with `Profiles: Domain,Private`.
 7. Run the installer again over the existing install: it stops the service
@@ -310,13 +311,15 @@ machine-scope environment variables; a service only sees those after a reboot,
 and once it does they override the file, so both install and uninstall scripts
 remove them.
 
-The file holds the token, so it is readable by SYSTEM and Administrators only;
-the data dir itself is read-only for Users (`media\` stays writable, it is the
-drop folder). Edit it through the Start-menu "Open Whisper Config" shortcut,
-which elevates, or from an elevated editor, then restart the service. The
-control window (`whisper-gui.exe`) runs unelevated and cannot read or save it;
-it reports "Could not save" and uses the values in its own fields for the
-server it launches itself.
+The file holds the token. SYSTEM and Administrators can change it; Users can
+only read it, so the unelevated control window shows the real settings. Any
+local account can therefore read the token. The data dir itself is read-only
+for Users (`media\` stays writable, it is the drop folder). Edit the file
+through the Start-menu "Open Whisper Config" shortcut, which elevates, or from
+an elevated editor, then restart the service. The control window
+(`whisper-gui.exe`) runs unelevated, so it can read the file but not save it;
+it reports "Not saved" and uses the values in its own fields for the server it
+launches itself.
 
 A `log_file` in `config.json` is honoured only inside
 `C:\ProgramData\SubSmelt\logs`; anything else is logged as a warning and the
@@ -370,8 +373,8 @@ without a release:** run the workflow manually from the Actions tab.
   server); run `run_server.exe --check` manually to see the startup
   diagnostics. Error 1053 means the registered binary path lacks `--service`:
   re-run `install-service.ps1` from an elevated PowerShell.
-- **"Access is denied" on `config.json`** — it is readable by administrators
-  only. Use **Open config** in the GUI or tray, or the "Open Whisper Config"
+- **"Access is denied" on `config.json`** — only administrators can change it
+  (installs before 0.7.4 also blocked reading it; reinstall to fix). Use **Open config** in the GUI or tray, or the "Open Whisper Config"
   shortcut; each opens it in Notepad behind a UAC prompt.
 - **SubSmelt shows "Token rejected" or the models list fails** — the token in
   SubSmelt does not match the service's. Copy `token` from `config.json`

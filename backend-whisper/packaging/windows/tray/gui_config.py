@@ -121,9 +121,9 @@ class ConfigUnreadable(Exception):
 
     Treating that as an empty config turned a permission error into a blank
     token field, and the next save into a file with the token and every other
-    setting gone. The installed service's config.json is readable only by
-    SYSTEM and Administrators (it holds the token), so this is the normal case
-    for the unelevated control window, not a corner case.
+    setting gone. Installers before 0.7.4 made the installed service's
+    config.json readable only by SYSTEM and Administrators, so the unelevated
+    control window still meets this on an older install.
     """
 
     def __init__(self, path: Path, reason: object) -> None:
@@ -199,8 +199,9 @@ def unreadable_config_note(error: ConfigUnreadable) -> str:
     """Why the fields show defaults and why nothing will be saved."""
     if error.permission_denied:
         reason = (
-            f"{error.path} is readable only by administrators because it holds the "
-            "backend token (this is the installed service's config)."
+            f"This account cannot read {error.path} (the installed service's "
+            "config). Installers before 0.7.4 limited it to administrators; "
+            "reinstall the backend to make it readable."
         )
     else:
         reason = f"{error}."
@@ -209,6 +210,19 @@ def unreadable_config_note(error: ConfigUnreadable) -> str:
         "API key field is blank because the saved key could not be read. Start "
         "will not save to config.json. Use Open config to edit the installed "
         "service's settings with administrator approval."
+    )
+
+
+def read_only_config_note(path: Path) -> str:
+    """Why Start could read config.json but not save it.
+
+    The installed service's config.json is readable by Users so this window
+    shows the real settings, but only administrators may change them.
+    """
+    return (
+        f"Not saved: only administrators can change {path}. This run uses the "
+        "fields above. Use Open config to change the installed service's "
+        "settings with administrator approval, then restart the service."
     )
 
 

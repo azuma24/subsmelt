@@ -15,10 +15,11 @@
     which a service does not see until the next reboot and which override
     config.json once they do; those variables are removed here.
 
-    <DataDir> is locked to SYSTEM and Administrators (Users read-only), and
-    config.json, which holds the token, is readable by SYSTEM and Administrators
-    only. The media folder stays writable by Users: it is where files to
-    transcribe are dropped.
+    <DataDir> is locked to SYSTEM and Administrators (Users read-only).
+    config.json is writable by SYSTEM and Administrators and readable by Users,
+    so the unelevated control window can show the service's settings and token;
+    any local account can therefore read the token. The media folder stays
+    writable by Users: it is where files to transcribe are dropped.
 
 .PARAMETER ExePath
     Full path to run_server.exe (the PyInstaller onedir output). Defaults to the
@@ -52,8 +53,8 @@
     version instead of the source default.
 
 .PARAMETER InfoFile
-    When set, the backend URL, token and paths are written to this file (locked
-    like config.json) instead of the token being printed. The installer shows
+    When set, the backend URL, token and paths are written to this file (readable by
+    administrators only) instead of the token being printed. The installer shows
     the file on its finish page.
 
 .EXAMPLE
@@ -111,6 +112,14 @@ function Invoke-Icacls {
 function Protect-SecretFile {
     param([string]$Path)
     Invoke-Icacls @($Path, "/inheritance:r", "/grant:r", "${SystemSid}:F", "${AdministratorsSid}:F")
+}
+
+# Only administrators may change the service's settings, but Users may read
+# them: the control window runs unelevated and has to show the real port and
+# token. Readable means every local account can see the token.
+function Protect-ConfigFile {
+    param([string]$Path)
+    Invoke-Icacls @($Path, "/inheritance:r", "/grant:r", "${SystemSid}:F", "${AdministratorsSid}:F", "${UsersSid}:R")
 }
 
 function Read-Config {
@@ -217,7 +226,7 @@ Invoke-Icacls @($DataDir, "/inheritance:r", "/grant:r",
 if (Test-UnderDirectory -Path $MediaRoot -Parent $DataDir) {
     Invoke-Icacls @($MediaRoot, "/grant:r", "${UsersSid}:(OI)(CI)M")
 }
-Protect-SecretFile -Path $ConfigPath
+Protect-ConfigFile -Path $ConfigPath
 
 # --- Legacy machine environment variables ---------------------------------------
 foreach ($name in $LegacyMachineVars) {
@@ -292,7 +301,7 @@ if ($InfoFile -ne "") {
         $lines += "Backend token: (none - every host on the network can use this backend)"
     }
     $lines += ""
-    $lines += "Settings: $ConfigPath (administrators only)"
+    $lines += "Settings: $ConfigPath (administrators edit, users read)"
     $lines += "Logs:     $LogsDir"
     [System.IO.File]::WriteAllLines($InfoFile, $lines, (New-Object System.Text.UTF8Encoding $false))
     Protect-SecretFile -Path $InfoFile

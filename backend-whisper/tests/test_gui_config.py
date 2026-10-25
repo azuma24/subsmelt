@@ -45,8 +45,8 @@ class LoadConfigTests(unittest.TestCase):
 
     @unittest.skipIf(_cannot_deny_reads(), "needs POSIX permissions and a non-root user")
     def test_a_file_we_may_not_read_is_reported_not_read_as_empty(self):
-        # The installed config.json is SYSTEM/Administrators-only. Reading it as
-        # {} showed a blank token as if none were set.
+        # Before 0.7.4 the installed config.json was administrators-only.
+        # Reading it as {} showed a blank token as if none were set.
         path = self.dir / "config.json"
         path.write_text(json.dumps({"token": "s3cr3t"}), encoding="utf-8")
         path.chmod(0)
@@ -136,9 +136,28 @@ class SaveConfigTests(unittest.TestCase):
     def test_the_note_for_a_protected_file_says_nothing_will_be_saved(self):
         error = gui_config.ConfigUnreadable(self.path, PermissionError(13, "denied"))
         note = gui_config.unreadable_config_note(error)
-        self.assertIn("readable only by administrators", note)
+        self.assertIn("cannot read", note)
+        self.assertIn("reinstall the backend", note)
         self.assertIn("blank because the saved key could not be read", note)
         self.assertIn("will not save", note)
+
+    @unittest.skipIf(_cannot_deny_reads(), "needs POSIX permissions and a non-root user")
+    def test_a_read_only_config_is_read_but_left_untouched_on_save(self):
+        # The installed config.json is readable by Users, writable only by
+        # administrators: the window shows the real token but cannot save.
+        self.path.write_text(json.dumps({"token": "s3cr3t", "model_dir": "D:/models"}), encoding="utf-8")
+        self.path.chmod(0o444)
+        self.path.parent.chmod(0o555)
+        self.addCleanup(self.path.parent.chmod, 0o755)
+
+        self.assertEqual(gui_config.load_config(self.path)["token"], "s3cr3t")
+        with self.assertRaises(PermissionError):
+            gui_config.save_config(self.path, "127.0.0.1", "9000", "other")
+        saved = json.loads(self.path.read_text(encoding="utf-8"))
+        self.assertEqual(saved, {"token": "s3cr3t", "model_dir": "D:/models"})
+        note = gui_config.read_only_config_note(self.path)
+        self.assertIn("only administrators can change", note)
+        self.assertIn("Open config", note)
 
 
 class BindWarningTests(unittest.TestCase):

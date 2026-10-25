@@ -5,6 +5,10 @@ version number and are released together (`v0.5.6` and `whisper-v0.5.6`).
 
 ## [Unreleased]
 
+### Changed
+
+- **The Windows control window can read the service's `config.json`.** The installer now grants Users read access to `C:\ProgramData\SubSmelt\config.json`, so the unelevated window shows the service's real port and token instead of defaults. Only SYSTEM and Administrators can change the file; Start says it did not save and points to Open config. Any local account can now read the backend token. Reinstall over 0.7.3 to apply the new access, or run `icacls C:\ProgramData\SubSmelt\config.json /grant "*S-1-5-32-545:R"` from an administrator PowerShell.
+
 ## [0.7.3] — 2026-10-25
 
 ### Fixed

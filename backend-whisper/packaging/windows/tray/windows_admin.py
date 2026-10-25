@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Administrator-only actions for the Whisper control window and tray.
 
-The installed SubSmeltWhisper service runs as LocalSystem, and its config.json
-holds the backend token, so the installer limits that file to SYSTEM and
-Administrators. The control apps run unelevated on purpose. Each admin action
+The installed SubSmeltWhisper service runs as LocalSystem, and the installer
+lets only SYSTEM and Administrators change its config.json (Users may read it).
+The control apps run unelevated on purpose. Each admin action
 goes through its own UAC prompt (ShellExecute "runas"), never by elevating the
 whole app or by loosening the ACL.
 
@@ -177,7 +177,7 @@ def service_owns_port(status: ServiceStatus, port: str, runner: Runner | None = 
 
     The service runs uvicorn in its own process (winservice.py), so its PID is
     the listener's PID. Compared by PID rather than by reading the service's
-    port from config.json, which this unelevated process cannot read.
+    port from config.json, which older installs did not let this process read.
     """
     if status.state != "running" or status.pid is None:
         return False
@@ -233,8 +233,8 @@ def open_config(path: Path, open_path: Callable[[Path], None], runner: Runner | 
     """Open config.json for editing. Returns None on success, else what went wrong.
 
     A config this process can write opens with the normal handler. The
-    installed one is SYSTEM/Administrators-only because it holds the token, so
-    it opens in Notepad behind a UAC prompt, as the installer's "Open Whisper
+    installed one only administrators may change, so it opens in Notepad
+    behind a UAC prompt, as the installer's "Open Whisper
     Config" shortcut does. Failures are returned, never swallowed: a button
     that silently does nothing is what this replaced.
     """
@@ -246,10 +246,7 @@ def open_config(path: Path, open_path: Callable[[Path], None], runner: Runner | 
         try:
             run_elevated("notepad.exe", [f'"{path}"'], wait=False, runner=runner)
         except ElevationDeclined:
-            return (
-                f"Open config cancelled: administrator approval was declined. {path} "
-                "holds the backend token, so only administrators can open it."
-            )
+            return f"Open config cancelled: administrator approval was declined. Only administrators can change {path}."
         except ElevatedActionFailed as exc:
             return f"Could not open {path} as administrator: {exc}"
         return None
