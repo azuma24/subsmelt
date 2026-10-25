@@ -13,11 +13,11 @@ Known gaps with no work in progress. Context and rationale live in
 
 ## Refactoring
 
-Sizes re-measured on 2026-09-30 on `release/0.6.0`; the guideline is 200–400
+Sizes re-measured on 2026-10-25 on `main` (after 0.7.3); the guideline is 200–400
 lines typical, 800 max. These two are the only source files over 800.
 
-- [ ] `backend-whisper/app/main.py` — **883 lines**, up from 816 at 0.5.6.
-- [ ] `backend-whisper/packaging/windows/tray/whisper_gui.py` — 858 lines.
+- [ ] `backend-whisper/app/main.py` — **1039 lines**, up from 883 at 0.6.0.
+- [ ] `backend-whisper/packaging/windows/tray/whisper_gui.py` — **1064 lines**, up from 858 at 0.6.0.
 
 ## Whisper control app (Windows)
 
