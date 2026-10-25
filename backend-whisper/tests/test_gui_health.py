@@ -45,6 +45,8 @@ def _window(running: bool, active: tuple[str, str, str] | None) -> "whisper_gui.
     app.host_var, app.port_var, app.token_var = (_Var(value) for value in EDITED)
     app.info_text: list[str] = []
     app._set_info = app.info_text.append
+    # sc.exe/netstat are Windows-only; the service line has its own tests.
+    app._refresh_service = lambda port=None: False
     return app
 
 

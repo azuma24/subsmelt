@@ -20,7 +20,7 @@ TRAY_SCRIPT = os.path.join(TRAY_DIR, "whisper_tray.py")
 
 # pystray picks a backend dynamically (win32 on Windows); pull its submodules and
 # PIL so the frozen exe has them.
-hiddenimports = ["server_launch"]
+hiddenimports = ["server_launch", "windows_admin"]
 hiddenimports += collect_submodules("pystray")
 hiddenimports += collect_submodules("PIL")
 

@@ -87,9 +87,16 @@ def shadowed_by_env(env: dict[str, str] | None = None) -> list[str]:
 
 def effective_config(env: dict[str, str] | None = None) -> dict[str, str]:
     """host/port/token as run_server will resolve them: env, then config.json,
-    then the defaults. What a "open the health page" link has to use."""
+    then the defaults. What a "open the health page" link has to use.
+
+    An unreadable config.json counts as the defaults here: these values only
+    build links and labels, and nothing is ever written back from them.
+    """
     environ = os.environ if env is None else env
-    values = load_config(config_path(environ))
+    try:
+        values = load_config(config_path(environ))
+    except ConfigUnreadable:
+        values = default_config()
     for key, name in SHADOWING_ENV_VARS.items():
         override = (environ.get(name) or "").strip()
         if override:
@@ -109,19 +116,53 @@ def shadowed_note(names: list[str]) -> str | None:
     )
 
 
-def load_config(path: Path) -> dict[str, str]:
-    """Read saved host/port/token, falling back to defaults.
+class ConfigUnreadable(Exception):
+    """config.json exists but could not be read or parsed.
 
-    Never raises: a missing, unreadable or malformed config must leave the window
-    usable rather than refusing to open.
+    Treating that as an empty config turned a permission error into a blank
+    token field, and the next save into a file with the token and every other
+    setting gone. The installed service's config.json is readable only by
+    SYSTEM and Administrators (it holds the token), so this is the normal case
+    for the unelevated control window, not a corner case.
     """
-    values = {"host": DEFAULT_HOST, "port": DEFAULT_PORT, "token": ""}
+
+    def __init__(self, path: Path, reason: object) -> None:
+        self.path = Path(path)
+        self.permission_denied = isinstance(reason, PermissionError)
+        detail = "permission denied" if self.permission_denied else str(reason)
+        super().__init__(f"Cannot read {self.path}: {detail}")
+
+
+def default_config() -> dict[str, str]:
+    return {"host": DEFAULT_HOST, "port": DEFAULT_PORT, "token": ""}
+
+
+def _read_saved(path: Path) -> dict:
+    """The saved JSON object; {} when there is no file. Raises ConfigUnreadable."""
     try:
-        raw = json.loads(Path(path).read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return values
+        text = Path(path).read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return {}
+    except OSError as exc:
+        raise ConfigUnreadable(path, exc) from exc
+    try:
+        raw = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ConfigUnreadable(path, f"not valid JSON ({exc})") from exc
     if not isinstance(raw, dict):
-        return values
+        raise ConfigUnreadable(path, "not a JSON object")
+    return raw
+
+
+def load_config(path: Path) -> dict[str, str]:
+    """Read saved host/port/token, with defaults for anything not saved.
+
+    A missing file is the defaults. A file that exists but cannot be read or
+    parsed raises ConfigUnreadable, so the caller can say so instead of showing
+    a blank token as if none were set.
+    """
+    values = default_config()
+    raw = _read_saved(path)
     for key in OWNED_KEYS:
         value = raw.get(key)
         if isinstance(value, (str, int)) and str(value).strip():
@@ -130,15 +171,14 @@ def load_config(path: Path) -> dict[str, str]:
 
 
 def save_config(path: Path, host: str, port: str, token: str) -> None:
-    """Merge host/port/token into config.json, preserving every other key."""
+    """Merge host/port/token into config.json, preserving every other key.
+
+    Raises ConfigUnreadable, without writing, when the existing file cannot be
+    read: merging into a guessed {} would replace the token and every setting
+    this window does not own.
+    """
     target = Path(path)
-    existing: dict = {}
-    try:
-        loaded = json.loads(target.read_text(encoding="utf-8"))
-        if isinstance(loaded, dict):
-            existing = loaded
-    except (OSError, json.JSONDecodeError):
-        existing = {}
+    existing = _read_saved(target)
 
     existing["host"] = host
     existing["port"] = str(port)
@@ -153,6 +193,23 @@ def save_config(path: Path, host: str, port: str, token: str) -> None:
     tmp = target.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(existing, indent=2) + "\n", encoding="utf-8")
     tmp.replace(target)
+
+
+def unreadable_config_note(error: ConfigUnreadable) -> str:
+    """Why the fields show defaults and why nothing will be saved."""
+    if error.permission_denied:
+        reason = (
+            f"{error.path} is readable only by administrators because it holds the "
+            "backend token (this is the installed service's config)."
+        )
+    else:
+        reason = f"{error}."
+    return (
+        f"{reason}\n\nThe fields show defaults, not the saved settings, and the "
+        "API key field is blank because the saved key could not be read. Start "
+        "will not save to config.json. Use Open config to edit the installed "
+        "service's settings with administrator approval."
+    )
 
 
 def source_backend_root(module_file: str = __file__) -> Path | None:

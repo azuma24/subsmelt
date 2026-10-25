@@ -32,6 +32,7 @@ APP_VERSION = _match.group(1) if _match else "0.0.0"
 hiddenimports = [
     "server_launch",
     "gui_config",
+    "windows_admin",
     "whisper_gui",
     "service_control",
 ]

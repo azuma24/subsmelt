@@ -63,10 +63,27 @@ class OpenConfigTests(TrayTestCase):
         # SUBSMELT_WHISPER_CONFIG is where run_server looks; the tray used to
         # open <data dir>/config.json regardless and edit a file nobody read.
         os.environ["SUBSMELT_DATA_DIR"] = str(self.dir / "data")
-        with mock.patch.object(whisper_tray, "_open_path") as opened:
+        with mock.patch.object(whisper_tray, "_open_with_handler") as opened:
             whisper_tray.open_config()
         self.assertEqual(opened.call_args.args[0], self.config)
         self.assertEqual(self.config.read_text(encoding="utf-8"), "{}\n")
+
+    def test_a_failure_to_open_is_reported_not_swallowed(self):
+        icon = FakeIcon()
+        with mock.patch.object(whisper_tray, "_open_with_handler", side_effect=OSError("no handler")):
+            whisper_tray.open_config(icon)
+        self.assertEqual(len(icon.notifications), 1)
+        self.assertIn("no handler", icon.notifications[0][0])
+
+    def test_a_declined_uac_prompt_is_reported(self):
+        icon = FakeIcon()
+        with (
+            mock.patch.object(whisper_tray.windows_admin, "_editable_here", side_effect=PermissionError()),
+            mock.patch.object(whisper_tray.windows_admin, "is_windows", return_value=True),
+            mock.patch.object(whisper_tray.windows_admin, "run", return_value=(1223, "")),
+        ):
+            whisper_tray.open_config(icon)
+        self.assertIn("administrator approval was declined", icon.notifications[0][0])
 
 
 class OpenHealthTests(TrayTestCase):
@@ -136,37 +153,38 @@ class FailureSurfacingTests(TrayTestCase):
 
 
 class ServiceControlTests(TrayTestCase):
-    """The tray runs unelevated; sc.exe start/stop needs an administrator."""
+    """The tray runs unelevated; service control needs an administrator."""
 
     def _service_action(self, action, result):
         icon = FakeIcon()
         with (
             mock.patch.object(whisper_tray, "_is_windows", return_value=True),
-            mock.patch.object(whisper_tray, "_run", return_value=result) as run,
+            mock.patch.object(whisper_tray.windows_admin, "run", return_value=result) as run,
         ):
             action(icon)
         return run.call_args.args[0], icon
 
-    def test_start_runs_sc_through_an_elevation_prompt(self):
+    def test_start_runs_the_service_cmdlet_through_an_elevation_prompt(self):
         cmd, icon = self._service_action(whisper_tray.start_service, (0, ""))
-        self.assertEqual(cmd[:3], ["powershell.exe", "-NoProfile", "-Command"])
-        self.assertIn("-Verb RunAs", cmd[3])
-        self.assertIn("-FilePath sc.exe", cmd[3])
-        self.assertIn("'start','SubSmeltWhisper'", cmd[3])
-        self.assertEqual(icon.notifications, [])
+        self.assertEqual(cmd[0], "powershell.exe")
+        self.assertIn("-Verb RunAs", cmd[-1])
+        self.assertIn("Start-Service -Name ''SubSmeltWhisper''", cmd[-1])
+        self.assertIn("started", icon.notifications[0][0])
 
-    def test_stop_runs_sc_through_an_elevation_prompt(self):
+    def test_stop_runs_the_service_cmdlet_through_an_elevation_prompt(self):
         cmd, _icon = self._service_action(whisper_tray.stop_service, (0, ""))
-        self.assertIn("'stop','SubSmeltWhisper'", cmd[3])
+        self.assertIn("Stop-Service -Name ''SubSmeltWhisper''", cmd[-1])
 
     def test_a_declined_prompt_is_reported(self):
-        declined = (
-            "Start-Process : This command cannot be run due to the error: The operation was canceled by the user."
-        )
-        _cmd, icon = self._service_action(whisper_tray.start_service, (1, declined))
+        _cmd, icon = self._service_action(whisper_tray.start_service, (1223, ""))
         ((message, _title),) = icon.notifications
-        self.assertIn("start service failed", message)
-        self.assertIn("canceled by the user", message)
+        self.assertIn("Start service cancelled", message)
+        self.assertIn("administrator approval was declined", message)
+
+    def test_a_failed_action_is_reported_with_its_reason(self):
+        _cmd, icon = self._service_action(whisper_tray.stop_service, (1, "Stop-Service : Cannot stop service"))
+        self.assertIn("Stop service failed", icon.notifications[0][0])
+        self.assertIn("Cannot stop service", icon.notifications[0][0])
 
 
 class DevServerScriptTests(unittest.TestCase):

@@ -20,7 +20,7 @@ GUI_SCRIPT = os.path.join(TRAY_DIR, "whisper_gui.py")
 # server weight.
 BACKEND_ROOT = os.path.abspath(os.path.join(SPEC_DIR, os.pardir, os.pardir))
 
-hiddenimports = ["server_launch", "gui_config", "app.version", "app.token_gen"]
+hiddenimports = ["server_launch", "gui_config", "windows_admin", "app.version", "app.token_gen"]
 hiddenimports += collect_submodules("pystray")
 hiddenimports += collect_submodules("PIL")
 

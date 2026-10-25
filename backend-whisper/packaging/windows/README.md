@@ -132,6 +132,15 @@ optional — only needed for the `.exe` installer).
   it to the system tray** (the server keeps running); the tray icon restores it
   or quits (Quit stops the server). No console window. `build-local.bat` builds
   `whisper-gui.exe`.
+  The window's own server is a **standalone** backend, separate from the
+  installed `SubSmeltWhisper` service. When the service already holds the
+  port, Start says so and points at the **Start / Stop / Restart service**
+  buttons, which each ask for administrator approval (UAC). Killing the
+  service's process does not free the port; Windows restarts it.
+  The installed `config.json` is administrators-only, so the unelevated window
+  cannot read it: it then shows defaults with a blank API key, says why, and
+  does not save. **Open config** opens that file in Notepad behind a UAC
+  prompt, and reports a declined prompt or any other failure.
 - **Tray-only (no window):** double-click `run-tray.bat` — a tray icon with
   Start / Stop / Restart / Open health page / Open logs / Quit. `build-local.bat`
   builds `whisper-tray.exe`. Skip both extra exes with `-SkipTray`.
@@ -259,8 +268,9 @@ runner, so check these by hand on a Windows box after a build:
    stay.
 
 Use the tray app (Start/Stop service, Open logs, Model manager, Open config,
-**Run diagnostics** → `run_server --check`). Start/Stop go through a UAC prompt:
-the tray is not elevated and `sc.exe` requires an administrator. To run the
+**Run diagnostics** → `run_server --check`). Start/Stop and Open config go
+through a UAC prompt: the tray is not elevated, service control requires an
+administrator, and `config.json` holds the token. To run the
 tray during development:
 
 ```bat
@@ -361,4 +371,8 @@ without a release:** run the workflow manually from the Actions tab.
   diagnostics. Error 1053 means the registered binary path lacks `--service`:
   re-run `install-service.ps1` from an elevated PowerShell.
 - **"Access is denied" on `config.json`** — it is readable by administrators
-  only. Use the elevated "Open Whisper Config" shortcut.
+  only. Use **Open config** in the GUI or tray, or the "Open Whisper Config"
+  shortcut; each opens it in Notepad behind a UAC prompt.
+- **SubSmelt shows "Token rejected" or the models list fails** — the token in
+  SubSmelt does not match the service's. Copy `token` from `config.json`
+  (Open config) into **SubSmelt → Settings → Speech to Text → Backend token**.

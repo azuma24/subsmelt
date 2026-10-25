@@ -50,10 +50,13 @@ except Exception:  # pragma: no cover
     _HAS_TRAY = False
 
 try:
+    import windows_admin
     from gui_config import (
+        ConfigUnreadable,
         bind_warning,
         config_path,
         data_dir,
+        default_config,
         dev_server_script,
         generate_token,
         load_config,
@@ -61,14 +64,18 @@ try:
         shadowed_by_env,
         shadowed_note,
         source_backend_root,
+        unreadable_config_note,
     )
     from server_launch import ServerExecutableNotFound, resolve_server_command
 except ImportError:  # pragma: no cover - this file's dir isn't on sys.path yet
     sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import windows_admin
     from gui_config import (
+        ConfigUnreadable,
         bind_warning,
         config_path,
         data_dir,
+        default_config,
         dev_server_script,
         generate_token,
         load_config,
@@ -76,6 +83,7 @@ except ImportError:  # pragma: no cover - this file's dir isn't on sys.path yet
         shadowed_by_env,
         shadowed_note,
         source_backend_root,
+        unreadable_config_note,
     )
     from server_launch import ServerExecutableNotFound, resolve_server_command
 
@@ -346,6 +354,40 @@ def port_conflict_message(host: str, port: str) -> str:
     )
 
 
+def service_owns_port_message(port: str) -> str:
+    """Explanation for a Start into the port the installed service holds.
+
+    Killing the service's process does not free the port: the service manager
+    restarts it. So point at the service controls instead.
+    """
+    service = windows_admin.SERVICE_NAME
+    return (
+        f"Not started: the installed {service} service is already serving port {port}.\n\n"
+        "This window launches a separate standalone backend, which cannot share "
+        "that port. Either keep using the service and manage it with Start / Stop / "
+        "Restart service below (Windows asks for administrator approval), or choose "
+        "a different port for a standalone run."
+    )
+
+
+def occupied_port_message(host: str, port: str, service_owns: bool) -> str:
+    """Why Start refused: the installed service, or some other server."""
+    return service_owns_port_message(port) if service_owns else port_conflict_message(host, port)
+
+
+def service_label(status: windows_admin.ServiceStatus, owns_port: bool, port: str) -> str:
+    """The installed-service line under the status line."""
+    service = windows_admin.SERVICE_NAME
+    if status.state == "unavailable":
+        return "Installed service: not available on this platform"
+    if status.state == "not installed":
+        return f"Installed service: {service} is not installed"
+    label = f"Installed service: {service} {status.state}"
+    if owns_port:
+        label += f", serving port {port}"
+    return label
+
+
 def launched_settings(
     previous: tuple[str, str, str] | None,
     was_running: bool,
@@ -452,19 +494,30 @@ class WhisperGuiApp:
         # so one can outlive the launch it was watching; its messages are
         # stamped with the generation and dropped once superseded.
         self._generation = 0
-        self.saved = load_config(self.config_file)
+        # An unreadable config.json (the installed service's, which only
+        # administrators can read) must not pass for an empty one; see
+        # gui_config.ConfigUnreadable.
+        self.config_error: ConfigUnreadable | None = None
+        try:
+            self.saved = load_config(self.config_file)
+        except ConfigUnreadable as exc:
+            self.config_error = exc
+            self.saved = default_config()
         self.root = tk.Tk()
         # Version in the title so a bug report names the build without the
         # server having to be running (the /health readout only covers the
         # server, and only after a Refresh).
         self.root.title(f"SubSmelt Whisper Backend {APP_VERSION}")
-        self.root.geometry("560x540")
+        self.root.geometry("560x600")
         self._tray_icon = None
         self._build_ui()
         # Close button hides to tray instead of quitting.
         self.root.protocol("WM_DELETE_WINDOW", self.hide_to_tray)
         self._poll_status()
+        self._refresh_service()
         self._drain_messages()
+        if self.config_error is not None:
+            self._set_info(unreadable_config_note(self.config_error))
 
     # ---- UI ----
     def _build_ui(self) -> None:
@@ -521,8 +574,23 @@ class WhisperGuiApp:
         ttk.Button(btns, text="Restart", command=self.on_restart).pack(side="left", padx=4)
         ttk.Button(btns, text="Refresh", command=self.on_refresh).pack(side="left", padx=4)
 
+        # The installed Windows service is a different server from the one the
+        # buttons above launch; it gets its own line and its own controls, each
+        # behind a UAC prompt because service control is administrator-only.
+        self.service_var = tk.StringVar(value="Installed service: checking…")
+        ttk.Label(frm, textvariable=self.service_var).grid(row=7, column=0, columnspan=3, sticky="w", **pad)
+        svc_btns = ttk.Frame(frm)
+        svc_btns.grid(row=8, column=0, columnspan=3, sticky="w", **pad)
+        self.service_btns = [
+            ttk.Button(svc_btns, text="Start service", command=lambda: self.on_service("start")),
+            ttk.Button(svc_btns, text="Stop service", command=lambda: self.on_service("stop")),
+            ttk.Button(svc_btns, text="Restart service", command=lambda: self.on_service("restart")),
+        ]
+        for button in self.service_btns:
+            button.pack(side="left", padx=4)
+
         links = ttk.Frame(frm)
-        links.grid(row=7, column=0, columnspan=3, sticky="w", **pad)
+        links.grid(row=9, column=0, columnspan=3, sticky="w", **pad)
         ttk.Button(links, text="Open health page", command=self.open_health).pack(side="left", padx=4)
         ttk.Button(links, text="View log", command=self.view_log).pack(side="left", padx=4)
         ttk.Button(links, text="Open logs", command=self.open_logs).pack(side="left", padx=4)
@@ -530,14 +598,14 @@ class WhisperGuiApp:
 
         # Version is in the title bar too, but a maximised or screenshotted
         # window often loses that, and this is the line people quote in reports.
-        ttk.Label(frm, text=f"GUI version {APP_VERSION}").grid(row=8, column=0, columnspan=3, sticky="w", **pad)
+        ttk.Label(frm, text=f"GUI version {APP_VERSION}").grid(row=10, column=0, columnspan=3, sticky="w", **pad)
 
-        # Info box (health output). Rows 9/10 — the version label above owns
-        # row 8; sharing a cell would stack the two labels on top of each other.
-        ttk.Label(frm, text="Server info:").grid(row=9, column=0, sticky="nw", **pad)
+        # Info box (health output). Rows 11/12 — the version label above owns
+        # row 10; sharing a cell would stack the two labels on top of each other.
+        ttk.Label(frm, text="Server info:").grid(row=11, column=0, sticky="nw", **pad)
         self.info = tk.Text(frm, height=10, width=58, wrap="word", state="disabled", font=("Consolas", 9))
-        self.info.grid(row=10, column=0, columnspan=3, sticky="nsew", padx=10, pady=6)
-        frm.rowconfigure(10, weight=1)
+        self.info.grid(row=12, column=0, columnspan=3, sticky="nsew", padx=10, pady=6)
+        frm.rowconfigure(12, weight=1)
         frm.columnconfigure(2, weight=1)
 
     def _set_info(self, text: str) -> None:
@@ -557,6 +625,9 @@ class WhisperGuiApp:
             note = shadowed_note(shadowed_by_env())
             if note:
                 saved_note = f"\n\nNote: {note}"
+        except ConfigUnreadable as exc:
+            # Nothing was written: the existing file (token included) is intact.
+            saved_note = f"\n\nNot saved to config.json: {exc}. This run uses the fields above."
         except OSError as exc:
             saved_note = f"\n\nCould not save {self.config_file}: {exc}"
 
@@ -571,7 +642,8 @@ class WhisperGuiApp:
         # and the readiness poll would report success for a process this window
         # does not own. The installed Windows service is the usual culprit.
         if not was_running and fetch_health(host, port, token) is not None:
-            self._set_info(port_conflict_message(host, port) + saved_note)
+            service_owns = self._refresh_service(port)
+            self._set_info(occupied_port_message(host, port, service_owns) + saved_note)
             self._refresh_status()
             return
         msg = self.ctl.start(host, port, token)
@@ -656,6 +728,7 @@ class WhisperGuiApp:
         if text is not None:
             self._set_info(text)
             self._refresh_status()
+            self._refresh_service()
         self.root.after(self.MESSAGE_POLL_MS, self._drain_messages)
 
     # ---- API key ----
@@ -726,6 +799,41 @@ class WhisperGuiApp:
         except Exception:  # pragma: no cover - clipboard owned by another app
             return False
 
+    # ---- installed service ----
+    def _refresh_service(self, port: str | None = None) -> bool:
+        """Update the installed-service line; True when it serves `port`.
+
+        Shells out to sc.exe and netstat, so it runs on demand (startup, Start,
+        Refresh, after a service action) rather than on the liveness timer.
+        """
+        port = port or self._server_settings()[1]
+        status = windows_admin.query_service()
+        owns = windows_admin.service_owns_port(status, port)
+        self.service_var.set(service_label(status, owns, port))
+        state = "normal" if status.installed else "disabled"
+        for button in self.service_btns:
+            button.config(state=state)
+        return owns
+
+    def on_service(self, action: str) -> None:
+        """Start/stop/restart the installed service behind a UAC prompt.
+
+        Runs off the Tk thread: the elevated command waits for the service to
+        change state, and the window must stay responsive meanwhile.
+        """
+        generation = self._generation
+        self._set_info(f"{action.capitalize()} service: waiting for administrator approval…")
+
+        def work() -> None:
+            error: Exception | None = None
+            try:
+                windows_admin.control_service(action)
+            except (windows_admin.ElevationDeclined, windows_admin.ElevatedActionFailed) as exc:
+                error = exc
+            self._post_info_for(generation, windows_admin.service_action_message(action, error))
+
+        threading.Thread(target=work, daemon=True).start()
+
     def on_stop(self) -> None:
         message = self.ctl.stop()
         # Invalidate any readiness poll still watching the process we just
@@ -748,6 +856,7 @@ class WhisperGuiApp:
         return self.active or (self.host_var.get(), self.port_var.get(), self.token_var.get())
 
     def on_refresh(self) -> None:
+        self._refresh_service()
         if not self.ctl.running():
             self._set_info("Server is not running.")
             return
@@ -799,8 +908,11 @@ class WhisperGuiApp:
         webbrowser.open(health_url(host, port))
 
     def open_logs(self) -> None:
-        log_dir().mkdir(parents=True, exist_ok=True)
-        self._open(log_dir())
+        try:
+            log_dir().mkdir(parents=True, exist_ok=True)
+            self._open(log_dir())
+        except Exception as exc:
+            self._set_info(f"Could not open {log_dir()}: {exc}")
 
     def _log_file(self) -> Path:
         """The log of the server this window launched (or would launch)."""
@@ -849,22 +961,20 @@ class WhisperGuiApp:
         reload_log()
 
     def open_config(self) -> None:
-        self.config_file.parent.mkdir(parents=True, exist_ok=True)
-        if not self.config_file.exists():
-            self.config_file.write_text("{}\n", encoding="utf-8")
-        self._open(self.config_file)
+        """Open config.json; the installed one in an elevated Notepad."""
+        error = windows_admin.open_config(self.config_file, self._open)
+        if error:
+            self._set_info(error)
 
     @staticmethod
     def _open(path: Path) -> None:
-        try:
-            if os.name == "nt":
-                os.startfile(str(path))  # type: ignore[attr-defined]
-            elif sys.platform == "darwin":
-                subprocess.run(["open", str(path)], check=False)
-            else:
-                subprocess.run(["xdg-open", str(path)], check=False)
-        except Exception:
-            pass
+        """Open with the OS handler. Raises, so callers can report a failure."""
+        if os.name == "nt":
+            os.startfile(str(path))  # type: ignore[attr-defined]
+        elif sys.platform == "darwin":
+            subprocess.run(["open", str(path)], check=True)
+        else:
+            subprocess.run(["xdg-open", str(path)], check=True)
 
     # ---- tray / lifecycle ----
     def hide_to_tray(self) -> None:

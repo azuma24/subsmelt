@@ -70,6 +70,32 @@ class PortConflictTests(unittest.TestCase):
         self.assertIn("different port", message)
 
 
+class ServiceOwnedPortTests(unittest.TestCase):
+    """The installed service on the port is named as such, not as a stranger."""
+
+    def test_the_service_gets_its_own_explanation_and_controls(self):
+        message = whisper_gui.occupied_port_message("0.0.0.0", "8001", service_owns=True)
+        self.assertIn("installed SubSmeltWhisper service is already serving port 8001", message)
+        self.assertIn("Restart service", message)
+        self.assertIn("administrator approval", message)
+
+    def test_any_other_server_keeps_the_generic_conflict(self):
+        message = whisper_gui.occupied_port_message("0.0.0.0", "8001", service_owns=False)
+        self.assertEqual(message, whisper_gui.port_conflict_message("0.0.0.0", "8001"))
+
+    def test_the_service_line_says_which_port_it_serves(self):
+        running = whisper_gui.windows_admin.ServiceStatus("running", 4321)
+        self.assertEqual(
+            whisper_gui.service_label(running, True, "8001"),
+            "Installed service: SubSmeltWhisper running, serving port 8001",
+        )
+        self.assertEqual(
+            whisper_gui.service_label(running, False, "9001"), "Installed service: SubSmeltWhisper running"
+        )
+        missing = whisper_gui.windows_admin.ServiceStatus("not installed")
+        self.assertIn("not installed", whisper_gui.service_label(missing, False, "8001"))
+
+
 class StatusLabelTests(unittest.TestCase):
     def test_stopped(self):
         self.assertEqual(whisper_gui.status_label(False, None, LAN_WITH_TOKEN), "○ Stopped")

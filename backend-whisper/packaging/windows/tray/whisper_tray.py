@@ -41,6 +41,7 @@ except Exception:  # pragma: no cover - deps absent outside the tray build
     _HAS_TRAY = False
 
 try:
+    import windows_admin
     from gui_config import config_path, data_dir, dev_server_script, effective_config
     from server_launch import ServerExecutableNotFound, resolve_server_command
 except ImportError:  # pragma: no cover - this file's dir isn't on sys.path yet
@@ -48,10 +49,11 @@ except ImportError:  # pragma: no cover - this file's dir isn't on sys.path yet
     if sys.platform == "darwin":
         # service_control.py lives beside the macOS packaging, not here.
         sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "macos"))
+    import windows_admin
     from gui_config import config_path, data_dir, dev_server_script, effective_config
     from server_launch import ServerExecutableNotFound, resolve_server_command
 
-SERVICE_NAME = os.environ.get("SUBSMELT_WHISPER_SERVICE", "SubSmeltWhisper")
+SERVICE_NAME = windows_admin.SERVICE_NAME
 NOTIFY_TITLE = "SubSmelt Whisper"
 # Windows balloon notifications truncate silently past about this length.
 NOTIFY_MAX_CHARS = 200
@@ -186,29 +188,16 @@ def quit_standalone(icon=None, _item=None) -> None:
         icon.stop()
 
 
-def _elevated_sc(verb: str) -> list[str]:
-    """``sc.exe <verb> <service>`` behind a UAC prompt.
-
-    The tray runs unelevated and sc.exe start/stop is administrator-only, so a
-    direct call always came back "Access is denied". Start-Process -Verb RunAs
-    is ShellExecute's "runas": Windows shows the consent prompt, the elevated
-    sc.exe runs, and its exit code is passed back; a declined prompt makes
-    Start-Process throw, which exits 1 with the reason on stderr.
-    """
-    script = (
-        f"$p = Start-Process -FilePath sc.exe -ArgumentList '{verb}','{SERVICE_NAME}' "
-        "-Verb RunAs -Wait -PassThru -WindowStyle Hidden; exit $p.ExitCode"
-    )
-    return ["powershell.exe", "-NoProfile", "-Command", script]
-
-
 def _service_control(icon, verb: str) -> None:
     if _is_windows():
-        code, out = _run(_elevated_sc(verb))
-        if code != 0:
-            _report(icon, f"{verb} service failed (rc={code}): {_last_line(out)}")
-        else:
-            print(f"[tray] {verb} service rc={code}: {out.strip()}")
+        # Service control is administrator-only; the tray stays unelevated and
+        # asks for approval per action.
+        error: Exception | None = None
+        try:
+            windows_admin.control_service(verb)
+        except (windows_admin.ElevationDeclined, windows_admin.ElevatedActionFailed) as exc:
+            error = exc
+        _report(icon, windows_admin.service_action_message(verb, error))
         return
     if _is_macos():
         # The LaunchAgent belongs to the user; launchctl needs no elevation.
@@ -233,14 +222,7 @@ def stop_service(icon=None, _item=None) -> None:
 
 def service_status() -> str:
     if _is_windows():
-        code, out = _run(["sc.exe", "query", SERVICE_NAME])
-        if code != 0:
-            return "not installed"
-        if "RUNNING" in out:
-            return "running"
-        if "STOPPED" in out:
-            return "stopped"
-        return "unknown"
+        return windows_admin.query_service().state
     if _is_macos():
         from service_control import service_status as launchd_status
 
@@ -279,16 +261,11 @@ def open_logs(icon=None, _item=None) -> None:
 
 def open_config(icon=None, _item=None) -> None:
     """Open the config file the server reads (gui_config.config_path, which
-    honours SUBSMELT_WHISPER_CONFIG the way run_server does)."""
-    target = config_path()
-    try:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        if not target.exists():
-            target.write_text("{}\n", encoding="utf-8")
-    except OSError as exc:
-        _report(icon, f"could not create {target}: {exc}")
-        return
-    _open_path(target, icon)
+    honours SUBSMELT_WHISPER_CONFIG the way run_server does). The installed
+    service's config is administrator-only, so that one opens elevated."""
+    error = windows_admin.open_config(config_path(), _open_with_handler)
+    if error:
+        _report(icon, error)
 
 
 def open_model_manager(_icon=None, _item=None) -> None:
@@ -337,16 +314,21 @@ def quit_app(icon=None, _item=None) -> None:
         icon.stop()
 
 
+def _open_with_handler(path: Path) -> None:
+    """Open a file/folder with the OS default handler. Raises on failure."""
+    if _is_windows():
+        os.startfile(str(path))  # type: ignore[attr-defined]
+        return
+    code, out = _run(["open" if sys.platform == "darwin" else "xdg-open", str(path)])
+    if code != 0:
+        raise OSError(_last_line(out) or f"exit code {code}")
+
+
 def _open_path(path: Path, icon=None) -> None:
     """Open a file/folder with the OS default handler (cross-platform)."""
     try:
-        if _is_windows():
-            os.startfile(str(path))  # type: ignore[attr-defined]
-        elif sys.platform == "darwin":
-            _run(["open", str(path)])
-        else:
-            _run(["xdg-open", str(path)])
-    except Exception as exc:  # pragma: no cover
+        _open_with_handler(path)
+    except Exception as exc:
         _report(icon, f"could not open {path}: {exc}")
 
 

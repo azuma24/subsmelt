@@ -19,6 +19,10 @@ gui_config = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(gui_config)
 
 
+def _cannot_deny_reads() -> bool:
+    return os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0)
+
+
 class LoadConfigTests(unittest.TestCase):
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
@@ -31,14 +35,27 @@ class LoadConfigTests(unittest.TestCase):
         self.assertEqual(values["port"], gui_config.DEFAULT_PORT)
         self.assertEqual(values["token"], "")
 
-    def test_malformed_file_never_raises(self):
+    def test_a_malformed_file_is_reported_not_read_as_empty(self):
         path = self.dir / "config.json"
-        path.write_text("{not json at all", encoding="utf-8")
-        # A broken config must leave the window usable, not stop it opening.
-        self.assertEqual(gui_config.load_config(path)["port"], gui_config.DEFAULT_PORT)
+        for content in ("{not json at all", '"a bare string"'):
+            path.write_text(content, encoding="utf-8")
+            with self.assertRaises(gui_config.ConfigUnreadable) as caught:
+                gui_config.load_config(path)
+            self.assertFalse(caught.exception.permission_denied)
 
-        path.write_text('"a bare string"', encoding="utf-8")
-        self.assertEqual(gui_config.load_config(path)["host"], gui_config.DEFAULT_HOST)
+    @unittest.skipIf(_cannot_deny_reads(), "needs POSIX permissions and a non-root user")
+    def test_a_file_we_may_not_read_is_reported_not_read_as_empty(self):
+        # The installed config.json is SYSTEM/Administrators-only. Reading it as
+        # {} showed a blank token as if none were set.
+        path = self.dir / "config.json"
+        path.write_text(json.dumps({"token": "s3cr3t"}), encoding="utf-8")
+        path.chmod(0)
+        self.addCleanup(path.chmod, 0o600)
+
+        with self.assertRaises(gui_config.ConfigUnreadable) as caught:
+            gui_config.load_config(path)
+        self.assertTrue(caught.exception.permission_denied)
+        self.assertIn("permission denied", str(caught.exception))
 
     def test_saved_values_are_read_back(self):
         path = self.dir / "config.json"
@@ -84,10 +101,44 @@ class SaveConfigTests(unittest.TestCase):
         gui_config.save_config(nested, "0.0.0.0", "8001", "")
         self.assertTrue(nested.is_file())
 
-    def test_a_broken_existing_file_is_replaced_not_fatal(self):
+    def test_a_broken_existing_file_is_left_alone(self):
+        # Merging into a guessed {} would replace whatever the file held.
         self.path.write_text("{{{", encoding="utf-8")
-        gui_config.save_config(self.path, "0.0.0.0", "8001", "")
-        self.assertEqual(json.loads(self.path.read_text(encoding="utf-8"))["host"], "0.0.0.0")
+        with self.assertRaises(gui_config.ConfigUnreadable):
+            gui_config.save_config(self.path, "0.0.0.0", "8001", "")
+        self.assertEqual(self.path.read_text(encoding="utf-8"), "{{{")
+
+    @unittest.skipIf(_cannot_deny_reads(), "needs POSIX permissions and a non-root user")
+    def test_an_unreadable_file_keeps_its_token_and_settings(self):
+        original = json.dumps({"token": "s3cr3t", "model_dir": "D:/models", "port": "8001"})
+        self.path.write_text(original, encoding="utf-8")
+        self.path.chmod(0)
+        self.addCleanup(self.path.chmod, 0o600)
+
+        # The window shows a blank token when it cannot read the file; saving
+        # that must not clear the real one.
+        with self.assertRaises(gui_config.ConfigUnreadable):
+            gui_config.save_config(self.path, "0.0.0.0", "9000", "")
+
+        self.path.chmod(0o600)
+        self.assertEqual(self.path.read_text(encoding="utf-8"), original)
+        self.assertFalse(self.path.with_suffix(".json.tmp").exists())
+
+    def test_saving_the_loaded_token_keeps_it_with_the_other_keys(self):
+        self.path.write_text(json.dumps({"token": "s3cr3t", "model_dir": "D:/models"}), encoding="utf-8")
+        loaded = gui_config.load_config(self.path)
+
+        gui_config.save_config(self.path, "127.0.0.1", "9000", loaded["token"])
+
+        saved = json.loads(self.path.read_text(encoding="utf-8"))
+        self.assertEqual(saved, {"token": "s3cr3t", "model_dir": "D:/models", "host": "127.0.0.1", "port": "9000"})
+
+    def test_the_note_for_a_protected_file_says_nothing_will_be_saved(self):
+        error = gui_config.ConfigUnreadable(self.path, PermissionError(13, "denied"))
+        note = gui_config.unreadable_config_note(error)
+        self.assertIn("readable only by administrators", note)
+        self.assertIn("blank because the saved key could not be read", note)
+        self.assertIn("will not save", note)
 
 
 class BindWarningTests(unittest.TestCase):
