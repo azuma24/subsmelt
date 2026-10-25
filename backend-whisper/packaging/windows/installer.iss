@@ -10,7 +10,11 @@
 ; because it cannot be tested in this environment.
 ;
 ; What it does (plan Phase 3):
-;   * Stops a running SubSmeltWhisper service before files are copied (upgrade).
+;   * On upgrade, before files are copied: stops the SubSmeltWhisper service
+;     (aborting if it will not stop), closes the GUI/tray and any standalone
+;     server they started, and deletes the previous program files so nothing
+;     from the old bundle lingers. Data in C:\ProgramData\SubSmelt (config.json
+;     with the token, models, logs) is never touched.
 ;   * Installs the --onedir output (dist\whisper-server\) into Program Files.
 ;   * Bundles + silently installs the VC++ redistributable.
 ;   * Runs a driver-version / hardware PRE-CHECK gate (Phase 3a provisioning).
@@ -160,15 +164,17 @@ end;
 
 { ---- Stop a running service so an upgrade does not hit locked files ----
   net stop waits for the service to report STOPPED; the loop afterwards covers
-  a service that was still STOP_PENDING when net gave up. }
-procedure StopExistingService;
+  a service that was still STOP_PENDING when net gave up. False when it is still
+  running after 30 s: copying over a live bundle fails on locked files or
+  leaves a mix of old and new. }
+function StopExistingService: Boolean;
 var
   ResultCode: Integer;
   Attempt: Integer;
 begin
-  if not Exec('net.exe', 'stop {#MyServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-    Exit;
-  Log(Format('net stop {#MyServiceName} exited %d', [ResultCode]));
+  Result := True;
+  if Exec('net.exe', 'stop {#MyServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    Log(Format('net stop {#MyServiceName} exited %d', [ResultCode]));
   for Attempt := 1 to 30 do
   begin
     if Exec('cmd.exe', '/C sc.exe query {#MyServiceName} | find "STOPPED"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
@@ -177,7 +183,64 @@ begin
       Exit;  { 1060: not installed }
     Sleep(1000);
   end;
-  Log('{#MyServiceName} did not reach STOPPED within 30 s; continuing.');
+  Log('{#MyServiceName} did not reach STOPPED within 30 s.');
+  Result := False;
+end;
+
+{ ---- Close the control apps and any server they started ----
+  whisper-gui.exe and whisper-tray.exe run in the user's session and lock their
+  own exes; a standalone run_server.exe they launched locks the bundle and keeps
+  holding the port. The service is already stopped, so every run_server.exe
+  left is one of those. }
+procedure StopControlApps;
+var
+  ResultCode: Integer;
+begin
+  if Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /T /IM whisper-gui.exe /IM whisper-tray.exe /IM run_server.exe',
+          '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    Log(Format('taskkill exited %d (128 = none running)', [ResultCode]));
+  Sleep(1000);  { let Windows release the handles }
+end;
+
+{ ---- Delete the previous program files ----
+  [Files] only copies over the app folder, so a DLL or module the new bundle dropped
+  would stay behind and could be loaded instead of the right one. Only runs
+  when that folder holds run_server.exe, so a folder that is not ours is never
+  emptied, and keeps Inno's own unins* files so the uninstaller still works.
+  Returns the path it could not delete, or '' on success. }
+function RemoveOldProgramFiles: String;
+var
+  Dir: String;
+  Path: String;
+  FindRec: TFindRec;
+  Deleted: Boolean;
+begin
+  Result := '';
+  Dir := ExpandConstant('{app}');
+  if not FileExists(Dir + '\run_server.exe') then
+    Exit;
+  if not FindFirst(Dir + '\*', FindRec) then
+    Exit;
+  try
+    repeat
+      if (FindRec.Name <> '.') and (FindRec.Name <> '..') and (Pos('unins', Lowercase(FindRec.Name)) <> 1) then
+      begin
+        Path := Dir + '\' + FindRec.Name;
+        if (FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0 then
+          Deleted := DelTree(Path, True, True, True)
+        else
+          Deleted := DeleteFile(Path);
+        if not Deleted then
+        begin
+          Result := Path;
+          Exit;
+        end;
+      end;
+    until not FindNext(FindRec);
+  finally
+    FindClose(FindRec);
+  end;
+  Log('Removed the previous program files from ' + Dir);
 end;
 
 { =========================================================================
@@ -202,11 +265,25 @@ function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   ResultCode: Integer;
   DoctorExe: String;
+  FailedPath: String;
 begin
   Result := '';  { empty string => proceed with install }
   NeedsRestart := False;
 
-  StopExistingService;
+  if not StopExistingService then
+  begin
+    Result := 'The {#MyServiceName} service did not stop within 30 seconds, so its files cannot be replaced.' + #13#10 +
+              'Stop it in services.msc (or reboot), then run setup again.';
+    Exit;
+  end;
+  StopControlApps;
+  FailedPath := RemoveOldProgramFiles;
+  if FailedPath <> '' then
+  begin
+    Result := 'Could not remove the previous version''s file:' + #13#10 + FailedPath + #13#10#13#10 +
+              'Close any program using it (or reboot), then run setup again. Your settings, token and models are unchanged.';
+    Exit;
+  end;
 
   { TODO(Phase 3a): point this at the bundled provision.exe once it exists.
     Until then we look for it next to the source bundle; if absent, we skip the
