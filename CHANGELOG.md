@@ -5,6 +5,12 @@ version number and are released together (`v0.5.6` and `whisper-v0.5.6`).
 
 ## [Unreleased]
 
+## [0.7.7] — 2026-11-03
+
+### Added
+
+- **A Jobs | Files switch in the Library.** Files lists one row per video with a chip per language (done, queued, translating, failed, not queued) or "No subtitles", as the old Files view did. Search and every filter apply, and the filter counts count files. Clicking a row opens the file's panel. Links to the old Files view open it.
+
 ## [0.7.6] — 2026-11-03
 
 ### Changed
