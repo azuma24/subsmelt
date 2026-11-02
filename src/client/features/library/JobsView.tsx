@@ -23,7 +23,7 @@ import { LibraryEmpty } from "./LibraryStates";
 import type { LibraryItem } from "./library-model";
 import { useLibraryFiles } from "./useLibraryFiles";
 import type { RowLayout } from "./dashboard-params";
-import { fileEntries, fileMatchesFilters, fileMatchesStatus } from "./file-entries";
+import { fileEntries, fileFilterOptions, fileMatchesFilters, fileMatchesStatus } from "./file-entries";
 import { FileList } from "./FileList";
 
 interface JobsViewProps {
@@ -120,13 +120,22 @@ export function JobsView({
     transcription,
     transcriptionEnabled,
   });
+  const rootLabel = t("dashboard.folderRoot");
+  const entries = useMemo(() => fileEntries(items, jobsById), [items, jobsById]);
+  const entryOptions = useMemo(() => fileFilterOptions(entries, rootLabel), [entries, rootLabel]);
   const allFolderOptions = useMemo(
-    () => Array.from(new Set([...folderOptions, ...files.folders])).sort((a, b) => a.localeCompare(b)),
-    [folderOptions, files.folders],
+    () =>
+      Array.from(new Set([...folderOptions, ...files.folders, ...entryOptions.folders])).sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    [folderOptions, files.folders, entryOptions.folders],
   );
   const allTargetOptions = useMemo(
-    () => Array.from(new Set([...targetOptions, ...files.targets])).sort((a, b) => a.localeCompare(b)),
-    [targetOptions, files.targets],
+    () =>
+      Array.from(new Set([...targetOptions, ...files.targets, ...entryOptions.targets])).sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    [targetOptions, files.targets, entryOptions.targets],
   );
   // The file statuses sit right after All: they are the work nobody has started.
   const fileSegmentCount = files.counts.untranscribed + files.counts.unqueued;
@@ -155,8 +164,6 @@ export function JobsView({
       : []),
     ...jobSegments,
   ];
-  const rootLabel = t("dashboard.folderRoot");
-  const entries = useMemo(() => fileEntries(items, jobsById), [items, jobsById]);
   const visibleEntries = useMemo(
     () =>
       entries

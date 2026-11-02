@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import type { Job, ScannedFile, TaskStatus } from "../../types";
 import { makeJob, makeTaskStatus } from "../../test-fixtures";
-import { fileEntries, fileMatchesFilters, fileMatchesStatus } from "./file-entries";
+import { fileEntries, fileFilterOptions, fileMatchesFilters, fileMatchesStatus } from "./file-entries";
 import { toLibraryItems } from "./library-model";
 
 const task = (langCode: string, status: TaskStatus["status"], jobId: number | null = null): TaskStatus =>
@@ -48,6 +48,29 @@ test("status filters pick the files with that kind of work", () => {
   assert.equal(fileMatchesStatus(episode, "error"), true);
   assert.equal(fileMatchesStatus(episode, "done"), false, "chi's most pressing state is the error");
   assert.equal(fileMatchesStatus(bare, "all"), true);
+});
+
+test("a language found already translated on disk counts as Done", () => {
+  const [onDisk] = fileEntries(
+    toLibraryItems(
+      [
+        {
+          ...files[1],
+          subtitles: [{ ...files[1].subtitles[0], tasks: [{ ...task("chi", "skipped"), outputExists: true }] }],
+        },
+      ],
+      "/media",
+    ),
+    new Map(),
+  );
+  assert.equal(fileMatchesStatus(onDisk, "done"), true);
+});
+
+test("the dropdowns offer every file's folder and languages", () => {
+  assert.deepEqual(fileFilterOptions([bare, episode], "Media root"), {
+    folders: ["Movies", "Shows"],
+    targets: ["chi (chi)", "jpn (jpn)"],
+  });
 });
 
 test("search, folder and language filters apply to files", () => {
