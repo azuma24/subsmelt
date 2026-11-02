@@ -208,6 +208,8 @@ export function LibraryPage() {
         <JobsView
           status={params.status}
           onStatusChange={(status) => setParams({ status })}
+          rows={params.rows}
+          onRowsChange={(rows) => setParams({ rows })}
           queueRunning={queueRunning}
           currentJobId={currentJobId}
           onPreview={setPreviewJobId}

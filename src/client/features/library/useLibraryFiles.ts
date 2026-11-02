@@ -153,6 +153,10 @@ export function useLibraryFiles({
     actions,
     openItem,
     openJobFile,
+    openFileKey: (key: string) => {
+      setTranslateRequest(null);
+      setOpenKey(key);
+    },
     translateRequest,
     closePanel: () => {
       setOpenKey(null);

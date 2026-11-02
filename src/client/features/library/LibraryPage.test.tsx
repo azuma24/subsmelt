@@ -129,7 +129,7 @@ const selectedTab = (page: { html: string }) =>
 test("the home page opens on the Jobs view, with the library's unqueued files among the jobs", () => {
   const page = renderPage(<LibraryPage />, configured);
   assert.equal(selectedTab(page), "Jobs 4");
-  assert.ok(!page.buttons.includes("Files"), "the Files view is merged into Jobs");
+  assert.ok(page.buttons.includes("Files"), "Files is a row layout of the Jobs view");
   assert.ok(!page.buttons.includes("Transcriptions"), "no Transcriptions view while transcription is off");
   assert.ok(page.text.includes("Severance.S02E08.Sweet.Vitriol.1080p.ATVP.WEB-DL.en.srt"));
   assert.ok(page.text.includes("Episode 02.en.srt"));
@@ -252,4 +252,15 @@ test("the setup checklist lists only the steps left, with progress beside its ti
   for (const finished of ["LLM connection", "Translation targets", "Media discovered"]) {
     assert.ok(!page.text.includes(finished), `${finished} is done and hidden`);
   }
+});
+
+test("?rows=files lists one row per file with a chip per language, and filters count files", () => {
+  const page = renderPage(<LibraryPage />, configured, { path: "/?rows=files" });
+  assert.match(page.html, /aria-pressed="true"[^>]*>Files/);
+  assert.ok(page.text.includes("Severance.S02E08.Sweet.Vitriol.1080p.ATVP.WEB-DL.mkv TV/Severance/Season 02"));
+  assert.match(page.html, /<\/svg>chi/);
+  assert.match(page.html, /<\/svg>jpn/);
+  assert.ok(page.buttons.includes("All 1"), "one file, not four rows");
+  assert.ok(page.buttons.includes("Not queued 1"));
+  assert.ok(!page.text.includes("Episode 01.en.srt"), "jobs with no Library file are not files");
 });

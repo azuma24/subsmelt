@@ -22,10 +22,16 @@ import { LibraryPanel } from "./LibraryPanel";
 import { LibraryEmpty } from "./LibraryStates";
 import type { LibraryItem } from "./library-model";
 import { useLibraryFiles } from "./useLibraryFiles";
+import type { RowLayout } from "./dashboard-params";
+import { fileEntries, fileMatchesFilters, fileMatchesStatus } from "./file-entries";
+import { FileList } from "./FileList";
 
 interface JobsViewProps {
   status: JobStatusFilter;
   onStatusChange: (status: JobStatusFilter) => void;
+  /** One row per job, or one per Library file with its language chips. */
+  rows: RowLayout;
+  onRowsChange: (rows: RowLayout) => void;
   queueRunning: boolean;
   currentJobId: number | null;
   onPreview: (jobId: number) => void;
@@ -47,6 +53,8 @@ interface JobsViewProps {
 export function JobsView({
   status,
   onStatusChange,
+  rows,
+  onRowsChange,
   queueRunning,
   currentJobId,
   onPreview,
@@ -147,6 +155,29 @@ export function JobsView({
       : []),
     ...jobSegments,
   ];
+  const rootLabel = t("dashboard.folderRoot");
+  const entries = useMemo(() => fileEntries(items, jobsById), [items, jobsById]);
+  const visibleEntries = useMemo(
+    () =>
+      entries
+        .filter((entry) => fileMatchesStatus(entry, status))
+        .filter((entry) => fileMatchesFilters(entry, query, folderFilter, targetFilter, rootLabel))
+        .sort(
+          (a, b) =>
+            (a.item.folder || rootLabel).localeCompare(b.item.folder || rootLabel) ||
+            a.item.name.localeCompare(b.item.name),
+        ),
+    [entries, status, query, folderFilter, targetFilter, rootLabel],
+  );
+  // In Files rows the filters count files, not jobs.
+  const shownSegments =
+    rows === "files"
+      ? segments.map((segment) => ({
+          ...segment,
+          count: entries.filter((entry) => fileMatchesStatus(entry, segment.key)).length,
+        }))
+      : segments;
+
   // A job with no Library file (a Convert upload) has no file panel; its details stand in.
   const openFile = useCallback(
     (job: Job) => {
@@ -294,6 +325,9 @@ export function JobsView({
         <JobsTableSkeleton />
       );
     }
+    if (rows === "files") {
+      return <FileList entries={visibleEntries} rootLabel={rootLabel} onOpen={files.openFileKey} />;
+    }
     if (!isMobile) {
       return (
         <JobsTableDesktop
@@ -346,8 +380,25 @@ export function JobsView({
           <LibraryEmpty />
         ) : (
           <>
-            <div className="border-b border-border px-4 pt-3">
-              <label className="flex min-h-touch min-w-0 items-center gap-2 rounded-sm border border-border bg-surface-raised px-3 focus-within:border-accent">
+            <div className="flex items-center gap-2 border-b border-border px-4 pt-3">
+              <div
+                role="group"
+                aria-label={t("library.view.jobs")}
+                className="flex shrink-0 rounded-sm border border-border p-1"
+              >
+                {(["jobs", "files"] as const).map((layout) => (
+                  <button
+                    key={layout}
+                    type="button"
+                    aria-pressed={rows === layout}
+                    onClick={() => onRowsChange(layout)}
+                    className={`min-h-[36px] rounded-sm px-3 text-sm transition-colors duration-fast ${rows === layout ? "bg-text font-medium text-surface" : "text-muted hover:text-text"}`}
+                  >
+                    {t(`library.view.${layout}`)}
+                  </button>
+                ))}
+              </div>
+              <label className="flex min-h-touch min-w-0 flex-1 items-center gap-2 rounded-sm border border-border bg-surface-raised px-3 focus-within:border-accent">
                 <Icon name="search" className="text-muted" />
                 <span className="sr-only">{t("library.searchLabel")}</span>
                 <input
@@ -368,7 +419,7 @@ export function JobsView({
               aria-label={t("dashboard.filtersLabel")}
               className="flex gap-2 overflow-x-auto border-b border-border px-4 py-3"
             >
-              {segments.map((segment) => {
+              {shownSegments.map((segment) => {
                 const selected = segment.key === status;
                 return (
                   <button
@@ -402,10 +453,11 @@ export function JobsView({
                 setTargetFilter("all");
                 setQuery("");
               }}
-              visiblePendingIds={visiblePendingIds}
-              visibleErrorIds={visibleErrorIds}
-              visibleRetranslatableIds={visibleRetranslatableIds}
-              finishedJobCount={finishedJobCount}
+              // The bulk actions act on job rows; Files rows show none of them.
+              visiblePendingIds={rows === "jobs" ? visiblePendingIds : []}
+              visibleErrorIds={rows === "jobs" ? visibleErrorIds : []}
+              visibleRetranslatableIds={rows === "jobs" ? visibleRetranslatableIds : []}
+              finishedJobCount={rows === "jobs" ? finishedJobCount : 0}
               isRetryPending={retrySelectedMutation.isPending}
               isForcePending={forceSelectedMutation.isPending}
               onSelectVisiblePending={() => setSelectedIds((prev) => new Set([...prev, ...visiblePendingIds]))}

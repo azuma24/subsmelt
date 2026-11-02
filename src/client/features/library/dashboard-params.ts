@@ -18,13 +18,18 @@ export const JOB_STATUS_FILTERS = [
 ] as const;
 export type JobStatusFilter = (typeof JOB_STATUS_FILTERS)[number];
 
+/** How the Jobs view lists its rows: one per job, or one per Library file with its language chips. */
+export const ROW_LAYOUTS = ["jobs", "files"] as const;
+export type RowLayout = (typeof ROW_LAYOUTS)[number];
+
 /** The home page's state, kept in the URL so a view or status can be linked and survives reload. */
 export interface DashboardParams {
   view: DashboardView;
   status: JobStatusFilter;
+  rows: RowLayout;
 }
 
-export const DEFAULT_DASHBOARD_PARAMS: Readonly<DashboardParams> = { view: "jobs", status: "all" };
+export const DEFAULT_DASHBOARD_PARAMS: Readonly<DashboardParams> = { view: "jobs", status: "all", rows: "jobs" };
 
 // Links from before the Files view was merged into Jobs: `?filter=` named a
 // Files status chip. Each maps to the Jobs status that shows the same work.
@@ -45,13 +50,15 @@ export function parseDashboardParams(search: URLSearchParams): DashboardParams {
   return {
     view: oneOf(DASHBOARD_VIEWS, search.get("view"), DEFAULT_DASHBOARD_PARAMS.view),
     status: oneOf(JOB_STATUS_FILTERS, search.get("status"), legacy ?? DEFAULT_DASHBOARD_PARAMS.status),
+    // view=files is a link from before Files became a row layout of the Jobs view.
+    rows: oneOf(ROW_LAYOUTS, search.get("rows") ?? (search.get("view") === "files" ? "files" : null), "jobs"),
   };
 }
 
 /** Search params for the given state, defaults omitted so the plain page stays at "/". */
 export function dashboardSearchParams(params: Partial<DashboardParams>): URLSearchParams {
   const search = new URLSearchParams();
-  for (const key of ["view", "status"] as const) {
+  for (const key of ["view", "status", "rows"] as const) {
     const value = params[key];
     if (value !== undefined && value !== DEFAULT_DASHBOARD_PARAMS[key]) search.set(key, value);
   }
