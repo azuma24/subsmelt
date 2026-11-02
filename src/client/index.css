@@ -1,0 +1,303 @@
+@import "tailwindcss";
+
+/*
+ * Palette. Hue-named values each theme redefines; utilities never read these
+ * directly. The role tokens in the @theme inline block below alias them, so a
+ * theme switch changes every utility without regenerating any CSS.
+ */
+:root {
+  color-scheme: dark;
+
+  --bg: #0b1020;
+  --surface: #111827;
+  --surface-2: #172033;
+  --surface-3: #1e293b;
+  --border: #334155;
+  --border-sub: #243044;
+  --text: #f1f5f9;
+  --text-2: #cbd5e1;
+  --text-3: #94a3b8;
+  /* Softer blue accent on lifted dark surfaces. It keeps Subsmelt's cockpit feel
+     but gives text, borders, and selected states more separation from panels. */
+  --accent: #60a5fa;
+  --accent-dim: rgba(96, 165, 250, 0.14);
+  --accent-border: rgba(96, 165, 250, 0.34);
+  /* Foreground for filled-accent surfaces (primary buttons). Dark text maintains
+     strong contrast against the lighter blue accent. */
+  --on-accent: #0b1020;
+  --green: #4ade80;
+  --green-dim: rgba(74, 222, 128, 0.13);
+  --green-border: rgba(74, 222, 128, 0.32);
+  --yellow: #facc15;
+  --yellow-dim: rgba(250, 204, 21, 0.13);
+  --yellow-border: rgba(250, 204, 21, 0.32);
+  --red: #fb7185;
+  --red-dim: rgba(251, 113, 133, 0.13);
+  --red-border: rgba(251, 113, 133, 0.32);
+  /* Chart series, blue then orange: the first two slots of the dataviz
+     reference palette, validated on --surface for contrast and colour-blind
+     separation (validate_palette.js, dark mode). Marks only, never text. */
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+
+  /* Elevation: 1 lifts a control off its panel, 2 floats an overlay above the page. */
+  --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --elevation-2: 0 12px 32px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+  --scrim: rgba(0, 0, 0, 0.7);
+
+  /* Motion: one curve; 150ms for state changes, 250ms for entrances. */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+}
+
+/* Light theme — applied when <html data-theme="light"> is set. The default
+   (no attribute, or data-theme="dark") uses the dark palette in :root above. */
+html[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --surface-2: #f6f8fa;
+  --surface-3: #eaeef2;
+  --border: #d0d7de;
+  --border-sub: #e4e8ec;
+  --text: #1f2328;
+  --text-2: #59636e;
+  /* 4.88:1 on --surface and 4.58:1 on --surface-2 (WCAG AA for body text);
+     the previous #818b96 was 3.46:1 / 3.25:1. */
+  --text-3: #687280;
+  /* Cyan-700 in light mode — darker so cyan text/links stay legible on white. */
+  --accent: #0e7490;
+  --accent-dim: rgba(14, 116, 144, 0.08);
+  --accent-border: rgba(14, 116, 144, 0.32);
+  --on-accent: #ffffff;
+  --green: #1a7f37;
+  --green-dim: rgba(26, 127, 55, 0.10);
+  --green-border: rgba(26, 127, 55, 0.30);
+  --yellow: #9a6700;
+  --yellow-dim: rgba(154, 103, 0, 0.10);
+  --yellow-border: rgba(154, 103, 0, 0.30);
+  --red: #cf222e;
+  --red-dim: rgba(207, 34, 46, 0.10);
+  --red-border: rgba(207, 34, 46, 0.30);
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+
+  --elevation-1: 0 1px 2px rgba(31, 35, 40, 0.08);
+  --elevation-2: 0 12px 32px rgba(31, 35, 40, 0.16), 0 2px 6px rgba(31, 35, 40, 0.08);
+  --scrim: rgba(31, 35, 40, 0.5);
+}
+
+/*
+ * Design system. Each scale replaces Tailwind's default, so an off-scale
+ * utility (text-5xl, rounded-lg, font-bold, bg-blue-500) does not exist.
+ */
+@theme {
+  /* Type: seven steps, nothing under 12px. */
+  --text-*: initial;
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 14px;
+  --text-sm--line-height: 20px;
+  --text-base: 16px;
+  --text-base--line-height: 24px;
+  --text-lg: 20px;
+  --text-lg--line-height: 28px;
+  --text-xl: 24px;
+  --text-xl--line-height: 32px;
+  --text-2xl: 32px;
+  --text-2xl--line-height: 40px;
+  --text-3xl: 48px;
+  --text-3xl--line-height: 56px;
+
+  --font-weight-*: initial;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+
+  /* Two corner radii. rounded-full stays built in. */
+  --radius-*: initial;
+  --radius-sm: 6px;
+  --radius-md: 12px;
+
+  /* Cockpit Grid numerals; falls back to the platform monospace stack. */
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Minimum hit target for touch (WCAG 2.5.8 / Apple HIG): min-h-touch, min-w-touch. */
+  --spacing-touch: 44px;
+
+  --default-transition-timing-function: var(--ease);
+  --animate-slide-in: slideIn var(--duration-base) var(--ease);
+  --animate-slide-up: slideUp var(--duration-base) var(--ease);
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+}
+
+/*
+ * Color roles (Tailwind: bg-surface, text-muted, border-danger-line, ...) and
+ * elevation, read through var() so both themes resolve at paint time.
+ *   canvas          the page behind every panel
+ *   surface         a panel; -raised a control on a panel; -highlight hover/active/track
+ *   border          dividers and outlines; -subtle for grouping inside a panel
+ *   text            body copy; muted secondary; faint tertiary
+ *   accent          interactive; -soft a tint, -line an outline, -text on a filled accent
+ *   danger / warning / success   each with -soft and -line like accent
+ */
+@theme inline {
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-canvas: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-2);
+  --color-surface-highlight: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-sub);
+  --color-text: var(--text);
+  --color-muted: var(--text-2);
+  --color-faint: var(--text-3);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-dim);
+  --color-accent-line: var(--accent-border);
+  --color-accent-text: var(--on-accent);
+  --color-danger: var(--red);
+  --color-danger-soft: var(--red-dim);
+  --color-danger-line: var(--red-border);
+  --color-warning: var(--yellow);
+  --color-warning-soft: var(--yellow-dim);
+  --color-warning-line: var(--yellow-border);
+  --color-success: var(--green);
+  --color-success-soft: var(--green-dim);
+  --color-success-line: var(--green-border);
+  --color-scrim: var(--scrim);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+
+  --shadow-*: initial;
+  --shadow-1: var(--elevation-1);
+  --shadow-2: var(--elevation-2);
+}
+
+@utility duration-fast {
+  transition-duration: var(--duration-fast);
+}
+@utility duration-base {
+  transition-duration: var(--duration-base);
+}
+
+/*
+ * Element defaults. These sit in the base layer so a utility on the element
+ * (text-xs on a button) still wins, as it did before cascade layers.
+ */
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    font-family: ui-sans-serif, "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", sans-serif;
+    line-height: 1.5;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  /* Tailwind 4 defaults borders to currentColor; a bare border-t means the divider color here. */
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+
+  /* Tailwind 4 gives buttons the default cursor; this app's buttons are links to actions. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  /* The type scale allows weights 400/500/600 only; browsers default these to 700. */
+  b,
+  strong {
+    font-weight: 600;
+  }
+
+  /* iOS zooms into inputs below 16px; a text-size utility on the input still wins. */
+  @media (max-width: 767px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+}
+
+/* One focus indicator for every keyboard stop. Unlayered on purpose: no
+   utility may remove it. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Toggle buttons sit edge to edge inside clipped segmented groups; an outset
+   ring would be cut off, so theirs is drawn inside. */
+[aria-pressed]:focus-visible {
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

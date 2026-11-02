@@ -1,0 +1,52 @@
+{
+  "name": "subsmelt",
+  "version": "0.7.6",
+  "type": "module",
+  "description": "Self-hosted batch subtitle translator using LLM",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20 <25"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "npm run typecheck && vite build && tsc -p tsconfig.server.build.json",
+    "start": "node dist/server/index.js",
+    "test": "tsx --test \"src/**/*.test.ts\" \"src/**/*.test.tsx\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.server.json",
+    "lint": "biome check . && npm run typecheck",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write ."
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.72",
+    "@ai-sdk/google": "^4.0.88",
+    "@ai-sdk/openai": "^4.0.84",
+    "@ai-sdk/openai-compatible": "^3.0.63",
+    "@tanstack/react-query": "^5.96.2",
+    "@tanstack/react-virtual": "^3.14.2",
+    "ai": "^7.0.128",
+    "better-sqlite3": "13.0.3",
+    "chokidar": "^5.0.0",
+    "express": "^5.2.1",
+    "franc-min": "^6.2.0",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.18.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.19.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.3"
+  }
+}

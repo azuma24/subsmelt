@@ -1,0 +1,213 @@
+import { useMemo } from "react";
+import type { TFunction } from "../../i18n";
+import type { Job } from "../../types";
+import type { JobStatusFilter } from "../library/dashboard-params";
+
+export function parentFolderLabel(
+  filePath: string,
+  mediaDir: string,
+  rootLabel: string,
+  externalLabel: string,
+): string {
+  const normalizedPath = filePath.replace(/\\/g, "/");
+  const normalizedMedia = mediaDir.replace(/\\/g, "/").replace(/\/+$/, "");
+  const relative = normalizedPath.startsWith(`${normalizedMedia}/`)
+    ? normalizedPath.slice(normalizedMedia.length + 1)
+    : "";
+
+  if (!relative) return externalLabel;
+  const parts = relative.split("/");
+  parts.pop();
+  const folder = parts.join("/");
+  return folder || rootLabel;
+}
+
+interface StatusSegment {
+  key: JobStatusFilter;
+  label: string;
+  count: number;
+  color: string;
+}
+
+interface DashboardDerivedStateInput {
+  jobs: Job[];
+  mediaDir: string;
+  statusFilter: string;
+  folderFilter: string;
+  targetFilter: string;
+  /** Search box text, matched against the subtitle's path; "" matches everything. */
+  query?: string;
+  selectedIds: Set<number>;
+  t: TFunction;
+}
+
+export interface DashboardDerivedState {
+  pendingJobs: Job[];
+  activeJobs: Job[];
+  doneJobs: Job[];
+  errorJobs: Job[];
+  finishedJobCount: number;
+  jobsById: Map<number, Job>;
+  selectedPendingCount: number;
+  selectedPendingIds: number[];
+  folderOptions: string[];
+  targetOptions: string[];
+  filteredJobs: Job[];
+  visiblePendingIds: number[];
+  visibleErrorIds: number[];
+  visibleDoneIds: number[];
+  visibleRetranslatableIds: number[];
+  hasQueueFilters: boolean;
+  statusSegments: StatusSegment[];
+}
+
+export function useDashboardDerivedState({
+  jobs,
+  mediaDir,
+  statusFilter,
+  folderFilter,
+  targetFilter,
+  query = "",
+  selectedIds,
+  t,
+}: DashboardDerivedStateInput): DashboardDerivedState {
+  // Each derived array below is memoized so the dashboard's frequent SSE-driven
+  // re-renders (job:progress fires on every tick) don't re-filter/re-map the
+  // whole jobs list on every render. Deps are scoped tightly to the inputs each
+  // value actually reads; the computed results are identical to the prior
+  // plain-expression versions.
+  const pendingJobs = useMemo(() => jobs.filter((j) => j.status === "pending"), [jobs]);
+  const selectedPendingCount = useMemo(
+    () => pendingJobs.filter((j) => selectedIds.has(j.id)).length,
+    [pendingJobs, selectedIds],
+  );
+  const activeJobs = useMemo(() => jobs.filter((j) => j.status === "translating"), [jobs]);
+  const doneJobs = useMemo(() => jobs.filter((j) => j.status === "done"), [jobs]);
+  const errorJobs = useMemo(() => jobs.filter((j) => j.status === "error"), [jobs]);
+  const skippedJobs = useMemo(() => jobs.filter((j) => j.status === "skipped"), [jobs]);
+  const jobsById = useMemo(() => new Map(jobs.map((job) => [job.id, job])), [jobs]);
+  const selectedPendingIds = useMemo(
+    () => pendingJobs.filter((j) => selectedIds.has(j.id)).map((j) => j.id),
+    [pendingJobs, selectedIds],
+  );
+  const folderOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          jobs.map((job) =>
+            parentFolderLabel(job.srt_path, mediaDir, t("dashboard.folderRoot"), t("dashboard.folderExternal")),
+          ),
+        ),
+      ).sort((a, b) => a.localeCompare(b)),
+    [jobs, mediaDir, t],
+  );
+  const targetOptions = useMemo(
+    () =>
+      Array.from(new Set(jobs.map((job) => `${job.target_lang || job.lang_code} (${job.lang_code})`))).sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    [jobs],
+  );
+  const filteredJobs = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return jobs.filter((j) => {
+      const statusMatches = statusFilter === "all" || j.status === statusFilter;
+      const folderMatches =
+        folderFilter === "all" ||
+        parentFolderLabel(j.srt_path, mediaDir, t("dashboard.folderRoot"), t("dashboard.folderExternal")) ===
+          folderFilter;
+      const targetMatches =
+        targetFilter === "all" || `${j.target_lang || j.lang_code} (${j.lang_code})` === targetFilter;
+      const queryMatches = !needle || j.srt_path.toLowerCase().includes(needle);
+      return statusMatches && folderMatches && targetMatches && queryMatches;
+    });
+  }, [jobs, statusFilter, folderFilter, targetFilter, query, mediaDir, t]);
+  const visiblePendingIds = useMemo(
+    () => filteredJobs.filter((j) => j.status === "pending").map((j) => j.id),
+    [filteredJobs],
+  );
+  const visibleErrorIds = useMemo(
+    () => filteredJobs.filter((j) => j.status === "error").map((j) => j.id),
+    [filteredJobs],
+  );
+  const visibleDoneIds = useMemo(
+    () => filteredJobs.filter((j) => j.status === "done").map((j) => j.id),
+    [filteredJobs],
+  );
+  const visibleRetranslatableIds = useMemo(
+    () => filteredJobs.filter((j) => j.status === "done" || j.status === "skipped").map((j) => j.id),
+    [filteredJobs],
+  );
+  const hasQueueFilters = useMemo(
+    () => statusFilter !== "all" || folderFilter !== "all" || targetFilter !== "all" || query.trim() !== "",
+    [statusFilter, folderFilter, targetFilter, query],
+  );
+
+  // The Jobs view's status filter. `skipped` is appended only when such jobs
+  // exist, so the row does not grow a permanently-zero filter.
+  const statusSegments = useMemo<StatusSegment[]>(
+    () => [
+      {
+        key: "all",
+        label: t("dashboard.filter.all"),
+        count: jobs.length,
+        color: "text-text",
+      },
+      {
+        key: "pending",
+        label: t("dashboard.stat.pending"),
+        count: pendingJobs.length,
+        color: "text-warning",
+      },
+      {
+        key: "translating",
+        label: t("dashboard.stat.translating"),
+        count: activeJobs.length,
+        color: "text-accent",
+      },
+      {
+        key: "done",
+        label: t("dashboard.stat.done"),
+        count: doneJobs.length,
+        color: "text-success",
+      },
+      {
+        key: "error",
+        label: t("dashboard.stat.errors"),
+        count: errorJobs.length,
+        color: "text-danger",
+      },
+      ...(skippedJobs.length > 0
+        ? [
+            {
+              key: "skipped" as const,
+              label: t("dashboard.status.skipped"),
+              count: skippedJobs.length,
+              color: "text-warning",
+            },
+          ]
+        : []),
+    ],
+    [jobs.length, pendingJobs.length, activeJobs.length, doneJobs.length, errorJobs.length, skippedJobs.length, t],
+  );
+
+  return {
+    pendingJobs,
+    activeJobs,
+    doneJobs,
+    errorJobs,
+    finishedJobCount: doneJobs.length + errorJobs.length + skippedJobs.length,
+    jobsById,
+    selectedPendingCount,
+    selectedPendingIds,
+    folderOptions,
+    targetOptions,
+    filteredJobs,
+    visiblePendingIds,
+    visibleErrorIds,
+    visibleDoneIds,
+    visibleRetranslatableIds,
+    hasQueueFilters,
+    statusSegments,
+  };
+}

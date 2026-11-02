@@ -1,0 +1,293 @@
+#!/usr/bin/env python3
+"""Persistence and safety messaging for the Whisper control window.
+
+The GUI used to keep host/port/token in Tk variables only: every restart began
+from the defaults, and the values were passed to the child process purely as
+environment variables. Meanwhile run_server reads
+``%SUBSMELT_DATA_DIR%\\config.json`` on every start (including the installed
+Windows service), so writing that file is what makes a setting stick and apply
+to the service as well as to a GUI-launched child.
+
+Kept free of tkinter so it can be tested anywhere.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+from pathlib import Path
+
+DEFAULT_HOST = "0.0.0.0"
+LOOPBACK_HOST = "127.0.0.1"
+DEFAULT_PORT = "8001"
+
+# Keys this window owns. They are saved to settings.json beside config.json,
+# which the installer lets Users edit; config.json names programs the SYSTEM
+# service runs, so it stays administrator-only and this window never writes it.
+# run_server reads only these keys from settings.json (load_user_settings).
+OWNED_KEYS = ("host", "port", "token")
+USER_SETTINGS_FILE_NAME = "settings.json"
+
+
+def settings_path(config_file: Path) -> Path:
+    """The user-editable settings.json beside a config.json."""
+    return Path(config_file).with_name(USER_SETTINGS_FILE_NAME)
+
+
+def data_dir(env: dict[str, str] | None = None, platform: str | None = None) -> Path:
+    """Where config.json and logs/ live: SUBSMELT_DATA_DIR, else the platform's
+    application-data directory.
+
+    Mirrors run_server.default_data_dir. The server and the control apps are
+    frozen into separate exes, so the function cannot be shared; test_gui_config
+    pins the two copies together.
+    """
+    environ = os.environ if env is None else env
+    override = (environ.get("SUBSMELT_DATA_DIR") or "").strip()
+    if override:
+        return Path(override)
+    if platform is None:
+        platform = sys.platform
+    if platform == "win32":
+        local = (environ.get("LOCALAPPDATA") or "").strip()
+        return (Path(local) if local else Path.home() / "AppData" / "Local") / "SubSmelt"
+    if platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "SubSmelt"
+    xdg = (environ.get("XDG_DATA_HOME") or "").strip()
+    return (Path(xdg) if xdg else Path.home() / ".local" / "share") / "subsmelt"
+
+
+def config_path(env: dict[str, str] | None = None) -> Path:
+    """The config file the SERVER will actually read.
+
+    run_server honours SUBSMELT_WHISPER_CONFIG ahead of the data directory, so
+    the window has to resolve it the same way — otherwise, in that supported
+    setup, it would sit editing a file the server never opens.
+    """
+    environ = os.environ if env is None else env
+    explicit = (environ.get("SUBSMELT_WHISPER_CONFIG") or "").strip()
+    if explicit:
+        return Path(explicit)
+    return data_dir(environ) / "config.json"
+
+
+# run_server gives environment variables precedence over config.json. Older
+# installers set these machine-wide for the installed service (the current one
+# removes them), and a shell may still export them. When one is present, saving
+# the corresponding field here cannot change what the service uses — say so
+# rather than implying the setting took effect everywhere.
+SHADOWING_ENV_VARS = {
+    "host": "SUBSMELT_WHISPER_HOST",
+    "port": "SUBSMELT_WHISPER_PORT",
+    "token": "SUBSMELT_WHISPER_TOKEN",
+}
+
+
+def shadowed_by_env(env: dict[str, str] | None = None) -> list[str]:
+    """Environment variables that will override the saved config, if any."""
+    environ = os.environ if env is None else env
+    return [name for name in SHADOWING_ENV_VARS.values() if (environ.get(name) or "").strip()]
+
+
+def effective_config(env: dict[str, str] | None = None) -> dict[str, str]:
+    """host/port/token as run_server will resolve them: env, then config.json,
+    then the defaults. What a "open the health page" link has to use.
+
+    An unreadable config.json counts as the defaults here: these values only
+    build links and labels, and nothing is ever written back from them.
+    """
+    environ = os.environ if env is None else env
+    try:
+        values = load_config(config_path(environ))
+    except ConfigUnreadable:
+        values = default_config()
+    for key, name in SHADOWING_ENV_VARS.items():
+        override = (environ.get(name) or "").strip()
+        if override:
+            values[key] = override
+    return values
+
+
+def shadowed_note(names: list[str]) -> str | None:
+    """Explanation for settings that cannot reach the installed service."""
+    if not names:
+        return None
+    joined = ", ".join(sorted(names))
+    return (
+        f"Saved, but {joined} is set in the machine environment and takes "
+        "precedence over config.json. The installed service will keep using that "
+        "value; this window's own runs use the fields above."
+    )
+
+
+class ConfigUnreadable(Exception):
+    """config.json exists but could not be read or parsed.
+
+    Treating that as an empty config turned a permission error into a blank
+    token field, and the next save into a file with the token and every other
+    setting gone. Installers before 0.7.4 made the installed service's
+    config.json readable only by SYSTEM and Administrators, so the unelevated
+    control window still meets this on an older install.
+    """
+
+    def __init__(self, path: Path, reason: object) -> None:
+        self.path = Path(path)
+        self.permission_denied = isinstance(reason, PermissionError)
+        detail = "permission denied" if self.permission_denied else str(reason)
+        super().__init__(f"Cannot read {self.path}: {detail}")
+
+
+def default_config() -> dict[str, str]:
+    return {"host": DEFAULT_HOST, "port": DEFAULT_PORT, "token": ""}
+
+
+def _read_saved(path: Path) -> dict:
+    """The saved JSON object; {} when there is no file. Raises ConfigUnreadable."""
+    try:
+        text = Path(path).read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return {}
+    except OSError as exc:
+        raise ConfigUnreadable(path, exc) from exc
+    try:
+        raw = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ConfigUnreadable(path, f"not valid JSON ({exc})") from exc
+    if not isinstance(raw, dict):
+        raise ConfigUnreadable(path, "not a JSON object")
+    return raw
+
+
+def load_config(path: Path) -> dict[str, str]:
+    """Read host/port/token as the server will: settings.json over config.json,
+    with defaults for anything saved in neither.
+
+    A key present in settings.json wins even when empty: a cleared token stays
+    cleared. A file that exists but cannot be read or parsed raises
+    ConfigUnreadable, so the caller can say so instead of showing a blank token
+    as if none were set; an unreadable config.json is tolerated when
+    settings.json holds all three values.
+    """
+    defaults = default_config()
+    values = dict(defaults)
+    user = _read_saved(settings_path(path))
+    try:
+        base = _read_saved(path)
+    except ConfigUnreadable:
+        if not all(key in user for key in OWNED_KEYS):
+            raise
+        base = {}
+    for key in OWNED_KEYS:
+        value = base.get(key)
+        if isinstance(value, (str, int)) and str(value).strip():
+            values[key] = str(value).strip()
+        if isinstance(user.get(key), (str, int)):
+            values[key] = str(user[key]).strip() or defaults[key]  # token's default is ""
+    return values
+
+
+def save_config(path: Path, host: str, port: str, token: str) -> None:
+    """Save host/port/token to the settings.json beside ``path``.
+
+    config.json is never written: it names programs the installed service runs
+    as SYSTEM and is administrator-only. An empty token is saved as "" so it
+    overrides a token in config.json. Raises ConfigUnreadable, without writing,
+    when the existing settings.json cannot be read.
+    """
+    target = settings_path(path)
+    existing = _read_saved(target)
+    existing.update({"host": host, "port": str(port), "token": token.strip()})
+    text = json.dumps(existing, indent=2) + "\n"
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tmp = target.with_suffix(".json.tmp")
+    try:
+        tmp.write_text(text, encoding="utf-8")
+        tmp.replace(target)
+    except PermissionError:
+        # The installed data dir lets Users modify settings.json but not create
+        # files beside it, so the temp file cannot exist there: write in place.
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+        target.write_text(text, encoding="utf-8")
+
+
+def unreadable_config_note(error: ConfigUnreadable) -> str:
+    """Why the fields show defaults and why nothing will be saved."""
+    if error.permission_denied:
+        reason = (
+            f"This account cannot read {error.path} (the installed service's "
+            "config). Installers before 0.7.4 limited it to administrators; "
+            "reinstall the backend to make it readable."
+        )
+    else:
+        reason = f"{error}."
+    return (
+        f"{reason}\n\nThe fields show defaults, not the saved settings, and the "
+        "API key field is blank because the saved key could not be read. Start "
+        "will not save to config.json. Use Open config to edit the installed "
+        "service's settings with administrator approval."
+    )
+
+
+def read_only_config_note(path: Path) -> str:
+    """Why Start could not save: settings.json is missing and the data dir
+    does not let Users create it (an install from before settings.json)."""
+    return (
+        f"Not saved: this account cannot change {settings_path(path)}. Backends "
+        "installed before 0.7.5 have no user-editable settings file; reinstall "
+        "the backend to get one, or use Open config to change the installed "
+        "service's settings with administrator approval."
+    )
+
+
+def source_backend_root(module_file: str = __file__) -> Path | None:
+    """backend-whisper/ of a source checkout, three levels above tray/.
+
+    None in a frozen build, where the bundle supplies app.* via the spec's
+    pathex + hiddenimports and there is no checkout to find. Also None when the
+    path is too shallow to climb: a onefile exe extracts to %TEMP%, and under a
+    short TEMP ``parents[3]`` raised IndexError at import time, so the tray and
+    the GUI never started.
+    """
+    if getattr(sys, "frozen", False):
+        return None
+    parents = Path(module_file).resolve().parents
+    return parents[3] if len(parents) > 3 else None
+
+
+def dev_server_script(module_file: str = __file__) -> Path | None:
+    """The repo's own run_server.py, for launching the server unfrozen."""
+    root = source_backend_root(module_file)
+    return root / "run_server.py" if root else None
+
+
+def generate_token() -> str:
+    """Mint a fresh backend API key for the operator to copy into SubSmelt.
+
+    app/token_gen.py is the single definition of how strong a generated key is;
+    duplicating it here to avoid one import is exactly how the two would drift.
+    Imported lazily so a bundle missing ``app.token_gen`` still opens the
+    control window — the operator loses the Generate button, not the app. The
+    caller is expected to surface the ImportError rather than fall back to a
+    home-made secret: a weak token that looks generated is worse than none.
+    """
+    root = source_backend_root()
+    if root and str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    from app.token_gen import generate_token as _generate
+
+    return _generate()
+
+
+def bind_warning(host: str, token: str) -> str | None:
+    """Warning to show when the server is reachable off-box without a token."""
+    if host == LOOPBACK_HOST or token.strip():
+        return None
+    return (
+        f"Listening on {host} with no token — every host on this network can use "
+        "this backend. Set a token, or bind 127.0.0.1."
+    )

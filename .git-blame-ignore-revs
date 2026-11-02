@@ -1,0 +1,5 @@
+# Mechanical commits git blame should look past.
+# Use with: git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# format: run Biome over the tree
+bbdb1a0f9e34b5adfaaabb35068e6b230fb95066

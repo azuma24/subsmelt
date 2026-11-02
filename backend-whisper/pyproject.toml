@@ -1,0 +1,25 @@
+# Lint and format settings for the Whisper backend. Run from backend-whisper/:
+#   ruff check .      # lint
+#   ruff format .     # format
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+extend-exclude = ["build", "packaging/windows/vendor", "packaging/windows/Output"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+ignore = [
+  "E501",   # line length is the formatter's job
+  "RUF012", # mutable class attributes are used deliberately for pydantic/dataclass defaults
+  "RUF001", "RUF002", "RUF003", # ambiguous unicode: the backend handles CJK text on purpose
+  "B008",   # FastAPI's Depends()/File() in defaults is the framework idiom
+  "SIM117", # nested with-statements read better than one long line here
+  "SIM105", # an explicit try/except/pass reads as well as contextlib.suppress
+  "SIM112", # Windows environment variables keep their conventional case (SystemRoot)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.format]
+quote-style = "double"

@@ -1,0 +1,29 @@
+fastapi==0.115.14
+uvicorn[standard]==0.35.0
+# Required by FastAPI's multipart File/Form parsing — the upload transport
+# (POST /transcribe/upload[/stream], plan Phase 2) receives media as multipart.
+python-multipart==0.0.20
+pydantic==2.12.5
+psutil==7.1.3
+faster-whisper==1.2.1
+# faster-whisper 1.2.1 decodes audio with av.open(..., metadata_errors=...),
+# which PyAV 19 removed; unpinned, the 0.6.0 Windows build got av 19 and every
+# Whisper transcription failed. 18.1.0 is what 0.5.9 shipped with.
+av==18.1.0
+# NVML bindings for GPU/VRAM detection. Pure-python, safe to install on any
+# host (no CUDA toolkit needed); imports are guarded so absence degrades to
+# CPU-only detection. Exposes the `pynvml` module.
+nvidia-ml-py==12.560.30
+# Chinese script conversion (s2twp / t2s) for the chinese_script request field.
+# The pure-Python reimplementation of OpenCC: no native library, so it installs
+# on every platform and freezes with PyInstaller by collecting its data files
+# (config/*.json + dictionary/*.txt; see packaging/windows/whisper-server.spec).
+opencc-python-reimplemented==0.1.7
+#
+# GPU-only runtime deps are intentionally NOT pinned here — they are
+# Windows/GPU packaging concerns supplied by the GPU compose image / Windows
+# build, not the CPU base requirements:
+#   - the CUDA build of ctranslate2 (faster-whisper's backend)
+#   - nvidia-cudnn-cu12, nvidia-cublas-cu12 (the cuDNN/cuBLAS runtime wheels)
+# Installing these on a CPU-only box would pull large CUDA artifacts and can
+# break the CPU ctranslate2 install, so they live in the GPU packaging layer.

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  launchd agent for the SubSmelt Whisper backend. install-launchd.sh renders
+  @PROGRAM@ and @LOG_DIR@. Settings, including the token, live in
+  ~/Library/Application Support/SubSmelt/config.json: an environment variable
+  here would override that file, so this plist sets none.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.subsmelt.whisper</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>@PROGRAM@</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>@LOG_DIR@/stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>@LOG_DIR@/stderr.log</string>
+</dict>
+</plist>
