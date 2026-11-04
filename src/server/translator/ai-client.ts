@@ -286,11 +286,31 @@ export function isTransportFailure(error: unknown): boolean {
   const message = errorMessage(error).toLowerCase();
   return TRANSPORT_MARKERS.some((marker) => message.includes(marker));
 }
+/** A retry backoff can honour Retry-After for up to a minute, so Stop and Cancel must be able to end it. */
+function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(controlledAbortError(signal));
+      return;
+    }
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(controlledAbortError(signal as AbortSignal));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
 export async function retryTranslate<T>(
   fn: (attempt: number) => Promise<T>,
   maxRetries = 5,
   delay = 1000,
   onRetry?: (attempt: number, error: unknown, backoff: number, maxRetries?: number) => void,
+  abortSignal?: AbortSignal,
 ): Promise<T> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -321,7 +341,7 @@ export async function retryTranslate<T>(
       const backoff = rateLimitMs && rateLimitMs > 0 ? rateLimitMs : exponential;
       // maxRetries is threaded through so callers can log a truthful "n/N".
       onRetry?.(attempt, error, backoff, maxRetries);
-      await new Promise((r) => setTimeout(r, backoff));
+      await abortableDelay(backoff, abortSignal);
     }
   }
   throw new Error("Unreachable");

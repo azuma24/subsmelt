@@ -366,6 +366,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
             2,
             1000,
             opts.onRetry,
+            abortSignal,
           ),
         );
         markUsed(conn);
@@ -413,6 +414,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
             retries,
             1000,
             opts.onRetry,
+            abortSignal,
           ),
         );
         markUsed(conn);
