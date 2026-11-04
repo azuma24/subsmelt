@@ -6,11 +6,17 @@ installer, macOS app) share a version number and are released together, as
 
 ## [Unreleased]
 
+## [0.7.8] — 2026-11-04
+
 ### Translation
 
 - Experimental: in Parallel mode with two or more connections, a new setting splits each file across every connection, so one long file finishes sooner. Files run one at a time, and each server takes at most `parallel_chunks` requests at once, or what its context window fits. When no chunks are left to hand out, a stalled chunk also goes to another machine and the first complete answer is written. Off by default.
 - Stop and Cancel now end a retry backoff or an availability probe at once instead of waiting it out.
 - A job queued just as the last one finished no longer waits until Stop in Single or Fallback mode.
+
+### Whisper backends
+
+- No changes. Rebuilt so the version matches the app.
 
 ## [0.7.7] — 2026-11-03
 

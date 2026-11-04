@@ -6,7 +6,7 @@ Point SubSmelt at your media folders and it translates every subtitle file into
 any number of languages, with an LLM on your own hardware or a cloud API key.
 Nothing leaves your network unless you choose a cloud provider.
 
-Current release: **0.7.7** · [Changelog](CHANGELOG.md) ·
+Current release: **0.7.8** · [Changelog](CHANGELOG.md) ·
 [Downloads](https://github.com/azuma24/subsmelt/releases)
 
 ## Quick start
@@ -14,7 +14,7 @@ Current release: **0.7.7** · [Changelog](CHANGELOG.md) ·
 ```yaml
 services:
   subsmelt:
-    image: ghcr.io/azuma24/subsmelt:latest   # or pin: ghcr.io/azuma24/subsmelt:0.7.7
+    image: ghcr.io/azuma24/subsmelt:latest   # or pin: ghcr.io/azuma24/subsmelt:0.7.8
     container_name: subsmelt
     ports:
       - "3000:3000"
