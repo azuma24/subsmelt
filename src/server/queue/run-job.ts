@@ -62,6 +62,7 @@ interface JobContext {
   lastTotalCues: number;
   // Throttled progress write timestamp (see PROGRESS_WRITE_THROTTLE_MS).
   lastProgressWrite: number;
+  lastCompletedWritten: number;
 }
 
 /** The job's primary connection, prompt and translation plan. */
@@ -134,6 +135,7 @@ function beginJob(
     usedConnIds: new Set(),
     lastTotalCues: 0,
     lastProgressWrite: 0,
+    lastCompletedWritten: 0,
   };
 }
 
@@ -289,6 +291,20 @@ async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
     },
     onUsage: (u) => recordJobUsage(ctx, u),
     savedAnalysis: savedAnalysis ?? undefined,
+    resumeKey: key ?? undefined,
+    onResumed: (kept, total) => {
+      logger.info(
+        "translate",
+        `Resuming: keeping ${kept} of ${total} cues from the previous run; the connections or model may have changed since`,
+        job.id,
+        { stage: "resume" },
+      );
+      // The claim reset these for this run, but the output still holds the earlier runs' work.
+      addJobUsage(job.id, job.input_tokens ?? 0, job.output_tokens ?? 0);
+      for (const label of job.used_connections?.split(", ") ?? []) {
+        if (!ctx.usedConnLabels.includes(label)) ctx.usedConnLabels.push(label);
+      }
+    },
     onAnalysisPhase: (running) => setJobAnalyzing(job.id, running),
     onAnalysis: (analysis) => {
       updateJob(job.id, { analysis_context: analysis, analysis_work_key: key });
@@ -313,8 +329,12 @@ function recordProgress(ctx: JobContext, completed: number, total: number): void
   // Skip the DB write + broadcast on intermediate ticks; always land the
   // final tick so the stored completed_cues is exact when the job settles.
   const now = Date.now();
-  if (completed < total && now - ctx.lastProgressWrite < PROGRESS_WRITE_THROTTLE_MS) return;
+  // The first count past zero always lands: a resume reports its kept cues right
+  // after the opening zero, and the next chunk can be minutes away.
+  const firstCount = completed > 0 && ctx.lastCompletedWritten === 0;
+  if (!firstCount && completed < total && now - ctx.lastProgressWrite < PROGRESS_WRITE_THROTTLE_MS) return;
   ctx.lastProgressWrite = now;
+  ctx.lastCompletedWritten = completed;
   updateJob(job.id, { completed_cues: completed, total_cues: total });
   broadcast("job:progress", {
     jobId: job.id,
@@ -382,8 +402,8 @@ function failJob(ctx: JobContext, error: unknown): boolean {
   // none gets picked out as "Cancelled by user".
   if (!isStopRequested() && (message === "JOB_CANCELLED" || isJobCancelled(job.id))) {
     // A user cancel is terminal: the job ends as a cancelled error (Retry is
-    // offered from there) instead of returning to the queue. The partial
-    // output stays on disk, so a later retry resumes from it.
+    // offered from there) instead of returning to the queue. Its finished chunks
+    // stay on disk, so a later retry continues from them.
     updateJob(job.id, { status: "error", error: "Cancelled by user", duration_seconds: durationSeconds });
     logger.info("queue", `Job #${job.id} cancelled by user`, job.id);
     broadcast("job:cancelled", { jobId: job.id, srtName });
@@ -391,7 +411,7 @@ function failJob(ctx: JobContext, error: unknown): boolean {
   }
   if (message === "STOP_REQUESTED" || isStopRequested()) {
     // Graceful stop — reset job to pending so it can be picked up later. The
-    // next run starts the file over, so the progress count goes back to zero.
+    // next run reports the cues it kept, so a pending job shows no progress.
     updateJob(job.id, { status: "pending", completed_cues: 0, error: null, duration_seconds: durationSeconds });
     logger.info("queue", `Job #${job.id} interrupted by stop request — reset to pending`, job.id);
     broadcast("job:stopped", { jobId: job.id, srtName });

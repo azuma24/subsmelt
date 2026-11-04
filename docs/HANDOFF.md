@@ -88,8 +88,8 @@ deadlocked two workers against each other.
 **Output safety** — incremental saves go to `<output>.part` and are renamed onto
 the real path only on completion. The queue treats an existing output file as
 "already done", so a partial file at the real path would silently mark a job
-finished. Interrupted jobs are reset to `pending` on startup and re-run from the
-beginning; there is no mid-file resume. The job preview reads the `.part` file,
+finished. Interrupted jobs are reset to `pending` on startup and continue from
+their finished chunks, kept in `<output>.part.json`. The job preview reads the `.part` file,
 so a running translation shows its progress before it finishes.
 
 ---
@@ -225,10 +225,10 @@ Nothing here is in progress. Ordered by what I would fix first.
   `backend-whisper/packaging/windows/tray/whisper_gui.py` (858) exceed the
   800-line guideline. They are the only source files that do. `WhisperPage.tsx`
   is down from 840 to 496 lines.
-- **Stopped jobs cannot resume from their `.part` file.** The file stores
-  `translatedText || text`, so a translated cue cannot be told apart from an
-  untranslated one. Resuming needs either "translation equals source" to count
-  as untranslated, or a sidecar list of translated cue indices. Not decided.
+- **A resumed job can mix output from two runs.** Translated cues are kept in
+  `<output>.part.json` (`translator/cue-progress.ts`), tied to the source file,
+  languages, prompt, Additional Context and the refine setting, but not to the model, so changing connections between runs
+  leaves both models' wording in one file. The log says so when a job resumes.
 - **Installs that stored the redaction marker as their API key** must re-enter
   the key once. No migration was written.
 - The CI runner has no `ffmpeg`, so the backend's ffmpeg paths are only exercised

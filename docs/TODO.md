@@ -46,8 +46,6 @@ lines typical, 800 max. These two are the only source files over 800.
 
 ## Open questions
 
-- [ ] **Resuming stopped jobs from `.part` files** — treat "translation equals source"
-      as untranslated, or keep a sidecar list of translated cue indices (HANDOFF §5).
 - [ ] **Installs that stored the redaction marker as their API key** re-enter it once;
       write a migration or leave it.
 

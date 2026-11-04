@@ -5,6 +5,7 @@ import { createJob, listJobPathsAndStatuses, listJobTaskStatuses, resetJob } fro
 import { parseRules, resolveDirectoryRule } from "./directory-rules.js";
 import { fileLangCodes } from "./language-codes.js";
 import { logger } from "./logger.js";
+import { removePartialOutput } from "./translator/engine.js";
 import { loadTitleSidecar, getTitle, pruneTitleSidecarQueued, type TitleSidecar } from "./translator/title-sidecar.js";
 import { caseKey, findAnyCase, stripLangSuffix, taskOutputName, taskOutputNames } from "./output-names.js";
 import { mediaRelativeDir, normalizeMediaSubfolder, resolveMediaSubfolder } from "./media-paths.js";
@@ -499,7 +500,9 @@ export async function scanFolder(createJobs = true): Promise<ScanResult> {
         if (!createJobs) {
           newJobs++;
         } else if (existingJob) {
+          const previousOutput = existingJob.output_path;
           if (resetJob(existingJob.id, outputPath) > 0) {
+            if (previousOutput !== outputPath) removePartialOutput(previousOutput);
             logger.info("scan", `Job #${existingJob.id} queued again: ${outputName} no longer exists`, existingJob.id);
             newJobs++;
             jobId = existingJob.id;

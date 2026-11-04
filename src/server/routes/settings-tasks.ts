@@ -18,7 +18,8 @@ import {
   validateTaskLangCode,
   persistableConnections,
 } from "../config.js";
-import { deletePendingJobsForTask } from "../db.js";
+import { deletePendingJobsForTask, getPendingJobOutputsForTask } from "../db.js";
+import { removePartialOutput } from "../translator/engine.js";
 import { standardTaskLangCode } from "../language-codes.js";
 import { scanFolder, MEDIA_DIR } from "../scanner.js";
 import { startAutoScan, stopAutoScan } from "../queue.js";
@@ -228,7 +229,9 @@ export function registerSettingsTasksRoutes(
   app.delete("/api/tasks/:id", (req, res) => {
     const id = parseInt(req.params.id, 10);
     deleteTask(id);
+    const outputs = getPendingJobOutputsForTask(id);
     const removedJobs = deletePendingJobsForTask(id);
+    for (const output of outputs) removePartialOutput(output);
     logger.info("system", `Deleted translation task #${id} and its ${removedJobs} pending job(s)`);
     res.json({ ok: true });
   });

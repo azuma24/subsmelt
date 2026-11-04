@@ -9,6 +9,7 @@ import { parseSubtitle, readSubtitleFileText, saveTranslated, splitIntoChunks, t
 import { createConnectionHealth } from "./connection-health.js";
 import { ContextOverflowError } from "./context-overflow.js";
 import { createChunkTranslator } from "./chunk-translator.js";
+import { loadCueProgress, removeCueProgress, saveCueProgress } from "./cue-progress.js";
 import { createSplitRun } from "./split-run.js";
 import { createConcurrencyGate } from "./concurrency-gate.js";
 import { awayFromDownMachines, createChunkHedger, type ChunkAttempt, type HedgeTiming } from "./chunk-hedge.js";
@@ -88,6 +89,13 @@ export interface TranslateFileOptions {
    * reservedConnectionIds for the file.
    */
   split?: { limits: ReadonlyMap<string, number>; hedgeTiming?: Partial<HedgeTiming> };
+  /**
+   * Identifies this work (see work-key.ts). When set, translated cues are saved as
+   * chunks finish, and a later run with the same key translates only the rest.
+   */
+  resumeKey?: string;
+  /** Fired when a run keeps cues translated by an earlier run. */
+  onResumed?: (keptCues: number, totalCues: number) => void;
   /** An analysis saved by an earlier run of this same work: used instead of calling the LLM. */
   savedAnalysis?: string;
   /** Fired when the analysis pass starts and ends, however it ends. */
@@ -134,6 +142,7 @@ export function partialOutputPath(outputPath: string): string {
 /** Drop the in-flight `.part` of a job that no longer exists; a no-op when there is none. */
 export function removePartialOutput(outputPath: string): void {
   fs.rmSync(partialOutputPath(outputPath), { force: true });
+  removeCueProgress(outputPath);
 }
 
 /** Prefer the in-flight `.part` file so Preview can show cues before the job finishes. */
@@ -368,7 +377,25 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // Concurrency-limited chunk processor.
   // Each slot processes chunks from the shared queue independently.
   // Progress and partial saves are guarded by a simple mutex flag.
-  const chunkQueue = [...chunks];
+  const savedCues = opts.resumeKey ? loadCueProgress(opts.outputPath, opts.resumeKey) : new Map<number, string>();
+  // Only whole chunks are kept. A chunk with any cue missing runs again in full, so
+  // its lines come from one answer and progress counts each cue once.
+  const chunkIsSaved = (block: SubtitleCue[]) => block.every((cue) => savedCues.has(indexMap.get(cue) as number));
+  const keptChunks = chunks.filter(chunkIsSaved);
+  const translatedCues = new Map<number, string>();
+  for (const cue of keptChunks.flat()) {
+    const index = indexMap.get(cue) as number;
+    const text = savedCues.get(index) as string;
+    if (cue.data) cue.data.translatedText = text;
+    translatedCues.set(index, text);
+  }
+  if (keptChunks.length > 0) {
+    completedCues = translatedCues.size;
+    opts.onResumed?.(completedCues, totalCues);
+    opts.onProgress?.(Math.min(completedCues, totalCues), totalCues);
+    saveTranslated(partialPath, parsed, outputExt, subtitle);
+  }
+  const chunkQueue = chunks.filter((block) => !chunkIsSaved(block));
   // Promise-chain mutex: each save is serialized by chaining onto the previous one.
   // Using a flag is NOT safe — two workers can both read `saving === false` before
   // either sets it to true (both pass the check in the same microtask tick).
@@ -556,6 +583,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       const t = translatedWindow?.[offset];
       if (cue?.data && typeof t === "string") {
         cue.data.translatedText = t;
+        translatedCues.set(idx, t);
         chunkCompleted++;
       }
     }
@@ -571,6 +599,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     saveChain = saveChain.then(() => {
       try {
         saveTranslated(partialPath, parsed, outputExt, subtitle);
+        if (opts.resumeKey) saveCueProgress(opts.outputPath, opts.resumeKey, translatedCues);
       } catch (e) {
         // Best-effort partial save — never throw (the final write at job end is
         // authoritative), but don't swallow silently: surface it for operators.
@@ -700,8 +729,10 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // the partial. Renaming (rather than writing in place mid-run) is what keeps a
   // crashed or stopped job from leaving a truncated subtitle that the queue would
   // then treat as finished work and skip.
+  await saveChain;
   saveTranslated(partialPath, parsed, outputExt, subtitle);
   fs.renameSync(partialPath, opts.outputPath);
+  removeCueProgress(opts.outputPath);
 }
 
 /** Test LLM connection by translating a simple phrase */

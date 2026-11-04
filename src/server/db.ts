@@ -91,8 +91,8 @@ db.exec("CREATE INDEX IF NOT EXISTS idx_logs_level ON logs (level, id)");
 // Wire up logger
 setLogDb(db);
 
-// Jobs the previous process left translating go back to pending. Nothing
-// resumes from the partial, so their progress count goes back to zero too.
+// Jobs the previous process left translating go back to pending. Their next run
+// reports the cues it kept, so their progress count goes back to zero until then.
 export function resetInterruptedJobs(): number {
   return db
     .prepare(
@@ -370,6 +370,11 @@ export function deleteJobs(ids: number[]) {
 // row would hide work that is still running.
 export function clearFinishedJobs(): number {
   return db.prepare("DELETE FROM jobs WHERE status IN ('done', 'skipped', 'error')").run().changes;
+}
+
+export function getPendingJobOutputsForTask(taskId: number): string[] {
+  const rows = db.prepare("SELECT output_path FROM jobs WHERE task_id = ? AND status = 'pending'").all(taskId);
+  return (rows as { output_path: string }[]).map((row) => row.output_path);
 }
 
 export function deletePendingJobsForTask(taskId: number): number {

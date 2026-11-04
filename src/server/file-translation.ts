@@ -1,3 +1,4 @@
+import { removePartialOutput } from "./translator/engine.js";
 import fs from "node:fs";
 import path from "node:path";
 import {
@@ -11,7 +12,7 @@ import {
   validateTaskLangCode,
   type TranslationTask,
 } from "./config.js";
-import { createJob, findJobForTask, findUnfinishedJobForOutput, resetJob } from "./db.js";
+import { getJob, createJob, findJobForTask, findUnfinishedJobForOutput, resetJob } from "./db.js";
 import { logger } from "./logger.js";
 import { MEDIA_DIR } from "./scanner.js";
 import { existingTaskOutput, stripLangSuffix, taskOutputName } from "./output-names.js";
@@ -145,7 +146,9 @@ export function queueFileTranslation(srtPathInput: string, target: FileTranslati
 
   const task = saveTask(resolved);
   if (existing) {
+    const previousOutput = getJob(existing.id)?.output_path ?? outputPath;
     if (resetJob(existing.id, outputPath) === 0) return { kind: "already-queued", jobId: existing.id, taskId: task.id };
+    if (previousOutput !== outputPath) removePartialOutput(previousOutput);
     logger.info("queue", `Job #${existing.id} reset to pending (one-off translation)`, existing.id);
     return { kind: "queued", jobId: existing.id, taskId: task.id };
   }

@@ -9,7 +9,6 @@ import {
   getJob,
   resetJob,
   resetJobs,
-  forceJob,
   forceJobs,
   forceAllJobs,
   deleteJob,
@@ -30,6 +29,7 @@ import {
   getJobAnalyzingSince,
   getJobConnection,
   getActiveJobConnections,
+  forceJobFromScratch,
 } from "../queue.js";
 import {
   parseSubtitle,
@@ -152,7 +152,7 @@ export function registerJobsRoutes(app: Express): void {
 
   app.post("/api/jobs/:id/force", (req, res) => {
     const id = parseInt(req.params.id, 10);
-    if (forceJob(id) === 0) return rejectUnchanged(res, id);
+    if (forceJobFromScratch(id) === 0) return rejectUnchanged(res, id);
     logger.info("queue", `Job #${id} marked for force re-translate`, id);
     setTimeout(() => runQueueSafely(), 100);
     res.json({ ok: true });
@@ -175,6 +175,11 @@ export function registerJobsRoutes(app: Express): void {
 
     const ids = rawIds.filter((v): v is number => typeof v === "number" && Number.isInteger(v));
     const updated = forceJobs(ids);
+    // A job forceJobs refused is translating now, and its files are in use.
+    for (const id of ids) {
+      const job = getJob(id);
+      if (job?.force && job.status === "pending") removePartialOutput(job.output_path);
+    }
     logger.info("queue", `Marked ${updated} selected jobs for force re-translate`);
     if (updated > 0) setTimeout(() => runQueueSafely(), 100);
     res.json({ ok: true, updated });

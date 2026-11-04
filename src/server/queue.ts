@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { countPendingJobs, claimPendingJob, updateJob, type JobRow } from "./db.js";
+import { countPendingJobs, claimPendingJob, forceJob, getJob, updateJob, type JobRow } from "./db.js";
 import { getAllSettings, getTask, getSetting } from "./config.js";
 import { readSettings } from "./settings-schema.js";
 import { resolveConnectionPool, type ResolvedConnection, type LlmMode } from "./connections.js";
@@ -25,6 +25,7 @@ import { runJob } from "./queue/run-job.js";
 import { writeJobTitle } from "./queue/titles.js";
 import { clearQueueRun, interruptedQueueRun, markQueueRun } from "./queue/run-marker.js";
 import { recordUsage } from "./usage.js";
+import { removePartialOutput } from "./translator/engine.js";
 
 // The per-job state (what translates now, on which connection, what was
 // cancelled) lives in ./queue/state.ts; the routes read it through these.
@@ -73,6 +74,14 @@ const titleRepairJobs: JobRow[] = [];
 function availablePool(pool: ResolvedConnection[]): ResolvedConnection[] {
   const available = pool.filter((conn) => !isConnectionOffline(conn.id));
   return available.length > 0 ? available : pool;
+}
+
+/** Force re-translate: the next run starts over, while its later runs may still resume it. */
+export function forceJobFromScratch(id: number): number {
+  const output = getJob(id)?.output_path;
+  const changed = forceJob(id);
+  if (changed > 0 && output) removePartialOutput(output);
+  return changed;
 }
 
 export function isQueueRunning() {
@@ -228,6 +237,7 @@ function withStandardOutput(job: JobRow): JobRow {
   const standard = standardOutputFor(job.srt_path, job.output_path, task);
   const outputPath = fs.existsSync(standard) ? standard : (existingTaskOutput(job.srt_path, task) ?? standard);
   if (outputPath === job.output_path) return job;
+  removePartialOutput(job.output_path);
   updateJob(job.id, { output_path: outputPath });
   return { ...job, output_path: outputPath };
 }
@@ -247,6 +257,7 @@ function claimNextJob(filter: Set<number> | null): JobRow | null {
     if (fs.existsSync(job.output_path) && !job.force) {
       logger.info("queue", `Skipping job ${job.id}: output already exists (${job.output_path})`, job.id);
       updateJob(job.id, { status: "skipped" });
+      removePartialOutput(job.output_path);
       titleRepairJobs.push(job);
       continue;
     }
