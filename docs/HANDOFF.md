@@ -54,7 +54,9 @@ translate → settle, with the stop/cancel/failure settlement in one function.
 `queue/state.ts` holds what the live run knows about its jobs (active ids,
 abort controllers, cancels, connections) behind accessors. The worker pool
 adapts to the configured LLM mode on every claim, so switching
-single/fallback/parallel takes effect mid-run.
+single/fallback/parallel takes effect mid-run. With `llm_split_file` on in
+parallel mode, one file runs at a time but its chunks fan out across every
+connection at once.
 
 **`src/shared/settings.ts`** — the one table of every setting: kind (flag,
 int, float, enum, json, text), bounds and default. The server's

@@ -6,6 +6,10 @@ installer, macOS app) share a version number and are released together, as
 
 ## [Unreleased]
 
+### Translation
+
+- Experimental: in Parallel mode, a new setting splits each file across every connection, so one long file finishes sooner. Files run one at a time, and each connection takes at most `parallel_chunks` requests at once. Off by default.
+
 ## [0.7.7] — 2026-11-03
 
 The first release in this repository's current history. It describes what

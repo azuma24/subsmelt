@@ -44,6 +44,9 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   // flat keys above at read time. llm_mode: single | fallback | parallel.
   llm_connections: "",
   llm_mode: "single",
+  // "1" sends one file's chunks to every connection at once in parallel mode:
+  // files run one at a time, each using the whole pool.
+  llm_split_file: "0",
   active_connection_id: "",
   scan_mode: "recursive",
   scan_folders: "",

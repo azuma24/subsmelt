@@ -78,6 +78,12 @@ export interface TranslateFileOptions {
   connections: ResolvedConnection[];
   /** single | fallback | parallel. Defaults to "single". */
   llmMode?: LlmMode;
+  /**
+   * Chunk-worker count override. Split mode (llm_split_file) sets it to
+   * parallelChunks × connections so one file's chunks fan out across every
+   * connection; absent, the mode-derived count below applies.
+   */
+  chunkWorkers?: number;
   /** Fired once per connection the moment it first produces a translation. */
   onConnectionUsed?: (info: { id: string; label: string }) => void;
   /** Fired whenever a success comes from a different connection than the last one reported here. */
@@ -437,9 +443,10 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // MAX_PARALLEL_CONNECTIONS distinct primaries.
   const MAX_PARALLEL_CONNECTIONS = 32;
   const concurrency =
-    llmMode === "parallel"
+    opts.chunkWorkers ??
+    (llmMode === "parallel"
       ? Math.max(1, Math.min(MAX_PARALLEL_CONNECTIONS, Math.max(configuredConcurrency, connections.length)))
-      : configuredConcurrency;
+      : configuredConcurrency);
 
   // Concurrency-limited chunk processor.
   // Each slot processes chunks from the shared queue independently.

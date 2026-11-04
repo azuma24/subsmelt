@@ -696,6 +696,8 @@
       "modeHelpSingle": "使用一個使用中的連線（傳統行為）。",
       "modeHelpFallback": "依序嘗試連線——若其中一個失敗，則切換至下一個。",
       "modeHelpParallel": "將工作的區塊分散到多個連線以加快翻譯速度。",
+      "splitFile": "將單一檔案分散到所有連線（實驗性）",
+      "splitFileHelp": "同時把一個檔案的分塊送到每條連線，讓長檔案更快完成。檔案一次只處理一個。不同模型對同一檔案的措辭可能不同，因此適合執行相同模型的連線。",
       "connectionName": "連線名稱",
       "defaultLabel": "連線 {{index}}",
       "enabled": "已啟用",

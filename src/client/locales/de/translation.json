@@ -696,6 +696,8 @@
       "modeHelpSingle": "Eine aktive Verbindung verwenden (klassisches Verhalten).",
       "modeHelpFallback": "Verbindungen der Reihe nach versuchen – schlägt eine fehl, zur nächsten wechseln.",
       "modeHelpParallel": "Die Segmente eines Auftrags auf mehrere Verbindungen verteilen, um schneller zu übersetzen.",
+      "splitFile": "Jede Datei auf die Verbindungen aufteilen (experimentell)",
+      "splitFileHelp": "Sendet die Segmente einer Datei gleichzeitig an alle Verbindungen, damit eine lange Datei schneller fertig wird. Dateien laufen einzeln nacheinander. Verschiedene Modelle formulieren innerhalb einer Datei unterschiedlich, daher eignet sich dies für Verbindungen mit demselben Modell.",
       "connectionName": "Verbindungsname",
       "defaultLabel": "Verbindung {{index}}",
       "enabled": "Aktiviert",

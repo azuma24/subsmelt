@@ -39,6 +39,8 @@ export const SETTINGS = {
   cloud_model_gemini: s,
   llm_connections: json,
   llm_mode: oneOf(["single", "fallback", "parallel"]),
+  // Split one file's chunks across every connection (parallel mode only).
+  llm_split_file: flag,
   active_connection_id: s,
   // Library
   scan_mode: oneOf(["recursive", "root_only", "selected"]),

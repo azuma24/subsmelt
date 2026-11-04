@@ -10,6 +10,7 @@ import { logger } from "../logger.js";
 import { broadcast } from "../sse.js";
 import { notify } from "../notify.js";
 import { tryAcquireConnectionLock } from "../connection-lock.js";
+import { createConcurrencyGate, type ConcurrencyGate } from "../translator/concurrency-gate.js";
 import { llmBusyWithTranscription } from "../gpu-gate.js";
 import { MEDIA_DIR } from "../scanner.js";
 import { assertMediaPathAllowed } from "../transcription-client.js";
@@ -190,11 +191,23 @@ function busyWithTranscription(jobId: number, conns: ResolvedConnection[]): (con
 /** Runs the translation engine over the file, relaying its events to the log, the DB and SSE. */
 async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
   const { job, srtName, langCode, conns, typed } = ctx;
+  // Split mode ("parallel"): parallel_chunks is requests per server, so every
+  // connection — the queue primary included — holds one of parallelChunks
+  // counting slots around each LLM call, gated per connection id and scoped to
+  // this job. When a machine is lost its workers cascade onto the survivors;
+  // the gate keeps a survivor at parallel_chunks in-flight requests instead of
+  // one per cascading worker.
+  const splitGates = new Map<string, ConcurrencyGate>();
   await translateFile({
     srtPath: job.srt_path,
     outputPath: job.output_path,
     ...plan.translation.options,
     llmMode: ctx.llmMode,
+    // Split mode (llm_split_file): parallel_chunks is requests per server, so a
+    // split file runs that many chunk workers per connection, capped at 32 like
+    // the engine's own parallel ceiling.
+    chunkWorkers:
+      ctx.llmMode === "parallel" ? Math.min(32, plan.translation.options.parallelChunks * conns.length) : undefined,
     onConnectionUsed: ({ id, label }) => {
       logger.info("translate", `Using LLM connection: ${label} (${id})`, job.id, { stage: "llm_connection" });
       if (!ctx.usedConnIds.has(id)) {
@@ -227,10 +240,22 @@ async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
         stage: "llm_connection_dropped",
       });
     },
-    // Only cascades reach this (the primary is reserved by the worker); they
-    // must not block on another worker's job-long hold.
-    acquireConnection: tryAcquireConnectionLock,
-    reservedConnectionIds: ctx.reservedConnectionIds,
+    // Single/fallback: only cascades reach this (the primary is reserved by the
+    // worker); they must not block on another worker's job-long hold. Split
+    // mode caps every connection instead — see splitGates above.
+    acquireConnection:
+      ctx.llmMode === "parallel"
+        ? async (conn) => {
+            const existing = splitGates.get(conn.id);
+            const gate = existing ?? createConcurrencyGate(plan.translation.options.parallelChunks);
+            if (!existing) splitGates.set(conn.id, gate);
+            await gate.acquire();
+            return () => gate.release();
+          }
+        : tryAcquireConnectionLock,
+    // Split mode reserves nothing: the primary takes a slot like any other
+    // connection, so no server can exceed parallel_chunks in-flight requests.
+    reservedConnectionIds: ctx.llmMode === "parallel" ? new Set<string>() : ctx.reservedConnectionIds,
     isConnectionBusy: busyWithTranscription(job.id, conns),
     prompt: plan.prompt,
     lang: ctx.targetLang || "English",

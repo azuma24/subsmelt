@@ -698,6 +698,8 @@
       "modeHelpSingle": "Usar uma conexão ativa (comportamento clássico).",
       "modeHelpFallback": "Tentar as conexões em ordem — se uma falhar, passar para a próxima.",
       "modeHelpParallel": "Dividir os blocos de um trabalho entre conexões para traduzir mais rápido.",
+      "splitFile": "Dividir cada arquivo entre as conexões (experimental)",
+      "splitFileHelp": "Envia os blocos de um arquivo para todas as conexões ao mesmo tempo, para que um arquivo longo termine mais cedo. Os arquivos são processados um por vez. Modelos diferentes podem redigir de maneiras diferentes dentro de um mesmo arquivo, então isso serve para conexões que executam o mesmo modelo.",
       "connectionName": "Nome da conexão",
       "defaultLabel": "Conexão {{index}}",
       "enabled": "Ativada",

@@ -46,6 +46,7 @@ export interface ClientSettings {
   cloud_model_gemini?: string;
   llm_connections?: string; // JSON array of connections
   llm_mode?: string; // "single" | "fallback" | "parallel"
+  llm_split_file?: StringBool;
   active_connection_id?: string;
 
   // ── Sources & monitoring ──

@@ -6,6 +6,7 @@ import { Field, RowActionsMenu, Select } from "../../ui/primitives";
 import { FORM_CONTROL_CLS, FORM_LABEL_CLS } from "../../ui/form-classes";
 import { Icon } from "../../ui/Icon";
 import { isEnvPinned } from "./settings-model";
+import { ToggleRow } from "./sections/shared";
 import { useIsMobile } from "../../hooks";
 
 const PROVIDERS: LlmProvider[] = ["local", "openai", "anthropic", "gemini"];
@@ -198,6 +199,16 @@ export function ConnectionsPanel({ settings, update, addToast }: ConnectionsPane
           ))}
         </div>
         <p className="mt-2 text-xs leading-relaxed text-faint">{t(MODE_HELP_KEY[mode])}</p>
+        {mode === "parallel" && (
+          <div className="mt-3">
+            <ToggleRow
+              title={t("settings.connections.splitFile")}
+              description={t("settings.connections.splitFileHelp")}
+              checked={settings.llm_split_file === "1"}
+              onChange={(checked) => update("llm_split_file", checked ? "1" : "0")}
+            />
+          </div>
+        )}
       </div>
 
       {/* Connection cards. In `single` mode only the active connection is

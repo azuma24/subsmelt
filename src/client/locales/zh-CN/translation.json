@@ -696,6 +696,8 @@
       "modeHelpSingle": "使用一个活动连接（经典行为）。",
       "modeHelpFallback": "按顺序尝试连接——如果某个失败，则切换到下一个。",
       "modeHelpParallel": "将任务的分块分散到多个连接以加快翻译速度。",
+      "splitFile": "将单个文件拆分到多个连接（实验性）",
+      "splitFileHelp": "同时把一个文件的分块发给每个连接，让长文件更快完成。文件一次只处理一个。不同模型对同一文件的措辞可能不同，因此适合运行相同模型的连接。",
       "connectionName": "连接名称",
       "defaultLabel": "连接 {{index}}",
       "enabled": "已启用",

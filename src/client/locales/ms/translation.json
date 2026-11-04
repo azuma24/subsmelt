@@ -696,6 +696,8 @@
       "modeHelpSingle": "Gunakan satu sambungan aktif (kelakuan klasik).",
       "modeHelpFallback": "Cuba sambungan mengikut urutan — jika satu gagal, lata ke yang seterusnya.",
       "modeHelpParallel": "Pecahkan cebisan kerja merentas sambungan untuk menterjemah lebih pantas.",
+      "splitFile": "Bahagikan setiap fail merentasi sambungan (eksperimen)",
+      "splitFileHelp": "Menghantar serpihan satu fail ke semua sambungan pada masa yang sama, supaya fail yang panjang siap lebih cepat. Fail diproses satu demi satu. Model berbeza mungkin memilih perkataan berbeza dalam fail yang sama, jadi ini sesuai untuk sambungan yang menjalankan model yang sama.",
       "connectionName": "Nama sambungan",
       "defaultLabel": "Sambungan {{index}}",
       "enabled": "Didayakan",

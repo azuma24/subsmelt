@@ -696,6 +696,8 @@
       "modeHelpSingle": "Gunakan satu koneksi aktif (perilaku klasik).",
       "modeHelpFallback": "Coba koneksi secara berurutan — jika satu gagal, lanjut ke berikutnya.",
       "modeHelpParallel": "Bagi potongan tugas ke beberapa koneksi agar menerjemahkan lebih cepat.",
+      "splitFile": "Bagi setiap file ke semua koneksi (eksperimental)",
+      "splitFileHelp": "Mengirim potongan satu file ke semua koneksi sekaligus, agar file panjang selesai lebih cepat. File diproses satu per satu. Model yang berbeda bisa memakai kata berbeda dalam satu file, jadi ini cocok untuk koneksi yang menjalankan model yang sama.",
       "connectionName": "Nama koneksi",
       "defaultLabel": "Koneksi {{index}}",
       "enabled": "Aktif",

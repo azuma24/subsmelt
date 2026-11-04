@@ -696,6 +696,8 @@
       "modeHelpSingle": "Använd en aktiv anslutning (klassiskt beteende).",
       "modeHelpFallback": "Prova anslutningar i ordning — om en misslyckas, gå vidare till nästa.",
       "modeHelpParallel": "Fördela ett jobbs segment mellan anslutningar för att översätta snabbare.",
+      "splitFile": "Fördela varje fil över anslutningarna (experimentell)",
+      "splitFileHelp": "Skickar en fils delar till alla anslutningar samtidigt, så att en lång fil blir klar snabbare. Filerna körs en i taget. Olika modeller kan uttrycka sig olika inom en och samma fil, så detta passar anslutningar som kör samma modell.",
       "connectionName": "Anslutningsnamn",
       "defaultLabel": "Anslutning {{index}}",
       "enabled": "Aktiverad",

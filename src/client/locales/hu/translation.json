@@ -696,6 +696,8 @@
       "modeHelpSingle": "Egy aktív kapcsolat használata (klasszikus viselkedés).",
       "modeHelpFallback": "Kapcsolatok kipróbálása sorrendben — ha az egyik sikertelen, lépés a következőre.",
       "modeHelpParallel": "Egy feladat részleteinek elosztása több kapcsolat között a gyorsabb fordításért.",
+      "splitFile": "Fájlok szétosztása a kapcsolatok között (kísérleti)",
+      "splitFileHelp": "Egy fájl darabjait egyszerre küldi minden kapcsolatra, így egy hosszú fájl hamarabb kész lesz. A fájlok egyszerre egyenként futnak. Különböző modellek ugyanazon fájlon belül másképp fogalmazhatnak, ezért az azonos modellt futtató kapcsolatokhoz való.",
       "connectionName": "Kapcsolat neve",
       "defaultLabel": "Kapcsolat {{index}}",
       "enabled": "Engedélyezve",

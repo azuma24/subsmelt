@@ -52,8 +52,8 @@ globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) =>
   });
 }) as typeof fetch;
 
-async function waitFor(condition: () => boolean, what: string) {
-  const deadline = Date.now() + 5_000;
+async function waitFor(condition: () => boolean, what: string, timeoutMs = 5_000) {
+  const deadline = Date.now() + timeoutMs;
   while (!condition()) {
     if (Date.now() > deadline) throw new Error(`timed out waiting for ${what}`);
     await new Promise((r) => setTimeout(r, 10));
@@ -441,4 +441,305 @@ test("re-translating an output written in an old spelling replaces that file ins
   assert.match(fs.readFileSync(path.join(mediaDir, "Again.ko.srt"), "utf8"), /안녕/);
   assert.equal(fs.existsSync(path.join(mediaDir, "Again.kor.srt")), false);
   db.deleteJob(job);
+});
+
+// ── Split one file across connections (llm_split_file) ───────────────────────
+// The module-level stub answers every chat request with a held promise and a
+// fixed title, which does not fit these tests: they need per-host routing,
+// peak-concurrency control and per-cue translations. Each installs its own
+// stub and restores the module stub afterwards.
+
+const moduleFetch = globalThis.fetch;
+
+interface SplitInfo {
+  host: string;
+  kind: "analysis" | "chunk";
+  lines: string[];
+}
+
+function splitRequestInfo(input: string | URL | Request, init?: RequestInit): SplitInfo {
+  const url = new URL(String(input instanceof Request ? input.url : input));
+  const body = JSON.parse(String(init?.body ?? "{}"));
+  const system = String(body.messages?.find((m: any) => m.role === "system")?.content ?? "");
+  const user = String(body.messages?.find((m: any) => m.role === "user")?.content ?? "");
+  if (system.includes("subtitle content analyst")) return { host: url.host, kind: "analysis", lines: [] };
+  const lines = JSON.parse(user.slice(user.lastIndexOf("["))) as string[];
+  return { host: url.host, kind: "chunk", lines };
+}
+
+function useSplitFetch(
+  t: { after(fn: () => void): void },
+  chat: (info: SplitInfo, init?: RequestInit) => Response | Promise<Response>,
+) {
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.endsWith("/models")) return new Response('{"data":[]}', { status: 200 });
+    if (!url.endsWith("/chat/completions")) return new Response("{}", { status: 404 });
+    return chat(splitRequestInfo(input, init), init);
+  }) as typeof fetch;
+  t.after(() => {
+    globalThis.fetch = moduleFetch;
+  });
+}
+
+function splitSrt(cues: number): string {
+  return Array.from({ length: cues }, (_, i) => `${i + 1}\n00:00:01,000 --> 00:00:01,500\ncue ${i + 1}\n`).join("\n");
+}
+
+function srtCueTexts(srt: string): string[] {
+  return srt
+    .trim()
+    .split(/\n\n+/)
+    .map((block) => block.split("\n").slice(2).join("\n").trim());
+}
+
+/** The output must read `Z-<source>` for every cue, in the source file's order. */
+function assertCuesTranslatedInOrder(srt: string, cues: number) {
+  assert.deepEqual(
+    srtCueTexts(srt),
+    Array.from({ length: cues }, (_, i) => `Z-cue ${i + 1}`),
+  );
+}
+
+function useParallelConnections(firstEndpoint: string, secondEndpoint: string) {
+  useConnections("parallel", [
+    { id: "a", label: "Host A", provider: "local", model: "m", endpoint: firstEndpoint, order: 0 },
+    { id: "b", label: "Host B", provider: "local", model: "m", endpoint: secondEndpoint, order: 1 },
+  ]);
+  config.setSetting("disable_tool_calls", "1");
+}
+
+test("split mode serves one file's chunks from every connection, in source order", async (t) => {
+  useParallelConnections("http://a.test/v1", "http://b.test/v1");
+  config.setSetting("llm_split_file", "1");
+  config.setSetting("chunk_size", "1");
+  const job = addJob({ srtExists: true, outputExists: false });
+  fs.writeFileSync(db.getJob(job)!.srt_path, splitSrt(6), "utf8");
+  const chunkHosts = new Set<string>();
+  useSplitFetch(t, (info) => {
+    if (info.kind === "analysis") return chatCompletion("Summary.");
+    chunkHosts.add(info.host);
+    return chatCompletion(JSON.stringify(info.lines.map((l) => `Z-${l}`)));
+  });
+  const run = queue.processQueue();
+  try {
+    await waitFor(() => ["done", "error"].includes(db.getJob(job)?.status ?? ""), "the job to settle", 15_000);
+    await run;
+    assert.equal(db.getJob(job)?.status, "done", db.getJob(job)?.error ?? "");
+    assert.deepEqual([...chunkHosts].sort(), ["a.test", "b.test"], "both hosts served chunks of the one job");
+    assert.deepEqual(
+      (db.getJob(job)?.used_connections ?? "").split(", ").sort(),
+      ["Host A", "Host B"],
+      "both connections are credited for the job",
+    );
+    assertCuesTranslatedInOrder(fs.readFileSync(db.getJob(job)!.output_path, "utf8"), 6);
+  } finally {
+    queue.requestStop();
+    await run;
+    config.setSetting("llm_split_file", "0");
+    config.setSetting("chunk_size", "");
+    db.deleteJob(job);
+  }
+});
+
+test("without the flag, a parallel-mode job's chunks all come from one host", async (t) => {
+  useParallelConnections("http://a.test/v1", "http://b.test/v1");
+  config.setSetting("chunk_size", "1");
+  const job = addJob({ srtExists: true, outputExists: false });
+  fs.writeFileSync(db.getJob(job)!.srt_path, splitSrt(6), "utf8");
+  const chunkHosts = new Set<string>();
+  useSplitFetch(t, (info) => {
+    if (info.kind === "analysis") return chatCompletion("Summary.");
+    chunkHosts.add(info.host);
+    return chatCompletion(JSON.stringify(info.lines.map((l) => `Z-${l}`)));
+  });
+  const run = queue.processQueue();
+  try {
+    await waitFor(() => ["done", "error"].includes(db.getJob(job)?.status ?? ""), "the job to settle", 15_000);
+    await run;
+    assert.equal(db.getJob(job)?.status, "done", db.getJob(job)?.error ?? "");
+    assert.equal(chunkHosts.size, 1, `the whole file ran on one host, saw ${[...chunkHosts].join(", ")}`);
+    assertCuesTranslatedInOrder(fs.readFileSync(db.getJob(job)!.output_path, "utf8"), 6);
+  } finally {
+    queue.requestStop();
+    await run;
+    config.setSetting("chunk_size", "");
+    db.deleteJob(job);
+  }
+});
+
+test("split mode runs parallel_chunks × connections chunk workers at once", async (t) => {
+  useParallelConnections("http://a.test/v1", "http://b.test/v1");
+  config.setSetting("llm_split_file", "1");
+  config.setSetting("chunk_size", "1");
+  config.setSetting("parallel_chunks", "2");
+  const job = addJob({ srtExists: true, outputExists: false });
+  fs.writeFileSync(db.getJob(job)!.srt_path, splitSrt(8), "utf8");
+  let inFlight = 0;
+  let peak = 0;
+  const held: Array<() => void> = [];
+  let releaseTimer: ReturnType<typeof setTimeout> | undefined;
+  let timedOut = false;
+  useSplitFetch(t, (info, init) => {
+    if (info.kind === "analysis") return chatCompletion("Summary.");
+    inFlight++;
+    peak = Math.max(peak, inFlight);
+    const content = JSON.stringify(info.lines.map((l) => `Z-${l}`));
+    return new Promise<Response>((resolve, reject) => {
+      init?.signal?.addEventListener(
+        "abort",
+        () => reject(Object.assign(new Error("aborted"), { name: "AbortError" })),
+        { once: true },
+      );
+      const finish = () => {
+        inFlight--;
+        resolve(chatCompletion(content));
+      };
+      held.push(finish);
+      releaseTimer ??= setTimeout(() => {
+        timedOut = true;
+        for (const f of held.splice(0)) f();
+      }, 8_000);
+      if (timedOut || inFlight >= 4) {
+        clearTimeout(releaseTimer);
+        releaseTimer = undefined;
+        for (const f of held.splice(0)) f();
+      }
+    });
+  });
+  const run = queue.processQueue();
+  try {
+    await waitFor(() => ["done", "error"].includes(db.getJob(job)?.status ?? ""), "the job to settle", 20_000);
+    await run;
+    assert.equal(db.getJob(job)?.status, "done", db.getJob(job)?.error ?? "");
+    assert.equal(peak, 4, `peak in-flight chunk requests across both hosts, saw ${peak}`);
+  } finally {
+    clearTimeout(releaseTimer);
+    queue.requestStop();
+    await run;
+    config.setSetting("llm_split_file", "0");
+    config.setSetting("chunk_size", "");
+    config.setSetting("parallel_chunks", "");
+    db.deleteJob(job);
+  }
+});
+
+test("split mode caps a surviving host at parallel_chunks in-flight requests", async (t) => {
+  useParallelConnections("http://a.test/v1", "http://b.test/v1");
+  config.setSetting("llm_split_file", "1");
+  config.setSetting("chunk_size", "1");
+  config.setSetting("parallel_chunks", "2");
+  const job = addJob({ srtExists: true, outputExists: false });
+  // Enough chunks that the surviving host is still mid-file when the lost
+  // machine's workers cascade onto it: its two own workers alone need well
+  // over the ~1s the dead host's retry backoff delays the cascade.
+  fs.writeFileSync(db.getJob(job)!.srt_path, splitSrt(120), "utf8");
+  let inFlight = 0;
+  let peak = 0;
+  useSplitFetch(t, async (info) => {
+    if (info.host === "a.test") return Promise.reject(new Error("ECONNREFUSED"));
+    if (info.kind === "analysis") return chatCompletion("Summary.");
+    inFlight++;
+    peak = Math.max(peak, inFlight);
+    await new Promise((r) => setTimeout(r, 100));
+    inFlight--;
+    return chatCompletion(JSON.stringify(info.lines.map((l) => `Z-${l}`)));
+  });
+  const run = queue.processQueue();
+  try {
+    await waitFor(() => ["done", "error"].includes(db.getJob(job)?.status ?? ""), "the job to settle", 20_000);
+    await run;
+    assert.equal(db.getJob(job)?.status, "done", db.getJob(job)?.error ?? "");
+    assert.equal(peak, 2, `peak in-flight chunk requests on the surviving host, saw ${peak}`);
+    assertCuesTranslatedInOrder(fs.readFileSync(db.getJob(job)!.output_path, "utf8"), 120);
+  } finally {
+    queue.requestStop();
+    await run;
+    config.setSetting("llm_split_file", "0");
+    config.setSetting("chunk_size", "");
+    config.setSetting("parallel_chunks", "");
+    db.deleteJob(job);
+  }
+});
+
+test("split mode finishes a job when one connection answers every chat request with an error", async (t) => {
+  useParallelConnections("http://a.test/v1", "http://b.test/v1");
+  config.setSetting("llm_split_file", "1");
+  config.setSetting("chunk_size", "1");
+  const job = addJob({ srtExists: true, outputExists: false });
+  fs.writeFileSync(db.getJob(job)!.srt_path, splitSrt(6), "utf8");
+  const chunkOkHosts = new Set<string>();
+  useSplitFetch(t, (info) => {
+    if (info.kind === "analysis")
+      return info.host === "a.test"
+        ? new Response('{"error":"bad request"}', { status: 400 })
+        : chatCompletion("Summary.");
+    if (info.host === "a.test") return new Response('{"error":"bad request"}', { status: 400 });
+    chunkOkHosts.add(info.host);
+    return chatCompletion(JSON.stringify(info.lines.map((l) => `Z-${l}`)));
+  });
+  const run = queue.processQueue();
+  try {
+    await waitFor(() => ["done", "error"].includes(db.getJob(job)?.status ?? ""), "the job to settle", 15_000);
+    await run;
+    assert.equal(db.getJob(job)?.status, "done", db.getJob(job)?.error ?? "");
+    assert.deepEqual([...chunkOkHosts], ["b.test"], "the surviving host served every chunk");
+    assertCuesTranslatedInOrder(fs.readFileSync(db.getJob(job)!.output_path, "utf8"), 6);
+  } finally {
+    queue.requestStop();
+    await run;
+    config.setSetting("llm_split_file", "0");
+    config.setSetting("chunk_size", "");
+    db.deleteJob(job);
+  }
+});
+
+test("split mode survives a connection dying mid-file and finishes on the survivor", async (t) => {
+  useParallelConnections("http://a.test/v1", "http://b.test/v1");
+  config.setSetting("llm_split_file", "1");
+  config.setSetting("chunk_size", "1");
+  const job = addJob({ srtExists: true, outputExists: false });
+  fs.writeFileSync(db.getJob(job)!.srt_path, splitSrt(8), "utf8");
+  // Host A answers its first two chat requests (the analysis and its first
+  // chunk), then every later request dies like a machine lost mid-file.
+  const aRequests: string[] = [];
+  const chunkOkByHost = new Map<string, number>([
+    ["a.test", 0],
+    ["b.test", 0],
+  ]);
+  useSplitFetch(t, (info) => {
+    if (info.host === "b.test") {
+      if (info.kind === "analysis") return chatCompletion("Summary.");
+      chunkOkByHost.set("b.test", (chunkOkByHost.get("b.test") ?? 0) + 1);
+      return chatCompletion(JSON.stringify(info.lines.map((l) => `Z-${l}`)));
+    }
+    aRequests.push(info.kind);
+    if (aRequests.length <= 2) {
+      if (info.kind === "analysis") return chatCompletion("Summary.");
+      chunkOkByHost.set("a.test", (chunkOkByHost.get("a.test") ?? 0) + 1);
+      return chatCompletion(JSON.stringify(info.lines.map((l) => `Z-${l}`)));
+    }
+    return Promise.reject(new Error("ECONNREFUSED"));
+  });
+  const run = queue.processQueue();
+  try {
+    await waitFor(() => ["done", "error"].includes(db.getJob(job)?.status ?? ""), "the job to settle", 20_000);
+    await run;
+    assert.equal(db.getJob(job)?.status, "done", db.getJob(job)?.error ?? "");
+    assertCuesTranslatedInOrder(fs.readFileSync(db.getJob(job)!.output_path, "utf8"), 8);
+    assert.deepEqual(
+      [...chunkOkByHost],
+      [
+        ["a.test", 1],
+        ["b.test", 7],
+      ],
+      "the survivor served every chunk after the first",
+    );
+  } finally {
+    queue.requestStop();
+    await run;
+    config.setSetting("llm_split_file", "0");
+    config.setSetting("chunk_size", "");
+    db.deleteJob(job);
+  }
 });

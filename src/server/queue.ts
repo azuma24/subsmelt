@@ -289,6 +289,9 @@ function hasPendingJobs(filter: Set<number> | null): boolean {
  * change applies mid-run:
  *  - parallel (pool > 1): worker `index` pins connection pool[index] and claims
  *    the next file (work-stealing); the other connections act as per-file fallbacks.
+ *  - split (llm_split_file on, parallel): only worker 0 claims, so files run one
+ *    at a time; the job runs in parallel mode, where the engine fans one file's
+ *    chunks out across every connection.
  *  - single / fallback: only worker 0 runs (sequential, one file at a time); the
  *    rest idle. If the mode later widens to parallel, idle workers pick up jobs.
  * A worker exits when the queue is drained (or stop is requested).
@@ -304,7 +307,9 @@ async function adaptiveWorker(index: number, filter: Set<number> | null) {
     const { mode, pool: resolvedPool } = resolveConnectionPool(getAllSettings());
     const pool = availablePool(resolvedPool);
     const parallel = mode === "parallel" && pool.length > 1;
-    const concurrency = parallel ? pool.length : 1;
+    // Read every loop like the mode, so toggling the flag applies mid-run.
+    const split = parallel && getSetting("llm_split_file") === "1";
+    const concurrency = split ? 1 : parallel ? pool.length : 1;
 
     if (index >= concurrency) {
       // Not active under the current mode. Stay alive while anything is pending OR
@@ -322,7 +327,7 @@ async function adaptiveWorker(index: number, filter: Set<number> | null) {
     if (!job) break;
 
     const order = parallel ? [pool[index], ...pool.filter((_, j) => j !== index)] : pool;
-    const jobMode: LlmMode = parallel ? "fallback" : mode;
+    const jobMode: LlmMode = split ? "parallel" : parallel ? "fallback" : mode;
     const primary = order[0];
     const releasePrimary = primary ? await acquireConnectionLock(primary) : undefined;
     let stopped = false;
