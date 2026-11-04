@@ -82,6 +82,23 @@ export function offlineMessage(error: unknown): string {
   return errorMessage(error) || errorCauseMessage(error) || "connection unavailable";
 }
 
+/** Resolves with `wait`, or rejects as soon as the signal aborts. */
+function untilAborted(wait: Promise<void>, signal?: AbortSignal): Promise<void> {
+  if (!signal) return wait;
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(controlledAbortError(signal));
+    if (signal.aborted) {
+      onAbort();
+      return;
+    }
+    signal.addEventListener("abort", onAbort, { once: true });
+    void wait.then(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, reject);
+  });
+}
+
 export function createConnectionHealth(options: ConnectionHealthOptions = {}): ConnectionHealth {
   const fetchImpl = options.fetchImpl ?? fetch;
   const delay = options.delayImpl ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
@@ -118,27 +135,29 @@ export function createConnectionHealth(options: ConnectionHealthOptions = {}): C
       return;
     }
 
+    const signal = options.abortSignal;
     let lastErr: unknown;
     for (let attempt = 1; attempt <= OFFLINE_ATTEMPTS; attempt++) {
       // Only a deliberate per-job cancel keeps its identity; every other abort
       // reads as a queue stop.
-      if (options.abortSignal?.aborted) throw controlledAbortError(options.abortSignal);
+      if (signal?.aborted) throw controlledAbortError(signal);
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort("connection_probe_timeout"), OFFLINE_RETRY_MS);
       try {
         const res = await fetchImpl(modelsUrl, {
           method: "GET",
           headers: conn.apiKey ? { Authorization: `Bearer ${conn.apiKey}` } : undefined,
-          signal: controller.signal,
+          signal: signal ? AbortSignal.any([controller.signal, signal]) : controller.signal,
         });
         if (!res.ok) throw new Error(`HTTP ${res.status} from ${modelsUrl}`);
         verified.add(conn.id);
         return;
       } catch (error) {
+        if (signal?.aborted) throw controlledAbortError(signal);
         lastErr = error;
         if (attempt >= OFFLINE_ATTEMPTS) break;
         options.onRetry?.(attempt, error, OFFLINE_RETRY_MS, OFFLINE_ATTEMPTS);
-        await delay(OFFLINE_RETRY_MS);
+        await untilAborted(delay(OFFLINE_RETRY_MS), signal);
       } finally {
         clearTimeout(timer);
       }

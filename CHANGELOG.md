@@ -6,6 +6,10 @@ installer, macOS app) share a version number and are released together, as
 
 ## [Unreleased]
 
+### Translation
+
+- Stop and Cancel now end a retry backoff or an availability probe at once instead of waiting it out.
+
 ## [0.7.7] — 2026-11-03
 
 The first release in this repository's current history. It describes what
