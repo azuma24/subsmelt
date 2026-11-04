@@ -701,7 +701,7 @@
       "modeHelpFallback": "Próbuj połączeń po kolei — jeśli jedno zawiedzie, przejdź do następnego.",
       "modeHelpParallel": "Rozdziel fragmenty zadania między połączenia, aby tłumaczyć szybciej.",
       "splitFile": "Rozdzielaj każdy plik na połączenia (eksperymentalne)",
-      "splitFileHelp": "Wysyła fragmenty jednego pliku do wszystkich połączeń naraz, dzięki czemu długi plik kończy się szybciej. Pliki przetwarzane są pojedynczo. Różne modele mogą formułować tekst inaczej w obrębie jednego pliku, więc pasuje to do połączeń uruchamiających ten sam model.",
+      "splitFileHelp": "Wysyła fragmenty jednego pliku do wszystkich połączeń naraz, dzięki czemu długi plik kończy się szybciej. Pliki przetwarzane są pojedynczo. Różne modele mogą formułować tekst inaczej w obrębie jednego pliku, więc pasuje to do połączeń uruchamiających ten sam model. Zablokowany fragment może zostać wysłany dwukrotnie, co na płatnych połączeniach może kosztować więcej.",
       "connectionName": "Nazwa połączenia",
       "defaultLabel": "Połączenie {{index}}",
       "enabled": "Włączone",

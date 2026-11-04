@@ -697,7 +697,7 @@
       "modeHelpFallback": "Subukan ang mga koneksyon nang sunod-sunod — kung nabigo ang isa, magpatuloy sa susunod.",
       "modeHelpParallel": "Hatiin ang mga chunk ng trabaho sa mga koneksyon para mas mabilis magsalin.",
       "splitFile": "Hatiin ang bawat file sa mga koneksyon (eksperimento)",
-      "splitFileHelp": "Ipinapadala nito ang mga bahagi ng isang file sa lahat ng koneksyon nang sabay-sabay, para matapos nang mas mabilis ang mahabang file. Isa-isang file lang ang tumatakbo. Maaaring magkaiba ang pagkakasabi ng mga ibang model sa loob ng iisang file, kaya bagay ito sa mga koneksyong nagpapatakbo ng parehong model.",
+      "splitFileHelp": "Ipinapadala nito ang mga bahagi ng isang file sa lahat ng koneksyon nang sabay-sabay, para matapos nang mas mabilis ang mahabang file. Isa-isang file lang ang tumatakbo. Maaaring magkaiba ang pagkakasabi ng magkakaibang model sa loob ng iisang file, kaya bagay ito sa mga koneksyong nagpapatakbo ng parehong model. Maaaring maipadala nang dalawang beses ang natigil na chunk, na maaaring mas magastos sa mga bayad na koneksyon.",
       "connectionName": "Pangalan ng koneksyon",
       "defaultLabel": "Koneksyon {{index}}",
       "enabled": "Naka-enable",

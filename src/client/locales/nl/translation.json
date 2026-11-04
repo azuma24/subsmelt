@@ -697,7 +697,7 @@
       "modeHelpFallback": "Probeer verbindingen op volgorde — als er één mislukt, val terug op de volgende.",
       "modeHelpParallel": "Verdeel de blokken van een taak over verbindingen om sneller te vertalen.",
       "splitFile": "Elk bestand verdelen over de verbindingen (experimenteel)",
-      "splitFileHelp": "Stuurt de segmenten van één bestand tegelijk naar alle verbindingen, zodat een lang bestand sneller klaar is. Bestanden worden één voor één verwerkt. Verschillende modellen kunnen binnen één bestand anders formuleren, dus dit past bij verbindingen die hetzelfde model draaien.",
+      "splitFileHelp": "Stuurt de segmenten van één bestand tegelijk naar alle verbindingen, zodat een lang bestand sneller klaar is. Bestanden worden één voor één verwerkt. Verschillende modellen kunnen binnen één bestand anders formuleren, dus dit past bij verbindingen die hetzelfde model draaien. Een vastgelopen blok kan twee keer worden verzonden, wat op betaalde verbindingen meer kan kosten.",
       "connectionName": "Verbindingsnaam",
       "defaultLabel": "Verbinding {{index}}",
       "enabled": "Ingeschakeld",

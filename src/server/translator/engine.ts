@@ -4,12 +4,15 @@ import { logger } from "../logger.js";
 import type { LlmMode, ResolvedConnection } from "../connections.js";
 import type { UsageKind } from "../../shared/usage.js";
 import type { CloudProvider, TokenUsage } from "./ai-client.js";
-import { retryTranslate, translateChunk, translateSingle } from "./ai-client.js";
+import { translateSingle } from "./ai-client.js";
 import { parseSubtitle, readSubtitleFileText, saveTranslated, splitIntoChunks, type SubtitleCue } from "./utils.js";
 import { createConnectionHealth } from "./connection-health.js";
 import { ContextOverflowError } from "./context-overflow.js";
+import { createChunkTranslator } from "./chunk-translator.js";
+import { createSplitRun } from "./split-run.js";
 import { createConcurrencyGate } from "./concurrency-gate.js";
-import { SINGLE_LINE_RETRIES, runLineFallback, singleLineTimeoutMs } from "./fallback-policy.js";
+import { awayFromDownMachines, createChunkHedger, type ChunkAttempt, type HedgeTiming } from "./chunk-hedge.js";
+import { runLineFallback, singleLineTimeoutMs } from "./fallback-policy.js";
 import { buildTranslationSystemPrompt } from "./prompt.js";
 import { refineChunk } from "./prompt.js";
 import {
@@ -79,11 +82,12 @@ export interface TranslateFileOptions {
   /** single | fallback | parallel. Defaults to "single". */
   llmMode?: LlmMode;
   /**
-   * Chunk-worker count override. Split mode (llm_split_file) sets it to
-   * parallelChunks × connections so one file's chunks fan out across every
-   * connection; absent, the mode-derived count below applies.
+   * Sends this file's chunks to every connection at once, each held to its own
+   * limit, and re-sends a stalled chunk to another machine. Only the queue's
+   * llm_split_file mode sets this; it replaces acquireConnection and
+   * reservedConnectionIds for the file.
    */
-  chunkWorkers?: number;
+  split?: { limits: ReadonlyMap<string, number>; hedgeTiming?: Partial<HedgeTiming> };
   /** Fired once per connection the moment it first produces a translation. */
   onConnectionUsed?: (info: { id: string; label: string }) => void;
   /** Fired whenever a success comes from a different connection than the last one reported here. */
@@ -99,7 +103,7 @@ export interface TranslateFileOptions {
    * primary connection for the whole file; fallback users wait here until that
    * primary job releases it.
    */
-  acquireConnection?: (conn: ResolvedConnection) => Promise<() => void>;
+  acquireConnection?: (conn: ResolvedConnection, signal?: AbortSignal) => Promise<() => void>;
   /** Connections already reserved by this job (so translateFile must not re-lock). */
   reservedConnectionIds?: Iterable<string>;
   /**
@@ -180,6 +184,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   const usageFor = (kind: UsageKind, connection: ResolvedConnection) =>
     onUsage ? (u: TokenUsage) => onUsage({ ...u, kind, connection }) : undefined;
   const reservedConnectionIds = new Set(opts.reservedConnectionIds ?? []);
+  const split = opts.split ? createSplitRun(connections, opts.split.limits) : null;
   // One failed chunk worker fails the whole job, so its siblings must stop
   // calling the LLM and rewriting the partial instead of running the file to
   // completion for a job already marked error. Every LLM call below listens to
@@ -192,13 +197,12 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     onConnectionUnavailable: opts.onConnectionUnavailable,
     onConnectionDropped: opts.onConnectionDropped,
     onRetry: opts.onRetry,
-    acquireConnection: opts.acquireConnection,
-    reservedConnectionIds: reservedConnectionIds,
+    acquireConnection: split ? split.acquire : opts.acquireConnection,
+    reservedConnectionIds: split ? [] : reservedConnectionIds,
     abortSignal,
   });
   const withConnection = health.withConnection;
   const liveConnections = health.live;
-  const noteConnectionFailure = health.noteFailure;
 
   let subtitle: SubtitleCue[];
   if (Array.isArray(parsed)) {
@@ -304,6 +308,10 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // by index); the remaining connections act as per-chunk fallbacks. In single
   // and fallback modes the connections are tried in their listed order.
   function connectionOrderFor(workerIndex: number): ResolvedConnection[] {
+    if (split) {
+      const primary = split.workerPrimaries[workerIndex];
+      return idleFirst([primary, ...connections.filter((conn) => conn !== primary)]);
+    }
     if (llmMode !== "parallel" || connections.length <= 1) return idleFirst(connections);
     const primaryIdx = workerIndex % connections.length;
     return idleFirst([connections[primaryIdx], ...connections.filter((_, i) => i !== primaryIdx)]);
@@ -319,119 +327,19 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     return [...order.filter((conn) => !busy.includes(conn)), ...busy];
   }
 
-  // Chunk requests in flight per server. Servers like LM Studio share one
-  // context window across concurrent requests, so an overflow on a server that
-  // was also serving a sibling means "too many at once", not "too big".
-  const chunksInFlight = new Map<string, number>();
-
-  async function translateChunkWithFallback(
-    coreText: string[],
-    order: ResolvedConnection[],
-    contextPromptPrefix: string,
-  ): Promise<{ result: string[]; conn: ResolvedConnection } | null> {
-    const usable = liveConnections(order);
-    if (usable.length === 0) {
-      throw new Error("All LLM connections timed out repeatedly — aborting job");
-    }
-    for (const conn of usable) {
-      let sharedServer = false;
-      try {
-        const result = await withConnection(conn, () =>
-          retryTranslate(
-            (attempt) => {
-              const attemptTemp = Math.max(
-                0.1,
-                Math.min(2, opts.temperature + (attempt - 1) * 0.15 + (Math.random() - 0.5) * 0.1),
-              );
-              const inFlight = (chunksInFlight.get(conn.apiHost) ?? 0) + 1;
-              chunksInFlight.set(conn.apiHost, inFlight);
-              sharedServer = inFlight > 1;
-              return translateChunk(coreText, {
-                apiKey: conn.apiKey,
-                apiHost: conn.apiHost,
-                model: conn.model,
-                provider: conn.provider,
-                systemPrompt,
-                temperature: attemptTemp,
-                abortSignal,
-                disableToolCalls: opts.disableToolCalls,
-                requestTimeoutMs: jobTimeoutMs,
-                contextPromptPrefix,
-                onUsage: usageFor("chunk", conn),
-              })
-                .then((r) => {
-                  if (!Array.isArray(r) || r.length !== coreText.length) {
-                    throw new Error("did not match schema");
-                  }
-                  return r;
-                })
-                .finally(() => {
-                  chunksInFlight.set(conn.apiHost, (chunksInFlight.get(conn.apiHost) ?? 1) - 1);
-                });
-            },
-            2,
-            1000,
-            opts.onRetry,
-          ),
-        );
-        markUsed(conn);
-        return { result, conn };
-      } catch (e) {
-        if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED") throw e;
-        // Retried later at lower concurrency (see processChunk).
-        if (sharedServer && e instanceof ContextOverflowError) throw e;
-        // exhausted retries on this connection — cascade to the next
-        noteConnectionFailure(conn, e);
-        opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(errorMessage(e) || e) });
-      }
-    }
-    return null;
-  }
-
-  async function translateSingleWithFallback(
-    lineText: string,
-    order: ResolvedConnection[],
-    retries = SINGLE_LINE_RETRIES,
-    timeoutMs = SINGLE_LINE_TIMEOUT_MS,
-  ): Promise<string> {
-    let lastErr: unknown;
-    const usable = liveConnections(order);
-    if (usable.length === 0) {
-      throw new Error("All LLM connections timed out repeatedly — aborting job");
-    }
-    for (const conn of usable) {
-      try {
-        const r = await withConnection(conn, () =>
-          retryTranslate(
-            (_) =>
-              translateSingle(lineText, {
-                apiKey: conn.apiKey,
-                apiHost: conn.apiHost,
-                model: conn.model,
-                provider: conn.provider,
-                systemPrompt,
-                temperature: opts.temperature,
-                abortSignal,
-                disableToolCalls: opts.disableToolCalls,
-                requestTimeoutMs: timeoutMs,
-                onUsage: usageFor("single", conn),
-              }),
-            retries,
-            1000,
-            opts.onRetry,
-          ),
-        );
-        markUsed(conn);
-        return r;
-      } catch (e) {
-        if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED") throw e;
-        lastErr = e;
-        noteConnectionFailure(conn, e);
-        opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(errorMessage(e) || e) });
-      }
-    }
-    throw lastErr || new Error("All LLM connections failed");
-  }
+  const { translateChunkWithFallback, translateSingleWithFallback } = createChunkTranslator({
+    health,
+    jobSignal: abortSignal,
+    systemPrompt,
+    temperature: opts.temperature,
+    disableToolCalls: opts.disableToolCalls,
+    chunkTimeoutMs: jobTimeoutMs,
+    singleLineTimeoutMs: SINGLE_LINE_TIMEOUT_MS,
+    markUsed,
+    usageFor,
+    onRetry: opts.onRetry,
+    onConnectionError: opts.onConnectionError,
+  });
 
   const chunks = splitIntoChunks(subtitle, opts.chunkSize);
   let completedCues = 0;
@@ -442,11 +350,11 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // cap (8): each extra connection is a separate backend, so workers scale up to
   // MAX_PARALLEL_CONNECTIONS distinct primaries.
   const MAX_PARALLEL_CONNECTIONS = 32;
-  const concurrency =
-    opts.chunkWorkers ??
-    (llmMode === "parallel"
+  const concurrency = split
+    ? split.workerPrimaries.length
+    : llmMode === "parallel"
       ? Math.max(1, Math.min(MAX_PARALLEL_CONNECTIONS, Math.max(configuredConcurrency, connections.length)))
-      : configuredConcurrency);
+      : configuredConcurrency;
 
   // Concurrency-limited chunk processor.
   // Each slot processes chunks from the shared queue independently.
@@ -458,7 +366,12 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   let saveChain = Promise.resolve();
 
   /** Returns "requeue" when the chunk overflowed a context shared with its siblings. */
-  async function processChunk(block: SubtitleCue[], workerIndex: number): Promise<"done" | "requeue"> {
+  async function processChunk(
+    block: SubtitleCue[],
+    workerIndex: number,
+    attempt?: ChunkAttempt,
+  ): Promise<"done" | "requeue"> {
+    if (attempt?.record.winner) return "done";
     const coreIndices = block
       .map((cue: SubtitleCue) => indexMap.get(cue) as number)
       .filter((n: number) => typeof n === "number")
@@ -522,24 +435,60 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     // reuses it instead of always hitting connOrder[0] (which may be down in
     // fallback/parallel mode, stalling every chunk on a dead primary).
     let pass1Conn: ResolvedConnection | null = null;
-    try {
-      const chunkResult = await translateChunkWithFallback(coreText, connOrder, contextPromptPrefix);
-      translatedWindow = chunkResult?.result ?? null;
-      pass1Conn = chunkResult?.conn ?? null;
-    } catch (e) {
-      if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED") throw e;
-      // Only an overflow on a shared server escapes the cascade: requeue it.
-      if (e instanceof ContextOverflowError) return "requeue";
-      translatedWindow = null;
+    const attemptSignal = attempt?.signal ?? abortSignal;
+    if (attempt?.targetConn) {
+      // A duplicate tries its one connection and ends quietly on any failure:
+      // the original attempt is still running and owns the fallback path.
+      try {
+        const result = await translateChunkWithFallback(coreText, [attempt.targetConn], contextPromptPrefix, {
+          signal: attemptSignal,
+        });
+        if (!result) return "done";
+        translatedWindow = result.result;
+        pass1Conn = result.conn;
+      } catch {
+        return "done";
+      }
+    } else {
+      try {
+        const chunkResult = await translateChunkWithFallback(
+          coreText,
+          connOrder,
+          contextPromptPrefix,
+          attempt && split
+            ? {
+                signal: attempt.signal,
+                // The duplicate already holds that connection's slot for this very chunk.
+                skip: (conn) => attempt.record.duplicate?.targetConn === conn,
+                onConnection: (conn) => {
+                  attempt.record.conn = conn;
+                  attempt.record.connLimit = split.limitOf(conn);
+                },
+              }
+            : {},
+        );
+        translatedWindow = chunkResult?.result ?? null;
+        pass1Conn = chunkResult?.conn ?? null;
+      } catch (e) {
+        if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED") throw e;
+        // Only an overflow on a shared server escapes the cascade: requeue it.
+        if (e instanceof ContextOverflowError) return "requeue";
+        translatedWindow = null;
+      }
     }
 
     // Single-line fallback — translatedWindow is now core-only (coreText.length)
     if (!translatedWindow) {
+      // A running duplicate may still answer the whole chunk: hear it out first.
+      if (attempt && hedger) {
+        await hedger.waitForDuplicate(attempt.record);
+        if (attempt.record.winner) return "done";
+      }
       // Bails out once the backend is clearly not answering, instead of walking
       // every line at one full timeout each (see fallback-policy.ts).
       const { translations } = await runLineFallback(
         coreIndices.map((idx) => subtitle[idx]?.data?.text || ""),
-        { translateLine: (lineText) => translateSingleWithFallback(lineText, connOrder) },
+        { translateLine: (lineText) => translateSingleWithFallback(lineText, connOrder, attemptSignal) },
       );
       translatedWindow = new Array(coreText.length).fill(null);
       coreIndices.forEach((idx, i) => {
@@ -557,26 +506,36 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       // A refine failure (null, mismatch, network/abort/schema throw) must never
       // discard a good pass-1 translation. Catch any throw and keep pass-1.
       try {
-        const refined = await withConnection(refineConn, () =>
-          refineChunk(coreText, translatedWindow as string[], {
-            apiKey: refineConn.apiKey,
-            apiHost: refineConn.apiHost,
-            model: refineConn.model,
-            provider: refineConn.provider,
-            lang: opts.lang,
-            additional: effectiveAdditional,
-            temperature: opts.temperature,
-            abortSignal,
-            disableToolCalls: opts.disableToolCalls,
-            requestTimeoutMs: jobTimeoutMs,
-            onUsage: usageFor("refine", refineConn),
-          }),
+        const refined = await withConnection(
+          refineConn,
+          () =>
+            refineChunk(coreText, translatedWindow as string[], {
+              apiKey: refineConn.apiKey,
+              apiHost: refineConn.apiHost,
+              model: refineConn.model,
+              provider: refineConn.provider,
+              lang: opts.lang,
+              additional: effectiveAdditional,
+              temperature: opts.temperature,
+              abortSignal: attemptSignal,
+              disableToolCalls: opts.disableToolCalls,
+              requestTimeoutMs: jobTimeoutMs,
+              onUsage: usageFor("refine", refineConn),
+            }),
+          attempt?.signal,
         );
         if (refined) translatedWindow = refined;
       } catch (e) {
         if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED") throw e;
         // Keep the pass-1 translatedWindow untouched (same as the null case).
       }
+    }
+
+    // The first complete answer wins. A partial per-line result must not end a
+    // duplicate that could still answer every line.
+    if (attempt && hedger) {
+      if (!translatedWindow?.every((t) => typeof t === "string")) await hedger.waitForDuplicate(attempt.record);
+      if (!hedger.claimWin(attempt)) return "done";
     }
 
     // Write translations back — offset is now relative to coreStart
@@ -615,27 +574,75 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // Worker: drain the shared chunk queue. workerIndex picks the primary
   // connection in parallel mode.
   const gate = createConcurrencyGate(concurrency);
+  const hedger = split
+    ? createChunkHedger({
+        connections,
+        usable: (order) =>
+          awayFromDownMachines(
+            liveConnections(idleFirst(order)),
+            connections,
+            (id) => health.isUnavailable(id) || health.isDisabled(id),
+          ),
+        jobSignal: abortSignal,
+        runDuplicate: (block, attempt) => processChunk(block, 0, attempt),
+        timing: opts.split?.hedgeTiming,
+      })
+    : null;
+
+  /** An original attempt of a raced chunk: a terminated loser is not a failure, and a duplicate can still save it. */
+  async function runOriginal(block: SubtitleCue[], workerIndex: number, attempt: ChunkAttempt) {
+    let outcome: "done" | "requeue";
+    try {
+      outcome = await processChunk(block, workerIndex, attempt);
+    } catch (e) {
+      if (abortSignal.aborted) throw e;
+      if (!attempt.controller.signal.aborted) {
+        await hedger?.waitForDuplicate(attempt.record);
+        if (!attempt.record.winner || attempt.record.winner === attempt) throw e;
+      }
+      outcome = "done";
+    }
+    if (outcome === "done") hedger?.finish(block);
+    return outcome;
+  }
+
+  function shrinkAfterOverflow(attempt: ChunkAttempt | undefined, limitAtStart: number) {
+    const conn = attempt?.record.conn;
+    if (split && conn && attempt) {
+      if (split.halveFrom(conn, attempt.record.connLimit)) {
+        logger.warn(
+          "translate",
+          `Chunks overflowed ${conn.label}'s shared context window; sending it ${split.limitOf(conn)} at a time`,
+        );
+      }
+      return;
+    }
+    if (gate.halveFrom(limitAtStart)) {
+      logger.warn(
+        "translate",
+        `Chunks overflowed the model's shared context window; translating ${gate.limit} at a time`,
+      );
+    }
+  }
+
   async function worker(workerIndex: number) {
     try {
       while (chunkQueue.length > 0) {
         const block = chunkQueue.shift();
         if (!block) break;
+        const attempt = hedger?.startOriginal(block);
         await gate.acquire();
         const limitAtStart = gate.limit;
         let outcome: "done" | "requeue";
         try {
-          outcome = await processChunk(block, workerIndex);
-          if (outcome === "requeue" && gate.halveFrom(limitAtStart)) {
-            logger.warn(
-              "translate",
-              `Chunks overflowed the model's shared context window; translating ${gate.limit} at a time`,
-            );
-          }
+          outcome = attempt ? await runOriginal(block, workerIndex, attempt) : await processChunk(block, workerIndex);
+          if (outcome === "requeue") shrinkAfterOverflow(attempt, limitAtStart);
         } finally {
           gate.release();
         }
         if (outcome === "requeue") chunkQueue.unshift(block);
       }
+      await hedger?.runIdleLoop();
     } catch (e) {
       jobAbort.abort(e);
       throw e;

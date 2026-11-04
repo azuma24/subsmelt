@@ -64,6 +64,8 @@ test("a job plan probes every connection and caps parallel chunks to fit the pri
     // Concurrent requests share LM Studio's window: 8192 holds three
     // 20-cue requests, so the configured four is capped.
     assert.equal(plan.parallelChunks, 3);
+    // The larger window on the same job is held only to the configured value.
+    assert.deepEqual([plan.parallelByConnection.get("a"), plan.parallelByConnection.get("b")], [3, 4]);
   } finally {
     server.close();
   }

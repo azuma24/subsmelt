@@ -25,6 +25,8 @@ export interface TranslationPlan {
   options: PlannedOptions;
   /** What the context probe found for each connection, by id. */
   contexts: ReadonlyMap<string, ModelContextInfo>;
+  /** Chunks to send each connection at once in split mode, fitted to its own window, by id. */
+  parallelByConnection: ReadonlyMap<string, number>;
   /** parallel_chunks as configured, before the primary's context window capped it. */
   configuredParallel: number;
 }
@@ -59,6 +61,7 @@ export async function planTranslation(
       refinePass: settings.refine_pass,
     },
     contexts: probed.byConnection,
+    parallelByConnection: probed.parallelByConnection,
     configuredParallel,
   };
 }

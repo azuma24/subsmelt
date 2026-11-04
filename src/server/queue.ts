@@ -52,6 +52,15 @@ function rememberRunRequest(ids: number[] | undefined): void {
   else requestedRun = { ids: [...new Set([...requestedRun.ids, ...ids])] };
 }
 
+// A split job uses every connection, so no other file starts beside it, whichever
+// way the llm_split_file setting has changed since it started.
+let splitJobRunning = false;
+
+// The worker slots still in their loop. When the slot allowed to claim has left,
+// the next one by rank takes over any job queued since, instead of idling beside
+// it for the rest of the run.
+const liveSlots = new Set<number>();
+
 // Hard ceiling on concurrent translation workers (matches the per-file connection cap).
 const MAX_WORKERS = 32;
 
@@ -160,7 +169,7 @@ export async function processQueue(onlyIds?: number[]) {
     // the title repair is calling the LLM has nothing to start it. Repair, then
     // look for pending work again before declaring the run finished.
     do {
-      await Promise.all(Array.from({ length: slots }, (_, i) => adaptiveWorker(i, filter)));
+      await Promise.all(Array.from({ length: slots }, (_, i) => runSlot(i, filter)));
       if (isStopRequested()) break;
       await repairMissingTitles();
       filter = nextRunFilter(filter);
@@ -287,15 +296,23 @@ function hasPendingJobs(filter: Set<number> | null): boolean {
 /**
  * Adaptive worker. Each loop re-resolves the current LLM mode + pool so a mode
  * change applies mid-run:
- *  - parallel (pool > 1): worker `index` pins connection pool[index] and claims
+ *  - parallel (pool > 1): each worker pins its own connection and claims
  *    the next file (work-stealing); the other connections act as per-file fallbacks.
- *  - split (llm_split_file on, parallel): only worker 0 claims, so files run one
- *    at a time; the job runs in parallel mode, where the engine fans one file's
- *    chunks out across every connection.
- *  - single / fallback: only worker 0 runs (sequential, one file at a time); the
+ *  - split (llm_split_file on, parallel): only the lowest live worker claims, once no other file is
+ *    running, so files run one at a time and each one's chunks go to every connection.
+ *  - single / fallback: only the lowest live worker runs (one file at a time); the
  *    rest idle. If the mode later widens to parallel, idle workers pick up jobs.
  * A worker exits when the queue is drained (or stop is requested).
  */
+async function runSlot(index: number, filter: Set<number> | null) {
+  liveSlots.add(index);
+  try {
+    await adaptiveWorker(index, filter);
+  } finally {
+    liveSlots.delete(index);
+  }
+}
+
 async function adaptiveWorker(index: number, filter: Set<number> | null) {
   // Idle slots used to run a COUNT query every 500ms each; with several
   // connections configured that is a constant stream of pointless queries for
@@ -310,8 +327,14 @@ async function adaptiveWorker(index: number, filter: Set<number> | null) {
     // Read every loop like the mode, so toggling the flag applies mid-run.
     const split = parallel && getSetting("llm_split_file") === "1";
     const concurrency = split ? 1 : parallel ? pool.length : 1;
+    const waitForOtherFiles = split ? activeJobCount() > 0 : splitJobRunning;
 
-    if (index >= concurrency) {
+    // In parallel without split, a slot keeps its own connection while it has one,
+    // so a new file never pairs with a connection another slot still holds.
+    const rank = [...liveSlots].filter((slot) => slot < index).length;
+    const turn = parallel && !split && index < pool.length ? index : rank;
+
+    if (turn >= concurrency || waitForOtherFiles) {
       // Not active under the current mode. Stay alive while anything is pending OR
       // in flight, so a mid-run widen to parallel can reactivate this slot; only
       // exit once the queue is fully drained.
@@ -326,14 +349,17 @@ async function adaptiveWorker(index: number, filter: Set<number> | null) {
     const job = claimNextJob(filter);
     if (!job) break;
 
-    const order = parallel ? [pool[index], ...pool.filter((_, j) => j !== index)] : pool;
+    const order = parallel && !split ? [pool[turn], ...pool.filter((_, j) => j !== turn)] : pool;
+    // Without split, a file stays on its worker's connection and the rest are fallbacks.
     const jobMode: LlmMode = split ? "parallel" : parallel ? "fallback" : mode;
     const primary = order[0];
     const releasePrimary = primary ? await acquireConnectionLock(primary) : undefined;
     let stopped = false;
     try {
-      stopped = await runJob(job, order, jobMode, primary ? new Set([primary.id]) : new Set<string>());
+      splitJobRunning = split;
+      stopped = await runJob(job, order, jobMode, primary ? new Set([primary.id]) : new Set<string>(), split);
     } finally {
+      splitJobRunning = false;
       releasePrimary?.();
     }
     if (stopped) break;

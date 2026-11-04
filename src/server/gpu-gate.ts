@@ -2,6 +2,9 @@ import { getSetting } from "./config.js";
 import { countPendingJobs } from "./db.js";
 import { gpuTranscriptionCount } from "./transcription/in-flight.js";
 import type { ResolvedConnection } from "./connections.js";
+import { sameMachine } from "./machine.js";
+
+export { sameMachine };
 
 /** Subtitles waiting for translation that open the gate even while YouTube videos still wait for Whisper. */
 export const SUBTITLES_WAITING_CAP = 20;
@@ -165,25 +168,6 @@ export function takeHeldStart(): { ids: number[] | undefined } | null {
 
 export function isQueueStartHeld(): boolean {
   return held !== null;
-}
-
-// Names that all mean "this machine": a LLM at localhost and a Whisper backend
-// at 127.0.0.1 share one GPU.
-const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1", "0.0.0.0"]);
-
-function machineOf(url: string): string | null {
-  try {
-    const hostname = new URL(url).hostname.toLowerCase();
-    return LOOPBACK_HOSTS.has(hostname) ? "loopback" : hostname || null;
-  } catch {
-    return null;
-  }
-}
-
-/** Both URLs point at the same machine, whatever the ports. */
-export function sameMachine(a: string, b: string): boolean {
-  const machine = machineOf(a);
-  return machine !== null && machine === machineOf(b);
 }
 
 /**

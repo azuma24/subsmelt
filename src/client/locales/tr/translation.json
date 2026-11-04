@@ -697,7 +697,7 @@
       "modeHelpFallback": "Bağlantıları sırayla dene — biri başarısız olursa sonrakine geç.",
       "modeHelpParallel": "Daha hızlı çevirmek için bir işin parçalarını bağlantılara dağıt.",
       "splitFile": "Her dosyayı bağlantılara böl (deneysel)",
-      "splitFileHelp": "Bir dosyanın parçalarını tüm bağlantılara aynı anda gönderir, böylece uzun bir dosya daha erken biter. Dosyalar tek tek çalışır. Farklı modeller aynı dosya içinde farklı ifade seçebilir, bu nedenle aynı modeli çalıştıran bağlantılar için uygundur.",
+      "splitFileHelp": "Bir dosyanın parçalarını tüm bağlantılara aynı anda gönderir, böylece uzun bir dosya daha erken biter. Dosyalar tek tek çalışır. Farklı modeller aynı dosya içinde farklı ifade seçebilir, bu nedenle aynı modeli çalıştıran bağlantılar için uygundur. Takılan bir parça iki kez gönderilebilir; bu, ücretli bağlantılarda maliyeti artırabilir.",
       "connectionName": "Bağlantı adı",
       "defaultLabel": "Bağlantı {{index}}",
       "enabled": "Etkin",

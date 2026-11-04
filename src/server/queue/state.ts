@@ -23,6 +23,8 @@ const cancelledJobIds = new Set<number>();
 // The LLM connection each translating job runs on, so the dashboard can show
 // which machine is working on what in parallel mode.
 const jobConnections = new Map<number, JobConnection>();
+// Every connection a split job is using; a split job has no single connection.
+const splitJobConnections = new Map<number, JobConnection[]>();
 // Connections this run found unreachable and stopped using.
 const offlineConnectionIds = new Set<string>();
 
@@ -68,6 +70,7 @@ export function releaseJob(jobId: number, controller: AbortController): void {
   if (abortControllers.get(jobId) === controller) {
     abortControllers.delete(jobId);
     jobConnections.delete(jobId);
+    splitJobConnections.delete(jobId);
     activeJobIds.delete(jobId);
     currentJobId = activeJobIds.size > 0 ? Array.from(activeJobIds)[activeJobIds.size - 1] : null;
   }
@@ -101,14 +104,28 @@ export function setJobConnection(jobId: number, connection: JobConnection): void
   broadcast("job:connection", { jobId, ...connection });
 }
 
+export function setSplitJobConnections(jobId: number, connections: JobConnection[]): void {
+  splitJobConnections.set(jobId, connections);
+}
+
+/** A split job stops using a connection it lost; it keeps reporting its last one. */
+export function dropSplitJobConnection(jobId: number, id: string): void {
+  const remaining = (splitJobConnections.get(jobId) ?? []).filter((conn) => conn.id !== id);
+  if (remaining.length === 0) return;
+  splitJobConnections.set(jobId, remaining);
+  if (jobConnections.get(jobId)?.id === id) setJobConnection(jobId, remaining[0]);
+}
+
 /** The connection a translating job currently runs on, or null. */
 export function getJobConnection(jobId: number): JobConnection | null {
   return jobConnections.get(jobId) ?? null;
 }
 
-/** Every translating job with its connection, for the queue status surface. */
+/** Every translating job with its connections, for the queue status surface. A split job appears once per connection. */
 export function getActiveJobConnections(): ({ jobId: number } & JobConnection)[] {
-  return Array.from(jobConnections, ([jobId, connection]) => ({ jobId, ...connection }));
+  return Array.from(jobConnections).flatMap(([jobId, connection]) =>
+    (splitJobConnections.get(jobId) ?? [connection]).map((conn) => ({ jobId, ...conn })),
+  );
 }
 
 export function markConnectionOffline(id: string): void {
@@ -132,5 +149,6 @@ export function resetRunState(): void {
   abortControllers.clear();
   cancelledJobIds.clear();
   jobConnections.clear();
+  splitJobConnections.clear();
   offlineConnectionIds.clear();
 }

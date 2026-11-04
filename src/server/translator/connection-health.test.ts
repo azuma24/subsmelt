@@ -207,3 +207,80 @@ test("an aborted job stops probing immediately", async () => {
 
   await assert.rejects(() => health.ensureReady(conn("stopped")), /STOP_REQUESTED/);
 });
+
+const probeTarget: ResolvedConnection = {
+  id: "a",
+  label: "A",
+  apiKey: "",
+  apiHost: "http://a.test/v1",
+  model: "m",
+};
+
+test("a stop ends an availability probe stuck on a silent host, without marking it down", async () => {
+  const controller = new AbortController();
+  const health = createConnectionHealth({
+    abortSignal: controller.signal,
+    fetchImpl: ((_url: string, init: RequestInit) =>
+      new Promise((_, reject) => {
+        init.signal?.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+      })) as unknown as typeof fetch,
+  });
+  const probing = health.ensureReady(probeTarget);
+  controller.abort("stop_requested");
+  await assert.rejects(probing, /^Error: STOP_REQUESTED$/);
+  assert.equal(health.isUnavailable("a"), false);
+});
+
+test("a cancel ends the wait between availability probes and keeps its identity", async () => {
+  const controller = new AbortController();
+  const health = createConnectionHealth({
+    abortSignal: controller.signal,
+    fetchImpl: (() => Promise.reject(new Error("fetch failed"))) as unknown as typeof fetch,
+    delayImpl: () => {
+      controller.abort(new Error("JOB_CANCELLED"));
+      return new Promise(() => {});
+    },
+  });
+  await assert.rejects(health.ensureReady(probeTarget), /^Error: JOB_CANCELLED$/);
+});
+
+test("a probe still failing cannot take down a connection another probe verified", async () => {
+  let firstFailed: () => void = () => {};
+  const failing = new Promise<void>((resolve) => {
+    firstFailed = resolve;
+  });
+  let calls = 0;
+  const health = createConnectionHealth({
+    fetchImpl: (() => {
+      calls += 1;
+      if (calls === 1) {
+        firstFailed();
+        return Promise.reject(new Error("fetch failed"));
+      }
+      return Promise.resolve(new Response("{}", { status: 200 }));
+    }) as unknown as typeof fetch,
+    delayImpl: () => new Promise((r) => setTimeout(r, 5)),
+  });
+  const stale = health.ensureReady(probeTarget);
+  await failing;
+  await health.ensureReady(probeTarget);
+  await stale;
+  assert.equal(health.isUnavailable("a"), false);
+  await health.ensureReady(probeTarget);
+  assert.equal(calls, 2);
+});
+
+test("probes of one dead host report it down once", async () => {
+  const reported: string[] = [];
+  const health = createConnectionHealth({
+    fetchImpl: (() => Promise.reject(new Error("fetch failed"))) as unknown as typeof fetch,
+    delayImpl: () => Promise.resolve(),
+    onConnectionUnavailable: ({ id }) => reported.push(id),
+  });
+  const results = await Promise.allSettled([1, 2, 3].map(() => health.ensureReady(probeTarget)));
+  assert.deepEqual(
+    results.map((r) => r.status),
+    ["rejected", "rejected", "rejected"],
+  );
+  assert.deepEqual(reported, ["a"]);
+});

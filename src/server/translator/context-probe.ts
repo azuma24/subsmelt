@@ -170,6 +170,8 @@ export interface JobContextPlan {
   byConnection: Map<string, ModelContextInfo>;
   /** Chunks to translate at once: the configured value, capped to fit the primary's window. */
   parallelChunks: number;
+  /** The same calculation for each connection's own window, by connection id. */
+  parallelByConnection: Map<string, number>;
 }
 
 /**
@@ -189,8 +191,14 @@ export async function planJobContext(
     byConnection.set(conn.id, info);
   }
 
+  const fit = (info?: ModelContextInfo) => {
+    const wanted = opts.configuredParallel > 1 ? opts.configuredParallel : (info?.recommendedParallelChunks ?? 1);
+    return Math.min(wanted, info?.maxParallelChunks ?? wanted);
+  };
   const primary = connections[0] ? byConnection.get(connections[0].id) : undefined;
-  const wanted = opts.configuredParallel > 1 ? opts.configuredParallel : (primary?.recommendedParallelChunks ?? 1);
-  const parallelChunks = Math.min(wanted, primary?.maxParallelChunks ?? wanted);
-  return { byConnection, parallelChunks };
+  return {
+    byConnection,
+    parallelChunks: fit(primary),
+    parallelByConnection: new Map([...byConnection].map(([id, info]) => [id, fit(info)])),
+  };
 }

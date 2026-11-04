@@ -697,7 +697,7 @@
       "modeHelpFallback": "Thử các kết nối theo thứ tự — nếu một kết nối lỗi, chuyển sang kết nối tiếp theo.",
       "modeHelpParallel": "Chia các phần của tác vụ cho nhiều kết nối để dịch nhanh hơn.",
       "splitFile": "Chia mỗi tệp cho các kết nối (thử nghiệm)",
-      "splitFileHelp": "Gửi các phân đoạn của một tệp đến mọi kết nối cùng lúc, để tệp dài hoàn thành sớm hơn. Các tệp chạy lần lượt từng cái. Các mô hình khác nhau có thể dùng từ ngữ khác nhau trong cùng một tệp, nên tính năng này phù hợp với các kết nối chạy cùng một mô hình.",
+      "splitFileHelp": "Gửi các phân đoạn của một tệp đến mọi kết nối cùng lúc, để tệp dài hoàn thành sớm hơn. Các tệp chạy lần lượt từng cái. Các mô hình khác nhau có thể dùng từ ngữ khác nhau trong cùng một tệp, nên tính năng này phù hợp với các kết nối chạy cùng một mô hình. Đoạn bị treo có thể được gửi hai lần, điều này có thể tốn thêm chi phí trên các kết nối trả phí.",
       "connectionName": "Tên kết nối",
       "defaultLabel": "Kết nối {{index}}",
       "enabled": "Đã bật",

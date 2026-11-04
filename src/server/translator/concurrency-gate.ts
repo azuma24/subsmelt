@@ -1,3 +1,5 @@
+import { controlledAbortError } from "./ai-client.js";
+
 /**
  * A counting semaphore whose limit can only shrink.
  *
@@ -7,7 +9,7 @@
  */
 export interface ConcurrencyGate {
   readonly limit: number;
-  acquire(): Promise<void>;
+  acquire(signal?: AbortSignal): Promise<void>;
   release(): void;
   /**
    * Halve the limit a caller observed when it started. Concurrent callers that
@@ -25,8 +27,28 @@ export function createConcurrencyGate(initialLimit: number): ConcurrencyGate {
     get limit() {
       return limit;
     },
-    async acquire() {
-      while (running >= limit) await new Promise<void>((resolve) => waiting.push(resolve));
+    async acquire(signal?: AbortSignal) {
+      while (running >= limit) {
+        if (signal?.aborted) throw controlledAbortError(signal);
+        await new Promise<void>((resolve, reject) => {
+          const wake = () => {
+            signal?.removeEventListener("abort", onAbort);
+            resolve();
+          };
+          const onAbort = () => {
+            const at = waiting.indexOf(wake);
+            if (at >= 0) waiting.splice(at, 1);
+            signal?.removeEventListener("abort", onAbort);
+            reject(controlledAbortError(signal!));
+          };
+          signal?.addEventListener("abort", onAbort, { once: true });
+          if (running < limit) {
+            wake();
+            return;
+          }
+          waiting.push(wake);
+        });
+      }
       running++;
     },
     release() {

@@ -10,7 +10,6 @@ import { logger } from "../logger.js";
 import { broadcast } from "../sse.js";
 import { notify } from "../notify.js";
 import { tryAcquireConnectionLock } from "../connection-lock.js";
-import { createConcurrencyGate, type ConcurrencyGate } from "../translator/concurrency-gate.js";
 import { llmBusyWithTranscription } from "../gpu-gate.js";
 import { MEDIA_DIR } from "../scanner.js";
 import { assertMediaPathAllowed } from "../transcription-client.js";
@@ -22,6 +21,9 @@ import {
   registerAbort,
   releaseJob,
   setJobConnection,
+  setSplitJobConnections,
+  dropSplitJobConnection,
+  getJobConnection,
 } from "./state.js";
 import { writeJobTitle } from "./titles.js";
 
@@ -42,6 +44,8 @@ interface JobContext {
   conns: ResolvedConnection[];
   llmMode: LlmMode;
   reservedConnectionIds: Set<string>;
+  /** llm_split_file: this file's chunks go to every connection at once. */
+  splitFile: boolean;
   settings: Record<string, string>;
   typed: TypedSettings;
   startTime: number;
@@ -75,8 +79,9 @@ export async function runJob(
   conns: ResolvedConnection[],
   llmMode: LlmMode,
   reservedConnectionIds: Set<string> = new Set(),
+  splitFile = false,
 ): Promise<boolean> {
-  const ctx = beginJob(job, conns, llmMode, reservedConnectionIds);
+  const ctx = beginJob(job, conns, llmMode, reservedConnectionIds, splitFile);
   try {
     const plan = await planJob(ctx);
     await translateJob(ctx, plan);
@@ -96,6 +101,7 @@ function beginJob(
   conns: ResolvedConnection[],
   llmMode: LlmMode,
   reservedConnectionIds: Set<string>,
+  splitFile: boolean,
 ): JobContext {
   const srtName = job.srt_path.split("/").pop() || job.srt_path;
   const task = getTask(job.task_id);
@@ -117,6 +123,7 @@ function beginJob(
     conns,
     llmMode,
     reservedConnectionIds,
+    splitFile,
     settings: getAllSettings(),
     typed: readSettings(),
     startTime: Date.now(),
@@ -191,23 +198,18 @@ function busyWithTranscription(jobId: number, conns: ResolvedConnection[]): (con
 /** Runs the translation engine over the file, relaying its events to the log, the DB and SSE. */
 async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
   const { job, srtName, langCode, conns, typed } = ctx;
-  // Split mode ("parallel"): parallel_chunks is requests per server, so every
-  // connection — the queue primary included — holds one of parallelChunks
-  // counting slots around each LLM call, gated per connection id and scoped to
-  // this job. When a machine is lost its workers cascade onto the survivors;
-  // the gate keeps a survivor at parallel_chunks in-flight requests instead of
-  // one per cascading worker.
-  const splitGates = new Map<string, ConcurrencyGate>();
+  if (ctx.splitFile) {
+    setSplitJobConnections(
+      job.id,
+      conns.map((c) => ({ id: c.id, label: c.label, host: c.apiHost, model: c.model })),
+    );
+  }
   await translateFile({
     srtPath: job.srt_path,
     outputPath: job.output_path,
     ...plan.translation.options,
     llmMode: ctx.llmMode,
-    // Split mode (llm_split_file): parallel_chunks is requests per server, so a
-    // split file runs that many chunk workers per connection, capped at 32 like
-    // the engine's own parallel ceiling.
-    chunkWorkers:
-      ctx.llmMode === "parallel" ? Math.min(32, plan.translation.options.parallelChunks * conns.length) : undefined,
+    split: ctx.splitFile ? { limits: plan.translation.parallelByConnection } : undefined,
     onConnectionUsed: ({ id, label }) => {
       logger.info("translate", `Using LLM connection: ${label} (${id})`, job.id, { stage: "llm_connection" });
       if (!ctx.usedConnIds.has(id)) {
@@ -218,6 +220,8 @@ async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
     onConnectionActive: ({ id, label }) => {
       // A fallback switch, or a return to an earlier connection, moves the
       // job to another machine; keep the dashboard's attribution current.
+      // A split job uses every connection at once, so its reported primary stays put.
+      if (ctx.splitFile) return;
       const switched = conns.find((c) => c.id === id);
       if (switched) setJobConnection(job.id, { id, label, host: switched.apiHost, model: switched.model });
     },
@@ -228,6 +232,7 @@ async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
     },
     onConnectionUnavailable: ({ id, label, error }) => {
       markConnectionOffline(id);
+      dropSplitJobConnection(job.id, id);
       logger.warn(
         "translate",
         `LLM connection unavailable after 5 attempts; skipping for this queue run: ${label} (${id}) — ${error}`,
@@ -236,26 +241,15 @@ async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
       );
     },
     onConnectionDropped: ({ id, label, error }) => {
+      dropSplitJobConnection(job.id, id);
       logger.warn("translate", `LLM connection dropped for the rest of this job: ${label} (${id}) — ${error}`, job.id, {
         stage: "llm_connection_dropped",
       });
     },
-    // Single/fallback: only cascades reach this (the primary is reserved by the
-    // worker); they must not block on another worker's job-long hold. Split
-    // mode caps every connection instead — see splitGates above.
-    acquireConnection:
-      ctx.llmMode === "parallel"
-        ? async (conn) => {
-            const existing = splitGates.get(conn.id);
-            const gate = existing ?? createConcurrencyGate(plan.translation.options.parallelChunks);
-            if (!existing) splitGates.set(conn.id, gate);
-            await gate.acquire();
-            return () => gate.release();
-          }
-        : tryAcquireConnectionLock,
-    // Split mode reserves nothing: the primary takes a slot like any other
-    // connection, so no server can exceed parallel_chunks in-flight requests.
-    reservedConnectionIds: ctx.llmMode === "parallel" ? new Set<string>() : ctx.reservedConnectionIds,
+    // Only cascades reach this (the primary is reserved by the worker); they
+    // must not block on another worker's job-long hold.
+    acquireConnection: tryAcquireConnectionLock,
+    reservedConnectionIds: ctx.reservedConnectionIds,
     isConnectionBusy: busyWithTranscription(job.id, conns),
     prompt: plan.prompt,
     lang: ctx.targetLang || "English",
@@ -347,7 +341,8 @@ async function translateJobTitle(ctx: JobContext, plan: JobPlan): Promise<void> 
   await writeJobTitle(job, "Title sidecar", {
     langCode: ctx.langCode,
     targetLang: ctx.targetLang,
-    connection: plan.primary,
+    // A split job may have lost its primary by now; it reports the one still working.
+    connection: (ctx.splitFile && ctx.conns.find((c) => c.id === getJobConnection(job.id)?.id)) || plan.primary,
     temperature: typed.temperature,
     disableToolCalls: typed.disable_tool_calls,
     requestTimeoutMs: plan.translation.options.requestTimeoutMs,

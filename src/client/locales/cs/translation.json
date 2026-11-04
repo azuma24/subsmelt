@@ -701,7 +701,7 @@
       "modeHelpFallback": "Zkoušet připojení v pořadí — pokud jedno selže, kaskádovat na další.",
       "modeHelpParallel": "Rozdělit části úlohy mezi připojení pro rychlejší překlad.",
       "splitFile": "Rozdělit každý soubor mezi připojení (experimentální)",
-      "splitFileHelp": "Odešle bloky jednoho souboru všem připojením najednou, aby dlouhý soubor skončil dřív. Soubory běží vždy jen jeden. Různé modely mohou formulovat stejný soubor odlišně, takže je to vhodné pro připojení se stejným modelem.",
+      "splitFileHelp": "Odešle bloky jednoho souboru všem připojením najednou, aby dlouhý soubor skončil dřív. Soubory běží vždy jen jeden. Různé modely mohou formulovat stejný soubor odlišně, takže je to vhodné pro připojení se stejným modelem. Zaseknutý blok může být odeslán dvakrát, což může u placených připojení stát více.",
       "connectionName": "Název připojení",
       "defaultLabel": "Připojení {{index}}",
       "enabled": "Povoleno",

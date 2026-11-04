@@ -699,7 +699,7 @@
       "modeHelpFallback": "Essayer les connexions dans l'ordre — si l'une échoue, passer à la suivante.",
       "modeHelpParallel": "Répartir les segments d'une tâche entre les connexions pour traduire plus vite.",
       "splitFile": "Répartir chaque fichier entre les connexions (expérimental)",
-      "splitFileHelp": "Envoie les fragments d'un fichier à toutes les connexions en même temps, pour qu'un fichier long se termine plus vite. Les fichiers sont traités un par un. Des modèles différents peuvent formuler les choses différemment dans un même fichier, ce qui convient donc aux connexions exécutant le même modèle.",
+      "splitFileHelp": "Envoie les fragments d'un fichier à toutes les connexions en même temps, pour qu'un fichier long se termine plus vite. Les fichiers sont traités un par un. Des modèles différents peuvent formuler les choses différemment dans un même fichier, ce qui convient donc aux connexions exécutant le même modèle. Un bloc bloqué peut être envoyé deux fois, ce qui peut coûter plus cher sur les connexions payantes.",
       "connectionName": "Nom de la connexion",
       "defaultLabel": "Connexion {{index}}",
       "enabled": "Activée",

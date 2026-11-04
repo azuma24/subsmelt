@@ -55,8 +55,11 @@ translate → settle, with the stop/cancel/failure settlement in one function.
 abort controllers, cancels, connections) behind accessors. The worker pool
 adapts to the configured LLM mode on every claim, so switching
 single/fallback/parallel takes effect mid-run. With `llm_split_file` on in
-parallel mode, one file runs at a time but its chunks fan out across every
-connection at once.
+parallel mode with 2+ connections, one file runs at a time and its chunks go to
+every connection at once, each server held to its own limit
+(`src/server/translator/split-run.ts`). When workers run out of chunks, a stalled
+chunk is also sent to another machine; the first complete answer is written and
+the other request is aborted (`src/server/translator/chunk-hedge.ts`).
 
 **`src/shared/settings.ts`** — the one table of every setting: kind (flag,
 int, float, enum, json, text), bounds and default. The server's
@@ -67,8 +70,8 @@ the same min/max.
 
 **`src/server/translator/engine.ts`** — one file translation: parse → optional
 context analysis (glossary extraction) → chunk → translate with cascade and
-fallback → optional refinement pass → save. Two concerns are extracted and
-tested:
+fallback → optional refinement pass → save. The chunk and per-line LLM calls
+live in `chunk-translator.ts`. Two more concerns are extracted and tested:
 
 - `connection-health.ts` — availability probing, the per-job timeout breaker
   (three transport failures and a connection is dropped for the rest of the job),

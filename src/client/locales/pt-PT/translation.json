@@ -699,7 +699,7 @@
       "modeHelpFallback": "Tentar as ligações por ordem — se uma falhar, passar para a seguinte.",
       "modeHelpParallel": "Dividir os blocos de um trabalho por várias ligações para traduzir mais depressa.",
       "splitFile": "Dividir cada ficheiro pelas ligações (experimental)",
-      "splitFileHelp": "Envia os blocos de um ficheiro para todas as ligações em simultâneo, para que um ficheiro longo termine mais depressa. Os ficheiros são processados um de cada vez. Modelos diferentes podem redigir de forma diferente no mesmo ficheiro, pelo que isto serve para ligações que executem o mesmo modelo.",
+      "splitFileHelp": "Envia os blocos de um ficheiro para todas as ligações em simultâneo, para que um ficheiro longo termine mais depressa. Os ficheiros são processados um de cada vez. Modelos diferentes podem redigir de forma diferente no mesmo ficheiro, pelo que isto serve para ligações que executem o mesmo modelo. Um bloco parado pode ser enviado duas vezes, o que pode custar mais em ligações pagas.",
       "connectionName": "Nome da ligação",
       "defaultLabel": "Ligação {{index}}",
       "enabled": "Ativada",

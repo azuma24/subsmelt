@@ -856,7 +856,7 @@
       "modeHelpFallback": "Try connections in order — if one fails, cascade to the next.",
       "modeHelpParallel": "Split a job's chunks across connections to translate faster.",
       "splitFile": "Split each file across connections (experimental)",
-      "splitFileHelp": "Sends one file's chunks to every connection at once, so a long file finishes sooner. Files run one at a time. Different models can word things differently within one file, so this suits connections running the same model.",
+      "splitFileHelp": "Sends one file's chunks to every connection at once, so a long file finishes sooner. Files run one at a time. Different models can word things differently within one file, so this suits connections running the same model. A stalled chunk may be sent twice, which can cost more on paid connections.",
       "connectionName": "Connection name",
       "defaultLabel": "Connection {{index}}",
       "enabled": "Enabled",

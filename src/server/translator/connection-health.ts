@@ -32,7 +32,7 @@ export interface ConnectionHealthOptions {
   onConnectionDropped?: (info: ConnectionEvent) => void;
   onRetry?: (attempt: number, error: unknown, backoff: number, maxRetries?: number) => void;
   /** Serializes requests per connection; returns a release function. */
-  acquireConnection?: (conn: ResolvedConnection) => Promise<() => void>;
+  acquireConnection?: (conn: ResolvedConnection, signal?: AbortSignal) => Promise<() => void>;
   /** Connections the caller already holds a lock for — do not re-acquire. */
   reservedConnectionIds?: Iterable<string>;
   abortSignal?: AbortSignal;
@@ -51,9 +51,9 @@ export interface ConnectionHealth {
   /** True once a probe has failed all its attempts for this connection. */
   isUnavailable(id: string): boolean;
   /** Probe availability once per job; throws when the connection is unreachable. */
-  ensureReady(conn: ResolvedConnection): Promise<void>;
+  ensureReady(conn: ResolvedConnection, signal?: AbortSignal): Promise<void>;
   /** ensureReady + lock acquisition around `fn`, releasing in a finally. */
-  withConnection<T>(conn: ResolvedConnection, fn: () => Promise<T>): Promise<T>;
+  withConnection<T>(conn: ResolvedConnection, fn: () => Promise<T>, signal?: AbortSignal): Promise<T>;
 }
 
 /**
@@ -82,6 +82,23 @@ export function offlineMessage(error: unknown): string {
   return errorMessage(error) || errorCauseMessage(error) || "connection unavailable";
 }
 
+/** Resolves with `wait`, or rejects as soon as the signal aborts. */
+function untilAborted(wait: Promise<void>, signal?: AbortSignal): Promise<void> {
+  if (!signal) return wait;
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(controlledAbortError(signal));
+    if (signal.aborted) {
+      onAbort();
+      return;
+    }
+    signal.addEventListener("abort", onAbort, { once: true });
+    void wait.then(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, reject);
+  });
+}
+
 export function createConnectionHealth(options: ConnectionHealthOptions = {}): ConnectionHealth {
   const fetchImpl = options.fetchImpl ?? fetch;
   const delay = options.delayImpl ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
@@ -106,7 +123,7 @@ export function createConnectionHealth(options: ConnectionHealthOptions = {}): C
     }
   }
 
-  async function ensureReady(conn: ResolvedConnection): Promise<void> {
+  async function ensureReady(conn: ResolvedConnection, signal = options.abortSignal): Promise<void> {
     if (unavailable.has(conn.id)) {
       throw new Error(`Connection marked unavailable: ${conn.label}`);
     }
@@ -122,37 +139,44 @@ export function createConnectionHealth(options: ConnectionHealthOptions = {}): C
     for (let attempt = 1; attempt <= OFFLINE_ATTEMPTS; attempt++) {
       // Only a deliberate per-job cancel keeps its identity; every other abort
       // reads as a queue stop.
-      if (options.abortSignal?.aborted) throw controlledAbortError(options.abortSignal);
+      if (signal?.aborted) throw controlledAbortError(signal);
+      // Another worker's probe of this connection may have settled it meanwhile.
+      if (verified.has(conn.id)) return;
+      if (unavailable.has(conn.id)) throw new Error(`Connection marked unavailable: ${conn.label}`);
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort("connection_probe_timeout"), OFFLINE_RETRY_MS);
       try {
         const res = await fetchImpl(modelsUrl, {
           method: "GET",
           headers: conn.apiKey ? { Authorization: `Bearer ${conn.apiKey}` } : undefined,
-          signal: controller.signal,
+          signal: signal ? AbortSignal.any([controller.signal, signal]) : controller.signal,
         });
         if (!res.ok) throw new Error(`HTTP ${res.status} from ${modelsUrl}`);
         verified.add(conn.id);
         return;
       } catch (error) {
+        if (signal?.aborted) throw controlledAbortError(signal);
         lastErr = error;
         if (attempt >= OFFLINE_ATTEMPTS) break;
         options.onRetry?.(attempt, error, OFFLINE_RETRY_MS, OFFLINE_ATTEMPTS);
-        await delay(OFFLINE_RETRY_MS);
+        await untilAborted(delay(OFFLINE_RETRY_MS), signal);
       } finally {
         clearTimeout(timer);
       }
     }
 
-    unavailable.add(conn.id);
     const error = offlineMessage(lastErr);
-    options.onConnectionUnavailable?.({ id: conn.id, label: conn.label, error });
+    if (verified.has(conn.id)) return;
+    if (!unavailable.has(conn.id)) {
+      unavailable.add(conn.id);
+      options.onConnectionUnavailable?.({ id: conn.id, label: conn.label, error });
+    }
     throw new Error(`Connection unavailable after ${OFFLINE_ATTEMPTS} attempts: ${conn.label} — ${error}`);
   }
 
-  async function withConnection<T>(conn: ResolvedConnection, fn: () => Promise<T>): Promise<T> {
-    await ensureReady(conn);
-    const release = reserved.has(conn.id) ? undefined : await options.acquireConnection?.(conn);
+  async function withConnection<T>(conn: ResolvedConnection, fn: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+    await ensureReady(conn, signal);
+    const release = reserved.has(conn.id) ? undefined : await options.acquireConnection?.(conn, signal);
     try {
       return await fn();
     } finally {

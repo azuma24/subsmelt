@@ -199,7 +199,7 @@ export function ConnectionsPanel({ settings, update, addToast }: ConnectionsPane
           ))}
         </div>
         <p className="mt-2 text-xs leading-relaxed text-faint">{t(MODE_HELP_KEY[mode])}</p>
-        {mode === "parallel" && (
+        {mode === "parallel" && conns.filter((c) => c.enabled !== false).length >= 2 && (
           <div className="mt-3">
             <ToggleRow
               title={t("settings.connections.splitFile")}
