@@ -150,3 +150,17 @@ test("a changed Analysis Sample keeps the finished chunks", async (t) => {
   await queue.processQueue();
   assert.deepEqual(state.sent, ["cue 3", "cue 4"]);
 });
+
+for (const viaRetry of [false, true]) {
+  test(`a job resumed on another connection credits both (${viaRetry ? "Retry" : "Stop"})`, async (t) => {
+    const { job, state } = useResumableJob(t);
+    await stopAtTheStall(job, state);
+    if (viaRetry) db.resetJob(job);
+    useConnections("single", [
+      { id: "b", label: "B", provider: "local", model: "m", endpoint: "http://a.test/v1", order: 0 },
+    ]);
+    await queue.processQueue();
+    assert.equal(db.getJob(job)?.status, "done");
+    assert.deepEqual(db.getJob(job)?.used_connections?.split(", ").sort(), ["A", "B"]);
+  });
+}

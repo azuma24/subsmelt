@@ -86,7 +86,7 @@ test("a stopped file continues with only the chunks it had not finished", async 
   useLlm(t, "OLD", "cue 3");
   await assert.rejects(run(paths), /STOP_REQUESTED/);
   assert.deepEqual(
-    [...loadCueProgress(paths.outputPath, "key")],
+    [...loadCueProgress(paths.outputPath, "key").cues],
     [
       [0, "OLD-cue 1"],
       [1, "OLD-cue 2"],
@@ -227,4 +227,25 @@ test("Preview shows the kept cues as soon as a run resumes", async (t) => {
   useLlm(t, "NEW", "cue 3");
   await assert.rejects(run(paths), /STOP_REQUESTED/);
   assert.match(fs.readFileSync(`${paths.outputPath}.part`, "utf8"), /OLD-cue 2/);
+});
+
+test("the connections behind kept cues are reported on resume", async (t) => {
+  const paths = files(t, 4);
+  saveCueProgress(
+    paths.outputPath,
+    "key",
+    new Map([
+      [0, "OLD-cue 1"],
+      [1, "OLD-cue 2"],
+    ]),
+    ["Earlier"],
+  );
+  useLlm(t, "NEW");
+  let reported: readonly string[] = [];
+  await run(paths, {
+    onResumed: (_, __, connections) => {
+      reported = connections;
+    },
+  });
+  assert.ok(reported.includes("Earlier"), `reported ${reported.join(", ")}`);
 });

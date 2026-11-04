@@ -95,7 +95,7 @@ export interface TranslateFileOptions {
    */
   resumeKey?: string;
   /** Fired when a run keeps cues translated by an earlier run. */
-  onResumed?: (keptCues: number, totalCues: number) => void;
+  onResumed?: (keptCues: number, totalCues: number, connections: readonly string[]) => void;
   /** An analysis saved by an earlier run of this same work: used instead of calling the LLM. */
   savedAnalysis?: string;
   /** Fired when the analysis pass starts and ends, however it ends. */
@@ -183,6 +183,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   if (connections.length === 0) throw new Error("No usable LLM connection configured");
   const llmMode: LlmMode = opts.llmMode || "single";
   const usedConnIds = new Set<string>();
+  const contributingLabels = new Set<string>();
   let lastActiveId: string | undefined;
   const markUsed = (c: ResolvedConnection) => {
     if (c.id !== lastActiveId) {
@@ -191,6 +192,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     }
     if (usedConnIds.has(c.id)) return;
     usedConnIds.add(c.id);
+    contributingLabels.add(c.label);
     opts.onConnectionUsed?.({ id: c.id, label: c.label });
   };
   const { onUsage } = opts;
@@ -377,7 +379,8 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // Concurrency-limited chunk processor.
   // Each slot processes chunks from the shared queue independently.
   // Progress and partial saves are guarded by a simple mutex flag.
-  const savedCues = opts.resumeKey ? loadCueProgress(opts.outputPath, opts.resumeKey) : new Map<number, string>();
+  const saved = opts.resumeKey ? loadCueProgress(opts.outputPath, opts.resumeKey) : null;
+  const savedCues = saved?.cues ?? new Map<number, string>();
   // Only whole chunks are kept. A chunk with any cue missing runs again in full, so
   // its lines come from one answer and progress counts each cue once.
   const chunkIsSaved = (block: SubtitleCue[]) => block.every((cue) => savedCues.has(indexMap.get(cue) as number));
@@ -391,7 +394,8 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   }
   if (keptChunks.length > 0) {
     completedCues = translatedCues.size;
-    opts.onResumed?.(completedCues, totalCues);
+    for (const label of saved?.connections ?? []) contributingLabels.add(label);
+    opts.onResumed?.(completedCues, totalCues, [...contributingLabels]);
     opts.onProgress?.(Math.min(completedCues, totalCues), totalCues);
     saveTranslated(partialPath, parsed, outputExt, subtitle);
   }
@@ -599,7 +603,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     saveChain = saveChain.then(() => {
       try {
         saveTranslated(partialPath, parsed, outputExt, subtitle);
-        if (opts.resumeKey) saveCueProgress(opts.outputPath, opts.resumeKey, translatedCues);
+        if (opts.resumeKey) saveCueProgress(opts.outputPath, opts.resumeKey, translatedCues, [...contributingLabels]);
       } catch (e) {
         // Best-effort partial save — never throw (the final write at job end is
         // authoritative), but don't swallow silently: surface it for operators.

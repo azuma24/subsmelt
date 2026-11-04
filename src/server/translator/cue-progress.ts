@@ -13,6 +13,13 @@ const CUE_PROGRESS_SUFFIX = ".part.json";
 interface StoredProgress {
   workKey: string;
   cues: Record<string, string>;
+  /** Labels of the connections that translated them, since the job row is reset between runs. */
+  connections?: string[];
+}
+
+export interface CueProgress {
+  cues: Map<number, string>;
+  connections: string[];
 }
 
 export function cueProgressPath(outputPath: string): string {
@@ -25,32 +32,42 @@ export function removeCueProgress(outputPath: string): void {
 }
 
 /** The translated cues saved for this exact work, by cue index. Anything else is discarded. */
-export function loadCueProgress(outputPath: string, workKey: string): Map<number, string> {
+export function loadCueProgress(outputPath: string, workKey: string): CueProgress {
   const file = cueProgressPath(outputPath);
   let stored: StoredProgress;
   try {
     stored = JSON.parse(fs.readFileSync(file, "utf8"));
   } catch {
     removeCueProgress(outputPath);
-    return new Map();
+    return { cues: new Map(), connections: [] };
   }
   if (stored?.workKey !== workKey || typeof stored.cues !== "object" || stored.cues === null) {
     removeCueProgress(outputPath);
-    return new Map();
+    return { cues: new Map(), connections: [] };
   }
-  return new Map(
-    Object.entries(stored.cues)
-      .filter(([, text]) => typeof text === "string")
-      .map(([index, text]) => [Number(index), text]),
-  );
+  return {
+    cues: new Map(
+      Object.entries(stored.cues)
+        .filter(([, text]) => typeof text === "string")
+        .map(([index, text]) => [Number(index), text]),
+    ),
+    connections: Array.isArray(stored.connections)
+      ? stored.connections.filter((label) => typeof label === "string")
+      : [],
+  };
 }
 
 /** Best-effort, like the `.part` save: a failure only means less to resume. Written whole, then renamed. */
-export function saveCueProgress(outputPath: string, workKey: string, cues: ReadonlyMap<number, string>): void {
+export function saveCueProgress(
+  outputPath: string,
+  workKey: string,
+  cues: ReadonlyMap<number, string>,
+  connections: readonly string[] = [],
+): void {
   const file = cueProgressPath(outputPath);
   const temporary = `${file}.tmp`;
   try {
-    const stored: StoredProgress = { workKey, cues: Object.fromEntries(cues) };
+    const stored: StoredProgress = { workKey, cues: Object.fromEntries(cues), connections: [...connections] };
     fs.writeFileSync(temporary, JSON.stringify(stored), "utf8");
     fs.renameSync(temporary, file);
   } catch (error) {

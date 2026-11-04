@@ -294,7 +294,7 @@ async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
     onUsage: (u) => recordJobUsage(ctx, u),
     savedAnalysis: savedAnalysis ?? undefined,
     resumeKey: key ?? undefined,
-    onResumed: (kept, total) => {
+    onResumed: (kept, total, connections) => {
       logger.info(
         "translate",
         `Resuming: keeping ${kept} of ${total} cues from the previous run; the connections or model may have changed since`,
@@ -303,7 +303,7 @@ async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
       );
       // The claim reset these for this run, but the output still holds the earlier runs' work.
       addJobUsage(job.id, job.input_tokens ?? 0, job.output_tokens ?? 0);
-      for (const label of job.used_connections?.split(", ") ?? []) {
+      for (const label of connections) {
         if (!ctx.usedConnLabels.includes(label)) ctx.usedConnLabels.push(label);
       }
     },
