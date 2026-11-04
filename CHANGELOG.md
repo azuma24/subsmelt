@@ -6,6 +6,10 @@ installer, macOS app) share a version number and are released together, as
 
 ## [Unreleased]
 
+### Settings
+
+- Saving settings after a scan no longer shows "Not saved: media_scanned". The setting was never lost: the server records that flag itself.
+
 ## [0.7.9] — 2026-11-04
 
 ### Translation

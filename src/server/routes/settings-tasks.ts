@@ -34,6 +34,9 @@ import { SECRET_SETTING_KEYS } from "../settings-schema.js";
 // Owned by the YouTube playlist routes. A Settings save sends back the whole
 // settings object it loaded, which would overwrite playlists followed since.
 const ROUTE_OWNED_SETTING_KEYS = new Set(["youtube_playlists"]);
+// Recorded by the server and shown to clients, so they send it back with the whole
+// form. Ignored there, not refused: nobody tried to change anything.
+const SERVER_RECORDED_SETTING_KEYS = new Set(["media_scanned"]);
 
 function redactSettings(settings: Record<string, string>): Record<string, string> {
   const redacted = { ...settings };
@@ -117,7 +120,7 @@ export function registerSettingsTasksRoutes(
     const patch: Record<string, string> = {};
     const invalid: string[] = [];
     for (const [key, value] of Object.entries(settings)) {
-      if (key.startsWith("_")) continue;
+      if (key.startsWith("_") || SERVER_RECORDED_SETTING_KEYS.has(key)) continue;
       if (!isWritableSettingKey(key) || ROUTE_OWNED_SETTING_KEYS.has(key)) {
         rejected.push(key);
         continue;
