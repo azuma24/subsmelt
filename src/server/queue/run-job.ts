@@ -27,6 +27,7 @@ import {
   getJobConnection,
 } from "./state.js";
 import { writeJobTitle } from "./titles.js";
+import { workKey } from "../translator/work-key.js";
 
 // Progress (completed_cues) is written to SQLite on every cue-advance, which with
 // many workers and long files hammers the WAL. Batch it — at most one write per
@@ -205,6 +206,19 @@ async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
       conns.map((c) => ({ id: c.id, label: c.label, host: c.apiHost, model: c.model })),
     );
   }
+  const key = workKey(job.srt_path, [
+    ctx.targetLang,
+    ctx.task?.source_lang || "",
+    plan.prompt,
+    plan.translation.options.additional,
+    String(plan.translation.options.refinePass),
+  ]);
+  const savedAnalysis = key && job.analysis_work_key === key ? job.analysis_context : null;
+  if (savedAnalysis) {
+    logger.info("translate", `Reusing the saved analysis of ${srtName}`, job.id, { stage: "context_analysis_reused" });
+  } else if (job.analysis_context) {
+    updateJob(job.id, { analysis_context: null, analysis_work_key: null });
+  }
   await translateFile({
     srtPath: job.srt_path,
     outputPath: job.output_path,
@@ -274,9 +288,10 @@ async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
       );
     },
     onUsage: (u) => recordJobUsage(ctx, u),
+    savedAnalysis: savedAnalysis ?? undefined,
     onAnalysisPhase: (running) => setJobAnalyzing(job.id, running),
     onAnalysis: (analysis) => {
-      updateJob(job.id, { analysis_context: analysis });
+      updateJob(job.id, { analysis_context: analysis, analysis_work_key: key });
       logger.info("translate", `Context prepared for ${srtName} (${langCode})`, job.id, {
         stage: "context_analysis",
         preview: analysis.slice(0, 300),

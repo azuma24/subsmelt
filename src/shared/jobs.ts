@@ -14,6 +14,8 @@ export interface JobRow {
   completed_cues: number;
   error: string | null;
   analysis_context: string | null;
+  /** What analysis_context was made from (see translator/work-key.ts). */
+  analysis_work_key: string | null;
   used_connections: string | null;
   duration_seconds: number | null;
   input_tokens: number | null;
@@ -37,7 +39,7 @@ export interface JobConnection {
  * task's languages, normalised token counts, an approximate cost and the live
  * connection. The list leaves out analysis_context, which can be large.
  */
-export interface Job extends Omit<JobRow, "analysis_context" | "input_tokens" | "output_tokens"> {
+export interface Job extends Omit<JobRow, "analysis_context" | "analysis_work_key" | "input_tokens" | "output_tokens"> {
   analysis_context?: string | null;
   input_tokens: number;
   output_tokens: number;

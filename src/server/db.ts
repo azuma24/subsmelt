@@ -42,6 +42,9 @@ const jobColumns = db.prepare("PRAGMA table_info(jobs)").all() as Array<{
 if (!jobColumns.some((c) => c.name === "analysis_context")) {
   db.exec("ALTER TABLE jobs ADD COLUMN analysis_context TEXT");
 }
+if (!jobColumns.some((c) => c.name === "analysis_work_key")) {
+  db.exec("ALTER TABLE jobs ADD COLUMN analysis_work_key TEXT");
+}
 if (!jobColumns.some((c) => c.name === "used_connections")) {
   db.exec("ALTER TABLE jobs ADD COLUMN used_connections TEXT");
 }
@@ -128,6 +131,7 @@ export function updateJob(
     completed_cues: number;
     error: string | null;
     analysis_context: string | null;
+    analysis_work_key: string | null;
     used_connections: string | null;
     duration_seconds: number;
     force: number;
@@ -241,7 +245,7 @@ export function claimPendingJob(ids?: Set<number> | null): JobRow | null {
     `SELECT * FROM jobs WHERE status = 'pending'${filter} ORDER BY priority DESC, created_at ASC, id ASC LIMIT 1`,
   );
   const claim = db.prepare(
-    "UPDATE jobs SET status = 'translating', error = NULL, analysis_context = NULL, used_connections = NULL, input_tokens = 0, output_tokens = 0, started_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND status = 'pending'",
+    "UPDATE jobs SET status = 'translating', error = NULL, used_connections = NULL, input_tokens = 0, output_tokens = 0, started_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND status = 'pending'",
   );
   return db.transaction(() => {
     const job = select.get(...values) as JobRow | undefined;
@@ -297,7 +301,7 @@ export function resetJobs(ids: number[]) {
 export function forceJob(id: number): number {
   return db
     .prepare(
-      "UPDATE jobs SET status = 'pending', force = 1, completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE id = ? AND status != 'translating'",
+      "UPDATE jobs SET status = 'pending', force = 1, analysis_work_key = NULL, completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE id = ? AND status != 'translating'",
     )
     .run(id).changes;
 }
@@ -307,7 +311,7 @@ export function forceJobs(ids: number[]) {
   if (cleanIds.length === 0) return 0;
 
   const stmt = db.prepare(
-    "UPDATE jobs SET status = 'pending', force = 1, completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE id = ? AND status IN ('done', 'skipped')",
+    "UPDATE jobs SET status = 'pending', force = 1, analysis_work_key = NULL, completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE id = ? AND status IN ('done', 'skipped')",
   );
   let updated = 0;
   const tx = db.transaction(() => {
@@ -319,7 +323,7 @@ export function forceJobs(ids: number[]) {
 
 export function forceAllJobs() {
   db.prepare(
-    "UPDATE jobs SET status = 'pending', force = 1, completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE status IN ('done', 'skipped')",
+    "UPDATE jobs SET status = 'pending', force = 1, analysis_work_key = NULL, completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, updated_at = datetime('now') WHERE status IN ('done', 'skipped')",
   ).run();
 }
 

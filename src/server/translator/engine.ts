@@ -88,6 +88,8 @@ export interface TranslateFileOptions {
    * reservedConnectionIds for the file.
    */
   split?: { limits: ReadonlyMap<string, number>; hedgeTiming?: Partial<HedgeTiming> };
+  /** An analysis saved by an earlier run of this same work: used instead of calling the LLM. */
+  savedAnalysis?: string;
   /** Fired when the analysis pass starts and ends, however it ends. */
   onAnalysisPhase?: (running: boolean) => void;
   /** Fired once per connection the moment it first produces a translation. */
@@ -243,11 +245,11 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // (tech talks, interviews) still carry glossary-worthy terms worth pinning.
   // It uses the same connection fallback/availability gate as translation so a
   // down primary source doesn't fail the job before chunk fallback can start.
-  let analysis = "";
+  let analysis = opts.savedAnalysis ?? "";
   let analysisErr: unknown;
-  opts.onAnalysisPhase?.(true);
+  if (!analysis) opts.onAnalysisPhase?.(true);
   try {
-    for (const conn of idleFirst(connections)) {
+    for (const conn of analysis ? [] : idleFirst(connections)) {
       try {
         analysis = await withConnection(conn, () =>
           analyzeSubtitlesForContext(allTexts, {
@@ -272,7 +274,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       }
     }
   } finally {
-    opts.onAnalysisPhase?.(false);
+    if (!opts.savedAnalysis) opts.onAnalysisPhase?.(false);
   }
   // Every connection failed its availability probe — surface the real error
   // rather than letting the per-line fallback pass source text through and save

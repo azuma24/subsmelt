@@ -9,6 +9,7 @@ installer, macOS app) share a version number and are released together, as
 ### Translation
 
 - Faster start: the analysis pass now samples 500 lines by default instead of up to 5000, as the new **Analysis Sample** setting, and its reply is capped. A job shows "Analyzing file…" with a timer during this pass instead of sitting at 0%. Connections are probed at the same time, so a silent host costs its timeout only once.
+- A retried or restarted job reuses its saved analysis instead of running the pass again, unless the source file, languages, prompt or Additional Context changed, or you force a re-translate.
 
 ## [0.7.8] — 2026-11-04
 
