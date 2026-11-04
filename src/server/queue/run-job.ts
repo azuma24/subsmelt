@@ -215,7 +215,9 @@ async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
     plan.translation.options.additional,
     String(plan.translation.options.refinePass),
   ]);
-  const savedAnalysis = key && job.analysis_work_key === key ? job.analysis_context : null;
+  // The sample size shapes the analysis alone, so changing it keeps finished chunks.
+  const analysisKey = key && `${key}:${typed.analysis_max_lines}`;
+  const savedAnalysis = analysisKey && job.analysis_work_key === analysisKey ? job.analysis_context : null;
   if (savedAnalysis) {
     logger.info("translate", `Reusing the saved analysis of ${srtName}`, job.id, { stage: "context_analysis_reused" });
   } else if (job.analysis_context) {
@@ -307,7 +309,7 @@ async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
     },
     onAnalysisPhase: (running) => setJobAnalyzing(job.id, running),
     onAnalysis: (analysis) => {
-      updateJob(job.id, { analysis_context: analysis, analysis_work_key: key });
+      updateJob(job.id, { analysis_context: analysis, analysis_work_key: analysisKey });
       logger.info("translate", `Context prepared for ${srtName} (${langCode})`, job.id, {
         stage: "context_analysis",
         preview: analysis.slice(0, 300),

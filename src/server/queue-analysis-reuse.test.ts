@@ -231,3 +231,18 @@ test("a forced job stopped after its analysis keeps that analysis", async (t) =>
     db.deleteJob(job);
   }
 });
+
+test("a changed Analysis Sample is analyzed again", async (t) => {
+  useSingleConnection();
+  const job = newJob();
+  const calls = useCountingFetch(t);
+  try {
+    await finishThenRequeue(job);
+    config.setSetting("analysis_max_lines", "1000");
+    await queue.processQueue();
+    assert.equal(calls.analysis, 2);
+  } finally {
+    config.setSetting("analysis_max_lines", "");
+    db.deleteJob(job);
+  }
+});
