@@ -35,7 +35,7 @@
 ; The #ifndef guard lets a command-line /D win; falls back to this default for
 ; local manual compiles.
 #ifndef MyAppVersion
-  #define MyAppVersion "0.7.9"
+  #define MyAppVersion "0.8.0"
 #endif
 #define MyAppPublisher "SubSmelt"
 #define MyServiceName "SubSmeltWhisper"

@@ -6,9 +6,15 @@ installer, macOS app) share a version number and are released together, as
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-11-04
+
 ### Settings
 
 - Saving settings after a scan no longer shows "Not saved: media_scanned". The setting was never lost: the server records that flag itself.
+
+### Whisper backends
+
+- No changes. Rebuilt so the version matches the app.
 
 ## [0.7.9] — 2026-11-04
 
