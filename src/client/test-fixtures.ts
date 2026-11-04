@@ -28,6 +28,7 @@ export function makeJob(partial: Partial<Job> & Pick<Job, "id">): Job {
     lang_code: "",
     source_lang: "",
     connection: null,
+    analyzing_since: null,
     ...partial,
   };
 }

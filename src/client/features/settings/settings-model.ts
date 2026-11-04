@@ -67,6 +67,7 @@ export interface ClientSettings {
   temperature?: string;
   chunk_size?: string;
   context_window?: string;
+  analysis_max_lines?: string;
   parallel_chunks?: string;
   request_timeout_s?: string;
   disable_tool_calls?: StringBool;

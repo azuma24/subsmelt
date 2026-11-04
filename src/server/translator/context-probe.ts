@@ -182,14 +182,17 @@ export async function planJobContext(
   connections: ResolvedConnection[],
   opts: { chunkSize: number; configuredParallel: number; abortSignal?: AbortSignal },
 ): Promise<JobContextPlan> {
-  const byConnection = new Map<string, ModelContextInfo>();
-  for (const conn of connections) {
-    // Cloud providers have no LM Studio endpoint to ask.
-    const info = conn.provider
-      ? UNKNOWN_CONTEXT
-      : await probeModelContext(conn.apiHost, conn.model, opts.chunkSize, opts.abortSignal);
-    byConnection.set(conn.id, info);
-  }
+  // All at once: a silent host costs its 5s timeout once, not once per connection before it.
+  const probed = await Promise.all(
+    connections.map(async (conn): Promise<[string, ModelContextInfo]> => {
+      // Cloud providers have no LM Studio endpoint to ask.
+      const info = conn.provider
+        ? UNKNOWN_CONTEXT
+        : await probeModelContext(conn.apiHost, conn.model, opts.chunkSize, opts.abortSignal);
+      return [conn.id, info];
+    }),
+  );
+  const byConnection = new Map<string, ModelContextInfo>(probed);
 
   const fit = (info?: ModelContextInfo) => {
     const wanted = opts.configuredParallel > 1 ? opts.configuredParallel : (info?.recommendedParallelChunks ?? 1);

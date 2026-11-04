@@ -60,6 +60,9 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   temperature: "0.3",
   chunk_size: "20",
   context_window: "5",
+  // Lines sampled for the analysis pass. It runs before any chunk, so a larger
+  // sample means a longer wait at 0%, however large the model's window is.
+  analysis_max_lines: "500",
   parallel_chunks: "1",
   request_timeout_s: "300",
   disable_tool_calls: "1",

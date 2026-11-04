@@ -79,8 +79,8 @@ function ActiveJobLine({ job, others }: { job: Job; others: number }) {
     return () => clearInterval(timer);
   }, []);
 
-  // total_cues === 0 means the context analysis phase is still running.
-  const analysing = job.total_cues === 0;
+  // A file's cue count arrives before the analysis pass, so total_cues alone can't say it is running.
+  const analysing = job.total_cues === 0 || (job.analyzing_since !== null && job.completed_cues === 0);
   const pct = analysing ? 0 : Math.round((job.completed_cues / job.total_cues) * 100);
   const elapsedMs = elapsedSince(job.started_at, now);
   const eta =

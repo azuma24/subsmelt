@@ -1,5 +1,6 @@
 import test, { mock } from "node:test";
 import assert from "node:assert/strict";
+import { makeJob } from "../test-fixtures";
 import {
   getSSEInvalidationKeys,
   SSE_EVENT_NAMES,
@@ -172,4 +173,20 @@ test("the jobs list refetches at most once per jobs window; other queries keep t
   } finally {
     mock.timers.reset();
   }
+});
+
+test("the analysis phase patches the job without refetching the list", () => {
+  const list = { jobs: [makeJob({ id: 1, status: "translating" })], queueRunning: true, currentJobId: 1 };
+  assert.deepEqual(getSSEInvalidationKeys("job:analyzing"), []);
+  assert.equal(withJobEvent(list, "job:analyzing", { jobId: 1, since: 1234 })?.jobs[0].analyzing_since, 1234);
+  const started = withJobEvent(list, "job:analyzing", { jobId: 1, since: 1234 });
+  assert.equal(
+    started && withJobEvent(started, "job:analyzing", { jobId: 1, since: null })?.jobs[0].analyzing_since,
+    null,
+  );
+});
+
+test("a job starting again clears a leftover analysis timer", () => {
+  const list = { jobs: [makeJob({ id: 1, analyzing_since: 1234 })], queueRunning: true, currentJobId: 1 };
+  assert.equal(withJobEvent(list, "job:start", { jobId: 1 })?.jobs[0].analyzing_since, null);
 });

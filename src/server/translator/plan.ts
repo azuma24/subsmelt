@@ -52,7 +52,10 @@ export async function planTranslation(
       contextSize: settings.context_window,
       parallelChunks: probed.parallelChunks,
       analysisLinesByConnection: new Map(
-        [...probed.byConnection].map(([id, info]) => [id, info.recommendedAnalysisLines]),
+        [...probed.byConnection].map(([id, info]) => [
+          id,
+          Math.min(info.recommendedAnalysisLines, settings.analysis_max_lines),
+        ]),
       ),
       requestTimeoutMs: settings.request_timeout_s * 1000,
       temperature: settings.temperature,

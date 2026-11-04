@@ -23,6 +23,8 @@ const cancelledJobIds = new Set<number>();
 // The LLM connection each translating job runs on, so the dashboard can show
 // which machine is working on what in parallel mode.
 const jobConnections = new Map<number, JobConnection>();
+// When each job's analysis pass started, while it runs.
+const analyzingSince = new Map<number, number>();
 // Every connection a split job is using; a split job has no single connection.
 const splitJobConnections = new Map<number, JobConnection[]>();
 // Connections this run found unreachable and stopped using.
@@ -70,6 +72,7 @@ export function releaseJob(jobId: number, controller: AbortController): void {
   if (abortControllers.get(jobId) === controller) {
     abortControllers.delete(jobId);
     jobConnections.delete(jobId);
+    analyzingSince.delete(jobId);
     splitJobConnections.delete(jobId);
     activeJobIds.delete(jobId);
     currentJobId = activeJobIds.size > 0 ? Array.from(activeJobIds)[activeJobIds.size - 1] : null;
@@ -97,6 +100,18 @@ export function isJobCancelled(jobId: number): boolean {
 
 export function clearJobCancel(jobId: number): void {
   cancelledJobIds.delete(jobId);
+}
+
+export function setJobAnalyzing(jobId: number, running: boolean): void {
+  const since = running ? Date.now() : null;
+  if (since === null) analyzingSince.delete(jobId);
+  else analyzingSince.set(jobId, since);
+  broadcast("job:analyzing", { jobId, since });
+}
+
+/** When a translating job's analysis pass started, or null when it is not in one. */
+export function getJobAnalyzingSince(jobId: number): number | null {
+  return analyzingSince.get(jobId) ?? null;
 }
 
 export function setJobConnection(jobId: number, connection: JobConnection): void {
@@ -149,6 +164,7 @@ export function resetRunState(): void {
   abortControllers.clear();
   cancelledJobIds.clear();
   jobConnections.clear();
+  analyzingSince.clear();
   splitJobConnections.clear();
   offlineConnectionIds.clear();
 }

@@ -53,6 +53,7 @@ export const SETTINGS = {
   temperature: float(0, 2),
   chunk_size: int(1, 500),
   context_window: int(0, 100),
+  analysis_max_lines: int(50, 5000),
   parallel_chunks: int(1, 8),
   request_timeout_s: int(10, 7200),
   disable_tool_calls: flag,

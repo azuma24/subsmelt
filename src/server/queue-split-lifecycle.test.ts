@@ -343,3 +343,48 @@ test("a split job translates its title on a connection still working", async (t)
     db.deleteJob(job);
   }
 });
+
+test("the analysis phase reaches status and SSE while it runs, and clears", async (t) => {
+  hedgeSettings();
+  const job = addJob({ srtExists: true, outputExists: false });
+  const events: (number | null)[] = [];
+  const { addSSEClient } = await import("./sse.js");
+  let closeClient: () => void = () => {};
+  addSSEClient({
+    setHeader: () => {},
+    writeHead: () => {},
+    flushHeaders: () => {},
+    on: (_: string, close: () => void) => {
+      closeClient = close;
+    },
+    write: (payload: string) => {
+      const data = /^event: job:analyzing\ndata: (.*)$/m.exec(payload)?.[1];
+      if (data) events.push(JSON.parse(data).since);
+      return true;
+    },
+  } as never);
+  t.after(() => closeClient());
+  let answerAnalysis: () => void = () => {};
+  useSplitFetch(t, (info) => {
+    if (info.kind === "analysis") {
+      return new Promise<Response>((resolve) => {
+        answerAnalysis = () => resolve(chatCompletion("Summary."));
+      });
+    }
+    return chatCompletion(JSON.stringify(info.lines.map((l) => `Z-${l}`)));
+  });
+  const run = queue.processQueue();
+  try {
+    await waitFor(() => queue.getJobAnalyzingSince(job) !== null, "the analysis to start");
+    answerAnalysis();
+    await run;
+    assert.equal(queue.getJobAnalyzingSince(job), null);
+    assert.equal(db.getJob(job)?.status, "done");
+    assert.equal(events.length, 2);
+    assert.equal(typeof events[0], "number");
+    assert.equal(events[1], null);
+  } finally {
+    clearHedgeSettings();
+    db.deleteJob(job);
+  }
+});

@@ -20,6 +20,7 @@ import {
   markConnectionOffline,
   registerAbort,
   releaseJob,
+  setJobAnalyzing,
   setJobConnection,
   setSplitJobConnections,
   dropSplitJobConnection,
@@ -273,6 +274,7 @@ async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
       );
     },
     onUsage: (u) => recordJobUsage(ctx, u),
+    onAnalysisPhase: (running) => setJobAnalyzing(job.id, running),
     onAnalysis: (analysis) => {
       updateJob(job.id, { analysis_context: analysis });
       logger.info("translate", `Context prepared for ${srtName} (${langCode})`, job.id, {

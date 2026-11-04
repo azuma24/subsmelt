@@ -47,6 +47,8 @@ export interface Job extends Omit<JobRow, "analysis_context" | "input_tokens" | 
   lang_code: string;
   source_lang: string;
   connection: JobConnection | null;
+  /** When the running analysis pass started (ms since epoch), or null. It runs before any cue can finish. */
+  analyzing_since: number | null;
 }
 
 export interface JobsResponse {

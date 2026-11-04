@@ -17,10 +17,11 @@ across chunk boundaries rather than resetting at each one.
 
 ## Character names and proper nouns stay consistent
 
-For files over 500 cues, SubSmelt first runs a quick analysis pass to extract
-recurring names, technical terms, and style notes into a glossary. Every chunk
-that follows sees that glossary. A character named 佐藤 doesn't become Sato in one
-subtitle and Satou in the next.
+Before translating a file, SubSmelt runs one analysis pass over an evenly spaced
+sample of its lines (500 by default, `analysis_max_lines`). It extracts recurring
+names, technical terms, and style notes into a glossary, and every chunk that
+follows sees that glossary. A character named 佐藤 doesn't become Sato in one
+subtitle and Satou in the next. The job shows "Analyzing file…" while this runs.
 
 ## Tone and register are preserved
 
@@ -49,7 +50,7 @@ SubSmelt minimises that with:
 - **Adaptive chunking** — 20 lines per call by default (`chunk_size`)
 - **Parallel workers** — tuned automatically against the model's real context window
 - **Context probing** — the LM Studio native API is queried for the actual window size
-- **A skip threshold** — the analysis pass is skipped entirely for short files
+- **A sampled analysis pass** — a capped sample of lines, not the whole file
 
 Running against a local endpoint (LM Studio, Ollama, vLLM, GPUStack) removes the
 per-call cost altogether.

@@ -4,6 +4,7 @@ import { useJobActions } from "../../hooks/useJobActions";
 import type { Job } from "../../types";
 import { ActionButton, ProgressSmall, RowActionsMenu } from "../../ui/primitives";
 import { JobStatusBadge } from "../jobs/JobStatusBadge";
+import { AnalyzingLabel } from "./AnalyzingLabel";
 import { jobDerived } from "./job-derived";
 
 interface JobCardMobileProps {
@@ -143,7 +144,11 @@ export const JobCardMobile = memo(function JobCardMobile({
       </div>
       {job.status === "translating" && (
         <div className="mt-3">
-          <ProgressSmall pct={pct} />
+          {job.analyzing_since && job.completed_cues === 0 ? (
+            <AnalyzingLabel since={job.analyzing_since} />
+          ) : (
+            <ProgressSmall pct={pct} />
+          )}
           {job.connection && (
             <div className="mt-1 truncate text-xs text-faint" title={connectionTitle ?? undefined}>
               {connectionText}

@@ -88,6 +88,8 @@ export interface TranslateFileOptions {
    * reservedConnectionIds for the file.
    */
   split?: { limits: ReadonlyMap<string, number>; hedgeTiming?: Partial<HedgeTiming> };
+  /** Fired when the analysis pass starts and ends, however it ends. */
+  onAnalysisPhase?: (running: boolean) => void;
   /** Fired once per connection the moment it first produces a translation. */
   onConnectionUsed?: (info: { id: string; label: string }) => void;
   /** Fired whenever a success comes from a different connection than the last one reported here. */
@@ -243,29 +245,34 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // down primary source doesn't fail the job before chunk fallback can start.
   let analysis = "";
   let analysisErr: unknown;
-  for (const conn of idleFirst(connections)) {
-    try {
-      analysis = await withConnection(conn, () =>
-        analyzeSubtitlesForContext(allTexts, {
-          apiKey: conn.apiKey,
-          apiHost: conn.apiHost,
-          model: conn.model,
-          provider: conn.provider,
-          lang: opts.lang,
-          temperature: 0.3,
-          abortSignal,
-          maxAnalysisLines: opts.analysisLinesByConnection?.get(conn.id) ?? opts.maxAnalysisLines,
-          requestTimeoutMs: jobTimeoutMs,
-          onUsage: usageFor("analysis", conn),
-        }),
-      );
-      markUsed(conn);
-      break;
-    } catch (e) {
-      if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED") throw e;
-      analysisErr = e;
-      opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(errorMessage(e) || e) });
+  opts.onAnalysisPhase?.(true);
+  try {
+    for (const conn of idleFirst(connections)) {
+      try {
+        analysis = await withConnection(conn, () =>
+          analyzeSubtitlesForContext(allTexts, {
+            apiKey: conn.apiKey,
+            apiHost: conn.apiHost,
+            model: conn.model,
+            provider: conn.provider,
+            lang: opts.lang,
+            temperature: 0.3,
+            abortSignal,
+            maxAnalysisLines: opts.analysisLinesByConnection?.get(conn.id) ?? opts.maxAnalysisLines,
+            requestTimeoutMs: jobTimeoutMs,
+            onUsage: usageFor("analysis", conn),
+          }),
+        );
+        markUsed(conn);
+        break;
+      } catch (e) {
+        if (errorMessage(e) === "STOP_REQUESTED" || errorMessage(e) === "JOB_CANCELLED") throw e;
+        analysisErr = e;
+        opts.onConnectionError?.({ id: conn.id, label: conn.label, error: String(errorMessage(e) || e) });
+      }
     }
+  } finally {
+    opts.onAnalysisPhase?.(false);
   }
   // Every connection failed its availability probe — surface the real error
   // rather than letting the per-line fallback pass source text through and save

@@ -80,6 +80,15 @@ export function EngineSection({ settings, updateAndSaveDebounced }: EngineSectio
               max={100}
             />
             <Field
+              label={t("settings.translationEngine.analysisMaxLines")}
+              value={str(settings.analysis_max_lines, "500")}
+              onChange={(v) => updateAndSaveDebounced("analysis_max_lines", v)}
+              help={t("settings.translationEngine.analysisMaxLinesHint")}
+              type="number"
+              min={50}
+              max={5000}
+            />
+            <Field
               label={t("settings.translationEngine.parallelChunks")}
               value={str(settings.parallel_chunks, "1")}
               onChange={(v) => updateAndSaveDebounced("parallel_chunks", v)}

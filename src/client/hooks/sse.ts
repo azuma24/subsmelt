@@ -9,6 +9,7 @@ export type SSEEventName =
   | "job:done"
   | "job:error"
   | "job:connection"
+  | "job:analyzing"
   | "job:cancelled"
   | "queue:finished"
   | "queue:stopped"
@@ -30,6 +31,7 @@ export const SSE_EVENT_NAMES: readonly SSEEventName[] = [
   "job:done",
   "job:error",
   "job:connection",
+  "job:analyzing",
   "job:cancelled",
   "queue:finished",
   "queue:stopped",
@@ -63,6 +65,7 @@ export function getSSEInvalidationKeys(name: SSEEventName, data: Record<string, 
     case "job:progress":
       return [["queue-status"]];
     case "job:analysis":
+    case "job:analyzing":
       return [];
     case "job:connection":
       // Parallel runs and fallbacks emit this per chunk.
@@ -159,10 +162,12 @@ function jobEventPatch(name: SSEEventName, data: Record<string, unknown>): Parti
         ? { connection: { id, label, host, model } }
         : null;
     }
+    case "job:analyzing":
+      return typeof data.since === "number" || data.since === null ? { analyzing_since: data.since } : null;
     case "job:analysis":
       return typeof data.analysis === "string" ? { analysis_context: data.analysis } : null;
     case "job:start":
-      return { status: "translating" };
+      return { status: "translating", analyzing_since: null };
     case "job:done":
       return {
         status: "done",

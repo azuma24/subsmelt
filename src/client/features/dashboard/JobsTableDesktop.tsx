@@ -6,6 +6,7 @@ import { useJobActions, type JobActions } from "../../hooks/useJobActions";
 import type { Job } from "../../types";
 import { MiniBtn, ProgressSmall, RowActionsMenu } from "../../ui/primitives";
 import { JobStatusBadge } from "../jobs/JobStatusBadge";
+import { AnalyzingLabel } from "./AnalyzingLabel";
 import { jobDerived } from "./job-derived";
 import { Icon } from "../../ui/Icon";
 
@@ -312,7 +313,11 @@ const JobsTableRow = memo(function JobsTableRow({
       <div className={`${TD} flex flex-col items-start justify-center gap-1`} role="cell">
         {job.status === "translating" ? (
           <>
-            <ProgressSmall pct={pct} />
+            {job.analyzing_since && job.completed_cues === 0 ? (
+              <AnalyzingLabel since={job.analyzing_since} />
+            ) : (
+              <ProgressSmall pct={pct} />
+            )}
             {/* Parallel mode runs jobs on different connections; name the machine. */}
             {job.connection && (
               <span

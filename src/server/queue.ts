@@ -33,6 +33,7 @@ export {
   getActiveJobConnections,
   getActiveJobIds,
   getCurrentJobId,
+  getJobAnalyzingSince,
   getJobConnection,
   getOfflineConnectionIds,
 } from "./queue/state.js";

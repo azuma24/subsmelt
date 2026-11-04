@@ -27,6 +27,7 @@ import {
   getCurrentJobId,
   requestStop,
   requestJobCancel,
+  getJobAnalyzingSince,
   getJobConnection,
   getActiveJobConnections,
 } from "../queue.js";
@@ -74,6 +75,7 @@ function enrichJobs(jobs: JobRow[]): Job[] {
       source_lang: task?.source_lang || "",
       // Which machine (LLM connection) a translating job runs on; null otherwise.
       connection: job.status === "translating" ? getJobConnection(job.id) : null,
+      analyzing_since: job.status === "translating" ? getJobAnalyzingSince(job.id) : null,
     };
   });
 }
