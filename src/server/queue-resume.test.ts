@@ -141,3 +141,12 @@ test("a job skipped because its output appeared leaves no progress behind", asyn
   assert.equal(db.getJob(job)?.status, "skipped");
   assert.equal(fs.existsSync(cueProgressPath(output)), false);
 });
+
+test("a changed Analysis Sample keeps the finished chunks", async (t) => {
+  const { job, state } = useResumableJob(t);
+  await stopAtTheStall(job, state);
+  config.setSetting("analysis_max_lines", "1000");
+  t.after(() => config.setSetting("analysis_max_lines", ""));
+  await queue.processQueue();
+  assert.deepEqual(state.sent, ["cue 3", "cue 4"]);
+});
