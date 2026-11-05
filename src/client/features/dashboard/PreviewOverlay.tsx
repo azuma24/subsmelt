@@ -11,6 +11,7 @@ import { ApiError, jobDownloadUrl, saveJobCues } from "../../api";
 import type { PreviewLine } from "../../types";
 import { Icon } from "../../ui/Icon";
 import { IconButton } from "../../ui/primitives";
+import { FixDialog } from "../corrections/FixDialog";
 
 interface PreviewOverlayProps {
   jobId: number;
@@ -68,6 +69,9 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
   // Pending edits keyed by stable cue index → new translated text. Cleared on
   // successful save (baseline is then refetched so highlights reflect saves).
   const [edits, setEdits] = useState<Map<number, string>>(new Map());
+  // A word selected in the cue list, offered to "Fix everywhere"; the dialog when open.
+  const [selection, setSelection] = useState<CueSelection | null>(null);
+  const [fix, setFix] = useState<CueSelection | null>(null);
 
   // Baseline translated text per cue index from the server. Used to decide
   // whether an edit actually differs from what's saved on disk.
@@ -99,6 +103,12 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
     const offset = listStartRef.current?.offsetTop ?? 0;
     setListOffset((prev) => (prev === offset ? prev : offset));
   });
+
+  useEffect(() => {
+    const onSelectionChange = () => setSelection(readCueSelection(listRef.current));
+    document.addEventListener("selectionchange", onSelectionChange);
+    return () => document.removeEventListener("selectionchange", onSelectionChange);
+  }, []);
 
   const { plot, glossary } = useMemo(() => splitAnalysisSections(previewData?.analysis || ""), [previewData?.analysis]);
   // First body line of the analysis (headings skipped) as the collapsed teaser.
@@ -283,6 +293,19 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
             >
               {t("dashboard.preview.nextIssue")}
             </button>
+            {previewData && (
+              <button
+                type="button"
+                // Keep the selection: a mousedown on the button would otherwise clear it first.
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setFix(selection ?? { text: "", column: "original" })}
+                className={`rounded-sm px-2 py-1 ${selection ? "bg-accent-soft text-accent" : "bg-surface-raised text-muted"}`}
+              >
+                {selection
+                  ? t("corrections.fix.fixSelection", { text: truncateSelection(selection.text) })
+                  : t("corrections.fix.fixAWord")}
+              </button>
+            )}
           </div>
         </div>
         <div ref={listRef} className="relative flex-1 overflow-y-auto">
@@ -409,8 +432,58 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
           </div>
         )}
       </div>
+      {fix && previewData && (
+        <FixDialog
+          find={fix.text}
+          column={fix.column}
+          srtPath={previewData.srtPath}
+          outputPath={previewData.outputPath}
+          targetLang={previewData.targetLang}
+          onClose={() => setFix(null)}
+        />
+      )}
     </ModalShell>
   );
+}
+
+/** Text selected inside one cue cell, and which column it came from. */
+interface CueSelection {
+  text: string;
+  column: "original" | "translated";
+}
+
+const MAX_SELECTION = 100;
+
+/**
+ * The current selection, when it lies in one cue cell of the list: a range in
+ * a source cell, or a range inside a translation's editor (a textarea, whose
+ * selection the document does not report). Null for anything else, and for
+ * selections spanning lines or longer than a term would be.
+ */
+function readCueSelection(list: HTMLElement | null): CueSelection | null {
+  if (!list) return null;
+  const active = document.activeElement;
+  let text = "";
+  let column: CueSelection["column"] | null = null;
+  if (active instanceof HTMLTextAreaElement && list.contains(active) && active.dataset.cueCol === "translated") {
+    text = active.value.slice(active.selectionStart, active.selectionEnd);
+    column = "translated";
+  } else {
+    const selection = document.getSelection();
+    if (!selection || selection.isCollapsed || !selection.anchorNode) return null;
+    const anchor = selection.anchorNode instanceof Element ? selection.anchorNode : selection.anchorNode.parentElement;
+    const cell = anchor?.closest<HTMLElement>("[data-cue-col]");
+    if (!cell || !list.contains(cell) || !selection.focusNode || !cell.contains(selection.focusNode)) return null;
+    text = selection.toString();
+    column = cell.dataset.cueCol === "translated" ? "translated" : "original";
+  }
+  text = text.trim();
+  if (!column || !text || /[\r\n]/.test(text) || text.length > MAX_SELECTION) return null;
+  return { text, column };
+}
+
+function truncateSelection(text: string): string {
+  return text.length > 24 ? `${text.slice(0, 23)}…` : text;
 }
 
 function hasIssue(line: PreviewLine, translatedOverride?: string): boolean {
@@ -439,6 +512,7 @@ function TranslatedEditor({ line, editCtx }: { line: PreviewLine; editCtx: EditC
   const dirty = editCtx.isDirty(line.index);
   return (
     <textarea
+      data-cue-col="translated"
       value={value}
       onChange={(e) => editCtx.onChange(line.index, e.target.value)}
       placeholder={editCtx.placeholder}
@@ -613,7 +687,9 @@ function PreviewLineRow({
         <td className="px-3 py-2 text-xs text-faint font-mono align-top whitespace-nowrap">
           {formatTimecode(line.start)}
         </td>
-        <td className="px-3 py-2 text-muted align-top text-xs">{line.original}</td>
+        <td data-cue-col="original" className="px-3 py-2 text-muted align-top text-xs">
+          {line.original}
+        </td>
         <td className="px-3 py-2 align-top text-xs">
           <TranslatedEditor line={line} editCtx={editCtx} />
         </td>
@@ -634,7 +710,9 @@ function PreviewLineRow({
       <div className="space-y-2 text-xs">
         <div>
           <div className="mb-1 text-xs uppercase text-faint">{t("dashboard.preview.colOriginal")}</div>
-          <div className="text-muted">{line.original}</div>
+          <div data-cue-col="original" className="text-muted">
+            {line.original}
+          </div>
         </div>
         <div>
           <div className="mb-1 text-xs uppercase text-faint">{t("dashboard.preview.colTranslated")}</div>
@@ -682,7 +760,9 @@ function PreviewLineGridRow({
     >
       <div className="px-3 py-2 text-faint text-xs">{line.index}</div>
       <div className="px-3 py-2 text-xs text-faint font-mono whitespace-nowrap">{formatTimecode(line.start)}</div>
-      <div className="px-3 py-2 text-muted text-xs">{line.original}</div>
+      <div data-cue-col="original" className="px-3 py-2 text-muted text-xs">
+        {line.original}
+      </div>
       <div className="px-3 py-2 text-xs">
         <TranslatedEditor line={line} editCtx={editCtx} />
       </div>

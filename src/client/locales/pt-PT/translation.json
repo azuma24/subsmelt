@@ -1660,5 +1660,61 @@
     "recent": {
       "title": "Chamadas recentes"
     }
+  },
+  "corrections": {
+    "fix": {
+      "title": "Corrigir uma palavra",
+      "fixSelection": "Corrigir «{{text}}»…",
+      "fixAWord": "Corrigir uma palavra…",
+      "inSource": "Na legenda de origem",
+      "inTranslation": "Na tradução ({{lang}})",
+      "applyTo": "Aplicar a",
+      "onlyThisFile": "Apenas este ficheiro",
+      "onlyThisFileHint": "Uma correção pontual. Nenhuma regra é guardada.",
+      "allFilesIn": "Todos os ficheiros em",
+      "folder": "Pasta",
+      "saveTo": "Guardar a regra em",
+      "newList": "uma nova lista «{{name}}»",
+      "futureFiles": "Arquivos adicionados depois também recebem a correção.",
+      "scanning": "A procurar nos seus ficheiros…",
+      "noMatches_one": "Não encontrado no {{count}} ficheiro verificado.",
+      "noMatches_many": "Não encontrado nos {{count}} ficheiros verificados.",
+      "noMatches_other": "Não encontrado nos {{count}} ficheiros verificados.",
+      "found_one": "Encontrado em {{count}} ficheiro ({{matches}} substituições). Desmarque um ficheiro para o deixar como está.",
+      "found_many": "Encontrado em {{count}} ficheiros ({{matches}} substituições). Desmarque um ficheiro para o deixar como está.",
+      "found_other": "Encontrado em {{count}} ficheiros ({{matches}} substituições). Desmarque um ficheiro para o deixar como está.",
+      "selectAll": "Selecionar tudo",
+      "selectNone": "Desmarcar tudo",
+      "matchCount_one": "{{count}}×",
+      "matchCount_many": "{{count}}×",
+      "matchCount_other": "{{count}}×",
+      "translation": "tradução",
+      "truncated": "Só os primeiros {{count}} ficheiros foram verificados.",
+      "retranslate_one": "Traduzir de novo a {{count}} tradução feita a partir destes ficheiros",
+      "retranslate_many": "Traduzir de novo as {{count}} traduções feitas a partir destes ficheiros",
+      "retranslate_other": "Traduzir de novo as {{count}} traduções feitas a partir destes ficheiros",
+      "retranslateCost": "Da última vez usaram cerca de {{tokens}} tokens.",
+      "retranslateHint": "Caso contrário, as traduções mantêm a palavra antiga.",
+      "submit_one": "Corrigir {{count}} ficheiro",
+      "submit_many": "Corrigir {{count}} ficheiros",
+      "submit_other": "Corrigir {{count}} ficheiros",
+      "saveOnly": "Guardar a regra",
+      "doneFixed_one": "{{count}} ocorrência corrigida em {{files}} ficheiro(s).",
+      "doneFixed_many": "{{count}} ocorrências corrigidas em {{files}} ficheiro(s).",
+      "doneFixed_other": "{{count}} ocorrências corrigidas em {{files}} ficheiro(s).",
+      "doneSaved": "A regra foi guardada para {{folder}}.",
+      "doneRetranslate_one": "{{count}} tradução colocada novamente na fila.",
+      "doneRetranslate_many": "{{count}} traduções colocadas novamente na fila.",
+      "doneRetranslate_other": "{{count}} traduções colocadas novamente na fila.",
+      "doneFailed_one": "{{count}} ficheiro não pôde ser alterado; consulte os Registos.",
+      "doneFailed_many": "{{count}} ficheiros não puderam ser alterados; consulte os Registos.",
+      "doneFailed_other": "{{count}} ficheiros não puderam ser alterados; consulte os Registos.",
+      "typeReplacement": "Escreva a palavra correta para ver quais ficheiros contêm a errada."
+    },
+    "preview": {
+      "run": "Pré-visualizar nos meus ficheiros",
+      "again": "Verificar de novo",
+      "saveFirst": "Guarde primeiro a lista."
+    }
   }
 }

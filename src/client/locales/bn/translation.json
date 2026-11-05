@@ -1650,5 +1650,53 @@
     "recent": {
       "title": "সাম্প্রতিক কল"
     }
+  },
+  "corrections": {
+    "fix": {
+      "title": "একটি শব্দ ঠিক করুন",
+      "fixSelection": "\"{{text}}\" ঠিক করুন…",
+      "fixAWord": "একটি শব্দ ঠিক করুন…",
+      "inSource": "উৎস সাবটাইটেলে",
+      "inTranslation": "অনুবাদে ({{lang}})",
+      "applyTo": "প্রয়োগ করুন",
+      "onlyThisFile": "শুধু এই ফাইল",
+      "onlyThisFileHint": "একবারের সংশোধন। কোনো নিয়ম সংরক্ষিত হয় না।",
+      "allFilesIn": "এর সব ফাইল:",
+      "folder": "ফোল্ডার",
+      "saveTo": "নিয়মটি সংরক্ষণ করুন",
+      "newList": "নতুন তালিকা \"{{name}}\"",
+      "futureFiles": "পরে যোগ করা ফাইলেও এটি প্রযোজ্য হবে।",
+      "scanning": "আপনার ফাইলে খোঁজা হচ্ছে…",
+      "noMatches_one": "পরীক্ষিত {{count}}টি ফাইলে পাওয়া যায়নি।",
+      "noMatches_other": "পরীক্ষিত {{count}}টি ফাইলে পাওয়া যায়নি।",
+      "found_one": "{{count}}টি ফাইলে পাওয়া গেছে ({{matches}}টি প্রতিস্থাপন)। কোনো ফাইল অপরিবর্তিত রাখতে তার টিক সরান।",
+      "found_other": "{{count}}টি ফাইলে পাওয়া গেছে ({{matches}}টি প্রতিস্থাপন)। কোনো ফাইল অপরিবর্তিত রাখতে তার টিক সরান।",
+      "selectAll": "সব নির্বাচন করুন",
+      "selectNone": "কোনোটি নয়",
+      "matchCount_one": "{{count}}×",
+      "matchCount_other": "{{count}}×",
+      "translation": "অনুবাদ",
+      "truncated": "শুধু প্রথম {{count}}টি ফাইল পরীক্ষা করা হয়েছে।",
+      "retranslate_one": "এই ফাইলগুলো থেকে তৈরি {{count}}টি অনুবাদ আবার অনুবাদ করুন",
+      "retranslate_other": "এই ফাইলগুলো থেকে তৈরি {{count}}টি অনুবাদ আবার অনুবাদ করুন",
+      "retranslateCost": "গতবার এগুলোতে প্রায় {{tokens}} টোকেন লেগেছিল।",
+      "retranslateHint": "না হলে অনুবাদে পুরোনো শব্দই থেকে যাবে।",
+      "submit_one": "{{count}}টি ফাইল ঠিক করুন",
+      "submit_other": "{{count}}টি ফাইল ঠিক করুন",
+      "saveOnly": "নিয়ম সংরক্ষণ করুন",
+      "doneFixed_one": "{{files}}টি ফাইলে {{count}}টি জায়গা ঠিক করা হয়েছে।",
+      "doneFixed_other": "{{files}}টি ফাইলে {{count}}টি জায়গা ঠিক করা হয়েছে।",
+      "doneSaved": "নিয়মটি {{folder}}-এর জন্য সংরক্ষিত হয়েছে।",
+      "doneRetranslate_one": "{{count}}টি অনুবাদ আবার সারিতে রাখা হয়েছে।",
+      "doneRetranslate_other": "{{count}}টি অনুবাদ আবার সারিতে রাখা হয়েছে।",
+      "doneFailed_one": "{{count}}টি ফাইল পরিবর্তন করা যায়নি; লগসমূহ দেখুন।",
+      "doneFailed_other": "{{count}}টি ফাইল পরিবর্তন করা যায়নি; লগসমূহ দেখুন।",
+      "typeReplacement": "কোন ফাইলে ভুল শব্দটি আছে দেখতে সঠিক শব্দটি লিখুন।"
+    },
+    "preview": {
+      "run": "আমার ফাইলে প্রিভিউ",
+      "again": "আবার পরীক্ষা করুন",
+      "saveFirst": "আগে তালিকাটি সংরক্ষণ করুন।"
+    }
   }
 }

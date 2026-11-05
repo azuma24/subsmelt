@@ -124,3 +124,48 @@ export function ruleTags(rule: CorrectionRule): Array<"output" | "both" | "phras
 export function listFolder(folder: string): string {
   return normalizeCorrectionPath(folder) ?? "";
 }
+
+/** A folder and every folder above it, nearest first, ending with the whole library (""). */
+export function ancestorFolders(folder: string): string[] {
+  const parts = listFolder(folder).split("/").filter(Boolean);
+  const out: string[] = [];
+  for (let n = parts.length; n > 0; n--) out.push(parts.slice(0, n).join("/"));
+  out.push("");
+  return out;
+}
+
+/** Scripts written without spaces between words, where a whole-word match would never fire. */
+const NO_SPACE_SCRIPTS =
+  /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}]/u;
+
+/** Whole word for spaced scripts; anywhere for Chinese, Japanese, Thai and the like. */
+export function defaultMatchFor(find: string): CorrectionRule["match"] {
+  return NO_SPACE_SCRIPTS.test(find) ? "phrase" : "word";
+}
+
+/**
+ * Add `rule` to the list `listId` (or to a new list named `newName`) and
+ * make sure that list is on for `folder`. The rule replaces one in that list
+ * with the same find text and options, so fixing a word twice does not
+ * leave two rules for it.
+ */
+export function addRuleForFolder(
+  lists: readonly CorrectionRuleSet[],
+  folder: string,
+  listId: string | null,
+  rule: CorrectionRule,
+  newName: string,
+): CorrectionRuleSet[] {
+  const same = (r: CorrectionRule) =>
+    r.find === rule.find && r.match === rule.match && r.caseSensitive === rule.caseSensitive && r.stage === rule.stage;
+  if (listId === null || !lists.some((list) => list.id === listId)) {
+    return [...lists, { ...newList(newName, folder), rules: [rule] }];
+  }
+  return lists.map((list) => {
+    if (list.id !== listId) return list;
+    const rules = list.rules.some(same)
+      ? list.rules.map((r) => (same(r) ? { ...rule, id: r.id } : r))
+      : [...list.rules, rule];
+    return { ...list, rules, paths: list.paths.includes(folder) ? list.paths : [...list.paths, folder] };
+  });
+}

@@ -1650,5 +1650,53 @@
     "recent": {
       "title": "Panggilan terbaru"
     }
+  },
+  "corrections": {
+    "fix": {
+      "title": "Perbaiki kata",
+      "fixSelection": "Perbaiki \"{{text}}\"…",
+      "fixAWord": "Perbaiki kata…",
+      "inSource": "Di subtitle sumber",
+      "inTranslation": "Di terjemahan ({{lang}})",
+      "applyTo": "Terapkan ke",
+      "onlyThisFile": "Hanya file ini",
+      "onlyThisFileHint": "Perbaikan sekali saja. Tidak ada aturan yang disimpan.",
+      "allFilesIn": "Semua file di",
+      "folder": "Folder",
+      "saveTo": "Simpan aturan ke",
+      "newList": "daftar baru \"{{name}}\"",
+      "futureFiles": "File yang ditambahkan nanti juga ikut diperbaiki.",
+      "scanning": "Mencari di file Anda…",
+      "noMatches_one": "Tidak ditemukan di {{count}} file yang diperiksa.",
+      "noMatches_other": "Tidak ditemukan di {{count}} file yang diperiksa.",
+      "found_one": "Ditemukan di {{count}} file ({{matches}} penggantian). Hapus centang file agar tidak diubah.",
+      "found_other": "Ditemukan di {{count}} file ({{matches}} penggantian). Hapus centang file agar tidak diubah.",
+      "selectAll": "Pilih semua",
+      "selectNone": "Kosongkan pilihan",
+      "matchCount_one": "{{count}}×",
+      "matchCount_other": "{{count}}×",
+      "translation": "terjemahan",
+      "truncated": "Hanya {{count}} file pertama yang diperiksa.",
+      "retranslate_one": "Terjemahkan ulang {{count}} terjemahan yang dibuat dari file ini",
+      "retranslate_other": "Terjemahkan ulang {{count}} terjemahan yang dibuat dari file ini",
+      "retranslateCost": "Terakhir kali memakan sekitar {{tokens}} token.",
+      "retranslateHint": "Jika tidak, terjemahan tetap memakai kata lama.",
+      "submit_one": "Perbaiki {{count}} file",
+      "submit_other": "Perbaiki {{count}} file",
+      "saveOnly": "Simpan aturan",
+      "doneFixed_one": "Memperbaiki {{count}} tempat di {{files}} file.",
+      "doneFixed_other": "Memperbaiki {{count}} tempat di {{files}} file.",
+      "doneSaved": "Aturan disimpan untuk {{folder}}.",
+      "doneRetranslate_one": "{{count}} terjemahan dimasukkan lagi ke antrean.",
+      "doneRetranslate_other": "{{count}} terjemahan dimasukkan lagi ke antrean.",
+      "doneFailed_one": "{{count}} file tidak dapat diubah; lihat Log.",
+      "doneFailed_other": "{{count}} file tidak dapat diubah; lihat Log.",
+      "typeReplacement": "Ketik kata yang benar untuk melihat file mana yang berisi kata yang salah."
+    },
+    "preview": {
+      "run": "Pratinjau pada file saya",
+      "again": "Periksa lagi",
+      "saveFirst": "Simpan daftar terlebih dahulu."
+    }
   }
 }

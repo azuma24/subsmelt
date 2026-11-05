@@ -1650,5 +1650,53 @@
     "recent": {
       "title": "Son çağrılar"
     }
+  },
+  "corrections": {
+    "fix": {
+      "title": "Kelime düzelt",
+      "fixSelection": "\"{{text}}\" düzelt…",
+      "fixAWord": "Kelime düzelt…",
+      "inSource": "Kaynak altyazıda",
+      "inTranslation": "Çeviride ({{lang}})",
+      "applyTo": "Uygulanacağı yer",
+      "onlyThisFile": "Yalnızca bu dosya",
+      "onlyThisFileHint": "Tek seferlik düzeltme. Kural kaydedilmez.",
+      "allFilesIn": "Şu klasördeki tüm dosyalar:",
+      "folder": "Klasör",
+      "saveTo": "Kuralı kaydet:",
+      "newList": "yeni liste \"{{name}}\"",
+      "futureFiles": "Sonradan eklenen dosyalara da uygulanır.",
+      "scanning": "Dosyalarınızda aranıyor…",
+      "noMatches_one": "Kontrol edilen {{count}} dosyada bulunamadı.",
+      "noMatches_other": "Kontrol edilen {{count}} dosyada bulunamadı.",
+      "found_one": "{{count}} dosyada bulundu ({{matches}} değiştirme). Bir dosyaya dokunulmasın istiyorsanız işaretini kaldırın.",
+      "found_other": "{{count}} dosyada bulundu ({{matches}} değiştirme). Bir dosyaya dokunulmasın istiyorsanız işaretini kaldırın.",
+      "selectAll": "Tümünü seç",
+      "selectNone": "Hiçbirini seçme",
+      "matchCount_one": "{{count}}×",
+      "matchCount_other": "{{count}}×",
+      "translation": "çeviri",
+      "truncated": "Yalnızca ilk {{count}} dosya kontrol edildi.",
+      "retranslate_one": "Bu dosyalardan yapılan {{count}} çeviriyi yeniden çevir",
+      "retranslate_other": "Bu dosyalardan yapılan {{count}} çeviriyi yeniden çevir",
+      "retranslateCost": "Geçen sefer yaklaşık {{tokens}} token kullandılar.",
+      "retranslateHint": "Aksi halde çeviriler eski kelimeyi korur.",
+      "submit_one": "{{count}} dosyayı düzelt",
+      "submit_other": "{{count}} dosyayı düzelt",
+      "saveOnly": "Kuralı kaydet",
+      "doneFixed_one": "{{files}} dosyada {{count}} yer düzeltildi.",
+      "doneFixed_other": "{{files}} dosyada {{count}} yer düzeltildi.",
+      "doneSaved": "Kural {{folder}} için kaydedildi.",
+      "doneRetranslate_one": "{{count}} çeviri yeniden kuyruğa alındı.",
+      "doneRetranslate_other": "{{count}} çeviri yeniden kuyruğa alındı.",
+      "doneFailed_one": "{{count}} dosya değiştirilemedi; Günlükler'e bakın.",
+      "doneFailed_other": "{{count}} dosya değiştirilemedi; Günlükler'e bakın.",
+      "typeReplacement": "Hangi dosyaların yanlış kelimeyi içerdiğini görmek için doğru kelimeyi yazın."
+    },
+    "preview": {
+      "run": "Dosyalarımda önizle",
+      "again": "Yeniden kontrol et",
+      "saveFirst": "Önce listeyi kaydedin."
+    }
   }
 }

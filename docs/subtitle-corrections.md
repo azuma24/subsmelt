@@ -35,6 +35,36 @@ There are two places to work with lists:
 - **Settings → Corrections** shows every list, the folders each one is on, and
   its rules. Use it for an overview or for bulk editing.
 
+## Fixing a word you spot ("Fix everywhere")
+
+In a job's preview, select a wrong word in the source or the translation and
+click **Fix "…"** in the toolbar, or click **Fix a word…** to type one. The
+dialog asks for the correct word and where to apply it:
+
+- **Only this file**: a one-off fix with no rule saved.
+- **All files in a folder** (the default): the rule is saved to a list on that
+  folder, so files added later are fixed too. The folder starts at the nearest
+  one that already has a list (a *Ubiquiti* list on `UniFi/` for a file in
+  `UniFi/Tutorials/`), and you can pick any folder above the file.
+
+Before anything is written, the dialog lists every file in scope that contains
+the word, with a count and up to two sample lines shown before and after the
+fix. All files are ticked. Untick any that should stay as they are, for example
+where "unify" is the ordinary verb. Unticking applies to this fix only; the rule
+still applies to that file's next translation.
+
+A word selected in the **source** becomes a "before translation" rule. Fixing
+a source does not change translations already made from it, so the dialog
+offers to **re-translate** them and shows how many tokens they took last time.
+A word selected in the **translation** becomes an "after translation" rule for
+that language only, and fixes the translated files directly, with no LLM
+needed. Words in Chinese, Japanese or Thai default to matching anywhere,
+because those scripts don't put spaces between words.
+
+The same dry run is under each list as **Preview on my files**. It shows what
+the whole list would change in its folders and applies to the files you leave
+ticked, once the list is saved.
+
 ## Editing a list
 
 - A rule is one line: `wrong word → correct word`. Options that differ from the

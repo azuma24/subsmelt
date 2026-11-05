@@ -1650,5 +1650,53 @@
     "recent": {
       "title": "Senaste anrop"
     }
+  },
+  "corrections": {
+    "fix": {
+      "title": "Rätta ett ord",
+      "fixSelection": "Rätta ”{{text}}”…",
+      "fixAWord": "Rätta ett ord…",
+      "inSource": "I källundertexten",
+      "inTranslation": "I översättningen ({{lang}})",
+      "applyTo": "Tillämpa på",
+      "onlyThisFile": "Bara den här filen",
+      "onlyThisFileHint": "En engångsrättning. Ingen regel sparas.",
+      "allFilesIn": "Alla filer i",
+      "folder": "Mapp",
+      "saveTo": "Spara regeln i",
+      "newList": "en ny lista ”{{name}}”",
+      "futureFiles": "Filer som läggs till senare får den också.",
+      "scanning": "Söker i dina filer…",
+      "noMatches_one": "Hittades inte i den {{count}} kontrollerade filen.",
+      "noMatches_other": "Hittades inte i de {{count}} kontrollerade filerna.",
+      "found_one": "Hittades i {{count}} fil ({{matches}} ersättningar). Avmarkera en fil för att lämna den orörd.",
+      "found_other": "Hittades i {{count}} filer ({{matches}} ersättningar). Avmarkera en fil för att lämna den orörd.",
+      "selectAll": "Markera alla",
+      "selectNone": "Avmarkera alla",
+      "matchCount_one": "{{count}}×",
+      "matchCount_other": "{{count}}×",
+      "translation": "översättning",
+      "truncated": "Bara de första {{count}} filerna kontrollerades.",
+      "retranslate_one": "Översätt om den {{count}} översättning som gjorts från de här filerna",
+      "retranslate_other": "Översätt om de {{count}} översättningar som gjorts från de här filerna",
+      "retranslateCost": "De använde ungefär {{tokens}} tokens förra gången.",
+      "retranslateHint": "Annars behåller översättningarna det gamla ordet.",
+      "submit_one": "Rätta {{count}} fil",
+      "submit_other": "Rätta {{count}} filer",
+      "saveOnly": "Spara regeln",
+      "doneFixed_one": "Rättade {{count}} ställe i {{files}} fil(er).",
+      "doneFixed_other": "Rättade {{count}} ställen i {{files}} fil(er).",
+      "doneSaved": "Regeln är sparad för {{folder}}.",
+      "doneRetranslate_one": "{{count}} översättning köad igen.",
+      "doneRetranslate_other": "{{count}} översättningar köade igen.",
+      "doneFailed_one": "{{count}} fil kunde inte ändras; se Loggar.",
+      "doneFailed_other": "{{count}} filer kunde inte ändras; se Loggar.",
+      "typeReplacement": "Skriv det rätta ordet för att se vilka filer som innehåller det felaktiga."
+    },
+    "preview": {
+      "run": "Förhandsgranska på mina filer",
+      "again": "Kontrollera igen",
+      "saveFirst": "Spara listan först."
+    }
   }
 }

@@ -1650,5 +1650,53 @@
     "recent": {
       "title": "Legutóbbi hívások"
     }
+  },
+  "corrections": {
+    "fix": {
+      "title": "Szó javítása",
+      "fixSelection": "„{{text}}” javítása…",
+      "fixAWord": "Szó javítása…",
+      "inSource": "A forrásfeliratban",
+      "inTranslation": "A fordításban ({{lang}})",
+      "applyTo": "Alkalmazás erre",
+      "onlyThisFile": "Csak ez a fájl",
+      "onlyThisFileHint": "Egyszeri javítás. Nem ment szabályt.",
+      "allFilesIn": "Minden fájl itt:",
+      "folder": "Mappa",
+      "saveTo": "Szabály mentése ide",
+      "newList": "egy új lista: „{{name}}”",
+      "futureFiles": "A később hozzáadott fájlok is megkapják.",
+      "scanning": "Keresés a fájljaidban…",
+      "noMatches_one": "Nem található a(z) {{count}} ellenőrzött fájlban.",
+      "noMatches_other": "Nem található a(z) {{count}} ellenőrzött fájlban.",
+      "found_one": "{{count}} fájlban található ({{matches}} csere). Vedd ki a pipát egy fájlnál, hogy érintetlen maradjon.",
+      "found_other": "{{count}} fájlban található ({{matches}} csere). Vedd ki a pipát egy fájlnál, hogy érintetlen maradjon.",
+      "selectAll": "Összes kijelölése",
+      "selectNone": "Kijelölés törlése",
+      "matchCount_one": "{{count}}×",
+      "matchCount_other": "{{count}}×",
+      "translation": "fordítás",
+      "truncated": "Csak az első {{count}} fájl ellenőrzése történt meg.",
+      "retranslate_one": "Az ezekből a fájlokból készült {{count}} fordítás újrafordítása",
+      "retranslate_other": "Az ezekből a fájlokból készült {{count}} fordítás újrafordítása",
+      "retranslateCost": "Legutóbb körülbelül {{tokens}} tokent használtak.",
+      "retranslateHint": "Különben a fordításokban a régi szó marad.",
+      "submit_one": "{{count}} fájl javítása",
+      "submit_other": "{{count}} fájl javítása",
+      "saveOnly": "Szabály mentése",
+      "doneFixed_one": "{{count}} hely javítva {{files}} fájlban.",
+      "doneFixed_other": "{{count}} hely javítva {{files}} fájlban.",
+      "doneSaved": "A szabály mentve ehhez: {{folder}}.",
+      "doneRetranslate_one": "{{count}} fordítás újra sorba állítva.",
+      "doneRetranslate_other": "{{count}} fordítás újra sorba állítva.",
+      "doneFailed_one": "{{count}} fájlt nem sikerült módosítani; lásd a Naplókat.",
+      "doneFailed_other": "{{count}} fájlt nem sikerült módosítani; lásd a Naplókat.",
+      "typeReplacement": "Írd be a helyes szót, és megmutatjuk, mely fájlok tartalmazzák a hibásat."
+    },
+    "preview": {
+      "run": "Előnézet a fájljaimon",
+      "again": "Ellenőrzés újra",
+      "saveFirst": "Előbb mentsd a listát."
+    }
   }
 }

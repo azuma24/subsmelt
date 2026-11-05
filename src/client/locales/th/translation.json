@@ -1650,5 +1650,53 @@
     "recent": {
       "title": "การเรียกล่าสุด"
     }
+  },
+  "corrections": {
+    "fix": {
+      "title": "แก้คำ",
+      "fixSelection": "แก้ \"{{text}}\"…",
+      "fixAWord": "แก้คำ…",
+      "inSource": "ในคำบรรยายต้นฉบับ",
+      "inTranslation": "ในคำแปล ({{lang}})",
+      "applyTo": "ใช้กับ",
+      "onlyThisFile": "เฉพาะไฟล์นี้",
+      "onlyThisFileHint": "แก้ครั้งเดียว ไม่มีการบันทึกกฎ",
+      "allFilesIn": "ทุกไฟล์ใน",
+      "folder": "โฟลเดอร์",
+      "saveTo": "บันทึกกฎไปที่",
+      "newList": "รายการใหม่ \"{{name}}\"",
+      "futureFiles": "ไฟล์ที่เพิ่มภายหลังก็จะได้รับด้วย",
+      "scanning": "กำลังค้นหาในไฟล์ของคุณ…",
+      "noMatches_one": "ไม่พบในไฟล์ที่ตรวจ {{count}} ไฟล์",
+      "noMatches_other": "ไม่พบในไฟล์ที่ตรวจ {{count}} ไฟล์",
+      "found_one": "พบใน {{count}} ไฟล์ (แทนที่ {{matches}} จุด) ยกเลิกการเลือกไฟล์ที่ไม่ต้องการแก้",
+      "found_other": "พบใน {{count}} ไฟล์ (แทนที่ {{matches}} จุด) ยกเลิกการเลือกไฟล์ที่ไม่ต้องการแก้",
+      "selectAll": "เลือกทั้งหมด",
+      "selectNone": "ไม่เลือกเลย",
+      "matchCount_one": "{{count}}×",
+      "matchCount_other": "{{count}}×",
+      "translation": "คำแปล",
+      "truncated": "ตรวจเฉพาะ {{count}} ไฟล์แรกเท่านั้น",
+      "retranslate_one": "แปลใหม่ {{count}} คำแปลที่สร้างจากไฟล์เหล่านี้",
+      "retranslate_other": "แปลใหม่ {{count}} คำแปลที่สร้างจากไฟล์เหล่านี้",
+      "retranslateCost": "ครั้งที่แล้วใช้ประมาณ {{tokens}} โทเค็น",
+      "retranslateHint": "มิฉะนั้นคำแปลจะยังใช้คำเดิม",
+      "submit_one": "แก้ {{count}} ไฟล์",
+      "submit_other": "แก้ {{count}} ไฟล์",
+      "saveOnly": "บันทึกกฎ",
+      "doneFixed_one": "แก้ {{count}} จุดใน {{files}} ไฟล์แล้ว",
+      "doneFixed_other": "แก้ {{count}} จุดใน {{files}} ไฟล์แล้ว",
+      "doneSaved": "บันทึกกฎสำหรับ {{folder}} แล้ว",
+      "doneRetranslate_one": "นำคำแปล {{count}} รายการเข้าคิวอีกครั้ง",
+      "doneRetranslate_other": "นำคำแปล {{count}} รายการเข้าคิวอีกครั้ง",
+      "doneFailed_one": "เปลี่ยน {{count}} ไฟล์ไม่ได้ ดูที่บันทึก",
+      "doneFailed_other": "เปลี่ยน {{count}} ไฟล์ไม่ได้ ดูที่บันทึก",
+      "typeReplacement": "พิมพ์คำที่ถูกเพื่อดูว่าไฟล์ใดมีคำที่ผิด"
+    },
+    "preview": {
+      "run": "ดูตัวอย่างกับไฟล์ของฉัน",
+      "again": "ตรวจอีกครั้ง",
+      "saveFirst": "บันทึกรายการก่อน"
+    }
   }
 }

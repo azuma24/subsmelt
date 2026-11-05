@@ -1,7 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import type { CorrectionRuleSet } from "../../../shared/corrections";
-import { listsForFolder, lowercaseTwin, newRule, parseQuickAdd, ruleTags, setListForFolder } from "./model";
+import {
+  addRuleForFolder,
+  ancestorFolders,
+  defaultMatchFor,
+  listsForFolder,
+  lowercaseTwin,
+  newRule,
+  parseQuickAdd,
+  ruleTags,
+  setListForFolder,
+} from "./model";
 
 const list = (id: string, paths: string[], enabled = true): CorrectionRuleSet => ({
   id,
@@ -68,4 +78,34 @@ test("collapsed rows tag only what differs from the defaults", () => {
     "phrase",
     "langs",
   ]);
+});
+
+test("a folder's ancestors run from itself up to the whole library", () => {
+  assert.deepEqual(ancestorFolders("UniFi/Tutorials/2024"), ["UniFi/Tutorials/2024", "UniFi/Tutorials", "UniFi", ""]);
+  assert.deepEqual(ancestorFolders(""), [""]);
+});
+
+test("Chinese, Japanese and Thai terms default to matching anywhere", () => {
+  assert.equal(defaultMatchFor("Ubiquity"), "word");
+  assert.equal(defaultMatchFor("優比快"), "phrase");
+  assert.equal(defaultMatchFor("ユビキティ"), "phrase");
+  assert.equal(defaultMatchFor("Привет"), "word");
+});
+
+test("fixing a word adds it to the chosen list, switches the list on for the folder, and replaces a twin rule", () => {
+  const lists = [list("ubnt", ["UniFi"])];
+  const first = addRuleForFolder(lists, "UniFi/Shorts", "ubnt", newRule("Ubiquity", "Ubiquiti"), "x");
+  assert.deepEqual(first[0].paths, ["UniFi", "UniFi/Shorts"]);
+  assert.equal(first[0].rules.length, 1);
+  const again = addRuleForFolder(first, "UniFi/Shorts", "ubnt", newRule("Ubiquity", "Ubiquiti!"), "x");
+  assert.equal(again[0].rules.length, 1);
+  assert.equal(again[0].rules[0].replace, "Ubiquiti!");
+  const fresh = addRuleForFolder(lists, "Movies", null, newRule("Jedy", "Jedi"), "Movies");
+  assert.deepEqual(
+    fresh.map((l) => [l.name, l.paths, l.rules.length]),
+    [
+      ["ubnt", ["UniFi"], 0],
+      ["Movies", ["Movies"], 1],
+    ],
+  );
 });

@@ -1650,5 +1650,53 @@
     "recent": {
       "title": "Recent calls"
     }
+  },
+  "corrections": {
+    "fix": {
+      "title": "Fix a word",
+      "fixSelection": "Fix \"{{text}}\"…",
+      "fixAWord": "Fix a word…",
+      "inSource": "In the source subtitle",
+      "inTranslation": "In the translation ({{lang}})",
+      "applyTo": "Apply to",
+      "onlyThisFile": "Only this file",
+      "onlyThisFileHint": "A one-off fix. No rule is saved.",
+      "allFilesIn": "All files in",
+      "folder": "Folder",
+      "saveTo": "Save the rule to",
+      "newList": "a new list \"{{name}}\"",
+      "futureFiles": "Files added later get it too.",
+      "scanning": "Looking for it in your files…",
+      "noMatches_one": "Not found in the {{count}} file checked.",
+      "noMatches_other": "Not found in the {{count}} files checked.",
+      "found_one": "Found in {{count}} file ({{matches}} replacements). Untick a file to leave it alone.",
+      "found_other": "Found in {{count}} files ({{matches}} replacements). Untick a file to leave it alone.",
+      "selectAll": "Select all",
+      "selectNone": "Select none",
+      "matchCount_one": "{{count}}×",
+      "matchCount_other": "{{count}}×",
+      "translation": "translation",
+      "truncated": "Only the first {{count}} files were checked.",
+      "retranslate_one": "Re-translate the {{count}} translation made from these files",
+      "retranslate_other": "Re-translate the {{count}} translations made from these files",
+      "retranslateCost": "They took about {{tokens}} tokens last time.",
+      "retranslateHint": "Otherwise the translations keep the old word.",
+      "submit_one": "Fix {{count}} file",
+      "submit_other": "Fix {{count}} files",
+      "saveOnly": "Save the rule",
+      "doneFixed_one": "Fixed {{count}} place in {{files}} file(s).",
+      "doneFixed_other": "Fixed {{count}} places in {{files}} file(s).",
+      "doneSaved": "The rule is saved for {{folder}}.",
+      "doneRetranslate_one": "{{count}} translation queued again.",
+      "doneRetranslate_other": "{{count}} translations queued again.",
+      "doneFailed_one": "{{count}} file could not be changed; see Logs.",
+      "doneFailed_other": "{{count}} files could not be changed; see Logs.",
+      "typeReplacement": "Type the correct word to see which files contain the wrong one."
+    },
+    "preview": {
+      "run": "Preview on my files",
+      "again": "Check again",
+      "saveFirst": "Save the list first."
+    }
   }
 }

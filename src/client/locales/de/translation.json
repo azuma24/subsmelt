@@ -1650,5 +1650,53 @@
     "recent": {
       "title": "Letzte Aufrufe"
     }
+  },
+  "corrections": {
+    "fix": {
+      "title": "Wort korrigieren",
+      "fixSelection": "„{{text}}“ korrigieren…",
+      "fixAWord": "Wort korrigieren…",
+      "inSource": "Im Quelluntertitel",
+      "inTranslation": "In der Übersetzung ({{lang}})",
+      "applyTo": "Anwenden auf",
+      "onlyThisFile": "Nur diese Datei",
+      "onlyThisFileHint": "Eine einmalige Korrektur. Es wird keine Regel gespeichert.",
+      "allFilesIn": "Alle Dateien in",
+      "folder": "Ordner",
+      "saveTo": "Regel speichern in",
+      "newList": "eine neue Liste „{{name}}“",
+      "futureFiles": "Später hinzugefügte Dateien erhalten sie auch.",
+      "scanning": "Suche in deinen Dateien…",
+      "noMatches_one": "In der {{count}} geprüften Datei nicht gefunden.",
+      "noMatches_other": "In den {{count}} geprüften Dateien nicht gefunden.",
+      "found_one": "In {{count}} Datei gefunden ({{matches}} Ersetzungen). Entferne den Haken bei einer Datei, um sie unverändert zu lassen.",
+      "found_other": "In {{count}} Dateien gefunden ({{matches}} Ersetzungen). Entferne den Haken bei einer Datei, um sie unverändert zu lassen.",
+      "selectAll": "Alle auswählen",
+      "selectNone": "Keine auswählen",
+      "matchCount_one": "{{count}}×",
+      "matchCount_other": "{{count}}×",
+      "translation": "Übersetzung",
+      "truncated": "Nur die ersten {{count}} Dateien wurden geprüft.",
+      "retranslate_one": "Die {{count}} Übersetzung aus diesen Dateien neu übersetzen",
+      "retranslate_other": "Die {{count}} Übersetzungen aus diesen Dateien neu übersetzen",
+      "retranslateCost": "Beim letzten Mal wurden etwa {{tokens}} Tokens verbraucht.",
+      "retranslateHint": "Sonst behalten die Übersetzungen das alte Wort.",
+      "submit_one": "{{count}} Datei korrigieren",
+      "submit_other": "{{count}} Dateien korrigieren",
+      "saveOnly": "Regel speichern",
+      "doneFixed_one": "{{count}} Stelle in {{files}} Datei(en) korrigiert.",
+      "doneFixed_other": "{{count}} Stellen in {{files}} Datei(en) korrigiert.",
+      "doneSaved": "Die Regel ist für {{folder}} gespeichert.",
+      "doneRetranslate_one": "{{count}} Übersetzung erneut eingereiht.",
+      "doneRetranslate_other": "{{count}} Übersetzungen erneut eingereiht.",
+      "doneFailed_one": "{{count}} Datei konnte nicht geändert werden; siehe Protokolle.",
+      "doneFailed_other": "{{count}} Dateien konnten nicht geändert werden; siehe Protokolle.",
+      "typeReplacement": "Gib das richtige Wort ein, um zu sehen, welche Dateien das falsche enthalten."
+    },
+    "preview": {
+      "run": "Vorschau mit meinen Dateien",
+      "again": "Erneut prüfen",
+      "saveFirst": "Speichere zuerst die Liste."
+    }
   }
 }

@@ -1650,5 +1650,53 @@
     "recent": {
       "title": "हाल की कॉल"
     }
+  },
+  "corrections": {
+    "fix": {
+      "title": "शब्द ठीक करें",
+      "fixSelection": "\"{{text}}\" ठीक करें…",
+      "fixAWord": "शब्द ठीक करें…",
+      "inSource": "स्रोत सबटाइटल में",
+      "inTranslation": "अनुवाद में ({{lang}})",
+      "applyTo": "इस पर लागू करें",
+      "onlyThisFile": "केवल यह फ़ाइल",
+      "onlyThisFileHint": "एक बार का सुधार। कोई नियम सहेजा नहीं जाता।",
+      "allFilesIn": "इसकी सभी फ़ाइलें:",
+      "folder": "फ़ोल्डर",
+      "saveTo": "नियम यहाँ सहेजें",
+      "newList": "नई सूची \"{{name}}\"",
+      "futureFiles": "बाद में जोड़ी गई फ़ाइलों पर भी लागू होगा।",
+      "scanning": "आपकी फ़ाइलों में खोजा जा रहा है…",
+      "noMatches_one": "जाँची गई {{count}} फ़ाइल में नहीं मिला।",
+      "noMatches_other": "जाँची गई {{count}} फ़ाइलों में नहीं मिला।",
+      "found_one": "{{count}} फ़ाइल में मिला ({{matches}} बदलाव)। किसी फ़ाइल को जस का तस छोड़ने के लिए उसका निशान हटाएँ।",
+      "found_other": "{{count}} फ़ाइलों में मिला ({{matches}} बदलाव)। किसी फ़ाइल को जस का तस छोड़ने के लिए उसका निशान हटाएँ।",
+      "selectAll": "सभी चुनें",
+      "selectNone": "कोई न चुनें",
+      "matchCount_one": "{{count}}×",
+      "matchCount_other": "{{count}}×",
+      "translation": "अनुवाद",
+      "truncated": "केवल पहली {{count}} फ़ाइलें जाँची गईं।",
+      "retranslate_one": "इन फ़ाइलों से बना {{count}} अनुवाद फिर से करें",
+      "retranslate_other": "इन फ़ाइलों से बने {{count}} अनुवाद फिर से करें",
+      "retranslateCost": "पिछली बार इनमें लगभग {{tokens}} टोकन लगे थे।",
+      "retranslateHint": "वरना अनुवादों में पुराना शब्द ही रहेगा।",
+      "submit_one": "{{count}} फ़ाइल ठीक करें",
+      "submit_other": "{{count}} फ़ाइलें ठीक करें",
+      "saveOnly": "नियम सहेजें",
+      "doneFixed_one": "{{files}} फ़ाइल(ों) में {{count}} जगह ठीक की गई।",
+      "doneFixed_other": "{{files}} फ़ाइल(ों) में {{count}} जगहें ठीक की गईं।",
+      "doneSaved": "नियम {{folder}} के लिए सहेजा गया।",
+      "doneRetranslate_one": "{{count}} अनुवाद फिर से कतार में।",
+      "doneRetranslate_other": "{{count}} अनुवाद फिर से कतार में।",
+      "doneFailed_one": "{{count}} फ़ाइल बदली नहीं जा सकी; लॉग देखें।",
+      "doneFailed_other": "{{count}} फ़ाइलें बदली नहीं जा सकीं; लॉग देखें।",
+      "typeReplacement": "सही शब्द लिखें, ताकि पता चले कि किन फ़ाइलों में गलत शब्द है।"
+    },
+    "preview": {
+      "run": "मेरी फ़ाइलों पर पूर्वावलोकन",
+      "again": "फिर से जाँचें",
+      "saveFirst": "पहले सूची सहेजें।"
+    }
   }
 }

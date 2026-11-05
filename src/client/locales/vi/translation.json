@@ -1650,5 +1650,53 @@
     "recent": {
       "title": "Lệnh gọi gần đây"
     }
+  },
+  "corrections": {
+    "fix": {
+      "title": "Sửa một từ",
+      "fixSelection": "Sửa \"{{text}}\"…",
+      "fixAWord": "Sửa một từ…",
+      "inSource": "Trong phụ đề nguồn",
+      "inTranslation": "Trong bản dịch ({{lang}})",
+      "applyTo": "Áp dụng cho",
+      "onlyThisFile": "Chỉ tệp này",
+      "onlyThisFileHint": "Sửa một lần. Không lưu quy tắc nào.",
+      "allFilesIn": "Tất cả tệp trong",
+      "folder": "Thư mục",
+      "saveTo": "Lưu quy tắc vào",
+      "newList": "danh sách mới \"{{name}}\"",
+      "futureFiles": "Các tệp thêm sau này cũng được áp dụng.",
+      "scanning": "Đang tìm trong các tệp của bạn…",
+      "noMatches_one": "Không tìm thấy trong {{count}} tệp đã kiểm tra.",
+      "noMatches_other": "Không tìm thấy trong {{count}} tệp đã kiểm tra.",
+      "found_one": "Tìm thấy trong {{count}} tệp ({{matches}} lần thay thế). Bỏ chọn một tệp để giữ nguyên tệp đó.",
+      "found_other": "Tìm thấy trong {{count}} tệp ({{matches}} lần thay thế). Bỏ chọn một tệp để giữ nguyên tệp đó.",
+      "selectAll": "Chọn tất cả",
+      "selectNone": "Bỏ chọn tất cả",
+      "matchCount_one": "{{count}}×",
+      "matchCount_other": "{{count}}×",
+      "translation": "bản dịch",
+      "truncated": "Chỉ {{count}} tệp đầu tiên được kiểm tra.",
+      "retranslate_one": "Dịch lại {{count}} bản dịch được tạo từ các tệp này",
+      "retranslate_other": "Dịch lại {{count}} bản dịch được tạo từ các tệp này",
+      "retranslateCost": "Lần trước chúng dùng khoảng {{tokens}} token.",
+      "retranslateHint": "Nếu không, các bản dịch vẫn giữ từ cũ.",
+      "submit_one": "Sửa {{count}} tệp",
+      "submit_other": "Sửa {{count}} tệp",
+      "saveOnly": "Lưu quy tắc",
+      "doneFixed_one": "Đã sửa {{count}} chỗ trong {{files}} tệp.",
+      "doneFixed_other": "Đã sửa {{count}} chỗ trong {{files}} tệp.",
+      "doneSaved": "Đã lưu quy tắc cho {{folder}}.",
+      "doneRetranslate_one": "Đã đưa lại {{count}} bản dịch vào hàng đợi.",
+      "doneRetranslate_other": "Đã đưa lại {{count}} bản dịch vào hàng đợi.",
+      "doneFailed_one": "Không thể thay đổi {{count}} tệp; xem Nhật ký.",
+      "doneFailed_other": "Không thể thay đổi {{count}} tệp; xem Nhật ký.",
+      "typeReplacement": "Nhập từ đúng để xem tệp nào chứa từ sai."
+    },
+    "preview": {
+      "run": "Xem trước trên tệp của tôi",
+      "again": "Kiểm tra lại",
+      "saveFirst": "Hãy lưu danh sách trước."
+    }
   }
 }

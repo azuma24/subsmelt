@@ -1650,5 +1650,53 @@
     "recent": {
       "title": "Panggilan terkini"
     }
+  },
+  "corrections": {
+    "fix": {
+      "title": "Betulkan perkataan",
+      "fixSelection": "Betulkan \"{{text}}\"…",
+      "fixAWord": "Betulkan perkataan…",
+      "inSource": "Dalam sari kata sumber",
+      "inTranslation": "Dalam terjemahan ({{lang}})",
+      "applyTo": "Guna pada",
+      "onlyThisFile": "Fail ini sahaja",
+      "onlyThisFileHint": "Pembetulan sekali sahaja. Tiada peraturan disimpan.",
+      "allFilesIn": "Semua fail dalam",
+      "folder": "Folder",
+      "saveTo": "Simpan peraturan ke",
+      "newList": "senarai baharu \"{{name}}\"",
+      "futureFiles": "Fail yang ditambah kemudian juga akan menerimanya.",
+      "scanning": "Mencari dalam fail anda…",
+      "noMatches_one": "Tidak ditemui dalam {{count}} fail yang disemak.",
+      "noMatches_other": "Tidak ditemui dalam {{count}} fail yang disemak.",
+      "found_one": "Ditemui dalam {{count}} fail ({{matches}} penggantian). Nyahtanda fail untuk membiarkannya.",
+      "found_other": "Ditemui dalam {{count}} fail ({{matches}} penggantian). Nyahtanda fail untuk membiarkannya.",
+      "selectAll": "Pilih semua",
+      "selectNone": "Nyahpilih semua",
+      "matchCount_one": "{{count}}×",
+      "matchCount_other": "{{count}}×",
+      "translation": "terjemahan",
+      "truncated": "Hanya {{count}} fail pertama yang disemak.",
+      "retranslate_one": "Terjemah semula {{count}} terjemahan yang dibuat daripada fail ini",
+      "retranslate_other": "Terjemah semula {{count}} terjemahan yang dibuat daripada fail ini",
+      "retranslateCost": "Kali lepas ia menggunakan kira-kira {{tokens}} token.",
+      "retranslateHint": "Jika tidak, terjemahan kekal dengan perkataan lama.",
+      "submit_one": "Betulkan {{count}} fail",
+      "submit_other": "Betulkan {{count}} fail",
+      "saveOnly": "Simpan peraturan",
+      "doneFixed_one": "{{count}} tempat dibetulkan dalam {{files}} fail.",
+      "doneFixed_other": "{{count}} tempat dibetulkan dalam {{files}} fail.",
+      "doneSaved": "Peraturan disimpan untuk {{folder}}.",
+      "doneRetranslate_one": "{{count}} terjemahan dibariskan semula.",
+      "doneRetranslate_other": "{{count}} terjemahan dibariskan semula.",
+      "doneFailed_one": "{{count}} fail tidak dapat diubah; lihat Log.",
+      "doneFailed_other": "{{count}} fail tidak dapat diubah; lihat Log.",
+      "typeReplacement": "Taip perkataan yang betul untuk melihat fail mana yang mengandungi perkataan salah."
+    },
+    "preview": {
+      "run": "Pratonton pada fail saya",
+      "again": "Semak semula",
+      "saveFirst": "Simpan senarai dahulu."
+    }
   }
 }
