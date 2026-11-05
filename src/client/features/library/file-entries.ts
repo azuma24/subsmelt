@@ -1,29 +1,37 @@
+import { getTaskStatus } from "./task-status";
 import { folderInScope } from "./folder-scope";
 import type { Job, TaskStatus } from "../../types";
 import type { JobStatusFilter } from "./dashboard-params";
-import { itemLanguageChips, languageState, type LibraryItem } from "./library-model";
+import { itemLanguageChips, itemTasks, languageState, type LibraryItem } from "./library-model";
 
 /** A Library file with its one-chip-per-language summary. */
 export interface FileEntry {
   item: LibraryItem;
   chips: { task: TaskStatus; status: string }[];
+  tasks: { task: TaskStatus; status: string }[];
 }
 
 export function fileEntries(items: LibraryItem[], jobsById: Map<number, Job>): FileEntry[] {
-  return items.map((item) => ({ item, chips: itemLanguageChips(item, jobsById) }));
+  return items.map((item) => ({
+    item,
+    chips: itemLanguageChips(item, jobsById),
+    tasks: itemTasks(item).map((task) => ({ task, status: getTaskStatus(task, jobsById) })),
+  }));
 }
 
 /**
  * Whether a file belongs under a status filter: it needs a transcription, has a
  * language never queued, or has a language whose job is in that status.
  */
-export function fileMatchesStatus(entry: FileEntry, status: JobStatusFilter): boolean {
-  if (status === "all") return true;
-  if (status === "needsTranscription") return entry.item.kind === "video" && entry.item.file.subtitles.length === 0;
-  if (status === "notQueued") return entry.chips.some(({ status: s }) => languageState(s) === "missing");
+export function fileMatchesStatus(entry: FileEntry, status: JobStatusFilter, target = "all"): boolean {
+  const tasks = entry.tasks.filter(({ task }) => target === "all" || targetLabel(task) === target);
+  if (status === "all") return target === "all" || tasks.length > 0;
+  if (status === "needsTranscription")
+    return target === "all" && entry.item.kind === "video" && entry.item.file.subtitles.length === 0;
+  if (status === "notQueued") return tasks.some(({ status: s }) => languageState(s) === "missing");
   // Done includes a language the scan found already translated on disk ("skipped").
-  if (status === "done") return entry.chips.some(({ status: s }) => languageState(s) === "done");
-  return entry.chips.some(({ status: s }) => s === status);
+  if (status === "done") return tasks.some(({ status: s }) => languageState(s) === "done");
+  return tasks.some(({ status: s }) => s === status);
 }
 
 const targetLabel = (task: TaskStatus) => `${task.targetLang || task.langCode} (${task.langCode})`;
@@ -52,7 +60,7 @@ export function fileMatchesFilters(
   return entry.chips.some(({ task }) => targetLabel(task) === target);
 }
 
-export type FileSort = "name-asc" | "name-desc" | "date-desc" | "date-asc";
+import type { FileSort } from "./dashboard-params";
 
 /** Sort a copy globally, with unknown dates last and stable name/path ties. */
 export function sortFileEntries(entries: FileEntry[], sort: FileSort): FileEntry[] {

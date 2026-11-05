@@ -8,10 +8,11 @@ interface FileListProps {
   entries: FileEntry[];
   rootLabel: string;
   onOpen: (key: string) => void;
+  disabled?: boolean;
 }
 
 /** One row per Library file: its name, folder and a chip per target language. */
-export function FileList({ entries, rootLabel, onOpen }: FileListProps) {
+export function FileList({ entries, rootLabel, onOpen, disabled }: FileListProps) {
   const { t } = useTranslation();
   if (entries.length === 0) {
     return (
@@ -22,9 +23,9 @@ export function FileList({ entries, rootLabel, onOpen }: FileListProps) {
   }
   return (
     <ul className="divide-y divide-border-subtle">
-      {entries.map(({ item, chips }) => (
-        <li key={item.key}>
-          <FileSummary entry={{ item, chips }} rootLabel={rootLabel} onOpen={onOpen} />
+      {entries.map((entry) => (
+        <li key={entry.item.key}>
+          <FileSummary entry={entry} rootLabel={rootLabel} onOpen={onOpen} disabled={disabled} />
         </li>
       ))}
     </ul>
@@ -37,17 +38,20 @@ export function FileSummary({
   rootLabel,
   onOpen,
   className = "",
+  disabled = false,
 }: {
   entry: FileEntry;
   rootLabel: string;
   onOpen: (key: string) => void;
   className?: string;
+  disabled?: boolean;
 }) {
   const { t } = useTranslation();
   const bare = item.kind === "video" && item.file.subtitles.length === 0;
   return (
     <button
       type="button"
+      disabled={disabled}
       onClick={() => onOpen(item.key)}
       title={item.key}
       className={`flex min-h-touch w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-left hover:bg-surface-raised ${className}`}

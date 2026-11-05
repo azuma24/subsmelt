@@ -103,6 +103,8 @@
       "delete": "删除",
       "logs": "Logs"
     },
+    "scanPartial": "扫描未完成：无法读取部分文件夹。结果可能不完整；请检查文件夹访问权限并重试。",
+    "scanPartialSummary": "部分结果：找到 {{subtitles}} 个适用字幕文件；将创建 {{jobs}} 个新任务。",
     "toast": {
       "scanComplete": "扫描完成：{{total}} 个字幕，{{newJobs}} 个新任务",
       "scanFailed": "扫描失败：{{message}}",
@@ -1470,6 +1472,7 @@
     }
   },
   "library": {
+    "jobsUnavailable": "重新加载队列前，任务状态和文件详情不可用。",
     "sort": {
       "label": "文件排序",
       "nameAsc": "名称：A–Z",

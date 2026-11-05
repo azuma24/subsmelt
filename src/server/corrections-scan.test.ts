@@ -74,6 +74,8 @@ function library(): ScanResult {
     ],
   });
   return {
+    complete: true,
+    errors: [],
     files: [
       { videoPath: null, videoName: null, videoMtime: null, subtitles: [scanned(talk, talkChi, true, job.id)] },
       {
@@ -153,4 +155,13 @@ test("a rule's exceptions keep a file out of the scan and the apply step", () =>
   const applied = applyCorrections(library(), [essayRule], [verb], false);
   assert.equal(applied.totalFixed, 0);
   assert.match(fs.readFileSync(verb, "utf8"), /the serenity of Wi-Fi/);
+});
+
+test("preview and apply refuse incomplete library scans before touching files", () => {
+  const partial = { ...library(), complete: false, errors: [{ path: "/media/missing", message: "permission denied" }] };
+  const before = fs.readFileSync(talk, "utf8");
+  const expected = /Library scan incomplete.*\/media\/missing: permission denied/;
+  assert.throws(() => scanForCorrections(partial, [rule("Serenity", "changed")], { folders: [""] }), expected);
+  assert.throws(() => applyCorrections(partial, [rule("Serenity", "changed")], [talk], true), expected);
+  assert.equal(fs.readFileSync(talk, "utf8"), before);
 });

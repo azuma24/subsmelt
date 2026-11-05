@@ -19,6 +19,7 @@ import { DesktopSidebar, MobileBottomNav } from "./app/shell";
 import { LANGUAGES } from "./app/constants";
 import { LibraryPage } from "./features/library/LibraryPage";
 import { dashboardHref } from "./features/library/dashboard-params";
+import { scanPartialMessage } from "./features/library/ScanWarning";
 import { LEGACY_REDIRECTS, LegacyRedirect } from "./app/redirects";
 
 const UsagePage = lazy(() => import("./features/usage/UsagePage").then((m) => ({ default: m.UsagePage })));
@@ -78,6 +79,9 @@ function AppInner() {
   const failedJobsRef = useRef(0);
 
   useSSE((type, data) => {
+    if (type === "scan:complete" && data.complete === false) {
+      addToast(scanPartialMessage(t, data.errors), "error", { persistent: true, key: "scan:partial" });
+    }
     if (type === "job:done") {
       addToast(
         t("dashboard.toast.jobComplete", {
@@ -111,6 +115,11 @@ function AppInner() {
     }
     if (type === "queue:finished") addToast(t("dashboard.toast.queueFinished"), "success");
     if (type === "queue:stopped") addToast(t("dashboard.toast.queueStopped"), "info");
+    if (type === "queue:failed")
+      addToast(t("dashboard.toast.queueFailed", { defaultValue: "Queue failed. Check the logs and retry." }), "error", {
+        persistent: true,
+        key: "queue:failed",
+      });
   });
 
   const queueRunning = Boolean(queueQuery.data?.running ?? jobsQuery.data?.queueRunning ?? false);

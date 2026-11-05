@@ -53,6 +53,24 @@ function Modal({ plan }: { plan: ScanPlan }) {
 
 const topFolders = summarizeScanFolders(files);
 
+test("partial preview warns with escaped errors and does not claim the scan found everything", () => {
+  const page = renderPage(
+    <Modal
+      plan={{
+        files: [],
+        newJobs: 0,
+        topFolders: [],
+        complete: false,
+        errors: [{ path: "/media/<bad>", message: "permission denied" }],
+      }}
+    />,
+  );
+  assert.ok(page.text.includes("Scan incomplete"));
+  assert.ok(page.text.includes("permission denied"));
+  assert.ok(page.html.includes("&lt;bad&gt;"));
+  assert.ok(!page.text.includes("every one already has"));
+});
+
 test("with new jobs the modal offers Proceed and pluralized folder counts", () => {
   const page = renderPage(<Modal plan={{ files, newJobs: 2, topFolders }} />);
 

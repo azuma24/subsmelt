@@ -40,6 +40,7 @@ import { QueueBand } from "./QueueBand";
 import { QuickStart } from "./QuickStart";
 import { ScanConfirmModal } from "./ScanConfirmModal";
 import { useScanFlow } from "./useScanFlow";
+import { ScanWarning } from "./ScanWarning";
 
 const TRANSCRIPTION_HISTORY_LIMIT = 8;
 
@@ -136,7 +137,11 @@ export function LibraryPage() {
 
   const tabs: { key: DashboardView; label: string; count?: number }[] = [
     // The same total as the view's All filter: jobs plus the files with no job yet.
-    { key: "jobs", label: t("library.view.jobs"), count: jobs.length + fileRowCount },
+    {
+      key: "jobs",
+      label: t("library.view.jobs"),
+      count: jobsQuery.data === undefined || jobsQuery.isError ? undefined : jobs.length + fileRowCount,
+    },
     ...(transcriptionEnabled
       ? [
           {
@@ -186,34 +191,43 @@ export function LibraryPage() {
         }
       />
 
-      <QueueBand
-        jobs={jobs}
-        queueRunning={queueRunning}
-        onRunAll={() => void runAll()}
-        onStop={() => void stop()}
-        busy={startQueueMutation.isPending || stopQueueMutation.isPending}
-      />
-      <QuickStart
-        jobs={jobs}
-        queueRunning={queueRunning}
-        onScan={() => void scan.start()}
-        onRunAll={() => void runAll()}
-      />
+      {libraryQuery.data?.complete === false && <ScanWarning errors={libraryQuery.data.errors ?? []} t={t} />}
+
+      {jobsQuery.data !== undefined && !jobsQuery.isError && (
+        <QueueBand
+          jobs={jobs}
+          queueRunning={queueRunning}
+          onRunAll={() => void runAll()}
+          onStop={() => void stop()}
+          busy={startQueueMutation.isPending || stopQueueMutation.isPending}
+        />
+      )}
+      {jobsQuery.data !== undefined && !jobsQuery.isError && (
+        <QuickStart
+          jobs={jobs}
+          queueRunning={queueRunning}
+          onScan={() => void scan.start()}
+          onRunAll={() => void runAll()}
+        />
+      )}
       {!autoTranslate && (
         <p className="shrink-0 border-b border-border px-4 py-2 text-xs text-muted">
           {t("dashboard.scanAutoTranslateOff")}
         </p>
       )}
 
-      <div role="tablist" className="flex shrink-0 gap-1 overflow-x-auto border-b border-border px-4">
+      <div
+        role="group"
+        aria-label={t("library.view.jobs")}
+        className="flex shrink-0 gap-1 overflow-x-auto border-b border-border px-4"
+      >
         {tabs.map((tab) => {
           const selected = tab.key === view;
           return (
             <button
               key={tab.key}
               type="button"
-              role="tab"
-              aria-selected={selected}
+              aria-pressed={selected}
               onClick={() => setParams({ view: tab.key })}
               className={`-mb-px inline-flex min-h-touch shrink-0 items-center gap-1 border-b-2 px-3 text-sm transition-colors duration-fast ${selected ? "border-accent font-medium text-text" : "border-transparent text-muted hover:text-text"}`}
             >
@@ -246,6 +260,8 @@ export function LibraryPage() {
               onStatusChange={(status) => setParams({ status })}
               rows={params.rows}
               onRowsChange={(rows) => setParams({ rows })}
+              fileSort={params.sort}
+              onFileSortChange={(sort) => setParams({ sort })}
               folder={params.folder}
               onFolderChange={(folder) => setParams({ folder })}
               queueRunning={queueRunning}

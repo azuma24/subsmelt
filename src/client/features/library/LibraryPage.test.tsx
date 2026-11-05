@@ -42,6 +42,36 @@ test("a failed scan preview says what failed and offers a retry", () => {
   assert.ok(!page.text.includes("No media found yet"));
 });
 
+test("partial library results display directory errors", () => {
+  const page = render([
+    noJobs,
+    settings,
+    [
+      ["library"],
+      {
+        files: [episode],
+        newJobs: 0,
+        totalSubtitles: 1,
+        complete: false,
+        errors: [{ path: "/media/private", message: "permission denied" }],
+      },
+    ],
+  ]);
+  assert.ok(page.text.includes("Scan incomplete"));
+  assert.ok(page.text.includes("/media/private"));
+  assert.ok(page.text.includes("permission denied"));
+});
+
+test("an incomplete empty preview does not claim the library is empty", () => {
+  const page = render([
+    noJobs,
+    settings,
+    [["library"], { files: [], newJobs: 0, totalSubtitles: 0, complete: false, errors: [] }],
+  ]);
+  assert.ok(page.text.includes("Scan incomplete"));
+  assert.ok(!page.text.includes("No media found yet"));
+});
+
 test("an empty library explains itself and points at media sources", () => {
   const page = render([noJobs, settings, library([])]);
   assert.ok(page.headings.includes("No media found yet"));
@@ -122,7 +152,7 @@ const configured: QuerySeed = [
 
 const selectedTab = (page: { html: string }) =>
   page.html
-    .match(/role="tab" aria-selected="true"[^>]*>(.*?)<\/button>/)?.[1]
+    .match(/aria-pressed="true"[^>]*>(.*?)<\/button>/)?.[1]
     .replace(/<[^>]+>/g, " ")
     .trim();
 
@@ -274,5 +304,33 @@ test("Files exposes an accessible sort selector on desktop and mobile, not Jobs"
     }
     const jobs = renderPage(<LibraryPage />, configured, { path: "/?rows=jobs", isMobile });
     assert.ok(!jobs.html.includes('id="library-file-sort"'));
+  }
+});
+
+test("Files remain visible when the jobs query fails, without fabricated statuses or actions", () => {
+  for (const isMobile of [false, true]) {
+    const page = renderPage(<LibraryPage />, [settings, library([episode]), [["jobs"], new SeededError("offline")]], {
+      path: "/?rows=files&status=error",
+      isMobile,
+    });
+    assert.ok(page.text.includes(episode.videoName!));
+    assert.ok(page.text.includes("Could not load the job queue: offline"));
+    assert.ok(page.text.includes("Job statuses and file details are unavailable"));
+    assert.ok(page.buttons.includes("Retry"));
+    assert.ok(!page.text.includes("Traditional Chinese"));
+    assert.ok(!page.buttons.some((button) => button.startsWith("Not queued")));
+    assert.match(page.html, /disabled=""[^>]*title=/);
+  }
+});
+
+test("Files applies the URL sort on desktop and mobile", () => {
+  const second = { ...episode, videoPath: "/media/Alpha.mkv", videoName: "Alpha.mkv" };
+  for (const isMobile of [false, true]) {
+    const page = renderPage(<LibraryPage />, [settings, noJobs, library([second, episode])], {
+      path: "/?rows=files&sort=name-desc",
+      isMobile,
+    });
+    assert.ok(page.html.indexOf(episode.videoName!) < page.html.indexOf("Alpha.mkv"));
+    assert.match(page.html, /value="name-desc" selected=""/);
   }
 });

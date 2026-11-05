@@ -14,18 +14,18 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 const DEBOUNCE_MS = 5000; // Wait 5s after last file change before scanning
 
-function getSubtitleExts(): string[] {
-  return getSetting("subtitle_extensions")
+function getWatchedExts(): string[] {
+  return `${getSetting("subtitle_extensions")},${getSetting("video_extensions")}`
     .split(",")
     .map((e) => e.trim().toLowerCase());
 }
 
 function handleFileChange(filePath: string) {
   const ext = path.extname(filePath).toLowerCase();
-  const subExts = getSubtitleExts();
+  const extensions = getWatchedExts();
 
-  // Only react to new subtitle files
-  if (!subExts.includes(ext)) return;
+  // A video can arrive after its subtitle, making an orphan eligible for work.
+  if (!ext || !extensions.includes(ext)) return;
 
   logger.info("scan", `File watcher detected: ${path.basename(filePath)}`);
 
@@ -37,7 +37,14 @@ function handleFileChange(filePath: string) {
         const result = await scanFolder(true);
         // Same announcement as an HTTP scan, so the UI's caches (including the
         // sticky media_scanned flag the checklists read) stay current.
-        broadcast("scan:complete", { newJobs: result.newJobs, total: result.totalSubtitles });
+        broadcast("scan:complete", {
+          newJobs: result.newJobs,
+          total: result.totalSubtitles,
+          complete: result.complete,
+          errors: result.errors,
+        });
+        for (const error of result.errors)
+          logger.warn("scan", `Watcher scan could not read ${error.path}: ${error.message}`);
         if (result.newJobs > 0) {
           logger.info("scan", `Watcher: ${result.newJobs} new jobs queued`);
           if (getSetting("auto_translate") === "1") runQueueSafely();

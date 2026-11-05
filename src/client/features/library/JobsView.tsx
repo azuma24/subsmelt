@@ -14,7 +14,7 @@ import { JobCardMobile, JobCardSkeleton } from "../dashboard/JobCardMobile";
 import { QueueToolbar } from "../dashboard/QueueToolbar";
 import { parentFolderLabel, useDashboardDerivedState } from "../dashboard/useDashboardDerivedState";
 import { folderInScope } from "./folder-scope";
-import type { JobStatusFilter } from "./dashboard-params";
+import type { FileSort, JobStatusFilter } from "./dashboard-params";
 import type { UseManualTranscriptionResult } from "../dashboard/useManualTranscription";
 import { Icon } from "../../ui/Icon";
 import { useLibraryQuery } from "../../hooks";
@@ -30,10 +30,31 @@ import {
   fileMatchesFilters,
   fileMatchesStatus,
   sortFileEntries,
-  type FileSort,
+  type FileEntry,
 } from "./file-entries";
 import { FileList } from "./FileList";
 import { selectCls } from "../../ui/SortControls";
+
+/** Apply only filters whose controls are available; keep selections for recovery. */
+export function visibleFileEntries(
+  entries: FileEntry[],
+  status: JobStatusFilter,
+  target: string,
+  query: string,
+  folder: string,
+  rootLabel: string,
+  sort: FileSort,
+  jobsUnavailable: boolean,
+): FileEntry[] {
+  const effectiveStatus = jobsUnavailable ? "all" : status;
+  const effectiveTarget = jobsUnavailable ? "all" : target;
+  return sortFileEntries(
+    entries
+      .filter((entry) => fileMatchesStatus(entry, effectiveStatus, effectiveTarget))
+      .filter((entry) => fileMatchesFilters(entry, query, folder, effectiveTarget, rootLabel)),
+    sort,
+  );
+}
 
 interface JobsViewProps {
   status: JobStatusFilter;
@@ -41,6 +62,8 @@ interface JobsViewProps {
   /** One row per job, or one per Library file with its language chips. */
   rows: RowLayout;
   onRowsChange: (rows: RowLayout) => void;
+  fileSort: FileSort;
+  onFileSortChange: (sort: FileSort) => void;
   /** The folder shown with its subfolders ("all" for everything), kept in the URL by the page. */
   folder: string;
   onFolderChange: (folder: string) => void;
@@ -67,6 +90,8 @@ export function JobsView({
   onStatusChange,
   rows,
   onRowsChange,
+  fileSort,
+  onFileSortChange,
   folder: folderFilter,
   onFolderChange: setFolderFilter,
   queueRunning,
@@ -88,7 +113,7 @@ export function JobsView({
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [targetFilter, setTargetFilter] = useState("all");
   const [query, setQuery] = useState("");
-  const [fileSort, setFileSort] = useState<FileSort>("name-asc");
+  const jobsUnavailable = jobsQuery.data === undefined || jobsQuery.isError;
   const searchRef = useRef<HTMLInputElement>(null);
   const libraryQuery = useLibraryQuery();
 
@@ -199,21 +224,15 @@ export function JobsView({
     ...jobSegments,
   ];
   const visibleEntries = useMemo(
-    () =>
-      sortFileEntries(
-        entries
-          .filter((entry) => fileMatchesStatus(entry, status))
-          .filter((entry) => fileMatchesFilters(entry, query, folderFilter, targetFilter, rootLabel)),
-        fileSort,
-      ),
-    [entries, status, query, folderFilter, targetFilter, rootLabel, fileSort],
+    () => visibleFileEntries(entries, status, targetFilter, query, folderFilter, rootLabel, fileSort, jobsUnavailable),
+    [entries, status, targetFilter, query, folderFilter, rootLabel, fileSort, jobsUnavailable],
   );
   // In Files rows the filters count files, not jobs.
   const shownSegments =
     rows === "files"
       ? segments.map((segment) => ({
           ...segment,
-          count: entries.filter((entry) => fileMatchesStatus(entry, segment.key)).length,
+          count: entries.filter((entry) => fileMatchesStatus(entry, segment.key, targetFilter)).length,
         }))
       : segments;
 
@@ -350,6 +369,22 @@ export function JobsView({
   const list = (() => {
     // Until the first /api/jobs response the list is unknown, not empty:
     // a skeleton or the failure, never the "no jobs" hint.
+    if (rows === "files" && jobsUnavailable) {
+      if (libraryQuery.data === undefined)
+        return (
+          <div role="status" className="p-4">
+            {t("errors.loading")}
+          </div>
+        );
+      return (
+        <FileList
+          entries={visibleEntries.map((entry) => ({ ...entry, chips: [] }))}
+          rootLabel={rootLabel}
+          onOpen={() => {}}
+          disabled
+        />
+      );
+    }
     if (jobsQuery.data === undefined && jobsQuery.isError) {
       return (
         <div className="p-4">
@@ -415,7 +450,12 @@ export function JobsView({
     );
   })();
   // A Library with nothing in it explains how to fill it instead of an empty table.
-  const libraryEmpty = libraryQuery.data !== undefined && libraryQuery.data.files.length === 0 && allJobs.length === 0;
+  const libraryEmpty =
+    !jobsUnavailable &&
+    libraryQuery.data !== undefined &&
+    libraryQuery.data.complete !== false &&
+    libraryQuery.data.files.length === 0 &&
+    allJobs.length === 0;
 
   return (
     <div className="flex min-h-[50dvh] flex-1">
@@ -458,58 +498,75 @@ export function JobsView({
                 </kbd>
               </label>
             </div>
-            <div
-              role="group"
-              aria-label={t("dashboard.filtersLabel")}
-              className="flex gap-2 overflow-x-auto border-b border-border px-4 py-3"
-            >
-              {shownSegments.map((segment) => {
-                const selected = segment.key === status;
-                return (
-                  <button
-                    key={segment.key}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => onStatusChange(segment.key)}
-                    className={`inline-flex min-h-touch shrink-0 items-center gap-2 rounded-full border px-4 text-sm transition-colors duration-fast ${selected ? "border-text bg-text text-surface" : "border-border bg-surface text-text hover:bg-surface-raised"}`}
-                  >
-                    {segment.label}
-                    <span
-                      className={`font-mono text-xs tabular-nums ${selected ? "text-surface" : segment.count === 0 ? "text-muted" : segment.color}`}
+            {rows === "files" && jobsUnavailable && !jobsQuery.isError && (
+              <p role="status" className="p-4 text-sm text-muted">
+                {t("errors.loading")} {t("library.jobsUnavailable")}
+              </p>
+            )}
+            {rows === "files" && jobsUnavailable && jobsQuery.isError && (
+              <div className="p-4">
+                <InlineError
+                  message={`${t("dashboard.queueLoadFailed", { message: getErrorMessage(jobsQuery.error) })} ${t("library.jobsUnavailable")}`}
+                  onRetry={() => void jobsQuery.refetch()}
+                />
+              </div>
+            )}
+            {!(rows === "files" && jobsUnavailable) && (
+              <div
+                role="group"
+                aria-label={t("dashboard.filtersLabel")}
+                className="flex gap-2 overflow-x-auto border-b border-border px-4 py-3"
+              >
+                {shownSegments.map((segment) => {
+                  const selected = segment.key === status;
+                  return (
+                    <button
+                      key={segment.key}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => onStatusChange(segment.key)}
+                      className={`inline-flex min-h-touch shrink-0 items-center gap-2 rounded-full border px-4 text-sm transition-colors duration-fast ${selected ? "border-text bg-text text-surface" : "border-border bg-surface text-text hover:bg-surface-raised"}`}
                     >
-                      {segment.count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            <QueueToolbar
-              hasQueueFilters={hasQueueFilters}
-              folderFilter={folderFilter}
-              targetFilter={targetFilter}
-              folderOptions={allFolderOptions}
-              targetOptions={allTargetOptions}
-              onFolderFilterChange={setFolderFilter}
-              onTargetFilterChange={setTargetFilter}
-              onClearFilters={() => {
-                onStatusChange("all");
-                setFolderFilter("all");
-                setTargetFilter("all");
-                setQuery("");
-              }}
-              // The bulk actions act on job rows; Files rows show none of them.
-              visiblePendingIds={rows === "jobs" ? visiblePendingIds : []}
-              visibleErrorIds={rows === "jobs" ? visibleErrorIds : []}
-              visibleRetranslatableIds={rows === "jobs" ? visibleRetranslatableIds : []}
-              finishedJobCount={rows === "jobs" ? finishedJobCount : 0}
-              isRetryPending={retrySelectedMutation.isPending}
-              isForcePending={forceSelectedMutation.isPending}
-              onSelectVisiblePending={() => setSelectedIds((prev) => new Set([...prev, ...visiblePendingIds]))}
-              onRetryVisibleErrors={handleRetryVisibleErrors}
-              onRetranslateVisible={handleRetranslateVisible}
-              onClearFinished={handleClearFinished}
-              t={t}
-            />
+                      {segment.label}
+                      <span
+                        className={`font-mono text-xs tabular-nums ${selected ? "text-surface" : segment.count === 0 ? "text-muted" : segment.color}`}
+                      >
+                        {segment.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {!(rows === "files" && jobsUnavailable) && (
+              <QueueToolbar
+                hasQueueFilters={hasQueueFilters}
+                folderFilter={folderFilter}
+                targetFilter={targetFilter}
+                folderOptions={allFolderOptions}
+                targetOptions={allTargetOptions}
+                onFolderFilterChange={setFolderFilter}
+                onTargetFilterChange={setTargetFilter}
+                onClearFilters={() => {
+                  onStatusChange("all");
+                  setFolderFilter("all");
+                  setTargetFilter("all");
+                  setQuery("");
+                }}
+                // The bulk actions act on job rows; Files rows show none of them.
+                visiblePendingIds={rows === "jobs" ? visiblePendingIds : []}
+                visibleErrorIds={rows === "jobs" ? visibleErrorIds : []}
+                visibleRetranslatableIds={rows === "jobs" ? visibleRetranslatableIds : []}
+                finishedJobCount={rows === "jobs" ? finishedJobCount : 0}
+                isRetryPending={retrySelectedMutation.isPending}
+                isForcePending={forceSelectedMutation.isPending}
+                onSelectVisiblePending={() => setSelectedIds((prev) => new Set([...prev, ...visiblePendingIds]))}
+                onRetryVisibleErrors={handleRetryVisibleErrors}
+                onRetranslateVisible={handleRetranslateVisible}
+                onClearFinished={handleClearFinished}
+                t={t}
+              />
+            )}
             {rows === "files" && (
               <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2">
                 <label htmlFor="library-file-sort" className="text-xs text-muted">
@@ -519,7 +576,7 @@ export function JobsView({
                   id="library-file-sort"
                   className={`${selectCls} max-w-full`}
                   value={fileSort}
-                  onChange={(event) => setFileSort(event.target.value as FileSort)}
+                  onChange={(event) => onFileSortChange(event.target.value as FileSort)}
                 >
                   <option value="name-asc">{t("library.sort.nameAsc")}</option>
                   <option value="name-desc">{t("library.sort.nameDesc")}</option>
@@ -566,7 +623,7 @@ export function JobsView({
           </>
         )}
       </section>
-      {files.openItem && (
+      {files.openItem && !jobsUnavailable && (
         <LibraryPanel
           item={files.openItem}
           jobsById={jobsById}

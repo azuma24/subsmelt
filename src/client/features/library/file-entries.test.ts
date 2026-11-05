@@ -46,7 +46,7 @@ test("status filters pick the files with that kind of work", () => {
   assert.equal(fileMatchesStatus(episode, "needsTranscription"), false);
   assert.equal(fileMatchesStatus(episode, "notQueued"), true);
   assert.equal(fileMatchesStatus(episode, "error"), true);
-  assert.equal(fileMatchesStatus(episode, "done"), false, "chi's most pressing state is the error");
+  assert.equal(fileMatchesStatus(episode, "done"), true, "another source is done");
   assert.equal(fileMatchesStatus(bare, "all"), true);
 });
 
@@ -114,4 +114,10 @@ test("global sorting covers all directions, stable ties, absent dates and filter
   const filtered = entries.filter((entry) => fileMatchesFilters(entry, "", "A", "all", "Root"));
   assert.deepEqual(keys(sortFileEntries(filtered, "date-asc")), [c, a, d]);
   assert.deepEqual(keys(entries), [b, a, az, c, d]);
+});
+
+test("combined language and status refer to the same task, including all sources", () => {
+  assert.equal(fileMatchesStatus(episode, "error", "jpn (jpn)"), false);
+  assert.equal(fileMatchesStatus(episode, "error", "chi (chi)"), true);
+  assert.equal(fileMatchesStatus(episode, "done", "chi (chi)"), true);
 });

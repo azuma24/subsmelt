@@ -103,6 +103,8 @@
       "delete": "삭제",
       "logs": "Logs"
     },
+    "scanPartial": "스캔이 불완전합니다. 일부 폴더를 읽을 수 없습니다. 결과가 누락될 수 있으니 접근 권한을 확인하고 다시 시도하세요.",
+    "scanPartialSummary": "일부 결과: 적용 가능한 자막 파일 {{subtitles}}개 발견, 새 작업 {{jobs}}개 생성 예정.",
     "toast": {
       "scanComplete": "스캔 완료: 자막 {{total}}개, 새 작업 {{newJobs}}개",
       "scanFailed": "스캔 실패: {{message}}",
@@ -1470,6 +1472,7 @@
     }
   },
   "library": {
+    "jobsUnavailable": "대기열을 다시 불러오기 전까지 작업 상태와 파일 상세 정보를 사용할 수 없습니다.",
     "sort": {
       "label": "파일 정렬",
       "nameAsc": "이름: A–Z",

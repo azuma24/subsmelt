@@ -7,6 +7,7 @@ import { LIBRARY_QUERY_KEY, useMutationWithInvalidation } from "../../hooks";
 import { useToast } from "../../ui/Toast";
 import type { ScanResult } from "../../types";
 import { summarizeScanFolders, type ScanPlan } from "./ScanConfirmModal";
+import { scanPartialMessage } from "./ScanWarning";
 
 /**
  * Scan = preview what would be queued, confirm, then run the scan that creates
@@ -38,7 +39,11 @@ export function useScanFlow() {
       const result = await scanMutation.mutateAsync();
       store(result);
       setPlan(null);
-      addToast(t("dashboard.toast.scanComplete", { total: result.totalSubtitles, newJobs: result.newJobs }), "info");
+      if (result.complete === false) {
+        addToast(scanPartialMessage(t, result.errors), "error", { persistent: true, key: "scan:partial" });
+      } else {
+        addToast(t("dashboard.toast.scanComplete", { total: result.totalSubtitles, newJobs: result.newJobs }), "info");
+      }
     } catch (e) {
       fail(e);
     }

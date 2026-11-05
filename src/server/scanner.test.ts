@@ -585,3 +585,166 @@ test("an orphan whose stat fails remains listed with an unknown modification tim
   const { files } = await scanFolder(true);
   assert.equal(files.find((file) => file.subtitles.some((sub) => sub.srtPath === lost))?.subtitleMtime, null);
 });
+
+test("preview preserves sidecars; complete scans retain video-only and output titles and prune stale titles", async (t) => {
+  useTasks("zh");
+  const dir = library("title-scan-safety", ["VideoOnly.mkv", "Pair.mkv", "Pair.srt", "Pair.zh.srt"]);
+  const file = path.join(dir, ".subsmelt_titles.json");
+  const original = JSON.stringify({
+    version: 1,
+    titles: { VideoOnly: { zh: "video" }, Pair: { zh: "pair" }, Gone: { zh: "stale" } },
+  });
+  fs.writeFileSync(file, original);
+  config.setSetting("title_sidecar", "1");
+  config.setSetting("scan_mode", "selected");
+  config.setSetting("scan_folders", JSON.stringify(["title-scan-safety"]));
+  t.after(() => {
+    config.setSetting("title_sidecar", "0");
+    config.setSetting("scan_mode", "recursive");
+    config.setSetting("scan_folders", "");
+  });
+  const preview = await scanFolder(false);
+  assert.equal(preview.complete, true);
+  assert.equal(fs.readFileSync(file, "utf8"), original);
+  const result = await scanFolder(true);
+  assert.equal(result.complete, true);
+  const { pruneTitleSidecarQueued } = await import("./translator/title-sidecar.js");
+  await pruneTitleSidecarQueued(dir, () => null);
+  assert.deepEqual(JSON.parse(fs.readFileSync(file, "utf8")).titles, {
+    VideoOnly: { zh: "video" },
+    Pair: { zh: "pair" },
+  });
+});
+
+test("excluded missing selected folders do not make an otherwise complete scan partial", async (t) => {
+  library("included-scan-safety", ["Alive.mkv"]);
+  config.setSetting("scan_mode", "selected");
+  config.setSetting("scan_folders", JSON.stringify(["included-scan-safety", "excluded-missing-safety"]));
+  config.setSetting("scan_exclude_folders", JSON.stringify(["excluded-missing-safety"]));
+  t.after(() => {
+    config.setSetting("scan_mode", "recursive");
+    config.setSetting("scan_folders", "");
+    config.setSetting("scan_exclude_folders", "");
+  });
+  const result = await scanFolder(true);
+  assert.equal(result.complete, true);
+  assert.deepEqual(result.errors, []);
+});
+
+test("unreadable selected path reports its error and blocks all sidecar pruning", async (t) => {
+  useTasks("zh");
+  const dir = library("partial-scan-safety", ["Alive.mkv"]);
+  const file = path.join(dir, ".subsmelt_titles.json");
+  const original = JSON.stringify({ version: 1, titles: { Gone: { zh: "keep" } } });
+  fs.writeFileSync(file, original);
+  config.setSetting("title_sidecar", "1");
+  config.setSetting("scan_mode", "selected");
+  config.setSetting("scan_folders", JSON.stringify(["partial-scan-safety", "missing-scan-safety"]));
+  t.after(() => {
+    config.setSetting("title_sidecar", "0");
+    config.setSetting("scan_mode", "recursive");
+    config.setSetting("scan_folders", "");
+  });
+  const result = await scanFolder(true);
+  assert.equal(result.complete, false);
+  assert.equal(result.errors.length, 1);
+  assert.equal(result.errors[0].path, path.join(mediaDir, "missing-scan-safety"));
+  assert.match(result.errors[0].message, /ENOENT/);
+  assert.equal(fs.readFileSync(file, "utf8"), original);
+});
+
+test("selected dangling and escaping symlinks report path errors unless excluded", async (t) => {
+  fs.symlinkSync(path.join(root, "absent"), path.join(mediaDir, "dangling-scan-safety"));
+  fs.symlinkSync(root, path.join(mediaDir, "outside-scan-safety"));
+  config.setSetting("scan_mode", "selected");
+  config.setSetting("scan_folders", JSON.stringify(["dangling-scan-safety", "outside-scan-safety"]));
+  t.after(() => {
+    config.setSetting("scan_mode", "recursive");
+    config.setSetting("scan_folders", "");
+    config.setSetting("scan_exclude_folders", "");
+  });
+  const result = await scanFolder(false);
+  assert.equal(result.complete, false);
+  assert.deepEqual(
+    result.errors.map((e) => e.path),
+    [path.join(mediaDir, "dangling-scan-safety"), path.join(mediaDir, "outside-scan-safety")],
+  );
+  assert.ok(result.errors.every((e) => /Cannot resolve/.test(e.message)));
+  config.setSetting("scan_exclude_folders", JSON.stringify(["dangling-scan-safety", "outside-scan-safety"]));
+  assert.equal((await scanFolder(false)).complete, true);
+});
+
+test("pruning rechecks files after a concurrent title write", async (t) => {
+  const { ensureTranslatedTitle, loadTitleSidecar, pruneTitleSidecarQueued } = await import(
+    "./translator/title-sidecar.js"
+  );
+  const dir = library("title-race-safety", ["Old.mkv"]);
+  config.setSetting("title_sidecar", "1");
+  config.setSetting("scan_mode", "selected");
+  config.setSetting("scan_folders", JSON.stringify(["title-race-safety"]));
+  t.after(() => {
+    config.setSetting("title_sidecar", "0");
+    config.setSetting("scan_mode", "recursive");
+    config.setSetting("scan_folders", "");
+  });
+  let release!: () => void;
+  let entered!: () => void;
+  const blocked = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const started = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  const write = ensureTranslatedTitle({
+    outputDir: dir,
+    base: "New",
+    langCode: "zh",
+    translate: async () => {
+      entered();
+      await blocked;
+      return "new title";
+    },
+  });
+  await started;
+  const original = fs.promises.readdir;
+  let walked!: () => void;
+  let resumeWalk!: () => void;
+  const walkedPromise = new Promise<void>((resolve) => {
+    walked = resolve;
+  });
+  const walkBlocked = new Promise<void>((resolve) => {
+    resumeWalk = resolve;
+  });
+  // Capture the old directory listing and pause before the scanner receives it.
+  fs.promises.readdir = (async (...args: Parameters<typeof original>) => {
+    const entries = await original(...args);
+    if (args[0] === dir) {
+      walked();
+      await walkBlocked;
+    }
+    return entries;
+  }) as typeof original;
+  t.after(() => {
+    fs.promises.readdir = original;
+  });
+  const scan = scanFolder(true);
+  await walkedPromise;
+  fs.writeFileSync(path.join(dir, "New.mkv"), "");
+  resumeWalk();
+  let timer!: ReturnType<typeof setTimeout>;
+  try {
+    const result = await Promise.race([
+      scan,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("scan blocked on title translation")), 1000);
+      }),
+    ]);
+    assert.equal(result.complete, true);
+  } finally {
+    clearTimeout(timer);
+    release();
+  }
+  await write;
+  await pruneTitleSidecarQueued(dir, () => null);
+  assert.equal(loadTitleSidecar(dir).titles.New?.zh, "new title");
+});

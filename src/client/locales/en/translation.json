@@ -261,6 +261,8 @@
       "delete": "Delete",
       "logs": "Logs"
     },
+    "scanPartial": "Scan incomplete: some folders could not be read. Results may be missing; check folder access and retry.",
+    "scanPartialSummary": "Partial results: {{subtitles}} applicable subtitle files found; {{jobs}} new jobs would be created.",
     "toast": {
       "scanComplete": "Scan complete: {{total}} subtitles, {{newJobs}} new jobs",
       "scanFailed": "Scan failed: {{message}}",
@@ -1470,6 +1472,7 @@
     }
   },
   "library": {
+    "jobsUnavailable": "Job statuses and file details are unavailable until the queue reloads.",
     "sort": {
       "label": "Sort files",
       "nameAsc": "Name: A–Z",

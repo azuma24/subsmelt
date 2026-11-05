@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { countPendingJobs, claimPendingJob, forceJob, getJob, updateJob, type JobRow } from "./db.js";
+import { countPendingJobs, claimPendingJob, forceJob, getJob, getJobsForList, updateJob, type JobRow } from "./db.js";
 import { getAllSettings, getTask, getSetting } from "./config.js";
 import { readSettings } from "./settings-schema.js";
 import { resolveConnectionPool, type ResolvedConnection, type LlmMode } from "./connections.js";
@@ -23,7 +23,7 @@ import {
 } from "./queue/state.js";
 import { runJob } from "./queue/run-job.js";
 import { writeJobTitle } from "./queue/titles.js";
-import { clearQueueRun, interruptedQueueRun, markQueueRun } from "./queue/run-marker.js";
+import { clearQueueRun, interruptedQueueRun, markQueueRun, writeQueueRun } from "./queue/run-marker.js";
 import { recordUsage } from "./usage.js";
 import { removePartialOutput } from "./translator/engine.js";
 
@@ -47,6 +47,8 @@ let runFilter: Set<number> | null = null;
 // own jobs are done, so the jobs a retry, a watcher scan or a one-off
 // translation queued meanwhile are never left pending.
 let requestedRun: { ids: number[] | undefined } | null = null;
+// Scope explicitly requested during this run; null means all jobs.
+let currentRunScope: Set<number> | null = null;
 
 function rememberRunRequest(ids: number[] | undefined): void {
   if (!requestedRun) requestedRun = { ids };
@@ -62,6 +64,8 @@ let splitJobRunning = false;
 // the next one by rank takes over any job queued since, instead of idling beside
 // it for the rest of the run.
 const liveSlots = new Set<number>();
+// Track claims even when setup fails before runJob can register its controller.
+const claimedJobs = new Set<number>();
 
 // Hard ceiling on concurrent translation workers (matches the per-file connection cap).
 const MAX_WORKERS = 32;
@@ -141,8 +145,11 @@ export function runQueueSafely(onlyIds?: number[]): void {
 }
 
 export async function processQueue(onlyIds?: number[]) {
+  const prior = !isRunning ? interruptedQueueRun() : null;
   markQueueRun(onlyIds && onlyIds.length > 0 ? onlyIds : undefined);
   if (isRunning) {
+    if (!onlyIds?.length) currentRunScope = null;
+    else if (currentRunScope) for (const id of onlyIds) currentRunScope.add(id);
     // A run of all jobs already re-checks for pending work before it ends.
     if (runFilter) rememberRunRequest(onlyIds && onlyIds.length > 0 ? onlyIds : undefined);
     return;
@@ -156,16 +163,24 @@ export async function processQueue(onlyIds?: number[]) {
     );
     return;
   }
+  // Snapshot an older all-jobs marker into concrete pending IDs: restoring an
+  // unrestricted marker would also resume work that this run explicitly stopped.
+  const priorPending = prior
+    ? getJobsForList()
+        .filter((job) => job.status === "pending" && (!prior.ids || prior.ids.includes(job.id)))
+        .map((job) => job.id)
+    : [];
   isRunning = true;
+  currentRunScope = onlyIds?.length ? new Set(onlyIds) : null;
   resetRunState();
   resetConnectionLocks();
 
   let filter = onlyIds && onlyIds.length > 0 ? new Set(onlyIds) : null;
   runFilter = filter;
-  const pendingCount = countPendingJobs(filter);
-  logger.info("queue", `Queue started (${pendingCount} pending jobs${filter ? ", selected subset" : ""})`);
-
+  let failed = false;
   try {
+    const pendingCount = countPendingJobs(filter);
+    logger.info("queue", `Queue started (${pendingCount} pending jobs${filter ? ", selected subset" : ""})`);
     // Adaptive worker pool: every worker re-resolves the LLM mode on each job
     // claim, so switching Single/Fallback ⇄ Parallel takes effect mid-run without
     // restarting the queue. One slot per configured connection (capped); a slot
@@ -179,7 +194,18 @@ export async function processQueue(onlyIds?: number[]) {
     // the title repair is calling the LLM has nothing to start it. Repair, then
     // look for pending work again before declaring the run finished.
     do {
-      await Promise.all(Array.from({ length: slots }, (_, i) => runSlot(i, filter)));
+      const results = await Promise.allSettled(
+        Array.from({ length: slots }, (_, i) =>
+          runSlot(i, filter).catch((error) => {
+            // Stop siblings immediately, but retain ownership until all have settled.
+            setStopRequested(true);
+            abortAllJobs("queue_failure");
+            throw error;
+          }),
+        ),
+      );
+      const rejected = results.find((result) => result.status === "rejected");
+      if (rejected?.status === "rejected") throw rejected.reason;
       if (isStopRequested()) break;
       await repairMissingTitles();
       filter = nextRunFilter(filter);
@@ -194,15 +220,39 @@ export async function processQueue(onlyIds?: number[]) {
       broadcast("queue:finished", {});
       void notify("queue:finished", {});
     }
+  } catch (error) {
+    failed = true;
+    throw error;
   } finally {
-    clearQueueRun();
-    titleRepairJobs.length = 0;
-    isRunning = false;
-    runFilter = null;
-    // A stop ends the run and whatever was asked for during it.
-    requestedRun = null;
-    resetRunState();
-    resetConnectionLocks();
+    // Jobs that failed between claim and runJob (or while waiting for a lock)
+    // have no job-level settlement. Do not disturb jobs already settled.
+    try {
+      for (const id of claimedJobs) {
+        if (getJob(id)?.status === "translating") updateJob(id, { status: "pending", completed_cues: 0, error: null });
+      }
+      const marker = interruptedQueueRun();
+      if (!failed && isStopRequested()) {
+        const remaining = priorPending.filter(
+          (id) => currentRunScope?.has(id) === false && getJob(id)?.status === "pending",
+        );
+        if (remaining.length) writeQueueRun(remaining, true);
+        else clearQueueRun();
+      } else if (!failed && (!marker || countPendingJobs(marker.ids ? new Set(marker.ids) : null) === 0)) {
+        clearQueueRun();
+      }
+    } finally {
+      claimedJobs.clear();
+      titleRepairJobs.length = 0;
+      isRunning = false;
+      runFilter = null;
+      requestedRun = null;
+      currentRunScope = null;
+      resetRunState();
+      resetConnectionLocks();
+      // Only announce failure once all workers and queue state have settled.
+      // Do not expose exception text, which can contain paths or credentials.
+      if (failed) broadcast("queue:failed", {});
+    }
   }
 }
 
@@ -252,6 +302,7 @@ function claimNextJob(filter: Set<number> | null): JobRow | null {
   while (!isStopRequested()) {
     const claimed = claimPendingJob(filter);
     if (!claimed) return null;
+    claimedJobs.add(claimed.id);
     const job = withStandardOutput(claimed);
 
     if (fs.existsSync(job.output_path) && !job.force) {
@@ -368,6 +419,7 @@ async function adaptiveWorker(index: number, filter: Set<number> | null) {
     const releasePrimary = primary ? await acquireConnectionLock(primary) : undefined;
     let stopped = false;
     try {
+      if (isStopRequested()) break;
       splitJobRunning = split;
       stopped = await runJob(job, order, jobMode, primary ? new Set([primary.id]) : new Set<string>(), split);
     } finally {

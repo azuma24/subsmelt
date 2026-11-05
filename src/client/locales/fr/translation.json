@@ -103,6 +103,8 @@
       "delete": "Supprimer",
       "logs": "Logs"
     },
+    "scanPartial": "Analyse incomplète : certains dossiers sont illisibles. Des résultats peuvent manquer ; vérifiez les accès et réessayez.",
+    "scanPartialSummary": "Résultats partiels : {{subtitles}} fichiers de sous-titres applicables trouvés ; {{jobs}} nouvelles tâches seraient créées.",
     "toast": {
       "scanComplete": "Analyse terminée : {{total}} sous-titres, {{newJobs}} nouvelles tâches",
       "scanFailed": "Échec de l’analyse : {{message}}",
@@ -1477,6 +1479,7 @@
     }
   },
   "library": {
+    "jobsUnavailable": "Les états des tâches et les détails des fichiers seront indisponibles jusqu’au rechargement de la file.",
     "sort": {
       "label": "Trier les fichiers",
       "nameAsc": "Nom : A–Z",

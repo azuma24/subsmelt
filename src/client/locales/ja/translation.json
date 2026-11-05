@@ -103,6 +103,8 @@
       "delete": "削除",
       "logs": "Logs"
     },
+    "scanPartial": "スキャンは不完全です。一部のフォルダーを読み取れませんでした。結果が欠けている可能性があります。アクセス権を確認して再試行してください。",
+    "scanPartialSummary": "部分的な結果：対象字幕ファイル {{subtitles}} 件、新規ジョブ {{jobs}} 件を作成予定。",
     "toast": {
       "scanComplete": "スキャン完了：字幕 {{total}} 件、新規ジョブ {{newJobs}} 件",
       "scanFailed": "スキャン失敗：{{message}}",
@@ -1470,6 +1472,7 @@
     }
   },
   "library": {
+    "jobsUnavailable": "キューを再読み込みするまで、ジョブの状態とファイルの詳細は利用できません。",
     "sort": {
       "label": "ファイルの並べ替え",
       "nameAsc": "名前：A–Z",

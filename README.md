@@ -112,3 +112,64 @@ AI SDK, and a Python FastAPI backend for speech to text.
 Translation engine ported from
 [subtitle-translator-electron](https://github.com/gnehs/subtitle-translator-electron)
 by gnehs (MIT License).
+
+
+## Security and ingress
+
+SubSmelt is a single-user administration service, not a multi-user security boundary.
+By default it listens on all interfaces and has **no authentication**; anyone who
+can connect can read library paths, logs and job data, change settings, start
+work that incurs charges, and cause the service to access configured files and
+backends. Settings responses redact configured secrets, but that is not a
+substitute for access control. Use only on a network where every reachable
+client is trusted; LAN membership alone does not make a network trustworthy.
+Do not expose the default service to the internet.
+
+Two optional environment-based controls can be enabled together (existing installs
+remain unchanged until configured):
+
+- `SUBSMELT_ALLOWED_HOSTS`: comma-separated exact HTTP Host authorities, for
+  example `localhost:3000,192.168.1.10:3000,subs.example.com`. Matching is
+  case-insensitive, includes the port when present, and also applies to reads,
+  static files, SSE, and health checks. IPv6 uses brackets, e.g. `[::1]:3000`.
+  No wildcards, schemes, paths, or forwarded host headers are accepted. A
+  configured empty or malformed list prevents startup. This blocks browser DNS
+  rebinding using an unlisted hostname, including same-origin GET requests;
+  it does not stop a direct client forging an allowed Host or an attacker who
+  controls an allowed hostname. Configure every actual access authority.
+- `SUBSMELT_BASIC_USER` and `SUBSMELT_BASIC_PASSWORD`: both must be nonempty;
+  the username cannot contain `:`. The server requires HTTP Basic authentication
+  on every request including assets, SSE, and health checks. Partial configuration
+  prevents startup. Store the values securely, never in a committed compose file;
+  environment variables can be visible to host/container administrators. Basic
+  credentials are only encoded, not encrypted: use HTTPS through a trusted
+  reverse proxy, or an encrypted private tunnel. Do not use Basic over plain LAN
+  HTTP. Authentication is shared: it does not provide accounts, roles, rate
+  limiting, MFA, or protection from a compromised authenticated client.
+
+For authenticated remote ingress, place a TLS reverse proxy with authentication
+(or the optional Basic guard above) in front of SubSmelt, preserve the original
+`Host` header and configure its exact public authority in the allow-list.
+Bind the backend to loopback or a private container network and firewall it so
+clients cannot bypass the proxy. In Docker, `HOST=127.0.0.1` inside the container
+is not accessible from a separate proxy container; use a private network instead.
+The proxy must overwrite untrusted forwarding headers. This does not secure the
+separate Whisper backend: isolate and authenticate it independently.
+
+The bundled Docker health check sends an unauthenticated localhost request; it
+will fail if Basic is enabled or localhost is not allow-listed. Configure an
+authenticated health check without putting credentials in command arguments, or
+disable that container health check and monitor through a protected ingress.
+Host validation and authentication intentionally do not exempt `/api/health`.
+The existing cross-site request guard blocks common browser cross-origin writes,
+but is not authentication and, without a configured host allow-list, cannot
+prevent DNS rebinding. Non-browser clients can forge browser headers.
+
+Media subfolder checks reject traversal and resolve existing symlinks (including
+existing ancestors of new paths); symlinks that resolve outside the media root
+or are dangling are refused. This is a point-in-time check, **not** an atomic
+filesystem sandbox: a local process able to replace paths/symlinks between
+validation and use can redirect later operations, and other file operations and
+external downloaders are not all covered by this helper. Restrict write access to
+media directories to trusted users and run the service with least filesystem
+privilege. Do not mount sensitive host directories into the container.

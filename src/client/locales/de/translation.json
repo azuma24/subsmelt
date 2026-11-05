@@ -103,6 +103,8 @@
       "delete": "Löschen",
       "logs": "Logs"
     },
+    "scanPartial": "Scan unvollständig: Einige Ordner konnten nicht gelesen werden. Ergebnisse können fehlen; Zugriff prüfen und erneut versuchen.",
+    "scanPartialSummary": "Teilergebnisse: {{subtitles}} passende Untertiteldateien gefunden; {{jobs}} neue Aufträge würden erstellt.",
     "toast": {
       "scanComplete": "Scan abgeschlossen: {{total}} Untertitel, {{newJobs}} neue Aufträge",
       "scanFailed": "Scan fehlgeschlagen: {{message}}",
@@ -1470,6 +1472,7 @@
     }
   },
   "library": {
+    "jobsUnavailable": "Auftragsstatus und Dateidetails sind bis zum erneuten Laden der Warteschlange nicht verfügbar.",
     "sort": {
       "label": "Dateien sortieren",
       "nameAsc": "Name: A–Z",

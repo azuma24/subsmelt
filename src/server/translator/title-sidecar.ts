@@ -26,28 +26,43 @@ function titleSidecarPath(dir: string): string {
  */
 export function loadTitleSidecar(dir: string): TitleSidecar {
   try {
-    const file = titleSidecarPath(dir);
-    if (!fs.existsSync(file)) return EMPTY_SIDECAR;
-    const raw = fs.readFileSync(file, "utf8");
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || typeof parsed.titles !== "object" || parsed.titles === null) {
-      return EMPTY_SIDECAR;
-    }
-    const titles: Record<string, Record<string, string>> = {};
-    for (const [base, byLang] of Object.entries(parsed.titles as Record<string, unknown>)) {
-      if (typeof base !== "string" || !byLang || typeof byLang !== "object") continue;
-      const langs: Record<string, string> = {};
-      for (const [lang, title] of Object.entries(byLang as Record<string, unknown>)) {
-        if (typeof lang === "string" && typeof title === "string" && lang.trim() && title.trim()) {
-          langs[lang] = title;
-        }
-      }
-      if (Object.keys(langs).length > 0) titles[base] = langs;
-    }
-    return { version: 1, titles };
+    return readTitleSidecar(dir);
   } catch {
     return EMPTY_SIDECAR;
   }
+}
+
+function readTitleSidecar(dir: string, strict = false): TitleSidecar {
+  const raw = fs.readFileSync(titleSidecarPath(dir), "utf8");
+  const parsed = JSON.parse(raw);
+  if (
+    !parsed ||
+    typeof parsed !== "object" ||
+    !parsed.titles ||
+    typeof parsed.titles !== "object" ||
+    Array.isArray(parsed.titles)
+  ) {
+    if (strict) throw new Error("Invalid title sidecar structure");
+    return EMPTY_SIDECAR;
+  }
+  const titles: Record<string, Record<string, string>> = {};
+  for (const [base, byLang] of Object.entries(parsed.titles as Record<string, unknown>)) {
+    if (!byLang || typeof byLang !== "object" || Array.isArray(byLang)) {
+      if (strict) throw new Error("Invalid title sidecar entry");
+      continue;
+    }
+    const langs: Record<string, string> = {};
+    for (const [lang, title] of Object.entries(byLang as Record<string, unknown>)) {
+      if (typeof title === "string" && lang.trim() && title.trim()) {
+        langs[lang] = title;
+      } else if (strict) {
+        throw new Error("Invalid title sidecar title");
+      }
+    }
+    if (Object.keys(langs).length > 0) titles[base] = langs;
+    else if (strict) throw new Error("Empty title sidecar entry");
+  }
+  return { version: 1, titles };
 }
 
 /** Look up a cached translated title, if any. */
@@ -118,7 +133,7 @@ export function pruneTitleSidecar(dir: string, validBases: ReadonlySet<string>):
     const file = titleSidecarPath(dir);
     if (!fs.existsSync(file)) return;
 
-    const sidecar = loadTitleSidecar(dir);
+    const sidecar = readTitleSidecar(dir, true);
     const titles: Record<string, Record<string, string>> = {};
     for (const [base, langs] of Object.entries(sidecar.titles)) {
       if (validBases.has(base)) titles[base] = langs;
@@ -250,8 +265,11 @@ export interface EnsureTitleOptions {
 const dirLocks = new Map<string, Promise<unknown>>();
 
 /** Prune serialized behind the same per-directory lock as title writes. */
-export function pruneTitleSidecarQueued(dir: string, validBases: ReadonlySet<string>): Promise<void> {
-  return withDirLock(dir, async () => pruneTitleSidecar(dir, validBases));
+export function pruneTitleSidecarQueued(dir: string, validBases: () => ReadonlySet<string> | null): Promise<void> {
+  return withDirLock(dir, async () => {
+    const current = validBases();
+    if (current) pruneTitleSidecar(dir, current);
+  });
 }
 
 async function withDirLock<T>(dir: string, fn: () => Promise<T>): Promise<T> {

@@ -3,6 +3,7 @@ import type { TFunction } from "../../i18n";
 import type { ScannedFile } from "../../types";
 import { ModalShell } from "../../ui/ModalShell";
 import { Icon } from "../../ui/Icon";
+import { ScanWarning } from "./ScanWarning";
 
 export interface ScanFolderCount {
   name: string;
@@ -13,6 +14,8 @@ export interface ScanPlan {
   files: ScannedFile[];
   newJobs: number;
   topFolders: ScanFolderCount[];
+  complete?: boolean;
+  errors?: { path: string; message: string }[];
 }
 
 const TOP_FOLDER_LIMIT = 3;
@@ -91,12 +94,15 @@ export function ScanConfirmModal({ scanPlan, onClose, onConfirm, t }: ScanConfir
         </button>
       </div>
       <p className="mt-2 text-sm text-muted">
-        {noTargetApplies
-          ? t("dashboard.scanConfirm.summaryNoTarget", { subtitles: untargetedSubtitles })
-          : nothingNew
-            ? t("dashboard.scanConfirm.summaryNothingNew", { subtitles })
-            : t("dashboard.scanConfirm.summary", { subtitles, jobs: scanPlan.newJobs })}
+        {scanPlan.complete === false
+          ? t("dashboard.scanPartialSummary", { subtitles, jobs: scanPlan.newJobs })
+          : noTargetApplies
+            ? t("dashboard.scanConfirm.summaryNoTarget", { subtitles: untargetedSubtitles })
+            : nothingNew
+              ? t("dashboard.scanConfirm.summaryNothingNew", { subtitles })
+              : t("dashboard.scanConfirm.summary", { subtitles, jobs: scanPlan.newJobs })}
       </p>
+      {scanPlan.complete === false && <ScanWarning errors={scanPlan.errors ?? []} t={t} />}
       <div className="mt-3 rounded-sm border border-border bg-surface-raised p-3">
         <div className="text-xs text-faint">{t("dashboard.scanConfirm.topFolders")}</div>
         <div className="mt-1 text-sm text-text">

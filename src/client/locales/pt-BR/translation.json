@@ -103,6 +103,8 @@
       "delete": "Excluir",
       "logs": "Logs"
     },
+    "scanPartial": "Escaneamento incompleto: algumas pastas não puderam ser lidas. Resultados podem estar ausentes; verifique o acesso e tente novamente.",
+    "scanPartialSummary": "Resultados parciais: {{subtitles}} arquivos de legenda aplicáveis encontrados; {{jobs}} novos trabalhos seriam criados.",
     "toast": {
       "scanComplete": "Escaneamento concluído: {{total}} legendas, {{newJobs}} novos trabalhos",
       "scanFailed": "Falha no escaneamento: {{message}}",
@@ -1477,6 +1479,7 @@
     }
   },
   "library": {
+    "jobsUnavailable": "Os status dos trabalhos e detalhes dos arquivos ficarão indisponíveis até a fila ser recarregada.",
     "sort": {
       "label": "Ordenar arquivos",
       "nameAsc": "Nome: A–Z",

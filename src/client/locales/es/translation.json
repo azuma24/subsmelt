@@ -103,6 +103,8 @@
       "delete": "Eliminar",
       "logs": "Logs"
     },
+    "scanPartial": "Escaneo incompleto: no se pudieron leer algunas carpetas. Pueden faltar resultados; comprueba el acceso y vuelve a intentarlo.",
+    "scanPartialSummary": "Resultados parciales: {{subtitles}} archivos de subtítulos aplicables encontrados; se crearían {{jobs}} trabajos nuevos.",
     "toast": {
       "scanComplete": "Escaneo completado: {{total}} subtítulos, {{newJobs}} trabajos nuevos",
       "scanFailed": "Error en el escaneo: {{message}}",
@@ -1477,6 +1479,7 @@
     }
   },
   "library": {
+    "jobsUnavailable": "Los estados de los trabajos y los detalles de los archivos no están disponibles hasta que se recargue la cola.",
     "sort": {
       "label": "Ordenar archivos",
       "nameAsc": "Nombre: A–Z",

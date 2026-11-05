@@ -60,6 +60,8 @@ test("SSE invalidation keys are targeted by event type", () => {
     ["youtube", "pipeline"],
     ["usage"],
   ]);
+  assert.ok(SSE_EVENT_NAMES.includes("queue:failed"));
+  assert.deepEqual(getSSEInvalidationKeys("queue:failed"), getSSEInvalidationKeys("queue:finished"));
   assert.deepEqual(getSSEInvalidationKeys("scan:complete"), [
     ["jobs"],
     ["queue-status"],

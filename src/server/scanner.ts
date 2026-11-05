@@ -5,6 +5,7 @@ import { createJob, listJobPathsAndStatuses, listJobTaskStatuses, resetJob } fro
 import { parseRules, resolveDirectoryRule } from "./directory-rules.js";
 import { fileLangCodes } from "./language-codes.js";
 import { logger } from "./logger.js";
+import { errorMessage } from "./errors.js";
 import { removePartialOutput } from "./translator/engine.js";
 import { loadTitleSidecar, getTitle, pruneTitleSidecarQueued, type TitleSidecar } from "./translator/title-sidecar.js";
 import { caseKey, findAnyCase, stripLangSuffix, taskOutputName, taskOutputNames } from "./output-names.js";
@@ -65,24 +66,34 @@ function getJobCountsByFolder(): Map<string, FolderCounts> {
  * to freeze every request and SSE heartbeat for the whole scan) while keeping
  * the order a synchronous walk produced, which the tie-breaks below rely on.
  */
-async function walkDir(dir: string, results: string[] = [], depth = 999): Promise<string[]> {
+async function walkDir(
+  dir: string,
+  results: string[],
+  directories: Set<string>,
+  errors: { path: string; message: string }[],
+  skippedFolders: string[],
+  depth = 999,
+): Promise<void> {
+  const relativePath = path.relative(path.resolve(MEDIA_DIR), path.resolve(dir)).split(path.sep).join("/");
+  if (pathIsInScope(relativePath, skippedFolders)) return;
   let entries: fs.Dirent[];
   try {
     entries = await fs.promises.readdir(dir, { withFileTypes: true });
-  } catch {
-    return results; // skip inaccessible directories
+  } catch (error) {
+    errors.push({ path: dir, message: errorMessage(error) });
+    return;
   }
+  directories.add(dir);
   for (const entry of entries) {
     if (entry.name.startsWith(".")) continue; // skip hidden
     if (entry.isSymbolicLink()) continue; // skip symlinks to avoid cycles
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (depth > 0) await walkDir(fullPath, results, depth - 1);
+      if (depth > 0) await walkDir(fullPath, results, directories, errors, skippedFolders, depth - 1);
     } else {
       results.push(fullPath);
     }
   }
-  return results;
 }
 
 /** Modification times for many files at once, a few stats in flight; unreadable files map to null. */
@@ -285,22 +296,29 @@ export async function scanFolder(createJobs = true): Promise<ScanResult> {
   const selectedFolders = parseFolderSetting(getSetting("scan_folders") || "");
   const excludedFolders = parseFolderSetting(getSetting("scan_exclude_folders") || "");
 
-  let allFiles: string[];
+  let allFiles: string[] = [];
+  const walkedDirs = new Set<string>();
+  const errors: { path: string; message: string }[] = [];
+  const skippedFolders = [...excludedFolders, youtubeFolder()].filter((folder): folder is string => Boolean(folder));
   if (scanMode === "root_only") {
     // Only files directly in MEDIA_DIR, no subdirectories
-    allFiles = await walkDir(MEDIA_DIR, [], 0);
+    await walkDir(MEDIA_DIR, allFiles, walkedDirs, errors, skippedFolders, 0);
   } else if (scanMode === "selected") {
     // Scan only selected subdirectories. Root files are covered by root_only mode.
-    allFiles = [];
     for (const folder of selectedFolders) {
+      if (pathIsInScope(folder, skippedFolders)) continue;
       const folderPath = resolveMediaSubfolder(folder, MEDIA_DIR);
-      if (folderPath && fs.existsSync(folderPath)) await walkDir(folderPath, allFiles);
+      if (folderPath) await walkDir(folderPath, allFiles, walkedDirs, errors, skippedFolders);
+      else
+        errors.push({
+          path: path.join(MEDIA_DIR, folder),
+          message: "Cannot resolve selected folder safely; check for a dangling link or a path outside the media root",
+        });
     }
   } else {
     // Default: full recursive scan
-    allFiles = await walkDir(MEDIA_DIR);
+    await walkDir(MEDIA_DIR, allFiles, walkedDirs, errors, skippedFolders);
   }
-  const skippedFolders = [...excludedFolders, youtubeFolder()].filter((folder): folder is string => Boolean(folder));
   allFiles = Array.from(new Set(allFiles)).filter((file) => {
     const relativePath = path.relative(path.resolve(MEDIA_DIR), path.resolve(file)).split(path.sep).join("/");
     return !pathIsInScope(relativePath, skippedFolders);
@@ -330,7 +348,7 @@ export async function scanFolder(createJobs = true): Promise<ScanResult> {
   // read this flag, and the jobs table they used before empties on every
   // clear/delete — a rescan then creates no jobs (outputs exist), so a
   // jobs-based step could never clear again. One guarded write, ever.
-  if (videoFiles.length > 0 && getSetting("media_scanned") !== "1") {
+  if (createJobs && videoFiles.length > 0 && getSetting("media_scanned") !== "1") {
     setSetting("media_scanned", "1");
   }
 
@@ -384,6 +402,19 @@ export async function scanFolder(createJobs = true): Promise<ScanResult> {
   // present per folder (used to prune stale sidecar entries afterwards).
   const titleSidecars = new Map<string, TitleSidecar>();
   const titleBasesByDir = new Map<string, Set<string>>();
+  for (const dir of walkedDirs) {
+    const relativePath = path.relative(mediaRoot, path.resolve(dir)).split(path.sep).join("/");
+    if (!pathIsInScope(relativePath, skippedFolders)) titleBasesByDir.set(dir, new Set());
+  }
+  // Include every video and subtitle, including videos without subtitles and
+  // subtitles classified as task outputs, before considering any deletion.
+  for (const file of [...videoFiles, ...srtFiles]) {
+    const ext = path.extname(file);
+    const stem = path.basename(file, ext);
+    const bases = titleBasesByDir.get(path.dirname(file));
+    bases?.add(stem);
+    if (subExts.includes(ext.toLowerCase())) bases?.add(stripLangSuffix(stem));
+  }
   const sidecarFor = (dir: string): TitleSidecar => {
     const cached = titleSidecars.get(dir);
     if (cached) return cached;
@@ -556,17 +587,39 @@ export async function scanFolder(createJobs = true): Promise<ScanResult> {
   if (createJobs) {
     logger.info(
       "scan",
-      `Scan complete: ${srtFiles.length} subtitle files, ${videoFiles.length} videos, ${newJobs} new jobs created`,
+      `Scan ${errors.length ? "incomplete" : "complete"}: ${srtFiles.length} subtitle files, ${videoFiles.length} videos, ${newJobs} new jobs created`,
     );
   }
 
   // Drop sidecar titles for media that no longer exists in scanned folders.
   // Queued behind the per-directory title lock so a prune never interleaves
-  // with an in-flight title write from the queue (fire-and-forget: scan
-  // results don't depend on prune completion).
-  if (getSetting("title_sidecar") === "1") {
-    for (const [dir, bases] of titleBasesByDir) void pruneTitleSidecarQueued(dir, bases);
+  // with an in-flight title write from the queue. Never prune a preview or a
+  // scan that could not read every directory in its scope.
+  if (createJobs && errors.length === 0 && getSetting("title_sidecar") === "1") {
+    for (const [dir, bases] of titleBasesByDir) {
+      void pruneTitleSidecarQueued(dir, () => {
+        // The walk may predate a title write. Re-read while holding the title
+        // lock so newly created media and its title cannot be pruned.
+        try {
+          const current = new Set(bases);
+          for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+            if (!entry.isFile() || entry.name.startsWith(".")) continue;
+            const ext = path.extname(entry.name).toLowerCase();
+            if (!videoExts.includes(ext) && !subExts.includes(ext)) continue;
+            const stem = path.basename(entry.name, path.extname(entry.name));
+            current.add(stem);
+            if (subExts.includes(ext)) current.add(stripLangSuffix(stem));
+          }
+          return current;
+        } catch (e) {
+          logger.warn("scan", `Title sidecar prune skipped: ${dir} — ${errorMessage(e) || e}`);
+          return null;
+        }
+      }).catch((e) => {
+        logger.warn("scan", `Title sidecar prune failed: ${dir} — ${errorMessage(e) || e}`);
+      });
+    }
   }
 
-  return { files, newJobs, totalSubtitles: srtFiles.length };
+  return { files, newJobs, totalSubtitles: srtFiles.length, complete: errors.length === 0, errors };
 }

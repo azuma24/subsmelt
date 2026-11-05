@@ -8,7 +8,7 @@ import { transcriptionHistory } from "./transcription-history.js";
 import { transcriptionWork } from "./transcription/work.js";
 import { enqueueMissingTranscripts } from "./transcription/scheduled.js";
 import { logger } from "./logger.js";
-import { crossSiteGuard } from "./cross-site-guard.js";
+import { crossSiteGuard, createIngressGuard } from "./cross-site-guard.js";
 import db, { getLogs, clearLogs } from "./db.js";
 import { addSSEClient, broadcast } from "./sse.js";
 import { notifyTest } from "./notify.js";
@@ -49,6 +49,7 @@ const HOST = process.env.HOST || "0.0.0.0";
 // sites from scripting this self-hosted API via the user's browser.
 // CORS hides responses, but a foreign page can still fire a simple POST; this
 // refuses those before any route acts on them.
+app.use(createIngressGuard(process.env));
 app.use(crossSiteGuard);
 app.use(express.json({ limit: "25mb" }));
 // Express 5 leaves req.body undefined when no parser matched the request (a
@@ -99,7 +100,7 @@ async function scanAndEnqueue() {
     const settings = getAllSettings();
     const typed = readSettings();
     const behavior = typed.transcription_missing_subtitle_behavior;
-    if (typed.transcription_enabled && getTranscriptionBackendUrl(settings) && behavior !== "ask") {
+    if (result.complete && typed.transcription_enabled && getTranscriptionBackendUrl(settings) && behavior !== "ask") {
       enqueueMissingTranscripts(result, behavior);
     }
     if (result.newJobs > 0 && getSetting("auto_translate") === "1") {
@@ -108,6 +109,8 @@ async function scanAndEnqueue() {
     broadcast("scan:complete", {
       newJobs: result.newJobs,
       total: result.totalSubtitles,
+      complete: result.complete,
+      errors: result.errors,
     });
     return result;
   })();

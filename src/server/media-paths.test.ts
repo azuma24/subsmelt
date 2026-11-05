@@ -76,3 +76,22 @@ test("relativeDir: a lexical .. escape is treated as outside", () => {
   const root = tmpRoot();
   assert.equal(mediaRelativeDir(path.join(root, "..", "etc", "passwd"), root), null);
 });
+
+test("canonical containment rejects escaping and dangling symlinks, including missing descendants", () => {
+  const root = tmpRoot();
+  const outside = tmpRoot();
+  fs.mkdirSync(path.join(root, "inside"));
+  fs.symlinkSync(outside, path.join(root, "escape"));
+  fs.symlinkSync(path.join(root, "missing"), path.join(root, "dangling"));
+  fs.symlinkSync(path.join(root, "inside"), path.join(root, "alias"));
+  assert.equal(resolveMediaSubfolder("escape/new", root), null);
+  assert.equal(resolveMediaSubfolder("dangling/new", root), null);
+  assert.equal(mediaRelativeDir(path.join(root, "escape", "x.srt"), root), null);
+  assert.notEqual(resolveMediaSubfolder("alias/new", root), null);
+  const linkedRoot = `${root}-link`;
+  fs.symlinkSync(root, linkedRoot);
+  assert.notEqual(resolveMediaSubfolder("inside/new", linkedRoot), null);
+  fs.rmSync(linkedRoot);
+  fs.rmSync(root, { recursive: true, force: true });
+  fs.rmSync(outside, { recursive: true, force: true });
+});

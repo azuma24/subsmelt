@@ -34,13 +34,20 @@ export function interruptedQueueRun(): QueueRunMarker | null {
 export function markQueueRun(ids: number[] | undefined): void {
   const current = interruptedQueueRun();
   const merged = !ids || current?.ids === null ? null : [...new Set([...(current?.ids ?? []), ...ids])];
+  writeQueueRun(merged);
+}
+
+/** Replace, rather than widen, the persisted scope after a user stops a run. */
+export function writeQueueRun(ids: number[] | null, failClosed = false): void {
   try {
     fs.mkdirSync(path.dirname(MARKER_FILE), { recursive: true });
     const tmp = `${MARKER_FILE}.${process.pid}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify({ ids: merged } satisfies QueueRunMarker));
+    fs.writeFileSync(tmp, JSON.stringify({ ids } satisfies QueueRunMarker));
     fs.renameSync(tmp, MARKER_FILE);
   } catch (error) {
     logger.warn("queue", `Could not record the queue run for restart: ${errorMessage(error)}`);
+    // A stale, broader marker could restart jobs the user explicitly stopped.
+    if (failClosed) clearQueueRun();
   }
 }
 

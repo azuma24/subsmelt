@@ -103,6 +103,8 @@
       "delete": "刪除",
       "logs": "Logs"
     },
+    "scanPartial": "掃描未完成：無法讀取部分資料夾。結果可能不完整；請檢查資料夾存取權限並重試。",
+    "scanPartialSummary": "部分結果：找到 {{subtitles}} 個適用字幕檔案；將建立 {{jobs}} 個新任務。",
     "toast": {
       "scanComplete": "掃描完成：{{total}} 個字幕，{{newJobs}} 個新任務",
       "scanFailed": "掃描失敗：{{message}}",
@@ -1470,6 +1472,7 @@
     }
   },
   "library": {
+    "jobsUnavailable": "重新載入佇列前，工作狀態和檔案詳細資料無法使用。",
     "sort": {
       "label": "排序檔案",
       "nameAsc": "名稱：A–Z",

@@ -54,6 +54,13 @@ function compile(rules: readonly CorrectionRule[], stage: "source" | "output", l
   return compileCorrectionsFor([set], "", stage, langCodes);
 }
 
+function requireCompleteScan(library: ScanResult): void {
+  if (!library.complete) {
+    const details = library.errors.map(({ path, message }) => `${path}: ${message}`).join("; ");
+    throw new Error(`Library scan incomplete. Check the selected folders and permissions, then retry. ${details}`);
+  }
+}
+
 /** Every subtitle the library knows about, as a source or a translation of one. */
 export function correctionTargets(library: ScanResult): CorrectionTarget[] {
   const tasks = getTasks();
@@ -151,6 +158,7 @@ export function scanForCorrections(
   rules: readonly CorrectionRule[],
   scope: { folders?: readonly string[]; files?: readonly string[] },
 ): ScanReport {
+  requireCompleteScan(library);
   checkRules(rules);
   const wanted = scope.files ? new Set(scope.files.map((f) => path.resolve(f))) : null;
   const inScope = correctionTargets(library).filter((target) => {
@@ -191,6 +199,7 @@ export function applyCorrections(
   files: readonly string[],
   retranslate: boolean,
 ): ApplyReport {
+  requireCompleteScan(library);
   checkRules(rules);
   const targets = new Map(correctionTargets(library).map((target) => [path.resolve(target.path), target]));
   const results: ApplyReport["results"] = [];

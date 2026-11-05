@@ -13,6 +13,7 @@ export type SSEEventName =
   | "job:cancelled"
   | "queue:finished"
   | "queue:stopped"
+  | "queue:failed"
   | "scan:complete"
   | "job:stopped"
   | "transcription:progress"
@@ -35,6 +36,7 @@ export const SSE_EVENT_NAMES: readonly SSEEventName[] = [
   "job:cancelled",
   "queue:finished",
   "queue:stopped",
+  "queue:failed",
   "scan:complete",
   "job:stopped",
   "transcription:progress",
@@ -90,6 +92,7 @@ export function getSSEInvalidationKeys(name: SSEEventName, data: Record<string, 
       ];
     case "queue:finished":
     case "queue:stopped":
+    case "queue:failed":
       return [
         ["jobs"],
         ["queue-status"],

@@ -5,7 +5,7 @@
   "description": "Self-hosted batch subtitle translator using LLM",
   "license": "MIT",
   "engines": {
-    "node": ">=20 <25"
+    "node": ">=22.14.0 <23 || >=24 <25"
   },
   "scripts": {
     "dev": "node scripts/dev.mjs",

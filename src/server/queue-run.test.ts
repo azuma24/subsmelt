@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { EventEmitter } from "node:events";
+import type { Response as ExpressResponse } from "express";
 
 // queue.ts pulls in db.ts, config.ts and scanner.ts, which bind their
 // directories at import, so point all three at scratch folders first.
@@ -16,6 +18,7 @@ const config = await import("./config.js");
 const queue = await import("./queue.js");
 const runMarker = await import("./queue/run-marker.js");
 const usage = await import("./usage.js");
+const sse = await import("./sse.js");
 
 (globalThis as any).AI_SDK_LOG_WARNINGS = false;
 
@@ -38,6 +41,8 @@ const release: Array<(content?: string) => void> = [];
 // Hosts that reject requests until a test takes them back out, for a
 // connection that fails partway through a job and then recovers.
 const failingHosts = new Set<string>();
+let holdAbort: (() => void) | null = null;
+let deferAbort = false;
 globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
   const url = String(input instanceof Request ? input.url : input);
   if (url.endsWith("/v1/models")) return new Response('{"data":[]}', { status: 200 });
@@ -45,9 +50,15 @@ globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) =>
     return new Response('{"error":"bad request"}', { status: 400 });
   if (!url.endsWith("/chat/completions")) return new Response("{}", { status: 404 });
   return new Promise<Response>((resolve, reject) => {
-    init?.signal?.addEventListener("abort", () => reject(Object.assign(new Error("aborted"), { name: "AbortError" })), {
-      once: true,
-    });
+    init?.signal?.addEventListener(
+      "abort",
+      () => {
+        const finish = () => reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+        if (deferAbort) holdAbort = finish;
+        else finish();
+      },
+      { once: true },
+    );
     release.push((content = "Translated Title") => resolve(chatCompletion(content)));
   });
 }) as typeof fetch;
@@ -152,6 +163,127 @@ function resetConnections() {
   config.setSetting("llm_mode", "");
   config.setSetting("llm_connections", "");
 }
+
+test("cancelling one parallel job leaves its sibling running", async () => {
+  useConnections("parallel", [
+    { id: "a", label: "A", provider: "local", model: "test", endpoint: "http://a.test/v1" },
+    { id: "b", label: "B", provider: "local", model: "test", endpoint: "http://b.test/v1" },
+  ]);
+  const first = addJob({ srtExists: true, outputExists: false });
+  const second = addJob({ srtExists: true, outputExists: false });
+  const run = queue.processQueue([first, second]);
+  try {
+    await waitFor(() => release.length >= 2, "both workers to enter fetch");
+    assert.equal(queue.requestJobCancel(first), true);
+    await waitFor(() => db.getJob(first)?.status === "error", "first cancellation");
+    assert.equal(db.getJob(first)?.error, "Cancelled by user");
+    assert.equal(db.getJob(second)?.status, "translating");
+    assert.equal(queue.isQueueRunning(), true);
+  } finally {
+    queue.requestStop();
+    await run;
+    release.length = 0;
+    resetConnections();
+    db.deleteJob(first);
+    db.deleteJob(second);
+  }
+});
+
+test("worker failure aborts and drains siblings before releasing the queue", async () => {
+  useConnections("single", [
+    { id: "a", label: "A", provider: "local", model: "test", endpoint: "http://a.test/v1" },
+    { id: "b", label: "B", provider: "local", model: "test", endpoint: "http://b.test/v1" },
+  ]);
+  const first = addJob({ srtExists: true, outputExists: false });
+  const second = addJob({ srtExists: true, outputExists: false });
+  const events: Array<{ payload: string; running: boolean; statuses: unknown[]; active: number[] }> = [];
+  const client = Object.assign(new EventEmitter(), {
+    writeHead() {},
+    write(payload: string) {
+      if (payload.startsWith("event: queue:"))
+        events.push({
+          payload,
+          running: queue.isQueueRunning(),
+          statuses: [db.getJob(first)?.status, db.getJob(second)?.status],
+          active: queue.getActiveJobIds(),
+        });
+      return true;
+    },
+  });
+  sse.addSSEClient(client as unknown as ExpressResponse);
+  const run = queue.processQueue([first, second]);
+  const observed = run.then(
+    () => null,
+    (error: Error) => error,
+  );
+  let later = 0;
+  const exists = fs.existsSync;
+  try {
+    await waitFor(() => release.length > 0, "first worker to enter fetch");
+    later = addJob({ srtExists: false, outputExists: false });
+    deferAbort = true;
+    const secondOutput = db.getJob(second)!.output_path;
+    fs.existsSync = ((p: fs.PathLike) => {
+      if (p === secondOutput) throw new Error("injected claim failure");
+      return exists(p);
+    }) as typeof fs.existsSync;
+    config.setSetting("llm_mode", "parallel");
+    await waitFor(() => holdAbort !== null, "sibling abort");
+    assert.equal(queue.isQueueRunning(), true);
+    assert.deepEqual(events, []);
+    await queue.processQueue([later]);
+    assert.equal(db.getJob(later)?.status, "pending");
+    assert.deepEqual(runMarker.interruptedQueueRun(), { ids: [first, second, later] });
+    fs.existsSync = exists;
+    deferAbort = false;
+    (holdAbort as unknown as () => void)();
+    holdAbort = null;
+    assert.match((await observed)?.message ?? "", /injected claim failure/);
+    assert.equal(queue.isQueueRunning(), false);
+    assert.equal(db.getJob(first)?.status, "pending");
+    assert.equal(db.getJob(second)?.status, "pending");
+    assert.equal(db.getJob(later)?.status, "pending");
+    assert.deepEqual(runMarker.interruptedQueueRun(), { ids: [first, second, later] });
+    assert.deepEqual(events, [
+      { payload: "event: queue:failed\ndata: {}\n\n", running: false, statuses: ["pending", "pending"], active: [] },
+    ]);
+    client.emit("close");
+    // A later selected run must not erase the interrupted run's remaining work.
+    await queue.processQueue([later]);
+    assert.deepEqual(runMarker.interruptedQueueRun(), { ids: [first, second, later] });
+    release.length = 0;
+    const stopped = addJob({ srtExists: true, outputExists: false });
+    const stoppedRun = queue.processQueue([stopped]);
+    await waitFor(() => release.length > 0, "later selected job to start");
+    queue.requestStop();
+    await stoppedRun;
+    release.length = 0;
+    assert.deepEqual(new Set(runMarker.interruptedQueueRun()?.ids), new Set([first, second]));
+    config.setSetting("auto_translate", "0");
+    fs.rmSync(db.getJob(first)!.srt_path);
+    fs.rmSync(db.getJob(second)!.srt_path);
+    queue.resumeQueueOnBoot();
+    await waitFor(() => !queue.isQueueRunning(), "failed run to resume on boot");
+    assert.equal(db.getJob(first)?.status, "error");
+    assert.equal(db.getJob(second)?.status, "error");
+    assert.equal(db.getJob(stopped)?.status, "pending");
+    assert.equal(runMarker.interruptedQueueRun(), null);
+    db.deleteJob(stopped);
+  } finally {
+    client.emit("close");
+    fs.existsSync = exists;
+    deferAbort = false;
+    holdAbort?.();
+    holdAbort = null;
+    queue.requestStop();
+    await observed;
+    release.length = 0;
+    config.setSetting("auto_translate", "1");
+    resetConnections();
+    for (const id of [first, second, later]) if (id) db.deleteJob(id);
+    runMarker.clearQueueRun();
+  }
+});
 
 test("a translating job reports the connection and model running it", async () => {
   useConnections("single", [
@@ -356,6 +488,35 @@ test("with auto-translate off, boot resumes only the run the previous process di
     config.setSetting("auto_translate", "1");
     db.deleteJob(selected);
     db.deleteJob(untouched);
+  }
+});
+
+test("stopping a selection narrows an older all-jobs marker", async () => {
+  config.setSetting("auto_translate", "0");
+  const older = addJob({ srtExists: false, outputExists: false });
+  const selected = addJob({ srtExists: true, outputExists: false });
+  let later = 0;
+  try {
+    runMarker.markQueueRun(undefined);
+    const run = queue.processQueue([selected]);
+    await waitFor(() => release.length > 0, "selected job to start");
+    queue.requestStop();
+    await run;
+    release.length = 0;
+    assert.deepEqual(runMarker.interruptedQueueRun(), { ids: [older] });
+    later = addJob({ srtExists: false, outputExists: false });
+    queue.resumeQueueOnBoot();
+    await waitFor(() => !queue.isQueueRunning(), "older job to resume");
+    assert.equal(db.getJob(older)?.status, "error");
+    assert.equal(db.getJob(selected)?.status, "pending");
+    assert.equal(db.getJob(later)?.status, "pending");
+    assert.equal(runMarker.interruptedQueueRun(), null);
+  } finally {
+    queue.requestStop();
+    release.length = 0;
+    runMarker.clearQueueRun();
+    config.setSetting("auto_translate", "1");
+    for (const id of [older, selected, later]) if (id) db.deleteJob(id);
   }
 });
 

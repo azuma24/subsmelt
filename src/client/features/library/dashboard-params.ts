@@ -22,11 +22,15 @@ export type JobStatusFilter = (typeof JOB_STATUS_FILTERS)[number];
 export const ROW_LAYOUTS = ["jobs", "files"] as const;
 export type RowLayout = (typeof ROW_LAYOUTS)[number];
 
+export const FILE_SORTS = ["name-asc", "name-desc", "date-desc", "date-asc"] as const;
+export type FileSort = (typeof FILE_SORTS)[number];
+
 /** The home page's state, kept in the URL so a view or status can be linked and survives reload. */
 export interface DashboardParams {
   view: DashboardView;
   status: JobStatusFilter;
   rows: RowLayout;
+  sort: FileSort;
   /** The folder shown, media-relative ("AnKor/Tutorials"), with its subfolders; "all" for the whole library. */
   folder: string;
 }
@@ -35,6 +39,7 @@ export const DEFAULT_DASHBOARD_PARAMS: Readonly<DashboardParams> = {
   view: "jobs",
   status: "all",
   rows: "jobs",
+  sort: "name-asc",
   folder: "all",
 };
 
@@ -59,6 +64,7 @@ export function parseDashboardParams(search: URLSearchParams): DashboardParams {
     status: oneOf(JOB_STATUS_FILTERS, search.get("status"), legacy ?? DEFAULT_DASHBOARD_PARAMS.status),
     // view=files is a link from before Files became a row layout of the Jobs view.
     rows: oneOf(ROW_LAYOUTS, search.get("rows") ?? (search.get("view") === "files" ? "files" : null), "jobs"),
+    sort: oneOf(FILE_SORTS, search.get("sort"), DEFAULT_DASHBOARD_PARAMS.sort),
     folder: search.get("folder")?.replace(/^\/+|\/+$/g, "") || DEFAULT_DASHBOARD_PARAMS.folder,
   };
 }
@@ -66,7 +72,7 @@ export function parseDashboardParams(search: URLSearchParams): DashboardParams {
 /** Search params for the given state, defaults omitted so the plain page stays at "/". */
 export function dashboardSearchParams(params: Partial<DashboardParams>): URLSearchParams {
   const search = new URLSearchParams();
-  for (const key of ["view", "status", "rows", "folder"] as const) {
+  for (const key of ["view", "status", "rows", "sort", "folder"] as const) {
     const value = params[key];
     if (value !== undefined && value !== DEFAULT_DASHBOARD_PARAMS[key]) search.set(key, value);
   }

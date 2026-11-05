@@ -222,6 +222,27 @@ test("pruneTitleSidecar: deletes the sidecar file when nothing remains", () => {
   }
 });
 
+test("pruneTitleSidecar: preserves corrupt and unreadable sidecars", (t) => {
+  const dir = mkTmpDir();
+  const file = path.join(dir, TITLE_SIDECAR_FILENAME);
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  for (const original of ["{broken", '{"titles":[]}', '{"titles":{"bad":null}}']) {
+    fs.writeFileSync(file, original);
+    pruneTitleSidecar(dir, new Set());
+    assert.equal(fs.readFileSync(file, "utf8"), original);
+  }
+  const original = '{"version":1,"titles":{"Gone":{"zh":"keep"}}}';
+  fs.writeFileSync(file, original);
+  const read = fs.readFileSync;
+  const mock = t.mock.method(fs, "readFileSync", ((...args: Parameters<typeof read>) => {
+    if (args[0] === file) throw Object.assign(new Error("permission denied"), { code: "EACCES" });
+    return read(...args);
+  }) as typeof read);
+  pruneTitleSidecar(dir, new Set());
+  mock.mock.restore();
+  assert.equal(fs.readFileSync(file, "utf8"), original);
+});
+
 test("pruneTitleSidecar: is a no-op when the sidecar file doesn't exist", () => {
   const dir = mkTmpDir();
   try {

@@ -33,6 +33,9 @@ export interface ScanResult {
   files: ScannedFile[];
   newJobs: number;
   totalSubtitles: number;
+  /** False when one or more directories could not be read. */
+  complete: boolean;
+  errors: { path: string; message: string }[];
 }
 
 export interface FolderCounts {
