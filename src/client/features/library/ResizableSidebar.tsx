@@ -1,12 +1,6 @@
-import { useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import { useTranslation } from "../../i18n";
-import {
-  SIDEBAR_MAX_WINDOW_SHARE,
-  SIDEBAR_WIDTH,
-  clampSidebarWidth,
-  parseStoredWidth,
-  widthAfterKey,
-} from "./sidebar-width";
+import { SIDEBAR_WIDTH, clampSidebarWidth, parseStoredWidth, sidebarMaxWidth, widthAfterKey } from "./sidebar-width";
 
 const WIDTH_KEY = "subsmelt.library.folders.width";
 
@@ -26,34 +20,44 @@ function writeWidth(width: number): void {
   }
 }
 
+function readWindowWidth(): number {
+  return typeof window === "undefined" ? 1280 : window.innerWidth;
+}
+
 /** The Library's folder column. Drag its edge, or focus the edge and use the arrow keys; each browser keeps its own width. */
 export function ResizableSidebar({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const [width, setWidth] = useState(readWidth);
+  const [windowWidth, setWindowWidth] = useState(readWindowWidth);
   const [dragging, setDragging] = useState(false);
-  const aside = useRef<HTMLElement>(null);
   const drag = useRef<{ startX: number; startWidth: number } | null>(null);
+  // The saved width is kept as chosen, so it comes back when the window grows again.
+  const shown = clampSidebarWidth(width, windowWidth);
 
-  const shownWidth = () => aside.current?.getBoundingClientRect().width ?? width;
+  useEffect(() => {
+    const onResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
-    drag.current = { startX: event.clientX, startWidth: shownWidth() };
+    drag.current = { startX: event.clientX, startWidth: shown };
     setDragging(true);
   };
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (!drag.current) return;
-    setWidth(clampSidebarWidth(drag.current.startWidth + event.clientX - drag.current.startX, window.innerWidth));
+    setWidth(clampSidebarWidth(drag.current.startWidth + event.clientX - drag.current.startX, windowWidth));
   };
   const endDrag = () => {
     if (!drag.current) return;
     drag.current = null;
     setDragging(false);
-    writeWidth(width);
+    writeWidth(shown);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const next = widthAfterKey(event.key, shownWidth(), window.innerWidth);
+    const next = widthAfterKey(event.key, shown, windowWidth);
     if (next === null) return;
     event.preventDefault();
     setWidth(next);
@@ -66,11 +70,7 @@ export function ResizableSidebar({ children }: { children: ReactNode }) {
 
   return (
     <div className="relative hidden shrink-0 md:block">
-      <aside
-        ref={aside}
-        className="@container h-full overflow-y-auto border-r border-border p-2"
-        style={{ width: `min(${width}px, ${SIDEBAR_MAX_WINDOW_SHARE * 100}vw)`, minWidth: SIDEBAR_WIDTH.min }}
-      >
+      <aside className="@container h-full overflow-y-auto border-r border-border p-2" style={{ width: shown }}>
         {children}
       </aside>
       <div
@@ -79,8 +79,8 @@ export function ResizableSidebar({ children }: { children: ReactNode }) {
         aria-orientation="vertical"
         aria-label={t("library.folders.resize")}
         aria-valuemin={SIDEBAR_WIDTH.min}
-        aria-valuemax={SIDEBAR_WIDTH.max}
-        aria-valuenow={width}
+        aria-valuemax={sidebarMaxWidth(windowWidth)}
+        aria-valuenow={shown}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { SIDEBAR_WIDTH, clampSidebarWidth, parseStoredWidth, widthAfterKey } from "./sidebar-width.js";
+import { SIDEBAR_WIDTH, clampSidebarWidth, parseStoredWidth, sidebarMaxWidth, widthAfterKey } from "./sidebar-width.js";
 
 test("a drag stops at 100px and at 480px on a wide window", () => {
   assert.equal(clampSidebarWidth(40, 1920), 100);
@@ -29,4 +29,10 @@ test("arrow keys step the width; Home and End jump to the limits", () => {
   assert.equal(widthAfterKey("End", 256, 1920), 480);
   assert.equal(widthAfterKey("End", 256, 1000), 400);
   assert.equal(widthAfterKey("Enter", 256, 1920), null);
+});
+
+test("the most a window allows is what it can show", () => {
+  assert.equal(sidebarMaxWidth(768), 307);
+  assert.equal(sidebarMaxWidth(1920), 480);
+  assert.equal(sidebarMaxWidth(200), 100);
 });
