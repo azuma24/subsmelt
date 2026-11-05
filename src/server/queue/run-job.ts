@@ -34,6 +34,7 @@ import {
   correctionGlossaryTerms,
   correctionsFingerprint,
   describeCorrections,
+  splitChecked,
   type CompiledCorrection,
   type CorrectionCounts,
 } from "../../shared/corrections.js";
@@ -311,6 +312,21 @@ async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
     sourceCorrections: corrections.source,
     outputCorrections: corrections.output,
     pinnedTerms: correctionGlossaryTerms(corrections.source),
+    onCorrectionChecks: (stage, result) => {
+      const where = stage === "source" ? "before translation" : "in the translation";
+      logCorrections(ctx, `${where} after a check`, result.confirmed, corrections[stage]);
+      const kept = describeCorrections(result.kept, corrections[stage]);
+      if (kept.length) {
+        logger.info(
+          "translate",
+          `Kept as written after a check: ${kept.map((d) => `${d.find} ×${d.count}`).join(", ")}${
+            result.failedBatches ? ` (${result.failedBatches} check request(s) failed, so their matches were kept)` : ""
+          }`,
+          ctx.job.id,
+          { stage: "corrections", kept },
+        );
+      }
+    },
     onCorrections: (stage, counts) => {
       // The source file was already corrected on disk; this reports only what
       // the in-memory pass still had to fix (a file that could not be rewritten).
@@ -360,8 +376,11 @@ function prepareCorrections(ctx: JobContext): {
   // like "Subs/{{name}}.chi.srt" can put in another folder than its source.
   const output = correctionsForFile(job.output_path, "output", langCodes);
   let inMemoryOnly = false;
-  if (source.length) {
-    const result = correctSubtitleFile(job.srt_path, source);
+  // Rules checked with the translator need the LLM, so they run in the engine only.
+  const { plain, checked } = splitChecked(source);
+  if (checked.length) inMemoryOnly = true;
+  if (plain.length) {
+    const result = correctSubtitleFile(job.srt_path, plain);
     if (result.error) {
       inMemoryOnly = true;
       logger.warn(

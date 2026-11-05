@@ -9,6 +9,7 @@ installer, macOS app) share a version number and are released together, as
 ### Translation
 
 - New **Corrections**: find → replace rules for words that keep coming out wrong, grouped in lists that you switch on for folders (for example "Ubiquity" → "Ubiquiti" in a UniFi channel only). Open any file in the Library to see and switch the lists for its folder, or manage every list under **Settings → Corrections**. A rule is one line; type a pair and press Enter, or paste many lines of `wrong → right` at once. Each rule runs **before translation** (on the source subtitle and on every new Whisper transcript, so the translator reads the right word and is told to keep it), **after translation** (on the translated file, optionally for some languages only), or both. Rules match a whole word, text anywhere (for Chinese or Japanese), or a regular expression. Only cue text changes; numbers, timings, styling, line endings and the file's modification time stay as they were, and each job logs what it replaced. See [docs/subtitle-corrections.md](docs/subtitle-corrections.md).
+- **Check with the translator**: a correction rule for a word that is also an ordinary word ("unify" the verb vs. the UniFi brand) can ask the LLM about each match, with the lines around it, and replace only those it confirms. An unclear answer or a failed request keeps the text as written. The cost shows under Settings → Usage as *Correction check*.
 - Corrections also apply on the **Convert** page: lists on the whole library fix uploaded files too.
 - Fix everywhere can **remember unticked files**: tick "Never apply this rule to the unticked files", and the rule keeps them as exceptions from then on. The rule's options list the exceptions and can clear them.
 - Problems with a rule ("the replacement would be changed again", "lists undo each other") are now shown in the interface language.
@@ -16,6 +17,7 @@ installer, macOS app) share a version number and are released together, as
 
 ### Interface
 
+- **Library folders**: a folder tree beside the list shows each folder's file count and a red dot when a translation in it failed. Pick a folder to see it with its subfolders. The status counts, filters and bulk actions (run pending, retry errors) then apply to that folder only. A header shows where you are, with a breadcrumb back up, the folder's counts and the correction lists that apply. Folders can be pinned, the open branches are remembered, and links keep the folder (`/?folder=UniFi/Tutorials`). On a phone the tree opens from a Folders button.
 - The interface now comes in 10 languages instead of 32: English, 简体中文, 繁體中文, 日本語, 한국어, Español, Français, Deutsch, Português (Brasil) and Русский. Anyone who had picked another one sees English, except European Portuguese, which now shows Brazilian Portuguese. This changes only SubSmelt's own screens: every language is still available as a subtitle translation target and for Whisper.
 
 ## [0.8.0] — 2026-11-04

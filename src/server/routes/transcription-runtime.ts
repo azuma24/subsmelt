@@ -37,7 +37,7 @@ import { mkdirShared, shareFile } from "../shared-files.js";
 import { standardLangCode } from "../language-codes.js";
 import { correctSubtitleFile, correctionsForFile } from "../corrections.js";
 import { logger } from "../logger.js";
-import { describeCorrections } from "../../shared/corrections.js";
+import { describeCorrections, splitChecked } from "../../shared/corrections.js";
 import { startHeldQueue } from "../queue.js";
 import { translationHoldsGpu, waitUntilTranscriptionMayStart } from "../gpu-gate.js";
 import {
@@ -554,7 +554,8 @@ export async function runTranscriptionAttempt(opts: {
  * wrote it (the translation still corrects it in memory).
  */
 function applyTranscriptCorrections(transcriptPath: string): void {
-  const rules = correctionsForFile(transcriptPath, "source");
+  // Rules checked with the translator wait for the translation job, which has an LLM.
+  const rules = splitChecked(correctionsForFile(transcriptPath, "source")).plain;
   if (!rules.length) return;
   const name = path.basename(transcriptPath);
   const result = correctSubtitleFile(transcriptPath, rules);

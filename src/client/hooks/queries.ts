@@ -42,6 +42,17 @@ export function useLibraryQuery(enabled = true) {
   });
 }
 
+/** The media folders with their counts. Under the library key, so every
+ *  library refresh (a scan, a finished queue, a new transcript) refreshes it too. */
+export function useFolderTreeQuery(enabled = true) {
+  return useQuery({
+    queryKey: [...LIBRARY_QUERY_KEY, "folder-tree"],
+    queryFn: ({ signal }) => api.getFolderTree({ signal }),
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
 export function useJobsQuery() {
   return useQuery({
     queryKey: ["jobs"],

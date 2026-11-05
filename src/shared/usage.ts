@@ -4,7 +4,7 @@ import type { LlmProvider } from "./llm.js";
  * What an LLM call was for. `single` is the line-by-line fallback after a chunk
  * failed, so its share is the retry overhead.
  */
-export const USAGE_KINDS = ["analysis", "chunk", "single", "refine", "title", "convert"] as const;
+export const USAGE_KINDS = ["analysis", "chunk", "single", "refine", "title", "convert", "check"] as const;
 export type UsageKind = (typeof USAGE_KINDS)[number];
 
 /** The windows GET /api/usage reports over. */

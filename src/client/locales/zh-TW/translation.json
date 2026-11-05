@@ -889,7 +889,10 @@
       "exceptCount_one": "不套用於 {{count}} 個檔案",
       "exceptCount_other": "不套用於 {{count}} 個檔案",
       "exceptClear": "重新套用到所有檔案",
-      "tag_except": "例外"
+      "tag_except": "例外",
+      "confirm": "交由翻譯模型確認",
+      "confirmHint": "當這個詞也是一般詞彙時使用（例如動詞「unify」與品牌 UniFi）。每處相符都要經 LLM 確認確實指替換詞後才會取代；修正在翻譯時進行，而不是在儲存逐字稿時。",
+      "tag_check": "確認"
     }
   },
   "jobDetail": {
@@ -1556,6 +1559,26 @@
       "from": "來自 {{folder}}",
       "edit": "編輯",
       "newForFolder": "為此資料夾新增清單"
+    },
+    "folders": {
+      "title": "資料夾",
+      "all": "所有檔案",
+      "pinned": "已釘選",
+      "none": "還沒有資料夾。請掃描以找到媒體。",
+      "expand": "展開 {{folder}}",
+      "collapse": "收合 {{folder}}",
+      "pin": "釘選 {{folder}}",
+      "unpin": "取消釘選 {{folder}}",
+      "breadcrumb": "資料夾路徑",
+      "noCorrections": "無",
+      "errors_one": "{{count}} 個錯誤",
+      "errors_other": "{{count}} 個錯誤",
+      "files_one": "{{count}} 個檔案",
+      "files_other": "{{count}} 個檔案",
+      "done_one": "已完成 {{count}}",
+      "done_other": "已完成 {{count}}",
+      "pending_one": "等待中 {{count}}",
+      "pending_other": "等待中 {{count}}"
     }
   },
   "llmStatus": {
@@ -1659,7 +1682,8 @@
       "single": "單行",
       "refine": "潤飾",
       "title": "標題",
-      "convert": "轉換"
+      "convert": "轉換",
+      "check": "校正確認"
     },
     "topFiles": {
       "title": "熱門檔案"

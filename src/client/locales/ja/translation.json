@@ -889,7 +889,10 @@
       "exceptCount_one": "{{count}} 件のファイルには適用しない",
       "exceptCount_other": "{{count}} 件のファイルには適用しない",
       "exceptClear": "すべてに再び適用",
-      "tag_except": "例外"
+      "tag_except": "例外",
+      "confirm": "翻訳モデルに確認する",
+      "confirmHint": "その語が一般的な単語でもある場合に使います（動詞の “unify” とブランドの UniFi など）。一致した箇所は、LLM が置換先の意味だと確認した場合だけ置き換えます。修正は文字起こしの保存時ではなく翻訳時に行われます。",
+      "tag_check": "確認"
     }
   },
   "jobDetail": {
@@ -1556,6 +1559,26 @@
       "from": "{{folder}} から",
       "edit": "編集",
       "newForFolder": "このフォルダー用の新しいリスト"
+    },
+    "folders": {
+      "title": "フォルダー",
+      "all": "すべてのファイル",
+      "pinned": "ピン留め",
+      "none": "フォルダーがまだありません。スキャンしてメディアを探してください。",
+      "expand": "{{folder}} を開く",
+      "collapse": "{{folder}} を閉じる",
+      "pin": "{{folder}} をピン留め",
+      "unpin": "{{folder}} のピン留めを外す",
+      "breadcrumb": "フォルダーのパス",
+      "noCorrections": "なし",
+      "errors_one": "エラー {{count}} 件",
+      "errors_other": "エラー {{count}} 件",
+      "files_one": "{{count}} ファイル",
+      "files_other": "{{count}} ファイル",
+      "done_one": "完了 {{count}}",
+      "done_other": "完了 {{count}}",
+      "pending_one": "待機中 {{count}}",
+      "pending_other": "待機中 {{count}}"
     }
   },
   "llmStatus": {
@@ -1659,7 +1682,8 @@
       "single": "単一行",
       "refine": "改良",
       "title": "タイトル",
-      "convert": "変換"
+      "convert": "変換",
+      "check": "修正の確認"
     },
     "topFiles": {
       "title": "上位ファイル"

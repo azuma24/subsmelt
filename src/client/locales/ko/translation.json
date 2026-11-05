@@ -889,7 +889,10 @@
       "exceptCount_one": "파일 {{count}}개에는 적용 안 함",
       "exceptCount_other": "파일 {{count}}개에는 적용 안 함",
       "exceptClear": "다시 모두에 적용",
-      "tag_except": "예외"
+      "tag_except": "예외",
+      "confirm": "번역 모델에게 확인",
+      "confirmHint": "단어가 일반 단어이기도 할 때 사용하세요(동사 “unify”와 브랜드 UniFi 등). 일치하는 부분은 LLM이 바꿀 말을 뜻한다고 확인한 경우에만 바뀝니다. 수정은 전사본을 저장할 때가 아니라 번역할 때 이루어집니다.",
+      "tag_check": "확인"
     }
   },
   "jobDetail": {
@@ -1556,6 +1559,26 @@
       "from": "{{folder}}에서",
       "edit": "편집",
       "newForFolder": "이 폴더용 새 목록"
+    },
+    "folders": {
+      "title": "폴더",
+      "all": "모든 파일",
+      "pinned": "고정됨",
+      "none": "아직 폴더가 없습니다. 스캔하여 미디어를 찾으세요.",
+      "expand": "{{folder}} 펼치기",
+      "collapse": "{{folder}} 접기",
+      "pin": "{{folder}} 고정",
+      "unpin": "{{folder}} 고정 해제",
+      "breadcrumb": "폴더 경로",
+      "noCorrections": "없음",
+      "errors_one": "오류 {{count}}개",
+      "errors_other": "오류 {{count}}개",
+      "files_one": "파일 {{count}}개",
+      "files_other": "파일 {{count}}개",
+      "done_one": "완료 {{count}}",
+      "done_other": "완료 {{count}}",
+      "pending_one": "대기 {{count}}",
+      "pending_other": "대기 {{count}}"
     }
   },
   "llmStatus": {
@@ -1659,7 +1682,8 @@
       "single": "단일 줄",
       "refine": "다듬기",
       "title": "제목",
-      "convert": "변환"
+      "convert": "변환",
+      "check": "교정 확인"
     },
     "topFiles": {
       "title": "상위 파일"

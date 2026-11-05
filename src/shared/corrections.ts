@@ -43,6 +43,13 @@ export interface CorrectionRule {
   languages: string[];
   enabled: boolean;
   /**
+   * Check with the translator: each match is replaced only after the LLM
+   * confirms it means the replacement (the brand "Unify app", not the verb
+   * "we unify"). Such rules run inside a translation job, where an LLM is at
+   * hand, and never in the in-place file rewrite. Default false.
+   */
+  confirm?: boolean;
+  /**
    * Files (MEDIA_DIR-relative, posix) the rule never applies to: the ones a
    * person unticked in Fix everywhere and asked to leave alone for good.
    */
@@ -161,11 +168,19 @@ function expandReplacement(
   return out;
 }
 
-function applyToPlain(text: string, item: CompiledCorrection, counts: CorrectionCounts): string {
+/**
+ * Each match of one rule in a plain piece of text, with the replacement the
+ * rule would put there; `decide` returns what to write instead. Matches whose
+ * replacement equals the match are left out (they are not changes).
+ */
+function mapPlain(
+  text: string,
+  item: CompiledCorrection,
+  decide: (match: string, replacement: string) => string,
+): string {
   const { rule, pattern } = item;
   pattern.lastIndex = 0;
-  let replaced = 0;
-  const out = text.replace(pattern, (...args: unknown[]) => {
+  return text.replace(pattern, (...args: unknown[]) => {
     const match = args[0] as string;
     // A zero-length match (a lookahead-only regex) would insert text on every
     // run and never settle; leave it alone. Validation refuses such patterns too.
@@ -181,11 +196,47 @@ function applyToPlain(text: string, item: CompiledCorrection, counts: Correction
       const named = hasNamed ? (args[args.length - 1] as Record<string, unknown>) : undefined;
       replacement = expandReplacement(rule.replace, match, groups, position, subject, named);
     }
-    if (replacement !== match) replaced++;
+    return replacement === match ? match : decide(match, replacement);
+  });
+}
+
+function applyToPlain(text: string, item: CompiledCorrection, counts: CorrectionCounts): string {
+  let replaced = 0;
+  const out = mapPlain(text, item, (_match, replacement) => {
+    replaced++;
     return replacement;
   });
-  if (replaced) counts[rule.id] = (counts[rule.id] ?? 0) + replaced;
+  if (replaced) counts[item.rule.id] = (counts[item.rule.id] ?? 0) + replaced;
   return out;
+}
+
+/** Run `transform` on each plain piece of a cue: each line, and each part of a line between markup. */
+function eachPlain(text: string, transform: (plain: string) => string): string {
+  return text
+    .split(/(\r?\n)/)
+    .map((piece, i) => {
+      if (i % 2 === 1) return piece;
+      return piece
+        .split(MARKUP)
+        .map((part, j) => (j % 2 === 1 || !part ? part : transform(part)))
+        .join("");
+    })
+    .join("");
+}
+
+/**
+ * One rule's changing matches in a cue, numbered from 0 in reading order and
+ * found exactly as correctCueText finds them; `decide(match, replacement, n)`
+ * returns what to write for each. Used to ask about, and apply, one
+ * occurrence at a time.
+ */
+export function mapCueMatches(
+  text: string,
+  item: CompiledCorrection,
+  decide: (match: string, replacement: string, n: number) => string,
+): string {
+  let n = 0;
+  return eachPlain(text, (plain) => mapPlain(plain, item, (match, replacement) => decide(match, replacement, n++)));
 }
 
 /**
@@ -200,21 +251,11 @@ export function correctCueText(
   counts: CorrectionCounts = {},
 ): { text: string; counts: CorrectionCounts } {
   if (!rules.length || !text) return { text, counts };
-  const out = text
-    .split(/(\r?\n)/)
-    .map((piece, i) => {
-      if (i % 2 === 1) return piece;
-      return piece
-        .split(MARKUP)
-        .map((part, j) => {
-          if (j % 2 === 1 || !part) return part;
-          let next = part;
-          for (const item of rules) next = applyToPlain(next, item, counts);
-          return next;
-        })
-        .join("");
-    })
-    .join("");
+  const out = eachPlain(text, (plain) => {
+    let next = plain;
+    for (const item of rules) next = applyToPlain(next, item, counts);
+    return next;
+  });
   return { text: out, counts };
 }
 
@@ -370,6 +411,7 @@ export function parseCorrectionRule(raw: unknown): CorrectionRule | null {
         )
       : [],
     enabled: e.enabled !== false,
+    ...(e.confirm === true ? { confirm: true } : {}),
   };
   const except = Array.isArray(e.except)
     ? Array.from(new Set(e.except.map(normalizeCorrectionPath).filter((p): p is string => Boolean(p))))
@@ -538,7 +580,17 @@ export function compileCorrectionsFor(
 
 /** A stable fingerprint of the rules, so finished work is redone when they change. */
 export function correctionsFingerprint(rules: readonly CompiledCorrection[]): string {
-  return JSON.stringify(rules.map(({ rule }) => [rule.find, rule.replace, rule.match, rule.caseSensitive]));
+  return JSON.stringify(
+    rules.map(({ rule }) => [rule.find, rule.replace, rule.match, rule.caseSensitive, rule.confirm === true]),
+  );
+}
+
+/** Rules that need no LLM (the in-place rewrite) and those to check with the translator. */
+export function splitChecked(rules: readonly CompiledCorrection[]): {
+  plain: CompiledCorrection[];
+  checked: CompiledCorrection[];
+} {
+  return { plain: rules.filter((c) => !c.rule.confirm), checked: rules.filter((c) => c.rule.confirm) };
 }
 
 /**
@@ -561,7 +613,8 @@ export function correctionGlossaryTerms(rules: readonly CompiledCorrection[]): s
   const terms: string[] = [];
   for (const { rule } of rules) {
     const term = rule.replace.trim();
-    if (rule.match === "regex" || !term || !looksLikeName(term)) continue;
+    // A checked rule's term is also an ordinary word; pinning it would undo the check.
+    if (rule.match === "regex" || rule.confirm || !term || !looksLikeName(term)) continue;
     const key = term.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);

@@ -27,8 +27,10 @@ import {
   type SeriesGlossary,
 } from "./context.js";
 import { errorMessage } from "../errors.js";
+import { askConnection, checkCorrections, type CheckResult } from "./correction-check.js";
 import {
   correctCueText,
+  splitChecked,
   totalCorrections,
   type CompiledCorrection,
   type CorrectionCounts,
@@ -144,6 +146,8 @@ export interface TranslateFileOptions {
   pinnedTerms?: readonly string[];
   /** Replacements made, per stage, by rule id; fired only when a stage changed something. */
   onCorrections?: (stage: "source" | "output", counts: CorrectionCounts) => void;
+  /** What the "check with the translator" rules confirmed and kept, per stage. */
+  onCorrectionChecks?: (stage: "source" | "output", result: CheckResult) => void;
 }
 
 /** One successful LLM call's tokens, attributed. */
@@ -253,14 +257,56 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // file first), so a source the queue could not rewrite — read-only, not
   // UTF-8 — is still translated from corrected text. A rewritten file makes
   // this a no-op: the rules are stable, so a second pass finds nothing.
-  if (opts.sourceCorrections?.length) {
+  const sourceRules = splitChecked(opts.sourceCorrections ?? []);
+  const outputRules = splitChecked(opts.outputCorrections ?? []);
+  if (sourceRules.plain.length) {
     const counts: CorrectionCounts = {};
     for (const cue of subtitle) {
       if (cue?.data && typeof cue.data.text === "string") {
-        cue.data.text = correctCueText(cue.data.text, opts.sourceCorrections, counts).text;
+        cue.data.text = correctCueText(cue.data.text, sourceRules.plain, counts).text;
       }
     }
     if (totalCorrections(counts) > 0) opts.onCorrections?.("source", counts);
+  }
+
+  // "Check with the translator" rules: every match is put to the LLM, and only
+  // a confirmed one is replaced. A failure keeps the text as it is.
+  const runChecks = async (stage: "source" | "output", checked: CompiledCorrection[], texts: string[]) => {
+    // Nothing to ask about: no connection is touched, so an offline one cannot fail the job.
+    if (!texts.some((text) => totalCorrections(correctCueText(text, checked).counts) > 0)) return texts;
+    for (const conn of connections) {
+      if (health.isUnavailable(conn.id)) continue;
+      try {
+        const result = await withConnection(conn, () =>
+          checkCorrections(
+            texts,
+            checked,
+            askConnection(conn, {
+              abortSignal,
+              requestTimeoutMs: jobTimeoutMs,
+              onUsage: usageFor("check", conn),
+            }),
+          ),
+        );
+        opts.onCorrectionChecks?.(stage, result);
+        return result.texts;
+      } catch (error) {
+        // An offline or busy connection moves on to the next, as the analysis pass does.
+        if (errorMessage(error) === "STOP_REQUESTED" || errorMessage(error) === "JOB_CANCELLED") throw error;
+      }
+    }
+    // No connection could check: every match is kept as written.
+    return texts;
+  };
+  if (sourceRules.checked.length) {
+    const fixed = await runChecks(
+      "source",
+      sourceRules.checked,
+      subtitle.map((cue) => String(cue?.data?.text ?? "")),
+    );
+    subtitle.forEach((cue, i) => {
+      if (cue?.data && typeof cue.data.text === "string") cue.data.text = fixed[i];
+    });
   }
 
   opts.onProgress?.(0, totalCues);
@@ -767,14 +813,24 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     }
   }
 
-  if (opts.outputCorrections?.length) {
+  if (outputRules.plain.length) {
     const counts: CorrectionCounts = {};
     for (const cue of subtitle) {
       if (cue?.data && typeof cue.data.translatedText === "string") {
-        cue.data.translatedText = correctCueText(cue.data.translatedText, opts.outputCorrections, counts).text;
+        cue.data.translatedText = correctCueText(cue.data.translatedText, outputRules.plain, counts).text;
       }
     }
     if (totalCorrections(counts) > 0) opts.onCorrections?.("output", counts);
+  }
+  if (outputRules.checked.length) {
+    const fixed = await runChecks(
+      "output",
+      outputRules.checked,
+      subtitle.map((cue) => String(cue?.data?.translatedText ?? "")),
+    );
+    subtitle.forEach((cue, i) => {
+      if (cue?.data && typeof cue.data.translatedText === "string") cue.data.translatedText = fixed[i];
+    });
   }
 
   // Final write: land the complete translation at the real output path and drop

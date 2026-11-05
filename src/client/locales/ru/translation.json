@@ -899,7 +899,10 @@
       "exceptCount_many": "Не применяется к {{count}} файлам",
       "exceptCount_other": "Не применяется к {{count}} файла",
       "exceptClear": "Снова применять везде",
-      "tag_except": "Исключения"
+      "tag_except": "Исключения",
+      "confirm": "Уточнять у переводчика",
+      "confirmHint": "Для слов, которые бывают и обычными словами (глагол «unify» и бренд UniFi). Каждое совпадение заменяется, только если LLM подтвердит, что имеется в виду замена; файлы исправляются при переводе, а не при сохранении расшифровки.",
+      "tag_check": "Проверка"
     }
   },
   "jobDetail": {
@@ -1578,6 +1581,34 @@
       "from": "из {{folder}}",
       "edit": "Изменить",
       "newForFolder": "Новый список для этой папки"
+    },
+    "folders": {
+      "title": "Папки",
+      "all": "Все файлы",
+      "pinned": "Закреплённые",
+      "none": "Папок пока нет. Запустите сканирование, чтобы найти медиафайлы.",
+      "expand": "Открыть {{folder}}",
+      "collapse": "Закрыть {{folder}}",
+      "pin": "Закрепить {{folder}}",
+      "unpin": "Открепить {{folder}}",
+      "breadcrumb": "Путь к папке",
+      "noCorrections": "нет",
+      "errors_one": "{{count}} ошибка",
+      "errors_few": "{{count}} ошибки",
+      "errors_many": "{{count}} ошибок",
+      "errors_other": "{{count}} ошибки",
+      "files_one": "{{count}} файл",
+      "files_few": "{{count}} файла",
+      "files_many": "{{count}} файлов",
+      "files_other": "{{count}} файла",
+      "done_one": "{{count}} готов",
+      "done_few": "{{count}} готово",
+      "done_many": "{{count}} готово",
+      "done_other": "{{count}} готово",
+      "pending_one": "{{count}} в очереди",
+      "pending_few": "{{count}} в очереди",
+      "pending_many": "{{count}} в очереди",
+      "pending_other": "{{count}} в очереди"
     }
   },
   "llmStatus": {
@@ -1681,7 +1712,8 @@
       "single": "Одна строка",
       "refine": "Доработка",
       "title": "Заголовок",
-      "convert": "Конвертация"
+      "convert": "Конвертация",
+      "check": "Проверка исправлений"
     },
     "topFiles": {
       "title": "Самые используемые файлы"

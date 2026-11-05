@@ -1047,7 +1047,10 @@
       "exceptCount_one": "Not applied to {{count}} file",
       "exceptCount_other": "Not applied to {{count}} files",
       "exceptClear": "Apply everywhere again",
-      "tag_except": "Exceptions"
+      "tag_except": "Exceptions",
+      "confirm": "Check with the translator",
+      "confirmHint": "Use when the word is also an ordinary word (\"unify\" the verb vs. the UniFi brand). Each match is replaced only after the LLM confirms it means the replacement; files are fixed during translation, not when a transcript is saved.",
+      "tag_check": "Check"
     }
   },
   "jobDetail": {
@@ -1556,6 +1559,26 @@
       "from": "from {{folder}}",
       "edit": "Edit",
       "newForFolder": "New list for this folder"
+    },
+    "folders": {
+      "title": "Folders",
+      "all": "All files",
+      "pinned": "Pinned",
+      "none": "No folders yet. Scan to find your media.",
+      "expand": "Open {{folder}}",
+      "collapse": "Close {{folder}}",
+      "pin": "Pin {{folder}}",
+      "unpin": "Unpin {{folder}}",
+      "breadcrumb": "Folder path",
+      "noCorrections": "none",
+      "errors_one": "{{count}} error",
+      "errors_other": "{{count}} errors",
+      "files_one": "{{count}} file",
+      "files_other": "{{count}} files",
+      "done_one": "{{count}} done",
+      "done_other": "{{count}} done",
+      "pending_one": "{{count}} waiting",
+      "pending_other": "{{count}} waiting"
     }
   },
   "llmStatus": {
@@ -1659,7 +1682,8 @@
       "single": "Single line",
       "refine": "Refine",
       "title": "Title",
-      "convert": "Convert"
+      "convert": "Convert",
+      "check": "Correction check"
     },
     "topFiles": {
       "title": "Top files"

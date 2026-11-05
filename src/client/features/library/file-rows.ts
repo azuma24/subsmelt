@@ -1,3 +1,4 @@
+import { folderInScope } from "./folder-scope";
 import type { Job, TaskStatus } from "../../types";
 import type { LibraryItem } from "./library-model";
 import { getTaskStatus } from "./task-status";
@@ -54,5 +55,5 @@ export function fileRowTarget(row: FileRow): string | null {
 export function fileRowMatches(row: FileRow, query: string, folder: string, rootLabel = ""): boolean {
   const needle = query.trim().toLowerCase();
   if (needle && !row.path.toLowerCase().includes(needle)) return false;
-  return folder === "all" || (row.folder || rootLabel) === folder;
+  return folderInScope(row.folder || rootLabel, folder, rootLabel);
 }

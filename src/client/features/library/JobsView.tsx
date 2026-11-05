@@ -12,7 +12,8 @@ import { InlineError } from "../../ui/QueryState";
 import { JobsTableDesktop, JobsTableSkeleton } from "../dashboard/JobsTableDesktop";
 import { JobCardMobile, JobCardSkeleton } from "../dashboard/JobCardMobile";
 import { QueueToolbar } from "../dashboard/QueueToolbar";
-import { useDashboardDerivedState } from "../dashboard/useDashboardDerivedState";
+import { parentFolderLabel, useDashboardDerivedState } from "../dashboard/useDashboardDerivedState";
+import { folderInScope } from "./folder-scope";
 import type { JobStatusFilter } from "./dashboard-params";
 import type { UseManualTranscriptionResult } from "../dashboard/useManualTranscription";
 import { Icon } from "../../ui/Icon";
@@ -32,6 +33,9 @@ interface JobsViewProps {
   /** One row per job, or one per Library file with its language chips. */
   rows: RowLayout;
   onRowsChange: (rows: RowLayout) => void;
+  /** The folder shown with its subfolders ("all" for everything), kept in the URL by the page. */
+  folder: string;
+  onFolderChange: (folder: string) => void;
   queueRunning: boolean;
   currentJobId: number | null;
   onPreview: (jobId: number) => void;
@@ -55,6 +59,8 @@ export function JobsView({
   onStatusChange,
   rows,
   onRowsChange,
+  folder: folderFilter,
+  onFolderChange: setFolderFilter,
   queueRunning,
   currentJobId,
   onPreview,
@@ -72,20 +78,39 @@ export function JobsView({
   const jobsQuery = useJobsQuery();
   const settingsQuery = useSettingsQuery();
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [folderFilter, setFolderFilter] = useState("all");
   const [targetFilter, setTargetFilter] = useState("all");
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const libraryQuery = useLibraryQuery();
 
   const startSelectedMutation = useMutationWithInvalidation((ids: number[]) => api.startQueue(ids));
-  const clearJobsMutation = useMutationWithInvalidation(() => api.clearJobs());
+  const clearJobsMutation = useMutationWithInvalidation((ids: number[] | undefined) => api.clearJobs(ids));
   const deleteSelectedMutation = useMutationWithInvalidation((ids: number[]) => api.deleteJobsApi(ids));
   const retrySelectedMutation = useMutationWithInvalidation((ids: number[]) => api.retryJobsApi(ids));
   const forceSelectedMutation = useMutationWithInvalidation((ids: number[]) => api.forceJobsApi(ids));
 
-  const jobs: Job[] = jobsQuery.data?.jobs || [];
+  const allJobs: Job[] = useMemo(() => jobsQuery.data?.jobs || [], [jobsQuery.data]);
   const mediaDir = str(settingsQuery.data?._media_dir, "/media");
+  // The folder chosen in the sidebar narrows everything below it: the rows, the
+  // status counts, the filter options and what the bulk actions act on.
+  const rootFolderLabel = t("dashboard.folderRoot");
+  const externalFolderLabel = t("dashboard.folderExternal");
+  const jobs = useMemo(
+    () =>
+      allJobs.filter((job) =>
+        folderInScope(
+          parentFolderLabel(job.srt_path, mediaDir, rootFolderLabel, externalFolderLabel),
+          folderFilter,
+          rootFolderLabel,
+          externalFolderLabel,
+        ),
+      ),
+    [allJobs, mediaDir, folderFilter, rootFolderLabel, externalFolderLabel],
+  );
+  const folderItems = useMemo(
+    () => items.filter((item) => folderInScope(item.folder || rootFolderLabel, folderFilter, rootFolderLabel)),
+    [items, folderFilter, rootFolderLabel],
+  );
   const {
     finishedJobCount,
     selectedPendingCount,
@@ -108,9 +133,9 @@ export function JobsView({
     selectedIds,
     t,
   });
-  const jobsById = useMemo(() => new Map(jobs.map((job) => [job.id, job])), [jobs]);
+  const jobsById = useMemo(() => new Map(allJobs.map((job) => [job.id, job])), [allJobs]);
   const files = useLibraryFiles({
-    items,
+    items: folderItems,
     jobsById,
     status,
     query,
@@ -121,7 +146,7 @@ export function JobsView({
     transcriptionEnabled,
   });
   const rootLabel = t("dashboard.folderRoot");
-  const entries = useMemo(() => fileEntries(items, jobsById), [items, jobsById]);
+  const entries = useMemo(() => fileEntries(folderItems, jobsById), [folderItems, jobsById]);
   const entryOptions = useMemo(() => fileFilterOptions(entries, rootLabel), [entries, rootLabel]);
   const allFolderOptions = useMemo(
     () =>
@@ -244,7 +269,12 @@ export function JobsView({
     });
     if (!ok) return;
     try {
-      await clearJobsMutation.mutateAsync();
+      // With a folder chosen, the count above was that folder's: clear exactly those jobs.
+      await clearJobsMutation.mutateAsync(
+        folderFilter === "all"
+          ? undefined
+          : jobs.filter((j) => j.status === "done" || j.status === "error" || j.status === "skipped").map((j) => j.id),
+      );
       setSelectedIds(new Set());
       addToast(t("dashboard.toast.jobsCleared"), "info");
     } catch (e) {
@@ -378,7 +408,7 @@ export function JobsView({
     );
   })();
   // A Library with nothing in it explains how to fill it instead of an empty table.
-  const libraryEmpty = libraryQuery.data !== undefined && libraryQuery.data.files.length === 0 && jobs.length === 0;
+  const libraryEmpty = libraryQuery.data !== undefined && libraryQuery.data.files.length === 0 && allJobs.length === 0;
 
   return (
     <div className="flex min-h-[50dvh] flex-1">

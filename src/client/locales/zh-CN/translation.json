@@ -889,7 +889,10 @@
       "exceptCount_one": "不套用于 {{count}} 个文件",
       "exceptCount_other": "不套用于 {{count}} 个文件",
       "exceptClear": "重新套用到所有文件",
-      "tag_except": "例外"
+      "tag_except": "例外",
+      "confirm": "交由翻译模型确认",
+      "confirmHint": "当这个词也是普通词时使用（例如动词 “unify” 与品牌 UniFi）。每处匹配都要经 LLM 确认确实指替换词后才会替换；修正在翻译时进行，而不是在保存转写稿时。",
+      "tag_check": "确认"
     }
   },
   "jobDetail": {
@@ -1556,6 +1559,26 @@
       "from": "来自 {{folder}}",
       "edit": "编辑",
       "newForFolder": "为此文件夹新建列表"
+    },
+    "folders": {
+      "title": "文件夹",
+      "all": "全部文件",
+      "pinned": "已固定",
+      "none": "还没有文件夹。扫描以查找媒体。",
+      "expand": "展开 {{folder}}",
+      "collapse": "收起 {{folder}}",
+      "pin": "固定 {{folder}}",
+      "unpin": "取消固定 {{folder}}",
+      "breadcrumb": "文件夹路径",
+      "noCorrections": "无",
+      "errors_one": "{{count}} 个错误",
+      "errors_other": "{{count}} 个错误",
+      "files_one": "{{count}} 个文件",
+      "files_other": "{{count}} 个文件",
+      "done_one": "已完成 {{count}}",
+      "done_other": "已完成 {{count}}",
+      "pending_one": "等待中 {{count}}",
+      "pending_other": "等待中 {{count}}"
     }
   },
   "llmStatus": {
@@ -1659,7 +1682,8 @@
       "single": "单行",
       "refine": "润色",
       "title": "标题",
-      "convert": "转换"
+      "convert": "转换",
+      "check": "校正确认"
     },
     "topFiles": {
       "title": "热门文件"

@@ -299,6 +299,15 @@ function RuleOptions({
         />
         {t("settings.corrections.caseSensitive")}
       </label>
+      <label className="flex items-center gap-2 text-xs text-muted" title={t("settings.corrections.confirmHint")}>
+        <input
+          type="checkbox"
+          checked={rule.confirm === true}
+          onChange={(e) => onChange({ confirm: e.target.checked || undefined })}
+          className="h-4 w-4 accent-accent"
+        />
+        {t("settings.corrections.confirm")}
+      </label>
       {(rule.except?.length ?? 0) > 0 && (
         <span className="flex items-center gap-1 text-xs text-muted" title={rule.except?.join("\n")}>
           {t("settings.corrections.exceptCount", { count: rule.except?.length ?? 0 })}
