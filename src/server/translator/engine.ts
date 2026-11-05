@@ -272,22 +272,30 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // "Check with the translator" rules: every match is put to the LLM, and only
   // a confirmed one is replaced. A failure keeps the text as it is.
   const runChecks = async (stage: "source" | "output", checked: CompiledCorrection[], texts: string[]) => {
+    // Nothing to ask about: no connection is touched, so an offline one cannot fail the job.
+    if (!texts.some((text) => totalCorrections(correctCueText(text, checked).counts) > 0)) return texts;
     for (const conn of connections) {
       if (health.isUnavailable(conn.id)) continue;
-      const result = await withConnection(conn, () =>
-        checkCorrections(
-          texts,
-          checked,
-          askConnection(conn, {
-            abortSignal,
-            requestTimeoutMs: jobTimeoutMs,
-            onUsage: usageFor("check", conn),
-          }),
-        ),
-      );
-      opts.onCorrectionChecks?.(stage, result);
-      return result.texts;
+      try {
+        const result = await withConnection(conn, () =>
+          checkCorrections(
+            texts,
+            checked,
+            askConnection(conn, {
+              abortSignal,
+              requestTimeoutMs: jobTimeoutMs,
+              onUsage: usageFor("check", conn),
+            }),
+          ),
+        );
+        opts.onCorrectionChecks?.(stage, result);
+        return result.texts;
+      } catch (error) {
+        // An offline or busy connection moves on to the next, as the analysis pass does.
+        if (errorMessage(error) === "STOP_REQUESTED" || errorMessage(error) === "JOB_CANCELLED") throw error;
+      }
     }
+    // No connection could check: every match is kept as written.
     return texts;
   };
   if (sourceRules.checked.length) {

@@ -163,11 +163,19 @@ function expandReplacement(
   return out;
 }
 
-function applyToPlain(text: string, item: CompiledCorrection, counts: CorrectionCounts): string {
+/**
+ * Each match of one rule in a plain piece of text, with the replacement the
+ * rule would put there; `decide` returns what to write instead. Matches whose
+ * replacement equals the match are left out (they are not changes).
+ */
+function mapPlain(
+  text: string,
+  item: CompiledCorrection,
+  decide: (match: string, replacement: string) => string,
+): string {
   const { rule, pattern } = item;
   pattern.lastIndex = 0;
-  let replaced = 0;
-  const out = text.replace(pattern, (...args: unknown[]) => {
+  return text.replace(pattern, (...args: unknown[]) => {
     const match = args[0] as string;
     // A zero-length match (a lookahead-only regex) would insert text on every
     // run and never settle; leave it alone. Validation refuses such patterns too.
@@ -183,11 +191,47 @@ function applyToPlain(text: string, item: CompiledCorrection, counts: Correction
       const named = hasNamed ? (args[args.length - 1] as Record<string, unknown>) : undefined;
       replacement = expandReplacement(rule.replace, match, groups, position, subject, named);
     }
-    if (replacement !== match) replaced++;
+    return replacement === match ? match : decide(match, replacement);
+  });
+}
+
+function applyToPlain(text: string, item: CompiledCorrection, counts: CorrectionCounts): string {
+  let replaced = 0;
+  const out = mapPlain(text, item, (_match, replacement) => {
+    replaced++;
     return replacement;
   });
-  if (replaced) counts[rule.id] = (counts[rule.id] ?? 0) + replaced;
+  if (replaced) counts[item.rule.id] = (counts[item.rule.id] ?? 0) + replaced;
   return out;
+}
+
+/** Run `transform` on each plain piece of a cue: each line, and each part of a line between markup. */
+function eachPlain(text: string, transform: (plain: string) => string): string {
+  return text
+    .split(/(\r?\n)/)
+    .map((piece, i) => {
+      if (i % 2 === 1) return piece;
+      return piece
+        .split(MARKUP)
+        .map((part, j) => (j % 2 === 1 || !part ? part : transform(part)))
+        .join("");
+    })
+    .join("");
+}
+
+/**
+ * One rule's changing matches in a cue, numbered from 0 in reading order and
+ * found exactly as correctCueText finds them; `decide(match, replacement, n)`
+ * returns what to write for each. Used to ask about, and apply, one
+ * occurrence at a time.
+ */
+export function mapCueMatches(
+  text: string,
+  item: CompiledCorrection,
+  decide: (match: string, replacement: string, n: number) => string,
+): string {
+  let n = 0;
+  return eachPlain(text, (plain) => mapPlain(plain, item, (match, replacement) => decide(match, replacement, n++)));
 }
 
 /**
@@ -202,21 +246,11 @@ export function correctCueText(
   counts: CorrectionCounts = {},
 ): { text: string; counts: CorrectionCounts } {
   if (!rules.length || !text) return { text, counts };
-  const out = text
-    .split(/(\r?\n)/)
-    .map((piece, i) => {
-      if (i % 2 === 1) return piece;
-      return piece
-        .split(MARKUP)
-        .map((part, j) => {
-          if (j % 2 === 1 || !part) return part;
-          let next = part;
-          for (const item of rules) next = applyToPlain(next, item, counts);
-          return next;
-        })
-        .join("");
-    })
-    .join("");
+  const out = eachPlain(text, (plain) => {
+    let next = plain;
+    for (const item of rules) next = applyToPlain(next, item, counts);
+    return next;
+  });
   return { text: out, counts };
 }
 

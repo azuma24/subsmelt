@@ -21,10 +21,10 @@ const unify: CorrectionRule = {
 
 const TEXTS = ["Open the unify app", "We unify the dashboards", "Nothing here", "unify, then unify again"];
 
-/** A stand-in LLM: says yes to the lines that mention an app. */
+/** A stand-in LLM: says yes when the marked occurrence is followed by "app". */
 function brandOnly(prompt: string): Promise<string> {
   const items = JSON.parse(prompt.slice(prompt.indexOf("[\n"))) as Array<{ id: number; line: string }>;
-  return Promise.resolve(JSON.stringify(items.map((item) => ({ id: item.id, replace: /app/.test(item.line) }))));
+  return Promise.resolve(JSON.stringify(items.map((item) => ({ id: item.id, replace: /» app/.test(item.line) }))));
 }
 
 test("only confirmed matches are replaced; the rest are kept and counted", async () => {
@@ -55,6 +55,13 @@ test("the question marks the term and carries the neighbouring lines", async () 
     term: "unify",
     replaceWith: "UniFi",
   });
+});
+
+test("each occurrence gets its own answer, so a line with both meanings is fixed only where it should be", async () => {
+  const result = await checkCorrections(["Use the unify app to unify the dashboards"], rules(unify), brandOnly);
+  assert.deepEqual(result.texts, ["Use the UniFi app to unify the dashboards"]);
+  assert.deepEqual(result.confirmed, { unify: 1 });
+  assert.deepEqual(result.kept, { unify: 1 });
 });
 
 test("a failed request or a garbled answer keeps everything as written", async () => {

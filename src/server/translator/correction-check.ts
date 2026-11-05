@@ -1,10 +1,5 @@
 import { generateText } from "ai";
-import {
-  correctCueText,
-  totalCorrections,
-  type CompiledCorrection,
-  type CorrectionCounts,
-} from "../../shared/corrections.js";
+import { mapCueMatches, type CompiledCorrection, type CorrectionCounts } from "../../shared/corrections.js";
 import {
   extractUsage,
   getAi,
@@ -46,16 +41,26 @@ export interface CheckResult {
   failedBatches: number;
 }
 
+/** One occurrence to ask about: the `n`-th changing match of the rule in cue `cue`. */
 interface Question {
   id: number;
   cue: number;
+  n: number;
   item: CompiledCorrection;
 }
 
-/** The cue with every match of the rule marked «like this», for the question. */
-function marked(text: string, item: CompiledCorrection): string {
-  const pattern = new RegExp(item.pattern.source, item.pattern.flags);
-  return text.replace(pattern, (match) => (match ? `«${match}»` : match));
+/** The cue with only the asked-about occurrence marked «like this». */
+function marked(text: string, item: CompiledCorrection, n: number): string {
+  return mapCueMatches(text, item, (match, _replacement, i) => (i === n ? `«${match}»` : match));
+}
+
+function occurrences(text: string, item: CompiledCorrection): number {
+  let count = 0;
+  mapCueMatches(text, item, (match) => {
+    count++;
+    return match;
+  });
+  return count;
 }
 
 function oneLine(text: string | undefined): string {
@@ -80,10 +85,10 @@ export function parseAnswers(raw: string): Map<number, boolean> {
 }
 
 export function buildCheckPrompt(questions: readonly Question[], texts: readonly string[]): string {
-  const items = questions.map(({ id, cue, item }) => ({
+  const items = questions.map(({ id, cue, n, item }) => ({
     id,
     before: oneLine(texts[cue - 1]),
-    line: oneLine(marked(texts[cue], item)),
+    line: oneLine(marked(texts[cue], item, n)),
     after: oneLine(texts[cue + 1]),
     term: item.rule.find,
     replaceWith: item.rule.replace,
@@ -112,11 +117,13 @@ export async function checkCorrections(
   const kept: CorrectionCounts = {};
   let failedBatches = 0;
   for (const item of rules) {
+    // One question per occurrence, so "the unify app to unify the dashboards" can get yes and no.
     const questions: Question[] = [];
     out.forEach((text, cue) => {
-      if (totalCorrections(correctCueText(text, [item]).counts) > 0)
-        questions.push({ id: questions.length, cue, item });
+      const count = occurrences(text, item);
+      for (let n = 0; n < count; n++) questions.push({ id: questions.length, cue, n, item });
     });
+    const yes = new Map<number, Set<number>>();
     for (let start = 0; start < questions.length; start += BATCH_SIZE) {
       const batch = questions.slice(start, start + BATCH_SIZE);
       let answers = new Map<number, boolean>();
@@ -127,16 +134,19 @@ export async function checkCorrections(
           throw error;
         failedBatches++;
       }
-      for (const { id, cue } of batch) {
-        const result = correctCueText(out[cue], [item]);
-        const n = totalCorrections(result.counts);
+      for (const { id, cue, n } of batch) {
         if (answers.get(id) === true) {
-          out[cue] = result.text;
-          confirmed[item.rule.id] = (confirmed[item.rule.id] ?? 0) + n;
+          if (!yes.has(cue)) yes.set(cue, new Set());
+          yes.get(cue)?.add(n);
+          confirmed[item.rule.id] = (confirmed[item.rule.id] ?? 0) + 1;
         } else {
-          kept[item.rule.id] = (kept[item.rule.id] ?? 0) + n;
+          kept[item.rule.id] = (kept[item.rule.id] ?? 0) + 1;
         }
       }
+    }
+    // Every question for this rule asked about the text as it stood; apply the yeses together.
+    for (const [cue, ns] of yes) {
+      out[cue] = mapCueMatches(out[cue], item, (match, replacement, n) => (ns.has(n) ? replacement : match));
     }
   }
   return { texts: out, confirmed, kept, failedBatches };

@@ -146,7 +146,7 @@ test("checked rules ask the LLM per match and replace only a confirmed one", asy
     if (system.includes("You check subtitle corrections")) {
       checks++;
       const items = JSON.parse(user.slice(user.indexOf("[\n"))) as Array<{ id: number; line: string }>;
-      return chatCompletion(JSON.stringify(items.map((i) => ({ id: i.id, replace: /app/.test(i.line) }))));
+      return chatCompletion(JSON.stringify(items.map((i) => ({ id: i.id, replace: /» app/.test(i.line) }))));
     }
     chunkPrompts.push(user);
     const lines = JSON.parse(user.slice(user.lastIndexOf("["))) as string[];
@@ -187,4 +187,62 @@ test("checked rules ask the LLM per match and replace only a confirmed one", asy
   // A checked rule's term is never pinned as a name.
   assert.doesNotMatch(prompt, /UniFi -> UniFi/);
   assert.ok(usageKinds.includes("check"));
+});
+
+test("an offline first connection hands the check to the next one instead of failing the job", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-corrections-fallback-"));
+  const srtPath = path.join(dir, "Talk.en.srt");
+  const outputPath = path.join(dir, "Talk.chi.srt");
+  fs.writeFileSync(srtPath, "1\n00:00:01,000 --> 00:00:02,000\nOpen the unify app\n", "utf8");
+  const set: CorrectionRuleSet = {
+    id: "ubnt",
+    name: "Ubiquiti",
+    enabled: true,
+    paths: [""],
+    rules: [rule("unify", "UniFi", { confirm: true })],
+  };
+  const source = compileCorrectionsFor([set], "Talk.en.srt", "source");
+  const checkedBy: string[] = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.startsWith("http://127.0.0.1:9/")) throw new TypeError("fetch failed: connect ECONNREFUSED");
+    if (url.endsWith("/models")) return new Response("{}", { status: 200 });
+    const body = JSON.parse(String(init?.body));
+    const system = messageContent(body, "system");
+    if (system.includes("subtitle content analyst")) return chatCompletion("Summary: a talk.");
+    const user = messageContent(body, "user");
+    if (system.includes("You check subtitle corrections")) {
+      checkedBy.push(url);
+      const items = JSON.parse(user.slice(user.indexOf("[\n"))) as Array<{ id: number }>;
+      return chatCompletion(JSON.stringify(items.map((i) => ({ id: i.id, replace: true }))));
+    }
+    const lines = JSON.parse(user.slice(user.lastIndexOf("["))) as string[];
+    return chatCompletion(JSON.stringify(lines.map((l) => `T ${l}`)));
+  }) as typeof fetch;
+  try {
+    await translateFile({
+      srtPath,
+      outputPath,
+      connections: [
+        { id: "down", label: "down", apiKey: "", apiHost: "http://127.0.0.1:9/v1", model: "test-model" },
+        { id: "up", label: "up", apiKey: "", apiHost: "http://127.0.0.2:9/v1", model: "test-model" },
+      ],
+      llmMode: "fallback",
+      prompt: "Translate.",
+      lang: "Chinese",
+      additional: "",
+      temperature: 0.3,
+      chunkSize: 5,
+      contextSize: 0,
+      parallelChunks: 1,
+      requestTimeoutMs: 5_000,
+      disableToolCalls: true,
+      sourceCorrections: source,
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.ok(checkedBy.length > 0 && checkedBy.every((url) => url.startsWith("http://127.0.0.2:9/")));
+  assert.match(fs.readFileSync(outputPath, "utf8"), /T Open the UniFi app/);
 });
