@@ -6,6 +6,10 @@ installer, macOS app) share a version number and are released together, as
 
 ## [Unreleased]
 
+### Translation
+
+- New **Settings → Corrections**: find → replace rules for words that keep coming out wrong, grouped in rule sets that apply to the folders you pick (for example "Ubiquity" → "Ubiquiti" in a UniFi channel only). Each rule runs **before translation** (on the source subtitle and on every new Whisper transcript, so the translator reads the right word and is told to keep it), **after translation** (on the translated file, optionally for some languages only), or both. Rules match a whole word, text anywhere (for Chinese or Japanese), or a regular expression. Only cue text changes; numbers, timings, styling, line endings and the file's modification time stay as they were, and each job logs what it replaced. See [docs/subtitle-corrections.md](docs/subtitle-corrections.md).
+
 ## [0.8.0] — 2026-11-04
 
 ### Settings

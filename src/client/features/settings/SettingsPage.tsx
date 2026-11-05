@@ -20,6 +20,7 @@ import { JSON_BLOB_SETTINGS, getStr, validateJsonSetting, type JsonBlobSettingKe
 import { str } from "../../lib/settings-value";
 import { EMPTY_FORM, edit, editMany, isDirty, receiveServer, saved, view, type SettingsForm } from "./settings-form";
 import { EngineSection } from "./sections/EngineSection";
+import { CorrectionsSection } from "./sections/CorrectionsSection";
 import { InterfaceSection } from "./sections/InterfaceSection";
 import { LlmSection } from "./sections/LlmSection";
 import { SourcesSection } from "./sections/SourcesSection";
@@ -28,7 +29,7 @@ import { YoutubeSection } from "./sections/YoutubeSection";
 import { SettingsSubpageLinks } from "./SettingsSubpageLinks";
 import { ConfigLoadErrorBanner, configLoadFailureOf } from "./ConfigLoadErrorBanner";
 
-const SECTION_KEYS = ["llm", "engine", "sources", "stt", "youtube", "iface"] as const;
+const SECTION_KEYS = ["llm", "engine", "corrections", "sources", "stt", "youtube", "iface"] as const;
 type SectionKey = (typeof SECTION_KEYS)[number];
 const isSectionKey = (value: string | null): value is SectionKey => SECTION_KEYS.includes(value as SectionKey);
 /** saved: written as sent. rejected: written, minus keys the server refused. failed: nothing written. */
@@ -291,6 +292,12 @@ export function SettingsPage() {
         title: t("settings.translationEngine.title"),
         description: t("settings.translationEngine.description"),
         content: <EngineSection settings={settings} updateAndSaveDebounced={updateAndSaveDebounced} />,
+      },
+      corrections: {
+        navLabel: t("settings.corrections.title"),
+        title: t("settings.corrections.title"),
+        description: t("settings.corrections.description"),
+        content: <CorrectionsSection settings={settings} updateAndSave={updateAndSave} />,
       },
       sources: {
         navLabel: t("settings.sources.title"),
