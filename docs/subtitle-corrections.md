@@ -8,8 +8,8 @@ are not a general quality check and do not fix mistranslations, timing or gramma
 
 | Stage | When | What it changes |
 |---|---|---|
-| **Before translation** | Right after Whisper writes a transcript, and again when a translation job starts | The source subtitle on disk (any source in the set's folders, not only transcripts), and the text sent to the LLM. Each replacement is also added to the per-chunk glossary as a term to keep as written (`Ubiquiti -> Ubiquiti`). |
-| **After translation** | Just before the translated file is saved | The translated cues only. A rule can be limited to some target languages (`chi`, `jpn`). |
+| **Before translation** | Right after Whisper writes a transcript, and again when a translation job starts | The source subtitle on disk (any source in the set's folders, not only transcripts), and the text sent to the LLM. A replacement that looks like a name (capitals, digits, or a script without case, such as `Ubiquiti`, `U7 Pro` or `優比快`) is also added to the per-chunk glossary as a term to keep as written (`Ubiquiti -> Ubiquiti`). A plain lowercase fix such as `teh → the` is not, so the translator still translates it. |
+| **After translation** | Just before the translated file is saved | The translated cues only. A rule can be limited to some target languages (`chi`, `jpn`). It applies by the folder the **translation** is saved in, which an output pattern such as `Subs/{{name}}.chi.srt` can make different from the source's folder. |
 | **Before and after** | Both | Both. |
 
 Fixing a speech-recognition mistake **before** translation is usually better:
@@ -108,6 +108,8 @@ match, and markup (`<i>`, `{\i1}`, `\N`) is never changed.
   changes nothing. If a check fails, the file is left alone and the job log
   says why. A source that is not UTF-8 is never rewritten; the translation is
   still corrected in memory.
+- Saving refuses two lists that undo each other where both apply (`Unify → UniFi` on one folder, `UniFi → Unify` on the whole library), and a regular expression that matches empty text (a lookahead on its own).
+- A rewrite keeps the file's permissions, its owner where the server is allowed to set it, and goes through a symlink to the real file.
 - Saving refuses a rule that would never settle, for example `UniFi` →
   `UniFi Network` (the replacement contains the term again), or `A → B` followed
   by `B → A`.

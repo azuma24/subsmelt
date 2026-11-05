@@ -4,6 +4,7 @@ import * as api from "../../../api";
 import type { Task } from "../../../types";
 import { ActionButton } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
+import { useSettingsQuery } from "../../../hooks";
 import { flattenFolderTree } from "../media-sources/model";
 import { ListEditor } from "../../corrections/ListEditor";
 import { newList } from "../../corrections/model";
@@ -12,7 +13,8 @@ import { useCorrectionDraft } from "../../corrections/useCorrectionDraft";
 
 interface CorrectionsSectionProps {
   settings: Record<string, unknown>;
-  updateAndSave: (key: string, value: unknown) => Promise<void> | void;
+  /** Resolves to "saved" only when the server stored the whole form. */
+  updateAndSave: (key: string, value: unknown) => Promise<string>;
 }
 
 /**
@@ -22,8 +24,16 @@ interface CorrectionsSectionProps {
  */
 export function CorrectionsSection({ settings, updateAndSave }: CorrectionsSectionProps) {
   const { t } = useTranslation();
-  const draft = useCorrectionDraft(str(settings.correction_rule_sets, "[]"), (json) =>
-    updateAndSave("correction_rule_sets", json),
+  // The saved value is the server's, not the page form's: the form holds edits the
+  // moment they are made, so reading it would mark a failed save as saved.
+  const serverSettings = useSettingsQuery().data as Record<string, unknown> | undefined;
+  const draft = useCorrectionDraft(
+    str(serverSettings?.correction_rule_sets ?? settings.correction_rule_sets, "[]"),
+    async (json) => {
+      const outcome = await updateAndSave("correction_rule_sets", json);
+      // The page has already said why (a toast, or the topbar's unsaved state); keep the draft unsaved.
+      if (outcome !== "saved") throw new Error(outcome);
+    },
   );
   const [folders, setFolders] = useState<string[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);

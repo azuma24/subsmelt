@@ -224,8 +224,10 @@ async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
     plan.prompt,
     plan.translation.options.additional,
     String(plan.translation.options.refinePass),
-    // Only when rules apply, so keys saved before corrections existed still match.
-    ...(corrections.source.length ? [correctionsFingerprint(corrections.source)] : []),
+    // Only when the source could not be rewritten: then the rules change what the LLM
+    // reads without changing the bytes the key hashes. A rewritten (or untouched)
+    // source already carries its corrections, so finished chunks stay valid.
+    ...(corrections.inMemoryOnly ? [correctionsFingerprint(corrections.source)] : []),
   ]);
   // The sample size shapes the analysis alone, so changing it keeps finished chunks.
   const analysisKey = key && `${key}:${typed.analysis_max_lines}`;
@@ -345,14 +347,23 @@ async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
  * the corrected file — and then given to the engine as well, which fixes in
  * memory whatever the rewrite could not. A failed rewrite never fails the job.
  */
-function prepareCorrections(ctx: JobContext): { source: CompiledCorrection[]; output: CompiledCorrection[] } {
+function prepareCorrections(ctx: JobContext): {
+  source: CompiledCorrection[];
+  output: CompiledCorrection[];
+  /** The source file could not be rewritten, so the rules apply in memory only. */
+  inMemoryOnly: boolean;
+} {
   const { job, srtName } = ctx;
   const langCodes = ctx.task ? fileLangCodes(ctx.task, ctx.typed.preferred_chinese) : [ctx.langCode];
   const source = correctionsForFile(job.srt_path, "source");
-  const output = correctionsForFile(job.srt_path, "output", langCodes);
+  // Output rules belong to where the translation lives, which an output pattern
+  // like "Subs/{{name}}.chi.srt" can put in another folder than its source.
+  const output = correctionsForFile(job.output_path, "output", langCodes);
+  let inMemoryOnly = false;
   if (source.length) {
     const result = correctSubtitleFile(job.srt_path, source);
     if (result.error) {
+      inMemoryOnly = true;
       logger.warn(
         "translate",
         `Corrections not saved to ${srtName}: ${result.error}; correcting in memory only`,
@@ -365,7 +376,7 @@ function prepareCorrections(ctx: JobContext): { source: CompiledCorrection[]; ou
       logCorrections(ctx, `in ${srtName}`, result.counts, source);
     }
   }
-  return { source, output };
+  return { source, output, inMemoryOnly };
 }
 
 function logCorrections(

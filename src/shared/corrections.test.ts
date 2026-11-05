@@ -135,3 +135,54 @@ test("parsing drops malformed entries and keeps folders inside the library", () 
 test("glossary terms are the plain rules' replacements, once each", () => {
   assert.deepEqual(correctionGlossaryTerms(compiled), ["Unifi", "Ubiquiti"]);
 });
+
+test("regex replacements expand exactly as String.prototype.replace does", () => {
+  const cases: Array<[string, string, string]> = [
+    ["(U)(\\d)", "$2$1", "U7 and U6"],
+    ["(U)", "$10", "U7"], // one group: $1 then a literal 0
+    ["(?<m>U)(\\d)", "[$<m>|$2]", "U7"],
+    ["U", "$<x>", "U7"], // no named groups: $<x> stays literal
+    ["U", "<$`|$'|$&|$$>", "aUb"],
+    ["U", "$0$3", "U"], // out of range: literal
+  ];
+  for (const [find, replace, text] of cases) {
+    const set: CorrectionRuleSet = { ...UBIQUITI, rules: [rule(find, replace, { match: "regex" })] };
+    const rules = compileCorrectionsFor([set], "UniFi/a.srt", "source");
+    assert.equal(
+      correctCueText(text, rules).text,
+      text.replace(new RegExp(find, "gu"), replace),
+      `${find} → ${replace}`,
+    );
+  }
+});
+
+test("lookahead-only patterns are refused, and a zero-length match never inserts text", () => {
+  assert.match(
+    correctionRuleSetsErrors(
+      JSON.stringify([{ ...UBIQUITI, rules: [rule("(?=Ubiq)", "X", { match: "regex" })] }]),
+    ).join(),
+    /empty text/,
+  );
+  const zero = { rule: rule("(?=Ubiq)", "X", { match: "regex" }), setName: "", pattern: /(?=Ubiq)/gu };
+  assert.deepEqual(correctCueText("Ubiquity", [zero]), { text: "Ubiquity", counts: {} });
+});
+
+test("only name-like replacements are pinned in the glossary", () => {
+  const set: CorrectionRuleSet = {
+    ...UBIQUITI,
+    rules: [rule("teh", "the"), rule("Ubiquity", "Ubiquiti"), rule("u7pro", "U7 Pro"), rule("優比快", "優比快")],
+  };
+  assert.deepEqual(correctionGlossaryTerms(compileCorrectionsFor([set], "UniFi/a", "source")), [
+    "Ubiquiti",
+    "U7 Pro",
+    "優比快",
+  ]);
+});
+
+test("lists that undo each other where both apply are refused on save", () => {
+  const a: CorrectionRuleSet = { id: "a", name: "A", enabled: true, paths: ["TV"], rules: [rule("Unify", "UniFi")] };
+  const b: CorrectionRuleSet = { id: "b", name: "B", enabled: true, paths: [""], rules: [rule("UniFi", "Unify")] };
+  assert.match(correctionRuleSetsErrors(JSON.stringify([a, b])).join(), /Lists "A" and "B" undo each other in TV/);
+  // Apart, they are fine.
+  assert.deepEqual(correctionRuleSetsErrors(JSON.stringify([a, { ...b, paths: ["Movies"] }])), []);
+});

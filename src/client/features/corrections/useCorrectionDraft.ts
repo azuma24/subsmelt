@@ -49,6 +49,8 @@ export function useCorrectionDraft(saved: string, persist: (json: string) => unk
         // (at once from the Settings form, after a refetch elsewhere), and a
         // failed save must leave the draft looking unsaved.
         await persist(serialized);
+      } catch {
+        // Reported by whoever saved (a toast); the draft stays unsaved so nothing is lost.
       } finally {
         setSaving(false);
       }
