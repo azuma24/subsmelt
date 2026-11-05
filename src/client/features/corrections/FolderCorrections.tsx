@@ -174,6 +174,7 @@ function EditDrawer({
           list={list}
           folders={folders}
           langCodes={langCodes}
+          saved={!draft.dirty && !isNew}
           onChange={(next) => draft.setLists((current) => current.map((l) => (l.id === next.id ? next : l)))}
           onDelete={
             isNew

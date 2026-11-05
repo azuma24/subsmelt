@@ -11,6 +11,7 @@ import {
   type CorrectionRule,
   type CorrectionRuleSet,
 } from "../../../shared/corrections";
+import { ListFilePreview } from "./ListFilePreview";
 import { lowercaseTwin, newRule, parseQuickAdd, ruleTags } from "./model";
 
 const SMALL =
@@ -26,6 +27,8 @@ interface ListEditorProps {
   folders?: string[];
   /** Target language codes of the configured tasks, for "after translation" rules. */
   langCodes: string[];
+  /** The list has no unsaved changes, so "Preview on my files" may apply it. */
+  saved?: boolean;
 }
 
 /**
@@ -34,7 +37,7 @@ interface ListEditorProps {
  * (before translation, whole word, match case); its options open on demand.
  * New rules are typed or pasted into the last line.
  */
-export function ListEditor({ list, onChange, onDelete, folders, langCodes }: ListEditorProps) {
+export function ListEditor({ list, onChange, onDelete, folders, langCodes, saved = false }: ListEditorProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState<string | null>(null);
   const [twinFor, setTwinFor] = useState<string | null>(null);
@@ -117,6 +120,7 @@ export function ListEditor({ list, onChange, onDelete, folders, langCodes }: Lis
       )}
 
       <TryLine list={list} />
+      <ListFilePreview list={list} saved={saved} />
     </section>
   );
 }

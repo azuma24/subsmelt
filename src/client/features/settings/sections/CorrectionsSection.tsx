@@ -54,6 +54,7 @@ export function CorrectionsSection({ settings, updateAndSave }: CorrectionsSecti
           list={list}
           folders={folders}
           langCodes={langCodes}
+          saved={!draft.dirty}
           onChange={(next) => draft.setLists((lists) => lists.map((l) => (l.id === list.id ? next : l)))}
           onDelete={() => draft.setLists((lists) => lists.filter((l) => l.id !== list.id))}
         />

@@ -207,7 +207,8 @@ function str(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
 }
 
-function parseRule(raw: unknown): CorrectionRule | null {
+/** One rule from untrusted JSON, with defaults filled in; null without an id. */
+export function parseCorrectionRule(raw: unknown): CorrectionRule | null {
   if (!raw || typeof raw !== "object") return null;
   const e = raw as Record<string, unknown>;
   const id = str(e.id);
@@ -254,7 +255,9 @@ export function parseCorrectionRuleSets(raw: string | undefined | null): Correct
     const paths = Array.isArray(e.paths)
       ? Array.from(new Set(e.paths.map(normalizeCorrectionPath).filter((p): p is string => p !== null)))
       : [];
-    const rules = Array.isArray(e.rules) ? e.rules.map(parseRule).filter((r): r is CorrectionRule => r !== null) : [];
+    const rules = Array.isArray(e.rules)
+      ? e.rules.map(parseCorrectionRule).filter((r): r is CorrectionRule => r !== null)
+      : [];
     sets.push({ id, name: str(e.name), enabled: e.enabled !== false, paths, rules });
   }
   return sets;
@@ -374,4 +377,34 @@ export function describeCorrections(
   return rules
     .filter(({ rule }) => counts[rule.id])
     .map(({ rule }) => ({ find: rule.find, replace: rule.replace, count: counts[rule.id] }));
+}
+
+// ── Fixing files already in the library (/api/corrections/scan and /apply) ──
+
+export interface ScanMatch {
+  path: string;
+  /** MEDIA_DIR-relative. */
+  relative: string;
+  kind: "source" | "output";
+  count: number;
+  samples: Array<{ before: string; after: string }>;
+  /** Set when the file matches but cannot be rewritten (not UTF-8, does not parse). */
+  error?: string;
+  /** Source: the finished translations a re-translate would redo, with the tokens they took last time. */
+  jobs: Array<{ id: number; langCode: string; tokens: number }>;
+}
+
+export interface ScanReport {
+  matches: ScanMatch[];
+  filesScanned: number;
+  totalMatches: number;
+  /** More files than MAX_FILES were in scope; only the first were read. */
+  truncated: boolean;
+}
+
+export interface ApplyReport {
+  results: Array<{ path: string; total: number; error?: string }>;
+  totalFixed: number;
+  /** Translation jobs queued again because their source changed. */
+  retranslated: number;
 }
