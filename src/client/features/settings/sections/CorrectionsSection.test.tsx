@@ -7,8 +7,8 @@ const ignore = () => {};
 
 test("no rule sets: the section explains itself and offers to add one", () => {
   const page = renderPage(<CorrectionsSection settings={{ correction_rule_sets: "[]" }} updateAndSave={ignore} />);
-  assert.ok(page.text.includes("No rule sets yet."));
-  assert.ok(page.buttons.includes("Add rule set"));
+  assert.ok(page.text.includes("No correction lists yet."));
+  assert.ok(page.buttons.includes("New list"));
 });
 
 test("a saved set shows its folders and rules", () => {

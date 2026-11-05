@@ -275,7 +275,7 @@ export function correctionRuleSetsErrors(raw: string): string[] {
   if (!Array.isArray(value)) return ["Correction rules must be a JSON array"];
   const errors: string[] = [];
   const sets = parseCorrectionRuleSets(raw);
-  if (sets.length !== value.length) errors.push("Every rule set needs an id");
+  if (sets.length !== value.length) errors.push("Every list needs an id");
   for (const set of sets) {
     const label = set.name || set.id;
     if (!set.paths.length) errors.push(`${label}: choose at least one folder`);
@@ -291,7 +291,7 @@ export function correctionRuleSetsErrors(raw: string): string[] {
         if (rule.match === "regex" || !probe) continue;
         const once = correctCueText(probe, compiled).text;
         if (totalCorrections(correctCueText(once, compiled).counts) > 0) {
-          errors.push(`${label}: "${rule.find}": the rules in this set keep changing each other's results`);
+          errors.push(`${label}: "${rule.find}": the rules in this list keep changing each other's results`);
           break;
         }
       }

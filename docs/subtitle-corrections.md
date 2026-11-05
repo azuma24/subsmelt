@@ -1,8 +1,7 @@
 # Subtitle corrections
 
-**Settings → Corrections** fixes words that keep coming out wrong: a brand that
-Whisper mishears, or a product name the translator renders differently every
-time. Rules are deterministic find → replace substitutions on cue text. They
+Corrections fix words that keep coming out wrong: a brand that Whisper
+mishears, or a product name the translator renders differently every time. Rules are deterministic find → replace substitutions on cue text. They
 are not a general quality check and do not fix mistranslations, timing or grammar.
 
 ## Where rules run
@@ -18,12 +17,38 @@ the translator then reads "Ubiquiti" instead of guessing at "Ubiquity", and
 every target language benefits. Use **after translation** for slips in the
 translation itself.
 
-## Rule sets and folders
+## Lists and folders
 
-Rules live in named sets, and a set applies to the folders it names and every
+Rules live in named **lists**, for example *Ubiquiti terms*. A list is defined
+once and switched on for folders. It then applies to those folders and every
 subfolder. **Whole library** applies to everything, so keep brand fixes scoped:
-"unify" is an ordinary English word in a movie. Sets run in list order, and the
-rules in a set run top to bottom.
+"unify" is an ordinary English word in a movie. Lists run in order, and the
+rules in a list run top to bottom.
+
+There are two places to work with lists:
+
+- **Library → open any file → Corrections.** The panel shows which lists apply
+  to that file's folder, including lists inherited from a parent folder
+  (marked "from UniFi"). A checkbox switches a list on or off for this folder,
+  and the change is saved at once. **Edit** opens the list in a drawer, and
+  **New list for this folder** starts a list that is already on for the folder.
+- **Settings → Corrections** shows every list, the folders each one is on, and
+  its rules. Use it for an overview or for bulk editing.
+
+## Editing a list
+
+- A rule is one line: `wrong word → correct word`. Options that differ from the
+  defaults (before translation, whole word, match case) show as small tags,
+  such as `After`, `Anywhere`, `Regex`, `Any case` or `chi`. **Options** opens
+  the rest.
+- To add rules, type in the last line and press Enter. You can also paste
+  several lines at once (`Ubiquity → Ubiquiti`, `a -> b`, `a => b`, or two
+  columns copied from a spreadsheet) and they are all added.
+- After you add a capitalised word, the editor offers its lowercase twin
+  ("Also fix `unify` → `unifi`?"), because whole-word rules match case.
+- **Try a line** runs the list on a sample line, using the same code as the server.
+- Edits are kept as a draft until you press **Save rules**. A problem with a
+  rule shows on its line, and Save stays off until every problem is fixed.
 
 ## Matching
 
@@ -61,7 +86,7 @@ match, and markup (`<i>`, `{\i1}`, `\N`) is never changed.
 
 ## Example: a UniFi library
 
-A set named *Ubiquiti* on the folder `UniFi`:
+A list named *Ubiquiti* that is on for the folder `UniFi`:
 
 | Find | Replace with | When | Match |
 |---|---|---|---|
@@ -69,12 +94,14 @@ A set named *Ubiquiti* on the folder `UniFi`:
 | `unify` | `unifi` | Before translation | Whole word |
 | `Ubiquity` | `Ubiquiti` | Before translation | Whole word |
 
-Use **Try a line** under the set to check a rule before saving.
+You can type the three pairs one by one, or paste them in one go.
 
 ## Storage
 
-Rules are stored in `config.json` under `correction_rule_sets`, as a JSON array
-of `{ id, name, enabled, paths, rules: [{ id, find, replace, stage, match,
+Lists are stored in `config.json` under `correction_rule_sets`, as a JSON
+array of `{ id, name, enabled, paths, rules: [{ id, find, replace, stage, match,
 caseSensitive, languages, enabled }] }` (`stage`: `source`, `output` or
 `both`; `match`: `word`, `phrase` or `regex`). The matching code is
 `src/shared/corrections.ts`, and the file rewriting is `src/server/corrections.ts`.
+The UI lives in `src/client/features/corrections/` (the list editor, the
+Library panel block, and the draft and save logic).
