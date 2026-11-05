@@ -48,7 +48,7 @@ brand Whisper mishears, fixed before and after translation in the folders you
 choose ([docs/subtitle-corrections.md](docs/subtitle-corrections.md)), the **Convert** page for single files (`.srt`, `.vtt`, `.ass`,
 `.ssa`), **YouTube** playlists saved as Markdown notes
 ([second-brain mirror](docs/second-brain.md)), token usage and cost in
-**Settings → Usage**, and 32 interface languages. Why an LLM instead of a
+**Settings → Usage**, and 10 interface languages. Why an LLM instead of a
 translation engine: [docs/why-llm-translation.md](docs/why-llm-translation.md).
 
 ## Speech to text (optional)

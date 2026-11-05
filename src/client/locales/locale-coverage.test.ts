@@ -145,8 +145,10 @@ test("error messages are translated in every non-English locale", () => {
   assert.deepEqual(untranslated, [], `errors.* values still identical to English:\n${untranslated.join("\n")}`);
 });
 
+// No bundled locale is right-to-left today. The layout still honours `dir`, so one added later
+// (Arabic, Hebrew, Persian) only needs its entry marked "rtl" and listed here.
 test("RTL locales are marked rtl and other bundled locales remain LTR", () => {
-  const RTL_LOCALES = new Set(["ar", "fa", "he"]);
+  const RTL_LOCALES = new Set<string>();
   for (const lang of LANGUAGES) {
     assert.equal(lang.dir, RTL_LOCALES.has(lang.code) ? "rtl" : "ltr", `${lang.code} has wrong direction`);
   }
