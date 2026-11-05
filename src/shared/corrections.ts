@@ -370,16 +370,22 @@ export function correctionRuleSetsErrors(raw: string): string[] {
  * Lists that are each fine but undo each other where both apply (UniFi → Unify
  * on the whole library, Unify → UniFi on TV/). Every file there would fail its
  * stability check, so the pair is refused on save. Checked per folder a list
- * names, with language limits ignored so no overlap is missed.
+ * names, and for output rules per target language, because rules limited to
+ * different languages never run on the same file.
  */
 function crossListConflicts(sets: readonly CorrectionRuleSet[]): string[] {
-  const unlimited = sets
-    .filter((set) => set.enabled)
-    .map((set) => ({ ...set, rules: set.rules.map((rule) => ({ ...rule, languages: [] })) }));
+  const live = sets.filter((set) => set.enabled);
+  // Every language an output rule is limited to, plus "a language none of them names".
+  const languages = [...new Set(live.flatMap((set) => set.rules.flatMap((rule) => rule.languages)))];
+  const scopes: Array<{ stage: "source" | "output"; langs: string[] }> = [
+    { stage: "source", langs: [] },
+    { stage: "output", langs: [] },
+    ...languages.map((lang) => ({ stage: "output" as const, langs: [lang] })),
+  ];
   const errors = new Set<string>();
-  for (const folder of new Set(unlimited.flatMap((set) => set.paths))) {
-    for (const stage of ["source", "output"] as const) {
-      const compiled = compileCorrectionsFor(unlimited, folder, stage);
+  for (const folder of new Set(live.flatMap((set) => set.paths))) {
+    for (const { stage, langs } of scopes) {
+      const compiled = compileCorrectionsFor(live, folder, stage, langs);
       const names = [...new Set(compiled.map((c) => c.setName))];
       if (names.length < 2) continue;
       for (const { rule } of compiled) {

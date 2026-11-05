@@ -186,3 +186,25 @@ test("lists that undo each other where both apply are refused on save", () => {
   // Apart, they are fine.
   assert.deepEqual(correctionRuleSetsErrors(JSON.stringify([a, { ...b, paths: ["Movies"] }])), []);
 });
+
+test("output lists limited to different languages never conflict, but do when they share one", () => {
+  const out = (id: string, find: string, replace: string, languages: string[]): CorrectionRuleSet => ({
+    id,
+    name: id,
+    enabled: true,
+    paths: [""],
+    rules: [rule(find, replace, { stage: "output", languages })],
+  });
+  assert.deepEqual(
+    correctionRuleSetsErrors(
+      JSON.stringify([out("zh", "Unify", "UniFi", ["chi"]), out("ja", "UniFi", "Unify", ["jpn"])]),
+    ),
+    [],
+  );
+  assert.match(
+    correctionRuleSetsErrors(
+      JSON.stringify([out("zh", "Unify", "UniFi", ["chi"]), out("all", "UniFi", "Unify", [])]),
+    ).join(),
+    /undo each other/,
+  );
+});
