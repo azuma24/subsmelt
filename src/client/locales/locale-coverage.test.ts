@@ -146,7 +146,7 @@ test("error messages are translated in every non-English locale", () => {
 });
 
 test("RTL locales are marked rtl and other bundled locales remain LTR", () => {
-  const RTL_LOCALES = new Set(["ar", "fa", "he"]);
+  const RTL_LOCALES = new Set(["fa"]);
   for (const lang of LANGUAGES) {
     assert.equal(lang.dir, RTL_LOCALES.has(lang.code) ? "rtl" : "ltr", `${lang.code} has wrong direction`);
   }

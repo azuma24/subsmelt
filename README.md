@@ -46,7 +46,7 @@ many media folders under `/media` as you like; SubSmelt scans it recursively.
 Also built in: the **Convert** page for single files (`.srt`, `.vtt`, `.ass`,
 `.ssa`), **YouTube** playlists saved as Markdown notes
 ([second-brain mirror](docs/second-brain.md)), token usage and cost in
-**Settings → Usage**, and 32 interface languages. Why an LLM instead of a
+**Settings → Usage**, and 30 interface languages. Why an LLM instead of a
 translation engine: [docs/why-llm-translation.md](docs/why-llm-translation.md).
 
 ## Speech to text (optional)

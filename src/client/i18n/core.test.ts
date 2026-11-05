@@ -32,11 +32,15 @@ test("plural forms follow each language's own categories, with _zero for a count
   assert.equal(ru.t(key, { count: 5 }), "5 языков");
   assert.equal(ru.t(key, { count: 21 }), "21 язык");
 
-  const ar = createI18n({ language: "ar", fallback: "en", bundles: { en: locale("en"), ar: locale("ar") } });
-  const zeroKey = Object.entries(flatten(locale("ar"))).find(([key]) => key.endsWith("_zero"));
-  assert.ok(zeroKey, "the Arabic bundle has a zero form");
-  const base = zeroKey[0].replace(/_zero$/, "");
-  assert.equal(ar.t(base, { count: 0 }), interpolate(zeroKey[1], { count: 0 }));
+  // A language with a zero category (Arabic's CLDR rules) picks its _zero form; the bundle here is
+  // synthetic because no shipped locale uses one.
+  const zero = createI18n({
+    language: "ar",
+    fallback: "en",
+    bundles: { en: locale("en"), ar: { n: { files_zero: "none", files_one: "one", files_other: "{{count}}" } } },
+  });
+  assert.equal(zero.t("n.files", { count: 0 }), "none");
+  assert.equal(zero.t("n.files", { count: 1 }), "one");
 });
 
 test("a key missing from the language falls back to its base language and then to English", () => {
@@ -71,13 +75,3 @@ test("changing the language loads its bundle first and tells listeners", async (
   assert.deepEqual(loaded, ["de", "xx"]);
   assert.deepEqual(events, ["loaded", "changed:de", "changed:xx"]);
 });
-
-function flatten(bundle: Bundle, prefix = ""): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [key, value] of Object.entries(bundle)) {
-    const path = prefix ? `${prefix}.${key}` : key;
-    if (typeof value === "string") out[path] = value;
-    else Object.assign(out, flatten(value, path));
-  }
-  return out;
-}

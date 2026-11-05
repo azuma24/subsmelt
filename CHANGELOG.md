@@ -6,6 +6,10 @@ installer, macOS app) share a version number and are released together, as
 
 ## [Unreleased]
 
+### Interface
+
+- Arabic and Hebrew are no longer offered as interface languages, so there are 30 to keep current. Anyone who had picked one sees English. Both remain available as subtitle translation targets and as Whisper languages.
+
 ## [0.8.0] — 2026-11-04
 
 ### Settings
