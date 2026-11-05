@@ -1650,5 +1650,53 @@
     "recent": {
       "title": "最近の呼び出し"
     }
+  },
+  "corrections": {
+    "fix": {
+      "title": "語を修正",
+      "fixSelection": "「{{text}}」を修正…",
+      "fixAWord": "語を修正…",
+      "inSource": "元の字幕内",
+      "inTranslation": "翻訳内（{{lang}}）",
+      "applyTo": "適用先",
+      "onlyThisFile": "このファイルのみ",
+      "onlyThisFileHint": "一度だけの修正です。ルールは保存されません。",
+      "allFilesIn": "次のフォルダーのすべてのファイル:",
+      "folder": "フォルダー",
+      "saveTo": "ルールの保存先",
+      "newList": "新しいリスト「{{name}}」",
+      "futureFiles": "後から追加されたファイルにも適用されます。",
+      "scanning": "ファイルを検索しています…",
+      "noMatches_one": "確認した {{count}} 件のファイルには見つかりませんでした。",
+      "noMatches_other": "確認した {{count}} 件のファイルには見つかりませんでした。",
+      "found_one": "{{count}} 件のファイルで見つかりました（置換 {{matches}} 件）。変更しないファイルはチェックを外してください。",
+      "found_other": "{{count}} 件のファイルで見つかりました（置換 {{matches}} 件）。変更しないファイルはチェックを外してください。",
+      "selectAll": "すべて選択",
+      "selectNone": "選択を解除",
+      "matchCount_one": "{{count}}×",
+      "matchCount_other": "{{count}}×",
+      "translation": "翻訳",
+      "truncated": "最初の {{count}} 件のファイルのみ確認しました。",
+      "retranslate_one": "これらのファイルから作成された {{count}} 件の翻訳を再翻訳",
+      "retranslate_other": "これらのファイルから作成された {{count}} 件の翻訳を再翻訳",
+      "retranslateCost": "前回は約 {{tokens}} トークンを使用しました。",
+      "retranslateHint": "再翻訳しない場合、翻訳には古い語が残ります。",
+      "submit_one": "{{count}} 件のファイルを修正",
+      "submit_other": "{{count}} 件のファイルを修正",
+      "saveOnly": "ルールを保存",
+      "doneFixed_one": "{{files}} 件のファイルで {{count}} 箇所を修正しました。",
+      "doneFixed_other": "{{files}} 件のファイルで {{count}} 箇所を修正しました。",
+      "doneSaved": "{{folder}} にルールを保存しました。",
+      "doneRetranslate_one": "{{count}} 件の翻訳を再びキューに追加しました。",
+      "doneRetranslate_other": "{{count}} 件の翻訳を再びキューに追加しました。",
+      "doneFailed_one": "{{count}} 件のファイルを変更できませんでした。ログを確認してください。",
+      "doneFailed_other": "{{count}} 件のファイルを変更できませんでした。ログを確認してください。",
+      "typeReplacement": "正しい語を入力すると、誤った語を含むファイルが表示されます。"
+    },
+    "preview": {
+      "run": "自分のファイルでプレビュー",
+      "again": "再確認",
+      "saveFirst": "先にリストを保存してください。"
+    }
   }
 }

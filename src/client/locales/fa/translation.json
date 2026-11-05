@@ -1650,5 +1650,53 @@
     "recent": {
       "title": "فراخوانی‌های اخیر"
     }
+  },
+  "corrections": {
+    "fix": {
+      "title": "اصلاح یک کلمه",
+      "fixSelection": "اصلاح «{{text}}»…",
+      "fixAWord": "اصلاح یک کلمه…",
+      "inSource": "در زیرنویس مبدأ",
+      "inTranslation": "در ترجمه ({{lang}})",
+      "applyTo": "اعمال روی",
+      "onlyThisFile": "فقط همین فایل",
+      "onlyThisFileHint": "اصلاحی یک‌باره. هیچ قانونی ذخیره نمی‌شود.",
+      "allFilesIn": "همهٔ فایل‌های",
+      "folder": "پوشه",
+      "saveTo": "ذخیرهٔ قانون در",
+      "newList": "فهرست جدید «{{name}}»",
+      "futureFiles": "فایل‌هایی که بعداً اضافه شوند هم آن را می‌گیرند.",
+      "scanning": "در حال جست‌وجو در فایل‌های شما…",
+      "noMatches_one": "در {{count}} فایل بررسی‌شده پیدا نشد.",
+      "noMatches_other": "در {{count}} فایل بررسی‌شده پیدا نشد.",
+      "found_one": "در {{count}} فایل پیدا شد ({{matches}} جایگزینی). تیک یک فایل را بردارید تا دست‌نخورده بماند.",
+      "found_other": "در {{count}} فایل پیدا شد ({{matches}} جایگزینی). تیک یک فایل را بردارید تا دست‌نخورده بماند.",
+      "selectAll": "انتخاب همه",
+      "selectNone": "لغو انتخاب همه",
+      "matchCount_one": "{{count}}×",
+      "matchCount_other": "{{count}}×",
+      "translation": "ترجمه",
+      "truncated": "فقط {{count}} فایل نخست بررسی شد.",
+      "retranslate_one": "ترجمهٔ دوبارهٔ {{count}} ترجمهٔ ساخته‌شده از این فایل‌ها",
+      "retranslate_other": "ترجمهٔ دوبارهٔ {{count}} ترجمهٔ ساخته‌شده از این فایل‌ها",
+      "retranslateCost": "دفعهٔ قبل حدود {{tokens}} توکن مصرف کردند.",
+      "retranslateHint": "در غیر این صورت ترجمه‌ها کلمهٔ قدیمی را نگه می‌دارند.",
+      "submit_one": "اصلاح {{count}} فایل",
+      "submit_other": "اصلاح {{count}} فایل",
+      "saveOnly": "ذخیرهٔ قانون",
+      "doneFixed_one": "{{count}} مورد در {{files}} فایل اصلاح شد.",
+      "doneFixed_other": "{{count}} مورد در {{files}} فایل اصلاح شد.",
+      "doneSaved": "قانون برای {{folder}} ذخیره شد.",
+      "doneRetranslate_one": "{{count}} ترجمه دوباره در صف قرار گرفت.",
+      "doneRetranslate_other": "{{count}} ترجمه دوباره در صف قرار گرفت.",
+      "doneFailed_one": "{{count}} فایل تغییر نکرد؛ گزارش‌ها را ببینید.",
+      "doneFailed_other": "{{count}} فایل تغییر نکرد؛ گزارش‌ها را ببینید.",
+      "typeReplacement": "کلمهٔ درست را بنویسید تا ببینید کدام فایل‌ها کلمهٔ نادرست را دارند."
+    },
+    "preview": {
+      "run": "پیش‌نمایش روی فایل‌های من",
+      "again": "بررسی دوباره",
+      "saveFirst": "ابتدا فهرست را ذخیره کنید."
+    }
   }
 }

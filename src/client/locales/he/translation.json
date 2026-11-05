@@ -1660,5 +1660,61 @@
     "recent": {
       "title": "קריאות אחרונות"
     }
+  },
+  "corrections": {
+    "fix": {
+      "title": "תיקון מילה",
+      "fixSelection": "תקן את \"{{text}}\"…",
+      "fixAWord": "תקן מילה…",
+      "inSource": "בכתוביות המקור",
+      "inTranslation": "בתרגום ({{lang}})",
+      "applyTo": "החל על",
+      "onlyThisFile": "רק הקובץ הזה",
+      "onlyThisFileHint": "תיקון חד־פעמי. לא נשמר כלל.",
+      "allFilesIn": "כל הקבצים ב-",
+      "folder": "תיקייה",
+      "saveTo": "שמור את הכלל ב-",
+      "newList": "רשימה חדשה \"{{name}}\"",
+      "futureFiles": "גם קבצים שיתווספו בהמשך יקבלו אותו.",
+      "scanning": "מחפש בקבצים שלך…",
+      "noMatches_one": "לא נמצא בקובץ שנבדק ({{count}}).",
+      "noMatches_two": "לא נמצא ב-{{count}} הקבצים שנבדקו.",
+      "noMatches_other": "לא נמצא ב-{{count}} הקבצים שנבדקו.",
+      "found_one": "נמצא בקובץ {{count}} ({{matches}} החלפות). בטל את הסימון של קובץ כדי להשאיר אותו כמו שהוא.",
+      "found_two": "נמצא ב-{{count}} קבצים ({{matches}} החלפות). בטל את הסימון של קובץ כדי להשאיר אותו כמו שהוא.",
+      "found_other": "נמצא ב-{{count}} קבצים ({{matches}} החלפות). בטל את הסימון של קובץ כדי להשאיר אותו כמו שהוא.",
+      "selectAll": "בחר הכול",
+      "selectNone": "נקה בחירה",
+      "matchCount_one": "{{count}}×",
+      "matchCount_two": "{{count}}×",
+      "matchCount_other": "{{count}}×",
+      "translation": "תרגום",
+      "truncated": "נבדקו רק {{count}} הקבצים הראשונים.",
+      "retranslate_one": "תרגם מחדש את התרגום שנוצר מהקבצים האלה ({{count}})",
+      "retranslate_two": "תרגם מחדש את {{count}} התרגומים שנוצרו מהקבצים האלה",
+      "retranslate_other": "תרגם מחדש את {{count}} התרגומים שנוצרו מהקבצים האלה",
+      "retranslateCost": "בפעם הקודמת הם צרכו כ-{{tokens}} טוקנים.",
+      "retranslateHint": "אחרת התרגומים ישמרו את המילה הישנה.",
+      "submit_one": "תקן קובץ {{count}}",
+      "submit_two": "תקן {{count}} קבצים",
+      "submit_other": "תקן {{count}} קבצים",
+      "saveOnly": "שמור את הכלל",
+      "doneFixed_one": "תוקן מקום {{count}} ב-{{files}} קבצים.",
+      "doneFixed_two": "תוקנו {{count}} מקומות ב-{{files}} קבצים.",
+      "doneFixed_other": "תוקנו {{count}} מקומות ב-{{files}} קבצים.",
+      "doneSaved": "הכלל נשמר עבור {{folder}}.",
+      "doneRetranslate_one": "תרגום {{count}} נוסף שוב לתור.",
+      "doneRetranslate_two": "{{count}} תרגומים נוספו שוב לתור.",
+      "doneRetranslate_other": "{{count}} תרגומים נוספו שוב לתור.",
+      "doneFailed_one": "לא ניתן היה לשנות קובץ {{count}}; ראה יומנים.",
+      "doneFailed_two": "לא ניתן היה לשנות {{count}} קבצים; ראה יומנים.",
+      "doneFailed_other": "לא ניתן היה לשנות {{count}} קבצים; ראה יומנים.",
+      "typeReplacement": "הקלד את המילה הנכונה כדי לראות אילו קבצים מכילים את השגויה."
+    },
+    "preview": {
+      "run": "תצוגה מקדימה על הקבצים שלי",
+      "again": "בדוק שוב",
+      "saveFirst": "שמור קודם את הרשימה."
+    }
   }
 }

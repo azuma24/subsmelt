@@ -1650,5 +1650,53 @@
     "recent": {
       "title": "最近呼叫"
     }
+  },
+  "corrections": {
+    "fix": {
+      "title": "修正詞語",
+      "fixSelection": "修正「{{text}}」…",
+      "fixAWord": "修正詞語…",
+      "inSource": "在來源字幕中",
+      "inTranslation": "在譯文中（{{lang}}）",
+      "applyTo": "套用範圍",
+      "onlyThisFile": "僅此檔案",
+      "onlyThisFileHint": "一次性修正，不會儲存規則。",
+      "allFilesIn": "以下資料夾中的所有檔案：",
+      "folder": "資料夾",
+      "saveTo": "將規則儲存到",
+      "newList": "新清單「{{name}}」",
+      "futureFiles": "之後新增的檔案也會套用。",
+      "scanning": "正在你的檔案中尋找…",
+      "noMatches_one": "在已檢查的 {{count}} 個檔案中找不到。",
+      "noMatches_other": "在已檢查的 {{count}} 個檔案中找不到。",
+      "found_one": "在 {{count}} 個檔案中找到（{{matches}} 處取代）。取消勾選檔案即可保持不變。",
+      "found_other": "在 {{count}} 個檔案中找到（{{matches}} 處取代）。取消勾選檔案即可保持不變。",
+      "selectAll": "全選",
+      "selectNone": "全不選",
+      "matchCount_one": "{{count}}×",
+      "matchCount_other": "{{count}}×",
+      "translation": "譯文",
+      "truncated": "僅檢查了前 {{count}} 個檔案。",
+      "retranslate_one": "重新翻譯由這些檔案產生的 {{count}} 份譯文",
+      "retranslate_other": "重新翻譯由這些檔案產生的 {{count}} 份譯文",
+      "retranslateCost": "上次約用了 {{tokens}} 個 token。",
+      "retranslateHint": "否則譯文會保留舊詞。",
+      "submit_one": "修正 {{count}} 個檔案",
+      "submit_other": "修正 {{count}} 個檔案",
+      "saveOnly": "儲存規則",
+      "doneFixed_one": "已在 {{files}} 個檔案中修正 {{count}} 處。",
+      "doneFixed_other": "已在 {{files}} 個檔案中修正 {{count}} 處。",
+      "doneSaved": "規則已為 {{folder}} 儲存。",
+      "doneRetranslate_one": "已將 {{count}} 份譯文重新排入佇列。",
+      "doneRetranslate_other": "已將 {{count}} 份譯文重新排入佇列。",
+      "doneFailed_one": "{{count}} 個檔案無法修改；請查看日誌。",
+      "doneFailed_other": "{{count}} 個檔案無法修改；請查看日誌。",
+      "typeReplacement": "輸入正確的詞，即可查看哪些檔案含有錯誤的詞。"
+    },
+    "preview": {
+      "run": "在我的檔案上預覽",
+      "again": "再次檢查",
+      "saveFirst": "請先儲存清單。"
+    }
   }
 }

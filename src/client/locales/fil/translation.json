@@ -1650,5 +1650,53 @@
     "recent": {
       "title": "Mga kamakailang tawag"
     }
+  },
+  "corrections": {
+    "fix": {
+      "title": "Ayusin ang isang salita",
+      "fixSelection": "Ayusin ang \"{{text}}\"…",
+      "fixAWord": "Ayusin ang isang salita…",
+      "inSource": "Sa source na subtitle",
+      "inTranslation": "Sa salin ({{lang}})",
+      "applyTo": "Ilapat sa",
+      "onlyThisFile": "Ang file na ito lang",
+      "onlyThisFileHint": "Isang beses na pag-aayos. Walang rule na ise-save.",
+      "allFilesIn": "Lahat ng file sa",
+      "folder": "Folder",
+      "saveTo": "I-save ang rule sa",
+      "newList": "bagong list na \"{{name}}\"",
+      "futureFiles": "Makukuha rin ito ng mga file na idadagdag mamaya.",
+      "scanning": "Hinahanap sa iyong mga file…",
+      "noMatches_one": "Hindi nakita sa {{count}} file na sinuri.",
+      "noMatches_other": "Hindi nakita sa {{count}} file na sinuri.",
+      "found_one": "Nakita sa {{count}} file ({{matches}} pagpapalit). Alisan ng check ang isang file para hindi ito galawin.",
+      "found_other": "Nakita sa {{count}} file ({{matches}} pagpapalit). Alisan ng check ang isang file para hindi ito galawin.",
+      "selectAll": "Piliin lahat",
+      "selectNone": "Walang piliin",
+      "matchCount_one": "{{count}}×",
+      "matchCount_other": "{{count}}×",
+      "translation": "salin",
+      "truncated": "Ang unang {{count}} file lang ang nasuri.",
+      "retranslate_one": "Isalin muli ang {{count}} salin na ginawa mula sa mga file na ito",
+      "retranslate_other": "Isalin muli ang {{count}} salin na ginawa mula sa mga file na ito",
+      "retranslateCost": "Mga {{tokens}} token ang nagamit nila noong nakaraan.",
+      "retranslateHint": "Kung hindi, mananatili ang lumang salita sa mga salin.",
+      "submit_one": "Ayusin ang {{count}} file",
+      "submit_other": "Ayusin ang {{count}} file",
+      "saveOnly": "I-save ang rule",
+      "doneFixed_one": "Naayos ang {{count}} lugar sa {{files}} file.",
+      "doneFixed_other": "Naayos ang {{count}} lugar sa {{files}} file.",
+      "doneSaved": "Naka-save ang rule para sa {{folder}}.",
+      "doneRetranslate_one": "{{count}} salin ang muling inilagay sa pila.",
+      "doneRetranslate_other": "{{count}} salin ang muling inilagay sa pila.",
+      "doneFailed_one": "Hindi mabago ang {{count}} file; tingnan ang Mga Log.",
+      "doneFailed_other": "Hindi mabago ang {{count}} file; tingnan ang Mga Log.",
+      "typeReplacement": "I-type ang tamang salita para makita kung aling mga file ang may maling salita."
+    },
+    "preview": {
+      "run": "I-preview sa aking mga file",
+      "again": "Suriin muli",
+      "saveFirst": "I-save muna ang list."
+    }
   }
 }

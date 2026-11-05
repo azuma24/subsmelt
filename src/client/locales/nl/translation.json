@@ -1650,5 +1650,53 @@
     "recent": {
       "title": "Recente aanroepen"
     }
+  },
+  "corrections": {
+    "fix": {
+      "title": "Woord corrigeren",
+      "fixSelection": "‘{{text}}’ corrigeren…",
+      "fixAWord": "Woord corrigeren…",
+      "inSource": "In de bronondertitel",
+      "inTranslation": "In de vertaling ({{lang}})",
+      "applyTo": "Toepassen op",
+      "onlyThisFile": "Alleen dit bestand",
+      "onlyThisFileHint": "Een eenmalige correctie. Er wordt geen regel opgeslagen.",
+      "allFilesIn": "Alle bestanden in",
+      "folder": "Map",
+      "saveTo": "Regel opslaan in",
+      "newList": "een nieuwe lijst ‘{{name}}’",
+      "futureFiles": "Later toegevoegde bestanden krijgen hem ook.",
+      "scanning": "Zoeken in je bestanden…",
+      "noMatches_one": "Niet gevonden in het {{count}} gecontroleerde bestand.",
+      "noMatches_other": "Niet gevonden in de {{count}} gecontroleerde bestanden.",
+      "found_one": "Gevonden in {{count}} bestand ({{matches}} vervangingen). Vink een bestand uit om het ongemoeid te laten.",
+      "found_other": "Gevonden in {{count}} bestanden ({{matches}} vervangingen). Vink een bestand uit om het ongemoeid te laten.",
+      "selectAll": "Alles selecteren",
+      "selectNone": "Niets selecteren",
+      "matchCount_one": "{{count}}×",
+      "matchCount_other": "{{count}}×",
+      "translation": "vertaling",
+      "truncated": "Alleen de eerste {{count}} bestanden zijn gecontroleerd.",
+      "retranslate_one": "De {{count}} vertaling van deze bestanden opnieuw vertalen",
+      "retranslate_other": "De {{count}} vertalingen van deze bestanden opnieuw vertalen",
+      "retranslateCost": "Vorige keer kostten ze ongeveer {{tokens}} tokens.",
+      "retranslateHint": "Anders houden de vertalingen het oude woord.",
+      "submit_one": "{{count}} bestand corrigeren",
+      "submit_other": "{{count}} bestanden corrigeren",
+      "saveOnly": "Regel opslaan",
+      "doneFixed_one": "{{count}} plek gecorrigeerd in {{files}} bestand(en).",
+      "doneFixed_other": "{{count}} plekken gecorrigeerd in {{files}} bestand(en).",
+      "doneSaved": "De regel is opgeslagen voor {{folder}}.",
+      "doneRetranslate_one": "{{count}} vertaling opnieuw in de wachtrij gezet.",
+      "doneRetranslate_other": "{{count}} vertalingen opnieuw in de wachtrij gezet.",
+      "doneFailed_one": "{{count}} bestand kon niet worden gewijzigd; zie Logboeken.",
+      "doneFailed_other": "{{count}} bestanden konden niet worden gewijzigd; zie Logboeken.",
+      "typeReplacement": "Typ het juiste woord om te zien welke bestanden het foute woord bevatten."
+    },
+    "preview": {
+      "run": "Voorbeeld op mijn bestanden",
+      "again": "Opnieuw controleren",
+      "saveFirst": "Sla eerst de lijst op."
+    }
   }
 }

@@ -1660,5 +1660,61 @@
     "recent": {
       "title": "Apeluri recente"
     }
+  },
+  "corrections": {
+    "fix": {
+      "title": "Corectează un cuvânt",
+      "fixSelection": "Corectează „{{text}}”…",
+      "fixAWord": "Corectează un cuvânt…",
+      "inSource": "În subtitrarea sursă",
+      "inTranslation": "În traducere ({{lang}})",
+      "applyTo": "Aplică la",
+      "onlyThisFile": "Doar acest fișier",
+      "onlyThisFileHint": "O corectură unică. Nu se salvează nicio regulă.",
+      "allFilesIn": "Toate fișierele din",
+      "folder": "Folder",
+      "saveTo": "Salvează regula în",
+      "newList": "o listă nouă „{{name}}”",
+      "futureFiles": "Și fișierele adăugate mai târziu o primesc.",
+      "scanning": "Se caută în fișierele tale…",
+      "noMatches_one": "Nu a fost găsit în {{count}} fișier verificat.",
+      "noMatches_few": "Nu a fost găsit în cele {{count}} fișiere verificate.",
+      "noMatches_other": "Nu a fost găsit în cele {{count}} de fișiere verificate.",
+      "found_one": "Găsit în {{count}} fișier ({{matches}} înlocuiri). Debifează un fișier ca să-l lași neschimbat.",
+      "found_few": "Găsit în {{count}} fișiere ({{matches}} înlocuiri). Debifează un fișier ca să-l lași neschimbat.",
+      "found_other": "Găsit în {{count}} de fișiere ({{matches}} înlocuiri). Debifează un fișier ca să-l lași neschimbat.",
+      "selectAll": "Selectează tot",
+      "selectNone": "Deselectează tot",
+      "matchCount_one": "{{count}}×",
+      "matchCount_few": "{{count}}×",
+      "matchCount_other": "{{count}}×",
+      "translation": "traducere",
+      "truncated": "Au fost verificate doar primele {{count}} fișiere.",
+      "retranslate_one": "Retradu {{count}} traducere făcută din aceste fișiere",
+      "retranslate_few": "Retradu cele {{count}} traduceri făcute din aceste fișiere",
+      "retranslate_other": "Retradu cele {{count}} de traduceri făcute din aceste fișiere",
+      "retranslateCost": "Data trecută au folosit aproximativ {{tokens}} tokenuri.",
+      "retranslateHint": "Altfel, traducerile păstrează cuvântul vechi.",
+      "submit_one": "Corectează {{count}} fișier",
+      "submit_few": "Corectează {{count}} fișiere",
+      "submit_other": "Corectează {{count}} de fișiere",
+      "saveOnly": "Salvează regula",
+      "doneFixed_one": "S-a corectat {{count}} loc în {{files}} fișier(e).",
+      "doneFixed_few": "S-au corectat {{count}} locuri în {{files}} fișier(e).",
+      "doneFixed_other": "S-au corectat {{count}} de locuri în {{files}} fișier(e).",
+      "doneSaved": "Regula este salvată pentru {{folder}}.",
+      "doneRetranslate_one": "{{count}} traducere pusă din nou în coadă.",
+      "doneRetranslate_few": "{{count}} traduceri puse din nou în coadă.",
+      "doneRetranslate_other": "{{count}} de traduceri puse din nou în coadă.",
+      "doneFailed_one": "{{count}} fișier nu a putut fi modificat; vezi Jurnalele.",
+      "doneFailed_few": "{{count}} fișiere nu au putut fi modificate; vezi Jurnalele.",
+      "doneFailed_other": "{{count}} de fișiere nu au putut fi modificate; vezi Jurnalele.",
+      "typeReplacement": "Scrie cuvântul corect ca să vezi ce fișiere îl conțin pe cel greșit."
+    },
+    "preview": {
+      "run": "Previzualizează pe fișierele mele",
+      "again": "Verifică din nou",
+      "saveFirst": "Salvează mai întâi lista."
+    }
   }
 }
