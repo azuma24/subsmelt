@@ -199,7 +199,7 @@ included**; the model manager downloads those on first use.
   chunked at silences (max 720 s per chunk). The Windows CUDA build needs NVIDIA
   driver R580 or newer.
 
-## 4a. New since 0.8.0 (unreleased): subtitle corrections
+## 4a. New in 0.8.1: subtitle corrections
 
 User-defined find → replace rules for terms that keep coming out wrong
 ("Ubiquity" → "Ubiquiti"). The user guide is
