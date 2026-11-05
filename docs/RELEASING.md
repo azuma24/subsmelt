@@ -59,6 +59,16 @@ its own GitHub release for the installer; the app's notes are not automated.
 
 ---
 
+## App-only releases
+
+When `backend-whisper` has not changed, a release may ship the app alone: bump
+`package.json`, `README.md` and `CHANGELOG.md`, push only `v<version>`, and create
+the app's GitHub release with `--latest=false`, so "Latest" stays on the release
+that has the installers. Say in the notes which backend release to keep using.
+The backend's version files stay at its last release.
+
+---
+
 ## Known constraints
 
 - **Tag pushes may be rejected for automation.** A GitHub App / CI token can

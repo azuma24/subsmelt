@@ -1,7 +1,7 @@
 # SubSmelt — Handoff
 
-Orientation for someone picking this project up. Current as of **0.7.3**
-(2026-10-25). For what changed when, see
+Orientation for someone picking this project up. The latest session note is
+§9 (0.8.4, 2026-11-05); the sections before it describe earlier states. For what changed when, see
 [../CHANGELOG.md](../CHANGELOG.md); for how to run it, see
 [../README.md](../README.md).
 
@@ -383,3 +383,42 @@ reader of the code should know afterwards:
   current, so a new event kind must be added there.
 - **Not done, on purpose:** authentication, a bind change beyond `HOST`, and
   rate limiting — see TODO.md.
+
+---
+
+## 9. Session handoff — 2026-11-05
+
+**State.** The app is at 0.8.4 and `main` matches on GitHub and Forgejo. The
+Whisper backend stays at 0.8.0: `backend-whisper` has not changed since, and
+0.8.2 to 0.8.4 shipped only `v*` tags, so there are no newer installers.
+`package.json` and the backend's version files differ on purpose until the next
+backend change. 0.8.1 was withdrawn: its image, tag and release are deleted.
+
+**What changed.**
+
+- **Lost correction rules.** Rules were not lost by updating: `config.json` in
+  `/app/config` survives a new container. **Save rules** dropped a pair still
+  typed in the last line, which stored the list with no rules. A filled-in pair
+  now joins the list when focus leaves the row (`ListEditor.tsx`), and leaving
+  Settings → Corrections saves the draft (`CorrectionsSection.tsx`).
+- **Settings saves.** The page sends only changed fields
+  (`settings-form.ts`, `changes`), so a tab with an old snapshot cannot undo newer
+  values. `inFlight` keeps an edit back to the snapshot value while a save is on
+  its way, so the last choice wins.
+- **Folder sidebar.** `ResizableSidebar.tsx` and `sidebar-width.ts`: 100 to 480 px,
+  at most 40% of the window, stored per browser in `localStorage`.
+- **Docker builds.** The ffmpeg and yt-dlp downloads retry. `ffmpeg.org` and
+  GitHub still fail the arm64 job at times: read the log for `curl:` and rerun.
+
+**Rule for public text.** Examples in the UI, docs, tests, commits and PRs use
+the fictional Serenity → Sereniti and Anchor → AnKor. Do not use examples taken
+from a real library.
+
+**Not verified.** Sidebar drag with a real mouse or touch screen (the check used
+simulated pointer events), the sidebar line in the dark theme, and **Save rules**
+in the Library drawer (it shares the same row). The component tests render static
+HTML, so no automated test covers focus, drag or leaving a page.
+
+**Known gaps.** Reloading or closing the tab still loses an unsaved draft. A word
+with no replacement still needs Enter or **Add rule**. Below 180 px the sidebar
+hides pin buttons, so widen it to pin a folder.
