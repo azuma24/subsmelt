@@ -28,6 +28,15 @@ import {
 } from "./state.js";
 import { writeJobTitle } from "./titles.js";
 import { workKey } from "../translator/work-key.js";
+import { correctSubtitleFile, correctionsForFile } from "../corrections.js";
+import { fileLangCodes } from "../language-codes.js";
+import {
+  correctionGlossaryTerms,
+  correctionsFingerprint,
+  describeCorrections,
+  type CompiledCorrection,
+  type CorrectionCounts,
+} from "../../shared/corrections.js";
 
 // Progress (completed_cues) is written to SQLite on every cue-advance, which with
 // many workers and long files hammers the WAL. Batch it — at most one write per
@@ -208,12 +217,15 @@ async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
       conns.map((c) => ({ id: c.id, label: c.label, host: c.apiHost, model: c.model })),
     );
   }
+  const corrections = prepareCorrections(ctx);
   const key = workKey(job.srt_path, [
     ctx.targetLang,
     ctx.task?.source_lang || "",
     plan.prompt,
     plan.translation.options.additional,
     String(plan.translation.options.refinePass),
+    // Only when rules apply, so keys saved before corrections existed still match.
+    ...(corrections.source.length ? [correctionsFingerprint(corrections.source)] : []),
   ]);
   // The sample size shapes the analysis alone, so changing it keeps finished chunks.
   const analysisKey = key && `${key}:${typed.analysis_max_lines}`;
@@ -294,6 +306,14 @@ async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
     onUsage: (u) => recordJobUsage(ctx, u),
     savedAnalysis: savedAnalysis ?? undefined,
     resumeKey: key ?? undefined,
+    sourceCorrections: corrections.source,
+    outputCorrections: corrections.output,
+    pinnedTerms: correctionGlossaryTerms(corrections.source),
+    onCorrections: (stage, counts) => {
+      // The source file was already corrected on disk; this reports only what
+      // the in-memory pass still had to fix (a file that could not be rewritten).
+      logCorrections(ctx, stage === "source" ? "in memory" : "in the translation", counts, corrections[stage]);
+    },
     onResumed: (kept, total, connections) => {
       logger.info(
         "translate",
@@ -316,6 +336,51 @@ async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
       });
       broadcast("job:analysis", { jobId: job.id, analysis, srtName });
     },
+  });
+}
+
+/**
+ * Subtitle corrections for this job. Source rules are written into the source
+ * file first — before the resume key is taken from its bytes, so the key names
+ * the corrected file — and then given to the engine as well, which fixes in
+ * memory whatever the rewrite could not. A failed rewrite never fails the job.
+ */
+function prepareCorrections(ctx: JobContext): { source: CompiledCorrection[]; output: CompiledCorrection[] } {
+  const { job, srtName } = ctx;
+  const langCodes = ctx.task ? fileLangCodes(ctx.task, ctx.typed.preferred_chinese) : [ctx.langCode];
+  const source = correctionsForFile(job.srt_path, "source");
+  const output = correctionsForFile(job.srt_path, "output", langCodes);
+  if (source.length) {
+    const result = correctSubtitleFile(job.srt_path, source);
+    if (result.error) {
+      logger.warn(
+        "translate",
+        `Corrections not saved to ${srtName}: ${result.error}; correcting in memory only`,
+        job.id,
+        {
+          stage: "corrections",
+        },
+      );
+    } else if (result.total) {
+      logCorrections(ctx, `in ${srtName}`, result.counts, source);
+    }
+  }
+  return { source, output };
+}
+
+function logCorrections(
+  ctx: JobContext,
+  where: string,
+  counts: CorrectionCounts,
+  rules: readonly CompiledCorrection[],
+) {
+  const details = describeCorrections(counts, rules);
+  const total = details.reduce((sum, d) => sum + d.count, 0);
+  if (!total) return;
+  const summary = details.map((d) => `${d.find} → ${d.replace} ×${d.count}`).join(", ");
+  logger.info("translate", `Corrected ${total} term${total === 1 ? "" : "s"} ${where}: ${summary}`, ctx.job.id, {
+    stage: "corrections",
+    corrections: details,
   });
 }
 

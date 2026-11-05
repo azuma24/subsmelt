@@ -35,6 +35,9 @@ import {
 import { broadcast } from "../sse.js";
 import { mkdirShared, shareFile } from "../shared-files.js";
 import { standardLangCode } from "../language-codes.js";
+import { correctSubtitleFile, correctionsForFile } from "../corrections.js";
+import { logger } from "../logger.js";
+import { describeCorrections } from "../../shared/corrections.js";
 import { startHeldQueue } from "../queue.js";
 import { translationHoldsGpu, waitUntilTranscriptionMayStart } from "../gpu-gate.js";
 import {
@@ -490,6 +493,7 @@ export async function runTranscriptionAttempt(opts: {
         await fs.promises.rename(outputPath, namedPath);
         finalPath = namedPath;
       }
+      applyTranscriptCorrections(finalPath);
       const finishedAt = new Date().toISOString();
       const durationSeconds =
         typeof result.duration_seconds === "number"
@@ -541,4 +545,31 @@ export async function runTranscriptionAttempt(opts: {
       throw rethrown;
     }
   });
+}
+
+/**
+ * Source-stage subtitle corrections on a fresh transcript, so the file on disk
+ * says "Ubiquiti" even when it is never translated. Never fails the
+ * transcription: a rule problem is logged and the transcript kept as Whisper
+ * wrote it (the translation still corrects it in memory).
+ */
+function applyTranscriptCorrections(transcriptPath: string): void {
+  const rules = correctionsForFile(transcriptPath, "source");
+  if (!rules.length) return;
+  const name = path.basename(transcriptPath);
+  const result = correctSubtitleFile(transcriptPath, rules);
+  if (result.error) {
+    logger.warn("system", `Transcript corrections not saved to ${name}: ${result.error}`);
+    return;
+  }
+  if (!result.total) return;
+  const details = describeCorrections(result.counts, rules);
+  logger.info(
+    "system",
+    `Corrected ${result.total} term${result.total === 1 ? "" : "s"} in transcript ${name}: ${details
+      .map((d) => `${d.find} → ${d.replace} ×${d.count}`)
+      .join(", ")}`,
+    undefined,
+    { stage: "corrections", corrections: details },
+  );
 }

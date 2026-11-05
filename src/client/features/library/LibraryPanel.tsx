@@ -8,6 +8,7 @@ import { Icon } from "../../ui/Icon";
 import type { UseManualTranscriptionResult } from "../dashboard/useManualTranscription";
 import { itemTasks, relevantJobId, type LibraryItem } from "./library-model";
 import { ErrorBlock, SubtitleLanguages, TranscribeBlock, type FailedTask } from "./PanelSections";
+import { FolderCorrections } from "../corrections/FolderCorrections";
 
 /** At this width the panel sits beside the list; below it, it overlays as a drawer or sheet. */
 const INLINE_PANEL_QUERY = "(min-width: 1024px)";
@@ -162,6 +163,7 @@ export function LibraryPanel({
               translateRequest={translateRequest?.srtPath === subtitle.srtPath ? translateRequest.id : 0}
             />
           ))}
+          <FolderCorrections folder={item.folder} />
         </div>
         {jobId !== null && (
           <footer className="border-t border-border px-4 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">

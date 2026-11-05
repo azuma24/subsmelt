@@ -43,7 +43,9 @@ many media folders under `/media` as you like; SubSmelt scans it recursively.
    language. Click a file to translate, retry or transcribe it.
 4. Turn on the **File Watcher** in Settings to queue new subtitles as they appear.
 
-Also built in: the **Convert** page for single files (`.srt`, `.vtt`, `.ass`,
+Also built in: **Corrections** for terms that keep coming out wrong, such as a
+brand Whisper mishears, fixed before and after translation in the folders you
+choose ([docs/subtitle-corrections.md](docs/subtitle-corrections.md)), the **Convert** page for single files (`.srt`, `.vtt`, `.ass`,
 `.ssa`), **YouTube** playlists saved as Markdown notes
 ([second-brain mirror](docs/second-brain.md)), token usage and cost in
 **Settings → Usage**, and 32 interface languages. Why an LLM instead of a

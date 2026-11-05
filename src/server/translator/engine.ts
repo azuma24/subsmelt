@@ -27,6 +27,12 @@ import {
   type SeriesGlossary,
 } from "./context.js";
 import { errorMessage } from "../errors.js";
+import {
+  correctCueText,
+  totalCorrections,
+  type CompiledCorrection,
+  type CorrectionCounts,
+} from "../../shared/corrections.js";
 export {
   isSafeHttpUrl,
   type JobContextPlan,
@@ -126,6 +132,18 @@ export interface TranslateFileOptions {
   isConnectionBusy?: (conn: ResolvedConnection) => boolean;
   /** Fired after each successful LLM call, naming what it was for and which connection ran it. */
   onUsage?: (u: UsageEvent) => void;
+  /**
+   * Subtitle corrections (src/shared/corrections.ts). Source rules fix each
+   * cue's text before analysis and translation, so the LLM reads "Ubiquiti",
+   * not Whisper's "Ubiquity"; output rules fix each translated cue just before
+   * the final save. Both default to none.
+   */
+  sourceCorrections?: readonly CompiledCorrection[];
+  outputCorrections?: readonly CompiledCorrection[];
+  /** Terms the translator must keep as written; joined into the per-chunk glossary. */
+  pinnedTerms?: readonly string[];
+  /** Replacements made, per stage, by rule id; fired only when a stage changed something. */
+  onCorrections?: (stage: "source" | "output", counts: CorrectionCounts) => void;
 }
 
 /** One successful LLM call's tokens, attributed. */
@@ -231,6 +249,20 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   const totalCues = subtitle.length;
   if (totalCues === 0) throw new Error("No subtitle cues found");
 
+  // Source corrections run in memory as well as on disk (the queue rewrites the
+  // file first), so a source the queue could not rewrite — read-only, not
+  // UTF-8 — is still translated from corrected text. A rewritten file makes
+  // this a no-op: the rules are stable, so a second pass finds nothing.
+  if (opts.sourceCorrections?.length) {
+    const counts: CorrectionCounts = {};
+    for (const cue of subtitle) {
+      if (cue?.data && typeof cue.data.text === "string") {
+        cue.data.text = correctCueText(cue.data.text, opts.sourceCorrections, counts).text;
+      }
+    }
+    if (totalCorrections(counts) > 0) opts.onCorrections?.("source", counts);
+  }
+
   opts.onProgress?.(0, totalCues);
 
   const allTexts = subtitle
@@ -303,7 +335,13 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // {term, translation} pairs once, then merge the series glossary on top so
   // every known term is available for per-chunk scanning. Purely additive: if
   // nothing parses, this is an empty list and chunk prompts are unchanged.
-  const { chunkGlossary, parsedGlossary } = buildChunkGlossary(analysis, seriesGlossary);
+  const { chunkGlossary: analysisGlossary, parsedGlossary } = buildChunkGlossary(analysis, seriesGlossary);
+  // Correction terms win over whatever the analysis suggested for the same term.
+  const pinned = new Set((opts.pinnedTerms ?? []).map((term) => term.toLowerCase()));
+  const chunkGlossary = [
+    ...(opts.pinnedTerms ?? []).map((term) => ({ term, translation: term })),
+    ...analysisGlossary.filter((entry) => !pinned.has(entry.term.toLowerCase())),
+  ];
 
   // Series-Wide Memory (§2) — merge newly-extracted terms back into the series
   // file so the next file in this folder inherits them. Best-effort, never fatal.
@@ -727,6 +765,16 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     if (cue?.data && typeof cue.data.translatedText !== "string") {
       cue.data.translatedText = cue.data.text || "";
     }
+  }
+
+  if (opts.outputCorrections?.length) {
+    const counts: CorrectionCounts = {};
+    for (const cue of subtitle) {
+      if (cue?.data && typeof cue.data.translatedText === "string") {
+        cue.data.translatedText = correctCueText(cue.data.translatedText, opts.outputCorrections, counts).text;
+      }
+    }
+    if (totalCorrections(counts) > 0) opts.onCorrections?.("output", counts);
   }
 
   // Final write: land the complete translation at the real output path and drop

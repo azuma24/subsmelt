@@ -60,6 +60,8 @@ export const SETTINGS = {
   refine_pass: flag,
   series_memory: flag,
   title_sidecar: flag,
+  // Find → replace rules run on cue text after speech-to-text and after translation (see corrections.ts).
+  correction_rule_sets: json,
   auto_scan_interval: int(0, 10080),
   monthly_token_budget: int(0, 1_000_000_000_000),
   // Notifications
