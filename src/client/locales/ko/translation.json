@@ -872,7 +872,10 @@
       "twinDismiss": "괜찮습니다",
       "unsaved": "저장되지 않은 변경 사항",
       "fixBeforeSaving_one": "저장하기 전에 문제 {{count}}개를 해결하세요",
-      "fixBeforeSaving_other": "저장하기 전에 문제 {{count}}개를 해결하세요"
+      "fixBeforeSaving_other": "저장하기 전에 문제 {{count}}개를 해결하세요",
+      "confirm": "번역 모델에게 확인",
+      "confirmHint": "단어가 일반 단어이기도 할 때 사용하세요(동사 “unify”와 브랜드 UniFi 등). 일치하는 부분은 LLM이 바꿀 말을 뜻한다고 확인한 경우에만 바뀝니다. 수정은 전사본을 저장할 때가 아니라 번역할 때 이루어집니다.",
+      "tag_check": "확인"
     }
   },
   "jobDetail": {
@@ -1662,7 +1665,8 @@
       "single": "단일 줄",
       "refine": "다듬기",
       "title": "제목",
-      "convert": "변환"
+      "convert": "변환",
+      "check": "교정 확인"
     },
     "topFiles": {
       "title": "상위 파일"

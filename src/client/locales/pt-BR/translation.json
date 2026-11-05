@@ -876,7 +876,10 @@
       "unsaved": "Alterações não salvas",
       "fixBeforeSaving_one": "Corrija {{count}} problema antes de salvar",
       "fixBeforeSaving_many": "Corrija {{count}} problemas antes de salvar",
-      "fixBeforeSaving_other": "Corrija {{count}} problemas antes de salvar"
+      "fixBeforeSaving_other": "Corrija {{count}} problemas antes de salvar",
+      "confirm": "Confirmar com o tradutor",
+      "confirmHint": "Use quando a palavra também é uma palavra comum (“unify” o verbo versus a marca UniFi). Cada ocorrência só é substituída se o LLM confirmar que se refere à substituição; os arquivos são corrigidos durante a tradução, não ao salvar uma transcrição.",
+      "tag_check": "Confirmar"
     }
   },
   "jobDetail": {
@@ -1676,7 +1679,8 @@
       "single": "Linha única",
       "refine": "Refinamento",
       "title": "Título",
-      "convert": "Conversão"
+      "convert": "Conversão",
+      "check": "Verificação de correções"
     },
     "topFiles": {
       "title": "Principais arquivos"

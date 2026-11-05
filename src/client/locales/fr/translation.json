@@ -876,7 +876,10 @@
       "unsaved": "Modifications non enregistrées",
       "fixBeforeSaving_one": "Corrigez {{count}} problème avant d’enregistrer",
       "fixBeforeSaving_many": "Corrigez {{count}} problèmes avant d’enregistrer",
-      "fixBeforeSaving_other": "Corrigez {{count}} problèmes avant d’enregistrer"
+      "fixBeforeSaving_other": "Corrigez {{count}} problèmes avant d’enregistrer",
+      "confirm": "Vérifier avec le traducteur",
+      "confirmHint": "À utiliser quand le mot est aussi un mot courant (« unify » le verbe contre la marque UniFi). Chaque occurrence n’est remplacée que si le LLM confirme qu’elle désigne le remplacement ; les fichiers sont corrigés pendant la traduction, pas à l’enregistrement d’une transcription.",
+      "tag_check": "Vérif."
     }
   },
   "jobDetail": {
@@ -1676,7 +1679,8 @@
       "single": "Ligne seule",
       "refine": "Affinage",
       "title": "Titre",
-      "convert": "Conversion"
+      "convert": "Conversion",
+      "check": "Vérification des corrections"
     },
     "topFiles": {
       "title": "Fichiers les plus utilisés"

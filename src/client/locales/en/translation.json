@@ -1030,7 +1030,10 @@
       "twinDismiss": "No thanks",
       "unsaved": "Unsaved changes",
       "fixBeforeSaving_one": "Fix {{count}} problem before saving",
-      "fixBeforeSaving_other": "Fix {{count}} problems before saving"
+      "fixBeforeSaving_other": "Fix {{count}} problems before saving",
+      "confirm": "Check with the translator",
+      "confirmHint": "Use when the word is also an ordinary word (\"unify\" the verb vs. the UniFi brand). Each match is replaced only after the LLM confirms it means the replacement; files are fixed during translation, not when a transcript is saved.",
+      "tag_check": "Check"
     }
   },
   "jobDetail": {
@@ -1662,7 +1665,8 @@
       "single": "Single line",
       "refine": "Refine",
       "title": "Title",
-      "convert": "Convert"
+      "convert": "Convert",
+      "check": "Correction check"
     },
     "topFiles": {
       "title": "Top files"

@@ -872,7 +872,10 @@
       "twinDismiss": "不用了",
       "unsaved": "有未儲存的變更",
       "fixBeforeSaving_one": "儲存前請修正 {{count}} 個問題",
-      "fixBeforeSaving_other": "儲存前請修正 {{count}} 個問題"
+      "fixBeforeSaving_other": "儲存前請修正 {{count}} 個問題",
+      "confirm": "交由翻譯模型確認",
+      "confirmHint": "當這個詞也是一般詞彙時使用（例如動詞「unify」與品牌 UniFi）。每處相符都要經 LLM 確認確實指替換詞後才會取代；修正在翻譯時進行，而不是在儲存逐字稿時。",
+      "tag_check": "確認"
     }
   },
   "jobDetail": {
@@ -1662,7 +1665,8 @@
       "single": "單行",
       "refine": "潤飾",
       "title": "標題",
-      "convert": "轉換"
+      "convert": "轉換",
+      "check": "校正確認"
     },
     "topFiles": {
       "title": "熱門檔案"

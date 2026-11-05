@@ -872,7 +872,10 @@
       "twinDismiss": "不用了",
       "unsaved": "有未保存的更改",
       "fixBeforeSaving_one": "保存前请修复 {{count}} 个问题",
-      "fixBeforeSaving_other": "保存前请修复 {{count}} 个问题"
+      "fixBeforeSaving_other": "保存前请修复 {{count}} 个问题",
+      "confirm": "交由翻译模型确认",
+      "confirmHint": "当这个词也是普通词时使用（例如动词 “unify” 与品牌 UniFi）。每处匹配都要经 LLM 确认确实指替换词后才会替换；修正在翻译时进行，而不是在保存转写稿时。",
+      "tag_check": "确认"
     }
   },
   "jobDetail": {
@@ -1662,7 +1665,8 @@
       "single": "单行",
       "refine": "润色",
       "title": "标题",
-      "convert": "转换"
+      "convert": "转换",
+      "check": "校正确认"
     },
     "topFiles": {
       "title": "热门文件"
