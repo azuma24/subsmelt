@@ -1539,6 +1539,26 @@
       "from": "{{folder}}에서",
       "edit": "편집",
       "newForFolder": "이 폴더용 새 목록"
+    },
+    "folders": {
+      "title": "폴더",
+      "all": "모든 파일",
+      "pinned": "고정됨",
+      "none": "아직 폴더가 없습니다. 스캔하여 미디어를 찾으세요.",
+      "expand": "{{folder}} 펼치기",
+      "collapse": "{{folder}} 접기",
+      "pin": "{{folder}} 고정",
+      "unpin": "{{folder}} 고정 해제",
+      "breadcrumb": "폴더 경로",
+      "noCorrections": "없음",
+      "errors_one": "오류 {{count}}개",
+      "errors_other": "오류 {{count}}개",
+      "files_one": "파일 {{count}}개",
+      "files_other": "파일 {{count}}개",
+      "done_one": "완료 {{count}}",
+      "done_other": "완료 {{count}}",
+      "pending_one": "대기 {{count}}",
+      "pending_other": "대기 {{count}}"
     }
   },
   "llmStatus": {

@@ -1,3 +1,4 @@
+import { folderInScope } from "./folder-scope";
 import type { Job, TaskStatus } from "../../types";
 import type { JobStatusFilter } from "./dashboard-params";
 import { itemLanguageChips, languageState, type LibraryItem } from "./library-model";
@@ -46,7 +47,7 @@ export function fileMatchesFilters(
 ): boolean {
   const needle = query.trim().toLowerCase();
   if (needle && !entry.item.key.toLowerCase().includes(needle)) return false;
-  if (folder !== "all" && (entry.item.folder || rootLabel) !== folder) return false;
+  if (!folderInScope(entry.item.folder || rootLabel, folder, rootLabel)) return false;
   if (target === "all") return true;
   return entry.chips.some(({ task }) => targetLabel(task) === target);
 }

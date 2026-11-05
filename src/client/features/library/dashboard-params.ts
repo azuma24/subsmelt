@@ -27,9 +27,16 @@ export interface DashboardParams {
   view: DashboardView;
   status: JobStatusFilter;
   rows: RowLayout;
+  /** The folder shown, media-relative ("UniFi/Tutorials"), with its subfolders; "all" for the whole library. */
+  folder: string;
 }
 
-export const DEFAULT_DASHBOARD_PARAMS: Readonly<DashboardParams> = { view: "jobs", status: "all", rows: "jobs" };
+export const DEFAULT_DASHBOARD_PARAMS: Readonly<DashboardParams> = {
+  view: "jobs",
+  status: "all",
+  rows: "jobs",
+  folder: "all",
+};
 
 // Links from before the Files view was merged into Jobs: `?filter=` named a
 // Files status chip. Each maps to the Jobs status that shows the same work.
@@ -52,13 +59,14 @@ export function parseDashboardParams(search: URLSearchParams): DashboardParams {
     status: oneOf(JOB_STATUS_FILTERS, search.get("status"), legacy ?? DEFAULT_DASHBOARD_PARAMS.status),
     // view=files is a link from before Files became a row layout of the Jobs view.
     rows: oneOf(ROW_LAYOUTS, search.get("rows") ?? (search.get("view") === "files" ? "files" : null), "jobs"),
+    folder: search.get("folder")?.replace(/^\/+|\/+$/g, "") || DEFAULT_DASHBOARD_PARAMS.folder,
   };
 }
 
 /** Search params for the given state, defaults omitted so the plain page stays at "/". */
 export function dashboardSearchParams(params: Partial<DashboardParams>): URLSearchParams {
   const search = new URLSearchParams();
-  for (const key of ["view", "status", "rows"] as const) {
+  for (const key of ["view", "status", "rows", "folder"] as const) {
     const value = params[key];
     if (value !== undefined && value !== DEFAULT_DASHBOARD_PARAMS[key]) search.set(key, value);
   }

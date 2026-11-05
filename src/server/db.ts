@@ -368,8 +368,17 @@ export function deleteJobs(ids: number[]) {
 
 // Pending and translating jobs stay: a worker may hold one, and deleting its
 // row would hide work that is still running.
-export function clearFinishedJobs(): number {
-  return db.prepare("DELETE FROM jobs WHERE status IN ('done', 'skipped', 'error')").run().changes;
+export function clearFinishedJobs(ids?: readonly number[]): number {
+  if (ids === undefined) {
+    return db.prepare("DELETE FROM jobs WHERE status IN ('done', 'skipped', 'error')").run().changes;
+  }
+  // Only these jobs (one Library folder's), and still only the finished ones.
+  const stmt = db.prepare("DELETE FROM jobs WHERE id = ? AND status IN ('done', 'skipped', 'error')");
+  let cleared = 0;
+  db.transaction(() => {
+    for (const id of new Set(ids)) if (Number.isInteger(id) && id > 0) cleared += stmt.run(id).changes;
+  })();
+  return cleared;
 }
 
 export function getPendingJobOutputsForTask(taskId: number): string[] {

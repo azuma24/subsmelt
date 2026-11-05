@@ -141,7 +141,9 @@ export const deleteJobsApi = (ids: number[]) =>
     method: "POST",
     body: JSON.stringify({ ids }),
   });
-export const clearJobs = () => fetchJSON("/jobs/clear", { method: "POST" });
+/** Clears finished jobs: all of them, or only those among `ids` (one Library folder's). */
+export const clearJobs = (ids?: number[]) =>
+  fetchJSON("/jobs/clear", { method: "POST", ...(ids ? { body: JSON.stringify({ ids }) } : {}) });
 export const pinJob = (id: number) => fetchJSON(`/jobs/${id}/pin`, { method: "POST" });
 export const unpinJob = (id: number) => fetchJSON(`/jobs/${id}/unpin`, { method: "POST" });
 export const getJobPreview = (id: number, opts?: FetchOpts) => fetchJSON<JobPreview>(`/jobs/${id}/preview`, opts);

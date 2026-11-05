@@ -5,6 +5,7 @@ import * as api from "../../api";
 import { str } from "../../lib/settings-value";
 import {
   useIsMobile,
+  useFolderTreeQuery,
   useJobsQuery,
   useLibraryQuery,
   useMutationWithInvalidation,
@@ -14,7 +15,7 @@ import {
 } from "../../hooks";
 import { useToast } from "../../ui/Toast";
 import type { Job } from "../../types";
-import { ActionButton, PageHeader } from "../../ui/primitives";
+import { ActionButton, Drawer, PageHeader } from "../../ui/primitives";
 import { Icon } from "../../ui/Icon";
 import { RefreshButton } from "../../ui/RefreshButton";
 import { LlmStatusPopover } from "../../app/LlmStatusPopover";
@@ -23,7 +24,7 @@ import { JobDetailsDrawer } from "../dashboard/JobDetailsDrawer";
 import { TranscriptionHistoryPanel } from "../dashboard/TranscriptionHistoryPanel";
 import { useManualTranscription } from "../dashboard/useManualTranscription";
 import { fileRows } from "./file-rows";
-import { toLibraryItems } from "./library-model";
+import { relativeFolder, toLibraryItems } from "./library-model";
 import {
   dashboardSearchParams,
   parseDashboardParams,
@@ -31,6 +32,9 @@ import {
   type DashboardView,
 } from "./dashboard-params";
 import { JobsView } from "./JobsView";
+import { FolderHeader } from "./FolderHeader";
+import { FolderTree } from "./FolderSidebar";
+import { folderStats, statsFor } from "./folder-scope";
 import { QueueBand } from "./QueueBand";
 import { QuickStart } from "./QuickStart";
 import { ScanConfirmModal } from "./ScanConfirmModal";
@@ -82,6 +86,21 @@ export function LibraryPage() {
   const items = useMemo(() => toLibraryItems(libraryQuery.data?.files ?? [], mediaDir), [libraryQuery.data, mediaDir]);
 
   const fileRowCount = useMemo(() => fileRows(items, jobsById).length, [items, jobsById]);
+  const folderTree = useFolderTreeQuery(view === "jobs");
+  const stats = useMemo(
+    () =>
+      folderStats(
+        items,
+        jobs.map((job) => {
+          const folder = relativeFolder(job.srt_path, mediaDir);
+          // relativeFolder hands back the absolute directory for a file outside the media folder.
+          return { status: job.status, folder: folder.startsWith("/") ? null : folder };
+        }),
+      ),
+    [items, jobs, mediaDir],
+  );
+  const [foldersOpen, setFoldersOpen] = useState(false);
+  const selectFolder = useCallback((folder: string) => setParams({ folder: folder || "all" }), [setParams]);
 
   const reportFailure = (e: unknown) =>
     addToast(e instanceof Error ? e.message : t("dashboard.toast.actionFailed"), "error");
@@ -205,21 +224,54 @@ export function LibraryPage() {
       </div>
 
       {view === "jobs" && (
-        <JobsView
-          status={params.status}
-          onStatusChange={(status) => setParams({ status })}
-          rows={params.rows}
-          onRowsChange={(rows) => setParams({ rows })}
-          queueRunning={queueRunning}
-          currentJobId={currentJobId}
-          onPreview={setPreviewJobId}
-          onOpenDetails={openDetails}
-          onOpenLogs={openLogs}
-          items={items}
-          transcription={transcription}
-          transcriptionEnabled={transcriptionEnabled}
-          onOpenJob={openJob}
-        />
+        <div className="flex min-h-0 flex-1">
+          {/* Folders: a sidebar from md up; on phones the header's Folders button opens the same tree. */}
+          {!isMobile && folderTree.data && (
+            <aside className="hidden w-64 shrink-0 overflow-y-auto border-r border-border p-2 md:block">
+              <FolderTree root={folderTree.data.root} selected={params.folder} stats={stats} onSelect={selectFolder} />
+            </aside>
+          )}
+          <div className="flex min-w-0 flex-1 flex-col">
+            {(params.folder !== "all" || isMobile) && folderTree.data && (
+              <FolderHeader
+                folder={params.folder === "all" ? "" : params.folder}
+                stats={statsFor(stats, params.folder === "all" ? "" : params.folder)}
+                onSelect={selectFolder}
+                onOpenTree={isMobile ? () => setFoldersOpen(true) : undefined}
+              />
+            )}
+            <JobsView
+              status={params.status}
+              onStatusChange={(status) => setParams({ status })}
+              rows={params.rows}
+              onRowsChange={(rows) => setParams({ rows })}
+              folder={params.folder}
+              onFolderChange={(folder) => setParams({ folder })}
+              queueRunning={queueRunning}
+              currentJobId={currentJobId}
+              onPreview={setPreviewJobId}
+              onOpenDetails={openDetails}
+              onOpenLogs={openLogs}
+              items={items}
+              transcription={transcription}
+              transcriptionEnabled={transcriptionEnabled}
+              onOpenJob={openJob}
+            />
+          </div>
+        </div>
+      )}
+      {isMobile && folderTree.data && (
+        <Drawer open={foldersOpen} onClose={() => setFoldersOpen(false)} title={t("library.folders.title")}>
+          <FolderTree
+            root={folderTree.data.root}
+            selected={params.folder}
+            stats={stats}
+            onSelect={(folder) => {
+              selectFolder(folder);
+              setFoldersOpen(false);
+            }}
+          />
+        </Drawer>
       )}
       {view === "transcriptions" && (
         <section aria-label={t("library.view.transcriptions")} className="flex-1">

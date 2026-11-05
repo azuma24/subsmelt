@@ -1539,6 +1539,26 @@
       "from": "{{folder}} から",
       "edit": "編集",
       "newForFolder": "このフォルダー用の新しいリスト"
+    },
+    "folders": {
+      "title": "フォルダー",
+      "all": "すべてのファイル",
+      "pinned": "ピン留め",
+      "none": "フォルダーがまだありません。スキャンしてメディアを探してください。",
+      "expand": "{{folder}} を開く",
+      "collapse": "{{folder}} を閉じる",
+      "pin": "{{folder}} をピン留め",
+      "unpin": "{{folder}} のピン留めを外す",
+      "breadcrumb": "フォルダーのパス",
+      "noCorrections": "なし",
+      "errors_one": "エラー {{count}} 件",
+      "errors_other": "エラー {{count}} 件",
+      "files_one": "{{count}} ファイル",
+      "files_other": "{{count}} ファイル",
+      "done_one": "完了 {{count}}",
+      "done_other": "完了 {{count}}",
+      "pending_one": "待機中 {{count}}",
+      "pending_other": "待機中 {{count}}"
     }
   },
   "llmStatus": {

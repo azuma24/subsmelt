@@ -13,6 +13,7 @@ installer, macOS app) share a version number and are released together, as
 
 ### Interface
 
+- **Library folders**: a folder tree beside the list shows each folder's file count and a red dot when a translation in it failed. Pick a folder to see it with its subfolders. The status counts, filters and bulk actions (run pending, retry errors) then apply to that folder only. A header shows where you are, with a breadcrumb back up, the folder's counts and the correction lists that apply. Folders can be pinned, the open branches are remembered, and links keep the folder (`/?folder=UniFi/Tutorials`). On a phone the tree opens from a Folders button.
 - The interface now comes in 10 languages instead of 32: English, 简体中文, 繁體中文, 日本語, 한국어, Español, Français, Deutsch, Português (Brasil) and Русский. Anyone who had picked another one sees English, except European Portuguese, which now shows Brazilian Portuguese. This changes only SubSmelt's own screens: every language is still available as a subtitle translation target and for Whisper.
 
 ## [0.8.0] — 2026-11-04
