@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { EMPTY_FORM, edit, editMany, isDirty, receiveServer, saved, view } from "./settings-form.js";
+import { EMPTY_FORM, changes, edit, editMany, isDirty, receiveServer, saved, view } from "./settings-form.js";
 
 const base = receiveServer(EMPTY_FORM, { model: "gpt", scan_interval: "60", _watcher_running: false });
 
@@ -39,4 +39,19 @@ test("server-side state can change underneath edits without dropping them", () =
   const toggled = receiveServer(form, { ...form.server, _watcher_running: true });
   assert.deepEqual(view(toggled), { model: "gpt", scan_interval: "5", _watcher_running: true });
   assert.equal(isDirty(toggled), true);
+});
+
+test("a save sends only the changed keys, so a stale snapshot cannot overwrite newer values", () => {
+  const form = edit(
+    { server: { correction_rule_sets: "[]", auto_scan_interval: "0" }, edits: {} },
+    "auto_scan_interval",
+    "45",
+  );
+  assert.deepEqual(changes(form), { auto_scan_interval: "45" });
+});
+
+test("saving some keys keeps the rest of the snapshot", () => {
+  const form = edit({ server: { model: "a", port: "1" }, edits: {} }, "port", "2");
+  const after = saved(form, changes(form));
+  assert.deepEqual(after, { server: { model: "a", port: "2" }, edits: {} });
 });

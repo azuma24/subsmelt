@@ -17,6 +17,9 @@ export const view = (form: SettingsForm): SettingsValues => ({ ...form.server, .
 
 export const isDirty = (form: SettingsForm): boolean => Object.keys(form.edits).length > 0;
 
+/** What a save sends. Never the snapshot: it may predate a value saved elsewhere, and sending it would undo that. */
+export const changes = (form: SettingsForm): SettingsValues => ({ ...form.edits });
+
 export const receiveServer = (form: SettingsForm, server: SettingsValues): SettingsForm => ({ ...form, server });
 
 export function edit(form: SettingsForm, key: string, value: unknown): SettingsForm {
@@ -35,5 +38,5 @@ export function saved(form: SettingsForm, body: SettingsValues): SettingsForm {
   for (const [key, value] of Object.entries(form.edits)) {
     if (!Object.is(value, body[key])) edits[key] = value;
   }
-  return { server: body, edits };
+  return { server: { ...form.server, ...body }, edits };
 }

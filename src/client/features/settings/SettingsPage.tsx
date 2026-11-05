@@ -18,7 +18,7 @@ import { Accordion, ActionButton, SettingsSection, PageHeader } from "../../ui/p
 import { InlineError } from "../../ui/QueryState";
 import { JSON_BLOB_SETTINGS, getStr, validateJsonSetting, type JsonBlobSettingKey } from "./settings-model";
 import { str } from "../../lib/settings-value";
-import { EMPTY_FORM, edit, editMany, isDirty, receiveServer, saved, view, type SettingsForm } from "./settings-form";
+import { changes, EMPTY_FORM, edit, editMany, isDirty, receiveServer, saved, view, type SettingsForm } from "./settings-form";
 import { EngineSection } from "./sections/EngineSection";
 import { CorrectionsSection } from "./sections/CorrectionsSection";
 import { InterfaceSection } from "./sections/InterfaceSection";
@@ -91,8 +91,9 @@ export function SettingsPage() {
   // Every save goes through here. Resolves true when `body` reached the server;
   // a malformed JSON blob is never persisted and the edits stay pending so the
   // value isn't lost (handleSave surfaces the toast on an explicit save).
-  const persist = (body: Record<string, unknown>): Promise<SaveOutcome> => {
-    if (!jsonBlobsValid(body)) return Promise.resolve("failed");
+  const persist = (): Promise<SaveOutcome> => {
+    if (!jsonBlobsValid(view(formRef.current))) return Promise.resolve("failed");
+    const body = changes(formRef.current);
     saveChainRef.current = saveChainRef.current
       .then(() => api.saveSettings(body))
       .then((result): SaveOutcome => {
@@ -124,12 +125,12 @@ export function SettingsPage() {
 
   const updateAndSave = async (key: string, value: unknown): Promise<SaveOutcome> => {
     applyForm(edit(formRef.current, key, value));
-    return persist(view(formRef.current));
+    return persist();
   };
 
   const updateManyAndSave = async (updates: Record<string, unknown>) => {
     applyForm(editMany(formRef.current, updates));
-    await persist(view(formRef.current));
+    await persist();
   };
 
   const clearSaveTimer = () => {
@@ -143,7 +144,7 @@ export function SettingsPage() {
     clearSaveTimer();
     saveTimerRef.current = setTimeout(() => {
       saveTimerRef.current = null;
-      void persist(view(formRef.current));
+      void persist();
     }, delay);
   };
 
@@ -170,7 +171,7 @@ export function SettingsPage() {
   useEffect(
     () => () => {
       clearSaveTimer();
-      if (isDirty(formRef.current) && validateJsonBlobs()) void persist(view(formRef.current));
+      if (isDirty(formRef.current) && validateJsonBlobs()) void persist();
     },
     [],
   );
@@ -179,7 +180,7 @@ export function SettingsPage() {
     if (!validateJsonBlobs()) return false;
     clearSaveTimer();
     setSaving(true);
-    if ((await persist(view(formRef.current))) === "saved") addToast(t("settings.saved"), "success");
+    if ((await persist()) === "saved") addToast(t("settings.saved"), "success");
     setSaving(false);
     return true;
   };
@@ -189,7 +190,7 @@ export function SettingsPage() {
     if (!dirty) return true;
     if (!validateJsonBlobs()) return false;
     clearSaveTimer();
-    return (await persist(view(formRef.current))) !== "failed";
+    return (await persist()) !== "failed";
   };
 
   const handleTranscriptionTest = async () => {
