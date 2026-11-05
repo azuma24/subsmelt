@@ -83,6 +83,7 @@ export function LibraryPage() {
   const jobs: Job[] = useMemo(() => jobsQuery.data?.jobs ?? [], [jobsQuery.data]);
   const jobsById = useMemo(() => new Map(jobs.map((job) => [job.id, job])), [jobs]);
   const queueRunning = Boolean(queueStatusQuery.data?.running ?? jobsQuery.data?.queueRunning ?? false);
+  const waitingForGpu = queueStatusQuery.data?.waitingForGpu === true;
   const currentJobId = queueStatusQuery.data?.currentJobId ?? jobsQuery.data?.currentJobId ?? null;
   const mediaDir = str(settings._media_dir, "/media");
   const items = useMemo(() => toLibraryItems(libraryQuery.data?.files ?? [], mediaDir), [libraryQuery.data, mediaDir]);
@@ -193,10 +194,11 @@ export function LibraryPage() {
 
       {libraryQuery.data?.complete === false && <ScanWarning errors={libraryQuery.data.errors ?? []} t={t} />}
 
-      {jobsQuery.data !== undefined && !jobsQuery.isError && (
+      {(waitingForGpu || (jobsQuery.data !== undefined && !jobsQuery.isError)) && (
         <QueueBand
           jobs={jobs}
           queueRunning={queueRunning}
+          waitingForGpu={waitingForGpu}
           onRunAll={() => void runAll()}
           onStop={() => void stop()}
           busy={startQueueMutation.isPending || stopQueueMutation.isPending}
@@ -205,7 +207,7 @@ export function LibraryPage() {
       {jobsQuery.data !== undefined && !jobsQuery.isError && (
         <QuickStart
           jobs={jobs}
-          queueRunning={queueRunning}
+          queueRunning={queueRunning || waitingForGpu}
           onScan={() => void scan.start()}
           onRunAll={() => void runAll()}
         />

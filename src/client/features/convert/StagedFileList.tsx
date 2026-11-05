@@ -4,6 +4,7 @@ import { extOf, formatBytes } from "./download-outputs";
 
 import { effectiveSource, isSameAsTarget, type StagedFile } from "./staged-file";
 import { IconButton } from "../../ui/primitives";
+import { FileQualityCheck } from "./FileQualityCheck";
 
 export type FileRunStatus = "working" | "done" | "error";
 
@@ -123,6 +124,7 @@ export function StagedFileList({
                   )}
                 </div>
               )}
+              <FileQualityCheck file={file} />
             </li>
           );
         })}

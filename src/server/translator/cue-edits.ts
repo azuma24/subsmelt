@@ -54,7 +54,8 @@ export function applyCueEdits(content: string, ext: string, edits: CueEdit[]): {
   let updated = 0;
 
   if (["srt", "vtt"].includes(normalizedExt)) {
-    const parsed = parseSrtVtt(content);
+    const format = normalizedExt === "vtt" ? "WebVTT" : "SRT";
+    const parsed = parseSrtVtt(content, format);
     let cuePosition = 0;
     const rebuilt = parsed.map((node) => {
       if (node.type !== "cue") return node;
@@ -81,7 +82,6 @@ export function applyCueEdits(content: string, ext: string, edits: CueEdit[]): {
         },
       };
     });
-    const format = normalizedExt === "vtt" ? "WebVTT" : "SRT";
     return { output: stringifySubtitle(rebuilt, format), updated };
   }
 

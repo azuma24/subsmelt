@@ -1,4 +1,4 @@
-import { removePartialOutput } from "./translator/engine.js";
+import { removeJobPartialOutput } from "./job-output.js";
 import fs from "node:fs";
 import path from "node:path";
 import {
@@ -12,7 +12,7 @@ import {
   validateTaskLangCode,
   type TranslationTask,
 } from "./config.js";
-import { getJob, createJob, findJobForTask, findUnfinishedJobForOutput, resetJob } from "./db.js";
+import { getJob, createJob, findJobForTask, findUnfinishedJobForOutput, getJobOutputOwner, resetJob } from "./db.js";
 import { logger } from "./logger.js";
 import { MEDIA_DIR } from "./scanner.js";
 import { existingTaskOutput, stripLangSuffix, taskOutputName } from "./output-names.js";
@@ -143,12 +143,14 @@ export function queueFileTranslation(srtPathInput: string, target: FileTranslati
   if (already) return reject(409, `${path.basename(already)} already exists`);
   if (findUnfinishedJobForOutput(outputPath, existing?.id ?? null))
     return reject(409, `Another job is already writing ${path.basename(outputPath)}`);
+  const owner = getJobOutputOwner(outputPath);
+  if (owner && owner.id !== existing?.id) return reject(409, `Another job already owns ${path.basename(outputPath)}`);
 
   const task = saveTask(resolved);
   if (existing) {
     const previousOutput = getJob(existing.id)?.output_path ?? outputPath;
     if (resetJob(existing.id, outputPath) === 0) return { kind: "already-queued", jobId: existing.id, taskId: task.id };
-    if (previousOutput !== outputPath) removePartialOutput(previousOutput);
+    if (previousOutput !== outputPath) removeJobPartialOutput(previousOutput);
     logger.info("queue", `Job #${existing.id} reset to pending (one-off translation)`, existing.id);
     return { kind: "queued", jobId: existing.id, taskId: task.id };
   }

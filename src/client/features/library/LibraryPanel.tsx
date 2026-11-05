@@ -8,6 +8,8 @@ import { Icon } from "../../ui/Icon";
 import type { UseManualTranscriptionResult } from "../dashboard/useManualTranscription";
 import { itemTasks, relevantJobId, type LibraryItem } from "./library-model";
 import { ErrorBlock, SubtitleLanguages, TranscribeBlock, type FailedTask } from "./PanelSections";
+import { canProbeEmbeddedSubtitles } from "../../../shared/embedded-subtitles";
+import { EmbeddedSubtitles } from "./EmbeddedSubtitles";
 import { FolderCorrections } from "../corrections/FolderCorrections";
 
 /** At this width the panel sits beside the list; below it, it overlays as a drawer or sheet. */
@@ -144,6 +146,9 @@ export function LibraryPanel({
             </dd>
           </dl>
           {failed.length > 0 && <ErrorBlock failed={failed} busy={retryMutation.isPending} onRetry={retry} />}
+          {videoPath && canProbeEmbeddedSubtitles(videoPath) && (
+            <EmbeddedSubtitles key={videoPath} videoPath={videoPath} />
+          )}
           {needsTranscription && videoPath && (
             <TranscribeBlock
               enabled={transcriptionEnabled}

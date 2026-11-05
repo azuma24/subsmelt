@@ -233,6 +233,27 @@ test("the queue band offers Run all while jobs wait, and is absent when nothing 
   assert.ok(!idle.buttons.includes("▶ Run All"));
 });
 
+test("the queue band offers Stop while a run waits for the shared GPU", () => {
+  const page = renderPage(<LibraryPage />, [
+    ...configured,
+    [
+      ["queue-status"],
+      {
+        running: false,
+        waitingForGpu: true,
+        currentJobId: null,
+        currentJob: null,
+        activeConnections: [],
+        pendingCount: 1,
+        watcherRunning: false,
+      },
+    ],
+  ]);
+  assert.ok(page.text.includes("Waiting for the GPU 1 more in queue ⏹ Stop"));
+  assert.ok(page.buttons.includes("⏹ Stop"));
+  assert.ok(!page.buttons.includes("▶ Run All"));
+});
+
 test("the Jobs view shows a loading skeleton, not the empty hint, before the first jobs response", () => {
   const seed: QuerySeed = [
     [["tasks"], [zhTask]],

@@ -50,6 +50,8 @@ test("SSE invalidation keys are targeted by event type", () => {
     ["usage"],
   ]);
   assert.deepEqual(getSSEInvalidationKeys("job:connection"), [["queue-status"], ["llm-status"]]);
+  assert.ok(SSE_EVENT_NAMES.includes("queue:waiting"));
+  assert.deepEqual(getSSEInvalidationKeys("queue:waiting"), [["queue-status"]]);
   assert.deepEqual(getSSEInvalidationKeys("queue:finished"), [
     ["jobs"],
     ["queue-status"],

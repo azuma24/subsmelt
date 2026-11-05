@@ -6,10 +6,10 @@ import { parseRules, resolveDirectoryRule } from "./directory-rules.js";
 import { fileLangCodes } from "./language-codes.js";
 import { logger } from "./logger.js";
 import { errorMessage } from "./errors.js";
-import { removePartialOutput } from "./translator/engine.js";
+import { removeJobPartialOutput } from "./job-output.js";
 import { loadTitleSidecar, getTitle, pruneTitleSidecarQueued, type TitleSidecar } from "./translator/title-sidecar.js";
-import { caseKey, findAnyCase, stripLangSuffix, taskOutputName, taskOutputNames } from "./output-names.js";
-import { mediaRelativeDir, normalizeMediaSubfolder, resolveMediaSubfolder } from "./media-paths.js";
+import { findAnyCase, stripLangSuffix, taskOutputName, taskOutputNames } from "./output-names.js";
+import { caseKey, mediaRelativeDir, normalizeMediaSubfolder, resolveMediaSubfolder } from "./media-paths.js";
 import type { FolderCounts, FolderNode, ScannedFile, ScanResult, ScanTaskState } from "../shared/scan.js";
 
 export const MEDIA_DIR = process.env.MEDIA_DIR || "/media";
@@ -263,23 +263,12 @@ export async function scanFolder(createJobs = true): Promise<ScanResult> {
     .map((e) => e.trim().toLowerCase());
   const tasks = getTasks();
   const enabledTasks = tasks.filter((t: TranslationTask) => t.enabled);
+  const tasksById = new Map(tasks.map((task) => [task.id, task]));
 
   // Per-directory translation control.
   const directoryRules = parseRules(getSetting("directory_rules") || "[]");
   const globalTranslateWithoutVideo = getSetting("translate_without_video") === "on";
   const mediaRoot = path.resolve(MEDIA_DIR);
-  // Job states for every (source subtitle, task) pair, loaded once instead of
-  // one SQLite query per pair.
-  const jobRows = listJobTaskStatuses();
-  const jobTasks = new Map(jobRows.map((job) => [`${job.srt_path}\u0000${job.task_id}`, job]));
-  // Tasks each source already has a job for, which includes one-off
-  // translations on tasks no scan applies.
-  const jobbedTasksBySource = new Map<string, TranslationTask[]>();
-  for (const job of jobRows) {
-    const task = tasks.find((t: TranslationTask) => t.id === job.task_id);
-    if (!task) continue;
-    jobbedTasksBySource.set(job.srt_path, [...(jobbedTasksBySource.get(job.srt_path) ?? []), task]);
-  }
   // Tasks used for output-file detection: every task, enabled or not. A
   // disabled task's translation is still a translation, and read as a source
   // it would show its video twice and translate the same language again.
@@ -357,19 +346,9 @@ export async function scanFolder(createJobs = true): Promise<ScanResult> {
 
   const taskOutputs = findTaskOutputs(srtFiles, outputDetectTasks);
 
-  // Show.srt and Show.eng.srt both translate to Show.zh.srt, and two jobs on one
-  // output would share its .part file. The shortest source name owns each
-  // output, so a source without a language suffix wins.
-  const outputOwners = new Map<string, string>();
   const sourcesShortestFirst = srtFiles
     .filter((srtPath) => !taskOutputs.has(caseKey(srtPath)))
     .sort((a, b) => path.basename(a).length - path.basename(b).length);
-  for (const srtPath of sourcesShortestFirst) {
-    for (const task of outputDetectTasks) {
-      const outputPath = path.join(path.dirname(srtPath), taskOutputName(srtPath, task));
-      if (!outputOwners.has(outputPath)) outputOwners.set(outputPath, srtPath);
-    }
-  }
 
   const matchingVideo = (srtPath: string): string | null => {
     const ext = path.extname(srtPath);
@@ -377,8 +356,26 @@ export async function scanFolder(createJobs = true): Promise<ScanResult> {
     const dir = path.dirname(srtPath);
     return videoIndex.get(`${dir}/${stem}`) ?? videoIndex.get(`${dir}/${stripLangSuffix(stem)}`) ?? null;
   };
+  const sourcePlans = new Map<string, { videoPath: string | null; effectiveTasks: TranslationTask[] }>();
+  for (const srtPath of sourcesShortestFirst) {
+    const videoPath = matchingVideo(srtPath);
+    const relDir = path
+      .relative(mediaRoot, path.resolve(path.dirname(srtPath)))
+      .split(path.sep)
+      .join("/");
+    const resolved = resolveDirectoryRule(relDir, directoryRules, globalTranslateWithoutVideo);
+    const effectiveTasks: TranslationTask[] = [];
+    if (videoPath || resolved.translateWithoutVideo) {
+      effectiveTasks.push(...enabledTasks);
+      for (const id of resolved.extraTaskIds) {
+        const task = tasksById.get(id);
+        if (task && !effectiveTasks.some((entry) => entry.id === id)) effectiveTasks.push(task);
+      }
+    }
+    sourcePlans.set(srtPath, { videoPath, effectiveTasks });
+  }
   // Only source subtitles without a video need their own modification time.
-  const orphanMtimes = await statMtimes(sourcesShortestFirst.filter((file) => !matchingVideo(file)));
+  const orphanMtimes = await statMtimes(sourcesShortestFirst.filter((file) => !sourcePlans.get(file)?.videoPath));
 
   // Group by video file
   // Key: videoPath or "orphan:{srtPath}"
@@ -394,6 +391,33 @@ export async function scanFolder(createJobs = true): Promise<ScanResult> {
       videoMtime: videoMtimes.get(vf) ?? null,
       subtitles: [],
     });
+  }
+
+  // Read jobs after the filesystem awaits. A concurrent scan or one-off
+  // translation may have queued a job since the walk began.
+  const jobRows = listJobTaskStatuses();
+  const jobTasks = new Map(jobRows.map((job) => [`${job.srt_path}\u0000${job.task_id}`, job]));
+  const jobbedTasksBySource = new Map<string, TranslationTask[]>();
+  const outputOwners = new Map<string, { srtPath: string; taskId: number }>();
+  for (const job of jobRows) {
+    const task = tasksById.get(job.task_id);
+    if (task) {
+      const jobbed = jobbedTasksBySource.get(job.srt_path) ?? [];
+      jobbed.push(task);
+      jobbedTasksBySource.set(job.srt_path, jobbed);
+    }
+    const key = caseKey(job.output_path);
+    if (job.owns_output || (!outputOwners.has(key) && (job.status === "pending" || job.status === "translating"))) {
+      outputOwners.set(key, { srtPath: job.srt_path, taskId: job.task_id });
+    }
+  }
+  // Existing jobs keep their destinations. Of new sources competing for a
+  // destination, the shortest eligible name wins, then the first eligible task.
+  for (const [srtPath, { effectiveTasks }] of sourcePlans) {
+    for (const task of effectiveTasks) {
+      const key = caseKey(path.join(path.dirname(srtPath), taskOutputName(srtPath, task)));
+      if (!outputOwners.has(key)) outputOwners.set(key, { srtPath, taskId: task.id });
+    }
   }
 
   let newJobs = 0;
@@ -424,31 +448,15 @@ export async function scanFolder(createJobs = true): Promise<ScanResult> {
   };
 
   for (const srtPath of srtFiles) {
-    if (taskOutputs.has(caseKey(srtPath))) continue;
+    const plan = sourcePlans.get(srtPath);
+    if (!plan) continue;
+    const { videoPath, effectiveTasks } = plan;
 
     const ext = path.extname(srtPath);
     const dir = path.dirname(srtPath);
     const stem = path.basename(srtPath, ext);
     const baseStem = stripLangSuffix(stem);
 
-    // Match to video
-    const videoPath = matchingVideo(srtPath);
-
-    // Resolve directory rule for this subtitle's folder.
-    const relDir = path.relative(mediaRoot, path.resolve(dir)).split(path.sep).join("/");
-    const resolved = resolveDirectoryRule(relDir, directoryRules, globalTranslateWithoutVideo);
-
-    // Orphan gate: subtitles with no companion video only translate where enabled.
-    const gated = videoPath === null && !resolved.translateWithoutVideo;
-
-    // Effective tasks = global enabled tasks ∪ the rule's extra tasks (additive union).
-    // Rule-attached tasks apply even if globally disabled, as long as the task exists.
-    const effectiveTasks = gated ? [] : [...enabledTasks];
-    for (const tid of gated ? [] : resolved.extraTaskIds) {
-      if (effectiveTasks.some((t: TranslationTask) => t.id === tid)) continue;
-      const extra = tasks.find((t: TranslationTask) => t.id === tid);
-      if (extra) effectiveTasks.push(extra);
-    }
     // Shown tasks add the ones this subtitle already has a job for. Those
     // always take their status from the job, so they never create one. A
     // subtitle with no shown task is still listed: the Library must know the
@@ -491,10 +499,12 @@ export async function scanFolder(createJobs = true): Promise<ScanResult> {
         taskOutputNames(srtPath, task)
           .map((name) => scannedPath(path.join(dir, name)))
           .find(Boolean) ?? null;
-      const outputPath = existingPath ?? writtenPath;
+      const outputOwner = outputOwners.get(caseKey(writtenPath));
+      const ownsOutput = !outputOwner || (outputOwner.srtPath === srtPath && outputOwner.taskId === task.id);
+      const existingOwner = existingPath ? outputOwners.get(caseKey(existingPath)) : undefined;
+      const outputExists = existingPath !== null && (!existingOwner || existingOwner.taskId === task.id);
+      const outputPath = outputExists ? existingPath : writtenPath;
       const outputName = path.basename(outputPath);
-      const outputExists = existingPath !== null;
-      const outputOwner = outputOwners.get(writtenPath) ?? srtPath;
 
       // Check existing job
       const existingJob = jobTasks.get(`${srtPath}\u0000${task.id}`);
@@ -505,7 +515,7 @@ export async function scanFolder(createJobs = true): Promise<ScanResult> {
         existingJob !== undefined &&
         (existingJob.status === "done" || existingJob.status === "skipped") &&
         !outputExists &&
-        outputOwner === srtPath &&
+        ownsOutput &&
         effectiveTasks.some((t: TranslationTask) => t.id === task.id) &&
         (scannedPath(existingJob.output_path) ?? findAnyCase(existingJob.output_path)) === null;
 
@@ -517,12 +527,12 @@ export async function scanFolder(createJobs = true): Promise<ScanResult> {
         jobId = existingJob.id;
       } else if (outputExists) {
         status = "skipped";
-      } else if (outputOwner !== srtPath) {
+      } else if (!ownsOutput && outputOwner) {
         status = "skipped";
         if (createJobs) {
           logger.info(
             "scan",
-            `Skipped ${path.basename(srtPath)}: ${path.basename(outputOwner)} already translates to ${outputName}`,
+            `Skipped ${path.basename(srtPath)} (task #${task.id}): ${path.basename(outputOwner.srtPath)} (task #${outputOwner.taskId}) already translates to ${outputName}`,
           );
         }
       } else {
@@ -536,7 +546,7 @@ export async function scanFolder(createJobs = true): Promise<ScanResult> {
         } else if (existingJob) {
           const previousOutput = existingJob.output_path;
           if (resetJob(existingJob.id, outputPath) > 0) {
-            if (previousOutput !== outputPath) removePartialOutput(previousOutput);
+            if (previousOutput !== outputPath) removeJobPartialOutput(previousOutput);
             logger.info("scan", `Job #${existingJob.id} queued again: ${outputName} no longer exists`, existingJob.id);
             newJobs++;
             jobId = existingJob.id;

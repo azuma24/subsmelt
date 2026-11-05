@@ -43,9 +43,13 @@ export function cuesOf(parsed: ParsedSubtitle): SubtitleCue[] {
   return isAssDocument(parsed) ? parsed.events : parsed.filter((node) => node.type === "cue");
 }
 
-export function parseSubtitle(fileContent: string, fileExtension: string): ParsedSubtitle {
+export function parseSubtitle(
+  fileContent: string,
+  fileExtension: string,
+  onInvalidTiming?: (line: number) => void,
+): ParsedSubtitle {
   if (["srt", "vtt"].includes(fileExtension)) {
-    return parseSrtVtt(fileContent);
+    return parseSrtVtt(fileContent, fileExtension === "vtt" ? "WebVTT" : "SRT", onInvalidTiming);
   }
   if (["ass", "ssa"].includes(fileExtension)) {
     const parsedAss = parseAss(fileContent);

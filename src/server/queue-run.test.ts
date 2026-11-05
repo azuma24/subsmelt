@@ -164,6 +164,72 @@ function resetConnections() {
   config.setSetting("llm_connections", "");
 }
 
+test("legacy duplicate jobs cannot share a parallel worker's output or overwrite it on force retry", async () => {
+  useConnections("parallel", [
+    { id: "a", label: "A", provider: "local", model: "test", endpoint: "http://a.test/v1" },
+    { id: "b", label: "B", provider: "local", model: "test", endpoint: "http://b.test/v1" },
+  ]);
+  const owner = addJob({ srtExists: true, outputExists: false });
+  const job = db.getJob(owner)!;
+  const otherTask = config.createTask({
+    source_lang: "Automatic",
+    target_lang: "Spanish",
+    output_pattern: "{{name}}.chi.srt",
+    lang_code: "spa",
+  }).lastInsertRowid;
+  const duplicate = Number(
+    db.createJob({
+      task_id: otherTask,
+      srt_path: job.srt_path,
+      output_path: job.output_path,
+      video_path: null,
+    }).lastInsertRowid,
+  );
+  let run = queue.processQueue([owner, duplicate]);
+  try {
+    await waitFor(() => release.length > 0, "the owner to enter fetch");
+    assert.equal(db.getJob(owner)?.status, "translating");
+    assert.equal(db.getJob(duplicate)?.status, "error");
+    assert.match(db.getJob(duplicate)?.error ?? "", /Output already belongs to another job/);
+
+    const partial = `${job.output_path}.part`;
+    fs.writeFileSync(partial, "current writer's partial");
+    queue.forceJobFromScratch(duplicate);
+    assert.equal(fs.readFileSync(partial, "utf8"), "current writer's partial");
+
+    assert.equal(queue.requestJobCancel(owner), true);
+    await run;
+    release.length = 0;
+    assert.equal(db.getJob(owner)?.status, "error");
+    assert.equal(db.getJob(duplicate)?.status, "error");
+    assert.equal(fs.existsSync(job.output_path), false);
+    assert.equal(fs.readFileSync(partial, "utf8"), "current writer's partial");
+
+    assert.equal(db.resetJob(owner), 1);
+    run = queue.processQueue([owner]);
+    while (db.getJob(owner)?.status === "translating") {
+      await waitFor(() => release.length > 0 || db.getJob(owner)?.status !== "translating", "the owner to finish");
+      release.shift()?.('["first translation"]');
+    }
+    await run;
+    assert.equal(db.getJob(owner)?.status, "done");
+    assert.equal(db.getJob(duplicate)?.status, "error");
+
+    queue.forceJobFromScratch(duplicate);
+    await queue.processQueue([duplicate]);
+    assert.equal(db.getJob(duplicate)?.status, "error");
+    assert.match(fs.readFileSync(job.output_path, "utf8"), /first translation/);
+  } finally {
+    queue.requestStop();
+    await run;
+    release.length = 0;
+    resetConnections();
+    db.deleteJob(owner);
+    db.deleteJob(duplicate);
+    config.deleteTask(otherTask);
+  }
+});
+
 test("cancelling one parallel job leaves its sibling running", async () => {
   useConnections("parallel", [
     { id: "a", label: "A", provider: "local", model: "test", endpoint: "http://a.test/v1" },

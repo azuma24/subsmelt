@@ -1,6 +1,11 @@
 import path from "node:path";
 import fs from "node:fs";
 
+/** A path compared ignoring case in its file name only: folders named "Show" and "show" stay apart. */
+export function caseKey(file: string): string {
+  return path.join(path.dirname(file), path.basename(file).toLowerCase());
+}
+
 // Resolve the deepest existing ancestor. lstat distinguishes a missing path
 // from a dangling symlink, which must never be treated as a future directory.
 function canonicalCandidate(input: string): string {

@@ -22,6 +22,14 @@ test("SRT: skips indices and timestamps, strips inline tags, joins cue text", ()
   assert.ok(!text.includes("<i>"));
 });
 
+test("the language sample keeps NOTE in dialogue", () => {
+  assert.match(
+    sampleCueText(SRT.replace("Hello there.", "NOTE TO SELF\nRemember the key")),
+    /NOTE TO SELF Remember the key/,
+  );
+  assert.match(sampleCueText(VTT.replace("- <v Roger>Where are we now?</v>", "NOTE TO SELF")), /NOTE TO SELF/);
+});
+
 const VTT = `WEBVTT
 
 NOTE a comment

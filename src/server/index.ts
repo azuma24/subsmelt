@@ -19,6 +19,7 @@ import { readSettings } from "./settings-schema.js";
 import { registerSettingsTasksRoutes } from "./routes/settings-tasks.js";
 import { registerConvertBatchRoutes } from "./routes/convert-batches.js";
 import { registerJobsRoutes } from "./routes/jobs.js";
+import { registerEmbeddedSubtitleRoutes } from "./routes/embedded-subtitles.js";
 import { registerCorrectionsRoutes } from "./routes/corrections.js";
 import { registerModelsRoutes } from "./routes/models.js";
 import { registerLlmStatusRoutes } from "./routes/llm-status.js";
@@ -139,6 +140,7 @@ app.get("/api/scan/preview", async (_req, res) => {
 });
 
 registerJobsRoutes(app);
+registerEmbeddedSubtitleRoutes(app);
 registerCorrectionsRoutes(app);
 
 // ======== Watcher (Feature 4) ========

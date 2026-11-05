@@ -11,6 +11,7 @@ export type SSEEventName =
   | "job:connection"
   | "job:analyzing"
   | "job:cancelled"
+  | "queue:waiting"
   | "queue:finished"
   | "queue:stopped"
   | "queue:failed"
@@ -34,6 +35,7 @@ export const SSE_EVENT_NAMES: readonly SSEEventName[] = [
   "job:connection",
   "job:analyzing",
   "job:cancelled",
+  "queue:waiting",
   "queue:finished",
   "queue:stopped",
   "queue:failed",
@@ -90,6 +92,8 @@ export function getSSEInvalidationKeys(name: SSEEventName, data: Record<string, 
         ["youtube", "pipeline"],
         ["usage"],
       ];
+    case "queue:waiting":
+      return [["queue-status"]];
     case "queue:finished":
     case "queue:stopped":
     case "queue:failed":

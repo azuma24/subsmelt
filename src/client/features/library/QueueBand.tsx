@@ -10,19 +10,22 @@ const ETA_TICK_MS = 5_000;
 interface QueueBandProps {
   jobs: Job[];
   queueRunning: boolean;
+  waitingForGpu: boolean;
   onRunAll: () => void;
   onStop: () => void;
   busy: boolean;
 }
 
 /** The live queue as one line above every view: what is translating, what waits, and Run all or Stop. */
-export function QueueBand({ jobs, queueRunning, onRunAll, onStop, busy }: QueueBandProps) {
+export function QueueBand({ jobs, queueRunning, waitingForGpu, onRunAll, onStop, busy }: QueueBandProps) {
   const { t } = useTranslation();
   const pendingJobs = jobs.filter((job) => job.status === "pending");
   const activeJobs = jobs.filter((job) => job.status === "translating");
-  if (!queueRunning && pendingJobs.length === 0 && activeJobs.length === 0) return null;
+  const canStop = queueRunning || waitingForGpu;
+  if (!canStop && pendingJobs.length === 0 && activeJobs.length === 0) return null;
 
-  const stateLabel = t(queueRunning ? "app.queueRunning" : "app.queueIdle");
+  const stateLabel = t(queueRunning ? "app.queueRunning" : waitingForGpu ? "youtube.status.gpuWait" : "app.queueIdle");
+  const stateDot = queueRunning ? "bg-success animate-pulse" : waitingForGpu ? "bg-warning" : "bg-faint";
   const queueEtaMs = estimateQueueEta(
     pendingJobs.length,
     recentDurationsSeconds(
@@ -36,15 +39,13 @@ export function QueueBand({ jobs, queueRunning, onRunAll, onStop, busy }: QueueB
       aria-label={stateLabel}
       className="flex min-h-touch shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-border bg-surface-raised px-4"
     >
-      <span
-        aria-hidden="true"
-        title={stateLabel}
-        className={`h-2 w-2 shrink-0 rounded-full ${queueRunning ? "bg-success animate-pulse" : "bg-faint"}`}
-      />
+      <span aria-hidden="true" title={stateLabel} className={`h-2 w-2 shrink-0 rounded-full ${stateDot}`} />
       {activeJobs.length > 0 ? (
         <ActiveJobLine job={activeJobs[0]} others={activeJobs.length - 1} />
       ) : (
-        <span className="min-w-0 flex-1 text-sm font-medium text-text">{stateLabel}</span>
+        <span aria-live="polite" className="min-w-0 flex-1 text-sm font-medium text-text">
+          {stateLabel}
+        </span>
       )}
       {pendingJobs.length > 0 && (
         <span
@@ -55,7 +56,7 @@ export function QueueBand({ jobs, queueRunning, onRunAll, onStop, busy }: QueueB
         </span>
       )}
       <div className="ml-auto">
-        {queueRunning ? (
+        {canStop ? (
           <ActionButton variant="danger" size="sm" onClick={onStop} busy={busy}>
             {t("dashboard.stop")}
           </ActionButton>

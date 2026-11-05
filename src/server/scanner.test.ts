@@ -89,6 +89,33 @@ test("two sources that translate to one output queue one job, from the source wi
   );
 });
 
+test("two tasks with the same destination on one source queue only the first task", async () => {
+  useTasks("eng", "spa");
+  const [english, spanish] = config.getTasks();
+  config.updateTask(english.id, { output_pattern: "{{name}}.translated.srt" });
+  config.updateTask(spanish.id, { output_pattern: "{{name}}.Translated.srt" });
+  const dir = library("shared-task-output", ["Movie.mkv", "Movie.srt"]);
+  const { files } = await scanFolder(true);
+  const subtitle = files.find((file) => file.videoPath === path.join(dir, "Movie.mkv"))?.subtitles[0];
+
+  assert.deepEqual(jobsIn(dir), [["Movie.srt", "Movie.translated.srt"]]);
+  assert.deepEqual(
+    subtitle?.tasks.map((task) => [task.taskId, task.status, task.outputExists]),
+    [
+      [english.id, "pending", false],
+      [spanish.id, "skipped", false],
+    ],
+  );
+
+  fs.writeFileSync(path.join(dir, "Movie.translated.srt"), "");
+  const preview = await scanFolder(false);
+  const translated = preview.files.find((file) => file.videoPath === path.join(dir, "Movie.mkv"))?.subtitles[0];
+  assert.deepEqual(
+    translated?.tasks.map((task) => task.outputExists),
+    [true, false],
+  );
+});
+
 test("stripLangSuffix drops a language with an optional region or subtitle flag", async () => {
   assert.equal(stripLangSuffix("Movie.en"), "Movie");
   assert.equal(stripLangSuffix("Movie.en.sdh"), "Movie");

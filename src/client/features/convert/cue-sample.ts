@@ -8,7 +8,7 @@
 const DEFAULT_MAX_CUES = 30;
 
 const SRT_VTT_TIMING = /-->/;
-const VTT_HEADER = /^WEBVTT/;
+const VTT_HEADER = /^WEBVTT(?:\s|$)/;
 const NUMERIC_INDEX = /^\d+$/;
 const ASS_DIALOGUE = /^Dialogue:\s*/i;
 const ASS_SECTION_OR_META = /^(\[|Format:|Style:|Comment:|Title:|ScriptType:|PlayRes|WrapStyle|Collisions)/i;
@@ -34,6 +34,8 @@ export function sampleCueText(content: string, maxCues: number = DEFAULT_MAX_CUE
   const cues: string[] = [];
   let currentCue: string[] = [];
   let inNote = false;
+  let inCue = false;
+  const vtt = VTT_HEADER.test(content.trimStart());
 
   const flush = () => {
     if (currentCue.length > 0) {
@@ -55,16 +57,20 @@ export function sampleCueText(content: string, maxCues: number = DEFAULT_MAX_CUE
 
     if (!line) {
       inNote = false;
+      inCue = false;
       flush();
       continue;
     }
-    if (VTT_HEADER.test(line)) continue;
-    if (line.startsWith("NOTE")) {
+    if (vtt && VTT_HEADER.test(line)) continue;
+    if (vtt && !inCue && /^NOTE(?:\s|$)/.test(line)) {
       inNote = true;
       continue;
     }
     if (inNote) continue;
-    if (SRT_VTT_TIMING.test(line)) continue; // timing row (cue settings live on it too)
+    if (SRT_VTT_TIMING.test(line)) {
+      inCue = true;
+      continue;
+    }
     if (NUMERIC_INDEX.test(line)) continue;
 
     const text = cleanLine(line);

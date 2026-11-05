@@ -7,11 +7,13 @@ import { copyText } from "../../lib/clipboard";
 import { ModalShell } from "../../ui/ModalShell";
 import { PageError, PageLoading } from "../../ui/QueryState";
 import { useToast } from "../../ui/Toast";
-import { ApiError, jobDownloadUrl, saveJobCues } from "../../api";
+import { ApiError, getBilingualJobDownload, jobDownloadUrl, saveJobCues } from "../../api";
 import type { PreviewLine } from "../../types";
 import { Icon } from "../../ui/Icon";
 import { IconButton } from "../../ui/primitives";
 import { FixDialog } from "../corrections/FixDialog";
+import { triggerDownload } from "../convert/download-outputs";
+import { SubtitleQualityReport } from "../../ui/SubtitleQualityReport";
 
 interface PreviewOverlayProps {
   jobId: number;
@@ -53,6 +55,7 @@ interface EditCtx {
   onChange: (index: number, value: string) => void;
   placeholder: string;
   editedLabel: string;
+  qualityCues: ReadonlySet<number>;
 }
 
 export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose }: PreviewOverlayProps) {
@@ -66,6 +69,9 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [showOnlyIssues, setShowOnlyIssues] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [pendingJump, setPendingJump] = useState<number | null>(null);
+  const lastIssue = useRef(0);
   // Pending edits keyed by stable cue index → new translated text. Cleared on
   // successful save (baseline is then refetched so highlights reflect saves).
   const [edits, setEdits] = useState<Map<number, string>>(new Map());
@@ -80,6 +86,12 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
     for (const line of previewData?.lines || []) map.set(line.index, line.translated || "");
     return map;
   }, [previewData?.lines]);
+  const qualityCues = useMemo(() => {
+    const issues = [...(previewData?.quality?.original ?? []), ...(previewData?.quality?.translated ?? [])];
+    const cues = new Set<number>();
+    for (const issue of issues) if (issue.cue !== undefined) cues.add(issue.cue);
+    return cues;
+  }, [previewData?.quality]);
 
   // Reset edit buffer when switching jobs or when fresh data arrives.
   // biome-ignore lint/correctness/useExhaustiveDependencies: the buffer resets when the job changes, not when its own state does
@@ -144,8 +156,9 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
       onChange,
       placeholder: t("dashboard.preview.editPlaceholder"),
       editedLabel: t("dashboard.preview.edited"),
+      qualityCues,
     }),
-    [getValue, isDirty, onChange, t],
+    [getValue, isDirty, onChange, qualityCues, t],
   );
 
   // The effective translated text for a line: edited value if present, else
@@ -171,9 +184,9 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
   const filteredLines = useMemo(() => {
     let lines = filterLines(previewData?.lines || [], previewSearch, effectiveTranslated);
     if (showOnlyChanged) lines = lines.filter((l) => l.original.trim() !== effectiveTranslated(l).trim());
-    if (showOnlyIssues) lines = lines.filter((l) => hasIssue(l, effectiveTranslated(l)));
+    if (showOnlyIssues) lines = lines.filter((l) => hasIssue(l, effectiveTranslated(l), qualityCues));
     return lines;
-  }, [previewData?.lines, previewSearch, showOnlyChanged, showOnlyIssues, effectiveTranslated]);
+  }, [previewData?.lines, previewSearch, showOnlyChanged, showOnlyIssues, effectiveTranslated, qualityCues]);
 
   const shouldVirtualize = filteredLines.length > VIRTUALIZE_THRESHOLD;
 
@@ -189,22 +202,46 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
   const virtualizerRef = useRef(virtualizer);
   virtualizerRef.current = virtualizer;
 
+  const scrollToCue = useCallback(
+    (cue: number) => {
+      const index = filteredLines.findIndex((line) => line.index === cue);
+      if (index === -1) return false;
+      // When windowed the target row may not be mounted, so scroll the
+      // virtualizer to it; otherwise the row exists in the DOM by its id.
+      if (shouldVirtualize && virtualizerRef.current) {
+        virtualizerRef.current.scrollToIndex(index, { align: "center" });
+      } else {
+        document.getElementById(`preview-line-${cue}`)?.scrollIntoView({ block: "center" });
+      }
+      return true;
+    },
+    [filteredLines, shouldVirtualize],
+  );
+
+  useEffect(() => {
+    if (pendingJump !== null) {
+      scrollToCue(pendingJump);
+      setPendingJump(null);
+    }
+  }, [pendingJump, scrollToCue]);
+
+  const jumpToCue = (cue: number) => {
+    if (scrollToCue(cue)) return;
+    setPreviewSearch("");
+    setShowOnlyChanged(false);
+    setShowOnlyIssues(false);
+    setPendingJump(cue);
+  };
+
   const jumpToNextIssue = () => {
-    const issueIdx = filteredLines.findIndex((line) => hasIssue(line, effectiveTranslated(line)));
-    if (issueIdx === -1) {
+    const issues = filteredLines.filter((line) => hasIssue(line, effectiveTranslated(line), qualityCues));
+    const next = issues.find((line) => line.index > lastIssue.current) ?? issues[0];
+    if (!next) {
       addToast(t("dashboard.preview.noIssues"), "info");
       return;
     }
-    // When windowed the target row may not be mounted, so scroll the
-    // virtualizer to it; otherwise the row exists in the DOM by its id.
-    if (shouldVirtualize && virtualizerRef.current) {
-      virtualizerRef.current.scrollToIndex(issueIdx, { align: "center", behavior: "smooth" });
-      return;
-    }
-    const el = document.getElementById(`preview-line-${filteredLines[issueIdx].index}`);
-    if (el && listRef.current) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
+    lastIssue.current = next.index;
+    scrollToCue(next.index);
   };
 
   const handleCopy = async (text: string, successMessage: string) => {
@@ -236,6 +273,19 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
       addToast(message, "error");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleBilingualDownload = async () => {
+    setIsDownloading(true);
+    try {
+      const { blob, name } = await getBilingualJobDownload(jobId);
+      triggerDownload(blob, name);
+    } catch (error) {
+      const key = error instanceof ApiError && error.status === 409 ? "bilingualMismatch" : "bilingualFailed";
+      addToast(t(`subtitleQuality.${key}`), "error");
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -311,6 +361,26 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
         <div ref={listRef} className="relative flex-1 overflow-y-auto">
           {previewQuery.isLoading && <PageLoading label={t("dashboard.preview.loading")} />}
           {previewQuery.isError && !previewQuery.isLoading && <PageError onRetry={() => void previewQuery.refetch()} />}
+          {previewData?.quality && (
+            <div className="mx-4 mt-4 space-y-2 empty:hidden">
+              {previewData.quality.original.length > 0 && (
+                <SubtitleQualityReport
+                  label={t("subtitleQuality.original")}
+                  issues={previewData.quality.original}
+                  onCue={jumpToCue}
+                  lastCue={previewData.totalLines}
+                />
+              )}
+              {previewData.quality.translated.length > 0 && (
+                <SubtitleQualityReport
+                  label={t("subtitleQuality.translated")}
+                  issues={previewData.quality.translated}
+                  onCue={jumpToCue}
+                  lastCue={previewData.totalLines}
+                />
+              )}
+            </div>
+          )}
           {previewData?.analysis && (
             <div className="mx-4 mt-4 rounded-md border border-border bg-surface-raised">
               {/* Collapsed by default: the analysis can run to hundreds of
@@ -413,6 +483,16 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
             >
               {t("dashboard.preview.download")}
             </a>
+            {previewData.canDownloadBilingual && (
+              <button
+                type="button"
+                onClick={() => void handleBilingualDownload()}
+                disabled={isDownloading}
+                className="rounded-md border border-border px-3 py-2 text-xs text-muted hover:text-text disabled:opacity-60"
+              >
+                {t(isDownloading ? "subtitleQuality.downloading" : "subtitleQuality.bilingual")}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => void handleSave()}
@@ -486,9 +566,10 @@ function truncateSelection(text: string): string {
   return text.length > 24 ? `${text.slice(0, 23)}…` : text;
 }
 
-function hasIssue(line: PreviewLine, translatedOverride?: string): boolean {
+function hasIssue(line: PreviewLine, translatedOverride: string, qualityCues: ReadonlySet<number>): boolean {
+  if (qualityCues.has(line.index)) return true;
   const original = line.original?.trim() || "";
-  const translated = (translatedOverride ?? line.translated ?? "").trim();
+  const translated = translatedOverride.trim();
 
   const isUntranslated = original.length > 0 && translated.length === 0;
   const isSuspiciousShort = translated.length > 0 && original.length > 35 && translated.length < original.length * 0.12;
@@ -678,7 +759,7 @@ function PreviewLineRow({
   effective: (line: PreviewLine) => string;
 }) {
   const { t } = useTranslation();
-  const issue = hasIssue(line, effective(line));
+  const issue = hasIssue(line, effective(line), editCtx.qualityCues);
 
   if (table) {
     return (
@@ -742,7 +823,7 @@ function PreviewLineGridRow({
   editCtx: EditCtx;
   effective: (line: PreviewLine) => string;
 }) {
-  const issue = hasIssue(line, effective(line));
+  const issue = hasIssue(line, effective(line), editCtx.qualityCues);
   return (
     <div
       id={`preview-line-${line.index}`}

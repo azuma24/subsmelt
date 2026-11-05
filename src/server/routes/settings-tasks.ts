@@ -19,7 +19,7 @@ import {
   persistableConnections,
 } from "../config.js";
 import { deletePendingJobsForTask, getPendingJobOutputsForTask } from "../db.js";
-import { removePartialOutput } from "../translator/engine.js";
+import { removeJobPartialOutput } from "../job-output.js";
 import { standardTaskLangCode } from "../language-codes.js";
 import { scanFolder, MEDIA_DIR } from "../scanner.js";
 import { startAutoScan, stopAutoScan } from "../queue.js";
@@ -237,7 +237,7 @@ export function registerSettingsTasksRoutes(
     deleteTask(id);
     const outputs = getPendingJobOutputsForTask(id);
     const removedJobs = deletePendingJobsForTask(id);
-    for (const output of outputs) removePartialOutput(output);
+    for (const output of outputs) removeJobPartialOutput(output);
     logger.info("system", `Deleted translation task #${id} and its ${removedJobs} pending job(s)`);
     res.json({ ok: true });
   });

@@ -3,6 +3,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { setLogDb } from "./logger.js";
 import type { JobRow, LogRow } from "../shared/jobs.js";
+import { caseKey } from "./media-paths.js";
 
 const DATA_DIR = process.env.DATA_DIR || "./data";
 fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -60,6 +61,20 @@ if (!jobColumns.some((c) => c.name === "output_tokens")) {
 // ETA from.
 if (!jobColumns.some((c) => c.name === "started_at")) {
   db.exec("ALTER TABLE jobs ADD COLUMN started_at TEXT");
+}
+
+// Keep the writer's claim through retries, stops, and force resets. Jobs that
+// skip an output already on disk do not acquire a writer's claim.
+if (!jobColumns.some((c) => c.name === "output_claim")) {
+  db.transaction(() => {
+    db.exec("ALTER TABLE jobs ADD COLUMN output_claim TEXT");
+    db.exec("CREATE UNIQUE INDEX idx_jobs_output_claim ON jobs (output_claim) WHERE output_claim IS NOT NULL");
+    const saved = db
+      .prepare("SELECT id, output_path FROM jobs WHERE status = 'done' ORDER BY updated_at DESC, id DESC")
+      .all() as Array<{ id: number; output_path: string }>;
+    const claim = db.prepare("UPDATE OR IGNORE jobs SET output_claim = ? WHERE id = ?");
+    for (const job of saved) claim.run(caseKey(job.output_path), job.id);
+  })();
 }
 
 // Queue workers claim pending jobs by status/priority rather than materializing
@@ -193,21 +208,45 @@ export function listJobTaskStatuses(): Array<{
   output_path: string;
   task_id: number;
   status: string;
+  owns_output: number;
 }> {
-  return db.prepare("SELECT id, srt_path, output_path, task_id, status FROM jobs").all() as Array<{
+  return db
+    .prepare("SELECT id, srt_path, output_path, task_id, status, output_claim IS NOT NULL AS owns_output FROM jobs")
+    .all() as Array<{
     id: number;
     srt_path: string;
     output_path: string;
     task_id: number;
     status: string;
+    owns_output: number;
   }>;
+}
+
+export function getJobOutputOwner(outputPath: string): { id: number; status: string } | undefined {
+  return db.prepare("SELECT id, status FROM jobs WHERE output_claim = ?").get(caseKey(outputPath)) as
+    | { id: number; status: string }
+    | undefined;
+}
+
+/** Reserve the resolved destination before starting translation or touching its files. */
+export function claimJobOutput(id: number, outputPath: string): boolean {
+  return (
+    db
+      .prepare("UPDATE OR IGNORE jobs SET output_path = ?, output_claim = ? WHERE id = ? AND status = 'translating'")
+      .run(outputPath, caseKey(outputPath), id).changes === 1
+  );
 }
 
 /** A job that has not finished and would write `outputPath`, other than `exceptId`. */
 export function findUnfinishedJobForOutput(outputPath: string, exceptId: number | null): { id: number } | undefined {
-  return db
-    .prepare("SELECT id FROM jobs WHERE output_path = ? AND status NOT IN ('done', 'skipped') AND id != ? LIMIT 1")
-    .get(outputPath, exceptId ?? -1) as { id: number } | undefined;
+  const key = caseKey(outputPath);
+  const jobs = db
+    .prepare("SELECT id, output_path FROM jobs WHERE status NOT IN ('done', 'skipped') AND id != ?")
+    .iterate(exceptId ?? -1) as Iterable<{ id: number; output_path: string }>;
+  for (const job of jobs) {
+    if (caseKey(job.output_path) === key) return { id: job.id };
+  }
+  return undefined;
 }
 
 /** The job for one (source subtitle, task) pair, which the jobs table keeps unique. */
@@ -278,9 +317,12 @@ export function getJobBySrtAndTask(srtPath: string, taskId: number): JobRow | un
 export function resetJob(id: number, outputPath?: string): number {
   return db
     .prepare(
-      "UPDATE jobs SET status = 'pending', completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL, output_path = COALESCE(?, output_path), updated_at = datetime('now') WHERE id = ? AND status != 'translating'",
+      `UPDATE jobs SET status = 'pending', completed_cues = 0, error = NULL, duration_seconds = NULL, used_connections = NULL,
+       output_path = COALESCE(?, output_path),
+       output_claim = CASE WHEN ? IS NULL OR output_claim = ? THEN output_claim END,
+       updated_at = datetime('now') WHERE id = ? AND status != 'translating'`,
     )
-    .run(outputPath ?? null, id).changes;
+    .run(outputPath ?? null, outputPath ?? null, outputPath === undefined ? null : caseKey(outputPath), id).changes;
 }
 
 export function resetJobs(ids: number[]) {

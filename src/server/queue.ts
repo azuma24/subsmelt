@@ -1,6 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
-import { countPendingJobs, claimPendingJob, forceJob, getJob, getJobsForList, updateJob, type JobRow } from "./db.js";
+import {
+  countPendingJobs,
+  claimJobOutput,
+  claimPendingJob,
+  forceJob,
+  getJob,
+  getJobOutputOwner,
+  getJobsForList,
+  updateJob,
+  type JobRow,
+} from "./db.js";
 import { getAllSettings, getTask, getSetting } from "./config.js";
 import { readSettings } from "./settings-schema.js";
 import { resolveConnectionPool, type ResolvedConnection, type LlmMode } from "./connections.js";
@@ -9,7 +19,14 @@ import { broadcast } from "./sse.js";
 import { notify } from "./notify.js";
 import { acquireConnectionLock, resetConnectionLocks } from "./connection-lock.js";
 import { existingTaskOutput, standardOutputFor } from "./output-names.js";
-import { currentTranslationGate, holdQueueStart, setTranslationQueueSource, takeHeldStart } from "./gpu-gate.js";
+import { caseKey } from "./media-paths.js";
+import {
+  clearHeldQueueStart,
+  currentTranslationGate,
+  holdQueueStart,
+  setTranslationQueueSource,
+  takeHeldStart,
+} from "./gpu-gate.js";
 import { errorMessage } from "./errors.js";
 import {
   abortAllJobs,
@@ -25,7 +42,7 @@ import { runJob } from "./queue/run-job.js";
 import { writeJobTitle } from "./queue/titles.js";
 import { clearQueueRun, interruptedQueueRun, markQueueRun, writeQueueRun } from "./queue/run-marker.js";
 import { recordUsage } from "./usage.js";
-import { removePartialOutput } from "./translator/engine.js";
+import { removeJobPartialOutput } from "./job-output.js";
 
 // The per-job state (what translates now, on which connection, what was
 // cancelled) lives in ./queue/state.ts; the routes read it through these.
@@ -49,6 +66,8 @@ let runFilter: Set<number> | null = null;
 let requestedRun: { ids: number[] | undefined } | null = null;
 // Scope explicitly requested during this run; null means all jobs.
 let currentRunScope: Set<number> | null = null;
+// An interrupted run can predate a newly requested start that the GPU gate holds.
+let heldPriorPending: number[] | null = null;
 
 function rememberRunRequest(ids: number[] | undefined): void {
   if (!requestedRun) requestedRun = { ids };
@@ -84,7 +103,7 @@ function availablePool(pool: ResolvedConnection[]): ResolvedConnection[] {
 export function forceJobFromScratch(id: number): number {
   const output = getJob(id)?.output_path;
   const changed = forceJob(id);
-  if (changed > 0 && output) removePartialOutput(output);
+  if (changed > 0 && output) removeJobPartialOutput(output, id);
   return changed;
 }
 
@@ -94,12 +113,36 @@ export function isQueueRunning() {
 setTranslationQueueSource(isQueueRunning);
 
 export function requestStop() {
+  const held = clearHeldQueueStart();
   if (isRunning) {
     setStopRequested(true);
     // Abort every in-flight LLM request immediately — don't wait for onProgress
     abortAllJobs("stop_requested");
     logger.info("queue", "Stop requested — aborting in-flight LLM calls");
+  } else if (held) {
+    const priorPending = heldPriorPending ?? [];
+    heldPriorPending = null;
+    restoreStoppedRun(priorPending, held.ids ? new Set(held.ids) : null);
+    logger.info("queue", "Queue start cancelled while waiting for the shared GPU");
+    broadcast("queue:stopped", {});
+    void notify("queue:stopped", {});
   }
+}
+
+function restoreStoppedRun(priorPending: number[], stoppedScope: Set<number> | null): void {
+  const remaining = priorPending.filter((id) => stoppedScope?.has(id) === false && getJob(id)?.status === "pending");
+  if (remaining.length) writeQueueRun(remaining, true);
+  else clearQueueRun();
+}
+
+function interruptedPendingIds(prior: ReturnType<typeof interruptedQueueRun>): number[] {
+  // Snapshot an older all-jobs marker into concrete pending IDs: restoring an
+  // unrestricted marker would also resume work that this run explicitly stopped.
+  if (!prior) return [];
+  const ids = prior.ids && new Set(prior.ids);
+  return getJobsForList()
+    .filter((job) => job.status === "pending" && (!ids || ids.has(job.id)))
+    .map((job) => job.id);
 }
 
 /**
@@ -145,31 +188,32 @@ export function runQueueSafely(onlyIds?: number[]): void {
 }
 
 export async function processQueue(onlyIds?: number[]) {
+  onlyIds = onlyIds?.length ? onlyIds : undefined;
   const prior = !isRunning ? interruptedQueueRun() : null;
-  markQueueRun(onlyIds && onlyIds.length > 0 ? onlyIds : undefined);
+  markQueueRun(onlyIds);
   if (isRunning) {
     if (!onlyIds?.length) currentRunScope = null;
     else if (currentRunScope) for (const id of onlyIds) currentRunScope.add(id);
     // A run of all jobs already re-checks for pending work before it ends.
-    if (runFilter) rememberRunRequest(onlyIds && onlyIds.length > 0 ? onlyIds : undefined);
+    if (runFilter) rememberRunRequest(onlyIds);
     return;
   }
   const gate = currentTranslationGate();
   if (!gate.open) {
-    holdQueueStart(onlyIds && onlyIds.length > 0 ? onlyIds : undefined);
+    const firstHold = heldPriorPending === null;
+    heldPriorPending ??= interruptedPendingIds(prior);
+    holdQueueStart(onlyIds);
+    if (firstHold) broadcast("queue:waiting", {});
     logger.info(
       "queue",
       `Translation waits for ${gate.waitingFor} transcription(s) to finish: Whisper and the translation model share one GPU`,
     );
     return;
   }
-  // Snapshot an older all-jobs marker into concrete pending IDs: restoring an
-  // unrestricted marker would also resume work that this run explicitly stopped.
-  const priorPending = prior
-    ? getJobsForList()
-        .filter((job) => job.status === "pending" && (!prior.ids || prior.ids.includes(job.id)))
-        .map((job) => job.id)
-    : [];
+  const held = clearHeldQueueStart();
+  if (held) onlyIds = held.ids && onlyIds ? [...new Set([...held.ids, ...onlyIds])] : undefined;
+  const priorPending = heldPriorPending ?? interruptedPendingIds(prior);
+  heldPriorPending = null;
   isRunning = true;
   currentRunScope = onlyIds?.length ? new Set(onlyIds) : null;
   resetRunState();
@@ -232,11 +276,7 @@ export async function processQueue(onlyIds?: number[]) {
       }
       const marker = interruptedQueueRun();
       if (!failed && isStopRequested()) {
-        const remaining = priorPending.filter(
-          (id) => currentRunScope?.has(id) === false && getJob(id)?.status === "pending",
-        );
-        if (remaining.length) writeQueueRun(remaining, true);
-        else clearQueueRun();
+        restoreStoppedRun(priorPending, currentRunScope);
       } else if (!failed && (!marker || countPendingJobs(marker.ids ? new Set(marker.ids) : null) === 0)) {
         clearQueueRun();
       }
@@ -281,15 +321,15 @@ export function startHeldQueue(): void {
  * re-translation replaces it in place instead of leaving a second file of the
  * same language beside the new one.
  */
-function withStandardOutput(job: JobRow): JobRow {
+function resolvedOutputPath(job: JobRow): string {
   const task = getTask(job.task_id);
-  if (!task) return job;
+  if (!task) return job.output_path;
   const standard = standardOutputFor(job.srt_path, job.output_path, task);
-  const outputPath = fs.existsSync(standard) ? standard : (existingTaskOutput(job.srt_path, task) ?? standard);
-  if (outputPath === job.output_path) return job;
-  removePartialOutput(job.output_path);
-  updateJob(job.id, { output_path: outputPath });
-  return { ...job, output_path: outputPath };
+  if (fs.existsSync(standard)) return standard;
+  const existing = existingTaskOutput(job.srt_path, task);
+  if (!existing) return standard;
+  const owner = getJobOutputOwner(existing);
+  return owner && owner.id !== job.id && caseKey(existing) !== caseKey(standard) ? standard : existing;
 }
 
 /**
@@ -303,12 +343,27 @@ function claimNextJob(filter: Set<number> | null): JobRow | null {
     const claimed = claimPendingJob(filter);
     if (!claimed) return null;
     claimedJobs.add(claimed.id);
-    const job = withStandardOutput(claimed);
+    const outputPath = resolvedOutputPath(claimed);
+    const job = { ...claimed, output_path: outputPath };
+    const owner = getJobOutputOwner(outputPath);
+    const exists = fs.existsSync(outputPath) && !job.force;
+    const outputChanged = outputPath !== claimed.output_path;
+    const needsClaim = !exists || (outputChanged && getJobOutputOwner(claimed.output_path)?.id === job.id);
+    if ((owner && owner.id !== job.id) || (needsClaim && !claimJobOutput(job.id, outputPath))) {
+      const error = `Output already belongs to another job: ${path.basename(outputPath)}`;
+      logger.warn("queue", error, job.id);
+      updateJob(job.id, { status: "error", error });
+      continue;
+    }
+    if (outputChanged) {
+      if (!needsClaim) updateJob(job.id, { output_path: outputPath });
+      removeJobPartialOutput(claimed.output_path);
+    }
 
-    if (fs.existsSync(job.output_path) && !job.force) {
+    if (exists) {
       logger.info("queue", `Skipping job ${job.id}: output already exists (${job.output_path})`, job.id);
       updateJob(job.id, { status: "skipped" });
-      removePartialOutput(job.output_path);
+      removeJobPartialOutput(job.output_path, job.id);
       titleRepairJobs.push(job);
       continue;
     }

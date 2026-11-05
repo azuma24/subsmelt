@@ -43,6 +43,12 @@ many media folders under `/media` as you like; SubSmelt scans it recursively.
    language. Click a file to translate, retry or transcribe it.
 4. Turn on the **File Watcher** in Settings to queue new subtitles as they appear.
 
+Use **Find embedded tracks** in a Library video's panel to import a text
+subtitle from MKV or MP4 as a sidecar. **Convert** can check staged files for
+quality warnings. The **Jobs** preview lists warnings for both subtitle files
+and offers a bilingual SRT download for completed translations with matching cues.
+Publishing an imported sidecar requires hard-link support on the media filesystem.
+
 Also built in: **Corrections** for terms that keep coming out wrong, such as a
 brand Whisper mishears, fixed before and after translation in the folders you
 choose ([docs/subtitle-corrections.md](docs/subtitle-corrections.md)), the **Convert** page for single files (`.srt`, `.vtt`, `.ass`,

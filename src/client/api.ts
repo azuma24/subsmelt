@@ -161,6 +161,13 @@ export const saveJobCues = (id: number, edits: CueEditInput[], opts?: FetchOpts)
   });
 // URL for an <a href download> that streams the translated output file.
 export const jobDownloadUrl = (id: number) => `${BASE}/jobs/${id}/download`;
+export const getBilingualJobDownload = async (id: number) => {
+  const url = `${jobDownloadUrl(id)}?format=bilingual`;
+  const response = await fetch(url);
+  if (!response.ok) throw new ApiError("Bilingual export unavailable", response.status, url);
+  const name = /filename="([^"]+)"/.exec(response.headers.get("Content-Disposition") ?? "")?.[1] ?? "bilingual.srt";
+  return { blob: await response.blob(), name };
+};
 
 // Queue
 export const startQueue = (ids?: number[]) =>

@@ -5,6 +5,8 @@
  * and the libraries only download when a file actually needs them.
  */
 
+import { extOf } from "./download-outputs";
+
 export async function readSubtitleFile(file: Blob): Promise<string> {
   const { readSubtitleFile: read } = await import("./decode-text");
   return read(file);
@@ -13,4 +15,12 @@ export async function readSubtitleFile(file: Blob): Promise<string> {
 export async function detectSampleLanguage(sample: string): Promise<string | null> {
   const { detectSampleLanguage: detect } = await import("./detect-language");
   return detect(sample);
+}
+
+export async function checkSubtitleFile(file: File) {
+  const [{ inspectSubtitle }, text] = await Promise.all([
+    import("../../../server/translator/subtitle-quality"),
+    readSubtitleFile(file),
+  ]);
+  return inspectSubtitle(text, extOf(file.name)).issues;
 }

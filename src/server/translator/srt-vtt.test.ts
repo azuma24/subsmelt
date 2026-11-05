@@ -76,6 +76,16 @@ test("a blank line inside a cue stays in its text; the next cue's index is not",
   );
 });
 
+test("a NOTE at the start of WebVTT cue text is dialogue", () => {
+  const vtt = "WEBVTT\n\n00:01.000 --> 00:02.000\nNOTE TO SELF\nDialogue\n\nNOTE real comment\n";
+  assert.deepEqual(
+    parseSrtVtt(vtt)
+      .filter((node) => node.type === "cue")
+      .map((node) => node.data.text),
+    ["NOTE TO SELF\nDialogue"],
+  );
+});
+
 test("a BOM, a timing line without an index, an empty cue and junk lines are all tolerated", () => {
   const srt =
     "﻿00:00:01,000 --> 00:00:02,000\nA\n\nnot a cue\nat all\n\n2\n00:00:03,000 --> 00:00:04,000\n\n3\n01:02:03,004 --> 01:02:05,006\nC\n";

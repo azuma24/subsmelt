@@ -7,6 +7,7 @@ import {
   getJobsForList,
   countPendingJobs,
   getJob,
+  getJobOutputOwner,
   resetJob,
   resetJobs,
   forceJobs,
@@ -32,11 +33,9 @@ import {
   forceJobFromScratch,
 } from "../queue.js";
 import {
-  parseSubtitle,
   readSubtitleFileText,
   applyCueEdits,
   writeSubtitleFile,
-  removePartialOutput,
   resolveTranslatedOutputPath,
   type CueEdit,
 } from "../translator.js";
@@ -44,13 +43,18 @@ import { resolveConnectionPool } from "../connections.js";
 import { estimateCost } from "../pricing.js";
 import { assertMediaPathAllowed } from "../transcription-client.js";
 import { isWatcherRunning } from "../watcher.js";
+import { isQueueStartHeld } from "../gpu-gate.js";
 import { getAllSettings } from "../config.js";
 import { logger } from "../logger.js";
 import type { Job, PreviewLine } from "../../shared/jobs.js";
-import { cuesOf, normalizeTimeToMs, type SubtitleCue } from "../translator/convert.js";
+import { normalizeTimeToMs, type SubtitleCue } from "../translator/convert.js";
+import { inspectSubtitle } from "../translator/subtitle-quality.js";
+import { bilingualSrt } from "../translator/bilingual.js";
+import type { SubtitleQualityIssue } from "../../shared/subtitle-quality.js";
 import { queueFileTranslation, type FileTranslationTarget } from "../file-translation.js";
 import { parsePositiveInteger, parsePositiveIntegerArray, sanitizeLanguageName } from "./validation.js";
 import { errorMessage } from "../errors.js";
+import { removeJobPartialOutput } from "../job-output.js";
 
 // Enrich job rows with task data (since settings/tasks are in config, not SQL JOIN).
 // Also surfaces token usage + an APPROXIMATE est_cost: jobs don't store which
@@ -85,7 +89,7 @@ function enrichJobs(jobs: JobRow[]): Job[] {
 function removePartialsOfDeleted(before: JobRow[]) {
   const remaining = new Set(getJobs().map((job) => job.id));
   for (const job of before) {
-    if (!remaining.has(job.id)) removePartialOutput(job.output_path);
+    if (!remaining.has(job.id)) removeJobPartialOutput(job.output_path);
   }
 }
 
@@ -178,7 +182,7 @@ export function registerJobsRoutes(app: Express): void {
     // A job forceJobs refused is translating now, and its files are in use.
     for (const id of ids) {
       const job = getJob(id);
-      if (job?.force && job.status === "pending") removePartialOutput(job.output_path);
+      if (job?.force && job.status === "pending") removeJobPartialOutput(job.output_path, job.id);
     }
     logger.info("queue", `Marked ${updated} selected jobs for force re-translate`);
     if (updated > 0) setTimeout(() => runQueueSafely(), 100);
@@ -218,7 +222,7 @@ export function registerJobsRoutes(app: Express): void {
     const id = parseInt(req.params.id, 10);
     const job = getJob(id);
     if (deleteJob(id) === 0) return rejectUnchanged(res, id);
-    if (job) removePartialOutput(job.output_path);
+    if (job) removeJobPartialOutput(job.output_path);
     res.json({ ok: true });
   });
 
@@ -252,24 +256,33 @@ export function registerJobsRoutes(app: Express): void {
     const job = getJob(id);
     if (!job) return res.status(404).json({ error: "Job not found" });
 
-    // Defense-in-depth: the paths come from the DB but still hit the filesystem,
-    // so confirm they live under MEDIA_DIR before reading.
+    let sourcePath: string;
+    let previewTarget = "";
+    let hasPartial = false;
     try {
-      assertMediaPathAllowed(job.srt_path, MEDIA_DIR);
-      if (job.output_path) assertMediaPathAllowed(job.output_path, MEDIA_DIR);
+      sourcePath = assertMediaPathAllowed(job.srt_path, MEDIA_DIR);
+      if (job.output_path) {
+        const outputPath = assertMediaPathAllowed(job.output_path, MEDIA_DIR);
+        const candidate = resolveTranslatedOutputPath(job.output_path);
+        hasPartial = candidate !== job.output_path;
+        previewTarget = hasPartial ? assertMediaPathAllowed(candidate, MEDIA_DIR) : outputPath;
+      }
     } catch (error) {
       return res.status(400).json({ error: errorMessage(error) || "Invalid media path" });
     }
 
     try {
       const srcExt = path.extname(job.srt_path).slice(1).toLowerCase();
-      const srcCues = cuesOf(parseSubtitle(readSubtitleFileText(job.srt_path), srcExt));
+      const { cues: srcCues, issues: originalIssues } = inspectSubtitle(readSubtitleFileText(sourcePath), srcExt);
 
       let trgCues: SubtitleCue[] = [];
-      const previewTarget = resolveTranslatedOutputPath(job.output_path);
-      if (fs.existsSync(previewTarget)) {
+      let translatedIssues: SubtitleQualityIssue[] = [];
+      const hasTarget = Boolean(previewTarget) && fs.existsSync(previewTarget);
+      if (hasTarget) {
         const trgExt = path.extname(job.output_path).slice(1).toLowerCase();
-        trgCues = cuesOf(parseSubtitle(readSubtitleFileText(previewTarget), trgExt));
+        const target = inspectSubtitle(readSubtitleFileText(previewTarget), trgExt);
+        trgCues = target.cues;
+        translatedIssues = target.issues;
       }
 
       // Times in milliseconds whatever the format: an ASS cue carries them as
@@ -283,6 +296,7 @@ export function registerJobsRoutes(app: Express): void {
       }));
 
       const task = getTask(job.task_id);
+      const outputOwner = job.status === "done" ? getJobOutputOwner(job.output_path) : undefined;
       res.json({
         srtPath: job.srt_path,
         outputPath: job.output_path,
@@ -290,6 +304,9 @@ export function registerJobsRoutes(app: Express): void {
         analysis: job.analysis_context || "",
         totalLines: lines.length,
         lines,
+        quality: { original: originalIssues, translated: translatedIssues },
+        canDownloadBilingual:
+          job.status === "done" && hasTarget && !hasPartial && (!outputOwner || outputOwner.id === id),
       });
     } catch (error) {
       res.status(500).json({ error: errorMessage(error) });
@@ -310,6 +327,11 @@ export function registerJobsRoutes(app: Express): void {
       assertMediaPathAllowed(job.output_path, MEDIA_DIR);
     } catch (error) {
       return res.status(400).json({ error: errorMessage(error) || "Invalid media path" });
+    }
+
+    const outputOwner = getJobOutputOwner(job.output_path);
+    if (outputOwner && (outputOwner.id !== id || outputOwner.status === "translating")) {
+      return res.status(409).json({ error: "This output belongs to another job or is being translated" });
     }
 
     const rawEdits = (req.body as { edits?: unknown })?.edits;
@@ -350,22 +372,43 @@ export function registerJobsRoutes(app: Express): void {
     const id = parseInt(req.params.id, 10);
     const job = getJob(id);
     if (!job) return res.status(404).json({ error: "Job not found" });
+    const bilingual = req.query.format === "bilingual";
+    if (bilingual && job.status !== "done") {
+      return res.status(409).json({ error: "Bilingual export requires a completed translation" });
+    }
+    const outputOwner = bilingual ? getJobOutputOwner(job.output_path) : undefined;
+    if (outputOwner && outputOwner.id !== id) {
+      return res.status(409).json({ error: "This output belongs to another job" });
+    }
     // Defense-in-depth: confirm the DB-stored output path is under MEDIA_DIR
     // before reading it off disk.
+    let outputPath: string;
+    let sourcePath = "";
     try {
-      assertMediaPathAllowed(job.output_path, MEDIA_DIR);
+      outputPath = assertMediaPathAllowed(job.output_path, MEDIA_DIR);
+      if (bilingual) sourcePath = assertMediaPathAllowed(job.srt_path, MEDIA_DIR);
     } catch (error) {
       return res.status(400).json({ error: errorMessage(error) || "Invalid media path" });
     }
-    if (!fs.existsSync(job.output_path)) {
+    if (!fs.existsSync(outputPath)) {
       return res.status(404).json({ error: "Output file not found" });
     }
 
     try {
-      const basename = path.basename(job.output_path);
+      const filename = path.basename(job.output_path);
+      const basename = bilingual ? `${path.parse(filename).name}.bilingual.srt` : filename;
       const ext = path.extname(basename).slice(1).toLowerCase();
       const contentType = ext === "vtt" ? "text/vtt; charset=utf-8" : "text/plain; charset=utf-8";
-      const content = readSubtitleFileText(job.output_path);
+      const translated = readSubtitleFileText(outputPath);
+      const content = bilingual
+        ? bilingualSrt(
+            { content: readSubtitleFileText(sourcePath), ext: path.extname(job.srt_path).slice(1).toLowerCase() },
+            { content: translated, ext: path.extname(filename).slice(1).toLowerCase() },
+          )
+        : translated;
+      if (content === null) {
+        return res.status(409).json({ error: "Source and translated cues do not have matching times" });
+      }
       res.setHeader("Content-Type", contentType);
       // Allow-list filename chars (CRLF/";" etc. could inject response headers).
       const safeName = basename.replace(/[^A-Za-z0-9._-]/g, "_") || "subtitle.srt";
@@ -404,6 +447,7 @@ export function registerJobsRoutes(app: Express): void {
     const currentJob = currentId ? getJob(currentId) : null;
     res.json({
       running: isQueueRunning(),
+      waitingForGpu: isQueueStartHeld(),
       currentJobId: currentId,
       currentJob: currentJob ? enrichJobs([currentJob])[0] : null,
       // Parallel mode runs several jobs at once, each pinned to a connection

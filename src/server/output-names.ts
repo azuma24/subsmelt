@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { preferredChinese, type TranslationTask } from "./config.js";
 import { fileLangCodes } from "./language-codes.js";
+import { caseKey } from "./media-paths.js";
 import { allLanguageFileAliases } from "./youtube/subtitle-routes.js";
 
 const LANG_SUFFIXES = new Set([
@@ -157,11 +158,6 @@ export function existingTaskOutput(srtPath: string, task: Parameters<typeof task
       .map((name) => findAnyCase(path.join(dir, name)))
       .find(Boolean) ?? null
   );
-}
-
-/** A path compared ignoring case in its file name only: folders named "Show" and "show" stay apart. */
-export function caseKey(file: string): string {
-  return path.join(path.dirname(file), path.basename(file).toLowerCase());
 }
 
 /**

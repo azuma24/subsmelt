@@ -37,18 +37,31 @@ export interface StringifyNode {
 const TIMING_RE = /^((?:\d+:)?\d{1,2}:\d{1,2}[,.]\d{1,3})\s+-->\s+((?:\d+:)?\d{1,2}:\d{1,2}[,.]\d{1,3})(?:\s+(.*))?$/;
 const INDEX_RE = /^\d+$/;
 const SKIPPED_BLOCK_RE = /^(NOTE|STYLE|REGION)(\s|$)/;
+const TIMESTAMP_RE = /^(?:(\d+):)?(\d{1,2}):(\d{1,2})[,.](\d{1,3})$/;
 
 /** `HH:MM:SS,mmm` or `MM:SS.mmm` in milliseconds; a short fraction is a fraction (`,5` is 500 ms). */
 export function parseTimestamp(value: string): number {
-  const match = value.match(/^(?:(\d+):)?(\d{1,2}):(\d{1,2})[,.](\d{1,3})$/);
+  const match = TIMESTAMP_RE.exec(value);
   if (!match) throw new Error(`Invalid SRT or VTT time format: "${value}"`);
   const hours = match[1] ? Number(match[1]) * 3_600_000 : 0;
   return hours + Number(match[2]) * 60_000 + Number(match[3]) * 1000 + Number(match[4].padEnd(3, "0"));
 }
 
-function timingOf(line: string): SubtitleCueNode["data"] | null {
+/** A valid cue clock, including a genuine time zero. */
+export function strictCueTime(value: number | string | undefined): number | null {
+  if (typeof value === "number") return Number.isSafeInteger(value) && value >= 0 ? value : null;
+  if (typeof value !== "string") return null;
+  const timestamp = value.trim();
+  const match = TIMESTAMP_RE.exec(timestamp);
+  if (!match || Number(match[2]) >= 60 || Number(match[3]) >= 60) return null;
+  const ms = parseTimestamp(timestamp);
+  return Number.isSafeInteger(ms) ? ms : null;
+}
+
+function timingOf(line: string, onInvalid?: () => void): SubtitleCueNode["data"] | null {
   const match = TIMING_RE.exec(line.trim());
   if (!match) return null;
+  if (onInvalid && (strictCueTime(match[1]) === null || strictCueTime(match[2]) === null)) onInvalid();
   const data: SubtitleCueNode["data"] = { start: parseTimestamp(match[1]), end: parseTimestamp(match[2]), text: "" };
   if (match[3]) data.settings = match[3].trim();
   return data;
@@ -56,9 +69,14 @@ function timingOf(line: string): SubtitleCueNode["data"] | null {
 
 type State = "header" | "id" | "timing" | "text" | "skip";
 
-export function parseSrtVtt(content: string): SubtitleNode[] {
+export function parseSrtVtt(
+  content: string,
+  format?: SubtitleFormat,
+  onInvalidTiming?: (line: number) => void,
+): SubtitleNode[] {
   const nodes: SubtitleNode[] = [];
   const lines = content.replace(/^﻿/, "").split(/\r?\n/);
+  const vtt = format === "WebVTT" || /^\s*WEBVTT(?:\s|$)/.test(content);
   let state: State = "header";
   let cue: SubtitleCueNode["data"] | null = null;
   let buffer: string[] = [];
@@ -72,10 +90,10 @@ export function parseSrtVtt(content: string): SubtitleNode[] {
     buffer = [];
   };
 
-  for (const line of lines) {
+  for (const [index, line] of lines.entries()) {
     if (state === "header") {
       if (!line.trim()) continue;
-      if (/^WEBVTT/.test(line)) {
+      if (vtt && /^WEBVTT(?:\s|$)/.test(line)) {
         buffer.push(line);
         state = "skip";
         // The header block ends at the first blank line, like a NOTE block.
@@ -95,19 +113,24 @@ export function parseSrtVtt(content: string): SubtitleNode[] {
       continue;
     }
 
+    const timing = timingOf(line, onInvalidTiming && (() => onInvalidTiming(index + 1)));
+    if (onInvalidTiming && !timing && /^\s*\S+\s+-->/.test(line)) {
+      const lastBlank = buffer.lastIndexOf("");
+      if (state !== "text" || (lastBlank >= 0 && buffer.length - lastBlank <= 2)) onInvalidTiming(index + 1);
+    }
+
     if (state === "id" || state === "timing") {
       if (!line.trim()) {
         state = "id";
         continue;
       }
-      const timing = timingOf(line);
       if (timing) {
         cue = timing;
         buffer = [];
         state = "text";
         continue;
       }
-      if (state === "id" && (INDEX_RE.test(line.trim()) || !SKIPPED_BLOCK_RE.test(line))) {
+      if (state === "id" && (!vtt || !SKIPPED_BLOCK_RE.test(line))) {
         // An index or a cue identifier: the timing line follows.
         state = "timing";
         continue;
@@ -118,7 +141,6 @@ export function parseSrtVtt(content: string): SubtitleNode[] {
     }
 
     // state === "text"
-    const timing = timingOf(line);
     if (timing) {
       // A blank line ends a cue, so one line between the last blank and this
       // timing is the new cue's index or identifier, not text. Without a
@@ -131,7 +153,7 @@ export function parseSrtVtt(content: string): SubtitleNode[] {
       state = "text";
       continue;
     }
-    if (/^NOTE(\s|$)/.test(line)) {
+    if (vtt && buffer.length > 0 && !buffer.at(-1)?.trim() && SKIPPED_BLOCK_RE.test(line)) {
       flushCue();
       state = "skip";
       continue;

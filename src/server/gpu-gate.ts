@@ -161,6 +161,11 @@ export function holdQueueStart(ids: number[] | undefined): void {
 /** Takes the held start once the gate is open; null while it stays closed or nothing was held. */
 export function takeHeldStart(): { ids: number[] | undefined } | null {
   if (!held || !currentTranslationGate().open) return null;
+  return clearHeldQueueStart();
+}
+
+/** Removes the held request even when the GPU gate is closed. */
+export function clearHeldQueueStart(): { ids: number[] | undefined } | null {
   const start = held;
   held = null;
   return start;

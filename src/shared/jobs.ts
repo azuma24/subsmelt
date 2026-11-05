@@ -1,3 +1,5 @@
+import type { SubtitleQualityIssue } from "./subtitle-quality.js";
+
 export type JobStatus = "pending" | "translating" | "done" | "error" | "skipped";
 
 /** A `jobs` row as stored in SQLite. */
@@ -61,6 +63,7 @@ export interface JobsResponse {
 
 export interface QueueStatus {
   running: boolean;
+  waitingForGpu: boolean;
   currentJobId: number | null;
   currentJob: Job | null;
   /** Parallel mode: every translating job with the connection running it. */
@@ -84,6 +87,8 @@ export interface JobPreview {
   analysis?: string;
   totalLines: number;
   lines: PreviewLine[];
+  quality?: { original: SubtitleQualityIssue[]; translated: SubtitleQualityIssue[] };
+  canDownloadBilingual?: boolean;
 }
 
 /** A `logs` row as stored in SQLite and returned by GET /api/logs. */

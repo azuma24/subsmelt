@@ -13,6 +13,7 @@ const db = await import("./db.js");
 const config = await import("./config.js");
 const queue = await import("./queue.js");
 const gate = await import("./gpu-gate.js");
+const runMarker = await import("./queue/run-marker.js");
 
 const base = { shared: true, transcriptionsRunning: 0, youtubeBacklog: 0, subtitlesWaiting: 3 };
 
@@ -101,6 +102,57 @@ test("held starts merge, and one for every job covers a subset", () => {
   gate.holdQueueStart(undefined);
   assert.deepEqual(gate.takeHeldStart(), { ids: undefined });
   assert.equal(gate.takeHeldStart(), null);
+});
+
+test("stopping a held queue prevents it starting when the GPU opens or the app restarts", async (t) => {
+  config.setSetting("auto_translate", "0");
+  config.setSetting("gpu_shared", "1");
+  let backlog = 1;
+  gate.setYoutubeBacklogSource(() => backlog);
+  const jobId = Number(
+    db.createJob({
+      task_id: 1,
+      srt_path: path.join(process.env.MEDIA_DIR!, "held.en.srt"),
+      output_path: path.join(process.env.MEDIA_DIR!, "held.chi.srt"),
+      video_path: null,
+    }).lastInsertRowid,
+  );
+  t.after(() => {
+    queue.requestStop();
+    runMarker.clearQueueRun();
+    config.setSetting("gpu_shared", "0");
+    config.setSetting("auto_translate", "1");
+    gate.setYoutubeBacklogSource(() => 0);
+    db.deleteJob(jobId);
+  });
+
+  await queue.processQueue([jobId]);
+  assert.equal(gate.isQueueStartHeld(), true);
+  assert.deepEqual(runMarker.interruptedQueueRun(), { ids: [jobId] });
+
+  queue.requestStop();
+  assert.equal(gate.isQueueStartHeld(), false);
+  assert.equal(runMarker.interruptedQueueRun(), null);
+  backlog = 0;
+  queue.startHeldQueue();
+  queue.resumeQueueOnBoot();
+  assert.equal(queue.isQueueRunning(), false);
+  assert.equal(db.getJob(jobId)?.status, "pending");
+
+  const older = Number(
+    db.createJob({
+      task_id: 1,
+      srt_path: path.join(process.env.MEDIA_DIR!, "older.en.srt"),
+      output_path: path.join(process.env.MEDIA_DIR!, "older.chi.srt"),
+      video_path: null,
+    }).lastInsertRowid,
+  );
+  t.after(() => db.deleteJob(older));
+  runMarker.markQueueRun([older]);
+  backlog = 1;
+  await queue.processQueue([jobId]);
+  queue.requestStop();
+  assert.deepEqual(runMarker.interruptedQueueRun(), { ids: [older] });
 });
 
 test("on a shared GPU a transcription waits for the running translation batch", async (t) => {

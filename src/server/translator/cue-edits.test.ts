@@ -50,6 +50,12 @@ test("applyCueEdits: srt round-trips multiple edits by 1-based index", () => {
   assert.equal(cues[1].data.text, "Second!");
 });
 
+test("editing another SRT cue preserves dialogue starting with NOTE", () => {
+  const content = SRT.replace("Hello world", "NOTE TO SELF\nRemember the key");
+  const { output } = applyCueEdits(content, "srt", [{ index: 2, text: "Edited line" }]);
+  assert.match(output, /NOTE TO SELF\nRemember the key/);
+});
+
 test("applyCueEdits: out-of-range indices are skipped and not counted", () => {
   const { output, updated } = applyCueEdits(SRT, "srt", [
     { index: 99, text: "ignored" },
