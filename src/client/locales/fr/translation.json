@@ -1593,7 +1593,8 @@
       "done_other": "{{count}} terminés",
       "pending_one": "{{count}} en attente",
       "pending_many": "{{count}} en attente",
-      "pending_other": "{{count}} en attente"
+      "pending_other": "{{count}} en attente",
+      "resize": "Redimensionner la barre des dossiers"
     }
   },
   "llmStatus": {

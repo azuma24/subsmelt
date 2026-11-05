@@ -34,6 +34,7 @@ import {
 import { JobsView } from "./JobsView";
 import { FolderHeader } from "./FolderHeader";
 import { FolderTree } from "./FolderSidebar";
+import { ResizableSidebar } from "./ResizableSidebar";
 import { folderStats, statsFor } from "./folder-scope";
 import { QueueBand } from "./QueueBand";
 import { QuickStart } from "./QuickStart";
@@ -227,9 +228,9 @@ export function LibraryPage() {
         <div className="flex min-h-0 flex-1">
           {/* Folders: a sidebar from md up; on phones the header's Folders button opens the same tree. */}
           {!isMobile && folderTree.data && (
-            <aside className="hidden w-64 shrink-0 overflow-y-auto border-r border-border p-2 md:block">
+            <ResizableSidebar>
               <FolderTree root={folderTree.data.root} selected={params.folder} stats={stats} onSelect={selectFolder} />
-            </aside>
+            </ResizableSidebar>
           )}
           <div className="flex min-w-0 flex-1 flex-col">
             {(params.folder !== "all" || isMobile) && folderTree.data && (

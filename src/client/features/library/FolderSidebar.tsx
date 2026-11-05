@@ -259,7 +259,11 @@ function Row({
         title={title ?? label}
         className="flex min-h-[32px] min-w-0 flex-1 items-center gap-2 py-1 text-left"
       >
-        <Icon name={expanded ? "folder-open" : "folder"} size={16} className="shrink-0 text-faint" />
+        <Icon
+          name={expanded ? "folder-open" : "folder"}
+          size={16}
+          className="shrink-0 text-faint @max-[140px]:hidden"
+        />
         <span className={`min-w-0 flex-1 truncate ${selected ? "font-medium" : ""}`}>{label}</span>
         {errors > 0 && (
           <span
@@ -269,7 +273,7 @@ function Row({
             <span className="sr-only">{t("library.folders.errors", { count: errors })}</span>
           </span>
         )}
-        <span className="shrink-0 font-mono text-[11px] tabular-nums text-faint">{count}</span>
+        <span className="shrink-0 font-mono text-[11px] tabular-nums text-faint @max-[180px]:hidden">{count}</span>
       </button>
       {onTogglePin && (
         <button
@@ -277,7 +281,7 @@ function Row({
           onClick={onTogglePin}
           aria-pressed={pinned}
           aria-label={t(pinned ? "library.folders.unpin" : "library.folders.pin", { folder: label })}
-          className={`inline-flex h-7 w-6 shrink-0 items-center justify-center rounded-sm hover:text-text ${pinned ? "text-accent" : "text-faint opacity-0 focus:opacity-100 group-hover:opacity-100"}`}
+          className={`inline-flex h-7 w-6 shrink-0 items-center justify-center rounded-sm hover:text-text @max-[180px]:hidden ${pinned ? "text-accent" : "text-faint opacity-0 focus:opacity-100 group-hover:opacity-100"}`}
         >
           <Icon name="pinned" size={16} />
         </button>

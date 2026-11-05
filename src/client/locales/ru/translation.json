@@ -1608,7 +1608,8 @@
       "pending_one": "{{count}} в очереди",
       "pending_few": "{{count}} в очереди",
       "pending_many": "{{count}} в очереди",
-      "pending_other": "{{count}} в очереди"
+      "pending_other": "{{count}} в очереди",
+      "resize": "Изменить ширину панели папок"
     }
   },
   "llmStatus": {

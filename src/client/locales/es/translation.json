@@ -1593,7 +1593,8 @@
       "done_other": "{{count}} hechos",
       "pending_one": "{{count}} en espera",
       "pending_many": "{{count}} en espera",
-      "pending_other": "{{count}} en espera"
+      "pending_other": "{{count}} en espera",
+      "resize": "Cambiar el ancho de la barra de carpetas"
     }
   },
   "llmStatus": {

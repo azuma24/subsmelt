@@ -1578,7 +1578,8 @@
       "done_one": "已完成 {{count}}",
       "done_other": "已完成 {{count}}",
       "pending_one": "等待中 {{count}}",
-      "pending_other": "等待中 {{count}}"
+      "pending_other": "等待中 {{count}}",
+      "resize": "調整資料夾側欄寬度"
     }
   },
   "llmStatus": {

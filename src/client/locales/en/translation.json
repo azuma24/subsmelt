@@ -1578,7 +1578,8 @@
       "done_one": "{{count}} done",
       "done_other": "{{count}} done",
       "pending_one": "{{count}} waiting",
-      "pending_other": "{{count}} waiting"
+      "pending_other": "{{count}} waiting",
+      "resize": "Resize the folder sidebar"
     }
   },
   "llmStatus": {
