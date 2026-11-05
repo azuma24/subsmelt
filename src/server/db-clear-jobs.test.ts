@@ -31,3 +31,28 @@ test("clearing the queue removes finished jobs and keeps pending and running one
     ["pending", "translating"],
   );
 });
+
+test("clearing with ids removes only those jobs' finished rows", () => {
+  for (const [name, status] of [
+    ["a-done", "done"],
+    ["a-pending", "pending"],
+    ["b-done", "done"],
+  ] as const) {
+    db.createJob({
+      task_id: 2,
+      srt_path: `/media/${name}.srt`,
+      output_path: `/media/${name}.x.srt`,
+      video_path: null,
+      status,
+    });
+  }
+  const byName = (name: string) => db.getJobs().find((j) => j.srt_path === `/media/${name}.srt`)!.id;
+  const removed = db.clearFinishedJobs([byName("a-done"), byName("a-pending")]);
+  assert.equal(removed, 1);
+  const left = db
+    .getJobs()
+    .filter((j) => j.task_id === 2)
+    .map((j) => j.srt_path)
+    .sort();
+  assert.deepEqual(left, ["/media/a-pending.srt", "/media/b-done.srt"]);
+});

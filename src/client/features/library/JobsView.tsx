@@ -84,7 +84,7 @@ export function JobsView({
   const libraryQuery = useLibraryQuery();
 
   const startSelectedMutation = useMutationWithInvalidation((ids: number[]) => api.startQueue(ids));
-  const clearJobsMutation = useMutationWithInvalidation(() => api.clearJobs());
+  const clearJobsMutation = useMutationWithInvalidation((ids: number[] | undefined) => api.clearJobs(ids));
   const deleteSelectedMutation = useMutationWithInvalidation((ids: number[]) => api.deleteJobsApi(ids));
   const retrySelectedMutation = useMutationWithInvalidation((ids: number[]) => api.retryJobsApi(ids));
   const forceSelectedMutation = useMutationWithInvalidation((ids: number[]) => api.forceJobsApi(ids));
@@ -269,7 +269,12 @@ export function JobsView({
     });
     if (!ok) return;
     try {
-      await clearJobsMutation.mutateAsync();
+      // With a folder chosen, the count above was that folder's: clear exactly those jobs.
+      await clearJobsMutation.mutateAsync(
+        folderFilter === "all"
+          ? undefined
+          : jobs.filter((j) => j.status === "done" || j.status === "error" || j.status === "skipped").map((j) => j.id),
+      );
       setSelectedIds(new Set());
       addToast(t("dashboard.toast.jobsCleared"), "info");
     } catch (e) {

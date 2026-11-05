@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "../../i18n";
 import type { FolderNode } from "../../types";
-import type { FolderCounts } from "../../../shared/scan";
 import { Icon } from "../../ui/Icon";
-import { folderTrail } from "./folder-scope";
+import { folderTrail, statsFor, type FolderStats } from "./folder-scope";
 
 const OPEN_KEY = "subsmelt.library.folders.open";
 const PINNED_KEY = "subsmelt.library.folders.pinned";
@@ -25,11 +24,6 @@ function writeList(key: string, values: Iterable<string>): void {
   }
 }
 
-/** Files in a folder as the Library counts them: one per video, or per subtitle with no video. */
-export function fileCount(counts: FolderCounts): number {
-  return Math.max(counts.videos, counts.subtitles);
-}
-
 /** Every folder in the tree by its path, for the header and the pinned list. */
 export function indexFolders(
   nodes: readonly FolderNode[],
@@ -46,6 +40,8 @@ interface FolderTreeProps {
   root: FolderNode;
   /** Selected folder path, or "all". */
   selected: string;
+  /** Per-folder totals from the Library's own rows (see folderStats). */
+  stats: ReadonlyMap<string, FolderStats>;
   onSelect: (folder: string) => void;
 }
 
@@ -55,7 +51,7 @@ interface FolderTreeProps {
  * subfolders. Which branches are open and which folders are pinned are
  * remembered in this browser.
  */
-export function FolderTree({ root, selected, onSelect }: FolderTreeProps) {
+export function FolderTree({ root, selected, stats, onSelect }: FolderTreeProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState<Set<string>>(() => new Set(readList(OPEN_KEY)));
   const [pinned, setPinned] = useState<string[]>(() => readList(PINNED_KEY));
@@ -95,8 +91,8 @@ export function FolderTree({ root, selected, onSelect }: FolderTreeProps) {
       <ul>
         <Row
           label={t("library.folders.all")}
-          count={fileCount(root.counts)}
-          errors={root.counts.errorJobs}
+          count={statsFor(stats, "").files}
+          errors={statsFor(stats, "").errors}
           depth={0}
           selected={selected === "all"}
           onSelect={() => onSelect("all")}
@@ -109,13 +105,12 @@ export function FolderTree({ root, selected, onSelect }: FolderTreeProps) {
           </h3>
           <ul>
             {livePins.map((path) => {
-              const node = byPath.get(path) as FolderNode;
               return (
                 <Row
                   key={path}
                   label={path}
-                  count={fileCount(node.counts)}
-                  errors={node.counts.errorJobs}
+                  count={statsFor(stats, path).files}
+                  errors={statsFor(stats, path).errors}
                   depth={0}
                   selected={selected === path}
                   onSelect={() => onSelect(path)}
@@ -141,6 +136,7 @@ export function FolderTree({ root, selected, onSelect }: FolderTreeProps) {
                 node={node}
                 depth={0}
                 selected={selected}
+                stats={stats}
                 open={open}
                 pinned={pinned}
                 onSelect={onSelect}
@@ -159,6 +155,7 @@ function Branch({
   node,
   depth,
   selected,
+  stats,
   open,
   pinned,
   onSelect,
@@ -168,6 +165,7 @@ function Branch({
   node: FolderNode;
   depth: number;
   selected: string;
+  stats: ReadonlyMap<string, FolderStats>;
   open: ReadonlySet<string>;
   pinned: readonly string[];
   onSelect: (folder: string) => void;
@@ -180,8 +178,8 @@ function Branch({
       <Row
         label={node.name}
         title={node.path}
-        count={fileCount(node.counts)}
-        errors={node.counts.errorJobs}
+        count={statsFor(stats, node.path).files}
+        errors={statsFor(stats, node.path).errors}
         depth={depth}
         selected={selected === node.path}
         onSelect={() => onSelect(node.path)}
@@ -197,6 +195,7 @@ function Branch({
             node={child}
             depth={depth + 1}
             selected={selected}
+            stats={stats}
             open={open}
             pinned={pinned}
             onSelect={onSelect}

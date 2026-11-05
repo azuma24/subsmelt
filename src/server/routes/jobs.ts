@@ -234,9 +234,13 @@ export function registerJobsRoutes(app: Express): void {
     res.json({ ok: true, deleted });
   });
 
-  app.post("/api/jobs/clear", (_req, res) => {
+  app.post("/api/jobs/clear", (req, res) => {
+    // Optional `ids`: clear only these jobs' finished rows (a Library folder's), not every folder's.
+    const rawIds = (req.body as { ids?: unknown } | undefined)?.ids;
+    if (rawIds !== undefined && !Array.isArray(rawIds)) return res.status(400).json({ error: "ids must be an array" });
+    const ids = rawIds?.filter((v): v is number => typeof v === "number" && Number.isInteger(v));
     const before = getJobs();
-    const cleared = clearFinishedJobs();
+    const cleared = clearFinishedJobs(ids);
     removePartialsOfDeleted(before);
     logger.info("queue", `Cleared ${cleared} finished jobs`);
     res.json({ ok: true, cleared });

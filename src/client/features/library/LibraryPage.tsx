@@ -24,7 +24,7 @@ import { JobDetailsDrawer } from "../dashboard/JobDetailsDrawer";
 import { TranscriptionHistoryPanel } from "../dashboard/TranscriptionHistoryPanel";
 import { useManualTranscription } from "../dashboard/useManualTranscription";
 import { fileRows } from "./file-rows";
-import { toLibraryItems } from "./library-model";
+import { relativeFolder, toLibraryItems } from "./library-model";
 import {
   dashboardSearchParams,
   parseDashboardParams,
@@ -33,7 +33,8 @@ import {
 } from "./dashboard-params";
 import { JobsView } from "./JobsView";
 import { FolderHeader } from "./FolderHeader";
-import { FolderTree, indexFolders } from "./FolderSidebar";
+import { FolderTree } from "./FolderSidebar";
+import { folderStats, statsFor } from "./folder-scope";
 import { QueueBand } from "./QueueBand";
 import { QuickStart } from "./QuickStart";
 import { ScanConfirmModal } from "./ScanConfirmModal";
@@ -86,7 +87,18 @@ export function LibraryPage() {
 
   const fileRowCount = useMemo(() => fileRows(items, jobsById).length, [items, jobsById]);
   const folderTree = useFolderTreeQuery(view === "jobs");
-  const folderIndex = useMemo(() => indexFolders(folderTree.data?.root.children ?? []), [folderTree.data]);
+  const stats = useMemo(
+    () =>
+      folderStats(
+        items,
+        jobs.map((job) => {
+          const folder = relativeFolder(job.srt_path, mediaDir);
+          // relativeFolder hands back the absolute directory for a file outside the media folder.
+          return { status: job.status, folder: folder.startsWith("/") ? null : folder };
+        }),
+      ),
+    [items, jobs, mediaDir],
+  );
   const [foldersOpen, setFoldersOpen] = useState(false);
   const selectFolder = useCallback((folder: string) => setParams({ folder: folder || "all" }), [setParams]);
 
@@ -216,14 +228,14 @@ export function LibraryPage() {
           {/* Folders: a sidebar from md up; on phones the header's Folders button opens the same tree. */}
           {!isMobile && folderTree.data && (
             <aside className="hidden w-64 shrink-0 overflow-y-auto border-r border-border p-2 md:block">
-              <FolderTree root={folderTree.data.root} selected={params.folder} onSelect={selectFolder} />
+              <FolderTree root={folderTree.data.root} selected={params.folder} stats={stats} onSelect={selectFolder} />
             </aside>
           )}
           <div className="flex min-w-0 flex-1 flex-col">
             {(params.folder !== "all" || isMobile) && folderTree.data && (
               <FolderHeader
                 folder={params.folder === "all" ? "" : params.folder}
-                node={params.folder === "all" ? folderTree.data.root : folderIndex.get(params.folder)}
+                stats={statsFor(stats, params.folder === "all" ? "" : params.folder)}
                 onSelect={selectFolder}
                 onOpenTree={isMobile ? () => setFoldersOpen(true) : undefined}
               />
@@ -253,6 +265,7 @@ export function LibraryPage() {
           <FolderTree
             root={folderTree.data.root}
             selected={params.folder}
+            stats={stats}
             onSelect={(folder) => {
               selectFolder(folder);
               setFoldersOpen(false);

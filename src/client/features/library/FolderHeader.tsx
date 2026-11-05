@@ -2,12 +2,10 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../i18n";
 import { useSettingsQuery } from "../../hooks";
-import type { FolderNode } from "../../types";
 import { Icon } from "../../ui/Icon";
 import { parseCorrectionRuleSets } from "../../../shared/corrections";
 import { listsForFolder } from "../corrections/model";
-import { folderTrail } from "./folder-scope";
-import { fileCount } from "./FolderSidebar";
+import { folderTrail, type FolderStats } from "./folder-scope";
 
 /**
  * Above the list while one folder is shown: where it is (a breadcrumb back up
@@ -16,12 +14,13 @@ import { fileCount } from "./FolderSidebar";
  */
 export function FolderHeader({
   folder,
-  node,
+  stats,
   onSelect,
   onOpenTree,
 }: {
   folder: string;
-  node: FolderNode | undefined;
+  /** This folder's totals, subfolders included, from the Library's own rows. */
+  stats: FolderStats;
   onSelect: (folder: string) => void;
   /** Phones: opens the folder tree, which has no sidebar there. */
   onOpenTree?: () => void;
@@ -36,7 +35,6 @@ export function FolderHeader({
     [settings, folder],
   );
   const trail = folderTrail(folder);
-  const counts = node?.counts;
 
   return (
     <div className="shrink-0 space-y-1 border-b border-border px-4 py-2">
@@ -75,18 +73,14 @@ export function FolderHeader({
           ))}
         </nav>
       </div>
-      {counts && (
-        <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
-          <span>{t("library.folders.files", { count: fileCount(counts) })}</span>
-          {counts.completeJobs > 0 && (
-            <span className="text-success">{t("library.folders.done", { count: counts.completeJobs })}</span>
-          )}
-          {counts.pendingJobs > 0 && <span>{t("library.folders.pending", { count: counts.pendingJobs })}</span>}
-          {counts.errorJobs > 0 && (
-            <span className="text-danger">{t("library.folders.errors", { count: counts.errorJobs })}</span>
-          )}
-        </p>
-      )}
+      <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+        <span>{t("library.folders.files", { count: stats.files })}</span>
+        {stats.done > 0 && <span className="text-success">{t("library.folders.done", { count: stats.done })}</span>}
+        {stats.waiting > 0 && <span>{t("library.folders.pending", { count: stats.waiting })}</span>}
+        {stats.errors > 0 && (
+          <span className="text-danger">{t("library.folders.errors", { count: stats.errors })}</span>
+        )}
+      </p>
       <p className="flex flex-wrap items-center gap-2 text-xs text-muted">
         <span>{t("library.corrections.title")}:</span>
         {lists.length === 0 ? (
