@@ -42,6 +42,11 @@ export interface CorrectionRule {
    */
   languages: string[];
   enabled: boolean;
+  /**
+   * Files (MEDIA_DIR-relative, posix) the rule never applies to: the ones a
+   * person unticked in Fix everywhere and asked to leave alone for good.
+   */
+  except?: string[];
 }
 
 export interface CorrectionRuleSet {
@@ -239,30 +244,103 @@ export function normalizeCorrectionPath(raw: unknown): string | null {
 
 const MAX_FIND_LENGTH = 500;
 
+export const CORRECTION_ISSUE_CODES = [
+  "invalidJson",
+  "notArray",
+  "missingId",
+  "noFolder",
+  "findEmpty",
+  "findTooLong",
+  "findMultiline",
+  "invalidRegex",
+  "matchesEmpty",
+  "unstableSelf",
+  "unstableList",
+  "listsConflict",
+] as const;
+export type CorrectionIssueCode = (typeof CORRECTION_ISSUE_CODES)[number];
+
+/**
+ * Why rules cannot be saved, as data: a code plus what it is about. The
+ * Settings screens word it in the viewer's language; the server logs and
+ * returns the English from describeCorrectionIssue.
+ */
+export interface CorrectionIssue {
+  code: CorrectionIssueCode;
+  /** The list it is in (its name, or id when unnamed). */
+  list?: string;
+  /** The rule's find text. */
+  find?: string;
+  /** listsConflict: the lists that undo each other, and where ("" is the whole library). */
+  lists?: string[];
+  folder?: string;
+  /** invalidRegex: the engine's message. findTooLong: the limit. */
+  detail?: string;
+}
+
 /** Why a rule cannot be saved, or null when it is fine. */
-export function correctionRuleError(rule: CorrectionRule): string | null {
-  if (!rule.find) return "Find text is empty";
-  if (rule.find.length > MAX_FIND_LENGTH) return `Find text is longer than ${MAX_FIND_LENGTH} characters`;
-  if (/[\r\n]/.test(rule.find) && rule.match !== "regex") return "Find text cannot span lines";
+export function correctionRuleIssue(rule: CorrectionRule): CorrectionIssue | null {
+  const at = { find: rule.find };
+  if (!rule.find) return { code: "findEmpty", ...at };
+  if (rule.find.length > MAX_FIND_LENGTH) return { code: "findTooLong", ...at, detail: String(MAX_FIND_LENGTH) };
+  if (/[\r\n]/.test(rule.find) && rule.match !== "regex") return { code: "findMultiline", ...at };
   let pattern: RegExp;
   try {
     pattern = correctionPattern(rule);
   } catch (error) {
-    return `Invalid regular expression: ${error instanceof Error ? error.message : String(error)}`;
+    return { code: "invalidRegex", ...at, detail: error instanceof Error ? error.message : String(error) };
   }
-  if (pattern.test("")) return "The pattern matches empty text";
+  if (pattern.test("")) return { code: "matchesEmpty", ...at };
   // A lookahead-only pattern matches nowhere and everywhere at once: refuse any
   // zero-length match on the rule's own text.
   for (const sample of [rule.find, rule.replace]) {
     for (const m of sample.matchAll(new RegExp(pattern.source, pattern.flags))) {
-      if (m[0] === "") return "The pattern matches empty text";
+      if (m[0] === "") return { code: "matchesEmpty", ...at };
     }
   }
   // A rule must be stable: its own replacement must come through it unchanged,
   // or every run would rewrite the file again ("UniFi" → "UniFi Network").
   const self = correctCueText(rule.replace, [{ rule, setName: "", pattern }]);
-  if (self.text !== rule.replace) return "The replacement would be changed again by this rule";
+  if (self.text !== rule.replace) return { code: "unstableSelf", ...at };
   return null;
+}
+
+/** The English wording of an issue, for logs and API errors. */
+export function describeCorrectionIssue(issue: CorrectionIssue): string {
+  const where = [issue.list, issue.find !== undefined ? `"${issue.find}"` : undefined].filter(Boolean).join(": ");
+  const prefix = where ? `${where}: ` : "";
+  switch (issue.code) {
+    case "invalidJson":
+      return "Correction rules must be valid JSON";
+    case "notArray":
+      return "Correction rules must be a JSON array";
+    case "missingId":
+      return "Every list needs an id";
+    case "noFolder":
+      return `${prefix}choose at least one folder`;
+    case "findEmpty":
+      return `${prefix}Find text is empty`;
+    case "findTooLong":
+      return `${prefix}Find text is longer than ${issue.detail} characters`;
+    case "findMultiline":
+      return `${prefix}Find text cannot span lines`;
+    case "invalidRegex":
+      return `${prefix}Invalid regular expression: ${issue.detail}`;
+    case "matchesEmpty":
+      return `${prefix}The pattern matches empty text`;
+    case "unstableSelf":
+      return `${prefix}The replacement would be changed again by this rule`;
+    case "unstableList":
+      return `${prefix}the rules in this list keep changing each other's results`;
+    case "listsConflict":
+      return `Lists ${(issue.lists ?? []).map((n) => `"${n}"`).join(" and ")} undo each other in ${issue.folder || "the whole library"} ("${issue.find}")`;
+  }
+}
+
+/** Why a rule cannot be saved, in English, or null when it is fine. */
+export function correctionRuleError(rule: CorrectionRule): string | null {
+  const issue = correctionRuleIssue(rule);
+  return issue ? describeCorrectionIssue({ ...issue, find: undefined }) : null;
 }
 
 function str(value: unknown, fallback = ""): string {
@@ -293,6 +371,10 @@ export function parseCorrectionRule(raw: unknown): CorrectionRule | null {
       : [],
     enabled: e.enabled !== false,
   };
+  const except = Array.isArray(e.except)
+    ? Array.from(new Set(e.except.map(normalizeCorrectionPath).filter((p): p is string => Boolean(p))))
+    : [];
+  if (except.length) rule.except = except;
   return rule;
 }
 
@@ -325,28 +407,24 @@ export function parseCorrectionRuleSets(raw: string | undefined | null): Correct
   return sets;
 }
 
-/**
- * Every problem that should stop a save, as readable messages. Checked on
- * save so a broken rule is refused up front instead of being skipped silently
- * at translation time.
- */
-export function correctionRuleSetsErrors(raw: string): string[] {
+/** Every problem that should stop a save, as issues the screens word in the viewer's language. */
+export function correctionRuleSetsIssues(raw: string): CorrectionIssue[] {
   let value: unknown;
   try {
     value = JSON.parse(raw || "[]");
   } catch {
-    return ["Correction rules must be valid JSON"];
+    return [{ code: "invalidJson" }];
   }
-  if (!Array.isArray(value)) return ["Correction rules must be a JSON array"];
-  const errors: string[] = [];
+  if (!Array.isArray(value)) return [{ code: "notArray" }];
+  const issues: CorrectionIssue[] = [];
   const sets = parseCorrectionRuleSets(raw);
-  if (sets.length !== value.length) errors.push("Every list needs an id");
+  if (sets.length !== value.length) issues.push({ code: "missingId" });
   for (const set of sets) {
-    const label = set.name || set.id;
-    if (!set.paths.length) errors.push(`${label}: choose at least one folder`);
+    const list = set.name || set.id;
+    if (!set.paths.length) issues.push({ code: "noFolder", list });
     for (const rule of set.rules) {
-      const error = correctionRuleError(rule);
-      if (error) errors.push(`${label}: "${rule.find}": ${error}`);
+      const issue = correctionRuleIssue(rule);
+      if (issue) issues.push({ ...issue, list });
     }
     // Rules that feed each other (A → B, then B → A) rewrite the file on every
     // run; the file check refuses them too, so refuse them here first.
@@ -356,14 +434,23 @@ export function correctionRuleSetsErrors(raw: string): string[] {
         if (rule.match === "regex" || !probe) continue;
         const once = correctCueText(probe, compiled).text;
         if (totalCorrections(correctCueText(once, compiled).counts) > 0) {
-          errors.push(`${label}: "${rule.find}": the rules in this list keep changing each other's results`);
+          issues.push({ code: "unstableList", list, find: rule.find });
           break;
         }
       }
     }
   }
-  errors.push(...crossListConflicts(sets));
-  return errors;
+  issues.push(...crossListConflicts(sets));
+  return issues;
+}
+
+/**
+ * Every problem that should stop a save, as readable (English) messages.
+ * Checked on save so a broken rule is refused up front instead of being
+ * skipped silently at translation time.
+ */
+export function correctionRuleSetsErrors(raw: string): string[] {
+  return correctionRuleSetsIssues(raw).map(describeCorrectionIssue);
 }
 
 /**
@@ -373,7 +460,7 @@ export function correctionRuleSetsErrors(raw: string): string[] {
  * names, and for output rules per target language, because rules limited to
  * different languages never run on the same file.
  */
-function crossListConflicts(sets: readonly CorrectionRuleSet[]): string[] {
+function crossListConflicts(sets: readonly CorrectionRuleSet[]): CorrectionIssue[] {
   const live = sets.filter((set) => set.enabled);
   // Every language an output rule is limited to, plus "a language none of them names".
   const languages = [...new Set(live.flatMap((set) => set.rules.flatMap((rule) => rule.languages)))];
@@ -382,7 +469,7 @@ function crossListConflicts(sets: readonly CorrectionRuleSet[]): string[] {
     { stage: "output", langs: [] },
     ...languages.map((lang) => ({ stage: "output" as const, langs: [lang] })),
   ];
-  const errors = new Set<string>();
+  const issues = new Map<string, CorrectionIssue>();
   for (const folder of new Set(live.flatMap((set) => set.paths))) {
     for (const { stage, langs } of scopes) {
       const compiled = compileCorrectionsFor(live, folder, stage, langs);
@@ -396,15 +483,14 @@ function crossListConflicts(sets: readonly CorrectionRuleSet[]): string[] {
           return totalCorrections(correctCueText(once, compiled).counts) > 0;
         });
         if (unstable) {
-          errors.add(
-            `Lists ${names.map((n) => `"${n}"`).join(" and ")} undo each other in ${folder || "the whole library"} ("${rule.find}")`,
-          );
+          const issue: CorrectionIssue = { code: "listsConflict", lists: names, folder, find: rule.find };
+          issues.set(describeCorrectionIssue(issue), issue);
           break;
         }
       }
     }
   }
-  return [...errors];
+  return [...issues.values()];
 }
 
 function compileSet(set: CorrectionRuleSet, keep: (rule: CorrectionRule) => boolean): CompiledCorrection[] {
@@ -441,6 +527,7 @@ export function compileCorrectionsFor(
     out.push(
       ...compileSet(set, (rule) => {
         if (rule.stage !== stage && rule.stage !== "both") return false;
+        if (rule.except?.includes(relativePath)) return false;
         if (stage === "output" && rule.languages.length && !rule.languages.some((l) => langs.has(l))) return false;
         return true;
       }),

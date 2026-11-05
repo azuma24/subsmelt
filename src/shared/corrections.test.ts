@@ -5,6 +5,8 @@ import {
   correctCueText,
   correctionGlossaryTerms,
   correctionRuleSetsErrors,
+  correctionRuleSetsIssues,
+  describeCorrectionIssue,
   parseCorrectionRuleSets,
   type CorrectionRule,
   type CorrectionRuleSet,
@@ -206,5 +208,27 @@ test("output lists limited to different languages never conflict, but do when th
       JSON.stringify([out("zh", "Unify", "UniFi", ["chi"]), out("all", "UniFi", "Unify", [])]),
     ).join(),
     /undo each other/,
+  );
+});
+
+test("a rule's exceptions skip exactly those files", () => {
+  const set: CorrectionRuleSet = {
+    ...UBIQUITI,
+    rules: [rule("Ubiquity", "Ubiquiti", { except: ["UniFi/Essay.srt"] })],
+  };
+  assert.equal(compileCorrectionsFor([set], "UniFi/Essay.srt", "source").length, 0);
+  assert.equal(compileCorrectionsFor([set], "UniFi/Talk.srt", "source").length, 1);
+  const parsed = parseCorrectionRuleSets(
+    JSON.stringify([{ ...set, rules: [{ ...set.rules[0], except: ["/UniFi/Essay.srt", "../x", "UniFi/Essay.srt"] }] }]),
+  );
+  assert.deepEqual(parsed[0].rules[0].except, ["UniFi/Essay.srt"]);
+});
+
+test("issues carry a code and what they are about, and still read in English", () => {
+  const issues = correctionRuleSetsIssues(JSON.stringify([{ ...UBIQUITI, rules: [rule("UniFi", "UniFi Network")] }]));
+  assert.deepEqual(issues, [{ code: "unstableSelf", find: "UniFi", list: "Ubiquiti" }]);
+  assert.equal(
+    describeCorrectionIssue(issues[0]),
+    'Ubiquiti: "UniFi": The replacement would be changed again by this rule',
   );
 });

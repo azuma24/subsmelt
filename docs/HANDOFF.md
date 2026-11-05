@@ -280,10 +280,8 @@ Nothing here is in progress. Ordered by what I would fix first.
   `LogsPage`, `TasksPage` and `JobDetailPage` have none, and no test clicks
   anything.
 
-- **Corrections do not apply on the Convert page**: its files are outside the
-  media folders, and lists are scoped by folder. Errors for invalid rules are
-  English only, because they come from shared code. Unticking a file in Fix
-  everywhere skips it for that fix only; there are no per-file exceptions.
+- **Corrections on the Convert page** apply whole-library lists only, because
+  uploads belong to no folder.
 
 ### Product
 

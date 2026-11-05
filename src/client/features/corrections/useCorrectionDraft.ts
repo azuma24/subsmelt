@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { correctionRuleSetsErrors, parseCorrectionRuleSets, type CorrectionRuleSet } from "../../../shared/corrections";
+import {
+  correctionRuleSetsIssues,
+  parseCorrectionRuleSets,
+  type CorrectionIssue,
+  type CorrectionRuleSet,
+} from "../../../shared/corrections";
 
 export interface CorrectionDraft {
   lists: CorrectionRuleSet[];
   setLists: (update: (lists: CorrectionRuleSet[]) => CorrectionRuleSet[]) => void;
   dirty: boolean;
   /** Why the draft cannot be saved; empty when it can. */
-  errors: string[];
+  errors: CorrectionIssue[];
   saving: boolean;
   save: () => Promise<void>;
   discard: () => void;
@@ -33,7 +38,7 @@ export function useCorrectionDraft(saved: string, persist: (json: string) => unk
     setBaseline(saved);
   }, [saved, baseline, dirty]);
 
-  const errors = useMemo(() => correctionRuleSetsErrors(serialized), [serialized]);
+  const errors = useMemo(() => correctionRuleSetsIssues(serialized), [serialized]);
 
   return {
     lists,

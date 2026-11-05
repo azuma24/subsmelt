@@ -111,12 +111,15 @@ export function lowercaseTwin(
 }
 
 /** Non-default options, as the short tags a collapsed rule row shows. */
-export function ruleTags(rule: CorrectionRule): Array<"output" | "both" | "phrase" | "regex" | "anyCase" | "langs"> {
-  const tags: Array<"output" | "both" | "phrase" | "regex" | "anyCase" | "langs"> = [];
+export function ruleTags(
+  rule: CorrectionRule,
+): Array<"output" | "both" | "phrase" | "regex" | "anyCase" | "langs" | "except"> {
+  const tags: Array<"output" | "both" | "phrase" | "regex" | "anyCase" | "langs" | "except"> = [];
   if (rule.stage === "output" || rule.stage === "both") tags.push(rule.stage);
   if (rule.match === "phrase" || rule.match === "regex") tags.push(rule.match);
   if (!rule.caseSensitive) tags.push("anyCase");
   if (rule.stage !== "source" && rule.languages.length) tags.push("langs");
+  if (rule.except?.length) tags.push("except");
   return tags;
 }
 
@@ -163,9 +166,12 @@ export function addRuleForFolder(
   }
   return lists.map((list) => {
     if (list.id !== listId) return list;
-    const rules = list.rules.some(same)
-      ? list.rules.map((r) => (same(r) ? { ...rule, id: r.id } : r))
-      : [...list.rules, rule];
+    // Replacing a twin keeps the files it was already told to leave alone.
+    const merged = (r: CorrectionRule): CorrectionRule => {
+      const except = [...new Set([...(r.except ?? []), ...(rule.except ?? [])])];
+      return { ...rule, id: r.id, ...(except.length ? { except } : {}) };
+    };
+    const rules = list.rules.some(same) ? list.rules.map((r) => (same(r) ? merged(r) : r)) : [...list.rules, rule];
     return { ...list, rules, paths: list.paths.includes(folder) ? list.paths : [...list.paths, folder] };
   });
 }

@@ -857,7 +857,6 @@
       "removeFolder": "移除 {{folder}}",
       "ruleEnabled": "規則已啟用",
       "deleteRule": "刪除規則 {{find}}",
-      "findEmpty": "尋找內容為空",
       "options": "選項",
       "tag_output": "翻譯後",
       "tag_both": "前 + 後",
@@ -872,7 +871,25 @@
       "twinDismiss": "不用了",
       "unsaved": "有未儲存的變更",
       "fixBeforeSaving_one": "儲存前請修正 {{count}} 個問題",
-      "fixBeforeSaving_other": "儲存前請修正 {{count}} 個問題"
+      "fixBeforeSaving_other": "儲存前請修正 {{count}} 個問題",
+      "issue": {
+        "invalidJson": "規則不是有效的 JSON。",
+        "notArray": "規則必須是一個清單。",
+        "missingId": "每個清單都需要 id。",
+        "noFolder": "請至少選擇一個資料夾",
+        "findEmpty": "錯誤的詞是空的",
+        "findTooLong": "錯誤的詞超過 {{detail}} 個字元",
+        "findMultiline": "錯誤的詞不能跨行",
+        "invalidRegex": "不是有效的正規表示式（{{detail}}）",
+        "matchesEmpty": "此模式會比對到空白文字",
+        "unstableSelf": "正確的詞會被這條規則再次修改",
+        "unstableList": "此清單中的規則會不斷改動彼此的結果",
+        "listsConflict": "清單 {{lists}} 在 {{folder}} 中互相抵銷（「{{find}}」）。"
+      },
+      "exceptCount_one": "不套用於 {{count}} 個檔案",
+      "exceptCount_other": "不套用於 {{count}} 個檔案",
+      "exceptClear": "重新套用到所有檔案",
+      "tag_except": "例外"
     }
   },
   "jobDetail": {
@@ -1691,7 +1708,9 @@
       "doneRetranslate_other": "已將 {{count}} 份譯文重新排入佇列。",
       "doneFailed_one": "{{count}} 個檔案無法修改；請查看日誌。",
       "doneFailed_other": "{{count}} 個檔案無法修改；請查看日誌。",
-      "typeReplacement": "輸入正確的詞，即可查看哪些檔案含有錯誤的詞。"
+      "typeReplacement": "輸入正確的詞，即可查看哪些檔案含有錯誤的詞。",
+      "rememberUnticked_one": "以後也不要對這 {{count}} 個未勾選的檔案套用此規則",
+      "rememberUnticked_other": "以後也不要對這 {{count}} 個未勾選的檔案套用此規則"
     },
     "preview": {
       "run": "在我的檔案上預覽",

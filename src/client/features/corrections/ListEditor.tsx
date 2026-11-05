@@ -6,12 +6,13 @@ import {
   CORRECTION_STAGES,
   compileCorrectionsFor,
   correctCueText,
-  correctionRuleError,
+  correctionRuleIssue,
   totalCorrections,
   type CorrectionRule,
   type CorrectionRuleSet,
 } from "../../../shared/corrections";
 import { ListFilePreview } from "./ListFilePreview";
+import { issueText } from "./issues";
 import { lowercaseTwin, newRule, parseQuickAdd, ruleTags } from "./model";
 
 const SMALL =
@@ -196,7 +197,8 @@ function RuleRow({
   langCodes: string[];
 }) {
   const { t } = useTranslation();
-  const error = rule.find ? correctionRuleError(rule) : t("settings.corrections.findEmpty");
+  const issue = correctionRuleIssue(rule);
+  const error = issue ? issueText(issue, t, { withRule: false }) : null;
   return (
     <li className={`px-2 py-1 ${rule.enabled ? "" : "opacity-60"}`}>
       <div className="flex flex-wrap items-center gap-2">
@@ -297,6 +299,18 @@ function RuleOptions({
         />
         {t("settings.corrections.caseSensitive")}
       </label>
+      {(rule.except?.length ?? 0) > 0 && (
+        <span className="flex items-center gap-1 text-xs text-muted" title={rule.except?.join("\n")}>
+          {t("settings.corrections.exceptCount", { count: rule.except?.length ?? 0 })}
+          <button
+            type="button"
+            onClick={() => onChange({ except: undefined })}
+            className="rounded-sm px-1 text-accent hover:underline"
+          >
+            {t("settings.corrections.exceptClear")}
+          </button>
+        </span>
+      )}
       {rule.stage !== "source" && (langCodes.length > 0 || rule.languages.length > 0) && (
         <span className="flex flex-wrap items-center gap-1 text-xs text-muted">
           {t("settings.corrections.languages")}

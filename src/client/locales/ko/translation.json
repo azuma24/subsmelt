@@ -857,7 +857,6 @@
       "removeFolder": "{{folder}} 제거",
       "ruleEnabled": "규칙 켜짐",
       "deleteRule": "규칙 {{find}} 삭제",
-      "findEmpty": "찾을 텍스트가 비어 있습니다",
       "options": "옵션",
       "tag_output": "번역 후",
       "tag_both": "전 + 후",
@@ -872,7 +871,25 @@
       "twinDismiss": "괜찮습니다",
       "unsaved": "저장되지 않은 변경 사항",
       "fixBeforeSaving_one": "저장하기 전에 문제 {{count}}개를 해결하세요",
-      "fixBeforeSaving_other": "저장하기 전에 문제 {{count}}개를 해결하세요"
+      "fixBeforeSaving_other": "저장하기 전에 문제 {{count}}개를 해결하세요",
+      "issue": {
+        "invalidJson": "규칙이 올바른 JSON이 아닙니다.",
+        "notArray": "규칙은 목록이어야 합니다.",
+        "missingId": "모든 목록에 id가 필요합니다.",
+        "noFolder": "폴더를 하나 이상 선택하세요",
+        "findEmpty": "잘못된 단어가 비어 있습니다",
+        "findTooLong": "잘못된 단어가 {{detail}}자보다 깁니다",
+        "findMultiline": "잘못된 단어는 여러 줄에 걸칠 수 없습니다",
+        "invalidRegex": "올바른 정규식이 아닙니다({{detail}})",
+        "matchesEmpty": "이 패턴은 빈 텍스트와 일치합니다",
+        "unstableSelf": "올바른 단어가 같은 규칙에 의해 다시 바뀝니다",
+        "unstableList": "이 목록의 규칙들이 서로의 결과를 계속 바꿉니다",
+        "listsConflict": "목록 {{lists}}이(가) {{folder}}에서 서로를 되돌립니다(“{{find}}”)."
+      },
+      "exceptCount_one": "파일 {{count}}개에는 적용 안 함",
+      "exceptCount_other": "파일 {{count}}개에는 적용 안 함",
+      "exceptClear": "다시 모두에 적용",
+      "tag_except": "예외"
     }
   },
   "jobDetail": {
@@ -1691,7 +1708,9 @@
       "doneRetranslate_other": "번역 {{count}}개를 다시 대기열에 추가했습니다.",
       "doneFailed_one": "파일 {{count}}개를 변경하지 못했습니다. 로그를 확인하세요.",
       "doneFailed_other": "파일 {{count}}개를 변경하지 못했습니다. 로그를 확인하세요.",
-      "typeReplacement": "올바른 단어를 입력하면 틀린 단어가 들어 있는 파일을 볼 수 있습니다."
+      "typeReplacement": "올바른 단어를 입력하면 틀린 단어가 들어 있는 파일을 볼 수 있습니다.",
+      "rememberUnticked_one": "선택 해제한 파일 {{count}}개에는 앞으로도 이 규칙을 적용하지 않기",
+      "rememberUnticked_other": "선택 해제한 파일 {{count}}개에는 앞으로도 이 규칙을 적용하지 않기"
     },
     "preview": {
       "run": "내 파일로 미리 보기",

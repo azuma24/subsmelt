@@ -857,7 +857,6 @@
       "removeFolder": "{{folder}} を削除",
       "ruleEnabled": "ルール有効",
       "deleteRule": "ルール {{find}} を削除",
-      "findEmpty": "検索テキストが空です",
       "options": "オプション",
       "tag_output": "翻訳後",
       "tag_both": "前後",
@@ -872,7 +871,25 @@
       "twinDismiss": "いいえ",
       "unsaved": "未保存の変更",
       "fixBeforeSaving_one": "保存する前に {{count}} 件の問題を修正してください",
-      "fixBeforeSaving_other": "保存する前に {{count}} 件の問題を修正してください"
+      "fixBeforeSaving_other": "保存する前に {{count}} 件の問題を修正してください",
+      "issue": {
+        "invalidJson": "ルールが有効な JSON ではありません。",
+        "notArray": "ルールはリストである必要があります。",
+        "missingId": "すべてのリストに id が必要です。",
+        "noFolder": "フォルダーを 1 つ以上選んでください",
+        "findEmpty": "誤った語が空です",
+        "findTooLong": "誤った語が {{detail}} 文字を超えています",
+        "findMultiline": "誤った語は複数行にまたがれません",
+        "invalidRegex": "正規表現として正しくありません（{{detail}}）",
+        "matchesEmpty": "このパターンは空の文字列に一致します",
+        "unstableSelf": "正しい語がこのルール自身で再び変更されます",
+        "unstableList": "このリストのルール同士が互いの結果を変え続けます",
+        "listsConflict": "リスト {{lists}} が {{folder}} で互いを打ち消しています（「{{find}}」）。"
+      },
+      "exceptCount_one": "{{count}} 件のファイルには適用しない",
+      "exceptCount_other": "{{count}} 件のファイルには適用しない",
+      "exceptClear": "すべてに再び適用",
+      "tag_except": "例外"
     }
   },
   "jobDetail": {
@@ -1691,7 +1708,9 @@
       "doneRetranslate_other": "{{count}} 件の翻訳を再びキューに追加しました。",
       "doneFailed_one": "{{count}} 件のファイルを変更できませんでした。ログを確認してください。",
       "doneFailed_other": "{{count}} 件のファイルを変更できませんでした。ログを確認してください。",
-      "typeReplacement": "正しい語を入力すると、誤った語を含むファイルが表示されます。"
+      "typeReplacement": "正しい語を入力すると、誤った語を含むファイルが表示されます。",
+      "rememberUnticked_one": "チェックを外した {{count}} 件のファイルには今後もこのルールを適用しない",
+      "rememberUnticked_other": "チェックを外した {{count}} 件のファイルには今後もこのルールを適用しない"
     },
     "preview": {
       "run": "自分のファイルでプレビュー",

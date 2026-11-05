@@ -860,7 +860,6 @@
       "removeFolder": "Quitar {{folder}}",
       "ruleEnabled": "Regla activa",
       "deleteRule": "Eliminar regla {{find}}",
-      "findEmpty": "El texto a buscar está vacío",
       "options": "Opciones",
       "tag_output": "Después",
       "tag_both": "Antes + después",
@@ -876,7 +875,26 @@
       "unsaved": "Cambios sin guardar",
       "fixBeforeSaving_one": "Corrige {{count}} problema antes de guardar",
       "fixBeforeSaving_many": "Corrige {{count}} problemas antes de guardar",
-      "fixBeforeSaving_other": "Corrige {{count}} problemas antes de guardar"
+      "fixBeforeSaving_other": "Corrige {{count}} problemas antes de guardar",
+      "issue": {
+        "invalidJson": "Las reglas no son JSON válido.",
+        "notArray": "Las reglas deben ser una lista.",
+        "missingId": "Cada lista necesita un id.",
+        "noFolder": "elige al menos una carpeta",
+        "findEmpty": "la palabra incorrecta está vacía",
+        "findTooLong": "la palabra incorrecta supera los {{detail}} caracteres",
+        "findMultiline": "la palabra incorrecta no puede ocupar varias líneas",
+        "invalidRegex": "no es una expresión regular válida ({{detail}})",
+        "matchesEmpty": "el patrón coincide con texto vacío",
+        "unstableSelf": "esta misma regla volvería a cambiar la palabra correcta",
+        "unstableList": "las reglas de esta lista cambian una y otra vez el resultado de las demás",
+        "listsConflict": "Las listas {{lists}} se anulan entre sí en {{folder}} («{{find}}»)."
+      },
+      "exceptCount_one": "No se aplica a {{count}} archivo",
+      "exceptCount_many": "No se aplica a {{count}} archivos",
+      "exceptCount_other": "No se aplica a {{count}} archivos",
+      "exceptClear": "Volver a aplicar en todo",
+      "tag_except": "Excepciones"
     }
   },
   "jobDetail": {
@@ -1709,7 +1727,10 @@
       "doneFailed_one": "No se pudo modificar {{count}} archivo; consulta los registros.",
       "doneFailed_many": "No se pudieron modificar {{count}} archivos; consulta los registros.",
       "doneFailed_other": "No se pudieron modificar {{count}} archivos; consulta los registros.",
-      "typeReplacement": "Escribe la palabra correcta para ver qué archivos contienen la incorrecta."
+      "typeReplacement": "Escribe la palabra correcta para ver qué archivos contienen la incorrecta.",
+      "rememberUnticked_one": "No aplicar nunca esta regla al {{count}} archivo desmarcado",
+      "rememberUnticked_many": "No aplicar nunca esta regla a los {{count}} archivos desmarcados",
+      "rememberUnticked_other": "No aplicar nunca esta regla a los {{count}} archivos desmarcados"
     },
     "preview": {
       "run": "Vista previa en mis archivos",
