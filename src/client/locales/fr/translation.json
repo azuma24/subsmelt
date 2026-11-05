@@ -860,7 +860,6 @@
       "removeFolder": "Retirer {{folder}}",
       "ruleEnabled": "Règle active",
       "deleteRule": "Supprimer la règle {{find}}",
-      "findEmpty": "Le texte à rechercher est vide",
       "options": "Options",
       "tag_output": "Après",
       "tag_both": "Avant + après",
@@ -877,6 +876,25 @@
       "fixBeforeSaving_one": "Corrigez {{count}} problème avant d’enregistrer",
       "fixBeforeSaving_many": "Corrigez {{count}} problèmes avant d’enregistrer",
       "fixBeforeSaving_other": "Corrigez {{count}} problèmes avant d’enregistrer",
+      "issue": {
+        "invalidJson": "Les règles ne sont pas un JSON valide.",
+        "notArray": "Les règles doivent être une liste.",
+        "missingId": "Chaque liste a besoin d’un id.",
+        "noFolder": "choisissez au moins un dossier",
+        "findEmpty": "le mot erroné est vide",
+        "findTooLong": "le mot erroné dépasse {{detail}} caractères",
+        "findMultiline": "le mot erroné ne peut pas tenir sur plusieurs lignes",
+        "invalidRegex": "expression régulière non valide ({{detail}})",
+        "matchesEmpty": "le motif correspond à un texte vide",
+        "unstableSelf": "le mot correct serait à nouveau modifié par cette même règle",
+        "unstableList": "les règles de cette liste modifient sans cesse les résultats les unes des autres",
+        "listsConflict": "Les listes {{lists}} s’annulent dans {{folder}} (« {{find}} »)."
+      },
+      "exceptCount_one": "Non appliquée à {{count}} fichier",
+      "exceptCount_many": "Non appliquée à {{count}} fichiers",
+      "exceptCount_other": "Non appliquée à {{count}} fichiers",
+      "exceptClear": "Appliquer à nouveau partout",
+      "tag_except": "Exceptions",
       "confirm": "Vérifier avec le traducteur",
       "confirmHint": "À utiliser quand le mot est aussi un mot courant (« unify » le verbe contre la marque UniFi). Chaque occurrence n’est remplacée que si le LLM confirme qu’elle désigne le remplacement ; les fichiers sont corrigés pendant la traduction, pas à l’enregistrement d’une transcription.",
       "tag_check": "Vérif."
@@ -1737,7 +1755,10 @@
       "doneFailed_one": "{{count}} fichier n’a pas pu être modifié ; voir les journaux.",
       "doneFailed_many": "{{count}} fichiers n’ont pas pu être modifiés ; voir les journaux.",
       "doneFailed_other": "{{count}} fichiers n’ont pas pu être modifiés ; voir les journaux.",
-      "typeReplacement": "Saisissez le mot correct pour voir quels fichiers contiennent le mot erroné."
+      "typeReplacement": "Saisissez le mot correct pour voir quels fichiers contiennent le mot erroné.",
+      "rememberUnticked_one": "Ne jamais appliquer cette règle au {{count}} fichier décoché",
+      "rememberUnticked_many": "Ne jamais appliquer cette règle aux {{count}} fichiers décochés",
+      "rememberUnticked_other": "Ne jamais appliquer cette règle aux {{count}} fichiers décochés"
     },
     "preview": {
       "run": "Aperçu sur mes fichiers",

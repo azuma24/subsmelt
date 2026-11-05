@@ -857,7 +857,6 @@
       "removeFolder": "{{folder}} entfernen",
       "ruleEnabled": "Regel aktiv",
       "deleteRule": "Regel {{find}} löschen",
-      "findEmpty": "Suchtext ist leer",
       "options": "Optionen",
       "tag_output": "Nachher",
       "tag_both": "Vorher + nachher",
@@ -873,6 +872,24 @@
       "unsaved": "Ungespeicherte Änderungen",
       "fixBeforeSaving_one": "Behebe vor dem Speichern {{count}} Problem",
       "fixBeforeSaving_other": "Behebe vor dem Speichern {{count}} Probleme",
+      "issue": {
+        "invalidJson": "Die Regeln sind kein gültiges JSON.",
+        "notArray": "Die Regeln müssen eine Liste sein.",
+        "missingId": "Jede Liste braucht eine ID.",
+        "noFolder": "wähle mindestens einen Ordner",
+        "findEmpty": "das falsche Wort ist leer",
+        "findTooLong": "das falsche Wort ist länger als {{detail}} Zeichen",
+        "findMultiline": "das falsche Wort darf nicht über mehrere Zeilen gehen",
+        "invalidRegex": "kein gültiger regulärer Ausdruck ({{detail}})",
+        "matchesEmpty": "das Muster passt auf leeren Text",
+        "unstableSelf": "das richtige Wort würde von derselben Regel erneut geändert",
+        "unstableList": "die Regeln dieser Liste ändern ständig die Ergebnisse der anderen",
+        "listsConflict": "Die Listen {{lists}} heben sich in {{folder}} gegenseitig auf („{{find}}“)."
+      },
+      "exceptCount_one": "Gilt nicht für {{count}} Datei",
+      "exceptCount_other": "Gilt nicht für {{count}} Dateien",
+      "exceptClear": "Wieder überall anwenden",
+      "tag_except": "Ausnahmen",
       "confirm": "Mit dem Übersetzer prüfen",
       "confirmHint": "Für Wörter, die auch gewöhnliche Wörter sind („unify“ das Verb statt der Marke UniFi). Jeder Treffer wird nur ersetzt, wenn das LLM bestätigt, dass die Ersetzung gemeint ist; Dateien werden bei der Übersetzung korrigiert, nicht beim Speichern eines Transkripts.",
       "tag_check": "Prüfen"
@@ -1715,7 +1732,9 @@
       "doneRetranslate_other": "{{count}} Übersetzungen erneut eingereiht.",
       "doneFailed_one": "{{count}} Datei konnte nicht geändert werden; siehe Protokolle.",
       "doneFailed_other": "{{count}} Dateien konnten nicht geändert werden; siehe Protokolle.",
-      "typeReplacement": "Gib das richtige Wort ein, um zu sehen, welche Dateien das falsche enthalten."
+      "typeReplacement": "Gib das richtige Wort ein, um zu sehen, welche Dateien das falsche enthalten.",
+      "rememberUnticked_one": "Diese Regel nie auf die {{count}} abgewählte Datei anwenden",
+      "rememberUnticked_other": "Diese Regel nie auf die {{count}} abgewählten Dateien anwenden"
     },
     "preview": {
       "run": "Vorschau mit meinen Dateien",

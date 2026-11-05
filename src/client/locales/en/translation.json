@@ -1015,7 +1015,6 @@
       "removeFolder": "Remove {{folder}}",
       "ruleEnabled": "Rule on",
       "deleteRule": "Delete rule {{find}}",
-      "findEmpty": "Find text is empty",
       "options": "Options",
       "tag_output": "After",
       "tag_both": "Before + after",
@@ -1031,6 +1030,24 @@
       "unsaved": "Unsaved changes",
       "fixBeforeSaving_one": "Fix {{count}} problem before saving",
       "fixBeforeSaving_other": "Fix {{count}} problems before saving",
+      "issue": {
+        "invalidJson": "The rules are not valid JSON.",
+        "notArray": "The rules must be a list.",
+        "missingId": "Every list needs an id.",
+        "noFolder": "choose at least one folder",
+        "findEmpty": "the wrong word is empty",
+        "findTooLong": "the wrong word is longer than {{detail}} characters",
+        "findMultiline": "the wrong word cannot span lines",
+        "invalidRegex": "not a valid regular expression ({{detail}})",
+        "matchesEmpty": "the pattern matches empty text",
+        "unstableSelf": "the correct word would be changed again by this same rule",
+        "unstableList": "the rules in this list keep changing each other's results",
+        "listsConflict": "Lists {{lists}} undo each other in {{folder}} (“{{find}}”)."
+      },
+      "exceptCount_one": "Not applied to {{count}} file",
+      "exceptCount_other": "Not applied to {{count}} files",
+      "exceptClear": "Apply everywhere again",
+      "tag_except": "Exceptions",
       "confirm": "Check with the translator",
       "confirmHint": "Use when the word is also an ordinary word (\"unify\" the verb vs. the UniFi brand). Each match is replaced only after the LLM confirms it means the replacement; files are fixed during translation, not when a transcript is saved.",
       "tag_check": "Check"
@@ -1715,7 +1732,9 @@
       "doneRetranslate_other": "{{count}} translations queued again.",
       "doneFailed_one": "{{count}} file could not be changed; see Logs.",
       "doneFailed_other": "{{count}} files could not be changed; see Logs.",
-      "typeReplacement": "Type the correct word to see which files contain the wrong one."
+      "typeReplacement": "Type the correct word to see which files contain the wrong one.",
+      "rememberUnticked_one": "Never apply this rule to the {{count}} unticked file",
+      "rememberUnticked_other": "Never apply this rule to the {{count}} unticked files"
     },
     "preview": {
       "run": "Preview on my files",

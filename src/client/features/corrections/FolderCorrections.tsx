@@ -7,8 +7,9 @@ import { useToast } from "../../ui/Toast";
 import { Drawer } from "../../ui/primitives";
 import { getErrorMessage } from "../../lib/errors";
 import { flattenFolderTree } from "../settings/media-sources/model";
-import { correctionRuleSetsErrors, parseCorrectionRuleSets, type CorrectionRuleSet } from "../../../shared/corrections";
+import { correctionRuleSetsIssues, parseCorrectionRuleSets, type CorrectionRuleSet } from "../../../shared/corrections";
 import { ListEditor } from "./ListEditor";
+import { issueText } from "./issues";
 import { listFolder, listsForFolder, newList, setListForFolder } from "./model";
 import { SaveBar } from "./SaveBar";
 import { useCorrectionDraft } from "./useCorrectionDraft";
@@ -50,9 +51,9 @@ export function FolderCorrections({ folder: rawFolder }: { folder: string }) {
   const toggle = async (listId: string, on: boolean) => {
     const next = setListForFolder(lists, listId, folder, on);
     const json = JSON.stringify(next);
-    const errors = correctionRuleSetsErrors(json);
+    const issues = correctionRuleSetsIssues(json);
     // Switching a list off for its only folder leaves it with none, which a save refuses; say so instead.
-    if (errors.length) return addToast(errors[0], "error");
+    if (issues.length) return addToast(issueText(issues[0], t), "error");
     setBusy(true);
     setOptimistic(next);
     try {

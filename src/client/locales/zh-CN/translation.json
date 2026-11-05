@@ -857,7 +857,6 @@
       "removeFolder": "移除 {{folder}}",
       "ruleEnabled": "规则已启用",
       "deleteRule": "删除规则 {{find}}",
-      "findEmpty": "查找内容为空",
       "options": "选项",
       "tag_output": "翻译后",
       "tag_both": "前 + 后",
@@ -873,6 +872,24 @@
       "unsaved": "有未保存的更改",
       "fixBeforeSaving_one": "保存前请修复 {{count}} 个问题",
       "fixBeforeSaving_other": "保存前请修复 {{count}} 个问题",
+      "issue": {
+        "invalidJson": "规则不是有效的 JSON。",
+        "notArray": "规则必须是一个列表。",
+        "missingId": "每个清单都需要 id。",
+        "noFolder": "请至少选择一个文件夹",
+        "findEmpty": "错误的词为空",
+        "findTooLong": "错误的词超过 {{detail}} 个字符",
+        "findMultiline": "错误的词不能跨行",
+        "invalidRegex": "不是有效的正则表达式（{{detail}}）",
+        "matchesEmpty": "该模式会匹配空文本",
+        "unstableSelf": "正确的词会被这条规则再次修改",
+        "unstableList": "此清单中的规则会不断改动彼此的结果",
+        "listsConflict": "清单 {{lists}} 在 {{folder}} 中互相抵消（“{{find}}”）。"
+      },
+      "exceptCount_one": "不套用于 {{count}} 个文件",
+      "exceptCount_other": "不套用于 {{count}} 个文件",
+      "exceptClear": "重新套用到所有文件",
+      "tag_except": "例外",
       "confirm": "交由翻译模型确认",
       "confirmHint": "当这个词也是普通词时使用（例如动词 “unify” 与品牌 UniFi）。每处匹配都要经 LLM 确认确实指替换词后才会替换；修正在翻译时进行，而不是在保存转写稿时。",
       "tag_check": "确认"
@@ -1715,7 +1732,9 @@
       "doneRetranslate_other": "已将 {{count}} 个译文重新加入队列。",
       "doneFailed_one": "{{count}} 个文件无法修改；请查看日志。",
       "doneFailed_other": "{{count}} 个文件无法修改；请查看日志。",
-      "typeReplacement": "输入正确的词，即可查看哪些文件包含错误的词。"
+      "typeReplacement": "输入正确的词，即可查看哪些文件包含错误的词。",
+      "rememberUnticked_one": "以后也不要对这 {{count}} 个未勾选的文件套用此规则",
+      "rememberUnticked_other": "以后也不要对这 {{count}} 个未勾选的文件套用此规则"
     },
     "preview": {
       "run": "在我的文件上预览",

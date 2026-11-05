@@ -145,3 +145,12 @@ test("an invalid rule is refused before anything is read", () => {
   );
   assert.throws(() => applyCorrections(library(), [], [talk], false), /No rules/);
 });
+
+test("a rule's exceptions keep a file out of the scan and the apply step", () => {
+  const essayRule = rule("ubiquity", "Ubiquiti", { caseSensitive: false, except: ["UniFi/Essay.en.srt"] });
+  const report = scanForCorrections(library(), [essayRule], { folders: ["UniFi"] });
+  assert.ok(!report.matches.some((m) => m.relative === "UniFi/Essay.en.srt"));
+  const applied = applyCorrections(library(), [essayRule], [verb], false);
+  assert.equal(applied.totalFixed, 0);
+  assert.match(fs.readFileSync(verb, "utf8"), /the ubiquity of Wi-Fi/);
+});

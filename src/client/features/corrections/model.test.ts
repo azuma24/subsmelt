@@ -109,3 +109,17 @@ test("fixing a word adds it to the chosen list, switches the list on for the fol
     ],
   );
 });
+
+test("replacing a twin rule keeps the files it already leaves alone", () => {
+  const lists = [
+    { ...list("ubnt", ["UniFi"]), rules: [{ ...newRule("Ubiquity", "Ubiquiti"), except: ["UniFi/a.srt"] }] },
+  ];
+  const next = addRuleForFolder(
+    lists,
+    "UniFi",
+    "ubnt",
+    { ...newRule("Ubiquity", "Ubiquiti"), except: ["UniFi/b.srt"] },
+    "x",
+  );
+  assert.deepEqual(next[0].rules[0].except, ["UniFi/a.srt", "UniFi/b.srt"]);
+});

@@ -860,7 +860,6 @@
       "removeFolder": "Remover {{folder}}",
       "ruleEnabled": "Regra ativa",
       "deleteRule": "Excluir regra {{find}}",
-      "findEmpty": "O texto a localizar está vazio",
       "options": "Opções",
       "tag_output": "Depois",
       "tag_both": "Antes + depois",
@@ -877,6 +876,25 @@
       "fixBeforeSaving_one": "Corrija {{count}} problema antes de salvar",
       "fixBeforeSaving_many": "Corrija {{count}} problemas antes de salvar",
       "fixBeforeSaving_other": "Corrija {{count}} problemas antes de salvar",
+      "issue": {
+        "invalidJson": "As regras não são um JSON válido.",
+        "notArray": "As regras precisam ser uma lista.",
+        "missingId": "Toda lista precisa de um id.",
+        "noFolder": "escolha pelo menos uma pasta",
+        "findEmpty": "a palavra errada está vazia",
+        "findTooLong": "a palavra errada passa de {{detail}} caracteres",
+        "findMultiline": "a palavra errada não pode ocupar várias linhas",
+        "invalidRegex": "não é uma expressão regular válida ({{detail}})",
+        "matchesEmpty": "o padrão corresponde a texto vazio",
+        "unstableSelf": "a palavra correta seria alterada de novo por esta mesma regra",
+        "unstableList": "as regras desta lista ficam alterando o resultado umas das outras",
+        "listsConflict": "As listas {{lists}} desfazem uma à outra em {{folder}} (“{{find}}”)."
+      },
+      "exceptCount_one": "Não aplicada a {{count}} arquivo",
+      "exceptCount_many": "Não aplicada a {{count}} arquivos",
+      "exceptCount_other": "Não aplicada a {{count}} arquivos",
+      "exceptClear": "Aplicar em tudo de novo",
+      "tag_except": "Exceções",
       "confirm": "Confirmar com o tradutor",
       "confirmHint": "Use quando a palavra também é uma palavra comum (“unify” o verbo versus a marca UniFi). Cada ocorrência só é substituída se o LLM confirmar que se refere à substituição; os arquivos são corrigidos durante a tradução, não ao salvar uma transcrição.",
       "tag_check": "Confirmar"
@@ -1737,7 +1755,10 @@
       "doneFailed_one": "{{count}} arquivo não pôde ser alterado; veja os Logs.",
       "doneFailed_many": "{{count}} arquivos não puderam ser alterados; veja os Logs.",
       "doneFailed_other": "{{count}} arquivos não puderam ser alterados; veja os Logs.",
-      "typeReplacement": "Digite a palavra correta para ver quais arquivos contêm a errada."
+      "typeReplacement": "Digite a palavra correta para ver quais arquivos contêm a errada.",
+      "rememberUnticked_one": "Nunca aplicar esta regra ao {{count}} arquivo desmarcado",
+      "rememberUnticked_many": "Nunca aplicar esta regra aos {{count}} arquivos desmarcados",
+      "rememberUnticked_other": "Nunca aplicar esta regra aos {{count}} arquivos desmarcados"
     },
     "preview": {
       "run": "Pré-visualizar nos meus arquivos",

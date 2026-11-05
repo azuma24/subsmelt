@@ -2,7 +2,14 @@ import type { Express } from "express";
 import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import { getAllSettings, AUTO_SOURCE_LANGUAGE } from "../config.js";
+import { getAllSettings, AUTO_SOURCE_LANGUAGE, preferredChinese } from "../config.js";
+import { fileLangCodes } from "../language-codes.js";
+import {
+  compileCorrectionsFor,
+  correctionGlossaryTerms,
+  describeCorrections,
+  parseCorrectionRuleSets,
+} from "../../shared/corrections.js";
 import { resolveConnectionPool } from "../connections.js";
 import { convertSubtitle, translateFile } from "../translator.js";
 import { planTranslation } from "../translator/plan.js";
@@ -318,6 +325,16 @@ async function processConvert(
   const translatedInput = `${inputPath}.${ext}`;
   const translatedOutput = `${outputPath}.${options.targetFormat}`;
   fs.writeFileSync(translatedInput, input.content, { mode: 0o600 });
+  // An uploaded file belongs to no media folder, so only lists on the whole
+  // library apply (compiled for the library root, which no folder list covers).
+  const lists = parseCorrectionRuleSets(settings.correction_rule_sets);
+  const sourceCorrections = compileCorrectionsFor(lists, "", "source");
+  const outputCorrections = compileCorrectionsFor(
+    lists,
+    "",
+    "output",
+    fileLangCodes({ target_lang: options.targetLang, lang_code: "" }, preferredChinese()).filter(Boolean),
+  );
   try {
     await translateFile({
       srtPath: translatedInput,
@@ -330,6 +347,16 @@ async function processConvert(
       seriesMemory: false,
       isConnectionBusy: llmBusyWithTranscription,
       onUsage: (u) => recordUsage({ ...u, kind: "convert", jobId: null, src: input.name, srtName: input.name }),
+      sourceCorrections,
+      outputCorrections,
+      pinnedTerms: correctionGlossaryTerms(sourceCorrections),
+      onCorrections: (stage, counts) => {
+        const details = describeCorrections(counts, stage === "source" ? sourceCorrections : outputCorrections);
+        logger.info(
+          "translate",
+          `Convert: corrected ${details.map((d) => `${d.find} → ${d.replace} ×${d.count}`).join(", ")} in ${input.name}`,
+        );
+      },
     });
     if (!regular(translatedOutput) || fs.statSync(translatedOutput).size > MAX_BATCH_FILE_BYTES)
       throw new Error("Output size limit exceeded");

@@ -50,8 +50,11 @@ dialog asks for the correct word and where to apply it:
 Before anything is written, the dialog lists every file in scope that contains
 the word, with a count and up to two sample lines shown before and after the
 fix. All files are ticked. Untick any that should stay as they are, for example
-where "unify" is the ordinary verb. Unticking applies to this fix only; the rule
-still applies to that file's next translation.
+where "unify" is the ordinary verb. Unticking applies to this fix only, unless
+you also tick **Never apply this rule to the unticked files**. The rule then
+keeps those files as exceptions, and they are skipped by future jobs,
+transcripts and dry runs. The rule's options show "Not applied to N files", with
+**Apply everywhere again** to clear the list.
 
 A word selected in the **source** becomes a "before translation" rule. Fixing
 a source does not change translations already made from it, so the dialog
@@ -119,6 +122,12 @@ before it is replaced:
 
 A term split across two lines, two cues or a tag (`Uni<i>fy</i>`) is not a
 match, and markup (`<i>`, `{\i1}`, `\N`) is never changed.
+
+## The Convert page
+
+Files uploaded on the Convert page belong to no media folder, so only lists
+that are on **Whole library** apply to them, for both the source and the
+translation.
 
 ## Safety
 

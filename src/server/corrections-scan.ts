@@ -100,7 +100,10 @@ function clip(text: string, at: number): string {
 }
 
 function rulesFor(target: CorrectionTarget, rules: readonly CorrectionRule[]): CompiledCorrection[] {
-  return target.kind === "source" ? compile(rules, "source") : compile(rules, "output", target.langCodes);
+  // A rule set to leave this file alone (an exception from an earlier fix) skips it here too.
+  const relative = mediaRelativePath(target.path);
+  const apply = rules.filter((rule) => !(relative !== null && rule.except?.includes(relative)));
+  return target.kind === "source" ? compile(apply, "source") : compile(apply, "output", target.langCodes);
 }
 
 /** What the rules would change in one file, without writing it. */

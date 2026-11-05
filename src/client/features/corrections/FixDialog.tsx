@@ -8,14 +8,15 @@ import { ActionButton, Drawer } from "../../ui/primitives";
 import { getErrorMessage } from "../../lib/errors";
 import {
   CORRECTION_MATCH_MODES,
-  correctionRuleError,
-  correctionRuleSetsErrors,
+  correctionRuleIssue,
+  correctionRuleSetsIssues,
   parseCorrectionRuleSets,
   type CorrectionRule,
   type ScanReport,
 } from "../../../shared/corrections";
 import { relativeFolder } from "../library/library-model";
 import { MatchList, fixable } from "./MatchList";
+import { issueText } from "./issues";
 import { addRuleForFolder, ancestorFolders, createId, defaultMatchFor, newRule } from "./model";
 
 const CONTROL =
@@ -87,7 +88,8 @@ export function FixDialog({ find: initialFind, column, srtPath, outputPath, targ
     }),
     [find, replace, stage, match, caseSensitive, langCode],
   );
-  const ruleError = find ? correctionRuleError(rule) : null;
+  const ruleIssue = find ? correctionRuleIssue(rule) : null;
+  const ruleError = ruleIssue ? issueText(ruleIssue, t, { withRule: false }) : null;
   // A fix needs its correct word: an empty one would delete the term from every ticked file.
   const ready = Boolean(find && replace.trim() && !ruleError);
 
@@ -96,6 +98,7 @@ export function FixDialog({ find: initialFind, column, srtPath, outputPath, targ
   const [scanError, setScanError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [retranslate, setRetranslate] = useState(true);
+  const [rememberUnticked, setRememberUnticked] = useState(false);
   const [busy, setBusy] = useState(false);
 
   // Dry run, debounced while typing: what this rule would change in scope.
@@ -129,6 +132,8 @@ export function FixDialog({ find: initialFind, column, srtPath, outputPath, targ
   }, [rule, ready, scope, folder, file]);
 
   const chosen = report?.matches.filter((m) => selected.has(m.path)) ?? [];
+  // Files the person unticked; with "remember", the saved rule leaves them alone for good.
+  const unticked = report?.matches.filter((m) => fixable(m) && !selected.has(m.path)) ?? [];
   const jobs = chosen.flatMap((m) => m.jobs);
   const tokens = jobs.reduce((sum, job) => sum + job.tokens, 0);
   const offerRetranslate = stage === "source" && jobs.length > 0;
@@ -144,12 +149,16 @@ export function FixDialog({ find: initialFind, column, srtPath, outputPath, targ
           lists,
           folder,
           listId === NEW_LIST ? null : listId,
-          { ...rule, id: createId() },
+          {
+            ...rule,
+            id: createId(),
+            ...(rememberUnticked && unticked.length ? { except: unticked.map((m) => m.relative) } : {}),
+          },
           name,
         );
         const json = JSON.stringify(next);
-        const errors = correctionRuleSetsErrors(json);
-        if (errors.length) throw new Error(errors[0]);
+        const issues = correctionRuleSetsIssues(json);
+        if (issues.length) throw new Error(issueText(issues[0], t));
         await api.saveSettings({ correction_rule_sets: json });
       }
       const files = chosen.map((m) => m.path);
@@ -314,6 +323,17 @@ export function FixDialog({ find: initialFind, column, srtPath, outputPath, targ
           {scanning && !report && <p className="text-xs text-muted">{t("corrections.fix.scanning")}</p>}
           {scanError && <p className="text-xs text-danger">{scanError}</p>}
           {report && <MatchList report={report} selected={selected} onChange={setSelected} />}
+          {scope === "folder" && unticked.length > 0 && (
+            <label className="flex items-start gap-2 text-xs text-muted">
+              <input
+                type="checkbox"
+                checked={rememberUnticked}
+                onChange={(e) => setRememberUnticked(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-accent"
+              />
+              {t("corrections.fix.rememberUnticked", { count: unticked.length })}
+            </label>
+          )}
         </div>
 
         {offerRetranslate && (

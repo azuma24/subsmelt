@@ -1,6 +1,7 @@
 import { useTranslation } from "../../i18n";
 import { ActionButton } from "../../ui/primitives";
 import type { CorrectionDraft } from "./useCorrectionDraft";
+import { issueText } from "./issues";
 
 /** Shown only while the draft has unsaved changes; sticks to the bottom of the scrolling area. */
 export function SaveBar({ draft }: { draft: CorrectionDraft }) {
@@ -24,9 +25,10 @@ export function SaveBar({ draft }: { draft: CorrectionDraft }) {
       </div>
       {blocked && (
         <ul className="list-disc space-y-1 pl-5 text-xs text-danger">
-          {draft.errors.map((error) => (
-            <li key={error}>{error}</li>
-          ))}
+          {draft.errors.map((issue) => {
+            const text = issueText(issue, t);
+            return <li key={text}>{text}</li>;
+          })}
         </ul>
       )}
     </div>
