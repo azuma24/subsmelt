@@ -18,7 +18,17 @@ import { Accordion, ActionButton, SettingsSection, PageHeader } from "../../ui/p
 import { InlineError } from "../../ui/QueryState";
 import { JSON_BLOB_SETTINGS, getStr, validateJsonSetting, type JsonBlobSettingKey } from "./settings-model";
 import { str } from "../../lib/settings-value";
-import { changes, EMPTY_FORM, edit, editMany, isDirty, receiveServer, saved, view, type SettingsForm } from "./settings-form";
+import {
+  changes,
+  EMPTY_FORM,
+  edit,
+  editMany,
+  isDirty,
+  receiveServer,
+  saved,
+  view,
+  type SettingsForm,
+} from "./settings-form";
 import { EngineSection } from "./sections/EngineSection";
 import { CorrectionsSection } from "./sections/CorrectionsSection";
 import { InterfaceSection } from "./sections/InterfaceSection";
