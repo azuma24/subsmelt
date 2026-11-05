@@ -80,6 +80,10 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   // the output file. Titles already recorded for a language are skipped.
   // Default off — filenames on disk are never changed.
   title_sidecar: "0",
+  // Subtitle corrections: JSON array of CorrectionRuleSet (src/shared/corrections.ts).
+  // Each set fixes recurring terms ("Ubiquity" → "Ubiquiti") in the folders it names,
+  // in the source subtitle before translation and/or in the translated output.
+  correction_rule_sets: "[]",
   auto_scan_interval: "0",
   // Soft monthly token budget for the cost/usage indicator. "0" = unlimited.
   // Display-only: NEVER blocks or throttles translation — it only powers a

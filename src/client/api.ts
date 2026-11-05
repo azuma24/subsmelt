@@ -1,3 +1,4 @@
+import type { ApplyReport, CorrectionRule, ScanReport } from "../shared/corrections";
 import type {
   UsageCleared,
   UsageRange,
@@ -129,6 +130,11 @@ export const forceJobsApi = (ids: number[]) =>
     method: "POST",
     body: JSON.stringify({ ids }),
   });
+// Subtitle corrections on files already in the library
+export const scanCorrections = (body: { rules: CorrectionRule[]; folders?: string[]; files?: string[] }) =>
+  fetchJSON<ScanReport>("/corrections/scan", { method: "POST", body: JSON.stringify(body) });
+export const applyCorrections = (body: { rules: CorrectionRule[]; files: string[]; retranslate: boolean }) =>
+  fetchJSON<ApplyReport>("/corrections/apply", { method: "POST", body: JSON.stringify(body) });
 export const deleteJobApi = (id: number) => fetchJSON(`/jobs/${id}`, { method: "DELETE" });
 export const deleteJobsApi = (ids: number[]) =>
   fetchJSON<{ ok: boolean; deleted: number }>("/jobs/delete-selected", {

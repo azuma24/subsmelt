@@ -28,6 +28,7 @@ import { logger } from "../logger.js";
 import { normalizeMediaSubfolder } from "../media-paths.js";
 import { isWatcherRunning, restartWatcher } from "../watcher.js";
 import { parseTaskUpdate, settingError, validateOutputPattern } from "./validation.js";
+import { correctionRuleSetsErrors } from "../../shared/corrections.js";
 import { SECRET_SETTING_KEYS } from "../settings-schema.js";
 
 // Which keys are secrets is part of the settings schema (src/shared/settings.ts).
@@ -156,7 +157,9 @@ export function registerSettingsTasksRoutes(
       }
       // Only changed values are checked, so a bad value already on disk never
       // blocks saving something else.
-      const valueError = settingError(key, resolved);
+      const valueError =
+        settingError(key, resolved) ??
+        (key === "correction_rule_sets" ? correctionRuleSetsErrors(resolved).join("; ") || null : null);
       if (valueError) {
         invalid.push(valueError);
         continue;
