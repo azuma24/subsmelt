@@ -82,6 +82,10 @@ ticked, once the list is saved.
 - **Try a line** runs the list on a sample line, using the same code as the server.
 - Edits are kept as a draft until you press **Save rules**. A problem with a
   rule shows on its line, and Save stays off until every problem is fixed.
+- A filled-in last line joins the list when you click elsewhere, so **Save
+  rules** keeps it. A word with no replacement still needs Enter or **Add rule**.
+- In Settings, leaving Corrections saves the draft. A draft with a problem is
+  not saved, and a message says why.
 
 ## Matching
 
