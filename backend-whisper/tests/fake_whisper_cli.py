@@ -67,6 +67,16 @@ def main(argv):
                 "timestamps": {"from": "00:00:00,000", "to": "00:00:01,000"},
                 "offsets": {"from": 0, "to": min(1000, duration_ms)},
                 "text": " Hello from whisper.cpp.",
+                "tokens": [
+                    {"text": text, "offsets": {"from": start, "to": end}}
+                    for text, start, end in (
+                        ("[_BEG_]", 0, 0),
+                        (" Hello", 100, 300),
+                        (" from", 300, 500),
+                        (" whisper", 500, 800),
+                        (".cpp.", 800, 900),
+                    )
+                ],
             },
             {
                 "timestamps": {"from": "00:00:01,000", "to": "00:00:02,000"},

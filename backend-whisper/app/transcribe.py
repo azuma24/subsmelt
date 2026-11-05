@@ -96,17 +96,20 @@ def assert_diarization_available(request: TranscribeRequest) -> None:
     raise DiarizationUnavailableError("pyannote.audio is not installed in this backend")
 
 
-def _maybe_diarize(collected: list, audio_path: Path, request: TranscribeRequest) -> list:
+def _maybe_diarize(collected: list, audio_path: Path, request: TranscribeRequest, duration: float | None) -> list:
     """Tag segments with speakers when diarization is requested (real pipeline)."""
     if not _diarization_requested(request):
         return collected
     opts = request.advanced_options
+    quality = request.subtitle_quality
+    split_on_speakers = bool(quality and (quality.max_subtitle_duration or 0) > 0)
     return assign_speakers(
-        collected,
+        clamp_to_duration(collected, duration) if split_on_speakers else collected,
         audio_path,
         request.device,
         min_speakers=opts.min_speakers,
         max_speakers=opts.max_speakers,
+        split_on_speakers=split_on_speakers,
     )
 
 
@@ -117,7 +120,7 @@ def _maybe_fake_diarize(collected: list, request: TranscribeRequest) -> list:
     return fake_assign_speakers(collected)
 
 
-def apply_subtitle_quality(segments: list, request: TranscribeRequest) -> list:
+def apply_subtitle_quality(segments: list, request: TranscribeRequest, *, audio_duration: float | None = None) -> list:
     """Apply merge + duration-split post-processing per the request's quality options.
 
     Order: merge short segments first, then split by max duration. Line-wrapping
@@ -131,6 +134,7 @@ def apply_subtitle_quality(segments: list, request: TranscribeRequest) -> list:
         segments,
         merge_short=quality.merge_short_segments,
         max_subtitle_duration=quality.max_subtitle_duration,
+        audio_duration=audio_duration,
     )
 
 
@@ -143,7 +147,7 @@ def _finalize(segments: list, info: object, request: TranscribeRequest, input_pa
     duration = getattr(info, "duration", None)
     if duration:
         segments = clamp_to_duration(segments, duration)
-    processed = apply_subtitle_quality(segments, request)
+    processed = apply_subtitle_quality(segments, request, audio_duration=duration)
     # A direct API call may carry an ISO-639-2 code ("kor"); the file suffix
     # and the reported language both use the short code ("ko").
     language = fold_iso3(request.language or "auto")
@@ -219,7 +223,7 @@ def run_transcription_streaming(
         if _diarization_requested(request):
             _raise_if_cancelled(is_cancelled)
             yield {"type": "phase", "phase": "diarizing"}
-            segments = _maybe_diarize(segments, audio_path, request)
+            segments = _maybe_diarize(segments, audio_path, request, getattr(info, "duration", None))
         # Diarization cannot be interrupted; never write a subtitle the client
         # already walked away from.
         _raise_if_cancelled(is_cancelled)

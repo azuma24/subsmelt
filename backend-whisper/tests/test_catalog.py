@@ -123,6 +123,7 @@ class CatalogTests(unittest.TestCase):
     def test_whispercpp_engine_is_registered_everywhere(self):
         whispercpp = descriptor_for("whispercpp-large-v3-turbo")
         self.assertEqual(whispercpp.engine, "whispercpp")
+        self.assertTrue(whispercpp.supports.word_timestamps)
         self.assertEqual(transcribe.ENGINE_RUNNERS["whispercpp"].__module__, "app.whispercpp")
         self.assertIn("whispercpp", model_manager.ENGINE_AVAILABILITY)
         self.assertEqual(downgrade_candidates("whispercpp-large-v3-turbo"), ())

@@ -14,6 +14,7 @@ from app import whispercpp
 from app.engine import EngineUnavailableError, TranscriptionCancelled
 from app.schemas import TranscribeRequest
 from app.whispercpp_runtime import WhisperCppHandle, load_handle
+from app.word_timing import Word
 from tests.nemotron_fixtures import can_exec_wrappers, write_silent_wav
 
 FAKE_CLI = Path(__file__).resolve().parent / "fake_whisper_cli.py"
@@ -72,6 +73,22 @@ class WhisperCppRunnerTests(unittest.TestCase):
         self.assertEqual(info.language, "en")
         self.assertEqual(info.duration, 2.0)
 
+    def test_word_offsets_are_opt_in_and_can_be_disabled(self):
+        _, (default_segments, _) = self._run(_request())
+        _, (quality_segments, _) = self._run(_request(subtitle_quality={"max_subtitle_duration": 1.0}))
+        _, (explicit_segments, _) = self._run(_request(advanced_options={"word_timestamps": True}))
+        _, (disabled_segments, _) = self._run(
+            _request(subtitle_quality={"max_subtitle_duration": 1.0}, advanced_options={"word_timestamps": False})
+        )
+        self.assertEqual(default_segments[0].words, ())
+        self.assertEqual(quality_segments[0].start, 0.0)
+        self.assertEqual(
+            quality_segments[0].words,
+            (Word(" Hello", 0.1, 0.3), Word(" from", 0.3, 0.5), Word(" whisper.cpp.", 0.5, 0.9)),
+        )
+        self.assertEqual(explicit_segments[0].start, 0.1)
+        self.assertEqual(disabled_segments[0].words, ())
+
     def test_prompt_and_beam_size_reach_the_command_line(self):
         seen = {}
 
@@ -95,6 +112,52 @@ class WhisperCppRunnerTests(unittest.TestCase):
             with self.assertRaises(TranscriptionCancelled):
                 self._run(_request(), lambda: True)
         self.assertLess(time.monotonic() - started, 5.0)
+
+
+class TokenOffsetTests(unittest.TestCase):
+    def test_split_utf8_and_mixed_latin_subwords_keep_text_and_offsets(self):
+        encoded = "貓".encode()
+        lead, tail = [part.decode("utf-8", errors="surrogateescape") for part in (encoded[:2], encoded[2:])]
+        tokens = [
+            {"text": text, "offsets": {"from": start, "to": end}}
+            for text, start, end in (
+                ("[_BEG_]", 0, 0),
+                (lead, 100, 120),
+                (tail, 130, 180),
+                ("Whis", 180, 230),
+                ("per", 230, 300),
+                ("。", 300, 320),
+            )
+        ]
+        self.assertEqual(
+            whispercpp._token_words(tokens, "貓Whisper。"),
+            (Word("貓", 0.1, 0.18), Word("Whisper", 0.18, 0.3), Word("。", 0.3, 0.32)),
+        )
+
+    def test_bad_token_offsets_fall_back_to_segment_text(self):
+        for bad in (
+            {},
+            {"from": 500, "to": 200},
+            {"from": -1, "to": 300},
+            {"from": 0, "to": 0},
+            {"from": 200, "to": 900},
+        ):
+            with self.subTest(offsets=bad):
+                result = whispercpp._segments_from(
+                    {
+                        "transcription": [
+                            {
+                                "text": " Test.",
+                                "offsets": {"from": 0, "to": 800},
+                                "tokens": [{"text": " Test.", "offsets": bad}],
+                            }
+                        ]
+                    },
+                    with_words=True,
+                )
+                self.assertEqual(
+                    (result[0].start, result[0].end, result[0].text, result[0].words), (0.0, 0.8, " Test.", ())
+                )
 
 
 class WhisperCppHandleTests(unittest.TestCase):

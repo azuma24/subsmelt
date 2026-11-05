@@ -78,7 +78,7 @@ _WHISPERCPP_SUPPORTS = Supports(
     condition_on_previous_text=False,
     vad=False,
     compute_type=False,
-    word_timestamps=False,
+    word_timestamps=True,
     translate_task=False,
 )
 

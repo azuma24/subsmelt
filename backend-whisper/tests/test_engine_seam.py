@@ -12,11 +12,13 @@ from unittest import mock
 try:
     from fastapi.testclient import TestClient
 
+    import app.diarize as diarize
     import app.main as main_module
     import app.transcribe as transcribe
     from app.schemas import TranscribeRequest
 except ModuleNotFoundError as exc:  # pragma: no cover - optional deps
     TestClient = None
+    diarize = None
     main_module = None
     transcribe = None
     TranscribeRequest = None
@@ -135,6 +137,54 @@ class EngineSeamTests(unittest.TestCase):
                 )
         diarize.assert_not_called()
         self.assertFalse((self.media / "clip.srt").exists())
+
+    def test_duration_quality_uses_word_clocks_across_diarized_speaker_changes(self):
+        def runner(request, audio_path, is_cancelled, min_progress_interval):
+            yield {"type": "progress"}
+            return [
+                SimpleNamespace(
+                    start=0.0,
+                    end=8.0,
+                    text="Yes. Then we go.",
+                    words=[
+                        SimpleNamespace(word=text, start=start, end=end)
+                        for text, start, end in (
+                            ("Yes.", 0.5, 1.0),
+                            (" Then", 3.0, 3.7),
+                            (" we", 4.0, 4.5),
+                            (" go.", 5.3, 7.0),
+                        )
+                    ],
+                )
+            ], SimpleNamespace(language="en", duration=6.4)
+
+        annotation = mock.Mock()
+        annotation.itertracks.return_value = [
+            (SimpleNamespace(start=0.4, end=1.2), None, "SPEAKER_00"),
+            (SimpleNamespace(start=2.9, end=6.4), None, "SPEAKER_01"),
+        ]
+        pipeline = mock.Mock(return_value=annotation)
+        advanced = {"speaker_diarization": True}
+        with (
+            mock.patch.dict(transcribe.ENGINE_RUNNERS, {"whisper": runner}),
+            mock.patch.object(diarize, "_get_pipeline", return_value=pipeline),
+        ):
+            default = transcribe.run_transcription(
+                self._request(advanced_options=advanced), self.media / "clip.mkv", deliver="content"
+            )
+            quality = transcribe.run_transcription(
+                self._request(advanced_options=advanced, subtitle_quality={"max_subtitle_duration": 2.5}),
+                self.media / "clip.mkv",
+                deliver="content",
+            )
+
+        self.assertEqual(default["content"], "1\n00:00:00,000 --> 00:00:06,400\n[SPEAKER_01] Yes. Then we go.\n")
+        self.assertEqual(
+            quality["content"],
+            "1\n00:00:00,500 --> 00:00:01,000\n[SPEAKER_00] Yes.\n\n"
+            "2\n00:00:03,000 --> 00:00:04,500\n[SPEAKER_01] Then we\n\n"
+            "3\n00:00:05,300 --> 00:00:06,400\n[SPEAKER_01] go.\n",
+        )
 
     def test_audio_extraction_receives_the_cancel_check(self):
         seen = {}

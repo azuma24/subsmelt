@@ -13,24 +13,13 @@ from dataclasses import dataclass
 
 from .schemas import SubtitleQualityOptions
 from .segments import Segment, has_wide_chars
+from .word_timing import MIN_CUE_S, word_runs
+from .word_timing import Word as Word
 
-SENTENCE_END = ".!?。！？…"
-CLAUSE_END = ",;:、，；："
-MAX_GAP_S = 0.6
 DEFAULT_MAX_DURATION_S = 6.0
 DEFAULT_MAX_LINE_SPACED = 42
 DEFAULT_MAX_LINE_WIDE = 16
 LINES_PER_CUE = 2
-# A lone word can arrive with one timestamp for start and end; a zero-length
-# cue is never shown, so it is given this long on screen.
-MIN_CUE_S = 0.5
-
-
-@dataclass(frozen=True)
-class Word:
-    text: str
-    start: float
-    end: float
 
 
 @dataclass(frozen=True)
@@ -73,16 +62,6 @@ def _exceeds(run: Sequence[Word], limits: _Limits) -> bool:
     return run[-1].end - run[0].start > limits.max_duration or len(text) > limits.max_chars(text)
 
 
-def _split_run(run: list[Word]) -> tuple[list[Word], list[Word]]:
-    """Cut after the last clause punctuation in the run's second half, else
-    after the last word."""
-    count = len(run)
-    for index in range(count - 2, count // 2 - 1, -1):
-        if run[index].text and run[index].text[-1] in CLAUSE_END:
-            return run[: index + 1], run[index + 1 :]
-    return run, []
-
-
 def _segment(run: Sequence[Word]) -> Segment:
     return Segment(start=run[0].start, end=run[-1].end, text=join_words(run).strip())
 
@@ -109,21 +88,4 @@ def _monotonic(segments: list[Segment]) -> list[Segment]:
 
 def words_to_segments(words: Sequence[Word], quality: SubtitleQualityOptions | None) -> list[Segment]:
     limits = _limits(quality)
-    segments: list[Segment] = []
-    run: list[Word] = []
-    for word in words:
-        if not word.text.strip():
-            continue
-        if run and word.start - run[-1].end > MAX_GAP_S:
-            segments.append(_segment(run))
-            run = []
-        while run and _exceeds([*run, word], limits):
-            head, run = _split_run(run)
-            segments.append(_segment(head))
-        run.append(word)
-        if word.text[-1] in SENTENCE_END:
-            segments.append(_segment(run))
-            run = []
-    if run:
-        segments.append(_segment(run))
-    return _monotonic(segments)
+    return _monotonic([_segment(run) for run in word_runs(words, lambda run: _exceeds(run, limits))])

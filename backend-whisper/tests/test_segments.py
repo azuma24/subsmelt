@@ -204,6 +204,124 @@ class PostprocessPipelineTests(unittest.TestCase):
         joined = " ".join(s.text for s in result)
         self.assertEqual(joined, "Oh this is a rather long sentence indeed")
 
+    def test_duration_uses_uneven_word_times_and_keeps_wordless_cues(self):
+        raw = [
+            SimpleNamespace(
+                start=0.0,
+                end=6.0,
+                text=" 真的API 3.14，稍後。",
+                speaker="A",
+                words=[
+                    SimpleNamespace(word=text, start=start, end=end)
+                    for text, start, end in (
+                        ("真的", 0.2, 0.6),
+                        ("API", 0.6, 1.1),
+                        (" 3.", 1.2, 1.36),
+                        ("14", 1.36, 1.65),
+                        ("，", 1.65, 1.7),
+                        ("稍後", 4.1, 5.6),
+                        ("。", 5.6, 5.6),
+                    )
+                ],
+            ),
+            SimpleNamespace(start=6.0, end=9.0, text="wordless cue stays", speaker="A"),
+            SimpleNamespace(
+                start=9.0,
+                end=14.0,
+                text="First. Next!",
+                speaker="B",
+                words=[
+                    SimpleNamespace(word="First.", start=9.2, end=9.7),
+                    SimpleNamespace(word="Next!", start=11.0, end=14.0),
+                ],
+            ),
+        ]
+        result = postprocess_segments(clamp_to_duration(raw, 12.0), max_subtitle_duration=2.5)
+        self.assertEqual(
+            [(cue.start, cue.end, cue.text, cue.speaker) for cue in result],
+            [
+                (0.2, 1.7, "真的API 3.14，", "A"),
+                (4.1, 5.6, "稍後。", "A"),
+                (6.0, 7.5, "wordless cue", "A"),
+                (7.5, 9.0, "stays", "A"),
+                (9.2, 9.7, "First.", "B"),
+                (11.0, 12.0, "Next!", "B"),
+            ],
+        )
+
+    def test_duration_split_holds_brief_tail_cues_until_next_cue_or_audio_end(self):
+        raw = [
+            SimpleNamespace(
+                start=2.5,
+                end=5.22,
+                text="他們可能不起眼但食物卻十分美味",
+                words=[
+                    SimpleNamespace(word="他們可能不起眼但食物卻十分", start=2.71, end=4.85),
+                    SimpleNamespace(word="美味", start=5.19, end=5.22),
+                ],
+            ),
+            SimpleNamespace(
+                start=5.22,
+                end=7.94,
+                text="下次不妨多留意身邊這樣的小店吧",
+                words=[
+                    SimpleNamespace(word="下次不妨多留意身邊這樣的小店", start=5.43, end=7.77),
+                    SimpleNamespace(word="吧", start=7.91, end=7.94),
+                ],
+            ),
+        ]
+        self.assertEqual(
+            postprocess_segments(raw, max_subtitle_duration=2.5, audio_duration=8.232),
+            [
+                seg(2.71, 4.85, "他們可能不起眼但食物卻十分"),
+                seg(5.19, 5.43, "美味"),
+                seg(5.43, 7.77, "下次不妨多留意身邊這樣的小店"),
+                seg(7.91, 8.232, "吧"),
+            ],
+        )
+        self.assertEqual(postprocess_segments(raw, max_subtitle_duration=2.5)[-1], seg(7.91, 7.94, "吧"))
+
+    def test_duration_padding_respects_a_cap_below_half_a_second(self):
+        raw = SimpleNamespace(
+            start=0.0,
+            end=1.03,
+            text="Yes.",
+            words=[SimpleNamespace(word="Yes.", start=1.0, end=1.03)],
+        )
+        self.assertEqual(
+            postprocess_segments([raw], max_subtitle_duration=0.2, audio_duration=2.0), [seg(1.0, 1.2, "Yes.")]
+        )
+
+    def test_incomplete_word_alignment_falls_back_without_dropping_text(self):
+        raw = SimpleNamespace(
+            start=0.0,
+            end=6.0,
+            text="first and second",
+            words=[SimpleNamespace(word="first", start=0.0, end=1.0)],
+        )
+        self.assertEqual(
+            postprocess_segments([raw], max_subtitle_duration=3.0),
+            [seg(0.0, 3.0, "first and"), seg(3.0, 6.0, "second")],
+        )
+
+    def test_merge_does_not_erase_a_long_cues_measured_word_boundaries(self):
+        raw = [
+            SimpleNamespace(start=0.0, end=0.4, text="Oh"),
+            SimpleNamespace(
+                start=0.4,
+                end=7.0,
+                text="first second",
+                words=[
+                    SimpleNamespace(word="first", start=0.5, end=1.0),
+                    SimpleNamespace(word="second", start=4.0, end=6.0),
+                ],
+            ),
+        ]
+        self.assertEqual(
+            postprocess_segments(raw, merge_short=True, max_subtitle_duration=4.0),
+            [seg(0.0, 0.4, "Oh"), seg(0.5, 1.0, "first"), seg(4.0, 6.0, "second")],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
