@@ -38,7 +38,7 @@ src/client/          React SPA (Vite, Tailwind 4, react-query)
   i18n/              The translation runtime (t, plurals, lazy bundles) and its React hook
   ui/                The primitives kit (Button, Field, Layout, Status, Icon, …)
   lib/               Framework-free helpers (clipboard, error taxonomy, settings)
-  locales/           30 translation bundles
+  locales/           10 translation bundles
 backend-whisper/     FastAPI + faster-whisper sidecar
   app/               Endpoints, preflight, model management, GPU probing
   packaging/windows/ PyInstaller specs, Inno Setup installer, tray/GUI apps

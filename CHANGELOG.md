@@ -8,7 +8,7 @@ installer, macOS app) share a version number and are released together, as
 
 ### Interface
 
-- Arabic and Hebrew are no longer offered as interface languages, so there are 30 to keep current. Anyone who had picked one sees English. Both remain available as subtitle translation targets and as Whisper languages.
+- The interface now comes in 10 languages instead of 32: English, 简体中文, 繁體中文, 日本語, 한국어, Español, Français, Deutsch, Português (Brasil) and Русский. Anyone who had picked another one sees English, except European Portuguese, which now shows Brazilian Portuguese. This changes only SubSmelt's own screens: every language is still available as a subtitle translation target and for Whisper.
 
 ## [0.8.0] — 2026-11-04
 
