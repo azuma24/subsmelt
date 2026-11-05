@@ -18,7 +18,7 @@ function file(videoPath: string, subtitleCount = 0): ScannedFile {
 
 const LIBRARY = [
   file("/media/downloads/Build Multi-Camera 3D Tracking with DeepStream.mp4"),
-  file("/media/downloads/Ubiquiti/UniFi Design Center.mp4", 1),
+  file("/media/downloads/Sereniti/AnKor Design Center.mp4", 1),
   file("/media/downloads/developer/Boris Cherny Building Claude Code.mp4"),
   file("/media/downloads/Proxmox Datacenter Manager.mp4", 2),
 ];
@@ -38,10 +38,10 @@ test("query matches file names case-insensitively", () => {
 
 test("query matches folder names too", () => {
   // Searching by folder is how you narrow to one source directory.
-  const result = filterLibraryFiles(LIBRARY, { query: "ubiquiti" });
+  const result = filterLibraryFiles(LIBRARY, { query: "sereniti" });
   assert.deepEqual(
     result.map((f) => f.videoName),
-    ["UniFi Design Center.mp4"],
+    ["AnKor Design Center.mp4"],
   );
 });
 
@@ -59,7 +59,7 @@ test("hiding subtitled files leaves only untranscribed ones", () => {
 });
 
 test("query and subtitle filter combine", () => {
-  assert.equal(filterLibraryFiles(LIBRARY, { query: "unifi", hideWithSubtitles: true }).length, 0);
+  assert.equal(filterLibraryFiles(LIBRARY, { query: "ankor", hideWithSubtitles: true }).length, 0);
   assert.equal(filterLibraryFiles(LIBRARY, { query: "deepstream", hideWithSubtitles: true }).length, 1);
 });
 

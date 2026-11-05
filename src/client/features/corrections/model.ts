@@ -73,8 +73,8 @@ export function setListForFolder(
 const QUICK_SEPARATORS = /\s*(?:→|->|=>|\t)\s*/;
 
 /**
- * Parse pasted or typed pairs, one per line: `Ubiquity → Ubiquiti`,
- * `Ubiquity -> Ubiquiti`, `Ubiquity => Ubiquiti` or tab-separated (a
+ * Parse pasted or typed pairs, one per line: `Serenity → Sereniti`,
+ * `Serenity -> Sereniti`, `Serenity => Sereniti` or tab-separated (a
  * spreadsheet column pair). Lines without a separator are ignored.
  */
 export function parseQuickAdd(text: string): Array<{ find: string; replace: string }> {
@@ -95,7 +95,7 @@ function lowerFirst(text: string): string {
 }
 
 /**
- * After `Unify → Unifi`, offer `unify → unifi`: whole-word rules match case,
+ * After `Anchor → Ankor`, offer `anchor → ankor`: whole-word rules match case,
  * so a capitalised term needs its lowercase twin. Null when there is nothing
  * to offer (not capitalised, case-insensitive, or the twin exists).
  */

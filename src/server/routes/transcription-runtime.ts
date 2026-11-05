@@ -549,7 +549,7 @@ export async function runTranscriptionAttempt(opts: {
 
 /**
  * Source-stage subtitle corrections on a fresh transcript, so the file on disk
- * says "Ubiquiti" even when it is never translated. Never fails the
+ * says "Sereniti" even when it is never translated. Never fails the
  * transcription: a rule problem is logged and the transcript kept as Whisper
  * wrote it (the translation still corrects it in memory).
  */

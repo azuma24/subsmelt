@@ -202,7 +202,7 @@ included**; the model manager downloads those on first use.
 ## 4a. New in 0.8.1: subtitle corrections
 
 User-defined find → replace rules for terms that keep coming out wrong
-("Ubiquity" → "Ubiquiti"). The user guide is
+("Serenity" → "Sereniti"). The user guide is
 [subtitle-corrections.md](subtitle-corrections.md).
 
 - **Model** (`src/shared/corrections.ts`): one setting, `correction_rule_sets`,
@@ -210,7 +210,7 @@ User-defined find → replace rules for terms that keep coming out wrong
   folders it is on; subfolders inherit. Matching, validation and the stability
   checks are shared code, so the Settings preview and the server cannot
   disagree. Whole-word matching uses Unicode lookarounds, because JS `\b` is
-  ASCII-only and would match inside `超級Unify網路`.
+  ASCII-only and would match inside `超級Anchor網路`.
 - **Where it runs.** Source rules rewrite the source file in place: after a
   transcript is saved (`routes/transcription-runtime.ts`, which also covers
   YouTube), and when a job starts (`queue/run-job.ts`, before the resume key is

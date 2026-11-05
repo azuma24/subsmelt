@@ -27,7 +27,7 @@ export interface DashboardParams {
   view: DashboardView;
   status: JobStatusFilter;
   rows: RowLayout;
-  /** The folder shown, media-relative ("UniFi/Tutorials"), with its subfolders; "all" for the whole library. */
+  /** The folder shown, media-relative ("AnKor/Tutorials"), with its subfolders; "all" for the whole library. */
   folder: string;
 }
 

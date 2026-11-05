@@ -81,7 +81,7 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   // Default off — filenames on disk are never changed.
   title_sidecar: "0",
   // Subtitle corrections: JSON array of CorrectionRuleSet (src/shared/corrections.ts).
-  // Each set fixes recurring terms ("Ubiquity" → "Ubiquiti") in the folders it names,
+  // Each set fixes recurring terms ("Serenity" → "Sereniti") in the folders it names,
   // in the source subtitle before translation and/or in the translated output.
   correction_rule_sets: "[]",
   auto_scan_interval: "0",

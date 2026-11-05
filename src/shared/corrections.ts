@@ -5,7 +5,7 @@
  *
  * Stored as a JSON array of rule sets in the `correction_rule_sets` setting. A
  * set applies to the media folders it names (and every subfolder), so the
- * fixes for one library — "Ubiquity" → "Ubiquiti" in a UniFi channel — never
+ * fixes for one library — "Serenity" → "Sereniti" in an AnKor channel — never
  * touch another.
  *
  * Pure: no Node, no DOM. The server runs it on subtitles; the Settings page
@@ -18,10 +18,10 @@ export type CorrectionStage = (typeof CORRECTION_STAGES)[number];
 /**
  * - `word`: the exact text as a whole word. An edge of the term that is a
  *   letter, digit or underscore must not touch another letter, digit or
- *   underscore — any script, so `超級Unify網路` does not match `Unify`
+ *   underscore — any script, so `超級Anchor網路` does not match `Anchor`
  *   (Python's Unicode `\b`).
  * - `phrase`: the exact text anywhere, for scripts without spaces
- *   (`優比快` → `Ubiquiti` in a Chinese translation).
+ *   (`賽瑞尼` → `Sereniti` in a Chinese translation).
  * - `regex`: a JavaScript regular expression (Unicode mode); `$1` works in the
  *   replacement.
  */
@@ -34,7 +34,7 @@ export interface CorrectionRule {
   replace: string;
   stage: CorrectionStage;
   match: CorrectionMatchMode;
-  /** Default true: `Unify` and `unify` are separate rules unless this is off. */
+  /** Default true: `Anchor` and `anchor` are separate rules unless this is off. */
   caseSensitive: boolean;
   /**
    * Output stage only: the target language codes this rule applies to
@@ -44,8 +44,8 @@ export interface CorrectionRule {
   enabled: boolean;
   /**
    * Check with the translator: each match is replaced only after the LLM
-   * confirms it means the replacement (the brand "Unify app", not the verb
-   * "we unify"). Such rules run inside a translation job, where an LLM is at
+   * confirms it means the replacement (the brand "Anchor app", not the verb
+   * "we anchor"). Such rules run inside a translation job, where an LLM is at
    * hand, and never in the in-place file rewrite. Default false.
    */
   confirm?: boolean;
@@ -340,7 +340,7 @@ export function correctionRuleIssue(rule: CorrectionRule): CorrectionIssue | nul
     }
   }
   // A rule must be stable: its own replacement must come through it unchanged,
-  // or every run would rewrite the file again ("UniFi" → "UniFi Network").
+  // or every run would rewrite the file again ("AnKor" → "AnKor Network").
   const self = correctCueText(rule.replace, [{ rule, setName: "", pattern }]);
   if (self.text !== rule.replace) return { code: "unstableSelf", ...at };
   return null;
@@ -496,8 +496,8 @@ export function correctionRuleSetsErrors(raw: string): string[] {
 }
 
 /**
- * Lists that are each fine but undo each other where both apply (UniFi → Unify
- * on the whole library, Unify → UniFi on TV/). Every file there would fail its
+ * Lists that are each fine but undo each other where both apply (AnKor → Anchor
+ * on the whole library, Anchor → AnKor on TV/). Every file there would fail its
  * stability check, so the pair is refused on save. Checked per folder a list
  * names, and for output rules per target language, because rules limited to
  * different languages never run on the same file.
@@ -596,11 +596,11 @@ export function splitChecked(rules: readonly CompiledCorrection[]): {
 /**
  * Terms the translator should keep exactly as written: the replacement of
  * each plain (non-regex) source rule. Fed to the per-chunk glossary, so the
- * LLM is told "Ubiquiti -> Ubiquiti" whenever a chunk mentions it.
+ * LLM is told "Sereniti -> Sereniti" whenever a chunk mentions it.
  */
 /**
  * A term worth telling the translator to keep: a name, not an ordinary word.
- * Capitals, digits or a script without case (UniFi, U7 Pro, 優比快) say name;
+ * Capitals, digits or a script without case (AnKor, A7 Pro, 賽瑞尼) say name;
  * an all-lowercase Latin word (a typo fix like teh → the) does not, and pinning
  * it would tell the LLM to leave an English word untranslated.
  */

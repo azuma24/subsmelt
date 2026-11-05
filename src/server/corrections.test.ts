@@ -10,27 +10,27 @@ function rule(find: string, replace: string): CorrectionRule {
   return { id: find, find, replace, stage: "both", match: "word", caseSensitive: true, languages: [], enabled: true };
 }
 const SET: CorrectionRuleSet = {
-  id: "ubnt",
-  name: "Ubiquiti",
+  id: "sereniti",
+  name: "Sereniti",
   enabled: true,
   paths: [""],
-  rules: [rule("Unify", "Unifi"), rule("unify", "unifi"), rule("Ubiquity", "Ubiquiti")],
+  rules: [rule("Anchor", "Ankor"), rule("anchor", "ankor"), rule("Serenity", "Sereniti")],
 };
 const RULES = compileCorrectionsFor([SET], "x.srt", "source");
 
 const SRT = [
   "1",
   "00:00:01,000 --> 00:00:04,000",
-  "Welcome to Unify Network.",
+  "Welcome to Anchor Network.",
   "",
   "2",
   "00:00:05,500 --> 00:00:08,000",
-  "<i>Ubiquity</i> makes it,",
-  "and unify ties it together.",
+  "<i>Serenity</i> makes it,",
+  "and anchor ties it together.",
   "",
   "3",
   "00:00:09,000 --> 00:00:10,000",
-  "超級Unify網路 UnifyCloud Uni",
+  "超級Anchor網路 AnchorCloud Uni",
   "fy",
   "",
   "4",
@@ -39,19 +39,19 @@ const SRT = [
   "",
   "5",
   "00:00:12,000 --> 00:00:13,000",
-  "fy Unify  ",
+  "fy Anchor  ",
   "",
 ].join("\r\n");
 
 test("SRT: only cue text changes; numbers, timings, CRLF and spacing stay byte-identical", () => {
   const result = correctSubtitleContent(`﻿${SRT}`, "srt", RULES);
   const expected = `﻿${SRT}`
-    .replace("Unify Network", "Unifi Network")
-    .replace("<i>Ubiquity</i>", "<i>Ubiquiti</i>")
-    .replace("and unify", "and unifi")
-    .replace("fy Unify  ", "fy Unifi  ");
+    .replace("Anchor Network", "Ankor Network")
+    .replace("<i>Serenity</i>", "<i>Sereniti</i>")
+    .replace("and anchor", "and ankor")
+    .replace("fy Anchor  ", "fy Ankor  ");
   assert.equal(result.content, expected);
-  assert.deepEqual(result.counts, { Unify: 2, unify: 1, Ubiquity: 1 });
+  assert.deepEqual(result.counts, { Anchor: 2, anchor: 1, Serenity: 1 });
   assert.equal(result.total, 4);
   // Second run: byte-identical, zero replacements.
   assert.deepEqual(correctSubtitleContent(result.content, "srt", RULES), {
@@ -74,38 +74,38 @@ test("SRT: a cue whose number is a term is not touched", () => {
 
 test("WebVTT: header, NOTE blocks, cue ids and settings are left alone", () => {
   const vtt = [
-    "WEBVTT - Unify talk",
+    "WEBVTT - Anchor talk",
     "",
-    "NOTE Unify is the old name",
+    "NOTE Anchor is the old name",
     "",
-    "intro-Unify",
+    "intro-Anchor",
     "00:01.000 --> 00:04.000 align:start",
-    "Unify <00:02.000>Ubiquity",
+    "Anchor <00:02.000>Serenity",
     "",
   ].join("\n");
   const result = correctSubtitleContent(vtt, "vtt", RULES);
-  assert.equal(result.content, vtt.replace("Unify <00:02.000>Ubiquity", "Unifi <00:02.000>Ubiquiti"));
+  assert.equal(result.content, vtt.replace("Anchor <00:02.000>Serenity", "Ankor <00:02.000>Sereniti"));
 });
 
 test("ASS: only the Text field of Dialogue lines changes, commas in text included", () => {
   const ass = [
     "[Script Info]",
-    "Title: Unify",
+    "Title: Anchor",
     "",
     "[V4+ Styles]",
     "Format: Name, Fontname, Fontsize",
-    "Style: Unify,Arial,20",
+    "Style: Anchor,Arial,20",
     "",
     "[Events]",
     "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
-    "Dialogue: 0,0:00:01.00,0:00:02.00,Unify,Unify,0,0,0,,{\\i1}Unify{\\i0}, by Ubiquity\\Nunify",
-    "Comment: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Unify",
+    "Dialogue: 0,0:00:01.00,0:00:02.00,Anchor,Anchor,0,0,0,,{\\i1}Anchor{\\i0}, by Serenity\\Nanchor",
+    "Comment: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Anchor",
     "",
   ].join("\n");
   const result = correctSubtitleContent(ass, "ass", RULES);
   assert.equal(
     result.content,
-    ass.replace("{\\i1}Unify{\\i0}, by Ubiquity\\Nunify", "{\\i1}Unifi{\\i0}, by Ubiquiti\\Nunifi"),
+    ass.replace("{\\i1}Anchor{\\i0}, by Serenity\\Nanchor", "{\\i1}Ankor{\\i0}, by Sereniti\\Nankor"),
   );
   assert.equal(result.total, 3);
 });
@@ -134,7 +134,7 @@ test("files are corrected in place atomically, keeping their modification time",
   const result = correctSubtitleFile(file, RULES);
   assert.equal(result.error, undefined);
   assert.equal(result.total, 4);
-  assert.match(fs.readFileSync(file, "utf8"), /Unifi Network/);
+  assert.match(fs.readFileSync(file, "utf8"), /Ankor Network/);
   assert.equal(fs.statSync(file).mtimeMs, old.getTime());
   assert.deepEqual(fs.readdirSync(dir), ["Talk.en.srt"]);
   // Second run: nothing to do.
@@ -144,21 +144,21 @@ test("files are corrected in place atomically, keeping their modification time",
 test("a file that is not UTF-8, or does not parse, is reported and left untouched", () => {
   const dir = tmpDir();
   const latin1 = path.join(dir, "a.srt");
-  const bytes = Buffer.from("1\n00:00:01,000 --> 00:00:02,000\nUnify caf\xe9\n", "latin1");
+  const bytes = Buffer.from("1\n00:00:01,000 --> 00:00:02,000\nAnchor caf\xe9\n", "latin1");
   fs.writeFileSync(latin1, bytes);
   assert.match(correctSubtitleFile(latin1, RULES).error ?? "", /not UTF-8/);
   assert.deepEqual(fs.readFileSync(latin1), bytes);
 
   const broken = path.join(dir, "b.srt");
-  fs.writeFileSync(broken, "Unify without any cue\n");
+  fs.writeFileSync(broken, "Anchor without any cue\n");
   assert.equal(correctSubtitleFile(broken, RULES).total, 0);
-  assert.equal(fs.readFileSync(broken, "utf8"), "Unify without any cue\n");
+  assert.equal(fs.readFileSync(broken, "utf8"), "Anchor without any cue\n");
 
   assert.ok(correctSubtitleFile(path.join(dir, "missing.srt"), RULES).error);
 });
 
 test("mediaRelativePath refuses files outside the media folder", () => {
-  assert.equal(mediaRelativePath("/media/UniFi/a.srt", "/media"), "UniFi/a.srt");
+  assert.equal(mediaRelativePath("/media/AnKor/a.srt", "/media"), "AnKor/a.srt");
   assert.equal(mediaRelativePath("/elsewhere/a.srt", "/media"), null);
 });
 
@@ -172,7 +172,7 @@ test("an in-place fix keeps the file's permissions and corrects a symlink's targ
   const result = correctSubtitleFile(link, RULES);
   assert.equal(result.error, undefined);
   assert.equal(fs.lstatSync(link).isSymbolicLink(), true);
-  assert.match(fs.readFileSync(real, "utf8"), /Unifi Network/);
+  assert.match(fs.readFileSync(real, "utf8"), /Ankor Network/);
   assert.equal(fs.statSync(real).mode & 0o777, 0o666);
 });
 

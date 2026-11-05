@@ -7,10 +7,10 @@ function rules(...list: CorrectionRule[]) {
   const set: CorrectionRuleSet = { id: "s", name: "s", enabled: true, paths: [""], rules: list };
   return compileCorrectionsFor([set], "a.srt", "source");
 }
-const unify: CorrectionRule = {
-  id: "unify",
-  find: "unify",
-  replace: "UniFi",
+const anchor: CorrectionRule = {
+  id: "anchor",
+  find: "anchor",
+  replace: "AnKor",
   stage: "source",
   match: "word",
   caseSensitive: true,
@@ -19,7 +19,7 @@ const unify: CorrectionRule = {
   confirm: true,
 };
 
-const TEXTS = ["Open the unify app", "We unify the dashboards", "Nothing here", "unify, then unify again"];
+const TEXTS = ["Open the anchor app", "We anchor the dashboards", "Nothing here", "anchor, then anchor again"];
 
 /** A stand-in LLM: says yes when the marked occurrence is followed by "app". */
 function brandOnly(prompt: string): Promise<string> {
@@ -28,66 +28,66 @@ function brandOnly(prompt: string): Promise<string> {
 }
 
 test("only confirmed matches are replaced; the rest are kept and counted", async () => {
-  const result = await checkCorrections(TEXTS, rules(unify), brandOnly);
+  const result = await checkCorrections(TEXTS, rules(anchor), brandOnly);
   assert.deepEqual(result.texts, [
-    "Open the UniFi app",
-    "We unify the dashboards",
+    "Open the AnKor app",
+    "We anchor the dashboards",
     "Nothing here",
-    "unify, then unify again",
+    "anchor, then anchor again",
   ]);
-  assert.deepEqual(result.confirmed, { unify: 1 });
-  assert.deepEqual(result.kept, { unify: 3 });
+  assert.deepEqual(result.confirmed, { anchor: 1 });
+  assert.deepEqual(result.kept, { anchor: 3 });
   assert.equal(result.failedBatches, 0);
 });
 
 test("the question marks the term and carries the neighbouring lines", async () => {
   let prompt = "";
-  await checkCorrections(TEXTS, rules(unify), (p) => {
+  await checkCorrections(TEXTS, rules(anchor), (p) => {
     prompt = p;
     return Promise.resolve("[]");
   });
   const items = JSON.parse(prompt.slice(prompt.indexOf("[\n")));
   assert.deepEqual(items[1], {
     id: 1,
-    before: "Open the unify app",
-    line: "We «unify» the dashboards",
+    before: "Open the anchor app",
+    line: "We «anchor» the dashboards",
     after: "Nothing here",
-    term: "unify",
-    replaceWith: "UniFi",
+    term: "anchor",
+    replaceWith: "AnKor",
   });
 });
 
 test("each occurrence gets its own answer, so a line with both meanings is fixed only where it should be", async () => {
-  const result = await checkCorrections(["Use the unify app to unify the dashboards"], rules(unify), brandOnly);
-  assert.deepEqual(result.texts, ["Use the UniFi app to unify the dashboards"]);
-  assert.deepEqual(result.confirmed, { unify: 1 });
-  assert.deepEqual(result.kept, { unify: 1 });
+  const result = await checkCorrections(["Use the anchor app to anchor the dashboards"], rules(anchor), brandOnly);
+  assert.deepEqual(result.texts, ["Use the AnKor app to anchor the dashboards"]);
+  assert.deepEqual(result.confirmed, { anchor: 1 });
+  assert.deepEqual(result.kept, { anchor: 1 });
 });
 
 test("a failed request or a garbled answer keeps everything as written", async () => {
-  const failed = await checkCorrections(TEXTS, rules(unify), () => Promise.reject(new Error("boom")));
+  const failed = await checkCorrections(TEXTS, rules(anchor), () => Promise.reject(new Error("boom")));
   assert.deepEqual(failed.texts, TEXTS);
   assert.equal(failed.failedBatches, 1);
-  const garbled = await checkCorrections(TEXTS, rules(unify), () => Promise.resolve("sure, replace them all"));
+  const garbled = await checkCorrections(TEXTS, rules(anchor), () => Promise.resolve("sure, replace them all"));
   assert.deepEqual(garbled.texts, TEXTS);
 });
 
 test("a stop or cancel is not swallowed", async () => {
   await assert.rejects(
-    checkCorrections(TEXTS, rules(unify), () => Promise.reject(new Error("STOP_REQUESTED"))),
+    checkCorrections(TEXTS, rules(anchor), () => Promise.reject(new Error("STOP_REQUESTED"))),
     /STOP_REQUESTED/,
   );
 });
 
 test("matches are sent in batches of 40", async () => {
-  const many = Array.from({ length: 95 }, () => "the unify app");
+  const many = Array.from({ length: 95 }, () => "the anchor app");
   let calls = 0;
-  const result = await checkCorrections(many, rules(unify), (p) => {
+  const result = await checkCorrections(many, rules(anchor), (p) => {
     calls++;
     return brandOnly(p);
   });
   assert.equal(calls, 3);
-  assert.ok(result.texts.every((t) => t === "the UniFi app"));
+  assert.ok(result.texts.every((t) => t === "the AnKor app"));
 });
 
 test("answers are read from a bare array, a fenced block or an answers object, and junk is ignored", () => {

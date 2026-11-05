@@ -136,8 +136,8 @@ export interface TranslateFileOptions {
   onUsage?: (u: UsageEvent) => void;
   /**
    * Subtitle corrections (src/shared/corrections.ts). Source rules fix each
-   * cue's text before analysis and translation, so the LLM reads "Ubiquiti",
-   * not Whisper's "Ubiquity"; output rules fix each translated cue just before
+   * cue's text before analysis and translation, so the LLM reads "Sereniti",
+   * not Whisper's "Serenity"; output rules fix each translated cue just before
    * the final save. Both default to none.
    */
   sourceCorrections?: readonly CompiledCorrection[];

@@ -49,17 +49,17 @@ test("source rules fix what the LLM reads and pin the term; output rules fix wha
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-corrections-engine-"));
   const srtPath = path.join(dir, "Talk.en.srt");
   const outputPath = path.join(dir, "Talk.chi.srt");
-  fs.writeFileSync(srtPath, "1\n00:00:01,000 --> 00:00:02,000\nUbiquity makes Unify gear\n", "utf8");
+  fs.writeFileSync(srtPath, "1\n00:00:01,000 --> 00:00:02,000\nSerenity makes Anchor gear\n", "utf8");
 
   const set: CorrectionRuleSet = {
-    id: "ubnt",
-    name: "Ubiquiti",
+    id: "sereniti",
+    name: "Sereniti",
     enabled: true,
     paths: [""],
     rules: [
-      rule("Ubiquity", "Ubiquiti"),
-      rule("Unify", "UniFi"),
-      rule("優比快", "Ubiquiti", { stage: "output", match: "phrase" }),
+      rule("Serenity", "Sereniti"),
+      rule("Anchor", "AnKor"),
+      rule("賽瑞尼", "Sereniti", { stage: "output", match: "phrase" }),
     ],
   };
   const source = compileCorrectionsFor([set], "Talk.en.srt", "source");
@@ -75,7 +75,7 @@ test("source rules fix what the LLM reads and pin the term; output rules fix wha
     const user = messageContent(body, "user");
     chunkPrompts.push(user);
     // The "model" gets the brand wrong in Chinese; the output rule fixes it.
-    return chatCompletion(JSON.stringify(["優比快 製造 UniFi 設備"]));
+    return chatCompletion(JSON.stringify(["賽瑞尼 製造 AnKor 設備"]));
   }) as typeof fetch;
 
   const reported: Array<[string, CorrectionCounts]> = [];
@@ -105,14 +105,14 @@ test("source rules fix what the LLM reads and pin the term; output rules fix wha
   }
 
   const prompt = chunkPrompts.join("\n");
-  assert.match(prompt, /Ubiquiti makes UniFi gear/);
-  assert.doesNotMatch(prompt, /Ubiquity|Unify/);
-  assert.match(prompt, /- Ubiquiti -> Ubiquiti/);
-  assert.match(prompt, /- UniFi -> UniFi/);
-  assert.match(fs.readFileSync(outputPath, "utf8"), /Ubiquiti 製造 UniFi 設備/);
+  assert.match(prompt, /Sereniti makes AnKor gear/);
+  assert.doesNotMatch(prompt, /Serenity|Anchor/);
+  assert.match(prompt, /- Sereniti -> Sereniti/);
+  assert.match(prompt, /- AnKor -> AnKor/);
+  assert.match(fs.readFileSync(outputPath, "utf8"), /Sereniti 製造 AnKor 設備/);
   assert.deepEqual(reported, [
-    ["source", { Ubiquity: 1, Unify: 1 }],
-    ["output", { 優比快: 1 }],
+    ["source", { Serenity: 1, Anchor: 1 }],
+    ["output", { 賽瑞尼: 1 }],
   ]);
 });
 
@@ -122,15 +122,15 @@ test("checked rules ask the LLM per match and replace only a confirmed one", asy
   const outputPath = path.join(dir, "Talk.chi.srt");
   fs.writeFileSync(
     srtPath,
-    "1\n00:00:01,000 --> 00:00:02,000\nOpen the unify app\n\n2\n00:00:03,000 --> 00:00:04,000\nWe unify the dashboards\n",
+    "1\n00:00:01,000 --> 00:00:02,000\nOpen the anchor app\n\n2\n00:00:03,000 --> 00:00:04,000\nWe anchor the dashboards\n",
     "utf8",
   );
   const set: CorrectionRuleSet = {
-    id: "ubnt",
-    name: "Ubiquiti",
+    id: "sereniti",
+    name: "Sereniti",
     enabled: true,
     paths: [""],
-    rules: [rule("unify", "UniFi", { confirm: true })],
+    rules: [rule("anchor", "AnKor", { confirm: true })],
   };
   const source = compileCorrectionsFor([set], "Talk.en.srt", "source");
   const chunkPrompts: string[] = [];
@@ -180,12 +180,12 @@ test("checked rules ask the LLM per match and replace only a confirmed one", asy
     globalThis.fetch = originalFetch;
   }
   assert.equal(checks, 1);
-  assert.deepEqual(checked, [["source", { unify: 1 }, { unify: 1 }]]);
+  assert.deepEqual(checked, [["source", { anchor: 1 }, { anchor: 1 }]]);
   const prompt = chunkPrompts.join("\n");
-  assert.match(prompt, /Open the UniFi app/);
-  assert.match(prompt, /We unify the dashboards/);
+  assert.match(prompt, /Open the AnKor app/);
+  assert.match(prompt, /We anchor the dashboards/);
   // A checked rule's term is never pinned as a name.
-  assert.doesNotMatch(prompt, /UniFi -> UniFi/);
+  assert.doesNotMatch(prompt, /AnKor -> AnKor/);
   assert.ok(usageKinds.includes("check"));
 });
 
@@ -193,13 +193,13 @@ test("an offline first connection hands the check to the next one instead of fai
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-corrections-fallback-"));
   const srtPath = path.join(dir, "Talk.en.srt");
   const outputPath = path.join(dir, "Talk.chi.srt");
-  fs.writeFileSync(srtPath, "1\n00:00:01,000 --> 00:00:02,000\nOpen the unify app\n", "utf8");
+  fs.writeFileSync(srtPath, "1\n00:00:01,000 --> 00:00:02,000\nOpen the anchor app\n", "utf8");
   const set: CorrectionRuleSet = {
-    id: "ubnt",
-    name: "Ubiquiti",
+    id: "sereniti",
+    name: "Sereniti",
     enabled: true,
     paths: [""],
-    rules: [rule("unify", "UniFi", { confirm: true })],
+    rules: [rule("anchor", "AnKor", { confirm: true })],
   };
   const source = compileCorrectionsFor([set], "Talk.en.srt", "source");
   const checkedBy: string[] = [];
@@ -244,5 +244,5 @@ test("an offline first connection hands the check to the next one instead of fai
     globalThis.fetch = originalFetch;
   }
   assert.ok(checkedBy.length > 0 && checkedBy.every((url) => url.startsWith("http://127.0.0.2:9/")));
-  assert.match(fs.readFileSync(outputPath, "utf8"), /T Open the UniFi app/);
+  assert.match(fs.readFileSync(outputPath, "utf8"), /T Open the AnKor app/);
 });

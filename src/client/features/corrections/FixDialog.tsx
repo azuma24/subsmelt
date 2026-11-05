@@ -61,8 +61,8 @@ export function FixDialog({ find: initialFind, column, srtPath, outputPath, targ
   const folders = useMemo(() => ancestorFolders(relativeFolder(file, mediaDir)), [file, mediaDir]);
   const [scope, setScope] = useState<"file" | "folder">("folder");
   const lists = useMemo(() => parseCorrectionRuleSets(String(settings.correction_rule_sets ?? "[]")), [settings]);
-  // Start at the nearest folder that already has a list (a "Ubiquiti" list on UniFi/ for a file in
-  // UniFi/Tutorials/), so the fix joins it; without one, at the file's own folder.
+  // Start at the nearest folder that already has a list (a "Sereniti" list on AnKor/ for a file in
+  // AnKor/Tutorials/), so the fix joins it; without one, at the file's own folder.
   const [folder, setFolder] = useState(
     () => folders.find((f) => lists.some((list) => list.paths.includes(f))) ?? folders[0] ?? "",
   );

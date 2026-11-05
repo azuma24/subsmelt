@@ -55,13 +55,13 @@ test("hrefs omit defaults", () => {
 });
 
 test("an href parses back to the state it was built from", () => {
-  const state = { view: "transcriptions", status: "notQueued", rows: "files", folder: "UniFi/Tutorials" } as const;
+  const state = { view: "transcriptions", status: "notQueued", rows: "files", folder: "AnKor/Tutorials" } as const;
   assert.deepEqual(parse(dashboardHref(state).slice(2)), state);
 });
 
 test("a folder is read from the query without stray slashes, and omitted when it is the whole library", () => {
-  assert.equal(parse("folder=/UniFi/Tutorials/").folder, "UniFi/Tutorials");
+  assert.equal(parse("folder=/AnKor/Tutorials/").folder, "AnKor/Tutorials");
   assert.equal(parse("folder=").folder, "all");
   assert.equal(dashboardHref({ folder: "all" }), "/");
-  assert.equal(dashboardHref({ folder: "UniFi" }), "/?folder=UniFi");
+  assert.equal(dashboardHref({ folder: "AnKor" }), "/?folder=AnKor");
 });
