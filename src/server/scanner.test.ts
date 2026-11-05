@@ -175,6 +175,7 @@ test("an orphan subtitle is listed with no languages while translate_without_vid
     videoPath: null,
     videoName: null,
     videoMtime: null,
+    subtitleMtime: fs.statSync(path.join(dir, "Loose.srt")).mtimeMs,
     subtitles: [{ srtPath: path.join(dir, "Loose.srt"), srtName: "Loose.srt", tasks: [] }],
   });
   assert.deepEqual(jobsIn(dir), []);
@@ -570,4 +571,17 @@ test("a scan tells a translation already on disk from an output another subtitle
   // Pair.srt owns Pair.chi.srt, so Pair.en.srt is skipped with nothing on disk.
   assert.deepEqual(await tasksOf("Pair.en.srt"), [["skipped", false]]);
   assert.deepEqual(await tasksOf("Pair.srt"), [["new", false]]);
+});
+
+test("an orphan whose stat fails remains listed with an unknown modification time", async (t) => {
+  useTasks();
+  const dir = library("orphan-stat-failure", ["Lost.srt"]);
+  const lost = path.join(dir, "Lost.srt");
+  const original = fs.promises.stat;
+  t.mock.method(fs.promises, "stat", async (...args: Parameters<typeof original>) => {
+    if (args[0] === lost) throw new Error("stat failed");
+    return original(...args);
+  });
+  const { files } = await scanFolder(true);
+  assert.equal(files.find((file) => file.subtitles.some((sub) => sub.srtPath === lost))?.subtitleMtime, null);
 });

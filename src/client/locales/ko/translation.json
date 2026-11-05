@@ -1470,6 +1470,13 @@
     }
   },
   "library": {
+    "sort": {
+      "label": "파일 정렬",
+      "nameAsc": "이름: A–Z",
+      "nameDesc": "이름: Z–A",
+      "dateDesc": "수정 날짜: 최신순",
+      "dateAsc": "수정 날짜: 오래된순"
+    },
     "summary": {
       "files_one": "파일 {{count}}개",
       "files_other": "파일 {{count}}개"

@@ -264,3 +264,15 @@ test("?rows=files lists one row per file with a chip per language, and filters c
   assert.ok(page.buttons.includes("Not queued 1"));
   assert.ok(!page.text.includes("Episode 01.en.srt"), "jobs with no Library file are not files");
 });
+
+test("Files exposes an accessible sort selector on desktop and mobile, not Jobs", () => {
+  for (const isMobile of [false, true]) {
+    const files = renderPage(<LibraryPage />, configured, { path: "/?rows=files", isMobile });
+    assert.match(files.html, /<label for="library-file-sort"[^>]*>Sort files<\/label>/);
+    for (const label of ["Name: A–Z", "Name: Z–A", "Date modified: newest first", "Date modified: oldest first"]) {
+      assert.ok(files.html.includes(label), label);
+    }
+    const jobs = renderPage(<LibraryPage />, configured, { path: "/?rows=jobs", isMobile });
+    assert.ok(!jobs.html.includes('id="library-file-sort"'));
+  }
+});

@@ -51,3 +51,26 @@ export function fileMatchesFilters(
   if (target === "all") return true;
   return entry.chips.some(({ task }) => targetLabel(task) === target);
 }
+
+export type FileSort = "name-asc" | "name-desc" | "date-desc" | "date-asc";
+
+/** Sort a copy globally, with unknown dates last and stable name/path ties. */
+export function sortFileEntries(entries: FileEntry[], sort: FileSort): FileEntry[] {
+  const compareText = (a: string, b: string) => a.localeCompare(b) || (a < b ? -1 : a > b ? 1 : 0);
+  const namePath = (a: FileEntry, b: FileEntry) =>
+    compareText(a.item.name, b.item.name) || compareText(a.item.key, b.item.key);
+  return [...entries].sort((a, b) => {
+    if (sort.startsWith("date")) {
+      const time = (entry: FileEntry) => {
+        const value = entry.item.kind === "video" ? entry.item.file.videoMtime : entry.item.file.subtitleMtime;
+        return typeof value === "number" && Number.isFinite(value) ? value : null;
+      };
+      const at = time(a);
+      const bt = time(b);
+      if (at === null || bt === null) return at === bt ? namePath(a, b) : at === null ? 1 : -1;
+      return (sort === "date-asc" ? at - bt : bt - at) || namePath(a, b);
+    }
+    const names = compareText(a.item.name, b.item.name);
+    return (sort === "name-desc" ? -names : names) || compareText(a.item.key, b.item.key);
+  });
+}

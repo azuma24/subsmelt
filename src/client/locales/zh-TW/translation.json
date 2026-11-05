@@ -1470,6 +1470,13 @@
     }
   },
   "library": {
+    "sort": {
+      "label": "排序檔案",
+      "nameAsc": "名稱：A–Z",
+      "nameDesc": "名稱：Z–A",
+      "dateDesc": "修改日期：最新優先",
+      "dateAsc": "修改日期：最舊優先"
+    },
     "summary": {
       "files_one": "{{count}} 個檔案",
       "files_other": "{{count}} 個檔案"

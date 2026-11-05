@@ -1470,6 +1470,13 @@
     }
   },
   "library": {
+    "sort": {
+      "label": "Sort files",
+      "nameAsc": "Name: A–Z",
+      "nameDesc": "Name: Z–A",
+      "dateDesc": "Date modified: newest first",
+      "dateAsc": "Date modified: oldest first"
+    },
     "summary": {
       "files_one": "{{count}} file",
       "files_other": "{{count}} files"

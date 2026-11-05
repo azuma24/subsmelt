@@ -24,8 +24,16 @@ import { LibraryEmpty } from "./LibraryStates";
 import type { LibraryItem } from "./library-model";
 import { useLibraryFiles } from "./useLibraryFiles";
 import type { RowLayout } from "./dashboard-params";
-import { fileEntries, fileFilterOptions, fileMatchesFilters, fileMatchesStatus } from "./file-entries";
+import {
+  fileEntries,
+  fileFilterOptions,
+  fileMatchesFilters,
+  fileMatchesStatus,
+  sortFileEntries,
+  type FileSort,
+} from "./file-entries";
 import { FileList } from "./FileList";
+import { selectCls } from "../../ui/SortControls";
 
 interface JobsViewProps {
   status: JobStatusFilter;
@@ -80,6 +88,7 @@ export function JobsView({
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [targetFilter, setTargetFilter] = useState("all");
   const [query, setQuery] = useState("");
+  const [fileSort, setFileSort] = useState<FileSort>("name-asc");
   const searchRef = useRef<HTMLInputElement>(null);
   const libraryQuery = useLibraryQuery();
 
@@ -191,15 +200,13 @@ export function JobsView({
   ];
   const visibleEntries = useMemo(
     () =>
-      entries
-        .filter((entry) => fileMatchesStatus(entry, status))
-        .filter((entry) => fileMatchesFilters(entry, query, folderFilter, targetFilter, rootLabel))
-        .sort(
-          (a, b) =>
-            (a.item.folder || rootLabel).localeCompare(b.item.folder || rootLabel) ||
-            a.item.name.localeCompare(b.item.name),
-        ),
-    [entries, status, query, folderFilter, targetFilter, rootLabel],
+      sortFileEntries(
+        entries
+          .filter((entry) => fileMatchesStatus(entry, status))
+          .filter((entry) => fileMatchesFilters(entry, query, folderFilter, targetFilter, rootLabel)),
+        fileSort,
+      ),
+    [entries, status, query, folderFilter, targetFilter, rootLabel, fileSort],
   );
   // In Files rows the filters count files, not jobs.
   const shownSegments =
@@ -503,6 +510,24 @@ export function JobsView({
               onClearFinished={handleClearFinished}
               t={t}
             />
+            {rows === "files" && (
+              <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2">
+                <label htmlFor="library-file-sort" className="text-xs text-muted">
+                  {t("library.sort.label")}
+                </label>
+                <select
+                  id="library-file-sort"
+                  className={`${selectCls} max-w-full`}
+                  value={fileSort}
+                  onChange={(event) => setFileSort(event.target.value as FileSort)}
+                >
+                  <option value="name-asc">{t("library.sort.nameAsc")}</option>
+                  <option value="name-desc">{t("library.sort.nameDesc")}</option>
+                  <option value="date-desc">{t("library.sort.dateDesc")}</option>
+                  <option value="date-asc">{t("library.sort.dateAsc")}</option>
+                </select>
+              </div>
+            )}
             <SelectionBar
               count={selectedPendingCount}
               summaryLabel={t("dashboard.selectionSummary", { count: selectedPendingCount })}

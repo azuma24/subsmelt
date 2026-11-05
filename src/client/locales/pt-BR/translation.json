@@ -1477,6 +1477,13 @@
     }
   },
   "library": {
+    "sort": {
+      "label": "Ordenar arquivos",
+      "nameAsc": "Nome: A–Z",
+      "nameDesc": "Nome: Z–A",
+      "dateDesc": "Data de modificação: mais recentes",
+      "dateAsc": "Data de modificação: mais antigos"
+    },
     "summary": {
       "files_one": "{{count}} arquivo",
       "files_many": "{{count}} arquivos",

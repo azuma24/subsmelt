@@ -79,3 +79,39 @@ test("search, folder and language filters apply to files", () => {
   assert.equal(fileMatchesFilters(episode, "", "all", "jpn (jpn)", "Media root"), true);
   assert.equal(fileMatchesFilters(bare, "", "all", "jpn (jpn)", "Media root"), false);
 });
+
+test("global sorting covers all directions, stable ties, absent dates and filtered entries without mutation", async () => {
+  const { sortFileEntries } = await import("./file-entries");
+  const source: ScannedFile[] = [
+    { videoPath: "/media/Z/B.mkv", videoName: "B.mkv", videoMtime: 10, subtitles: [] },
+    { videoPath: "/media/A/A.mkv", videoName: "A.mkv", videoMtime: 20, subtitles: [] },
+    { videoPath: "/media/Z/A.mkv", videoName: "A.mkv", videoMtime: 20, subtitles: [] },
+    {
+      videoPath: null,
+      videoName: null,
+      videoMtime: null,
+      subtitleMtime: 5,
+      subtitles: [{ srtPath: "/media/A/C.srt", srtName: "C.srt", tasks: [] }],
+    },
+    {
+      videoPath: null,
+      videoName: null,
+      videoMtime: null,
+      subtitles: [{ srtPath: "/media/A/D.srt", srtName: "D.srt", tasks: [] }],
+    },
+  ];
+  const entries = fileEntries(toLibraryItems(source, "/media"), new Map());
+  const keys = (sorted: typeof entries) => sorted.map((entry) => entry.item.key);
+  const a = "/media/A/A.mkv",
+    az = "/media/Z/A.mkv",
+    b = "/media/Z/B.mkv",
+    c = "/media/A/C.srt",
+    d = "/media/A/D.srt";
+  assert.deepEqual(keys(sortFileEntries(entries, "name-asc")), [a, az, b, c, d]);
+  assert.deepEqual(keys(sortFileEntries(entries, "name-desc")), [d, c, b, a, az]);
+  assert.deepEqual(keys(sortFileEntries(entries, "date-desc")), [a, az, b, c, d]);
+  assert.deepEqual(keys(sortFileEntries(entries, "date-asc")), [c, b, a, az, d]);
+  const filtered = entries.filter((entry) => fileMatchesFilters(entry, "", "A", "all", "Root"));
+  assert.deepEqual(keys(sortFileEntries(filtered, "date-asc")), [c, a, d]);
+  assert.deepEqual(keys(entries), [b, a, az, c, d]);
+});

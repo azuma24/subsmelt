@@ -353,6 +353,15 @@ export async function scanFolder(createJobs = true): Promise<ScanResult> {
     }
   }
 
+  const matchingVideo = (srtPath: string): string | null => {
+    const ext = path.extname(srtPath);
+    const stem = path.basename(srtPath, ext);
+    const dir = path.dirname(srtPath);
+    return videoIndex.get(`${dir}/${stem}`) ?? videoIndex.get(`${dir}/${stripLangSuffix(stem)}`) ?? null;
+  };
+  // Only source subtitles without a video need their own modification time.
+  const orphanMtimes = await statMtimes(sourcesShortestFirst.filter((file) => !matchingVideo(file)));
+
   // Group by video file
   // Key: videoPath or "orphan:{srtPath}"
   const grouped = new Map<string, ScannedFile>();
@@ -392,14 +401,7 @@ export async function scanFolder(createJobs = true): Promise<ScanResult> {
     const baseStem = stripLangSuffix(stem);
 
     // Match to video
-    let videoPath: string | null = null;
-    for (const tryName of [stem, baseStem]) {
-      const match = videoIndex.get(`${dir}/${tryName}`);
-      if (match) {
-        videoPath = match;
-        break;
-      }
-    }
+    const videoPath = matchingVideo(srtPath);
 
     // Resolve directory rule for this subtitle's folder.
     const relDir = path.relative(mediaRoot, path.resolve(dir)).split(path.sep).join("/");
@@ -433,6 +435,7 @@ export async function scanFolder(createJobs = true): Promise<ScanResult> {
         videoPath,
         videoName: videoPath ? path.basename(videoPath) : null,
         videoMtime: videoPath ? (videoMtimes.get(videoPath) ?? null) : null,
+        subtitleMtime: videoPath ? undefined : (orphanMtimes.get(srtPath) ?? null),
         subtitles: [],
       });
     }

@@ -1470,6 +1470,13 @@
     }
   },
   "library": {
+    "sort": {
+      "label": "ファイルの並べ替え",
+      "nameAsc": "名前：A–Z",
+      "nameDesc": "名前：Z–A",
+      "dateDesc": "更新日時：新しい順",
+      "dateAsc": "更新日時：古い順"
+    },
     "summary": {
       "files_one": "{{count}} 件のファイル",
       "files_other": "{{count}} 件のファイル"

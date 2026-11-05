@@ -24,6 +24,8 @@ export interface ScannedFile {
   videoPath: string | null;
   videoName: string | null;
   videoMtime: number | null;
+  /** Source subtitle mtime for an orphan; absent in older scan responses. */
+  subtitleMtime?: number | null;
   subtitles: ScannedSubtitle[];
 }
 
