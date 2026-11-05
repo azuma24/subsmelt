@@ -27,7 +27,7 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends build-essential nasm curl ca-certificates xz-utils \
   && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
-RUN curl -fsSL -o ffmpeg.tar.xz "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz" \
+RUN curl -fsSL --connect-timeout 30 --retry 5 --retry-delay 5 --retry-all-errors -o ffmpeg.tar.xz "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz" \
   && echo "${FFMPEG_SHA256}  ffmpeg.tar.xz" | sha256sum -c - \
   && tar -xJf ffmpeg.tar.xz --strip-components=1 \
   && rm ffmpeg.tar.xz
@@ -61,10 +61,10 @@ RUN set -eu; \
     arm64) asset=yt-dlp_linux_aarch64; sum="${YTDLP_SHA256_ARM64}" ;; \
     *) echo "yt-dlp: no standalone build for ${TARGETARCH}" >&2; exit 1 ;; \
   esac; \
-  curl -fsSL -o /yt-dlp "https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}/${asset}"; \
+  curl -fsSL --connect-timeout 30 --retry 5 --retry-delay 5 --retry-all-errors -o /yt-dlp "https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}/${asset}"; \
   echo "${sum}  /yt-dlp" | sha256sum -c -; \
   chmod 755 /yt-dlp; \
-  curl -fsSL -o /yt-dlp-LICENSE "https://raw.githubusercontent.com/yt-dlp/yt-dlp/${YTDLP_VERSION}/LICENSE"
+  curl -fsSL --connect-timeout 30 --retry 5 --retry-delay 5 --retry-all-errors -o /yt-dlp-LICENSE "https://raw.githubusercontent.com/yt-dlp/yt-dlp/${YTDLP_VERSION}/LICENSE"
 
 # ---- Production Stage ----
 FROM node:22-slim
