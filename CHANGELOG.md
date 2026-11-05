@@ -6,9 +6,15 @@ installer, macOS app) share a version number and are released together, as
 
 ## [Unreleased]
 
+## [0.8.4] — 2026-11-05
+
 ### Interface
 
 - The Library's folder sidebar can be resized: drag its right edge between 100 and 480 px, or focus the edge and use the arrow keys, Home and End. Double-click the edge to reset it. Each browser remembers its own width. The sidebar stops at 40% of a small window, and a very narrow one hides file counts, pin buttons and folder icons; hover a folder for its full name.
+
+### Whisper backends
+
+- No changes and no new installers. The current backend release stays 0.8.0.
 
 ## [0.8.3] — 2026-11-05
 
