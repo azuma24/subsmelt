@@ -6,6 +6,8 @@ installer, macOS app) share a version number and are released together, as
 
 ## [Unreleased]
 
+## [0.8.3] — 2026-11-05
+
 ### Translation
 
 - Corrections no longer lose rules that were typed but not added: clicking **Save rules** used to store the list without the word pair still in the last line. A filled-in pair now joins the list when you click away.
@@ -14,6 +16,10 @@ installer, macOS app) share a version number and are released together, as
 ### Settings
 
 - Saving Settings now sends only the fields you changed. A tab left open could put old values back over newer ones when it saved, which could wipe correction rules saved from another tab or device.
+
+### Whisper backends
+
+- No changes and no new installers. The current backend release stays 0.8.0.
 
 ## [0.8.2] — 2026-11-05
 
