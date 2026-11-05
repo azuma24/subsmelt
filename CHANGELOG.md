@@ -6,7 +6,9 @@ installer, macOS app) share a version number and are released together, as
 
 ## [Unreleased]
 
-## [0.8.1] — 2026-11-05
+## [0.8.2] — 2026-11-05
+
+This release replaces 0.8.1, which was withdrawn.
 
 ### Translation
 
