@@ -111,12 +111,15 @@ export function lowercaseTwin(
 }
 
 /** Non-default options, as the short tags a collapsed rule row shows. */
-export function ruleTags(rule: CorrectionRule): Array<"output" | "both" | "phrase" | "regex" | "anyCase" | "langs"> {
-  const tags: Array<"output" | "both" | "phrase" | "regex" | "anyCase" | "langs"> = [];
+export function ruleTags(
+  rule: CorrectionRule,
+): Array<"output" | "both" | "phrase" | "regex" | "anyCase" | "langs" | "check"> {
+  const tags: Array<"output" | "both" | "phrase" | "regex" | "anyCase" | "langs" | "check"> = [];
   if (rule.stage === "output" || rule.stage === "both") tags.push(rule.stage);
   if (rule.match === "phrase" || rule.match === "regex") tags.push(rule.match);
   if (!rule.caseSensitive) tags.push("anyCase");
   if (rule.stage !== "source" && rule.languages.length) tags.push("langs");
+  if (rule.confirm) tags.push("check");
   return tags;
 }
 

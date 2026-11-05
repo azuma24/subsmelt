@@ -42,6 +42,13 @@ export interface CorrectionRule {
    */
   languages: string[];
   enabled: boolean;
+  /**
+   * Check with the translator: each match is replaced only after the LLM
+   * confirms it means the replacement (the brand "Unify app", not the verb
+   * "we unify"). Such rules run inside a translation job, where an LLM is at
+   * hand, and never in the in-place file rewrite. Default false.
+   */
+  confirm?: boolean;
 }
 
 export interface CorrectionRuleSet {
@@ -292,6 +299,7 @@ export function parseCorrectionRule(raw: unknown): CorrectionRule | null {
         )
       : [],
     enabled: e.enabled !== false,
+    ...(e.confirm === true ? { confirm: true } : {}),
   };
   return rule;
 }
@@ -451,7 +459,17 @@ export function compileCorrectionsFor(
 
 /** A stable fingerprint of the rules, so finished work is redone when they change. */
 export function correctionsFingerprint(rules: readonly CompiledCorrection[]): string {
-  return JSON.stringify(rules.map(({ rule }) => [rule.find, rule.replace, rule.match, rule.caseSensitive]));
+  return JSON.stringify(
+    rules.map(({ rule }) => [rule.find, rule.replace, rule.match, rule.caseSensitive, rule.confirm === true]),
+  );
+}
+
+/** Rules that need no LLM (the in-place rewrite) and those to check with the translator. */
+export function splitChecked(rules: readonly CompiledCorrection[]): {
+  plain: CompiledCorrection[];
+  checked: CompiledCorrection[];
+} {
+  return { plain: rules.filter((c) => !c.rule.confirm), checked: rules.filter((c) => c.rule.confirm) };
 }
 
 /**
@@ -474,7 +492,8 @@ export function correctionGlossaryTerms(rules: readonly CompiledCorrection[]): s
   const terms: string[] = [];
   for (const { rule } of rules) {
     const term = rule.replace.trim();
-    if (rule.match === "regex" || !term || !looksLikeName(term)) continue;
+    // A checked rule's term is also an ordinary word; pinning it would undo the check.
+    if (rule.match === "regex" || rule.confirm || !term || !looksLikeName(term)) continue;
     const key = term.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);

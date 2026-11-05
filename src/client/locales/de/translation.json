@@ -872,7 +872,10 @@
       "twinDismiss": "Nein danke",
       "unsaved": "Ungespeicherte Änderungen",
       "fixBeforeSaving_one": "Behebe vor dem Speichern {{count}} Problem",
-      "fixBeforeSaving_other": "Behebe vor dem Speichern {{count}} Probleme"
+      "fixBeforeSaving_other": "Behebe vor dem Speichern {{count}} Probleme",
+      "confirm": "Mit dem Übersetzer prüfen",
+      "confirmHint": "Für Wörter, die auch gewöhnliche Wörter sind („unify“ das Verb statt der Marke UniFi). Jeder Treffer wird nur ersetzt, wenn das LLM bestätigt, dass die Ersetzung gemeint ist; Dateien werden bei der Übersetzung korrigiert, nicht beim Speichern eines Transkripts.",
+      "tag_check": "Prüfen"
     }
   },
   "jobDetail": {
@@ -1642,7 +1645,8 @@
       "single": "Einzelzeile",
       "refine": "Verfeinerung",
       "title": "Titel",
-      "convert": "Konvertierung"
+      "convert": "Konvertierung",
+      "check": "Korrekturprüfung"
     },
     "topFiles": {
       "title": "Meistgenutzte Dateien"

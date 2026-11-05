@@ -94,6 +94,29 @@ ticked, once the list is saved.
   Turn it off to canonicalise every spelling (`unifi` → `UniFi`); matches already
   spelled like the replacement are not counted.
 
+### Check with the translator
+
+Some terms are also ordinary words: "unify" is the brand Whisper misheard in
+"open the unify app", and the verb in "we unify the dashboards". Turn on
+**Check with the translator** in a rule's options (it then shows a **Check**
+tag) and each match is put to the LLM, with the lines before and after it,
+before it is replaced:
+
+- Only a clear "yes" is replaced. A "no", an unclear or missing answer, or a
+  failed request keeps the text exactly as written, so the check can only do
+  less than the plain rule would.
+- Matches are sent in batches of 40, one request per batch, so a file costs a
+  few small requests at most. The tokens show under **Settings → Usage** as
+  *Correction check*.
+- Checked rules run inside translation jobs, where an LLM is available. They
+  fix the text the translator reads and the saved translation, but the source
+  file on disk is not rewritten for them, and a new transcript is not checked
+  when it is saved. **Fix everywhere** applies them to the files you tick, as
+  you have already confirmed those.
+- A checked rule's replacement is not pinned in the glossary.
+- The job log lists what was replaced after a check and what was kept as
+  written.
+
 A term split across two lines, two cues or a tag (`Uni<i>fy</i>`) is not a
 match, and markup (`<i>`, `{\i1}`, `\N`) is never changed.
 

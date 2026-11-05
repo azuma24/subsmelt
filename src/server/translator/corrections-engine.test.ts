@@ -115,3 +115,76 @@ test("source rules fix what the LLM reads and pin the term; output rules fix wha
     ["output", { 優比快: 1 }],
   ]);
 });
+
+test("checked rules ask the LLM per match and replace only a confirmed one", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-corrections-check-"));
+  const srtPath = path.join(dir, "Talk.en.srt");
+  const outputPath = path.join(dir, "Talk.chi.srt");
+  fs.writeFileSync(
+    srtPath,
+    "1\n00:00:01,000 --> 00:00:02,000\nOpen the unify app\n\n2\n00:00:03,000 --> 00:00:04,000\nWe unify the dashboards\n",
+    "utf8",
+  );
+  const set: CorrectionRuleSet = {
+    id: "ubnt",
+    name: "Ubiquiti",
+    enabled: true,
+    paths: [""],
+    rules: [rule("unify", "UniFi", { confirm: true })],
+  };
+  const source = compileCorrectionsFor([set], "Talk.en.srt", "source");
+  const chunkPrompts: string[] = [];
+  let checks = 0;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.endsWith("/models")) return new Response("{}", { status: 200 });
+    const body = JSON.parse(String(init?.body));
+    const system = messageContent(body, "system");
+    if (system.includes("subtitle content analyst")) return chatCompletion("Summary: a talk.");
+    const user = messageContent(body, "user");
+    if (system.includes("You check subtitle corrections")) {
+      checks++;
+      const items = JSON.parse(user.slice(user.indexOf("[\n"))) as Array<{ id: number; line: string }>;
+      return chatCompletion(JSON.stringify(items.map((i) => ({ id: i.id, replace: /app/.test(i.line) }))));
+    }
+    chunkPrompts.push(user);
+    const lines = JSON.parse(user.slice(user.lastIndexOf("["))) as string[];
+    return chatCompletion(JSON.stringify(lines.map((l) => `T ${l}`)));
+  }) as typeof fetch;
+
+  const checked: Array<[string, Record<string, number>, Record<string, number>]> = [];
+  const usageKinds: string[] = [];
+  try {
+    await translateFile({
+      srtPath,
+      outputPath,
+      connections: [
+        { id: "default", label: "default", apiKey: "", apiHost: "http://127.0.0.1:9/v1", model: "test-model" },
+      ],
+      prompt: "Translate.",
+      lang: "Chinese",
+      additional: "",
+      temperature: 0.3,
+      chunkSize: 5,
+      contextSize: 0,
+      parallelChunks: 1,
+      requestTimeoutMs: 5_000,
+      disableToolCalls: true,
+      sourceCorrections: source,
+      pinnedTerms: correctionGlossaryTerms(source),
+      onCorrectionChecks: (stage, result) => checked.push([stage, result.confirmed, result.kept]),
+      onUsage: (u) => usageKinds.push(u.kind),
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.equal(checks, 1);
+  assert.deepEqual(checked, [["source", { unify: 1 }, { unify: 1 }]]);
+  const prompt = chunkPrompts.join("\n");
+  assert.match(prompt, /Open the UniFi app/);
+  assert.match(prompt, /We unify the dashboards/);
+  // A checked rule's term is never pinned as a name.
+  assert.doesNotMatch(prompt, /UniFi -> UniFi/);
+  assert.ok(usageKinds.includes("check"));
+});

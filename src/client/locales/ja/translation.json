@@ -872,7 +872,10 @@
       "twinDismiss": "いいえ",
       "unsaved": "未保存の変更",
       "fixBeforeSaving_one": "保存する前に {{count}} 件の問題を修正してください",
-      "fixBeforeSaving_other": "保存する前に {{count}} 件の問題を修正してください"
+      "fixBeforeSaving_other": "保存する前に {{count}} 件の問題を修正してください",
+      "confirm": "翻訳モデルに確認する",
+      "confirmHint": "その語が一般的な単語でもある場合に使います（動詞の “unify” とブランドの UniFi など）。一致した箇所は、LLM が置換先の意味だと確認した場合だけ置き換えます。修正は文字起こしの保存時ではなく翻訳時に行われます。",
+      "tag_check": "確認"
     }
   },
   "jobDetail": {
@@ -1642,7 +1645,8 @@
       "single": "単一行",
       "refine": "改良",
       "title": "タイトル",
-      "convert": "変換"
+      "convert": "変換",
+      "check": "修正の確認"
     },
     "topFiles": {
       "title": "上位ファイル"
