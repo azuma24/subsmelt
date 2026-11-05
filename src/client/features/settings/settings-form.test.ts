@@ -1,6 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { EMPTY_FORM, edit, editMany, isDirty, receiveServer, saved, view } from "./settings-form.js";
+import {
+  EMPTY_FORM,
+  changes,
+  edit,
+  editMany,
+  isDirty,
+  receiveServer,
+  saved,
+  sendFailed,
+  sending,
+  view,
+} from "./settings-form.js";
 
 const base = receiveServer(EMPTY_FORM, { model: "gpt", scan_interval: "60", _watcher_running: false });
 
@@ -39,4 +50,39 @@ test("server-side state can change underneath edits without dropping them", () =
   const toggled = receiveServer(form, { ...form.server, _watcher_running: true });
   assert.deepEqual(view(toggled), { model: "gpt", scan_interval: "5", _watcher_running: true });
   assert.equal(isDirty(toggled), true);
+});
+
+test("a save sends only the changed keys, so a stale snapshot cannot overwrite newer values", () => {
+  const form = edit(
+    receiveServer(EMPTY_FORM, { correction_rule_sets: "[]", auto_scan_interval: "0" }),
+    "auto_scan_interval",
+    "45",
+  );
+  assert.deepEqual(changes(form), { auto_scan_interval: "45" });
+});
+
+test("saving some keys keeps the rest of the snapshot", () => {
+  const form = edit(receiveServer(EMPTY_FORM, { model: "a", port: "1" }), "port", "2");
+  const after = saved(sending(form), changes(form));
+  assert.deepEqual(view(after), { model: "a", port: "2" });
+  assert.equal(isDirty(after), false);
+});
+
+test("changing a value back while its save is in flight is sent, so the last choice wins", () => {
+  const changed = edit(receiveServer(EMPTY_FORM, { port: "1" }), "port", "2");
+  const inFlight = sending(changed);
+  const restored = edit(inFlight, "port", "1");
+  assert.deepEqual(changes(restored), { port: "1" });
+  const afterFirst = saved(restored, { port: "2" });
+  assert.deepEqual(changes(afterFirst), { port: "1" });
+  const afterSecond = saved(sending(afterFirst), { port: "1" });
+  assert.deepEqual(view(afterSecond), { port: "1" });
+  assert.equal(isDirty(afterSecond), false);
+});
+
+test("with no save in flight, changing a value back is still not an unsaved change", () => {
+  const changed = edit(receiveServer(EMPTY_FORM, { port: "1" }), "port", "2");
+  const failed = sendFailed(sending(changed));
+  assert.equal(isDirty(failed), true);
+  assert.equal(isDirty(edit(failed, "port", "1")), false);
 });

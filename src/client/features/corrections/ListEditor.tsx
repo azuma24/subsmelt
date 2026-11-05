@@ -1,4 +1,4 @@
-import { useMemo, useState, type ClipboardEvent, type KeyboardEvent } from "react";
+import { useMemo, useState, type ClipboardEvent, type FocusEvent, type KeyboardEvent } from "react";
 import { useTranslation } from "../../i18n";
 import { Field } from "../../ui/primitives";
 import {
@@ -372,8 +372,19 @@ function QuickAdd({ onAdd }: { onAdd: (pairs: Array<{ find: string; replace: str
     event.preventDefault();
     onAdd(pairs);
   };
+  // A finished pair joins the list as focus leaves the row, so clicking Save keeps it.
+  // Switching windows keeps focus on the input; an empty replacement deletes the word, so it needs Enter or Add rule.
+  const onBlur = (event: FocusEvent<HTMLDivElement>) => {
+    if (event.currentTarget.contains(event.relatedTarget) || document.activeElement === event.target) return;
+    if (replace.trim()) submit();
+  };
   return (
-    <div className="flex flex-wrap items-center gap-2 px-2 py-2">
+    <div
+      role="group"
+      aria-label={t("settings.corrections.addRule")}
+      onBlur={onBlur}
+      className="flex flex-wrap items-center gap-2 px-2 py-2"
+    >
       <span aria-hidden="true" className="w-4 text-center text-xs text-faint">
         +
       </span>

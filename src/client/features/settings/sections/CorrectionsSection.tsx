@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "../../../i18n";
 import * as api from "../../../api";
 import type { Task } from "../../../types";
 import { ActionButton } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
 import { useSettingsQuery } from "../../../hooks";
+import { useToast } from "../../../ui/Toast";
 import { flattenFolderTree } from "../media-sources/model";
+import { issueText } from "../../corrections/issues";
 import { ListEditor } from "../../corrections/ListEditor";
 import { newList } from "../../corrections/model";
 import { SaveBar } from "../../corrections/SaveBar";
@@ -37,6 +39,20 @@ export function CorrectionsSection({ settings, updateAndSave }: CorrectionsSecti
   );
   const [folders, setFolders] = useState<string[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const { addToast } = useToast();
+
+  // Leaving this section saves the draft, as the page does for its other settings. A draft
+  // the server would refuse cannot be saved, so say why it was dropped.
+  const onLeave = useRef(() => {});
+  onLeave.current = () => {
+    if (!draft.dirty) return;
+    if (draft.errors.length > 0) {
+      addToast(t("settings.saveFailed", { message: issueText(draft.errors[0], t) }), "error");
+      return;
+    }
+    void draft.save();
+  };
+  useEffect(() => () => onLeave.current(), []);
 
   useEffect(() => {
     let active = true;
