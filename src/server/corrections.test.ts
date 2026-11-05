@@ -161,3 +161,22 @@ test("mediaRelativePath refuses files outside the media folder", () => {
   assert.equal(mediaRelativePath("/media/UniFi/a.srt", "/media"), "UniFi/a.srt");
   assert.equal(mediaRelativePath("/elsewhere/a.srt", "/media"), null);
 });
+
+test("an in-place fix keeps the file's permissions and corrects a symlink's target", () => {
+  const dir = tmpDir();
+  const real = path.join(dir, "real.srt");
+  fs.writeFileSync(real, SRT);
+  fs.chmodSync(real, 0o666);
+  const link = path.join(dir, "link.srt");
+  fs.symlinkSync(real, link);
+  const result = correctSubtitleFile(link, RULES);
+  assert.equal(result.error, undefined);
+  assert.equal(fs.lstatSync(link).isSymbolicLink(), true);
+  assert.match(fs.readFileSync(real, "utf8"), /Unifi Network/);
+  assert.equal(fs.statSync(real).mode & 0o777, 0o666);
+});
+
+test("a folder whose name merely starts with .. is inside the media folder", () => {
+  assert.equal(mediaRelativePath("/media/..foo/a.srt", "/media"), "..foo/a.srt");
+  assert.equal(mediaRelativePath("/media/../a.srt", "/media"), null);
+});

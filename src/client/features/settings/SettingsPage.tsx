@@ -122,9 +122,9 @@ export function SettingsPage() {
     applyForm(edit(formRef.current, key, value));
   };
 
-  const updateAndSave = async (key: string, value: unknown) => {
+  const updateAndSave = async (key: string, value: unknown): Promise<SaveOutcome> => {
     applyForm(edit(formRef.current, key, value));
-    await persist(view(formRef.current));
+    return persist(view(formRef.current));
   };
 
   const updateManyAndSave = async (updates: Record<string, unknown>) => {

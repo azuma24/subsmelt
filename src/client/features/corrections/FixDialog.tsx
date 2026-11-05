@@ -100,8 +100,12 @@ export function FixDialog({ find: initialFind, column, srtPath, outputPath, targ
 
   // Dry run, debounced while typing: what this rule would change in scope.
   useEffect(() => {
+    // Any change of rule or scope makes the last report stale: drop it and its
+    // ticks at once, so Fix can never apply a list that no longer matches the form.
+    setReport(null);
+    setSelected(new Set());
     if (!ready) {
-      setReport(null);
+      setScanning(false);
       return;
     }
     let active = true;
@@ -131,7 +135,7 @@ export function FixDialog({ find: initialFind, column, srtPath, outputPath, targ
   const folderLabel = (f: string) => (f === "" ? t("settings.corrections.wholeLibrary") : f);
 
   const submit = async () => {
-    if (!ready) return;
+    if (!ready || scanning) return;
     setBusy(true);
     try {
       if (scope === "folder") {
@@ -338,7 +342,7 @@ export function FixDialog({ find: initialFind, column, srtPath, outputPath, targ
           <ActionButton
             onClick={() => void submit()}
             busy={busy}
-            disabled={!ready || (scope === "file" && chosen.length === 0)}
+            disabled={!ready || scanning || (scope === "file" && chosen.length === 0)}
           >
             {submitLabel}
           </ActionButton>

@@ -92,20 +92,68 @@ export function correctionPattern(rule: Pick<CorrectionRule, "find" | "match" | 
  */
 const MARKUP = /(<[^<>\n]*>|\{[^{}\n]*\}|\\[Nnh])/;
 
-/** `$1`, `$<name>`, `$&` and `$$` in a regex rule's replacement, as String.replace reads them. */
-function expandReplacement(template: string, match: string, groups: unknown[], named: unknown): string {
-  return template.replace(/\$(\$|&|<([^>]*)>|(\d{1,2}))/g, (whole, token: string, name?: string, digits?: string) => {
-    if (token === "$") return "$";
-    if (token === "&") return match;
-    if (name !== undefined) {
-      const value = named && typeof named === "object" ? (named as Record<string, unknown>)[name] : undefined;
-      return typeof value === "string" ? value : "";
+/**
+ * A regex rule's replacement, expanded exactly as `String.prototype.replace`
+ * does (the spec's GetSubstitution): `$$`, `$&`, `` $` ``, `$'`, `$1`–`$99`
+ * (a two-digit reference falls back to one digit plus a literal digit), and
+ * `$<name>` only when the pattern has named groups.
+ */
+function expandReplacement(
+  template: string,
+  match: string,
+  groups: readonly unknown[],
+  position: number,
+  subject: string,
+  named: Record<string, unknown> | undefined,
+): string {
+  const group = (n: number) => (typeof groups[n - 1] === "string" ? (groups[n - 1] as string) : "");
+  let out = "";
+  for (let i = 0; i < template.length; i++) {
+    const ch = template[i];
+    const next = template[i + 1];
+    if (ch !== "$" || next === undefined) {
+      out += ch;
+      continue;
     }
-    const index = Number(digits);
-    if (index >= 1 && index <= groups.length)
-      return typeof groups[index - 1] === "string" ? (groups[index - 1] as string) : "";
-    return whole;
-  });
+    if (next === "$") {
+      out += "$";
+      i++;
+    } else if (next === "&") {
+      out += match;
+      i++;
+    } else if (next === "`") {
+      out += subject.slice(0, position);
+      i++;
+    } else if (next === "'") {
+      out += subject.slice(position + match.length);
+      i++;
+    } else if (next >= "0" && next <= "9") {
+      const two = template.slice(i + 1, i + 3);
+      const twoN = /^\d\d$/.test(two) ? Number(two) : 0;
+      const oneN = Number(next);
+      if (twoN >= 1 && twoN <= groups.length) {
+        out += group(twoN);
+        i += 2;
+      } else if (oneN >= 1 && oneN <= groups.length) {
+        out += group(oneN);
+        i++;
+      } else {
+        out += ch;
+      }
+    } else if (next === "<" && named) {
+      const close = template.indexOf(">", i + 2);
+      if (close < 0) {
+        out += ch;
+        continue;
+      }
+      const value = named[template.slice(i + 2, close)];
+      out += typeof value === "string" ? value : "";
+      i = close;
+    } else {
+      out += ch;
+    }
+  }
+  return out;
 }
 
 function applyToPlain(text: string, item: CompiledCorrection, counts: CorrectionCounts): string {
@@ -114,12 +162,19 @@ function applyToPlain(text: string, item: CompiledCorrection, counts: Correction
   let replaced = 0;
   const out = text.replace(pattern, (...args: unknown[]) => {
     const match = args[0] as string;
+    // A zero-length match (a lookahead-only regex) would insert text on every
+    // run and never settle; leave it alone. Validation refuses such patterns too.
+    if (match === "") return match;
     let replacement = rule.replace;
     if (rule.match === "regex") {
       // Trailing args: offset, whole string, then the named groups when the pattern has any.
-      const hasNamed = typeof args[args.length - 1] === "object";
-      const groups = args.slice(1, hasNamed ? -3 : -2);
-      replacement = expandReplacement(rule.replace, match, groups, hasNamed ? args[args.length - 1] : undefined);
+      const hasNamed = typeof args[args.length - 1] === "object" && args[args.length - 1] !== null;
+      const tail = hasNamed ? 3 : 2;
+      const groups = args.slice(1, args.length - tail);
+      const position = args[args.length - tail] as number;
+      const subject = args[args.length - tail + 1] as string;
+      const named = hasNamed ? (args[args.length - 1] as Record<string, unknown>) : undefined;
+      replacement = expandReplacement(rule.replace, match, groups, position, subject, named);
     }
     if (replacement !== match) replaced++;
     return replacement;
@@ -196,6 +251,13 @@ export function correctionRuleError(rule: CorrectionRule): string | null {
     return `Invalid regular expression: ${error instanceof Error ? error.message : String(error)}`;
   }
   if (pattern.test("")) return "The pattern matches empty text";
+  // A lookahead-only pattern matches nowhere and everywhere at once: refuse any
+  // zero-length match on the rule's own text.
+  for (const sample of [rule.find, rule.replace]) {
+    for (const m of sample.matchAll(new RegExp(pattern.source, pattern.flags))) {
+      if (m[0] === "") return "The pattern matches empty text";
+    }
+  }
   // A rule must be stable: its own replacement must come through it unchanged,
   // or every run would rewrite the file again ("UniFi" → "UniFi Network").
   const self = correctCueText(rule.replace, [{ rule, setName: "", pattern }]);
@@ -300,7 +362,49 @@ export function correctionRuleSetsErrors(raw: string): string[] {
       }
     }
   }
+  errors.push(...crossListConflicts(sets));
   return errors;
+}
+
+/**
+ * Lists that are each fine but undo each other where both apply (UniFi → Unify
+ * on the whole library, Unify → UniFi on TV/). Every file there would fail its
+ * stability check, so the pair is refused on save. Checked per folder a list
+ * names, and for output rules per target language, because rules limited to
+ * different languages never run on the same file.
+ */
+function crossListConflicts(sets: readonly CorrectionRuleSet[]): string[] {
+  const live = sets.filter((set) => set.enabled);
+  // Every language an output rule is limited to, plus "a language none of them names".
+  const languages = [...new Set(live.flatMap((set) => set.rules.flatMap((rule) => rule.languages)))];
+  const scopes: Array<{ stage: "source" | "output"; langs: string[] }> = [
+    { stage: "source", langs: [] },
+    { stage: "output", langs: [] },
+    ...languages.map((lang) => ({ stage: "output" as const, langs: [lang] })),
+  ];
+  const errors = new Set<string>();
+  for (const folder of new Set(live.flatMap((set) => set.paths))) {
+    for (const { stage, langs } of scopes) {
+      const compiled = compileCorrectionsFor(live, folder, stage, langs);
+      const names = [...new Set(compiled.map((c) => c.setName))];
+      if (names.length < 2) continue;
+      for (const { rule } of compiled) {
+        if (rule.match === "regex") continue;
+        const unstable = [rule.find, rule.replace].some((probe) => {
+          if (!probe) return false;
+          const once = correctCueText(probe, compiled).text;
+          return totalCorrections(correctCueText(once, compiled).counts) > 0;
+        });
+        if (unstable) {
+          errors.add(
+            `Lists ${names.map((n) => `"${n}"`).join(" and ")} undo each other in ${folder || "the whole library"} ("${rule.find}")`,
+          );
+          break;
+        }
+      }
+    }
+  }
+  return [...errors];
 }
 
 function compileSet(set: CorrectionRuleSet, keep: (rule: CorrectionRule) => boolean): CompiledCorrection[] {
@@ -355,12 +459,22 @@ export function correctionsFingerprint(rules: readonly CompiledCorrection[]): st
  * each plain (non-regex) source rule. Fed to the per-chunk glossary, so the
  * LLM is told "Ubiquiti -> Ubiquiti" whenever a chunk mentions it.
  */
+/**
+ * A term worth telling the translator to keep: a name, not an ordinary word.
+ * Capitals, digits or a script without case (UniFi, U7 Pro, 優比快) say name;
+ * an all-lowercase Latin word (a typo fix like teh → the) does not, and pinning
+ * it would tell the LLM to leave an English word untranslated.
+ */
+function looksLikeName(term: string): boolean {
+  return /[\p{Lu}\p{N}]/u.test(term) || /[\p{L}]/u.test(term.replace(/[\p{Ll}\p{Lu}\p{Lt}]/gu, ""));
+}
+
 export function correctionGlossaryTerms(rules: readonly CompiledCorrection[]): string[] {
   const seen = new Set<string>();
   const terms: string[] = [];
   for (const { rule } of rules) {
     const term = rule.replace.trim();
-    if (rule.match === "regex" || !term || !/[\p{L}\p{N}]/u.test(term)) continue;
+    if (rule.match === "regex" || !term || !looksLikeName(term)) continue;
     const key = term.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);

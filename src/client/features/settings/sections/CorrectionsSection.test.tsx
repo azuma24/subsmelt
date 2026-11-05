@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { renderPage } from "../../../test-render";
 import { CorrectionsSection } from "./CorrectionsSection";
 
-const ignore = () => {};
+const ignore = async () => "saved";
 
 test("no rule sets: the section explains itself and offers to add one", () => {
   const page = renderPage(<CorrectionsSection settings={{ correction_rule_sets: "[]" }} updateAndSave={ignore} />);

@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import {
@@ -179,11 +180,15 @@ const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
  * the original modification time — the scanner orders mutual translations
  * (`Movie.eng.srt` ↔ `Movie.chi.srt`) by it, so a newer source would swap
  * roles with its own translation — and never re-encodes: a file that is not
- * UTF-8 is reported and left as it is. Never throws.
+ * UTF-8 is reported and left as it is. The rewrite also keeps the file's
+ * permissions and (as far as the process may) its owner, and goes through a
+ * symlink to its target rather than replacing the link. Never throws.
  */
-export function correctSubtitleFile(filePath: string, rules: readonly CompiledCorrection[]): FileCorrectionResult {
+export function correctSubtitleFile(linkPath: string, rules: readonly CompiledCorrection[]): FileCorrectionResult {
   if (!rules.length) return { counts: {}, total: 0 };
   try {
+    // Renaming over a symlink would replace the link and leave its target as it was.
+    const filePath = fs.realpathSync(linkPath);
     const bytes = fs.readFileSync(filePath);
     let content: string;
     try {
@@ -194,14 +199,24 @@ export function correctSubtitleFile(filePath: string, rules: readonly CompiledCo
     const result = correctSubtitleContent(content, path.extname(filePath), rules);
     if (result.total === 0) return { counts: {}, total: 0 };
     const stat = fs.statSync(filePath);
-    const tmp = `${filePath}.${process.pid}.${Date.now()}.corrections.tmp`;
+    // Beside the file, so the rename stays on one filesystem.
+    const tmp = `${filePath}.${process.pid}.${crypto.randomUUID()}.corrections.tmp`;
     try {
       // ignoreBOM kept the BOM in `content`; written back as UTF-8 it is the same three bytes.
       const out = Buffer.from(result.content, "utf8");
       if (bytes.subarray(0, 3).equals(UTF8_BOM) && !out.subarray(0, 3).equals(UTF8_BOM)) {
         throw new Error("the byte-order mark was lost");
       }
-      fs.writeFileSync(tmp, out, { mode: stat.mode & 0o777 });
+      fs.writeFileSync(tmp, out);
+      // writeFileSync's mode is masked by the umask (a shared 0666 transcript came
+      // back 0644), so set it explicitly; the owner is kept where the process may
+      // (as root in the container), so a user's own file does not turn root's.
+      fs.chmodSync(tmp, stat.mode & 0o7777);
+      try {
+        fs.chownSync(tmp, stat.uid, stat.gid);
+      } catch {
+        // Not permitted for an unprivileged process: the file keeps its new owner.
+      }
       fs.utimesSync(tmp, stat.atime, stat.mtime);
       fs.renameSync(tmp, filePath);
     } catch (error) {
@@ -217,7 +232,8 @@ export function correctSubtitleFile(filePath: string, rules: readonly CompiledCo
 /** A file's path relative to MEDIA_DIR (posix), or null when it lies outside. */
 export function mediaRelativePath(filePath: string, mediaDir = MEDIA_DIR): string | null {
   const relative = path.relative(path.resolve(mediaDir), path.resolve(filePath));
-  if (relative.startsWith("..") || path.isAbsolute(relative)) return null;
+  // ".." itself or a path through it; a folder merely named "..foo" is inside.
+  if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) return null;
   return relative.split(path.sep).join("/");
 }
 
