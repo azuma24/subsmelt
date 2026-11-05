@@ -1539,6 +1539,26 @@
       "from": "aus {{folder}}",
       "edit": "Bearbeiten",
       "newForFolder": "Neue Liste für diesen Ordner"
+    },
+    "folders": {
+      "title": "Ordner",
+      "all": "Alle Dateien",
+      "pinned": "Angeheftet",
+      "none": "Noch keine Ordner. Starte einen Scan, um deine Medien zu finden.",
+      "expand": "{{folder}} öffnen",
+      "collapse": "{{folder}} schließen",
+      "pin": "{{folder}} anheften",
+      "unpin": "{{folder}} lösen",
+      "breadcrumb": "Ordnerpfad",
+      "noCorrections": "keine",
+      "errors_one": "{{count}} Fehler",
+      "errors_other": "{{count}} Fehler",
+      "files_one": "{{count}} Datei",
+      "files_other": "{{count}} Dateien",
+      "done_one": "{{count}} fertig",
+      "done_other": "{{count}} fertig",
+      "pending_one": "{{count}} wartet",
+      "pending_other": "{{count}} warten"
     }
   },
   "llmStatus": {

@@ -1,3 +1,4 @@
+import { folderInScope } from "../library/folder-scope";
 import { useMemo } from "react";
 import type { TFunction } from "../../i18n";
 import type { Job } from "../../types";
@@ -112,10 +113,12 @@ export function useDashboardDerivedState({
     const needle = query.trim().toLowerCase();
     return jobs.filter((j) => {
       const statusMatches = statusFilter === "all" || j.status === statusFilter;
-      const folderMatches =
-        folderFilter === "all" ||
-        parentFolderLabel(j.srt_path, mediaDir, t("dashboard.folderRoot"), t("dashboard.folderExternal")) ===
-          folderFilter;
+      const folderMatches = folderInScope(
+        parentFolderLabel(j.srt_path, mediaDir, t("dashboard.folderRoot"), t("dashboard.folderExternal")),
+        folderFilter,
+        t("dashboard.folderRoot"),
+        t("dashboard.folderExternal"),
+      );
       const targetMatches =
         targetFilter === "all" || `${j.target_lang || j.lang_code} (${j.lang_code})` === targetFilter;
       const queryMatches = !needle || j.srt_path.toLowerCase().includes(needle);

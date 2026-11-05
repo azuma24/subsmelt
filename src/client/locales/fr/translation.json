@@ -1549,6 +1549,30 @@
       "from": "de {{folder}}",
       "edit": "Modifier",
       "newForFolder": "Nouvelle liste pour ce dossier"
+    },
+    "folders": {
+      "title": "Dossiers",
+      "all": "Tous les fichiers",
+      "pinned": "Épinglés",
+      "none": "Aucun dossier pour l’instant. Lancez une analyse pour trouver vos médias.",
+      "expand": "Ouvrir {{folder}}",
+      "collapse": "Fermer {{folder}}",
+      "pin": "Épingler {{folder}}",
+      "unpin": "Désépingler {{folder}}",
+      "breadcrumb": "Chemin du dossier",
+      "noCorrections": "aucune",
+      "errors_one": "{{count}} erreur",
+      "errors_many": "{{count}} erreurs",
+      "errors_other": "{{count}} erreurs",
+      "files_one": "{{count}} fichier",
+      "files_many": "{{count}} fichiers",
+      "files_other": "{{count}} fichiers",
+      "done_one": "{{count}} terminé",
+      "done_many": "{{count}} terminés",
+      "done_other": "{{count}} terminés",
+      "pending_one": "{{count}} en attente",
+      "pending_many": "{{count}} en attente",
+      "pending_other": "{{count}} en attente"
     }
   },
   "llmStatus": {

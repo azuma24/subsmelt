@@ -1549,6 +1549,30 @@
       "from": "de {{folder}}",
       "edit": "Editar",
       "newForFolder": "Nueva lista para esta carpeta"
+    },
+    "folders": {
+      "title": "Carpetas",
+      "all": "Todos los archivos",
+      "pinned": "Fijadas",
+      "none": "Aún no hay carpetas. Escanea para encontrar tu contenido.",
+      "expand": "Abrir {{folder}}",
+      "collapse": "Cerrar {{folder}}",
+      "pin": "Fijar {{folder}}",
+      "unpin": "Dejar de fijar {{folder}}",
+      "breadcrumb": "Ruta de la carpeta",
+      "noCorrections": "ninguna",
+      "errors_one": "{{count}} error",
+      "errors_many": "{{count}} errores",
+      "errors_other": "{{count}} errores",
+      "files_one": "{{count}} archivo",
+      "files_many": "{{count}} archivos",
+      "files_other": "{{count}} archivos",
+      "done_one": "{{count}} hecho",
+      "done_many": "{{count}} hechos",
+      "done_other": "{{count}} hechos",
+      "pending_one": "{{count}} en espera",
+      "pending_many": "{{count}} en espera",
+      "pending_other": "{{count}} en espera"
     }
   },
   "llmStatus": {

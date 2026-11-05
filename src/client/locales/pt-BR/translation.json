@@ -1549,6 +1549,30 @@
       "from": "de {{folder}}",
       "edit": "Editar",
       "newForFolder": "Nova lista para esta pasta"
+    },
+    "folders": {
+      "title": "Pastas",
+      "all": "Todos os arquivos",
+      "pinned": "Fixadas",
+      "none": "Ainda não há pastas. Faça uma varredura para encontrar suas mídias.",
+      "expand": "Abrir {{folder}}",
+      "collapse": "Fechar {{folder}}",
+      "pin": "Fixar {{folder}}",
+      "unpin": "Desafixar {{folder}}",
+      "breadcrumb": "Caminho da pasta",
+      "noCorrections": "nenhuma",
+      "errors_one": "{{count}} erro",
+      "errors_many": "{{count}} erros",
+      "errors_other": "{{count}} erros",
+      "files_one": "{{count}} arquivo",
+      "files_many": "{{count}} arquivos",
+      "files_other": "{{count}} arquivos",
+      "done_one": "{{count}} concluído",
+      "done_many": "{{count}} concluídos",
+      "done_other": "{{count}} concluídos",
+      "pending_one": "{{count}} aguardando",
+      "pending_many": "{{count}} aguardando",
+      "pending_other": "{{count}} aguardando"
     }
   },
   "llmStatus": {
