@@ -199,6 +199,43 @@ included**; the model manager downloads those on first use.
   chunked at silences (max 720 s per chunk). The Windows CUDA build needs NVIDIA
   driver R580 or newer.
 
+## 4a. New since 0.8.0 (unreleased): subtitle corrections
+
+User-defined find → replace rules for terms that keep coming out wrong
+("Ubiquity" → "Ubiquiti"). The user guide is
+[subtitle-corrections.md](subtitle-corrections.md).
+
+- **Model** (`src/shared/corrections.ts`): one setting, `correction_rule_sets`,
+  holds a JSON array of lists (`CorrectionRuleSet`). Each list names the media
+  folders it is on; subfolders inherit. Matching, validation and the stability
+  checks are shared code, so the Settings preview and the server cannot
+  disagree. Whole-word matching uses Unicode lookarounds, because JS `\b` is
+  ASCII-only and would match inside `超級Unify網路`.
+- **Where it runs.** Source rules rewrite the source file in place: after a
+  transcript is saved (`routes/transcription-runtime.ts`, which also covers
+  YouTube), and when a job starts (`queue/run-job.ts`, before the resume key is
+  taken). They are also applied in memory in `translator/engine.ts`, so a file
+  that could not be rewritten is still translated from corrected text. Their
+  replacements are pinned in the per-chunk glossary. Output rules fix
+  translated cues before the final save.
+- **The rewriter** (`src/server/corrections.ts`) is line-based, not
+  parse-and-serialise, so nothing but cue text changes. It validates before it
+  writes, refuses non-UTF-8 files, writes atomically and **keeps the file's
+  mtime**. That last point matters: `findTaskOutputs` in `scanner.ts` uses
+  mtime to tell a source from its mutual translation.
+- **Fix everywhere** (`corrections-scan.ts`, `routes/corrections.ts`,
+  `client/features/corrections/FixDialog.tsx`): a dry run and an apply step
+  over files the library scan knows about. Sources and translations are told
+  apart by that scan.
+- **UI**: Settings → Corrections, the Corrections block in the Library file
+  panel, and the Fix button in the job preview. All of them share
+  `ListEditor` and `useCorrectionDraft`. Edits are a local, validated draft,
+  because `POST /api/settings` refuses the whole request over one bad value.
+
+Interface languages were cut from 32 to 10 in the same cycle (en, zh-CN, zh-TW,
+ja, ko, es, fr, de, pt-BR, ru). Adding one back is a locale folder, an entry in
+`LANGUAGES` (`app/constants.ts`) and a loader line in `i18n/index.ts`.
+
 ---
 
 ## 5. Known gaps
@@ -242,6 +279,11 @@ Nothing here is in progress. Ordered by what I would fix first.
 - **Render tests cover four screens, first frame only** (see §3). `shell`,
   `LogsPage`, `TasksPage` and `JobDetailPage` have none, and no test clicks
   anything.
+
+- **Corrections do not apply on the Convert page**: its files are outside the
+  media folders, and lists are scoped by folder. Errors for invalid rules are
+  English only, because they come from shared code. Unticking a file in Fix
+  everywhere skips it for that fix only; there are no per-file exceptions.
 
 ### Product
 

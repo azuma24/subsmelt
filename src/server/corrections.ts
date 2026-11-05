@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import {
@@ -194,7 +195,10 @@ export function correctSubtitleFile(filePath: string, rules: readonly CompiledCo
     const result = correctSubtitleContent(content, path.extname(filePath), rules);
     if (result.total === 0) return { counts: {}, total: 0 };
     const stat = fs.statSync(filePath);
-    const tmp = `${filePath}.${process.pid}.${Date.now()}.corrections.tmp`;
+    // Unique per write: two jobs for the same source (one per target language) can
+    // correct it in the same millisecond. They write identical bytes, so the
+    // last rename winning is fine, but they must not share a temp file.
+    const tmp = `${filePath}.${process.pid}.${crypto.randomUUID()}.corrections.tmp`;
     try {
       // ignoreBOM kept the BOM in `content`; written back as UTF-8 it is the same three bytes.
       const out = Buffer.from(result.content, "utf8");
