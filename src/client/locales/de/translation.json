@@ -1578,7 +1578,8 @@
       "done_one": "{{count}} fertig",
       "done_other": "{{count}} fertig",
       "pending_one": "{{count}} wartet",
-      "pending_other": "{{count}} warten"
+      "pending_other": "{{count}} warten",
+      "resize": "Breite der Ordnerleiste ändern"
     }
   },
   "llmStatus": {

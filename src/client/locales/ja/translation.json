@@ -1578,7 +1578,8 @@
       "done_one": "完了 {{count}}",
       "done_other": "完了 {{count}}",
       "pending_one": "待機中 {{count}}",
-      "pending_other": "待機中 {{count}}"
+      "pending_other": "待機中 {{count}}",
+      "resize": "フォルダーサイドバーの幅を変更"
     }
   },
   "llmStatus": {

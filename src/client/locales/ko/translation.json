@@ -1578,7 +1578,8 @@
       "done_one": "완료 {{count}}",
       "done_other": "완료 {{count}}",
       "pending_one": "대기 {{count}}",
-      "pending_other": "대기 {{count}}"
+      "pending_other": "대기 {{count}}",
+      "resize": "폴더 사이드바 너비 조정"
     }
   },
   "llmStatus": {

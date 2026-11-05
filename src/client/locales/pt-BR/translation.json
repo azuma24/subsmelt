@@ -1593,7 +1593,8 @@
       "done_other": "{{count}} concluídos",
       "pending_one": "{{count}} aguardando",
       "pending_many": "{{count}} aguardando",
-      "pending_other": "{{count}} aguardando"
+      "pending_other": "{{count}} aguardando",
+      "resize": "Redimensionar a barra de pastas"
     }
   },
   "llmStatus": {
