@@ -26,6 +26,8 @@ import {
   isDirty,
   receiveServer,
   saved,
+  sendFailed,
+  sending,
   view,
   type SettingsForm,
 } from "./settings-form";
@@ -104,6 +106,7 @@ export function SettingsPage() {
   const persist = (): Promise<SaveOutcome> => {
     if (!jsonBlobsValid(view(formRef.current))) return Promise.resolve("failed");
     const body = changes(formRef.current);
+    applyForm(sending(formRef.current));
     saveChainRef.current = saveChainRef.current
       .then(() => api.saveSettings(body))
       .then((result): SaveOutcome => {
@@ -121,6 +124,7 @@ export function SettingsPage() {
         return "rejected";
       })
       .catch((e: unknown): SaveOutcome => {
+        applyForm(sendFailed(formRef.current));
         // Edits stay pending, and the failure is surfaced instead of swallowed
         // (debounced autosaves otherwise fail silently).
         addToast(t("settings.saveFailed", { message: getErrorMessage(e) }), "error");
