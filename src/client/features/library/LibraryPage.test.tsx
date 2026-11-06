@@ -298,7 +298,10 @@ test("the phone header carries the LLM status beside Scan", () => {
 });
 
 test("the setup checklist lists only the steps left, with progress beside its title", () => {
-  const page = renderPage(<LibraryPage />, configured);
+  const page = renderPage(<LibraryPage />, [
+    ...configured,
+    [["jobs"], { jobs: [job(3, "Episode 03.en.srt", "pending")], queueRunning: false, currentJobId: null }],
+  ]);
   assert.ok(page.text.includes("Setup checklist 3 of 4 done Dismiss Queue status Queue is idle. Run queue"));
   for (const finished of ["LLM connection", "Translation targets", "Media discovered"]) {
     assert.ok(!page.text.includes(finished), `${finished} is done and hidden`);
@@ -354,4 +357,33 @@ test("Files applies the URL sort on desktop and mobile", () => {
     assert.ok(page.html.indexOf(episode.videoName!) < page.html.indexOf("Alpha.mkv"));
     assert.match(page.html, /value="name-desc" selected=""/);
   }
+});
+
+test("completed jobs hide the first-run checklist on the initial render", () => {
+  const page = render([
+    settings,
+    library([episode]),
+    [["tasks"], [zhTask]],
+    [["jobs"], { jobs: [job(1, "Episode 01.en.srt", "done")], queueRunning: false, currentJobId: null }],
+  ]);
+
+  assert.doesNotMatch(page.html, /aria-label="Setup checklist"/);
+});
+
+test("a file awaiting source review has a review label in the Files list", () => {
+  const page = renderPage(
+    <LibraryPage />,
+    [
+      settings,
+      noJobs,
+      library([episode]),
+      [
+        ["transcription-work"],
+        { items: [{ id: "review", kind: "file", input: episode.videoPath, status: "needs_review" }] },
+      ],
+    ],
+    { path: "/?rows=files", isMobile: true },
+  );
+
+  assert.ok(page.buttons.some((label) => label.includes(episode.videoName!) && label.includes("Needs review")));
 });

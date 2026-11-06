@@ -9,6 +9,7 @@ import type { ManualTranscriptionProgress, TranscribePostAction } from "./transc
 
 export interface UseManualTranscriptionResult {
   transcriptionProgressByPath: Record<string, ManualTranscriptionProgress>;
+  pendingReviewsByPath: Map<string, string>;
   transcribingPath: string | null;
   isTranscribePending: boolean;
   isRetryPending: boolean;
@@ -35,7 +36,13 @@ export function useManualTranscription(): UseManualTranscriptionResult {
   const items = query.data?.items ?? [];
   const active = items.filter((item) => item.status === "running" || item.status === "queued");
   const transcriptionProgressByPath: Record<string, ManualTranscriptionProgress> = {};
+  const pendingReviewsByPath = new Map<string, string>();
   for (const item of items.filter((entry) => entry.kind === "file")) {
+    if (item.status === "needs_review") {
+      pendingReviewsByPath.set(item.input, item.id);
+      delete transcriptionProgressByPath[item.input];
+      continue;
+    }
     transcriptionProgressByPath[item.input] = {
       stage:
         item.status === "queued"
@@ -65,6 +72,7 @@ export function useManualTranscription(): UseManualTranscriptionResult {
   };
   return {
     transcriptionProgressByPath,
+    pendingReviewsByPath,
     transcribingPath: active.find((item) => item.status === "running")?.input ?? null,
     isTranscribePending: active.length > 0,
     isRetryPending: false,

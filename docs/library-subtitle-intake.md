@@ -4,7 +4,7 @@ In **Settings → Sources → Subtitle source selection**, add a rule for the fo
 
 A readable, timed sidecar whose filename identifies the source language takes priority. When the scan finds one unambiguous embedded text track in that language, it can import the track beside the video. Confirmed caption absence can trigger speech recognition if the rule permits it and a transcription backend is configured. Forced tracks, ambiguous languages, unsupported formats, image tracks and failed probes stay available for review.
 
-Unattended speech recognition checks for newly arrived captions again before publication. In shared-filesystem mode, this fallback requires a Whisper backend that supports deferred publication. Upload mode can publish the returned transcript directly. Manual transcription can still run through an older shared-filesystem backend. Unattended speech recognition in shared-filesystem mode requires a current Whisper backend so the Library can verify the video and publish the sidecar itself.
+Unattended speech recognition checks for newly arrived captions again before publication. In shared-filesystem mode, use Whisper backend 0.9.0 or later so the Library can verify the video and publish the sidecar itself. Upload mode can publish the returned transcript directly. Manual transcription can still run through an older shared-filesystem backend.
 
 ## Enable image subtitle OCR
 

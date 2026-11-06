@@ -10,7 +10,7 @@ import { removeJobPartialOutput } from "./job-output.js";
 import { loadTitleSidecar, getTitle, pruneTitleSidecarQueued, type TitleSidecar } from "./translator/title-sidecar.js";
 import { findAnyCase, stripLangSuffix, taskOutputName, taskOutputNames } from "./output-names.js";
 import { caseKey, mediaRelativeDir, normalizeMediaSubfolder, resolveMediaSubfolder } from "./media-paths.js";
-import { decideSubtitleIntake, intakeCompanionStem, matchSubtitleIntakeRule } from "./subtitle-intake.js";
+import { createSubtitleIntakeDecider, intakeCompanionStem, matchSubtitleIntakeRule } from "./subtitle-intake.js";
 import { parseSubtitleIntakeRules, type SubtitleIntakeDecision } from "../shared/subtitle-intake.js";
 import { hasAutomaticTranslationRestrictions, isAutomaticTranslationAllowed } from "./transcription/review-gate.js";
 import type { FolderCounts, FolderNode, ScannedFile, ScanResult, ScanTaskState } from "../shared/scan.js";
@@ -367,6 +367,7 @@ export async function scanFolder(
       (a, b) => b.path.length - a.path.length,
     );
     if (rules.length > 0) {
+      const decideSubtitleIntake = createSubtitleIntakeDecider();
       const sourcesByVideo = new Map<string, string[]>();
       const sidecarsByVideo = new Map<string, string[]>();
       const sourcesAdded = new Set(sourcesShortestFirst);

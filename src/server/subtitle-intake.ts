@@ -26,11 +26,23 @@ const pendingProbes = new Map<string, Promise<EmbeddedSubtitleProbe>>();
 const waitingProbes: (() => void)[] = [];
 let runningProbes = 0;
 
-function cachedProbe(file: string, revision: string): Promise<EmbeddedSubtitleProbe> {
-  const cached = probeCache.get(file);
+function rememberProbe(file: string, probe: EmbeddedSubtitleProbe): void {
+  probeCache.delete(file);
+  probeCache.set(file, probe);
+  if (probeCache.size > MAX_CACHE_ENTRIES) {
+    const oldest = probeCache.keys().next().value;
+    if (oldest !== undefined) probeCache.delete(oldest);
+  }
+}
+
+function cachedProbe(
+  file: string,
+  revision: string,
+  cachedAtStart: ReadonlyMap<string, EmbeddedSubtitleProbe>,
+): Promise<EmbeddedSubtitleProbe> {
+  const cached = probeCache.get(file) ?? cachedAtStart.get(file);
   if (cached?.revision === revision) {
-    probeCache.delete(file);
-    probeCache.set(file, cached);
+    rememberProbe(file, cached);
     return Promise.resolve(cached);
   }
   const key = `${file}\0${revision}`;
@@ -43,12 +55,7 @@ function cachedProbe(file: string, revision: string): Promise<EmbeddedSubtitlePr
     try {
       const result = await probeVideo(file, { requireClean: true });
       if (result.revision !== revision) throw new EmbeddedSubtitleError(412, "The video changed.");
-      probeCache.delete(file);
-      probeCache.set(file, result);
-      if (probeCache.size > MAX_CACHE_ENTRIES) {
-        const oldest = probeCache.keys().next().value;
-        if (oldest !== undefined) probeCache.delete(oldest);
-      }
+      rememberProbe(file, result);
       return result;
     } finally {
       pendingProbes.delete(key);
@@ -91,7 +98,7 @@ function titleIsForced(title: string | null): boolean {
   );
 }
 
-export async function decideSubtitleIntake(options: {
+interface SubtitleIntakeOptions {
   video: string;
   sources: string[];
   allSidecars: string[];
@@ -99,7 +106,19 @@ export async function decideSubtitleIntake(options: {
   preferredChinese: PreferredChinese;
   run: boolean;
   transcriptionAvailable: boolean;
-}): Promise<SubtitleIntakeDecision> {
+}
+
+export function createSubtitleIntakeDecider() {
+  // A walk larger than the LRU could otherwise evict every unchanged probe
+  // before reaching its video. Keep a bounded snapshot for this walk.
+  const cachedAtStart = new Map(probeCache);
+  return (options: SubtitleIntakeOptions) => decideSubtitleIntake(options, cachedAtStart);
+}
+
+async function decideSubtitleIntake(
+  options: SubtitleIntakeOptions,
+  cachedAtStart: ReadonlyMap<string, EmbeddedSubtitleProbe>,
+): Promise<SubtitleIntakeDecision> {
   const { video, sources, allSidecars, rule } = options;
   const language = languageKey(rule.language);
   const decision = (
@@ -134,7 +153,7 @@ export async function decideSubtitleIntake(options: {
   try {
     const identity = await embeddedVideoIdentity(video);
     if (Date.now() - identity.changedAt < SETTLE_MS) return decision("settling");
-    probe = await cachedProbe(video, identity.revision);
+    probe = await cachedProbe(video, identity.revision, cachedAtStart);
   } catch (error) {
     return decision(error instanceof EmbeddedSubtitleError && error.status === 412 ? "settling" : "probe_failed");
   }

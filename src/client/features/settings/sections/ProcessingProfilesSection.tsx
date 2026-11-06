@@ -8,6 +8,8 @@ import { ActionButton, Field, Select, SettingsSection } from "../../../ui/primit
 import { ToggleRow } from "./shared";
 import { createProfileId } from "../media-sources/model";
 
+export const PROCESSING_PROFILES_HEADING = "processing-profiles";
+
 function profilesFrom(value: string): ProcessingProfile[] {
   try {
     return parseProcessingProfiles(value);
@@ -50,7 +52,11 @@ export function ProcessingProfilesSection({
   };
 
   return (
-    <SettingsSection title={t("processing.profiles")} description={t("processing.profilesHelp")}>
+    <SettingsSection
+      headingId={PROCESSING_PROFILES_HEADING}
+      title={t("processing.profiles")}
+      description={t("processing.profilesHelp")}
+    >
       <ul className="space-y-2">
         {profiles.map((profile) => (
           <li

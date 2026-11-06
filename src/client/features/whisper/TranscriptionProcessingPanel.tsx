@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   approveTranscriptionReview,
@@ -14,6 +15,7 @@ import { ActionButton } from "../../ui/primitives";
 import { SubtitleQualityReport } from "../../ui/SubtitleQualityReport";
 import { ReviewTransforms } from "./ReviewTransforms";
 import { formatBytes } from "../convert/download-outputs";
+import { transcriptionReviewAnchor } from "../dashboard/transcription-progress";
 
 function SourceReview({ item, onChange }: { item: TranscriptionWork; onChange: () => void }) {
   const { t } = useTranslation();
@@ -142,6 +144,20 @@ function SourceReview({ item, onChange }: { item: TranscriptionWork; onChange: (
 export function TranscriptionProcessingPanel({ work, onChange }: { work: TranscriptionWork[]; onChange: () => void }) {
   const { t } = useTranslation();
   const pending = work.filter((item) => item.status === "needs_review");
+  const location = useLocation();
+  const anchor = location.hash.slice(1);
+  const hasReviewAnchor =
+    pending.some(({ id }) => anchor === transcriptionReviewAnchor(id)) ||
+    (pending.length > 0 && anchor === transcriptionReviewAnchor());
+
+  useEffect(() => {
+    if (!hasReviewAnchor) return;
+    const target = document.getElementById(location.hash.slice(1));
+    const details = target?.closest("details");
+    if (details) details.open = true;
+    target?.focus({ preventScroll: true });
+    target?.scrollIntoView({ block: "start" });
+  }, [location, hasReviewAnchor]);
   const recent = work
     .filter(
       (item) =>
@@ -158,7 +174,9 @@ export function TranscriptionProcessingPanel({ work, onChange }: { work: Transcr
 
   return (
     <section className="space-y-2 rounded-md border border-border bg-surface-raised p-3">
-      <h2 className="text-sm font-semibold text-text">{t("processing.recentWork")}</h2>
+      <h2 id={transcriptionReviewAnchor()} tabIndex={-1} className="scroll-mt-3 text-sm font-semibold text-text">
+        {t("processing.recentWork")}
+      </h2>
       {items.map((item) => {
         const input = item.input.split(/[/\\]/).filter(Boolean).at(-1) ?? item.input;
         const effective = item.plan?.effective;
@@ -168,7 +186,11 @@ export function TranscriptionProcessingPanel({ work, onChange }: { work: Transcr
             open={item.status === "needs_review" || undefined}
             className="space-y-2 rounded border border-border px-3 py-2"
           >
-            <summary className="cursor-pointer break-words text-sm font-medium text-text" title={item.input}>
+            <summary
+              id={item.status === "needs_review" ? transcriptionReviewAnchor(item.id) : undefined}
+              className="scroll-mt-3 cursor-pointer break-words text-sm font-medium text-text"
+              title={item.input}
+            >
               {input}
               {item.status === "needs_review" && (
                 <span className="ml-2 text-warning">{t("processing.pendingReview")}</span>

@@ -46,8 +46,10 @@ interface QuickStartProps {
 export function QuickStart({ jobs, queueRunning, onScan, onRunAll }: QuickStartProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const settings = useSettingsQuery().data || {};
-  const tasks = useTasksQuery().data || [];
+  const settingsQuery = useSettingsQuery();
+  const tasksQuery = useTasksQuery();
+  const settings = settingsQuery.data || {};
+  const tasks = tasksQuery.data || [];
   const [dismissed, setDismissed] = useState(readDismissed);
   const hasDoneJob = jobs.some((job) => job.status === "done");
 
@@ -56,6 +58,8 @@ export function QuickStart({ jobs, queueRunning, onScan, onRunAll }: QuickStartP
     persistDismissed();
     setDismissed(true);
   }, [hasDoneJob, dismissed]);
+
+  if (dismissed || hasDoneJob || settingsQuery.isPending || tasksQuery.isPending) return null;
 
   // Server-computed: the legacy llm_endpoint/model keys carry non-empty defaults,
   // so checking them client-side reported "configured" on a brand-new install and
@@ -100,7 +104,7 @@ export function QuickStart({ jobs, queueRunning, onScan, onRunAll }: QuickStartP
     },
   ];
   const remaining = steps.filter((step) => !step.done);
-  if (dismissed || remaining.length === 0) return null;
+  if (remaining.length === 0) return null;
 
   return (
     <section aria-label={t("dashboard.quickStart.title")} className="shrink-0 border-b border-border px-4 pb-3">

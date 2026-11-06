@@ -40,3 +40,12 @@ test("a fresh install lists what is left to set up", () => {
   assert.ok(page.text.includes("○ LLM connection Configure endpoint and model."));
   assert.ok(page.buttons.includes("Open Translations"));
 });
+
+test("speech-to-text settings links directly to processing profiles on desktop and mobile", () => {
+  for (const isMobile of [false, true]) {
+    const page = renderPage(<SettingsPage />, freshInstall, { path: "/settings?section=stt", isMobile });
+    assert.ok(page.links.includes("Processing profiles"));
+    assert.match(page.html, /href="#processing-profiles"/);
+    assert.match(page.html, /id="processing-profiles" tabindex="-1"/);
+  }
+});

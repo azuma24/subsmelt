@@ -242,10 +242,22 @@ export function LibraryPage() {
 
       {view === "jobs" && (
         <div className="flex min-h-0 flex-1">
-          {/* Folders: a sidebar from md up; on phones the header's Folders button opens the same tree. */}
-          {!isMobile && folderTree.data && (
+          {/* Reserve the user's folder pane width while its tree is loading. */}
+          {!isMobile && (folderTree.data || folderTree.isPending) && (
             <ResizableSidebar>
-              <FolderTree root={folderTree.data.root} selected={params.folder} stats={stats} onSelect={selectFolder} />
+              {folderTree.data ? (
+                <FolderTree
+                  root={folderTree.data.root}
+                  selected={params.folder}
+                  stats={stats}
+                  onSelect={selectFolder}
+                />
+              ) : (
+                <div aria-hidden="true" className="space-y-3 p-4">
+                  <div className="h-3 w-20 rounded-sm bg-surface-highlight" />
+                  <div className="h-3 w-28 rounded-sm bg-surface-highlight" />
+                </div>
+              )}
             </ResizableSidebar>
           )}
           <div className="flex min-w-0 flex-1 flex-col">

@@ -9,10 +9,11 @@ interface FileListProps {
   rootLabel: string;
   onOpen: (key: string) => void;
   disabled?: boolean;
+  pendingReviewsByPath?: ReadonlyMap<string, string>;
 }
 
 /** One row per Library file: its name, folder and a chip per target language. */
-export function FileList({ entries, rootLabel, onOpen, disabled }: FileListProps) {
+export function FileList({ entries, rootLabel, onOpen, disabled, pendingReviewsByPath }: FileListProps) {
   const { t } = useTranslation();
   if (entries.length === 0) {
     return (
@@ -25,7 +26,13 @@ export function FileList({ entries, rootLabel, onOpen, disabled }: FileListProps
     <ul className="divide-y divide-border-subtle">
       {entries.map((entry) => (
         <li key={entry.item.key}>
-          <FileSummary entry={entry} rootLabel={rootLabel} onOpen={onOpen} disabled={disabled} />
+          <FileSummary
+            entry={entry}
+            rootLabel={rootLabel}
+            onOpen={onOpen}
+            disabled={disabled}
+            needsReview={entry.item.kind === "video" && pendingReviewsByPath?.has(entry.item.key)}
+          />
         </li>
       ))}
     </ul>
@@ -39,12 +46,14 @@ export function FileSummary({
   onOpen,
   className = "",
   disabled = false,
+  needsReview = false,
 }: {
   entry: FileEntry;
   rootLabel: string;
   onOpen: (key: string) => void;
   className?: string;
   disabled?: boolean;
+  needsReview?: boolean;
 }) {
   const { t } = useTranslation();
   const bare = item.kind === "video" && item.file.subtitles.length === 0;
@@ -62,11 +71,9 @@ export function FileSummary({
         <span className="block truncate text-xs text-muted">{item.folder || rootLabel}</span>
       </span>
       <span className="flex flex-wrap items-center gap-1">
-        {bare ? (
-          <span className="text-xs text-warning">{t("library.row.noSubtitles")}</span>
-        ) : (
-          chips.map(({ task, status }) => <LanguageChip key={task.taskId} task={task} status={status} />)
-        )}
+        {needsReview && <span className="text-xs font-medium text-warning">{t("processing.pendingReview")}</span>}
+        {bare && !needsReview && <span className="text-xs text-warning">{t("library.row.noSubtitles")}</span>}
+        {!bare && chips.map(({ task, status }) => <LanguageChip key={task.taskId} task={task} status={status} />)}
       </span>
     </button>
   );

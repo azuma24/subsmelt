@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "../../i18n";
 import * as api from "../../api";
 import { useMutationWithInvalidation } from "../../hooks";
@@ -6,6 +7,7 @@ import { useToast } from "../../ui/Toast";
 import type { Job, TaskStatus } from "../../types";
 import { Icon } from "../../ui/Icon";
 import type { UseManualTranscriptionResult } from "../dashboard/useManualTranscription";
+import { transcriptionReviewAnchor } from "../dashboard/transcription-progress";
 import { itemTasks, relevantJobId, type LibraryItem } from "./library-model";
 import { ErrorBlock, SubtitleLanguages, TranscribeBlock, type FailedTask } from "./PanelSections";
 import { canProbeEmbeddedSubtitles } from "../../../shared/embedded-subtitles";
@@ -104,7 +106,8 @@ export function LibraryPanel({
     }
   };
   const videoPath = item.file.videoPath;
-  const needsTranscription = item.kind === "video" && item.file.subtitles.length === 0;
+  const pendingReview = videoPath ? transcription.pendingReviewsByPath.get(videoPath) : undefined;
+  const needsTranscription = item.kind === "video" && item.file.subtitles.length === 0 && !pendingReview;
   const jobId = relevantJobId(item, jobsById);
 
   return (
@@ -145,6 +148,14 @@ export function LibraryPanel({
               {item.kind === "video" ? t("library.panel.kindVideo") : t("library.panel.kindSubtitle")}
             </dd>
           </dl>
+          {pendingReview && (
+            <Link
+              to={`/whisper#${transcriptionReviewAnchor(pendingReview)}`}
+              className="inline-flex min-h-touch items-center rounded-sm border border-warning-line bg-warning-soft px-3 text-sm font-medium text-warning hover:underline"
+            >
+              {t("processing.pendingReview")}
+            </Link>
+          )}
           {failed.length > 0 && <ErrorBlock failed={failed} busy={retryMutation.isPending} onRetry={retry} />}
           {videoPath && canProbeEmbeddedSubtitles(videoPath) && (
             <EmbeddedSubtitles key={videoPath} videoPath={videoPath} />

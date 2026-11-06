@@ -26,6 +26,7 @@ import { collectFolderPaths } from "../../ui/file-tree/build";
 import { usePersistedExpansion } from "../../ui/file-tree/use-persisted-expansion";
 import { useDrillDown } from "../../ui/file-tree/use-drill-down";
 import { TranscriptionHistoryPanel } from "../dashboard/TranscriptionHistoryPanel";
+import { transcriptionReviewAnchor } from "../dashboard/transcription-progress";
 import { str } from "../../lib/settings-value";
 import { useModelGate } from "./useModelGate";
 import { RunOptionsSection } from "./RunOptionsSection";
@@ -57,6 +58,7 @@ export function WhisperPage() {
     refetchInterval: 1500,
   });
   const work = workQuery.data?.items ?? [];
+  const pendingReviewCount = work.filter((item) => item.status === "needs_review").length;
   const backendConfigured = Boolean(str(settings.transcription_backend_url));
   const enabled = str(settings.transcription_enabled, "0") === "1";
   const mediaDir = str(settings._media_dir, "/media");
@@ -530,7 +532,19 @@ export function WhisperPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <PageHeader title={t("nav.whisper")} />
+      <PageHeader
+        title={t("nav.whisper")}
+        actions={
+          pendingReviewCount > 0 && (
+            <Link
+              to={`#${transcriptionReviewAnchor()}`}
+              className="inline-flex min-h-touch items-center gap-2 rounded-sm border border-warning-line bg-warning-soft px-3 text-sm font-medium text-warning hover:underline"
+            >
+              {t("processing.pendingReview")} <span className="tabular-nums">{pendingReviewCount}</span>
+            </Link>
+          )
+        }
+      />
       <div className="flex-1 overflow-auto">
         <div className={`mx-auto w-full max-w-[1100px] space-y-4 ${isMobile ? "p-3 pb-24" : "p-6"}`}>
           <p className="text-sm text-muted">{t("whisper.subtitle")}</p>

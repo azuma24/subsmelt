@@ -15,7 +15,7 @@ import { LanguageSupportWarning, ModelPicker } from "../../whisper/ModelPicker";
 import { ToggleRow, labelCls, selectCls } from "./shared";
 import { useIsMobile } from "../../../hooks";
 import { Icon } from "../../../ui/Icon";
-import { ProcessingProfilesSection } from "./ProcessingProfilesSection";
+import { PROCESSING_PROFILES_HEADING, ProcessingProfilesSection } from "./ProcessingProfilesSection";
 
 /** Whisper's source-language shortlist. `auto` plus the four bundled hints. */
 const STT_LANGUAGE_OPTIONS: { value: string; labelKey: string }[] = [
@@ -81,6 +81,12 @@ export function SttSection({
 
   return (
     <>
+      <a
+        href={`#${PROCESSING_PROFILES_HEADING}`}
+        className="inline-flex min-h-touch items-center text-sm font-medium text-accent underline"
+      >
+        {t("processing.profiles")}
+      </a>
       <ToggleRow
         title={t("settings.transcription.enableLabel")}
         description={t("settings.transcription.enableHelp")}

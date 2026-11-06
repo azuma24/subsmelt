@@ -70,16 +70,24 @@ export function DetailCard({ label, value, mono = false }: { label: string; valu
 export function SettingsSection({
   title,
   description,
+  headingId,
   children,
 }: {
   title: string;
   description?: string;
+  headingId?: string;
   children: ReactNode;
 }) {
   return (
     <section className="space-y-4 rounded-md border border-border bg-surface p-4">
       <div>
-        <h2 className="text-sm font-semibold text-text">{title}</h2>
+        <h2
+          id={headingId}
+          tabIndex={headingId ? -1 : undefined}
+          className="scroll-mt-24 text-sm font-semibold text-text"
+        >
+          {title}
+        </h2>
         {description && <p className="mt-1 text-xs leading-6 text-muted">{description}</p>}
       </div>
       {children}

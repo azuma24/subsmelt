@@ -1,42 +1,45 @@
 # Releasing
 
-Two deployables share one version number and ship together: the SubSmelt app
-(Docker image) and the Windows Whisper backend (installer + GitHub release).
+Coordinated releases ship the SubSmelt Docker image and the Windows and macOS
+Whisper backend packages with the same version number.
 
-Publishing is driven **entirely by tags**. Pushing to `main` publishes nothing.
+Push version tags to start publishing. A push to `main` starts CI.
 
 | Tag | Workflow | Publishes |
 |---|---|---|
 | `v<version>` | `.github/workflows/docker-publish.yml` | `ghcr.io/azuma24/subsmelt`, **including re-pointing `latest`** |
-| `whisper-v<version>` | `.github/workflows/windows-whisper-build.yml` | Windows installer (~1 GB) + a GitHub release with it attached |
+| `whisper-v<version>` | `.github/workflows/windows-whisper-build.yml` | Windows installer (~1 GB) on the backend GitHub release |
+| `whisper-v<version>` | `.github/workflows/macos-whisper-build.yml` | Apple Silicon zip on the same backend GitHub release |
 
-Both also accept `workflow_dispatch` if you ever need to run one without a tag.
+All three also accept `workflow_dispatch`.
 
 ---
 
 ## Cutting a release
 
-**1. Bump all three version files together.** They are separate files and
-nothing enforces agreement:
+**1. Bump the app and backend versions together.**
 
 - `package.json` → `"version"`
+- `package-lock.json` → top-level `"version"` and `packages[""].version`
 - `backend-whisper/app/version.py` → `_DEFAULT_VERSION`
 - `backend-whisper/packaging/windows/installer.iss` → `#define MyAppVersion`
 
-The Windows control GUI reads its version from `app/version.py`, so it follows
-automatically — do not add a fourth constant.
+The Windows control GUI and macOS bundle read their version from `app/version.py`.
+The macOS workflow checks that this version matches the backend tag.
 
 **2. Move `## [Unreleased]` into a dated section** in `CHANGELOG.md`, and put
 the new number in `README.md` (the "Current release" line and the pinned image
 tag in Quick Start).
 
-**3. Verify before tagging.** CI runs all of this, but a failed release tag is
-more annoying to undo than a failed push:
+**3. Verify before tagging.** Use a supported Node version and a Python 3.13
+environment with the backend test dependencies. The lint commands below use
+Ruff 0.17.3, the version pinned in CI. See [dependency reproducibility](dependency-reproducibility.md).
 
 ```bash
 npm ci
 npm run lint && npm test && npm run build
-cd backend-whisper && ruff check . && ruff format --check . && python -m pytest tests -q
+cd backend-whisper
+uvx ruff@0.17.3 check . && uvx ruff@0.17.3 format --check . && python -m pytest tests -q
 ```
 
 **4. Commit to `main`.** The convention is a direct commit, not a PR:
@@ -54,17 +57,20 @@ git tag -a whisper-v<version> -m "SubSmelt Whisper backend <version>"
 git push origin v<version> whisper-v<version>
 ```
 
-**6. Write the app's release notes by hand.** The `whisper-v*` workflow creates
-its own GitHub release for the installer; the app's notes are not automated.
+**6. Write the app's release notes by hand.** The `whisper-v*` workflows publish
+the backend GitHub release with both installers. Use the corresponding changelog
+section for the app's GitHub release and link to the backend release for downloads.
+Set `--latest=false` on the app's release to keep GitHub's Latest link on the
+backend downloads.
 
 ---
 
 ## App-only releases
 
 When `backend-whisper` has not changed, a release may ship the app alone: bump
-`package.json`, `README.md` and `CHANGELOG.md`, push only `v<version>`, and create
-the app's GitHub release with `--latest=false`, so "Latest" stays on the release
-that has the installers. Say in the notes which backend release to keep using.
+`package.json`, `package-lock.json`, `README.md` and `CHANGELOG.md`, push only
+`v<version>`, and create the app's GitHub release with `--latest=false`. Say in
+the notes which backend release to keep using.
 The backend's version files stay at its last release.
 
 ---

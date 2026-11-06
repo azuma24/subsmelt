@@ -381,6 +381,7 @@ export function JobsView({
           entries={visibleEntries.map((entry) => ({ ...entry, chips: [] }))}
           rootLabel={rootLabel}
           onOpen={() => {}}
+          pendingReviewsByPath={transcription.pendingReviewsByPath}
           disabled
         />
       );
@@ -405,7 +406,14 @@ export function JobsView({
       );
     }
     if (rows === "files") {
-      return <FileList entries={visibleEntries} rootLabel={rootLabel} onOpen={files.openFileKey} />;
+      return (
+        <FileList
+          entries={visibleEntries}
+          rootLabel={rootLabel}
+          onOpen={files.openFileKey}
+          pendingReviewsByPath={transcription.pendingReviewsByPath}
+        />
+      );
     }
     if (!isMobile) {
       return (

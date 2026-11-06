@@ -6,7 +6,7 @@ Point SubSmelt at your media folders and it translates every subtitle file into
 any number of languages, with an LLM on your own hardware or a cloud API key.
 Nothing leaves your network unless you choose a cloud provider.
 
-Current release: **0.8.4** · [Changelog](CHANGELOG.md) ·
+Current release: **0.9.0** · [Changelog](CHANGELOG.md) ·
 [Downloads](https://github.com/azuma24/subsmelt/releases)
 
 ## Quick start
@@ -14,7 +14,7 @@ Current release: **0.8.4** · [Changelog](CHANGELOG.md) ·
 ```yaml
 services:
   subsmelt:
-    image: ghcr.io/azuma24/subsmelt:latest   # or pin: ghcr.io/azuma24/subsmelt:0.8.4
+    image: ghcr.io/azuma24/subsmelt:latest   # or pin: ghcr.io/azuma24/subsmelt:0.9.0
     container_name: subsmelt
     ports:
       - "3000:3000"
@@ -66,6 +66,9 @@ Videos with no subtitles can be transcribed by a Whisper backend: faster-whisper
 NVIDIA Nemotron, and whisper.cpp on a Mac. Download models from **Settings →
 Speech-to-text models**, then set **Backend URL** and **Backend token** on the
 same page.
+
+Use the **0.9.0 Whisper backend** for unattended subtitle intake with a shared
+media filesystem. See [Library subtitle intake](docs/library-subtitle-intake.md).
 
 | Where it runs | How |
 |---|---|

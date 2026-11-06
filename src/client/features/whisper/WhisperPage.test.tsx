@@ -61,3 +61,28 @@ test("a configured backend shows run options and the library grouped by folder",
   assert.ok(page.buttons.includes("Select all"));
   assert.ok(!page.text.includes("Speech-to-text is disabled."));
 });
+
+test("the header links to pending reviews even with speech-to-text disabled", () => {
+  const page = renderPage(
+    <WhisperPage />,
+    [
+      [["settings"], { transcription_enabled: "0" }],
+      emptyHistory,
+      [
+        ["transcription-work"],
+        {
+          items: [
+            { id: "source-1", kind: "file", input: "/media/Arrival.mkv", status: "needs_review" },
+            { id: "source-2", kind: "file", input: "/media/Dune.mkv", status: "needs_review" },
+            { id: "old", kind: "file", input: "/media/Old.mkv", status: "succeeded" },
+          ],
+        },
+      ],
+    ],
+    { path: "/whisper" },
+  );
+  assert.ok(page.links.includes("Needs review 2"));
+  assert.match(page.html, /href="\/whisper#transcription-reviews"/);
+  assert.match(page.html, /id="transcription-reviews"/);
+  assert.match(page.html, /id="transcription-review-source-2"/);
+});

@@ -1,10 +1,38 @@
 # Changelog
 
-All notable changes to SubSmelt. The app and the Whisper backends (Windows
-installer, macOS app) share a version number and are released together, as
-`v<version>` and `whisper-v<version>`.
+All notable changes to SubSmelt. The app ships as `v<version>`. When the
+Whisper backend changes, its Windows installer and macOS app ship together
+under `whisper-v<version>` with the same version number.
 
 ## [Unreleased]
+
+## [0.9.0] — 2026-11-06
+
+### Library and translation
+
+- Set a source language and fallback by folder in **Settings → Sources → Subtitle source selection**. The Library prefers an existing sidecar, can import an unambiguous embedded text track, and can queue speech recognition when it confirms captions are absent. Scan Preview shows each video's decision before you run the scan. Shared-filesystem speech recognition for unattended intake requires the 0.9.0 Whisper backend. See [Library subtitle intake](docs/library-subtitle-intake.md).
+- Import embedded text tracks from the video panel. An optional Subtitle Edit and Tesseract setup adds PGS and VobSub image subtitle OCR. See [image subtitle OCR](docs/library-subtitle-intake.md#enable-image-subtitle-ocr).
+- Check staged subtitles in Convert and review source and output quality warnings in Jobs. Completed translations with matching cues offer a bilingual SRT download.
+- Sort the Files view by name or modified date. Scans show which paths they could not read, and a partial scan preserves saved title metadata. Large caption-first scans reuse cached probes even as new files fill the cache. Queue recovery keeps track of completed output and can stop a run while it waits for transcription to release the GPU.
+- The Library reserves the desktop folder pane's width while loading. The first-run checklist stays hidden from the initial render when completed jobs are present.
+
+### Transcription workflows
+
+- Save processing profiles by folder with model, language, output format, corrections and translation targets. Use the shortcut at the top of Speech-to-text Settings to jump to profiles.
+- Review source transcripts before translation, preview timing and line adjustments, and choose the translations to queue. The Transcribe header counts pending reviews, and the Library file panel links to the review for that file.
+- Export timestamped Markdown notes from Library or URL transcripts. The JSON CLI can preview plans, submit work, wait for review or completion, and download results. See [processing workflows](docs/processing-workflows.md).
+- Choose the audio track of a selected video. For upload transport, choose lossless audio-only upload and see bytes sent and phase timings in recent work.
+
+### Whisper backends
+
+- Reuse compatible raw recognition after a failed or interrupted render or publish step, or force fresh recognition for a new run.
+- Split long subtitle cues and speaker turns at measured word boundaries when timing is available. whisper.cpp can supply usable word timings from its token offsets.
+- Model downloads report progress and can be cancelled. The 0.9.0 Windows and macOS packages include these changes and support deferred publication for shared-filesystem subtitle intake.
+
+### Deployment
+
+- Configure optional Host validation and HTTP Basic authentication for SubSmelt. The app and Whisper backend can read supported credentials from mounted secret files, and new app logs redact known credentials. See [security and ingress](README.md#security-and-ingress) and [mounted secrets](docs/mounted-secrets.md).
+- Updated request parsing, HTTP client, and schema validation dependencies to address production npm advisories.
 
 ## [0.8.4] — 2026-11-05
 
