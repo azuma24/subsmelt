@@ -27,9 +27,13 @@ class GenerateTokenCliTests(unittest.TestCase):
 
         # run_server resolves config + token from the environment, so pin both
         # rather than inheriting whatever the developer's shell has set.
-        self._saved_env = {key: os.environ.get(key) for key in ("SUBSMELT_WHISPER_CONFIG", "SUBSMELT_WHISPER_TOKEN")}
+        self._saved_env = {
+            key: os.environ.get(key)
+            for key in ("SUBSMELT_WHISPER_CONFIG", "SUBSMELT_WHISPER_TOKEN", "SUBSMELT_WHISPER_TOKEN_FILE")
+        }
         os.environ["SUBSMELT_WHISPER_CONFIG"] = str(self.config)
         os.environ.pop("SUBSMELT_WHISPER_TOKEN", None)
+        os.environ.pop("SUBSMELT_WHISPER_TOKEN_FILE", None)
         self.addCleanup(self._restore_env)
 
     def _restore_env(self) -> None:
@@ -128,6 +132,19 @@ class GenerateTokenCliTests(unittest.TestCase):
         os.environ["SUBSMELT_WHISPER_TOKEN"] = "from-the-environment"
         _, output = self._run("--generate-token", "--save", "--force")
         self.assertIn("SUBSMELT_WHISPER_TOKEN", output)
+
+    def test_mounted_token_is_used_without_exporting_or_printing_it(self):
+        token_file = self.config.with_name("mounted-secret")
+        token_file.write_text("mounted-token\n", encoding="utf-8")
+        self._write_config({"token": "saved-token"})
+        os.environ["SUBSMELT_WHISPER_TOKEN_FILE"] = str(token_file)
+        config = run_server.load_config()
+        self.assertEqual(config.token, "mounted-token")
+        run_server.apply_environment(config)
+        self.assertNotIn("SUBSMELT_WHISPER_TOKEN", os.environ)
+        code, output = self._run("--print-config")
+        self.assertEqual(code, 0)
+        self.assertNotIn("mounted-token", output)
 
     def test_save_writes_where_the_token_takes_effect(self):
         # The Windows installer keeps the token in settings.json, which wins over

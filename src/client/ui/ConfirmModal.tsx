@@ -63,7 +63,9 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           overlayClassName="fixed inset-0 bg-scrim flex items-end justify-center z-[90] p-0 md:items-center md:p-4"
           panelClassName="bg-surface border border-border rounded-t-md md:rounded-md p-6 w-full max-w-sm space-y-4"
         >
-          <p className="text-sm text-muted">{state.opts.message}</p>
+          <p className="max-h-60 overflow-auto whitespace-pre-line break-words text-sm text-muted">
+            {state.opts.message}
+          </p>
           <div className="flex gap-3 justify-end pt-2 sticky bottom-0 bg-surface">
             <button
               type="button"

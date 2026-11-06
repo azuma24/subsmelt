@@ -396,7 +396,28 @@
       "folderCount_other": "{{name}} ({{count}} subtitles)",
       "summaryNothingNew": "Found {{subtitles}} subtitle files, and every one already has a job or a finished output. Nothing new will be queued.",
       "summaryNoTarget": "Found {{subtitles}} subtitle files, but no translation target applies to any of them. Add or enable one in Translations.",
-      "scanAnyway": "Scan anyway"
+      "scanAnyway": "Scan anyway",
+      "intake": {
+        "title": "Subtitle source selection",
+        "sidecar": "Use {{file}}",
+        "embedded": "Import embedded track {{track}}",
+        "imported": "Imported {{file}}",
+        "transcribe": "Queue transcription",
+        "transcribe_and_translate": "Queue transcription and translation",
+        "absent": "No captions found",
+        "no_speech": "No speech was found in this video",
+        "settling": "Waiting for the video to settle",
+        "ambiguous": "Multiple or unlabelled captions need review",
+        "forced_only": "Only forced captions found",
+        "language_mismatch": "Captions are in another language",
+        "invalid_sidecar": "Existing caption needs review",
+        "bitmap": "Image subtitles need OCR",
+        "unsupported": "Subtitle format needs review",
+        "probe_failed": "Subtitle tracks could not be verified",
+        "import_failed": "Subtitle track could not be imported",
+        "asr_unavailable": "Transcription is unavailable",
+        "summary": "The scan will follow the source choices below. {{jobs}} translation jobs are ready to queue from existing subtitles."
+      }
     },
     "filtersLabel": "Filters",
     "bulkActionsLabel": "Bulk actions",
@@ -683,7 +704,18 @@
       "preferredChinese": "Preferred Chinese",
       "chineseTraditional": "Traditional Chinese (Taiwan)",
       "chineseSimplified": "Simplified Chinese",
-      "preferredChineseHint": "Written as .chi, like most existing Chinese subtitles; the other script is written as .chs (Simplified) or .cht (Traditional). Existing .chi and .zh subtitles count as this one. Choose once: changing it later changes what new .chi files mean."
+      "preferredChineseHint": "Written as .chi, like most existing Chinese subtitles; the other script is written as .chs (Simplified) or .cht (Traditional). Existing .chi and .zh subtitles count as this one. Choose once: changing it later changes what new .chi files mean.",
+      "subtitleIntake": {
+        "title": "Subtitle source selection",
+        "hint": "Choose which folders use existing captions before speech recognition. Rules include subfolders. The closest rule wins.",
+        "add": "Add folder rule",
+        "folder": "Folder",
+        "language": "Source language",
+        "fallback": "When captions are absent",
+        "off": "Leave for review",
+        "transcribe": "Transcribe",
+        "transcribe_and_translate": "Transcribe and translate"
+      }
     },
     "notifications": {
       "title": "Notifications",
@@ -700,7 +732,8 @@
       "testFailed": "Test notification failed: {{message}}",
       "hint": "Send a webhook when the events you pick below happen. Leave the URL empty to turn notifications off.",
       "webhookSaved": "Saved (hidden). Type a new URL to replace it.",
-      "webhookRemove": "Remove webhook"
+      "webhookRemove": "Remove webhook",
+      "eventTranscriptionNote": "Transcript note ready"
     },
     "saved": "Settings saved",
     "saveFailed": "Save failed: {{message}}",
@@ -918,7 +951,10 @@
       "deleteConfirm": "Delete the {{model}} model from the backend cache? It can be re-downloaded later.",
       "deleteDone": "Deleted {{model}} (freed {{freed}})",
       "deleteFailed": "Delete of {{model}} failed: {{message}}",
-      "runtimeMissing": "Runtime missing"
+      "runtimeMissing": "Runtime missing",
+      "downloadCancelling": "Cancelling…",
+      "downloadCancelled": "Download cancelled",
+      "downloadCancelFailed": "Could not cancel the download for {{model}} ({{message}})"
     },
     "setup": {
       "progress": "{{done}} of {{total}} done",
@@ -1514,7 +1550,12 @@
       "conflict": "A subtitle file with this name already exists.",
       "failed": "Could not import the subtitle track.",
       "changed": "The video changed. Check its tracks again.",
-      "noText": "This video has no importable text tracks."
+      "noText": "This video has no importable text tracks.",
+      "ocr": "Read image subtitles",
+      "ocrRunning": "Reading image subtitles…",
+      "ocrReady": "OCR available",
+      "ocrUnavailable": "OCR is unavailable on this server",
+      "cancelOcr": "Cancel OCR"
     },
     "jobsUnavailable": "Job statuses and file details are unavailable until the queue reloads.",
     "sort": {
@@ -1795,6 +1836,81 @@
       "run": "Preview on my files",
       "again": "Check again",
       "saveFirst": "Save the list first."
+    }
+  },
+  "processing": {
+    "profiles": "Processing profiles",
+    "profilesHelp": "Save speech recognition, source review, and translation defaults for a folder and its subfolders.",
+    "root": "Media root",
+    "addProfile": "Add profile",
+    "profileName": "Profile name",
+    "folder": "Folder relative to the media root",
+    "inherit": "Inherit defaults",
+    "maxWidth": "Review line width limit",
+    "maxSpeed": "Review characters per second",
+    "targets": "Translation targets",
+    "correctionLists": "Correction lists",
+    "review": "Review source before translation",
+    "reviewHelp": "Pause after speech recognition so you can edit the timed transcript and choose translation targets.",
+    "exportNote": "Create a Markdown note",
+    "exportNoteHelp": "Group the transcript into timestamped paragraphs for download.",
+    "invalidProfile": "Enter a name and a unique folder, then check the limits.",
+    "applyProfile": "Apply profile",
+    "audioOnly": "Upload audio only",
+    "audioOnlyHelp": "Send lossless audio when the speech backend needs an upload.",
+    "chooseAudio": "Choose audio track",
+    "audioProbeFailed": "Audio tracks could not be read.",
+    "defaultAudio": "Automatic audio track",
+    "useFolderProfiles": "Use folder profiles",
+    "confirmPlan": "Confirm processing plan",
+    "sourceTranscript": "Source transcript",
+    "sourceQuality": "Subtitle quality",
+    "reloadTranscript": "Reload transcript",
+    "approve": "Approve source",
+    "cancelReview": "Cancel review",
+    "downloadTranscript": "Download transcript",
+    "downloadNote": "Download Markdown note",
+    "recentWork": "Transcription results and review",
+    "pendingReview": "Needs review",
+    "checkpointHit": "Reused saved speech recognition",
+    "milliseconds": "{{elapsed}} ms",
+    "transforms": "Timing and line adjustments",
+    "transformType": "Adjustment type",
+    "offset": "Time shift (ms)",
+    "frameRate": "Frame-rate correction",
+    "balance": "Balance plain-text lines",
+    "fromFps": "Original FPS",
+    "toFps": "Target FPS",
+    "addTransform": "Add adjustment",
+    "previewTransforms": "Preview adjustments",
+    "usePreview": "Use preview in editor",
+    "offsetSummary": "Shift by {{milliseconds}} ms",
+    "frameRateSummary": "Convert {{from}} to {{to}} FPS",
+    "balanceSummary": "Balance to {{width}} characters per line",
+    "translateWithProfile": "Translate using profile targets",
+    "inheritedFolderDefaults": "Inherited folder defaults",
+    "environmentPins": "Environment settings ({{settings}})",
+    "uploadSummary": "Uploaded {{size}}",
+    "audioUploadSummary": "Uploaded {{size}} of audio",
+    "phases": {
+      "gpuWait": "GPU wait",
+      "preflight": "Preflight",
+      "uploadPrepare": "Audio preparation",
+      "upload": "Upload",
+      "uploadSave": "Save upload",
+      "backendPreflight": "Backend preflight",
+      "urlDownload": "Download media",
+      "checkpoint": "Checkpoint lookup",
+      "audioExtract": "Extract audio",
+      "modelLoad": "Load model",
+      "asr": "Recognize speech",
+      "diarization": "Identify speakers",
+      "render": "Render subtitles",
+      "publish": "Publish output"
+    },
+    "blockers": {
+      "speechDisabled": "Speech recognition is disabled",
+      "backendMissing": "Speech backend URL is missing"
     }
   }
 }

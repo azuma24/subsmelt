@@ -18,6 +18,7 @@ import type {
   TranscriptionPreflightResponse,
   WhisperModel,
   WhisperModelDeleteResult,
+  WhisperModelDownloadOperation,
   WhisperModelDownloadResult,
   YoutubePlaylist,
   YoutubePlaylistFields,
@@ -32,13 +33,14 @@ import type {
 
 const BASE = "/api";
 
-type JsonErrorBody = { error?: unknown; message?: unknown };
+type JsonErrorBody = { error?: unknown; message?: unknown; code?: unknown };
 
 export class ApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
     public readonly url: string,
+    public readonly code?: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -63,7 +65,7 @@ export async function fetchJSON<T = unknown>(url: string, opts: RequestInit = {}
         : typeof body.message === "string"
           ? body.message
           : `HTTP ${res.status}`;
-    throw new ApiError(message, res.status, url);
+    throw new ApiError(message, res.status, url, typeof body.code === "string" ? body.code : undefined);
   }
   return res.json() as Promise<T>;
 }
@@ -273,8 +275,8 @@ export interface TranscriptionWork {
   batchId: string;
   kind: "file" | "url";
   input: string;
-  request: Record<string, unknown>;
-  status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+  request?: Record<string, unknown>;
+  status: "queued" | "running" | "needs_review" | "succeeded" | "failed" | "cancelled";
   progress: number;
   error?: string;
   outputPath?: string;
@@ -282,6 +284,23 @@ export interface TranscriptionWork {
   content?: string;
   segments?: number;
   createdAt: string;
+  updatedAt?: string;
+  plan?: {
+    profile?: { id: string; name: string; folder: string };
+    effective: { model: string; language: string; output_format: string; device: string; compute_type: string };
+    origins: { folderDefaults: boolean; runOverrides: string[]; environment: string[] };
+    targets?: { id: number; label: string }[];
+    review: boolean;
+    exportNote: boolean;
+    transport?: { mode: "shared" | "upload"; audioOnlyUpload: boolean };
+    blockers?: string[];
+  };
+  translationIssues?: string[];
+  noteReady?: boolean;
+  timingsMs?: Record<string, number>;
+  checkpointHit?: boolean;
+  uploadedBytes?: number;
+  audioOnlyUploaded?: boolean;
 }
 export const queueTranscriptionWork = (
   inputs: Array<{ kind: "file" | "url"; input: string; request: Record<string, unknown> }>,
@@ -289,10 +308,46 @@ export const queueTranscriptionWork = (
   fetchJSON<{ items: TranscriptionWork[] }>("/transcribe/work", { method: "POST", body: JSON.stringify({ inputs }) });
 export const listTranscriptionWork = (opts?: FetchOpts) =>
   fetchJSON<{ items: TranscriptionWork[] }>("/transcribe/work", opts);
+export const planTranscriptionWork = (
+  inputs: Array<{ kind: "file" | "url"; input: string; request: Record<string, unknown> }>,
+) =>
+  fetchJSON<{ plans: Array<NonNullable<TranscriptionWork["plan"]>> }>("/transcribe/work/plan", {
+    method: "POST",
+    body: JSON.stringify({ inputs }),
+  });
 export const getTranscriptionWork = (id: string) =>
   fetchJSON<TranscriptionWork>(`/transcribe/work/${encodeURIComponent(id)}`);
 export const cancelTranscriptionWork = (id: string) =>
   fetchJSON<{ ok: boolean }>(`/transcribe/work/${encodeURIComponent(id)}/cancel`, { method: "POST" });
+export const getTranscriptionReview = (id: string, opts?: FetchOpts) =>
+  fetchJSON<{
+    content: string;
+    ext: string;
+    revision: string;
+    issues: import("../shared/subtitle-quality").SubtitleQualityIssue[];
+  }>(`/transcribe/work/${encodeURIComponent(id)}/review`, opts);
+export type ReviewOperation =
+  | { kind: "offset"; milliseconds: number }
+  | { kind: "frameRate"; from: number; to: number }
+  | { kind: "balance"; width: number };
+export const previewTranscriptionReview = (
+  id: string,
+  body: { revision: string; content?: string; operations: ReviewOperation[] },
+) =>
+  fetchJSON<{
+    content: string;
+    issues: import("../shared/subtitle-quality").SubtitleQualityIssue[];
+  }>(`/transcribe/work/${encodeURIComponent(id)}/review/preview`, { method: "POST", body: JSON.stringify(body) });
+export const approveTranscriptionReview = (
+  id: string,
+  body: { revision: string; content?: string; targetIds: number[] },
+) =>
+  fetchJSON<TranscriptionWork>(`/transcribe/work/${encodeURIComponent(id)}/review`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+export const transcriptionWorkDownloadUrl = (id: string, note = false) =>
+  `${BASE}/transcribe/work/${encodeURIComponent(id)}/download${note ? "?format=note" : ""}`;
 export const getTranscriptionHealth = (opts?: FetchOpts) => fetchJSON<TranscriptionHealth>("/transcribe/health", opts);
 export interface TranscriptionLogs {
   ok: boolean;
@@ -333,6 +388,12 @@ export const downloadWhisperModel = (model: string) =>
     method: "POST",
     body: JSON.stringify({ model }),
   });
+export const cancelWhisperModelDownload = (operationId: string) =>
+  fetchJSON<WhisperModelDownloadOperation>(`/whisper/models/download/${encodeURIComponent(operationId)}/cancel`, {
+    method: "POST",
+  });
+export const isWhisperModelDownloadCancelled = (error: unknown) =>
+  error instanceof ApiError && error.code === "model_download_cancelled";
 export const deleteWhisperModel = (model: string) =>
   fetchJSON<WhisperModelDeleteResult>(`/whisper/models/${encodeURIComponent(model)}`, { method: "DELETE" });
 

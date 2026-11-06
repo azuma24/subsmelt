@@ -50,6 +50,7 @@ export function SourcesSection({
         scanExcludeFolders={str(settings.scan_exclude_folders)}
         scanProfiles={str(settings.scan_profiles, "[]")}
         directoryRules={str(settings.directory_rules, "[]")}
+        subtitleIntakeRules={str(settings.subtitle_intake_rules, "[]")}
         onScanModeChange={(mode) => updateAndSave("scan_mode", mode)}
         onScanFoldersChange={(folders) => updateAndSave("scan_folders", folders)}
         onScanExcludeFoldersChange={(folders) => updateAndSave("scan_exclude_folders", folders)}
@@ -62,6 +63,7 @@ export function SourcesSection({
         }
         onScanProfilesChange={(profiles) => updateAndSave("scan_profiles", profiles)}
         onDirectoryRulesChange={(rules) => updateAndSave("directory_rules", rules)}
+        onSubtitleIntakeRulesChange={(rules) => updateAndSave("subtitle_intake_rules", rules)}
       />
       <ToggleRow
         title={t("settings.sources.autoTranslate")}

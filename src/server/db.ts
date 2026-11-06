@@ -4,6 +4,7 @@ import fs from "node:fs";
 import { setLogDb } from "./logger.js";
 import type { JobRow, LogRow } from "../shared/jobs.js";
 import { caseKey } from "./media-paths.js";
+import { hasAutomaticTranslationRestrictions, isAutomaticTranslationAllowed } from "./transcription/review-gate.js";
 
 const DATA_DIR = process.env.DATA_DIR || "./data";
 fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -11,6 +12,9 @@ fs.mkdirSync(DATA_DIR, { recursive: true });
 const db = new Database(path.join(DATA_DIR, "subsmelt.db"));
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
+db.function("review_allows_translation", (subtitle: string, video: string | null, taskId: number) =>
+  Number(isAutomaticTranslationAllowed(subtitle, video ?? undefined, taskId)),
+);
 
 // --- Schema: Jobs ---
 
@@ -264,15 +268,22 @@ export function listJobPathsAndStatuses(): Array<{ srt_path: string; status: str
   return db.prepare("SELECT srt_path, status FROM jobs").all() as Array<{ srt_path: string; status: string }>;
 }
 
+function pendingReviewFilter(): string {
+  return hasAutomaticTranslationRestrictions() ? " AND review_allows_translation(srt_path, video_path, task_id)" : "";
+}
+
 export function countPendingJobs(ids?: Set<number> | null): number {
+  const review = pendingReviewFilter();
   if (!ids || ids.size === 0) {
-    return (db.prepare("SELECT COUNT(*) AS count FROM jobs WHERE status = 'pending'").get() as { count: number }).count;
+    return (
+      db.prepare(`SELECT COUNT(*) AS count FROM jobs WHERE status = 'pending'${review}`).get() as { count: number }
+    ).count;
   }
   const values = Array.from(ids);
   const placeholders = values.map(() => "?").join(",");
   return (
     db
-      .prepare(`SELECT COUNT(*) AS count FROM jobs WHERE status = 'pending' AND id IN (${placeholders})`)
+      .prepare(`SELECT COUNT(*) AS count FROM jobs WHERE status = 'pending'${review} AND id IN (${placeholders})`)
       .get(...values) as { count: number }
   ).count;
 }
@@ -281,7 +292,7 @@ export function claimPendingJob(ids?: Set<number> | null): JobRow | null {
   const values = ids && ids.size > 0 ? Array.from(ids) : [];
   const filter = values.length > 0 ? ` AND id IN (${values.map(() => "?").join(",")})` : "";
   const select = db.prepare(
-    `SELECT * FROM jobs WHERE status = 'pending'${filter} ORDER BY priority DESC, created_at ASC, id ASC LIMIT 1`,
+    `SELECT * FROM jobs WHERE status = 'pending'${pendingReviewFilter()}${filter} ORDER BY priority DESC, created_at ASC, id ASC LIMIT 1`,
   );
   const claim = db.prepare(
     "UPDATE jobs SET status = 'translating', error = NULL, used_connections = NULL, input_tokens = 0, output_tokens = 0, started_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND status = 'pending'",

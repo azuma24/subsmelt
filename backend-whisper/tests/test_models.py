@@ -7,6 +7,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from model_download_fixtures import inline_download_attempt, seed_whisper_metadata, stalled_download_worker
+
 try:
     from fastapi.testclient import TestClient
 
@@ -55,6 +57,7 @@ class ModelManagerEndpointTests(unittest.TestCase):
         snap = Path(self._tmp.name) / "hub" / f"models--Systran--faster-whisper-{model}" / "snapshots" / "deadbeef"
         snap.mkdir(parents=True)
         (snap / "model.bin").write_bytes(b"\0" * size_bytes)
+        seed_whisper_metadata(snap)
         return snap
 
     # --- GET /models -------------------------------------------------------
@@ -107,6 +110,7 @@ class ModelManagerEndpointTests(unittest.TestCase):
             bar.close()
             target_snap.mkdir(parents=True)
             (target_snap / "model.bin").write_bytes(b"\0" * 1024)
+            seed_whisper_metadata(target_snap)
             return str(target_snap)
 
         fake_hub = types.ModuleType("huggingface_hub")
@@ -116,9 +120,12 @@ class ModelManagerEndpointTests(unittest.TestCase):
         fake_tqdm_auto.tqdm = _FakeTqdm
         fake_tqdm.auto = fake_tqdm_auto
 
-        with mock.patch.dict(
-            sys.modules,
-            {"huggingface_hub": fake_hub, "tqdm": fake_tqdm, "tqdm.auto": fake_tqdm_auto},
+        with (
+            mock.patch.dict(
+                sys.modules,
+                {"huggingface_hub": fake_hub, "tqdm": fake_tqdm, "tqdm.auto": fake_tqdm_auto},
+            ),
+            mock.patch.object(model_manager, "_run_download_attempt", inline_download_attempt),
         ):
             resp = self.client.post("/models/download", json={"model": "tiny"})
             self.assertEqual(resp.status_code, 200)
@@ -147,6 +154,37 @@ class ModelManagerEndpointTests(unittest.TestCase):
         self.assertEqual(lines[0]["type"], "result")
         self.assertTrue(lines[0]["ok"])
         self.assertTrue(lines[0].get("alreadyPresent"))
+        operation_id = resp.headers["X-Model-Download-Id"]
+        status = self.client.get(f"/models/download/{operation_id}")
+        self.assertEqual(status.status_code, 200)
+        self.assertEqual(status.json()["status"], "succeeded")
+        self.assertEqual(status.json()["cachePath"], lines[0]["cachePath"])
+
+    def test_download_status_and_cancel_require_auth_and_cancel_the_same_operation(self):
+        with (
+            mock.patch.dict(os.environ, {"SUBSMELT_WHISPER_TOKEN": "secret"}),
+            mock.patch.object(model_manager, "_download_worker", stalled_download_worker),
+        ):
+            operation = model_manager.start_model_download("tiny")
+            status_path = f"/models/download/{operation.id}"
+            auth = {"Authorization": "Bearer secret"}
+            try:
+                self.assertEqual(self.client.get(status_path).status_code, 401)
+                self.assertEqual(self.client.post(f"{status_path}/cancel").status_code, 401)
+                status = self.client.get(status_path, headers=auth).json()
+                self.assertEqual(status["status"], "running")
+                self.assertEqual(status["id"], operation.id)
+                self.assertEqual(status["model"], "tiny")
+                self.assertEqual(self.client.delete("/models/tiny", headers=auth).status_code, 409)
+                cancelled = self.client.post(f"{status_path}/cancel", headers=auth)
+                self.assertEqual(cancelled.status_code, 200)
+                self.assertEqual(cancelled.json()["status"], "cancelling")
+                self.assertEqual(self.client.get("/models/download/unknown", headers=auth).status_code, 404)
+            finally:
+                model_manager.shutdown_model_downloads()
+            final = self.client.get(status_path, headers=auth).json()
+            self.assertEqual(final["status"], "cancelled")
+            self.assertEqual(self.client.post(f"{status_path}/cancel", headers=auth).json(), final)
 
     # --- DELETE /models/{model} -------------------------------------------
 

@@ -3,6 +3,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from model_download_fixtures import seed_whisper_metadata
+
 from app.model_cache import describe_model_cache
 
 
@@ -23,6 +25,7 @@ class ModelCacheTests(unittest.TestCase):
             model_dir = Path(tmp) / "hub" / "models--Systran--faster-whisper-small" / "snapshots" / "1234"
             model_dir.mkdir(parents=True)
             (model_dir / "model.bin").write_bytes(b"\0")
+            seed_whisper_metadata(model_dir)
             info = describe_model_cache("small", 8192, env={"HF_HOME": tmp})
             self.assertEqual(info["cache_path"], str(model_dir))
             self.assertTrue(info["cached"])
@@ -39,6 +42,13 @@ class ModelCacheTests(unittest.TestCase):
             self.assertFalse(info["cached"])
             self.assertIsNone(info["cache_path"])
 
+    def test_model_bin_alone_does_not_make_a_partial_snapshot_ready(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            snap = Path(tmp) / "models--Systran--faster-whisper-small" / "snapshots" / "1234"
+            snap.mkdir(parents=True)
+            (snap / "model.bin").write_bytes(b"\0")
+            self.assertFalse(describe_model_cache("small", 8192, env={"HF_HOME": tmp})["cached"])
+
     def test_a_ggml_weights_file_counts_as_downloaded(self):
         with tempfile.TemporaryDirectory() as tmp:
             snap = Path(tmp) / "hub" / "models--ggerganov--whisper.cpp" / "snapshots" / "1234"
@@ -50,6 +60,8 @@ class ModelCacheTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             snap = Path(tmp) / "hub" / "models--ggerganov--whisper.cpp" / "snapshots" / "1234"
             snap.mkdir(parents=True)
+            (snap / "ggml-tiny.bin").write_bytes(b"\0")
+            (snap / "ggml-large-v3-turbo.bin").touch()
             self.assertFalse(describe_model_cache("whispercpp-large-v3-turbo", 8192, env={"HF_HOME": tmp})["cached"])
 
     def test_prefers_the_snapshot_named_by_refs_main(self):
@@ -59,6 +71,7 @@ class ModelCacheTests(unittest.TestCase):
                 snap = repo / "snapshots" / name
                 snap.mkdir(parents=True)
                 (snap / "model.bin").write_bytes(b"\0")
+                seed_whisper_metadata(snap)
             (repo / "refs").mkdir()
             (repo / "refs" / "main").write_text("1111\n")
             info = describe_model_cache("small", 8192, env={"HF_HOME": tmp})
@@ -69,6 +82,7 @@ class ModelCacheTests(unittest.TestCase):
             snap = Path(tmp) / "hub" / "models--Systran--faster-whisper-small" / "snapshots" / "1234"
             snap.mkdir(parents=True)
             (snap / "model.bin").write_bytes(b"\0")
+            seed_whisper_metadata(snap)
             with mock.patch.object(Path, "iterdir", side_effect=PermissionError("denied")):
                 info = describe_model_cache("small", 8192, env={"HF_HOME": tmp})
             self.assertEqual((info["cached"], info["cache_path"]), (False, None))

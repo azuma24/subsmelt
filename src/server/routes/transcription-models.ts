@@ -1,6 +1,12 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { getAllSettings } from "../config.js";
-import { listBackendModels, downloadBackendModel, deleteBackendModel } from "../transcription-client.js";
+import {
+  deleteBackendModel,
+  downloadBackendModel,
+  listBackendModels,
+  ModelDownloadCancelledError,
+  requestBackendModelDownloadOperation,
+} from "../transcription-client.js";
 import { logger } from "../logger.js";
 import { broadcast } from "../sse.js";
 import { getTranscriptionBackendUrl } from "./transcription-runtime.js";
@@ -49,11 +55,40 @@ export function registerTranscriptionModelsRoutes(app: Express): void {
       return res.json(result);
     } catch (error) {
       const message = errorMessage(error) || "Whisper model download failed";
+      if (error instanceof ModelDownloadCancelledError) {
+        broadcast("model:download", { model, cancelled: true });
+        return res.status(409).json({ error: message, code: "model_download_cancelled" });
+      }
       broadcast("model:download", { model, error: true, message });
       logger.error("system", `Whisper model download failed for ${model}: ${message}`);
       return res.status(502).json({ error: message });
     }
   });
+
+  const operation = async (req: Request, res: Response) => {
+    const settings = getAllSettings();
+    const backendUrl = getTranscriptionBackendUrl(settings);
+    if (!backendUrl) return res.status(400).json({ error: "Transcription backend URL is not configured" });
+    const operationId = req.params.operationId;
+    if (typeof operationId !== "string" || !/^[a-f0-9]{32}$/.test(operationId)) {
+      return res.status(400).json({ error: "Invalid model download ID" });
+    }
+    try {
+      return res.json(
+        await requestBackendModelDownloadOperation(
+          backendUrl,
+          operationId,
+          settings.transcription_backend_token,
+          req.method === "POST",
+        ),
+      );
+    } catch (error) {
+      const status = (error as { backendStatus?: number }).backendStatus === 404 ? 404 : 502;
+      return res.status(status).json({ error: errorMessage(error) || "Whisper model download request failed" });
+    }
+  };
+  app.get("/api/whisper/models/download/:operationId", operation);
+  app.post("/api/whisper/models/download/:operationId/cancel", operation);
 
   app.delete("/api/whisper/models/:model", async (req, res) => {
     const settings = getAllSettings();

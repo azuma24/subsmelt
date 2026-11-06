@@ -36,6 +36,12 @@ class TranscribeRequest(BaseModel):
     device: str = "cpu"
     compute_type: str = "int8"
     use_vad: bool = True
+    audio_stream_index: int | None = Field(default=None, strict=True, ge=0, le=2_147_483_647)
+    # When the client uploaded only the chosen audio, its original stream index
+    # identifies the checkpoint but the packed audio uses automatic mapping.
+    source_audio_stream_index: int | None = Field(default=None, strict=True, ge=0, le=2_147_483_647)
+    force_recognition: bool = False
+    defer_publish: bool = False
     post_action: PostAction = "transcribe_only"
     allow_unsafe: bool = False
     subtitle_quality: SubtitleQualityOptions | None = None
@@ -93,11 +99,14 @@ class PreflightResponse(BaseModel):
 class TranscribeResponse(BaseModel):
     ok: bool
     subtitle_path: str | None = None
+    content: str | None = None
     language: str | None = None
     segments: int = 0
     duration_seconds: float | None = None
     # The script the transcript was converted to, or None when not converted.
     chinese_script: str | None = None
+    timings_ms: dict[str, int] | None = None
+    checkpoint_hit: bool | None = None
 
 
 class UploadTranscribeResponse(BaseModel):
@@ -115,3 +124,5 @@ class UploadTranscribeResponse(BaseModel):
     segments: int = 0
     duration_seconds: float | None = None
     chinese_script: str | None = None
+    timings_ms: dict[str, int] | None = None
+    checkpoint_hit: bool | None = None

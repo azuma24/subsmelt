@@ -30,6 +30,22 @@ The backend must see the same media paths that Subsmelt sees. If Subsmelt scans 
 - `POST /preflight` — RAM/ffmpeg/disk/path safety check plus selected-model cache hints.
 - `POST /transcribe` — generate `.srt`, `.vtt`, or `.txt` next to the media file.
 
+## Recognition checkpoints
+
+The backend saves raw recognition output, including detected language and available word timings, before diarization and subtitle rendering. A retry with the same input revision and recognition options can reuse it, even when the subtitle format changes. Requests can set `force_recognition: true` to rerun the recognizer.
+
+Checkpoints live in `subsmelt-transcripts` under the model cache. Set `SUBSMELT_WHISPER_CHECKPOINT_DIR` to use a different directory, or `SUBSMELT_WHISPER_CHECKPOINTS=0` to disable them. The backend ignores entries over 30 days old and prunes on write to at most 128 entries and 256 MiB. Keep this directory on the backend when restarting or upgrading it.
+
+Set `audio_stream_index` to the absolute FFprobe stream index to select a particular audio track. The backend preserves its offset relative to the media start. Subsmelt can also prepare a lossless 16 kHz mono audio-only upload when upload transport is in use.
+
+From the repository root, compare the same track on the same backend with each transport payload:
+
+```bash
+npx tsx scripts/benchmark-transcription.ts http://localhost:8001 /path/to/Movie.mkv --audio-stream 2 --rounds 2
+```
+
+Use `WHISPER_BACKEND_TOKEN` when the backend requires authentication. The script forces recognition in each run and reports bytes, elapsed phases, audio duration, and whether the rendered subtitles match.
+
 ## CPU defaults
 
 Recommended first settings:

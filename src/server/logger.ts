@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type Database from "better-sqlite3";
+import { logTextRedactor, redactLogMeta } from "./log-redaction.js";
 
 /** Structured context stored beside a log line (a stage name, a status, a snippet). */
 export type LogMeta = Record<string, unknown>;
@@ -115,24 +116,25 @@ type LogCategory = "scan" | "translate" | "queue" | "system" | "youtube";
 function log(level: LogLevel, category: LogCategory, message: string, jobId?: number | null, meta?: LogMeta) {
   const isoTimestamp = nowISO();
   const localTimestamp = nowLocal();
+  const redactText = logTextRedactor();
 
   const entry = {
     timestamp: isoTimestamp,
     level,
     category,
-    message,
+    message: redactText(message),
     job_id: jobId ?? null,
-    meta,
+    meta: meta ? redactLogMeta(meta, redactText) : undefined,
   };
 
   // Console (local time)
   const prefix = `[${localTimestamp}] [${level.toUpperCase()}] [${category}]`;
   if (level === "error") {
-    console.error(`${prefix} ${message}`);
+    console.error(`${prefix} ${entry.message}`);
   } else if (level === "warn") {
-    console.warn(`${prefix} ${message}`);
+    console.warn(`${prefix} ${entry.message}`);
   } else {
-    console.log(`${prefix} ${message}`);
+    console.log(`${prefix} ${entry.message}`);
   }
 
   // File (includes both timestamps)

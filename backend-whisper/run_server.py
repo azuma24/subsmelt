@@ -62,11 +62,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import multiprocessing
 import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.secret_file import SecretFileError, secret_from_env
 from app.token_gen import generate_token
 
 # ---------------------------------------------------------------------------
@@ -325,7 +327,7 @@ def load_config() -> ServerConfig:
             return str(file_value)
         return default
 
-    token = pick("SUBSMELT_WHISPER_TOKEN", "token", None)
+    token = secret_from_env("SUBSMELT_WHISPER_TOKEN") or pick("SUBSMELT_WHISPER_TOKEN", "token")
 
     # Default bind: all interfaces. SubSmelt normally runs in Docker or on another
     # box, so a loopback-only backend is unreachable in the common deployment.
@@ -398,7 +400,8 @@ def apply_environment(config: ServerConfig) -> None:
         os.environ["SUBSMELT_WHISPER_MODEL_DIR"] = config.model_dir
     if config.media_root:
         os.environ["MEDIA_ROOT"] = config.media_root
-    if config.token:
+    mounted_token = os.environ.get("SUBSMELT_WHISPER_TOKEN_FILE") and not os.environ.get("SUBSMELT_WHISPER_TOKEN")
+    if config.token and not mounted_token:
         os.environ["SUBSMELT_WHISPER_TOKEN"] = config.token
     if config.ffmpeg:
         os.environ["SUBSMELT_FFMPEG"] = config.ffmpeg
@@ -604,11 +607,16 @@ def generate_token_command(save: bool, force: bool) -> int:
         return 1
 
     print(f"Saved to {config_path}. Restart the backend to apply it.")
-    if (os.environ.get("SUBSMELT_WHISPER_TOKEN") or "").strip():
-        # Env beats file in load_config, so the saved key would not be the one
-        # actually enforced — say so rather than leaving it to a 401 later.
+    token_override = (
+        "SUBSMELT_WHISPER_TOKEN"
+        if os.environ.get("SUBSMELT_WHISPER_TOKEN")
+        else "SUBSMELT_WHISPER_TOKEN_FILE"
+        if os.environ.get("SUBSMELT_WHISPER_TOKEN_FILE")
+        else None
+    )
+    if token_override:
         print(
-            "\nWARNING: SUBSMELT_WHISPER_TOKEN is set in the environment and "
+            f"\nWARNING: {token_override} is set in the environment and "
             "takes precedence over config.json. The backend will keep using "
             "that value until it is cleared."
         )
@@ -751,7 +759,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if windows_user_data_needs_preparing():
         prepare_user_data(default_data_dir(), Path(LEGACY_WINDOWS_DATA_DIR))
-    config = load_config()
+    try:
+        config = load_config()
+    except SecretFileError as exc:
+        print(f"[run_server] ERROR: {exc}", file=sys.stderr)
+        return 2
 
     if args.print_config:
         print(json.dumps(config.redacted(), indent=2))
@@ -780,4 +792,5 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     raise SystemExit(main())

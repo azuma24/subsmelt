@@ -48,6 +48,9 @@ subtitle from MKV or MP4 as a sidecar. **Convert** can check staged files for
 quality warnings. The **Jobs** preview lists warnings for both subtitle files
 and offers a bilingual SRT download for completed translations with matching cues.
 Publishing an imported sidecar requires hard-link support on the media filesystem.
+See [caption-first scans and image OCR](docs/library-subtitle-intake.md) and
+[processing profiles, review, and JSON automation](docs/processing-workflows.md).
+See [mounted secrets](docs/mounted-secrets.md) for deployment credentials.
 
 Also built in: **Corrections** for terms that keep coming out wrong, such as a
 brand Whisper mishears, fixed before and after translation in the folders you

@@ -5,6 +5,7 @@ export const NOTIFY_EVENTS = [
   { event: "queue:finished", labelKey: "settings.notifications.eventQueueFinished" },
   { event: "queue:stopped", labelKey: "settings.notifications.eventQueueStopped" },
   { event: "youtube:note", labelKey: "settings.notifications.eventYoutubeNote" },
+  { event: "transcription:note", labelKey: "settings.notifications.eventTranscriptionNote" },
 ] as const;
 
 export function parseNotifyEvents(raw: string): string[] {

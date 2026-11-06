@@ -7,6 +7,7 @@
 import type {
   DownloadBackendModelOptions,
   WhisperModelDeleteResult,
+  WhisperModelDownloadOperation,
   WhisperModelDownloadProgress,
   WhisperModelDownloadResult,
   WhisperModelInfo,
@@ -60,6 +61,27 @@ export async function deleteBackendModel(
   if (!response.ok) throwBackendError(body, response.status);
   return body as WhisperModelDeleteResult;
 }
+
+export async function requestBackendModelDownloadOperation(
+  backendUrl: string,
+  operationId: string,
+  token: string | undefined,
+  cancel: boolean,
+): Promise<WhisperModelDownloadOperation> {
+  const url = normalizeTranscriptionBackendUrl(backendUrl);
+  if (!url) throw new Error("Transcription backend URL is not configured");
+  const response = await fetchWithTimeout(
+    `${url}/models/download/${encodeURIComponent(operationId)}${cancel ? "/cancel" : ""}`,
+    { method: cancel ? "POST" : "GET", headers: transcriptionAuthHeaders(token) },
+    SHORT_REQUEST_TIMEOUT_MS,
+    cancel ? "Cancel Whisper model download" : "Whisper model download status",
+  );
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throwBackendError(body, response.status);
+  return body as WhisperModelDownloadOperation;
+}
+
+export class ModelDownloadCancelledError extends Error {}
 
 // Downloads model size can vary; large models take a while, so the download
 // stream gets the same generous default as a transcription run.
@@ -119,7 +141,7 @@ export async function downloadBackendModel(
   const decoder = new TextDecoder();
   let buffer = "";
   let result: WhisperModelDownloadResult | null = null;
-  let streamError: string | null = null;
+  let streamError: Error | null = null;
 
   const handleLine = (line: string): void => {
     const record = parseNdjsonLine(line);
@@ -135,7 +157,11 @@ export async function downloadBackendModel(
         ...(typeof record.cachePath === "string" ? { cachePath: record.cachePath } : {}),
       };
     } else if (type === "error") {
-      streamError = typeof record.error === "string" ? record.error : "Model download failed";
+      const message = typeof record.error === "string" ? record.error : "Model download failed";
+      streamError =
+        record.code === "model_download_cancelled"
+          ? new ModelDownloadCancelledError(message)
+          : Object.assign(new Error(message), { backendStatus: 500 });
     }
   };
 
@@ -155,11 +181,7 @@ export async function downloadBackendModel(
     clearTimeout(timer);
   }
 
-  if (streamError) {
-    const err = new Error(streamError);
-    (err as Error & { backendStatus?: number }).backendStatus = 500;
-    throw err;
-  }
+  if (streamError) throw streamError;
   if (!result) throw new Error("Model download stream ended without a result");
   return result;
 }

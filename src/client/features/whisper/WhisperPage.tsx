@@ -32,6 +32,8 @@ import { RunOptionsSection } from "./RunOptionsSection";
 import { AutoTranscriptionControl } from "./AutoTranscriptionControl";
 import { UrlTranscribeSection } from "./UrlTranscribeSection";
 import { LibraryPicker } from "./LibraryPicker";
+import { AudioTrackPicker } from "./AudioTrackPicker";
+import { TranscriptionProcessingPanel } from "./TranscriptionProcessingPanel";
 import { InlineError } from "../../ui/QueryState";
 
 import { COMPUTE_BY_DEVICE, descriptorsFrom, FORMATS, type OutputFormat, transcriptionHost } from "./whisper-shared";
@@ -83,6 +85,8 @@ export function WhisperPage() {
             device: attempt.device,
             computeType: attempt.computeType,
             advancedOptions: attempt.advancedOptions,
+            audioStreamIndex: attempt.audioStreamIndex,
+            audioOnlyUpload: attempt.audioOnlyUpload,
             overwrite: attempt.overwrite === true,
           },
         },
@@ -135,6 +139,8 @@ export function WhisperPage() {
             device: target.device,
             computeType: target.computeType,
             advancedOptions: target.advancedOptions,
+            audioStreamIndex: target.audioStreamIndex,
+            audioOnlyUpload: target.audioOnlyUpload,
             overwrite: target.overwrite === true,
           },
         })),
@@ -338,12 +344,16 @@ export function WhisperPage() {
     setDiarize(checked);
   }, []);
 
+  const [useFolderProfiles, setUseFolderProfiles] = useState(false);
+  const [translateWithProfile, setTranslateWithProfile] = useState(false);
+  const [audioTrack, setAudioTrack] = useState<{ input: string; index: number }>();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const selectedVisible = useMemo(
     () => Array.from(selected).filter((path) => visiblePaths.has(path)),
     [selected, visiblePaths],
   );
 
+  const singleInput = selectedVisible.length === 1 ? selectedVisible[0] : undefined;
   const activeWork = work.filter(
     (item) => item.kind === "file" && (item.status === "queued" || item.status === "running"),
   );
@@ -435,10 +445,61 @@ export function WhisperPage() {
     const paths = selectedVisible;
     if (paths.length === 0 || running) return;
 
-    // Gate 1: check the selected model is downloaded before we start the batch.
-    // On decline, cancel the run (leave model selected, do nothing else).
-    const modelReady = await ensureModelDownloaded(effModel);
-    if (!modelReady) return;
+    const request = useFolderProfiles
+      ? {}
+      : {
+          outputFormat: effFormat,
+          model: effModel,
+          language: effLang,
+          device: effDevice,
+          computeType: effCompute,
+          speakerDiarization: canDiarize && effDiarize,
+        };
+    const inputs = paths.map((videoPath) => ({
+      kind: "file" as const,
+      input: videoPath,
+      request: {
+        ...request,
+        postAction: useFolderProfiles && translateWithProfile ? "transcribe_and_translate" : "transcribe_only",
+        audioStreamIndex: singleInput === videoPath && audioTrack?.input === videoPath ? audioTrack.index : undefined,
+      },
+    }));
+
+    try {
+      if (useFolderProfiles) {
+        const { plans } = await api.planTranscriptionWork(inputs);
+        const descriptions = [
+          ...new Set(
+            plans.map(({ profile, effective, origins, blockers }) =>
+              [
+                profile?.name,
+                effective.model,
+                effective.language,
+                effective.output_format.toUpperCase(),
+                effective.device,
+                effective.compute_type,
+                origins.folderDefaults && t("processing.inheritedFolderDefaults"),
+                origins.environment.length &&
+                  t("processing.environmentPins", { settings: origins.environment.join(", ") }),
+                ...(blockers ?? []).map((blocker) => t(`processing.blockers.${blocker}`)),
+              ]
+                .filter(Boolean)
+                .join(" · "),
+            ),
+          ),
+        ];
+        const ok = await confirm({ title: t("processing.confirmPlan"), message: descriptions.join("\n") });
+        if (!ok) return;
+        for (const model of new Set(plans.map(({ effective }) => effective.model))) {
+          if (!(await ensureModelDownloaded(model))) return;
+        }
+      } else if (!(await ensureModelDownloaded(effModel))) {
+        return;
+      }
+    } catch (e) {
+      addToast(getErrorMessage(e), "error");
+      return;
+    }
 
     const withSubs = visibleFiles.filter((f) => f.videoPath && paths.includes(f.videoPath) && f.subtitles.length > 0);
     // Reaching the run means the user agreed to replace these videos' subtitles.
@@ -452,21 +513,12 @@ export function WhisperPage() {
     }
     try {
       await api.queueTranscriptionWork(
-        paths.map((videoPath) => ({
-          kind: "file",
-          input: videoPath,
-          request: {
-            outputFormat: effFormat,
-            postAction: "transcribe_only",
-            model: effModel,
-            language: effLang,
-            device: effDevice,
-            computeType: effCompute,
-            speakerDiarization: canDiarize && effDiarize,
-            overwrite: overwritten.has(videoPath),
-          },
+        inputs.map((entry) => ({
+          ...entry,
+          request: { ...entry.request, overwrite: overwritten.has(entry.input) },
         })),
       );
+      setAudioTrack(undefined);
       setSelected(new Set());
       void workQuery.refetch();
     } catch (e: unknown) {
@@ -551,6 +603,42 @@ export function WhisperPage() {
               )}
 
               {/* ── 3. Library — the primary working surface ─────────────────── */}
+              {selectedVisible.length > 0 && (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
+                  {str(settings.processing_profiles, "[]") !== "[]" && (
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        className="accent-accent"
+                        checked={useFolderProfiles}
+                        onChange={(event) => setUseFolderProfiles(event.target.checked)}
+                      />
+                      {t("processing.useFolderProfiles")}
+                    </label>
+                  )}
+                  {useFolderProfiles && (
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        className="accent-accent"
+                        checked={translateWithProfile}
+                        onChange={(event) => setTranslateWithProfile(event.target.checked)}
+                      />
+                      {t("processing.translateWithProfile")}
+                    </label>
+                  )}
+                  {singleInput && (
+                    <AudioTrackPicker
+                      key={singleInput}
+                      input={singleInput}
+                      track={audioTrack?.input === singleInput ? audioTrack.index : undefined}
+                      onChange={(index) =>
+                        setAudioTrack(index === undefined ? undefined : { input: singleInput, index })
+                      }
+                    />
+                  )}
+                </div>
+              )}
               <LibraryPicker
                 libraryQuery={libraryQuery}
                 onLibraryQueryChange={setLibraryQuery}
@@ -587,6 +675,8 @@ export function WhisperPage() {
               />
             </>
           )}
+
+          <TranscriptionProcessingPanel work={work} onChange={() => void workQuery.refetch()} />
 
           {/* Readiness + Model Manager live in Settings → Speech to Text; the Whisper
           page focuses on picking files and transcribing. */}

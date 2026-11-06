@@ -239,7 +239,28 @@
       "folderCount_other": "{{name}} ({{count}} sous-titres)",
       "summaryNothingNew": "{{subtitles}} fichiers de sous-titres trouvés, et chacun a déjà une tâche ou une sortie terminée. Rien de nouveau ne sera mis en file.",
       "summaryNoTarget": "{{subtitles}} fichiers de sous-titres trouvés, mais aucune cible de traduction ne s'applique à eux. Ajoutez ou activez-en une dans Traductions.",
-      "scanAnyway": "Analyser quand même"
+      "scanAnyway": "Analyser quand même",
+      "intake": {
+        "title": "Choix de la source des sous-titres",
+        "sidecar": "Utiliser {{file}}",
+        "embedded": "Importer la piste intégrée {{track}}",
+        "imported": "{{file}} importé",
+        "transcribe": "Mettre la transcription en file d’attente",
+        "transcribe_and_translate": "Mettre la transcription et la traduction en file d’attente",
+        "absent": "Aucun sous-titre trouvé",
+        "no_speech": "Aucune parole détectée dans cette vidéo",
+        "settling": "En attente de la stabilisation du fichier vidéo",
+        "ambiguous": "Plusieurs pistes ou des pistes non étiquetées sont à vérifier",
+        "forced_only": "Seuls des sous-titres forcés ont été trouvés",
+        "language_mismatch": "Les sous-titres sont dans une autre langue",
+        "invalid_sidecar": "Les sous-titres existants sont à vérifier",
+        "bitmap": "Les sous-titres en image nécessitent la reconnaissance optique (OCR)",
+        "unsupported": "Le format des sous-titres est à vérifier",
+        "probe_failed": "Impossible de vérifier les pistes de sous-titres",
+        "import_failed": "Impossible d’importer la piste de sous-titres",
+        "asr_unavailable": "La transcription est indisponible",
+        "summary": "L’analyse suivra les choix de source ci-dessous. À partir des sous-titres existants, {{jobs}} tâches de traduction sont prêtes à être mises en file d’attente."
+      }
     },
     "filtersLabel": "Filtres",
     "bulkActionsLabel": "Actions groupées",
@@ -527,7 +548,18 @@
       "preferredChinese": "Chinois préféré",
       "chineseTraditional": "Chinois traditionnel (Taïwan)",
       "chineseSimplified": "Chinois simplifié",
-      "preferredChineseHint": "S'écrit .chi, comme la plupart des sous-titres chinois existants ; l'autre écriture s'écrit .chs (simplifié) ou .cht (traditionnel). Les sous-titres .chi et .zh existants comptent comme ce choix. Choisissez une seule fois : le modifier plus tard change le sens des nouveaux fichiers .chi."
+      "preferredChineseHint": "S'écrit .chi, comme la plupart des sous-titres chinois existants ; l'autre écriture s'écrit .chs (simplifié) ou .cht (traditionnel). Les sous-titres .chi et .zh existants comptent comme ce choix. Choisissez une seule fois : le modifier plus tard change le sens des nouveaux fichiers .chi.",
+      "subtitleIntake": {
+        "title": "Choix de la source des sous-titres",
+        "hint": "Choisissez les dossiers qui utilisent les sous-titres existants avant de recourir à la reconnaissance vocale. Les règles s’appliquent aussi aux sous-dossiers. La règle du dossier le plus proche est prioritaire.",
+        "add": "Ajouter une règle de dossier",
+        "folder": "Dossier",
+        "language": "Langue source",
+        "fallback": "En l’absence de sous-titres",
+        "off": "Laisser en attente de vérification",
+        "transcribe": "Transcrire",
+        "transcribe_and_translate": "Transcrire et traduire"
+      }
     },
     "notifications": {
       "title": "Notifications",
@@ -544,7 +576,8 @@
       "testFailed": "Échec de la notification de test : {{message}}",
       "hint": "Envoie un webhook quand les événements choisis ci-dessous se produisent. Laissez l’URL vide pour désactiver les notifications.",
       "webhookSaved": "Enregistrée (masquée). Saisissez une nouvelle URL pour la remplacer.",
-      "webhookRemove": "Supprimer le webhook"
+      "webhookRemove": "Supprimer le webhook",
+      "eventTranscriptionNote": "Note de transcription prête"
     },
     "saved": "Paramètres enregistrés",
     "saveFailed": "Échec de l’enregistrement : {{message}}",
@@ -762,7 +795,10 @@
       "deleteConfirm": "Supprimer le modèle {{model}} du cache du backend ? Il pourra être retéléchargé plus tard.",
       "deleteDone": "{{model}} supprimé ({{freed}} libérés)",
       "deleteFailed": "Échec de la suppression de {{model}} : {{message}}",
-      "runtimeMissing": "Runtime manquant"
+      "runtimeMissing": "Runtime manquant",
+      "downloadCancelling": "Annulation en cours…",
+      "downloadCancelled": "Téléchargement annulé",
+      "downloadCancelFailed": "Impossible d’annuler le téléchargement de {{model}} ({{message}})"
     },
     "setup": {
       "progress": "{{done}} sur {{total}} terminé",
@@ -1521,7 +1557,12 @@
       "conflict": "Un fichier de sous-titres porte déjà ce nom.",
       "failed": "Impossible d’importer la piste de sous-titres.",
       "changed": "La vidéo a changé. Vérifiez de nouveau ses pistes.",
-      "noText": "Cette vidéo ne contient aucune piste texte importable."
+      "noText": "Cette vidéo ne contient aucune piste texte importable.",
+      "ocr": "Lire les sous-titres en image",
+      "ocrRunning": "Lecture des sous-titres en image…",
+      "ocrReady": "OCR disponible",
+      "ocrUnavailable": "L’OCR est indisponible sur ce serveur",
+      "cancelOcr": "Annuler l’OCR"
     },
     "jobsUnavailable": "Les états des tâches et les détails des fichiers seront indisponibles jusqu’au rechargement de la file.",
     "sort": {
@@ -1819,6 +1860,81 @@
       "run": "Aperçu sur mes fichiers",
       "again": "Vérifier à nouveau",
       "saveFirst": "Enregistrez d’abord la liste."
+    }
+  },
+  "processing": {
+    "profiles": "Profils de traitement",
+    "profilesHelp": "Enregistrez les réglages par défaut de reconnaissance vocale, de vérification du texte source et de traduction pour un dossier et ses sous-dossiers.",
+    "root": "Dossier racine des médias",
+    "addProfile": "Ajouter un profil",
+    "profileName": "Nom du profil",
+    "folder": "Dossier relatif à la racine des médias",
+    "inherit": "Hériter des réglages par défaut",
+    "maxWidth": "Longueur maximale des lignes lors de la vérification",
+    "maxSpeed": "Nombre maximal de caractères par seconde lors de la vérification",
+    "targets": "Cibles de traduction",
+    "correctionLists": "Listes de corrections",
+    "review": "Vérifier le texte source avant la traduction",
+    "reviewHelp": "Interrompez le traitement après la reconnaissance vocale pour modifier la transcription horodatée et choisir les cibles de traduction.",
+    "exportNote": "Créer une note Markdown",
+    "exportNoteHelp": "Regroupez la transcription en paragraphes horodatés pour la télécharger.",
+    "invalidProfile": "Saisissez un nom et choisissez un dossier sans autre profil, puis vérifiez les limites.",
+    "applyProfile": "Appliquer le profil",
+    "audioOnly": "Envoyer uniquement l’audio",
+    "audioOnlyHelp": "Envoyez l’audio sans perte lorsque le serveur de transcription a besoin de recevoir un fichier.",
+    "chooseAudio": "Choisir la piste audio",
+    "audioProbeFailed": "Impossible de lire les pistes audio.",
+    "defaultAudio": "Sélection automatique de la piste audio",
+    "useFolderProfiles": "Utiliser les profils de dossier",
+    "confirmPlan": "Confirmer le plan de traitement",
+    "sourceTranscript": "Transcription source",
+    "sourceQuality": "Qualité des sous-titres",
+    "reloadTranscript": "Recharger la transcription",
+    "approve": "Approuver le texte source",
+    "cancelReview": "Annuler la vérification",
+    "downloadTranscript": "Télécharger la transcription",
+    "downloadNote": "Télécharger la note Markdown",
+    "recentWork": "Résultats et vérification des transcriptions",
+    "pendingReview": "À vérifier",
+    "checkpointHit": "Résultat enregistré de la reconnaissance vocale réutilisé",
+    "milliseconds": "{{elapsed}} ms",
+    "transforms": "Ajustements des temps et des lignes",
+    "transformType": "Type d’ajustement",
+    "offset": "Décalage temporel (ms)",
+    "frameRate": "Correction de la fréquence d’images",
+    "balance": "Équilibrer les lignes de texte brut",
+    "fromFps": "Fréquence d’origine (i/s)",
+    "toFps": "Fréquence cible (i/s)",
+    "addTransform": "Ajouter un ajustement",
+    "previewTransforms": "Prévisualiser les ajustements",
+    "usePreview": "Utiliser l’aperçu dans l’éditeur",
+    "offsetSummary": "Décaler de {{milliseconds}} ms",
+    "frameRateSummary": "Convertir de {{from}} à {{to}} i/s",
+    "balanceSummary": "Équilibrer à {{width}} caractères par ligne",
+    "translateWithProfile": "Traduire vers les cibles du profil",
+    "inheritedFolderDefaults": "Réglages hérités du dossier",
+    "environmentPins": "Paramètres d’environnement ({{settings}})",
+    "uploadSummary": "{{size}} envoyés",
+    "audioUploadSummary": "{{size}} d’audio envoyés",
+    "phases": {
+      "gpuWait": "Attente du GPU",
+      "preflight": "Vérification préalable",
+      "uploadPrepare": "Préparation de l’audio",
+      "upload": "Envoi",
+      "uploadSave": "Enregistrer le fichier envoyé",
+      "backendPreflight": "Vérification préalable du serveur",
+      "urlDownload": "Télécharger le média",
+      "checkpoint": "Rechercher un résultat intermédiaire enregistré",
+      "audioExtract": "Extraire l’audio",
+      "modelLoad": "Charger le modèle",
+      "asr": "Reconnaître la parole",
+      "diarization": "Identifier les locuteurs",
+      "render": "Générer les sous-titres",
+      "publish": "Publier le résultat"
+    },
+    "blockers": {
+      "speechDisabled": "La reconnaissance vocale est désactivée",
+      "backendMissing": "L’URL du serveur de transcription est manquante"
     }
   }
 }

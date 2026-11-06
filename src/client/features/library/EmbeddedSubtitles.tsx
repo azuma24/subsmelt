@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { EmbeddedSubtitleImport, EmbeddedSubtitleProbe } from "../../../shared/embedded-subtitles";
 import { ApiError, fetchJSON } from "../../api";
@@ -21,7 +21,9 @@ export function EmbeddedSubtitles({ videoPath }: { videoPath: string }) {
   const { t, i18n } = useTranslation();
   const listId = useId();
   const [expanded, setExpanded] = useState(false);
-  const [selected, setSelected] = useState<{ index: number; revision: string } | null>(null);
+  const [selected, setSelected] = useState<{ index: number; revision: string; ocr?: true } | null>(null);
+  const controller = useRef<AbortController | null>(null);
+  useEffect(() => () => controller.current?.abort(), []);
   const probe = useQuery({
     queryKey: ["embedded-subtitles", videoPath],
     queryFn: ({ signal }) =>
@@ -30,14 +32,16 @@ export function EmbeddedSubtitles({ videoPath }: { videoPath: string }) {
     refetchOnWindowFocus: false,
     retry: false,
   });
-  const importTrack = useMutationWithInvalidation((selection: NonNullable<typeof selected>) =>
-    fetchJSON<EmbeddedSubtitleImport>(API_PATH, {
-      method: "POST",
-      body: JSON.stringify({ videoPath, ...selection }),
-    }),
+  const importTrack = useMutationWithInvalidation(
+    ({ selection, signal }: { selection: NonNullable<typeof selected>; signal?: AbortSignal }) =>
+      fetchJSON<EmbeddedSubtitleImport>(API_PATH, {
+        method: "POST",
+        signal,
+        body: JSON.stringify({ videoPath, ...selection }),
+      }),
   );
   const tracks = probe.data?.tracks ?? [];
-  const canImport = tracks.some((track) => track.format);
+  const canImport = tracks.some((track) => track.format || track.ocr === "available");
   const active = selected?.revision === probe.data?.revision ? selected : null;
   const languages = new Intl.DisplayNames([i18n.language], { type: "language" });
   const importError = importTrack.error instanceof ApiError ? importTrack.error : null;
@@ -46,6 +50,24 @@ export function EmbeddedSubtitles({ videoPath }: { videoPath: string }) {
     setSelected(null);
     importTrack.reset();
     void probe.refetch();
+  };
+
+  const importSelection = () => {
+    if (!active) return;
+    const request = active.ocr ? new AbortController() : null;
+    controller.current = request;
+    importTrack.mutate(
+      { selection: active, signal: request?.signal },
+      {
+        onSuccess: () => setSelected(null),
+        onError: () => {
+          if (request?.signal.aborted) importTrack.reset();
+        },
+        onSettled: () => {
+          controller.current = null;
+        },
+      },
+    );
   };
 
   return (
@@ -81,6 +103,7 @@ export function EmbeddedSubtitles({ videoPath }: { videoPath: string }) {
                     </legend>
                     <ul className="divide-y divide-border rounded-md border border-border">
                       {tracks.map((track, position) => {
+                        const selectable = track.format || track.ocr === "available";
                         const label = [
                           t("library.embedded.track", { number: position + 1 }),
                           track.language
@@ -89,7 +112,10 @@ export function EmbeddedSubtitles({ videoPath }: { videoPath: string }) {
                           track.codec,
                           track.isDefault && t("library.embedded.default"),
                           track.isForced && t("library.embedded.forced"),
+                          track.ocr === "available" && t("library.embedded.ocrReady"),
+                          track.ocr === "unavailable" && t("library.embedded.ocrUnavailable"),
                           !track.format &&
+                            !track.ocr &&
                             t(track.isBitmap ? "library.embedded.bitmap" : "library.embedded.unsupported"),
                         ]
                           .filter(Boolean)
@@ -100,16 +126,20 @@ export function EmbeddedSubtitles({ videoPath }: { videoPath: string }) {
                             className={active?.index === track.index ? "bg-accent-soft" : undefined}
                           >
                             <label
-                              className={`flex min-h-touch items-center gap-3 px-3 py-2 ${track.format ? "cursor-pointer hover:bg-surface-raised" : "text-muted"}`}
+                              className={`flex min-h-touch items-center gap-3 px-3 py-2 ${selectable ? "cursor-pointer hover:bg-surface-raised" : "text-muted"}`}
                             >
                               <input
                                 type="radio"
                                 name={listId}
                                 checked={active?.index === track.index}
-                                disabled={!track.format}
+                                disabled={!selectable}
                                 onChange={() => {
                                   if (!probe.data) return;
-                                  setSelected({ index: track.index, revision: probe.data.revision });
+                                  setSelected({
+                                    index: track.index,
+                                    revision: probe.data.revision,
+                                    ...(track.ocr === "available" ? { ocr: true } : {}),
+                                  });
                                   importTrack.reset();
                                 }}
                                 className="shrink-0 accent-accent"
@@ -126,15 +156,24 @@ export function EmbeddedSubtitles({ videoPath }: { videoPath: string }) {
                   </fieldset>
                 )}
                 {canImport && (
-                  <ActionButton
-                    variant="ghost"
-                    size="sm"
-                    disabled={!active || changed}
-                    busy={importTrack.isPending}
-                    onClick={() => active && importTrack.mutate(active, { onSuccess: () => setSelected(null) })}
-                  >
-                    {t(importTrack.isPending ? "library.embedded.importing" : "library.embedded.import")}
-                  </ActionButton>
+                  <div className="flex flex-wrap gap-2">
+                    <ActionButton
+                      variant="ghost"
+                      size="sm"
+                      disabled={!active || changed}
+                      busy={importTrack.isPending}
+                      onClick={importSelection}
+                    >
+                      {active?.ocr
+                        ? t(importTrack.isPending ? "library.embedded.ocrRunning" : "library.embedded.ocr")
+                        : t(importTrack.isPending ? "library.embedded.importing" : "library.embedded.import")}
+                    </ActionButton>
+                    {active?.ocr && importTrack.isPending && (
+                      <ActionButton variant="ghost" size="sm" onClick={() => controller.current?.abort()}>
+                        {t("library.embedded.cancelOcr")}
+                      </ActionButton>
+                    )}
+                  </div>
                 )}
               </>
             )}

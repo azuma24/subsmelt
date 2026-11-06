@@ -339,6 +339,7 @@ export function SettingsPage() {
         content: (
           <SttSection
             settings={settings}
+            tasks={tasksQuery.data ?? []}
             update={update}
             updateAndSaveDebounced={updateAndSaveDebounced}
             healthQuery={transcriptionHealthQuery}

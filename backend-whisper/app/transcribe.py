@@ -3,14 +3,17 @@ render subtitles. Engines plug in through :data:`ENGINE_RUNNERS`."""
 
 from __future__ import annotations
 
+import logging
+import shutil
 import tempfile
+import time
 from collections.abc import Callable, Generator, Iterator
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Literal
 
 from . import nemotron, whisper_engine, whispercpp
-from .audio import extract_audio
+from .audio import extract_audio, ffmpeg_binary
 from .catalog import descriptor_for
 from .chinese_script import convert_segments, is_chinese
 from .diarize import (
@@ -23,10 +26,22 @@ from .diarize import (
 )
 from .engine import EngineRunner, LanguageNotSupportedError, TranscriptionCancelled, progress_event
 from .formatters import write_transcript
+from .model_loader import file_revision, model_revision
 from .nemotron_languages import fold_iso3, normalize_language
 from .paths import output_path_for
 from .schemas import TranscribeRequest
-from .segments import clamp_to_duration, postprocess_segments
+from .segments import clamp_to_duration, postprocess_segments, snap_start_to_words
+from .transcript_checkpoint import (
+    RawTranscript,
+    checkpoint_directory,
+    checkpoint_key,
+    content_digest,
+    read_checkpoint,
+    recognizer_engine,
+    write_checkpoint,
+)
+
+log = logging.getLogger(__name__)
 
 # "path" writes the subtitle next to the input on the shared media root and
 # returns its path; "content" returns the rendered subtitle as a string (the
@@ -34,9 +49,9 @@ from .segments import clamp_to_duration, postprocess_segments
 Deliver = Literal["path", "content"]
 
 ENGINE_RUNNERS: dict[str, EngineRunner] = {
-    "whisper": whisper_engine.run,
-    "whispercpp": whispercpp.run,
-    "nemotron": nemotron.run,
+    "whisper": whisper_engine.run_raw,
+    "whispercpp": whispercpp.run_raw,
+    "nemotron": nemotron.run_raw,
 }
 
 
@@ -200,6 +215,39 @@ def _raise_if_cancelled(is_cancelled: Callable[[], bool] | None) -> None:
         raise TranscriptionCancelled("Transcription cancelled by client")
 
 
+def elapsed_ms(start: float) -> int:
+    return round((time.monotonic() - start) * 1000)
+
+
+def _timing(timings: dict, checkpoint_hit: bool) -> dict:
+    return {"type": "timing", "timings_ms": dict(timings), "checkpoint_hit": checkpoint_hit}
+
+
+def _input_revision(input_path: Path) -> tuple | None:
+    try:
+        return file_revision(input_path)
+    except OSError:
+        return None
+
+
+def _extract(input_path: Path, tmp: str, request: TranscribeRequest, is_cancelled: Callable[[], bool] | None) -> Path:
+    selection = {"stream_index": request.audio_stream_index} if request.audio_stream_index is not None else {}
+    return extract_audio(input_path, Path(tmp) / "audio.wav", is_cancelled=is_cancelled, **selection)
+
+
+def _segments_for_request(segments: list, info: object, request: TranscribeRequest, engine: str) -> list:
+    raw_words = getattr(info, "raw_words", None)
+    if engine == "nemotron" and raw_words is not None:
+        words = [word for word in raw_words if word.start is not None and word.end is not None]
+        return nemotron.words_to_segments(words, request.subtitle_quality)
+    raw_segments = getattr(info, "raw_segments", None)
+    if raw_segments is None:
+        return segments
+    if engine == "whispercpp":
+        return whispercpp.segments_for_request(raw_segments, request)
+    return [snap_start_to_words(segment) for segment in raw_segments]
+
+
 def run_transcription_streaming(
     request: TranscribeRequest,
     input_path: Path,
@@ -207,34 +255,116 @@ def run_transcription_streaming(
     min_progress_interval: float = 1.0,
     *,
     deliver: Deliver,
+    input_digest: str | None = None,
+    shared_input: bool = False,
+    initial_timings: dict[str, int] | None = None,
 ) -> Generator[dict, None, dict]:
-    """Yield ``progress`` dicts, then a terminal ``result`` dict, which is also
-    the generator's return value (for :func:`run_transcription`).
-
-    The temporary ffmpeg scratch directory is always removed via the context
-    manager, including when the caller cancels (``is_cancelled`` returns True →
-    ``TranscriptionCancelled``).
-    """
+    """Checkpoint recognition before diarization, subtitle processing or publication."""
     assert_supported_advanced_features(request)
+    _raise_if_cancelled(is_cancelled)
     runner = engine_runner(request.model)
-    with tempfile.TemporaryDirectory(prefix="subsmelt-whisper-") as tmp:
-        audio_path = extract_audio(input_path, Path(tmp) / "audio.wav", is_cancelled=is_cancelled)
-        segments, info = yield from runner(request, audio_path, is_cancelled, min_progress_interval)
-        if _diarization_requested(request):
+    timings = dict(initial_timings or {})
+    checkpoint_hit = False
+    directory = checkpoint_directory()
+    revision = _input_revision(input_path)
+    identity = model_revision(request.model) if directory is not None and revision is not None else None
+    engine = recognizer_engine(request)
+    key = None
+    checkpoint = None
+    if identity is not None:
+        started = time.monotonic()
+        try:
+            binary = shutil.which(ffmpeg_binary())
+            extractor = file_revision(Path(binary)) if binary else None
+            input_identity = (
+                input_digest or content_digest(input_path, is_cancelled)
+                if deliver == "content" and not shared_input
+                else revision
+            )
+            key = checkpoint_key(request, engine, input_identity, identity, extractor)
+            if not request.force_recognition:
+                checkpoint = read_checkpoint(directory, key, engine)
+                if _input_revision(input_path) != revision or model_revision(request.model) != identity:
+                    checkpoint = None
+                    key = None
+        except (OSError, ValueError):
+            key = None
+        timings["checkpoint"] = elapsed_ms(started)
+    checkpoint_hit = checkpoint is not None
+    yield _timing(timings, checkpoint_hit)
+    active = None
+    started = time.monotonic()
+    try:
+        with tempfile.TemporaryDirectory(prefix="subsmelt-whisper-") as tmp:
+            audio_path = None
+            if not checkpoint_hit or _diarization_requested(request):
+                active, started = "audioExtract", time.monotonic()
+                audio_path = _extract(input_path, tmp, request, is_cancelled)
+                timings[active] = elapsed_ms(started)
+                yield _timing(timings, checkpoint_hit)
+            if checkpoint is None:
+                active, started = "asr", time.monotonic()
+                segments, info = yield from runner(request, audio_path, is_cancelled, min_progress_interval)
+                timings[active] = elapsed_ms(started)
+                load_ms = getattr(info, "model_load_ms", None)
+                if load_ms is not None:
+                    timings["modelLoad"] = min(timings[active], load_ms)
+                    timings[active] -= timings["modelLoad"]
+                active = None
+                # Preserve completed recognition even when the caller disconnects
+                # before diarization/render, but never record a changing source.
+                if key and _input_revision(input_path) == revision and model_revision(request.model) == identity:
+                    cache_started = time.monotonic()
+                    try:
+                        write_checkpoint(directory, RawTranscript.from_output(key, engine, segments, info))
+                    except ValueError:
+                        log.warning("Recognizer output could not be checkpointed", exc_info=True)
+                    timings["checkpoint"] += elapsed_ms(cache_started)
+                yield _timing(timings, checkpoint_hit)
+            else:
+                segments, info = checkpoint.output()
+            segments = _segments_for_request(segments, info, request, engine)
+            if _diarization_requested(request):
+                _raise_if_cancelled(is_cancelled)
+                yield {"type": "phase", "phase": "diarizing"}
+                active, started = "diarization", time.monotonic()
+                segments = _maybe_diarize(segments, audio_path, request, getattr(info, "duration", None))
+                timings[active] = elapsed_ms(started)
+                yield _timing(timings, checkpoint_hit)
             _raise_if_cancelled(is_cancelled)
-            yield {"type": "phase", "phase": "diarizing"}
-            segments = _maybe_diarize(segments, audio_path, request, getattr(info, "duration", None))
-        # Diarization cannot be interrupted; never write a subtitle the client
-        # already walked away from.
-        _raise_if_cancelled(is_cancelled)
-        result = _finalize(segments, info, request, input_path, deliver)
-        yield {**result, "type": "result"}
-        return result
+            if revision is not None and _input_revision(input_path) != revision:
+                raise RuntimeError("Media file changed during transcription")
+            active, started = "render", time.monotonic()
+            result = _finalize(segments, info, request, input_path, deliver)
+            timings[active] = elapsed_ms(started)
+    except Exception:
+        if active is not None and active not in timings:
+            timings[active] = elapsed_ms(started)
+        yield _timing(timings, checkpoint_hit)
+        raise
+    result.update(timings_ms=timings, checkpoint_hit=checkpoint_hit)
+    yield {**result, "type": "result"}
+    return result
 
 
-def run_transcription(request: TranscribeRequest, input_path: Path, *, deliver: Deliver) -> dict:
+def run_transcription(
+    request: TranscribeRequest,
+    input_path: Path,
+    *,
+    deliver: Deliver,
+    input_digest: str | None = None,
+    shared_input: bool = False,
+    initial_timings: dict[str, int] | None = None,
+) -> dict:
     """Blocking transcription: drains the streaming pipeline, returns its result."""
-    events = run_transcription_streaming(request, input_path, deliver=deliver)
+    events = run_transcription_streaming(
+        request,
+        input_path,
+        deliver=deliver,
+        input_digest=input_digest,
+        shared_input=shared_input,
+        initial_timings=initial_timings,
+    )
     while True:
         try:
             next(events)

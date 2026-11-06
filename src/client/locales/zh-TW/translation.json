@@ -238,7 +238,28 @@
       "folderCount_other": "{{name}}（{{count}} 個字幕）",
       "summaryNothingNew": "找到 {{subtitles}} 個字幕檔，但每個都已有工作或已完成的輸出。不會有新工作加入佇列。",
       "summaryNoTarget": "找到 {{subtitles}} 個字幕檔，但沒有適用於它們的翻譯目標。請在「翻譯」中新增或啟用一個。",
-      "scanAnyway": "仍要掃描"
+      "scanAnyway": "仍要掃描",
+      "intake": {
+        "title": "字幕來源選擇",
+        "sidecar": "使用 {{file}}",
+        "embedded": "匯入內嵌字幕軌 {{track}}",
+        "imported": "已匯入 {{file}}",
+        "transcribe": "將轉錄加入佇列",
+        "transcribe_and_translate": "將轉錄與翻譯加入佇列",
+        "absent": "找不到字幕",
+        "no_speech": "這部影片沒有偵測到語音",
+        "settling": "等待影片檔案寫入完成",
+        "ambiguous": "多個或未標記的字幕需要審閱",
+        "forced_only": "只找到強制字幕",
+        "language_mismatch": "字幕為其他語言",
+        "invalid_sidecar": "現有字幕需要審閱",
+        "bitmap": "圖像字幕需要 OCR",
+        "unsupported": "字幕格式需要審閱",
+        "probe_failed": "無法驗證字幕軌",
+        "import_failed": "無法匯入字幕軌",
+        "asr_unavailable": "無法使用轉錄",
+        "summary": "掃描將依照下列字幕來源選擇。現有字幕可建立 {{jobs}} 個翻譯工作。"
+      }
     },
     "filtersLabel": "篩選",
     "bulkActionsLabel": "批次操作",
@@ -525,7 +546,18 @@
       "preferredChinese": "偏好的中文",
       "chineseTraditional": "繁體中文（台灣）",
       "chineseSimplified": "簡體中文",
-      "preferredChineseHint": "以 .chi 標示，與大多數現有中文字幕一致；另一種字體則標示為 .chs（簡體）或 .cht（繁體）。現有的 .chi 與 .zh 字幕都算作此項。只需選擇一次：之後變更會改變新 .chi 檔案的意義。"
+      "preferredChineseHint": "以 .chi 標示，與大多數現有中文字幕一致；另一種字體則標示為 .chs（簡體）或 .cht（繁體）。現有的 .chi 與 .zh 字幕都算作此項。只需選擇一次：之後變更會改變新 .chi 檔案的意義。",
+      "subtitleIntake": {
+        "title": "字幕來源選擇",
+        "hint": "選擇優先使用現有字幕的資料夾。規則包含子資料夾，並以最接近的規則為準。",
+        "add": "新增資料夾規則",
+        "folder": "資料夾",
+        "language": "來源語言",
+        "fallback": "沒有字幕時",
+        "off": "留待審閱",
+        "transcribe": "轉錄",
+        "transcribe_and_translate": "轉錄並翻譯"
+      }
     },
     "notifications": {
       "title": "通知",
@@ -542,7 +574,8 @@
       "testFailed": "測試通知失敗：{{message}}",
       "hint": "當下方選擇的事件發生時傳送 Webhook。將 URL 留空即可關閉通知。",
       "webhookSaved": "已儲存（已隱藏）。輸入新的 URL 即可取代。",
-      "webhookRemove": "移除 Webhook"
+      "webhookRemove": "移除 Webhook",
+      "eventTranscriptionNote": "逐字稿筆記已就緒"
     },
     "saved": "設定已儲存",
     "saveFailed": "儲存失敗：{{message}}",
@@ -760,7 +793,10 @@
       "deleteConfirm": "要從後端快取刪除 {{model}} 模型嗎？之後可以重新下載。",
       "deleteDone": "已刪除 {{model}}（釋放 {{freed}}）",
       "deleteFailed": "刪除 {{model}} 失敗：{{message}}",
-      "runtimeMissing": "缺少執行環境"
+      "runtimeMissing": "缺少執行環境",
+      "downloadCancelling": "正在取消…",
+      "downloadCancelled": "已取消下載",
+      "downloadCancelFailed": "無法取消 {{model}} 的下載（{{message}}）"
     },
     "setup": {
       "progress": "已完成 {{done}}/{{total}}",
@@ -1514,7 +1550,12 @@
       "conflict": "已有同名字幕檔。",
       "failed": "無法匯入字幕軌。",
       "changed": "影片已變更，請重新檢查字幕軌。",
-      "noText": "此影片沒有可匯入的文字字幕軌。"
+      "noText": "此影片沒有可匯入的文字字幕軌。",
+      "ocr": "辨識圖像字幕",
+      "ocrRunning": "正在辨識圖像字幕…",
+      "ocrReady": "可使用 OCR",
+      "ocrUnavailable": "此伺服器無法使用 OCR",
+      "cancelOcr": "取消 OCR"
     },
     "jobsUnavailable": "重新載入佇列前，工作狀態和檔案詳細資料無法使用。",
     "sort": {
@@ -1795,6 +1836,81 @@
       "run": "在我的檔案上預覽",
       "again": "再次檢查",
       "saveFirst": "請先儲存清單。"
+    }
+  },
+  "processing": {
+    "profiles": "處理設定檔",
+    "profilesHelp": "儲存資料夾及其子資料夾的語音辨識、原文審閱與翻譯預設值。",
+    "root": "媒體根目錄",
+    "addProfile": "新增設定檔",
+    "profileName": "設定檔名稱",
+    "folder": "相對於媒體根目錄的資料夾",
+    "inherit": "沿用預設值",
+    "maxWidth": "審閱行寬上限",
+    "maxSpeed": "審閱每秒字元數",
+    "targets": "翻譯目標",
+    "correctionLists": "校正清單",
+    "review": "翻譯前審閱原文",
+    "reviewHelp": "語音辨識完成後暫停，以便編輯附時間碼的逐字稿並選擇翻譯目標。",
+    "exportNote": "建立 Markdown 筆記",
+    "exportNoteHelp": "將逐字稿整理為附時間戳的段落，供下載使用。",
+    "invalidProfile": "請輸入名稱及未使用的資料夾，並檢查上限數值。",
+    "applyProfile": "套用設定檔",
+    "audioOnly": "只上傳音訊",
+    "audioOnlyHelp": "語音後端需要上傳時，傳送無損音訊。",
+    "chooseAudio": "選擇音軌",
+    "audioProbeFailed": "無法讀取音軌。",
+    "defaultAudio": "自動選擇音軌",
+    "useFolderProfiles": "使用資料夾設定檔",
+    "confirmPlan": "確認處理計畫",
+    "sourceTranscript": "原始逐字稿",
+    "sourceQuality": "字幕品質",
+    "reloadTranscript": "重新載入逐字稿",
+    "approve": "核准原文",
+    "cancelReview": "取消審閱",
+    "downloadTranscript": "下載逐字稿",
+    "downloadNote": "下載 Markdown 筆記",
+    "recentWork": "轉錄結果與審閱",
+    "pendingReview": "待審閱",
+    "checkpointHit": "已重用儲存的語音辨識結果",
+    "milliseconds": "{{elapsed}} 毫秒",
+    "transforms": "時間與斷行調整",
+    "transformType": "調整類型",
+    "offset": "時間位移（毫秒）",
+    "frameRate": "影格率校正",
+    "balance": "平衡純文字字幕行",
+    "fromFps": "原始 FPS",
+    "toFps": "目標 FPS",
+    "addTransform": "新增調整",
+    "previewTransforms": "預覽調整",
+    "usePreview": "將預覽套用至編輯器",
+    "offsetSummary": "位移 {{milliseconds}} 毫秒",
+    "frameRateSummary": "從 {{from}} 轉換為 {{to}} FPS",
+    "balanceSummary": "平衡至每行 {{width}} 個字元",
+    "translateWithProfile": "依設定檔的目標翻譯",
+    "inheritedFolderDefaults": "沿用資料夾預設值",
+    "environmentPins": "環境設定（{{settings}}）",
+    "uploadSummary": "已上傳 {{size}}",
+    "audioUploadSummary": "已上傳 {{size}} 音訊",
+    "phases": {
+      "gpuWait": "GPU 等待",
+      "preflight": "前置檢查",
+      "uploadPrepare": "音訊準備",
+      "upload": "上傳",
+      "uploadSave": "儲存上傳檔案",
+      "backendPreflight": "後端前置檢查",
+      "urlDownload": "下載媒體",
+      "checkpoint": "查詢檢查點",
+      "audioExtract": "擷取音訊",
+      "modelLoad": "載入模型",
+      "asr": "語音辨識",
+      "diarization": "辨識說話者",
+      "render": "產生字幕",
+      "publish": "發佈輸出"
+    },
+    "blockers": {
+      "speechDisabled": "語音辨識已停用",
+      "backendMissing": "未設定語音後端網址"
     }
   }
 }

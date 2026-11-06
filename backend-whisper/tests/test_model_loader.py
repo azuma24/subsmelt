@@ -21,6 +21,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from model_download_fixtures import seed_whisper_metadata
+
 import app.model_loader as model_loader
 from app.engine import EngineUnavailableError
 from app.model_cache import cache_root_from_env
@@ -77,6 +79,7 @@ class GetWhisperModelTests(unittest.TestCase):
         snap = base / f"models--Systran--faster-whisper-{model}" / "snapshots" / "deadbeef"
         snap.mkdir(parents=True)
         (snap / "model.bin").write_bytes(b"\0")
+        seed_whisper_metadata(snap)
         return snap
 
     def test_loads_from_resolved_snapshot_hub_layout(self):
@@ -227,6 +230,14 @@ class GetWhisperModelTests(unittest.TestCase):
         self.assertEqual(model_loader._MODEL_CACHE, {})
         self.assertEqual(tiny.model.unload_calls, 1)
         self.assertFalse(model_loader.unload_model("tiny"))
+
+    def test_replacing_weights_reloads_the_resident_model(self):
+        snapshot = self._seed("tiny", layout="hub")
+        first = model_loader.get_whisper_model("tiny", "cpu", "int8")
+        (snapshot / "model.bin").write_bytes(b"new model revision")
+        second = model_loader.get_whisper_model("tiny", "cpu", "int8")
+        self.assertIsNot(first, second)
+        self.assertEqual(first.model.unload_calls, 1)
 
     def test_cache_key_normalizes_model_id_case(self):
         self._seed("tiny", layout="hub")

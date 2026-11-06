@@ -1,5 +1,6 @@
 """Chinese transcripts are converted to the script the user prefers."""
 
+import os
 import shutil
 import tempfile
 import unittest
@@ -60,9 +61,12 @@ class PipelineConversionTests(unittest.TestCase):
         (self.media / "clip.mkv").write_bytes(b"x")
         self._extract = mock.patch.object(transcribe, "extract_audio", _copy_instead_of_ffmpeg)
         self._extract.start()
+        self.addCleanup(self._extract.stop)
+        cache = mock.patch.dict(os.environ, {"SUBSMELT_WHISPER_CHECKPOINTS": "0"})
+        cache.start()
+        self.addCleanup(cache.stop)
 
     def tearDown(self):
-        self._extract.stop()
         self._tmp.cleanup()
 
     def _run(self, text, detected, deliver="content", **request):

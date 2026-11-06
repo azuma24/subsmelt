@@ -20,7 +20,11 @@ export function visibleCueText(text: string, ext: string): string {
     .replace(/<(?:\d+:)?\d{2}:\d{2}\.\d{3}>/g, "");
 }
 
-export function inspectSubtitle(content: string, ext: string) {
+export function inspectSubtitle(
+  content: string,
+  ext: string,
+  policy?: { maxLineWidth?: number; maxReadingSpeed?: number },
+) {
   const issues: SubtitleQualityIssue[] = [];
   const parsed = parseSubtitle(content, ext, (line) => issues.push({ code: "invalidTiming", line }));
   const cues = cuesOf(parsed);
@@ -68,8 +72,9 @@ export function inspectSubtitle(content: string, ext: string) {
       }
       maxWidth = Math.max(maxWidth, width);
     }
-    if (maxWidth > 42) issues.push({ cue, code: "width", value: maxWidth, limit: 42 });
-    const speedLimit = cjk * 2 > characters ? 9 : 20;
+    const widthLimit = policy?.maxLineWidth ?? 42;
+    if (maxWidth > widthLimit) issues.push({ cue, code: "width", value: maxWidth, limit: widthLimit });
+    const speedLimit = policy?.maxReadingSpeed ?? (cjk * 2 > characters ? 9 : 20);
     const speed = duration > 0 ? (characters * 1000) / duration : 0;
     if (speed > speedLimit) issues.push({ cue, code: "speed", value: Math.round(speed * 10) / 10, limit: speedLimit });
   });

@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable, Generator
 from pathlib import Path
+from types import SimpleNamespace
 
 from .engine import TranscriptionCancelled, progress_event
 from .gpu import effective_compute_type, effective_device
@@ -85,10 +87,7 @@ def _iter_segments_with_progress(
             raise
         if is_cancelled is not None and is_cancelled():
             raise TranscriptionCancelled("Transcription cancelled by client")
-        # Snap the cue's start to its first word when the model stretched it
-        # back over lead-in silence (the first cue otherwise sits at 0:00
-        # while the first speaker speaks seconds later).
-        collected.append(snap_start_to_words(segment))
+        collected.append(segment)
         processed_seconds = float(getattr(segment, "end", 0.0) or 0.0)
         if processed_seconds - last_emitted >= min_progress_interval:
             last_emitted = processed_seconds
@@ -98,7 +97,7 @@ def _iter_segments_with_progress(
         raise TranscriptionCancelled("Transcription cancelled by client")
 
 
-def run(
+def run_raw(
     request: TranscribeRequest,
     audio_path: Path,
     is_cancelled: Callable[[], bool] | None,
@@ -107,8 +106,10 @@ def run(
     """Engine runner: lease the WhisperModel, decode ``audio_path``, return
     ``(segments, info)`` after yielding progress. Segments are produced lazily,
     so CUDA OOM can surface at ``transcribe`` or during iteration."""
+    started = time.monotonic()
     _require_faster_whisper()
     with lease(request.model, effective_device(request.device), effective_compute_type(request.compute_type)) as model:
+        load_ms = round((time.monotonic() - started) * 1000)
         try:
             segments_iter, info = model.transcribe(str(audio_path), **faster_whisper_transcribe_kwargs(request))
         except Exception as exc:
@@ -119,4 +120,20 @@ def run(
         yield from _iter_segments_with_progress(
             segments_iter, total_seconds, collected, request, is_cancelled, min_progress_interval
         )
-        return collected, info
+        return collected, SimpleNamespace(
+            language=getattr(info, "language", None),
+            duration=getattr(info, "duration", None),
+            raw_segments=collected,
+            model_load_ms=load_ms,
+        )
+
+
+def run(
+    request: TranscribeRequest,
+    audio_path: Path,
+    is_cancelled: Callable[[], bool] | None,
+    min_progress_interval: float,
+) -> Generator[dict, None, tuple[list, object]]:
+    """Decode audio and return the engine's rendered cue inputs."""
+    segments, info = yield from run_raw(request, audio_path, is_cancelled, min_progress_interval)
+    return [snap_start_to_words(segment) for segment in segments], info

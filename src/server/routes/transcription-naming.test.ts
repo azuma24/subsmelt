@@ -17,6 +17,7 @@ fs.mkdirSync(path.join(mediaDir, "show"), { recursive: true });
 fs.mkdirSync(process.env.DATA_DIR, { recursive: true });
 
 const { getAllSettings } = await import("../config.js");
+const { embeddedVideoIdentity } = await import("../embedded-subtitles.js");
 const { runTranscriptionAttempt } = await import("./transcription-runtime.js");
 const { transcriptionHistory } = await import("../transcription-history.js");
 
@@ -123,11 +124,12 @@ test("a confirmed overwrite replaces the transcript already there under the stan
 });
 
 /** An upload backend: it returns the transcript as content and reports `detected`. */
-async function uploadBackend(detected: string) {
+async function uploadBackend(detected: string, beforeRespond?: () => void) {
   const server = http.createServer(async (req, res) => {
     for await (const _ of req) {
       /* drain the upload */
     }
+    beforeRespond?.();
     const result = {
       type: "result",
       ok: true,
@@ -202,4 +204,156 @@ test("a run cancelled before it reached the backend never holds translation back
     setSetting("gpu_shared", "0");
     server.close();
   }
+});
+
+test("unattended upload leaves captions that arrive during recognition in place", async () => {
+  const video = path.join(mediaDir, "show", "Intake upload.mkv");
+  const original = path.join(mediaDir, "show", "Intake upload.fra.srt");
+  fs.writeFileSync(video, "video");
+  const { revision } = await embeddedVideoIdentity(video);
+  const url = await uploadBackend("en", () => fs.writeFileSync(original, "the new sidecar"));
+  await assert.rejects(
+    runTranscriptionAttempt({
+      videoPath: video,
+      postAction: "transcribe_only",
+      subtitleIntakeRevision: revision,
+      settings: { ...settingsFor(url), transcription_transport: "upload" },
+    }),
+    /subtitle appeared/i,
+  );
+  assert.equal(fs.readFileSync(original, "utf8"), "the new sidecar");
+  assert.ok(!fs.existsSync(path.join(mediaDir, "show", "Intake upload.eng.srt")));
+  assert.ok(!fs.readdirSync(path.dirname(video)).some((name) => name.startsWith(".subsmelt-import-")));
+});
+
+test("unattended shared runs require deferred publication and reject late subtitle conflicts", async () => {
+  let supportsDeferredPublication = false;
+  let transcribed = 0;
+  let beforeResult: (() => void) | undefined;
+  const server = http.createServer(async (req, res) => {
+    if (req.url === "/health") {
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ capabilities: { deferredSharedPublication: supportsDeferredPublication } }));
+      return;
+    }
+    if (req.url === "/preflight") {
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ ok: true, safe: true }));
+      return;
+    }
+    let raw = "";
+    for await (const chunk of req) raw += chunk;
+    const { defer_publish } = JSON.parse(raw);
+    if (defer_publish !== true) {
+      res.writeHead(400).end();
+      return;
+    }
+    transcribed++;
+    beforeResult?.();
+    res.setHeader("Content-Type", "application/x-ndjson");
+    res.end(
+      `${JSON.stringify({
+        type: "result",
+        ok: true,
+        content: "1\n00:00:01,000 --> 00:00:02,000\nhello\n",
+        language: "en",
+        segments: 1,
+      })}\n`,
+    );
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  after(() => server.close());
+  const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const video = path.join(mediaDir, "show", "Intake shared.mkv");
+  const subtitle = path.join(mediaDir, "show", "Intake shared.eng.srt");
+  fs.writeFileSync(video, "video");
+  const { revision } = await embeddedVideoIdentity(video);
+  const run = () =>
+    runTranscriptionAttempt({
+      videoPath: video,
+      postAction: "transcribe_only",
+      subtitleIntakeRevision: revision,
+      settings: settingsFor(url),
+    });
+  await assert.rejects(run(), /backend needs an update/i);
+  assert.equal(transcribed, 0);
+  supportsDeferredPublication = true;
+  beforeResult = () => fs.writeFileSync(subtitle, "the new sidecar");
+  await assert.rejects(run(), /subtitle appeared/i);
+  assert.equal(fs.readFileSync(subtitle, "utf8"), "the new sidecar");
+
+  fs.unlinkSync(subtitle);
+  beforeResult = () => fs.writeFileSync(video, "replaced video");
+  await assert.rejects(run(), /video changed/i);
+  assert.equal(fs.existsSync(subtitle), false);
+
+  beforeResult = undefined;
+  const { revision: replaced } = await embeddedVideoIdentity(video);
+  const result = await runTranscriptionAttempt({
+    videoPath: video,
+    postAction: "transcribe_only",
+    subtitleIntakeRevision: replaced,
+    settings: settingsFor(url),
+  });
+  assert.equal(result.outputPath, subtitle);
+  assert.match(fs.readFileSync(subtitle, "utf8"), /hello/);
+  assert.equal(transcribed, 3);
+});
+
+test("review uses deferred shared publication when advertised and keeps legacy backend support", async () => {
+  let supportsDeferredPublication = false;
+  const requests: { path?: string; deferred?: boolean }[] = [];
+  const server = http.createServer(async (req, res) => {
+    if (req.url === "/health") {
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ capabilities: { deferredSharedPublication: supportsDeferredPublication } }));
+      return;
+    }
+    if (req.url === "/preflight") {
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ ok: true, safe: true }));
+      return;
+    }
+    let raw = "";
+    for await (const chunk of req) raw += chunk;
+    const body = JSON.parse(raw) as { input_path: string; defer_publish?: boolean };
+    requests.push({ path: req.url, deferred: body.defer_publish });
+    const content = "1\n00:00:01,000 --> 00:00:02,000\nhello\n";
+    if (body.defer_publish) {
+      if (req.url === "/transcribe/stream") {
+        res.writeHead(404).end();
+        return;
+      }
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ ok: true, content, language: "en", segments: 1 }));
+      return;
+    }
+    const subtitle = body.input_path.replace(/\.mkv$/, ".srt");
+    fs.writeFileSync(subtitle, content);
+    res.setHeader("Content-Type", "application/x-ndjson");
+    res.end(`${JSON.stringify({ type: "result", ok: true, subtitle_path: subtitle, language: "en", segments: 1 })}\n`);
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  after(() => server.close());
+  const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const run = (stem: string) => {
+    const videoPath = path.join(mediaDir, "show", `${stem}.mkv`);
+    fs.writeFileSync(videoPath, "video");
+    return runTranscriptionAttempt({
+      videoPath,
+      postAction: "transcribe_only",
+      deferSharedPublication: true,
+      settings: settingsFor(url),
+    });
+  };
+  assert.equal(path.basename((await run("Legacy review")).outputPath), "Legacy review.eng.srt");
+  supportsDeferredPublication = true;
+  assert.equal(path.basename((await run("Deferred review")).outputPath), "Deferred review.eng.srt");
+  assert.deepEqual(requests, [
+    { path: "/transcribe/stream", deferred: undefined },
+    { path: "/transcribe/stream", deferred: true },
+    { path: "/transcribe", deferred: true },
+  ]);
 });

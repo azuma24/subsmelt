@@ -1,3 +1,5 @@
+import { parseProcessingProfiles } from "./processing-profiles.js";
+
 /**
  * Every setting the app stores, with the shape of its value. config.json and
  * the API carry settings as strings; this table says what each string must
@@ -47,6 +49,8 @@ export const SETTINGS = {
   scan_folders: s,
   scan_exclude_folders: s,
   scan_profiles: json,
+  subtitle_intake_rules: json,
+  processing_profiles: json,
   directory_rules: json,
   translate_without_video: oneOf(["on", "off"]),
   // Translation engine
@@ -101,6 +105,7 @@ export const SETTINGS = {
   transcription_path_map_from: s,
   transcription_path_map_to: s,
   transcription_transport: oneOf(["auto", "shared", "upload"]),
+  transcription_audio_only_upload: flag,
   gpu_shared: flag,
   convert_gpu_shared: flag,
   // YouTube
@@ -159,10 +164,11 @@ export function settingError(key: string, value: string): string | null {
     }
     case "json":
       try {
-        JSON.parse(value);
+        if (key === "processing_profiles") parseProcessingProfiles(value);
+        else JSON.parse(value);
         return null;
       } catch {
-        return `${key} must be valid JSON`;
+        return key === "processing_profiles" ? "Invalid processing profile settings" : `${key} must be valid JSON`;
       }
     default:
       return null;

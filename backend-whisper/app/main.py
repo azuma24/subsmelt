@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import os
 import re
 import secrets
-import shutil
 import tempfile
 import threading
+import time
 from collections.abc import AsyncIterator, Callable, Iterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
@@ -19,6 +21,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from .audio import AudioStreamSelectionError
 from .catalog import ADVERTISED_MODELS
 from .diarize import (
     DiarizationTokenMissingError,
@@ -44,16 +47,21 @@ from .model_loader import (
     unload_model,
 )
 from .model_manager import (
+    ModelDownload,
+    ModelDownloadInProgressError,
     ModelInUseError,
     ModelNotDownloadedError,
     UnknownModelError,
     assert_engine_available,
     assert_model_downloaded,
+    cancel_model_download,
     delete_model,
     describe_model_info,
     describe_models,
-    download_model_events,
+    find_model_download,
     normalize_model,
+    shutdown_model_downloads,
+    start_model_download,
 )
 from .nemotron_runtime import availability as nemo_speech_availability
 from .nemotron_runtime import binary_version as nemo_speech_version
@@ -77,9 +85,12 @@ from .schemas import (
     TranscribeResponse,
     UploadTranscribeResponse,
 )
+from .secret_file import secret_from_env
 from .transcribe import (
+    Deliver,
     assert_diarization_available,
     assert_language_supported,
+    elapsed_ms,
     fake_transcribe_for_tests,
     fake_transcribe_streaming_for_tests,
     run_transcription,
@@ -93,7 +104,17 @@ USE_FAKE_TRANSCRIBE = os.environ.get("SUBSMELT_WHISPER_FAKE", "0") == "1"
 #: Matches the Node client's upload cap (src/server/transcription/http-upload.ts).
 DEFAULT_MAX_UPLOAD_MB = 5120
 
-app = FastAPI(title="Subsmelt Whisper Backend", version=backend_version())
+
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    _configured_token()  # An invalid mounted auth secret must prevent startup.
+    try:
+        yield
+    finally:
+        await run_in_threadpool(shutdown_model_downloads)
+
+
+app = FastAPI(title="Subsmelt Whisper Backend", version=backend_version(), lifespan=_lifespan)
 log = logging.getLogger(__name__)
 
 
@@ -104,7 +125,7 @@ def _configured_token() -> str:
     ``SUBSMELT_WHISPER_TOKEN`` per process without re-importing the module. An
     empty/unset value means auth is DISABLED (the localhost dev default).
     """
-    return (os.environ.get("SUBSMELT_WHISPER_TOKEN") or "").strip()
+    return (secret_from_env("SUBSMELT_WHISPER_TOKEN") or "").strip()
 
 
 def auth_required() -> bool:
@@ -251,6 +272,8 @@ def capabilities() -> dict:
         "gpus": gpu_info() + apple_gpu_info(),
         "host": host_info(),
         "outputFormats": ["srt", "vtt", "txt", "ass"],
+        "audioStreamSelection": True,
+        "deferredSharedPublication": True,
         # urlInput true only when yt-dlp is installed → frontend shows the URL box
         # only when the backend can actually fetch.
         "urlInput": url_fetch_available(),
@@ -520,30 +543,52 @@ def _stream_error_line(exc: Exception) -> dict:
     }
 
 
+async def _model_download_stream(operation: ModelDownload) -> AsyncIterator[bytes]:
+    sequence = 0
+    while True:
+        sequence, events, finished = operation.events_after(sequence)
+        for event in events:
+            yield (json.dumps(event) + "\n").encode("utf-8")
+        if finished:
+            return
+        await asyncio.sleep(0.25)
+
+
 @app.post("/models/download")
-async def models_download(
+def models_download(
     request: ModelDownloadRequest,
     _auth: None = Depends(require_token),
 ) -> StreamingResponse:
-    """USER-initiated model download, streamed as NDJSON.
-
-    Validates the model id (400 on unknown) BEFORE the stream opens, then emits
-    ``progress`` lines and a terminal ``result``/``error`` line. Idempotent: an
-    already-present model yields an immediate ``result``. The blocking
-    ``snapshot_download`` runs on a worker thread feeding a queue, so the event
-    loop stays free (mirrors ``/transcribe/stream``). A client disconnect does
-    not abort the download; it finishes on the worker thread.
-    """
+    """Start or join a download and stream progress in the original NDJSON format."""
     try:
-        normalize_model(request.model)
+        operation = start_model_download(request.model)
     except UnknownModelError as exc:
         raise HTTPException(
             status_code=400,
             detail={"code": "unknown_model", "model": request.model, "message": str(exc)},
         ) from exc
 
-    stream = _ndjson_stream(download_model_events(request.model), asyncio.Event())
-    return StreamingResponse(stream, media_type="application/x-ndjson")
+    return StreamingResponse(
+        _model_download_stream(operation),
+        media_type="application/x-ndjson",
+        headers={"X-Model-Download-Id": operation.id},
+    )
+
+
+@app.get("/models/download/{operation_id}")
+def model_download_status(operation_id: str, _auth: None = Depends(require_token)) -> dict:
+    status = find_model_download(operation_id)
+    if status is None:
+        raise HTTPException(status_code=404, detail={"code": "model_download_not_found"})
+    return status
+
+
+@app.post("/models/download/{operation_id}/cancel")
+def models_download_cancel(operation_id: str, _auth: None = Depends(require_token)) -> dict:
+    status = cancel_model_download(operation_id)
+    if status is None:
+        raise HTTPException(status_code=404, detail={"code": "model_download_not_found"})
+    return status
 
 
 @app.delete("/models/{model}")
@@ -565,6 +610,10 @@ def models_delete(model: str, _auth: None = Depends(require_token)) -> dict:
         raise HTTPException(
             status_code=404,
             detail={"code": "model_not_downloaded", "model": exc.model},
+        ) from exc
+    except ModelDownloadInProgressError as exc:
+        raise HTTPException(
+            status_code=409, detail={"code": "model_download_in_progress", "model": exc.model, "message": str(exc)}
         ) from exc
     except ModelInUseError as exc:
         raise HTTPException(status_code=409, detail={"code": "model_in_use", "model": exc.model}) from exc
@@ -746,12 +795,15 @@ def validate_transcribe_request(request: TranscribeRequest, *, missing_input_sta
 
 @app.post("/transcribe", response_model=TranscribeResponse)
 def transcribe(request: TranscribeRequest, _auth: None = Depends(require_token)) -> TranscribeResponse:
+    started = time.monotonic()
     input_path = validate_transcribe_request(request)
+    timings = {"backendPreflight": elapsed_ms(started)}
+    deliver: Deliver = "content" if request.defer_publish else "path"
     try:
         if USE_FAKE_TRANSCRIBE:
-            result = fake_transcribe_for_tests(input_path, request, deliver="path")
+            result = fake_transcribe_for_tests(input_path, request, deliver=deliver)
         else:
-            result = run_transcription(request, input_path, deliver="path")
+            result = run_transcription(request, input_path, deliver=deliver, shared_input=True, initial_timings=timings)
     except Exception as exc:
         raise _map_transcription_error(exc) from exc
     return TranscribeResponse(**result)
@@ -777,13 +829,18 @@ async def transcribe_stream(
     # Preflight probes disk, RAM and (on CUDA) nvidia-smi; keep it off the loop.
     # A 404 from this route reads as "no such route" to the client, which then
     # silently retries the JSON route, so a missing file is a 400 here.
+    started = time.monotonic()
     input_path = await run_in_threadpool(validate_transcribe_request, request, missing_input_status=400)
+    timings = {"backendPreflight": elapsed_ms(started)}
+    deliver: Deliver = "content" if request.defer_publish else "path"
 
     cancel_event = asyncio.Event()
     if USE_FAKE_TRANSCRIBE:
-        gen = fake_transcribe_streaming_for_tests(input_path, request, cancel_event.is_set, deliver="path")
+        gen = fake_transcribe_streaming_for_tests(input_path, request, cancel_event.is_set, deliver=deliver)
     else:
-        gen = run_transcription_streaming(request, input_path, cancel_event.is_set, deliver="path")
+        gen = run_transcription_streaming(
+            request, input_path, cancel_event.is_set, deliver=deliver, shared_input=True, initial_timings=timings
+        )
     return StreamingResponse(_ndjson_stream(gen, cancel_event), media_type="application/x-ndjson")
 
 
@@ -899,11 +956,14 @@ def _upload_basename(filename: str | None) -> str:
     return name
 
 
-def _save_upload(file: UploadFile, dest_dir: Path) -> Path:
+def _save_upload(file: UploadFile, dest_dir: Path, update_digest: Callable[[bytes], None] | None = None) -> Path:
     """Persist the uploaded stream to a real temp file ffmpeg can read."""
     dest = dest_dir / _upload_basename(file.filename)
     with dest.open("wb") as out:
-        shutil.copyfileobj(file.file, out)
+        while chunk := file.file.read(1024 * 1024):
+            out.write(chunk)
+            if update_digest:
+                update_digest(chunk)
     return dest
 
 
@@ -912,6 +972,8 @@ def _map_transcription_error(exc: Exception) -> HTTPException:
     endpoint (path, upload, url) surfaces."""
     if isinstance(exc, (ModelWeightsMissingError, ModelNotDownloadedError)):
         return HTTPException(status_code=409, detail={"code": "model_not_downloaded", "model": exc.model})
+    if isinstance(exc, AudioStreamSelectionError):
+        return HTTPException(status_code=400, detail={"code": "invalid_audio_stream", "message": str(exc)})
     if isinstance(exc, (CudaUnavailableError, InvalidComputeTypeError)):
         return HTTPException(status_code=400, detail={"code": "invalid_device", "message": str(exc)})
     if isinstance(exc, LanguageNotSupportedError):
@@ -950,22 +1012,33 @@ def transcribe_upload(
     """Upload transport (Model B): transcribe uploaded media, return content."""
     with tempfile.TemporaryDirectory(prefix="subsmelt-upload-") as tmp:
         tmp_dir = Path(tmp)
-        saved = _save_upload(file, tmp_dir)
+        digest = hashlib.sha256()
+        started = time.monotonic()
+        saved = _save_upload(file, tmp_dir, digest.update)
+        timings = {"uploadSave": elapsed_ms(started)}
+        started = time.monotonic()
         upload_size_mb = int(saved.stat().st_size / 1024 / 1024)
         parsed = parse_upload_request(request, str(saved))
         validate_upload_request(parsed, upload_size_mb, tmp_dir)
+        timings["backendPreflight"] = elapsed_ms(started)
         try:
             if USE_FAKE_TRANSCRIBE:
                 result = fake_transcribe_for_tests(saved, parsed, deliver="content")
             else:
-                result = run_transcription(parsed, saved, deliver="content")
+                result = run_transcription(
+                    parsed, saved, deliver="content", input_digest=digest.hexdigest(), initial_timings=timings
+                )
         except Exception as exc:
             raise _map_transcription_error(exc) from exc
         return UploadTranscribeResponse(**result)
 
 
 def _upload_stream_response(
-    saved: Path, parsed: TranscribeRequest, tmp_ctx: tempfile.TemporaryDirectory
+    saved: Path,
+    parsed: TranscribeRequest,
+    tmp_ctx: tempfile.TemporaryDirectory,
+    timings: dict[str, int],
+    input_digest: str | None = None,
 ) -> StreamingResponse:
     """Stream an upload-mode transcription; ``tmp_ctx`` is removed when it ends,
     including on a client disconnect."""
@@ -973,9 +1046,17 @@ def _upload_stream_response(
     if USE_FAKE_TRANSCRIBE:
         gen = fake_transcribe_streaming_for_tests(saved, parsed, cancel_event.is_set, deliver="content")
     else:
-        gen = run_transcription_streaming(parsed, saved, cancel_event.is_set, deliver="content")
+        gen = run_transcription_streaming(
+            parsed,
+            saved,
+            cancel_event.is_set,
+            deliver="content",
+            input_digest=input_digest,
+            initial_timings=timings,
+        )
     stream = _ndjson_stream(gen, cancel_event, cleanup=tmp_ctx.cleanup)
-    return StreamingResponse(stream, media_type="application/x-ndjson")
+    headers = {"Server-Timing": f"preflight;dur={timings['backendPreflight']}, save;dur={timings.get('uploadSave', 0)}"}
+    return StreamingResponse(stream, media_type="application/x-ndjson", headers=headers)
 
 
 @app.post("/transcribe/upload/stream")
@@ -995,14 +1076,19 @@ async def transcribe_upload_stream(
     try:
         # Copying a multi-GB upload and the preflight probes are blocking work;
         # run them on the threadpool so the loop keeps serving other clients.
-        saved = await run_in_threadpool(_save_upload, file, tmp_dir)
+        digest = hashlib.sha256()
+        started = time.monotonic()
+        saved = await run_in_threadpool(_save_upload, file, tmp_dir, digest.update)
+        timings = {"uploadSave": elapsed_ms(started)}
+        started = time.monotonic()
         upload_size_mb = int(saved.stat().st_size / 1024 / 1024)
         parsed = parse_upload_request(request, str(saved))
         await run_in_threadpool(validate_upload_request, parsed, upload_size_mb, tmp_dir)
+        timings["backendPreflight"] = elapsed_ms(started)
     except BaseException:
         tmp_ctx.cleanup()
         raise
-    return _upload_stream_response(saved, parsed, tmp_ctx)
+    return _upload_stream_response(saved, parsed, tmp_ctx, timings, digest.hexdigest())
 
 
 @app.post("/transcribe/url/stream")
@@ -1026,9 +1112,12 @@ async def transcribe_url_stream(
         # The download is the expensive step: refuse a bad request, an absent
         # model or a starved host before it starts. The media size is unknown
         # until then, so the disk check sees only its floor.
+        started = time.monotonic()
         request_json = json.dumps({k: v for k, v in payload.items() if k != "url"})
         parsed = parse_upload_request(request_json, str(tmp_dir))
         await run_in_threadpool(validate_upload_request, parsed, 0, tmp_dir)
+        timings = {"backendPreflight": elapsed_ms(started)}
+        started = time.monotonic()
         try:
             # yt-dlp is blocking — run it off the event loop so this async worker
             # keeps serving health/cancel/progress while a large URL downloads.
@@ -1037,8 +1126,9 @@ async def transcribe_url_stream(
             raise HTTPException(status_code=400, detail={"code": "url_fetch_unavailable", "message": str(exc)}) from exc
         except UrlFetchError as exc:
             raise HTTPException(status_code=400, detail={"code": "url_fetch_failed", "message": str(exc)}) from exc
+        timings["urlDownload"] = elapsed_ms(started)
         parsed = parsed.model_copy(update={"input_path": str(saved)})
     except BaseException:
         tmp_ctx.cleanup()
         raise
-    return _upload_stream_response(saved, parsed, tmp_ctx)
+    return _upload_stream_response(saved, parsed, tmp_ctx, timings)

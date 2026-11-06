@@ -244,7 +244,7 @@ export function localTranscriptionOutputPath(
   return path.join(parsed.dir, `${parsed.name}.${suffix}`);
 }
 
-function matchingFolderDefaults(
+export function matchingFolderDefaults(
   inputPath: string,
   mediaDir: string,
   settings: TranscriptionSettings,
@@ -316,6 +316,9 @@ export function buildTranscriptionRequest(options: BuildTranscriptionRequestOpti
 export function buildUrlTranscriptionRequest(
   options: Omit<BuildTranscriptionRequestOptions, "videoPath" | "mediaDir" | "postAction"> & { url: string },
 ): Omit<BackendTranscriptionRequest, "input_path"> & { url: string } {
+  if (options.overrides?.audio_stream_index !== undefined) {
+    throw new Error("An explicit audio stream can only be selected for a Library file");
+  }
   const runAnyway = (options.settings.transcription_low_ram_behavior || "").trim() === "run_anyway";
   return {
     url: options.url,
@@ -350,6 +353,8 @@ function transcriptionRunOptions(
   if (options.outputFormat !== undefined && !isOutputFormat(options.outputFormat)) {
     throw new Error(`Unsupported transcription output format: ${options.outputFormat}`);
   }
+  const audioStreamIndex = ov.audio_stream_index ?? folderDefaults?.audio_stream_index;
+  if (audioStreamIndex !== undefined) assertAudioStreamIndex(audioStreamIndex);
   const language = setting(ov.language ?? folderDefaults?.language ?? options.settings.transcription_language, "auto");
   // A saved setting may carry a 3-letter ISO code ("kor" — the form the
   // translation tasks use); the backend catalog and faster-whisper both want
@@ -371,10 +376,18 @@ function transcriptionRunOptions(
     ),
     use_vad: boolSetting(folderDefaults?.use_vad ?? options.settings.transcription_use_vad, true),
     post_action: postAction,
+    ...(audioStreamIndex !== undefined ? { audio_stream_index: audioStreamIndex } : {}),
+    ...(ov.force_recognition === true ? { force_recognition: true } : {}),
     ...(subtitleQuality ? { subtitle_quality: subtitleQuality } : {}),
     ...(mergedAdvanced ? { advanced_options: mergedAdvanced } : {}),
     chinese_script: options.settings.preferred_chinese === "zh-CN" ? "zh-CN" : "zh-TW",
   };
+}
+
+export function assertAudioStreamIndex(value: unknown): asserts value is number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0 || value > 2_147_483_647) {
+    throw new Error("Audio stream index must be a non-negative integer");
+  }
 }
 
 // Reads transcription_request_timeout_s from settings; undefined → default.

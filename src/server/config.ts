@@ -4,6 +4,9 @@ import { migrateConnectionsFromFlat, parseConnections } from "./connections.js";
 import { standardizeTasks, standardTaskLangCode, type PreferredChinese } from "./language-codes.js";
 import { computeLlmConfigured } from "./llm-configured.js";
 import { logger } from "./logger.js";
+import { setLogSecretSource } from "./log-redaction.js";
+import { readMountedSecret } from "./mounted-secrets.js";
+import { SECRET_SETTING_KEYS } from "../shared/settings.js";
 import type { TranslationTask } from "../shared/tasks.js";
 import { errorMessage } from "./errors.js";
 
@@ -52,10 +55,12 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   scan_folders: "",
   scan_exclude_folders: "",
   scan_profiles: "[]",
+  processing_profiles: "[]",
   // Per-directory translation control (see directory-rules.ts).
   // directory_rules: JSON array of DirectoryRule. translate_without_video: global
   // baseline for subtitles that have no companion video ("on" | "off").
   directory_rules: "[]",
+  subtitle_intake_rules: "[]",
   translate_without_video: "off",
   temperature: "0.3",
   chunk_size: "20",
@@ -136,6 +141,7 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   // mode when a token is set with no mapping (true remote). "shared" forces
   // path mode (Model A); "upload" forces multipart upload (Model B).
   transcription_transport: "auto",
+  transcription_audio_only_upload: "0",
   // "1" when Whisper and the translation model share one GPU: translation then
   // runs in batches after pending transcriptions (gpu-gate.ts).
   gpu_shared: "0",
@@ -206,7 +212,8 @@ function loadConfig(): ConfigData {
     // up, leave it in place, and refuse to overwrite it until the user says so.
     const backup = `${CONFIG_FILE}.broken-${new Date().toISOString().replace(/[:.]/g, "-")}`;
     fs.copyFileSync(CONFIG_FILE, backup);
-    const message = e instanceof Error ? errorMessage(e) : String(e);
+    // JSON.parse diagnostics can quote the invalid document, including its keys.
+    const message = e instanceof SyntaxError ? "Invalid JSON" : errorMessage(e);
     configLoadFailure = { file: CONFIG_FILE, backup, message };
     logger.error(
       "system",
@@ -511,16 +518,24 @@ export const ENV_SETTING_OVERRIDES: Record<string, string> = {
   // Lets the compose shared-FS setup pin transport=shared (the backend reads
   // /media in place); otherwise auto picks upload for a non-loopback host.
   WHISPER_TRANSPORT: "transcription_transport",
+  WHISPER_AUDIO_ONLY_UPLOAD: "transcription_audio_only_upload",
+};
+
+const MOUNTED_SECRET_VARIABLES: Readonly<Record<string, string>> = {
+  API_KEY: "API_KEY_FILE",
+  WHISPER_BACKEND_TOKEN: "WHISPER_BACKEND_TOKEN_FILE",
 };
 
 /** Settings to seed from `env`, skipping unset and empty values. */
 export function envSettingOverrides(env: Record<string, string | undefined> = process.env): Record<string, string> {
   const overrides: Record<string, string> = {};
   for (const [envKey, settingKey] of Object.entries(ENV_SETTING_OVERRIDES)) {
-    const value = env[envKey];
     // An empty string is a deliberate "leave it alone", not a value to store —
     // compose files routinely declare a variable with no value.
-    if (value !== undefined && value !== "") overrides[settingKey] = value;
+    const fileVariable = MOUNTED_SECRET_VARIABLES[envKey];
+    const file = fileVariable && env[fileVariable];
+    const value = env[envKey] || (file ? readMountedSecret(fileVariable, file) : undefined);
+    if (value !== undefined) overrides[settingKey] = value;
   }
   return overrides;
 }
@@ -529,6 +544,32 @@ export function envSettingOverrides(env: Record<string, string | undefined> = pr
 // cannot bake an env value into the file and removing the variable brings the
 // saved value back on the next start.
 const envPinnedSettings = envSettingOverrides();
+
+let lastLoggedSettings: ConfigData["settings"] | undefined;
+let logSecrets: string[] = [];
+setLogSecretSource(() => {
+  const settings = _config.settings;
+  if (settings === lastLoggedSettings) return logSecrets;
+  lastLoggedSettings = settings;
+  logSecrets = [];
+  for (const key of SECRET_SETTING_KEYS) {
+    for (const value of [settings[key], envPinnedSettings[key]]) {
+      if (typeof value === "string" && value) logSecrets.push(value);
+    }
+  }
+  if (settings.llm_connections) {
+    // parseConnections can itself log a warning, so read only the credentials here.
+    try {
+      const connections: unknown = JSON.parse(settings.llm_connections);
+      if (Array.isArray(connections)) {
+        for (const connection of connections) {
+          if (typeof connection?.apiKey === "string" && connection.apiKey) logSecrets.push(connection.apiKey);
+        }
+      }
+    } catch {}
+  }
+  return logSecrets;
+});
 
 /** Setting keys whose value comes from the environment; the UI cannot edit them. */
 export function envPinnedSettingKeys(): string[] {

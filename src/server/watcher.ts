@@ -3,9 +3,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { getSetting } from "./config.js";
 import { MEDIA_DIR } from "./scanner.js";
-import { scanFolder } from "./scanner.js";
-import { runQueueSafely } from "./queue.js";
-import { broadcast } from "./sse.js";
+import { scanAndEnqueue } from "./library-scan.js";
 import { logger } from "./logger.js";
 import { errorMessage } from "./errors.js";
 
@@ -34,21 +32,7 @@ function handleFileChange(filePath: string) {
   debounceTimer = setTimeout(() => {
     void (async () => {
       try {
-        const result = await scanFolder(true);
-        // Same announcement as an HTTP scan, so the UI's caches (including the
-        // sticky media_scanned flag the checklists read) stay current.
-        broadcast("scan:complete", {
-          newJobs: result.newJobs,
-          total: result.totalSubtitles,
-          complete: result.complete,
-          errors: result.errors,
-        });
-        for (const error of result.errors)
-          logger.warn("scan", `Watcher scan could not read ${error.path}: ${error.message}`);
-        if (result.newJobs > 0) {
-          logger.info("scan", `Watcher: ${result.newJobs} new jobs queued`);
-          if (getSetting("auto_translate") === "1") runQueueSafely();
-        }
+        await scanAndEnqueue("watcher");
       } catch (e) {
         logger.error("scan", `Watcher scan error: ${errorMessage(e)}`);
       }

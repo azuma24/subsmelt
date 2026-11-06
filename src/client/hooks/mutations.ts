@@ -66,15 +66,15 @@ export function useModelDownload() {
 
   /**
    * Starts a model download and waits for it to finish (or throw).
-   * Invalidates ["whisper-models"] after a successful download.
+   * Refreshes ["whisper-models"] so the latest backend status is visible.
    */
   const downloadModel = useCallback(
     async (model: string): Promise<void> => {
       setDownloads((prev) => ({ ...prev, [model]: { active: true, pct: prev[model]?.pct ?? 0 } }));
       try {
         await api.downloadWhisperModel(model);
-        await queryClient.invalidateQueries({ queryKey: ["whisper-models"] });
       } finally {
+        await queryClient.invalidateQueries({ queryKey: ["whisper-models"] });
         setDownloads((prev) => {
           const next = { ...prev };
           delete next[model];

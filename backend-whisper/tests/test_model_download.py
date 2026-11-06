@@ -13,6 +13,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from model_download_fixtures import inline_download_attempt, seed_whisper_metadata
+
 
 def _install_stubs():
     tq = types.ModuleType("tqdm")
@@ -42,6 +44,8 @@ def _hub_writing_weights(calls=None):
         snap.mkdir(parents=True)
         weights = "nemotron-3.5-asr-streaming-0.6b.q8_0.gguf" if "nemotron" in repo_id else "model.bin"
         (snap / weights).write_bytes(b"\0" * 2048)
+        if weights == "model.bin":
+            seed_whisper_metadata(snap)
         return str(snap)
 
     mod = types.ModuleType("huggingface_hub")
@@ -74,6 +78,7 @@ def _hub_driving_hf_bars(sizes_mib, chunks_mib):
         snap = Path(cache_dir) / ("models--" + repo_id.replace("/", "--")) / "snapshots" / "abc"
         snap.mkdir(parents=True)
         (snap / "model.bin").write_bytes(b"\0" * 2048)
+        seed_whisper_metadata(snap)
         return str(snap)
 
     mod = types.ModuleType("huggingface_hub")
@@ -106,6 +111,7 @@ def _hub_driving_live_xet_bars(size_mib, inflated_mib, chunk_mib):
         snap = Path(cache_dir) / ("models--" + repo_id.replace("/", "--")) / "snapshots" / "abc"
         snap.mkdir(parents=True)
         (snap / "model.bin").write_bytes(b"\0" * 2048)
+        seed_whisper_metadata(snap)
         return str(snap)
 
     mod = types.ModuleType("huggingface_hub")
@@ -134,6 +140,9 @@ class DownloadDeleteTests(unittest.TestCase):
         import app.model_manager as mm
 
         self.mm = mm
+        attempt = mock.patch.object(mm, "_run_download_attempt", inline_download_attempt)
+        attempt.start()
+        self.addCleanup(attempt.stop)
 
     def tearDown(self):
         self._stubs.stop()
@@ -258,6 +267,7 @@ class DownloadDeleteTests(unittest.TestCase):
         blob.write_bytes(b"\0" * 2 * MIB)
         snap = repo / "snapshots" / "deadbeef"
         snap.mkdir(parents=True)
+        seed_whisper_metadata(snap)
         (snap / "model.bin").symlink_to(Path("..") / ".." / "blobs" / "sha256-abc")
         tiny = next(entry for entry in self.mm.describe_models() if entry["id"] == "tiny")
         self.assertEqual(tiny["sizeMb"], 2)

@@ -161,7 +161,7 @@ def _segments_from(data: dict, *, with_words: bool) -> list:
     return segments
 
 
-def run(
+def run_raw(
     request: TranscribeRequest,
     audio_path: Path,
     is_cancelled: Callable[[], bool] | None,
@@ -197,13 +197,29 @@ def run(
             except (OSError, ValueError):
                 raise RuntimeError(f"whisper-cli exited with code {proc.returncode} without a JSON result") from None
     result = data.get("result") or {}
+    raw_segments = _segments_from(data, with_words=True)
+    return raw_segments, SimpleNamespace(language=result.get("language"), duration=duration, raw_segments=raw_segments)
+
+
+def segments_for_request(raw_segments: list, request: TranscribeRequest) -> list:
     options = request.advanced_options
     explicit_word_timestamps = options.word_timestamps if options else None
-    quality = request.subtitle_quality
-    with_words = explicit_word_timestamps is True or (
-        explicit_word_timestamps is None and quality is not None and (quality.max_subtitle_duration or 0) > 0
-    )
-    segments = _segments_from(data, with_words=with_words)
     if explicit_word_timestamps is True:
-        segments = [snap_start_to_words(segment) for segment in segments]
-    return segments, SimpleNamespace(language=result.get("language"), duration=duration)
+        return [snap_start_to_words(segment) for segment in raw_segments]
+    quality = request.subtitle_quality
+    if explicit_word_timestamps is None and quality is not None and (quality.max_subtitle_duration or 0) > 0:
+        return raw_segments
+    return [
+        SimpleNamespace(start=segment.start, end=segment.end, text=segment.text, words=()) for segment in raw_segments
+    ]
+
+
+def run(
+    request: TranscribeRequest,
+    audio_path: Path,
+    is_cancelled: Callable[[], bool] | None,
+    min_progress_interval: float,
+) -> Generator[dict, None, tuple[list, object]]:
+    """Decode audio and return the engine's rendered cue inputs."""
+    segments, info = yield from run_raw(request, audio_path, is_cancelled, min_progress_interval)
+    return segments_for_request(segments, request), info

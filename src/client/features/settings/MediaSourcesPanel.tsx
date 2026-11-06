@@ -5,6 +5,7 @@ import type { FolderNode, Task } from "../../types";
 import { DirectoryRulesSection } from "./media-sources/DirectoryRulesSection";
 import { FolderTree, toSettingsTree } from "./media-sources/FolderTree";
 import { ScanProfilesSection } from "./media-sources/ScanProfilesSection";
+import { SubtitleIntakeSection } from "./media-sources/SubtitleIntakeSection";
 import { usePersistedExpansion, type TreeExpansion } from "../../ui/file-tree/use-persisted-expansion";
 import { useDrillDown } from "../../ui/file-tree/use-drill-down";
 import {
@@ -35,12 +36,14 @@ interface MediaSourcesPanelProps {
   scanExcludeFolders: string;
   scanProfiles: string;
   directoryRules: string;
+  subtitleIntakeRules: string;
   onScanModeChange: (mode: string) => void;
   onScanFoldersChange: (folders: string) => void;
   onScanExcludeFoldersChange: (folders: string) => void;
   onScanScopeChange: (scope: { scanMode: string; scanFolders: string; scanExcludeFolders: string }) => void;
   onScanProfilesChange: (profiles: string) => void;
   onDirectoryRulesChange: (rules: string) => void;
+  onSubtitleIntakeRulesChange: (rules: string) => void;
 }
 
 /**
@@ -59,12 +62,14 @@ export function MediaSourcesPanel({
   scanExcludeFolders,
   scanProfiles,
   directoryRules,
+  subtitleIntakeRules,
   onScanModeChange,
   onScanFoldersChange,
   onScanExcludeFoldersChange,
   onScanScopeChange,
   onScanProfilesChange,
   onDirectoryRulesChange,
+  onSubtitleIntakeRulesChange,
 }: MediaSourcesPanelProps) {
   const isMobile = useIsMobile();
   const { t } = useTranslation();
@@ -362,6 +367,12 @@ export function MediaSourcesPanel({
         rawRules={directoryRules}
         onChange={onDirectoryRulesChange}
         tasks={tasks}
+      />
+
+      <SubtitleIntakeSection
+        folders={allSubfolders}
+        rawRules={subtitleIntakeRules}
+        onChange={onSubtitleIntakeRulesChange}
       />
 
       <details className="rounded-sm border border-border bg-surface-raised p-3">

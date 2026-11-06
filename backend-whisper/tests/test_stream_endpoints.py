@@ -74,6 +74,26 @@ class PreStreamWorkOffLoopTests(unittest.TestCase):
         self.assertIn('"type": "result"', resp.text)
         self.assertEqual(self.seen, {"validate": False})
 
+    def test_shared_delivery_can_return_content_without_touching_existing_subtitle(self):
+        media = self.media / "clip.mkv"
+        sidecar = media.with_suffix(".srt")
+        sidecar.write_text("existing subtitle")
+        body = {"input_path": str(media), "model": "small", "defer_publish": True}
+        with (
+            mock.patch.object(main_module, "MEDIA_ROOT", str(self.media)),
+            mock.patch.object(main_module, "available_ram_mb", return_value=64000),
+            mock.patch.object(main_module, "ffmpeg_available", return_value=True),
+            mock.patch.object(main_module, "assert_model_downloaded", return_value=None),
+        ):
+            streamed = self.client.post("/transcribe/stream", json=body)
+            plain = self.client.post("/transcribe", json=body)
+        self.assertEqual((streamed.status_code, plain.status_code), (200, 200))
+        result = json.loads(streamed.text.splitlines()[-1])
+        self.assertIn("Test transcription", result["content"])
+        self.assertEqual(result["content"], plain.json()["content"])
+        self.assertIsNone(plain.json()["subtitle_path"])
+        self.assertEqual(sidecar.read_text(), "existing subtitle")
+
     def test_upload_stream_saves_and_validates_off_the_loop(self):
         with (
             mock.patch.object(main_module, "_save_upload", self._recording("save", main_module._save_upload)),

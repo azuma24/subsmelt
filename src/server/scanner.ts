@@ -10,6 +10,9 @@ import { removeJobPartialOutput } from "./job-output.js";
 import { loadTitleSidecar, getTitle, pruneTitleSidecarQueued, type TitleSidecar } from "./translator/title-sidecar.js";
 import { findAnyCase, stripLangSuffix, taskOutputName, taskOutputNames } from "./output-names.js";
 import { caseKey, mediaRelativeDir, normalizeMediaSubfolder, resolveMediaSubfolder } from "./media-paths.js";
+import { decideSubtitleIntake, intakeCompanionStem, matchSubtitleIntakeRule } from "./subtitle-intake.js";
+import { parseSubtitleIntakeRules, type SubtitleIntakeDecision } from "../shared/subtitle-intake.js";
+import { hasAutomaticTranslationRestrictions, isAutomaticTranslationAllowed } from "./transcription/review-gate.js";
 import type { FolderCounts, FolderNode, ScannedFile, ScanResult, ScanTaskState } from "../shared/scan.js";
 
 export const MEDIA_DIR = process.env.MEDIA_DIR || "/media";
@@ -254,7 +257,10 @@ function youtubeFolder(): string | null {
   return normalizeMediaSubfolder(getSetting("youtube_download_dir"));
 }
 
-export async function scanFolder(createJobs = true): Promise<ScanResult> {
+export async function scanFolder(
+  createJobs = true,
+  options?: { intake: "preview" | "run"; transcriptionAvailable: boolean },
+): Promise<ScanResult> {
   const videoExts = getSetting("video_extensions")
     .split(",")
     .map((e) => e.trim().toLowerCase());
@@ -346,16 +352,84 @@ export async function scanFolder(createJobs = true): Promise<ScanResult> {
 
   const taskOutputs = findTaskOutputs(srtFiles, outputDetectTasks);
 
-  const sourcesShortestFirst = srtFiles
-    .filter((srtPath) => !taskOutputs.has(caseKey(srtPath)))
-    .sort((a, b) => path.basename(a).length - path.basename(b).length);
-
   const matchingVideo = (srtPath: string): string | null => {
     const ext = path.extname(srtPath);
     const stem = path.basename(srtPath, ext);
     const dir = path.dirname(srtPath);
     return videoIndex.get(`${dir}/${stem}`) ?? videoIndex.get(`${dir}/${stripLangSuffix(stem)}`) ?? null;
   };
+  const sourcesShortestFirst = srtFiles
+    .filter((srtPath) => !taskOutputs.has(caseKey(srtPath)))
+    .sort((a, b) => path.basename(a).length - path.basename(b).length);
+  const intakeDecisions = new Map<string, SubtitleIntakeDecision>();
+  if (options) {
+    const rules = parseSubtitleIntakeRules(getSetting("subtitle_intake_rules")).sort(
+      (a, b) => b.path.length - a.path.length,
+    );
+    if (rules.length > 0) {
+      const sourcesByVideo = new Map<string, string[]>();
+      const sidecarsByVideo = new Map<string, string[]>();
+      const sourcesAdded = new Set(sourcesShortestFirst);
+      const formats = new Set([...subExts, ".srt", ".ass", ".ssa", ".vtt", ".idx", ".sub", ".sup"]);
+      for (const source of srtFiles) {
+        const video = matchingVideo(source);
+        if (video) {
+          const sources = sourcesByVideo.get(video) ?? [];
+          sources.push(source);
+          sourcesByVideo.set(video, sources);
+        }
+      }
+      for (const file of allFiles) {
+        if (!formats.has(path.extname(file).toLowerCase())) continue;
+        const video = matchingVideo(file) ?? videoIndex.get(`${path.dirname(file)}/${intakeCompanionStem(file)}`);
+        if (video) {
+          const sidecars = sidecarsByVideo.get(video) ?? [];
+          sidecars.push(file);
+          sidecarsByVideo.set(video, sidecars);
+        }
+      }
+      // The shared FFprobe gate also bounds simultaneous preview and run requests.
+      for (let start = 0; start < videoFiles.length; start += 3) {
+        const decisions = await Promise.all(
+          videoFiles.slice(start, start + 3).map(async (video) => {
+            const relativeFolder = path
+              .relative(mediaRoot, path.resolve(path.dirname(video)))
+              .split(path.sep)
+              .join("/");
+            const rule = matchSubtitleIntakeRule(relativeFolder, rules);
+            if (!rule) return null;
+            const decision = await decideSubtitleIntake({
+              video,
+              sources: sourcesByVideo.get(video) ?? [],
+              allSidecars: sidecarsByVideo.get(video) ?? [],
+              rule,
+              preferredChinese: preferredChinese(),
+              run: options.intake === "run",
+              transcriptionAvailable: options.transcriptionAvailable && errors.length === 0,
+            });
+            return { video, decision };
+          }),
+        );
+        for (const planned of decisions) {
+          if (!planned) continue;
+          const { video, decision } = planned;
+          intakeDecisions.set(video, decision);
+          if (!decision.file) continue;
+          const source = path.join(path.dirname(video), decision.file);
+          if (!sourcesAdded.has(source)) {
+            sourcesShortestFirst.push(source);
+            sourcesAdded.add(source);
+          }
+          if (decision.action === "imported") {
+            srtFiles.push(source);
+            scannedFiles.set(caseKey(source), source);
+          }
+        }
+      }
+      sourcesShortestFirst.sort((a, b) => path.basename(a).length - path.basename(b).length);
+    }
+  }
+
   const sourcePlans = new Map<string, { videoPath: string | null; effectiveTasks: TranslationTask[] }>();
   for (const srtPath of sourcesShortestFirst) {
     const videoPath = matchingVideo(srtPath);
@@ -365,7 +439,9 @@ export async function scanFolder(createJobs = true): Promise<ScanResult> {
       .join("/");
     const resolved = resolveDirectoryRule(relDir, directoryRules, globalTranslateWithoutVideo);
     const effectiveTasks: TranslationTask[] = [];
-    if (videoPath || resolved.translateWithoutVideo) {
+    const intake = videoPath ? intakeDecisions.get(videoPath) : undefined;
+    const chosen = !intake || intake.file === path.basename(srtPath);
+    if (chosen && (videoPath || resolved.translateWithoutVideo)) {
       effectiveTasks.push(...enabledTasks);
       for (const id of resolved.extraTaskIds) {
         const task = tasksById.get(id);
@@ -390,7 +466,18 @@ export async function scanFolder(createJobs = true): Promise<ScanResult> {
       videoName: path.basename(vf),
       videoMtime: videoMtimes.get(vf) ?? null,
       subtitles: [],
+      ...(intakeDecisions.has(vf) ? { intake: intakeDecisions.get(vf) } : {}),
     });
+  }
+
+  // Review can start during a filesystem await. Apply the current gate at
+  // the synchronous job planning boundary, before choosing output owners.
+  if (hasAutomaticTranslationRestrictions()) {
+    for (const [subtitlePath, source] of sourcePlans) {
+      source.effectiveTasks = source.effectiveTasks.filter((task) =>
+        isAutomaticTranslationAllowed(subtitlePath, source.videoPath ?? undefined, task.id),
+      );
+    }
   }
 
   // Read jobs after the filesystem awaits. A concurrent scan or one-off

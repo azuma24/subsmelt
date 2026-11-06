@@ -18,6 +18,7 @@ import { MEDIA_DIR } from "./scanner.js";
 import { existingTaskOutput, stripLangSuffix, taskOutputName } from "./output-names.js";
 import { standardTaskLangCode } from "./language-codes.js";
 import { assertMediaPathAllowed } from "./transcription-client.js";
+import { allowExplicitTranslationTarget, isSourceReviewPending } from "./transcription/review-gate.js";
 
 export type FileTranslationTarget = { taskId: number } | { langCode: string; targetLang: string };
 
@@ -116,20 +117,32 @@ function findCompanionVideo(srtPath: string): string | null {
 }
 
 /** Queue one library subtitle for translation into one language, without touching the global tasks. */
-export function queueFileTranslation(srtPathInput: string, target: FileTranslationTarget): FileTranslationResult {
+export function queueFileTranslation(
+  srtPathInput: string,
+  target: FileTranslationTarget,
+  explicit = false,
+): FileTranslationResult {
   // Scan results name subtitles by their resolved path under MEDIA_DIR, and the
   // jobs table keys on that exact string.
   const srtPath = path.resolve(srtPathInput);
   const sourceProblem = checkSource(srtPath);
   if (sourceProblem) return sourceProblem;
+  const video = explicit ? findCompanionVideo(srtPath) : undefined;
+  if (explicit && isSourceReviewPending(srtPath, video ?? undefined))
+    return reject(409, "Approve the source transcript before translating it");
+  const permit = (taskId: number) => {
+    if (explicit) allowExplicitTranslationTarget(srtPath, taskId);
+  };
 
   const resolved = resolveTask(target);
   if (resolved.kind === "rejected") return resolved;
   const shape = resolved.kind === "existing" ? resolved.task : resolved.draft;
 
   const existing = resolved.kind === "existing" ? findJobForTask(srtPath, resolved.task.id) : undefined;
-  if (existing?.status === "pending" || existing?.status === "translating")
+  if (existing?.status === "pending" || existing?.status === "translating") {
+    permit(existing.task_id);
     return { kind: "already-queued", jobId: existing.id, taskId: existing.task_id };
+  }
   if (existing?.status === "done" || existing?.status === "skipped")
     return reject(
       409,
@@ -147,6 +160,7 @@ export function queueFileTranslation(srtPathInput: string, target: FileTranslati
   if (owner && owner.id !== existing?.id) return reject(409, `Another job already owns ${path.basename(outputPath)}`);
 
   const task = saveTask(resolved);
+  permit(task.id);
   if (existing) {
     const previousOutput = getJob(existing.id)?.output_path ?? outputPath;
     if (resetJob(existing.id, outputPath) === 0) return { kind: "already-queued", jobId: existing.id, taskId: task.id };
@@ -159,7 +173,7 @@ export function queueFileTranslation(srtPathInput: string, target: FileTranslati
     task_id: task.id,
     srt_path: srtPath,
     output_path: outputPath,
-    video_path: findCompanionVideo(srtPath),
+    video_path: video === undefined ? findCompanionVideo(srtPath) : video,
     status: "pending",
   });
   const jobId = Number(lastInsertRowid);

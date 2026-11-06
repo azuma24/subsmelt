@@ -239,7 +239,28 @@
       "folderCount_other": "{{name}} ({{count}} subtítulos)",
       "summaryNothingNew": "Se encontraron {{subtitles}} archivos de subtítulos y todos ya tienen un trabajo o una salida terminada. No se añadirá nada nuevo a la cola.",
       "summaryNoTarget": "Se encontraron {{subtitles}} archivos de subtítulos, pero ningún destino de traducción se aplica a ninguno. Añade o activa uno en Traducciones.",
-      "scanAnyway": "Escanear de todos modos"
+      "scanAnyway": "Escanear de todos modos",
+      "intake": {
+        "title": "Selección de la fuente de subtítulos",
+        "sidecar": "Usar {{file}}",
+        "embedded": "Importar la pista incrustada {{track}}",
+        "imported": "Se importó {{file}}",
+        "transcribe": "Poner la transcripción en cola",
+        "transcribe_and_translate": "Poner la transcripción y la traducción en cola",
+        "absent": "No se encontraron subtítulos",
+        "no_speech": "No se detectó voz en este vídeo",
+        "settling": "Esperando a que el archivo de vídeo se estabilice",
+        "ambiguous": "Hay varias pistas de subtítulos o alguna sin etiqueta. Hay que revisarlas.",
+        "forced_only": "Solo se encontraron subtítulos forzados",
+        "language_mismatch": "Los subtítulos están en otro idioma",
+        "invalid_sidecar": "Hay que revisar los subtítulos existentes",
+        "bitmap": "Los subtítulos de imagen requieren OCR",
+        "unsupported": "Hay que revisar el formato de los subtítulos",
+        "probe_failed": "No se pudieron verificar las pistas de subtítulos",
+        "import_failed": "No se pudo importar la pista de subtítulos",
+        "asr_unavailable": "La transcripción no está disponible",
+        "summary": "El escaneo seguirá las opciones de fuente indicadas abajo. Se pueden poner en cola {{jobs}} tareas de traducción a partir de los subtítulos existentes."
+      }
     },
     "filtersLabel": "Filtros",
     "bulkActionsLabel": "Acciones en lote",
@@ -527,7 +548,18 @@
       "preferredChinese": "Chino preferido",
       "chineseTraditional": "Chino tradicional (Taiwán)",
       "chineseSimplified": "Chino simplificado",
-      "preferredChineseHint": "Se escribe como .chi, igual que la mayoría de los subtítulos en chino existentes; la otra escritura se escribe como .chs (simplificado) o .cht (tradicional). Los subtítulos .chi y .zh existentes cuentan como esta opción. Elígela una sola vez: cambiarla después cambia el significado de los nuevos archivos .chi."
+      "preferredChineseHint": "Se escribe como .chi, igual que la mayoría de los subtítulos en chino existentes; la otra escritura se escribe como .chs (simplificado) o .cht (tradicional). Los subtítulos .chi y .zh existentes cuentan como esta opción. Elígela una sola vez: cambiarla después cambia el significado de los nuevos archivos .chi.",
+      "subtitleIntake": {
+        "title": "Selección de la fuente de subtítulos",
+        "hint": "Elige en qué carpetas se usan los subtítulos existentes antes de recurrir al reconocimiento de voz. Las reglas también se aplican a las subcarpetas. Tiene prioridad la regla de la carpeta más cercana.",
+        "add": "Añadir regla de carpeta",
+        "folder": "Carpeta",
+        "language": "Idioma origen",
+        "fallback": "Si no hay subtítulos",
+        "off": "Dejar pendiente de revisión",
+        "transcribe": "Transcribir",
+        "transcribe_and_translate": "Transcribir y traducir"
+      }
     },
     "notifications": {
       "title": "Notificaciones",
@@ -544,7 +576,8 @@
       "testFailed": "Error en la notificación de prueba: {{message}}",
       "hint": "Envía un webhook cuando ocurran los eventos que elijas abajo. Deja la URL vacía para desactivar las notificaciones.",
       "webhookSaved": "Guardada (oculta). Escribe una URL nueva para reemplazarla.",
-      "webhookRemove": "Quitar webhook"
+      "webhookRemove": "Quitar webhook",
+      "eventTranscriptionNote": "Nota de transcripción lista"
     },
     "saved": "Configuración guardada",
     "saveFailed": "Error al guardar: {{message}}",
@@ -762,7 +795,10 @@
       "deleteConfirm": "¿Eliminar el modelo {{model}} de la caché del backend? Puedes volver a descargarlo más tarde.",
       "deleteDone": "{{model}} eliminado (se liberaron {{freed}})",
       "deleteFailed": "Error al eliminar {{model}}: {{message}}",
-      "runtimeMissing": "Falta el runtime"
+      "runtimeMissing": "Falta el runtime",
+      "downloadCancelling": "Cancelando…",
+      "downloadCancelled": "Descarga cancelada",
+      "downloadCancelFailed": "No se pudo cancelar la descarga de {{model}} ({{message}})"
     },
     "setup": {
       "progress": "{{done}} de {{total}} completado",
@@ -1521,7 +1557,12 @@
       "conflict": "Ya existe un archivo de subtítulos con este nombre.",
       "failed": "No se pudo importar la pista de subtítulos.",
       "changed": "El vídeo ha cambiado. Vuelve a comprobar las pistas.",
-      "noText": "Este vídeo no tiene pistas de texto que se puedan importar."
+      "noText": "Este vídeo no tiene pistas de texto que se puedan importar.",
+      "ocr": "Leer subtítulos de imagen",
+      "ocrRunning": "Leyendo subtítulos de imagen…",
+      "ocrReady": "OCR disponible",
+      "ocrUnavailable": "El OCR no está disponible en este servidor",
+      "cancelOcr": "Cancelar OCR"
     },
     "jobsUnavailable": "Los estados de los trabajos y los detalles de los archivos no están disponibles hasta que se recargue la cola.",
     "sort": {
@@ -1819,6 +1860,81 @@
       "run": "Vista previa en mis archivos",
       "again": "Comprobar de nuevo",
       "saveFirst": "Guarda primero la lista."
+    }
+  },
+  "processing": {
+    "profiles": "Perfiles de procesamiento",
+    "profilesHelp": "Guarda los valores predeterminados de reconocimiento de voz, revisión del original y traducción para una carpeta y sus subcarpetas.",
+    "root": "Carpeta raíz de medios",
+    "addProfile": "Añadir perfil",
+    "profileName": "Nombre del perfil",
+    "folder": "Carpeta relativa a la raíz de medios",
+    "inherit": "Heredar valores predeterminados",
+    "maxWidth": "Límite de caracteres por línea para la revisión",
+    "maxSpeed": "Límite de caracteres por segundo para la revisión",
+    "targets": "Destinos de traducción",
+    "correctionLists": "Listas de correcciones",
+    "review": "Revisar el original antes de traducir",
+    "reviewHelp": "Pausa el proceso tras el reconocimiento de voz para editar la transcripción con marcas de tiempo y elegir los destinos de traducción.",
+    "exportNote": "Crear una nota en Markdown",
+    "exportNoteHelp": "Agrupa la transcripción en párrafos con marcas de tiempo para descargarla.",
+    "invalidProfile": "Indica un nombre y una carpeta que no tenga otro perfil. Comprueba también los límites.",
+    "applyProfile": "Aplicar perfil",
+    "audioOnly": "Subir solo el audio",
+    "audioOnlyHelp": "Envía audio sin pérdida cuando el servidor de transcripción requiere una subida.",
+    "chooseAudio": "Elegir pista de audio",
+    "audioProbeFailed": "No se pudieron leer las pistas de audio.",
+    "defaultAudio": "Selección automática de la pista de audio",
+    "useFolderProfiles": "Usar perfiles de carpeta",
+    "confirmPlan": "Confirmar el plan de procesamiento",
+    "sourceTranscript": "Transcripción original",
+    "sourceQuality": "Calidad de los subtítulos",
+    "reloadTranscript": "Volver a cargar la transcripción",
+    "approve": "Aprobar el original",
+    "cancelReview": "Cancelar la revisión",
+    "downloadTranscript": "Descargar la transcripción",
+    "downloadNote": "Descargar la nota en Markdown",
+    "recentWork": "Resultados de transcripción y revisión",
+    "pendingReview": "Pendiente de revisión",
+    "checkpointHit": "Se reutilizó un resultado guardado del reconocimiento de voz",
+    "milliseconds": "{{elapsed}} ms",
+    "transforms": "Ajustes de tiempos y líneas",
+    "transformType": "Tipo de ajuste",
+    "offset": "Desplazamiento temporal (ms)",
+    "frameRate": "Corrección de la tasa de fotogramas",
+    "balance": "Equilibrar las líneas de texto sin formato",
+    "fromFps": "FPS originales",
+    "toFps": "FPS de destino",
+    "addTransform": "Añadir ajuste",
+    "previewTransforms": "Previsualizar los ajustes",
+    "usePreview": "Usar la vista previa en el editor",
+    "offsetSummary": "Desplazar {{milliseconds}} ms",
+    "frameRateSummary": "Convertir de {{from}} a {{to}} FPS",
+    "balanceSummary": "Equilibrar a {{width}} caracteres por línea",
+    "translateWithProfile": "Traducir a los destinos del perfil",
+    "inheritedFolderDefaults": "Valores heredados de la carpeta",
+    "environmentPins": "Configuración del entorno ({{settings}})",
+    "uploadSummary": "Se subieron {{size}}",
+    "audioUploadSummary": "Se subieron {{size}} de audio",
+    "phases": {
+      "gpuWait": "Esperando a la GPU",
+      "preflight": "Comprobación previa",
+      "uploadPrepare": "Preparación del audio",
+      "upload": "Subida",
+      "uploadSave": "Guardar el archivo subido",
+      "backendPreflight": "Comprobación previa del servidor",
+      "urlDownload": "Descargar archivo multimedia",
+      "checkpoint": "Buscar un resultado intermedio guardado",
+      "audioExtract": "Extraer el audio",
+      "modelLoad": "Cargar el modelo",
+      "asr": "Reconocer voz",
+      "diarization": "Identificar a los hablantes",
+      "render": "Generar los subtítulos",
+      "publish": "Publicar el resultado"
+    },
+    "blockers": {
+      "speechDisabled": "El reconocimiento de voz está desactivado",
+      "backendMissing": "Falta la URL del servidor de transcripción"
     }
   }
 }

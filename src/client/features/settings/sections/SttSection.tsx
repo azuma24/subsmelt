@@ -1,6 +1,6 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useTranslation } from "../../../i18n";
-import type { TranscriptionHealth } from "../../../types";
+import type { Task, TranscriptionHealth } from "../../../types";
 import { ActionButton, Field, Select } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
 import { isEnvPinned } from "../settings-model";
@@ -15,6 +15,7 @@ import { LanguageSupportWarning, ModelPicker } from "../../whisper/ModelPicker";
 import { ToggleRow, labelCls, selectCls } from "./shared";
 import { useIsMobile } from "../../../hooks";
 import { Icon } from "../../../ui/Icon";
+import { ProcessingProfilesSection } from "./ProcessingProfilesSection";
 
 /** Whisper's source-language shortlist. `auto` plus the four bundled hints. */
 const STT_LANGUAGE_OPTIONS: { value: string; labelKey: string }[] = [
@@ -27,6 +28,7 @@ const STT_LANGUAGE_OPTIONS: { value: string; labelKey: string }[] = [
 
 interface SttSectionProps {
   settings: Record<string, unknown>;
+  tasks?: Task[];
   /** Deferred writer — most of this section waits for the topbar Save. */
   update: (key: string, value: unknown) => void;
   /** Debounced autosave — used only by the backend token, as before. */
@@ -51,6 +53,7 @@ interface SttSectionProps {
  */
 export function SttSection({
   settings,
+  tasks = [],
   update,
   updateAndSaveDebounced,
   healthQuery,
@@ -171,8 +174,15 @@ export function SttSection({
       <ModelManagerPanel enabled={Boolean(str(settings.transcription_backend_url))} host={host} />
 
       <PathMappingFields settings={settings} update={update} />
+      <ToggleRow
+        title={t("processing.audioOnly")}
+        description={t("processing.audioOnlyHelp")}
+        checked={str(settings.transcription_audio_only_upload, "0") === "1"}
+        onChange={(checked) => update("transcription_audio_only_upload", checked ? "1" : "0")}
+      />
 
       <SttAdvancedFields settings={settings} update={update} model={selectedDescriptor} host={host} />
+      <ProcessingProfilesSection settings={settings} tasks={tasks} update={update} />
 
       {/* Raw config (L4) — the two STT JSON blobs, behind an explicit Save. */}
       <RawConfigDrawer settings={settings} update={update} onSave={onSave} dirty={dirty} saving={saving} />

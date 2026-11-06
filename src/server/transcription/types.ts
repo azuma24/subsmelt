@@ -6,8 +6,11 @@ import type {
   TranscriptionOutputFormat,
   TranscriptionPreflightResponse,
   TranscriptionSubtitleQualityOptions,
+  TranscriptionTimings,
   WhisperModelDeleteResult,
   WhisperModelDescriptor,
+  WhisperModelDownloadOperation,
+  WhisperModelDownloadProgress,
   WhisperModelDownloadResult,
   WhisperModelInfo,
 } from "../../shared/transcription.js";
@@ -22,6 +25,8 @@ export type {
   TranscriptionSubtitleQualityOptions,
   WhisperModelDeleteResult,
   WhisperModelDescriptor,
+  WhisperModelDownloadOperation,
+  WhisperModelDownloadProgress,
   WhisperModelDownloadResult,
   WhisperModelInfo,
 };
@@ -40,6 +45,7 @@ export interface TranscriptionSettings {
   transcription_path_map_from?: string;
   transcription_path_map_to?: string;
   transcription_transport?: string;
+  transcription_audio_only_upload?: string;
   transcription_request_timeout_s?: string;
   transcription_max_line_length?: string;
   transcription_max_subtitle_duration?: string;
@@ -56,6 +62,7 @@ export interface TranscriptionFolderDefaults {
   device?: string;
   compute_type?: string;
   output_format?: string;
+  audio_stream_index?: number;
   use_vad?: boolean | string;
   max_line_length?: number | string;
   max_subtitle_duration?: number | string;
@@ -70,6 +77,9 @@ export interface TranscriptionOverrides {
   language?: string;
   device?: string;
   compute_type?: string;
+  audio_stream_index?: number;
+  audio_only_upload?: boolean;
+  force_recognition?: boolean;
   // Per-run speaker diarization toggle (Whisper page). Merged into
   // advanced_options so it wins over per-folder / global advanced_stt.
   speaker_diarization?: boolean;
@@ -95,6 +105,10 @@ export interface BackendTranscriptionRequest {
   device: string;
   compute_type: string;
   use_vad: boolean;
+  audio_stream_index?: number;
+  source_audio_stream_index?: number;
+  defer_publish?: boolean;
+  force_recognition?: boolean;
   post_action: TranscribePostAction;
   allow_unsafe?: boolean;
   subtitle_quality?: TranscriptionSubtitleQualityOptions;
@@ -110,12 +124,13 @@ export interface BackendTranscriptionResponse {
   ok: boolean;
   // Path mode (Model A): backend wrote the subtitle to a shared path.
   subtitle_path?: string;
-  // Upload mode (Model B): backend returns the subtitle content; the SubSmelt
-  // server writes it to the local output path.
+  // Upload or deferred shared publication: Subsmelt writes the returned content locally.
   content?: string;
   language?: string;
   segments?: number;
   duration_seconds?: number;
+  timings_ms?: TranscriptionTimings;
+  checkpoint_hit?: boolean;
   error?: string;
   detail?: unknown;
 }
@@ -130,6 +145,7 @@ export interface TranscribeBackendOptions {
   token?: string;
   // Aborting this signal cancels the HTTP request.
   signal?: AbortSignal;
+  onMetrics?: (metrics: { timingsMs: TranscriptionTimings; checkpointHit?: boolean }) => void;
 }
 
 export interface TranscriptionProgressUpdate {
@@ -143,10 +159,13 @@ export interface TranscribeStreamingOptions extends TranscribeBackendOptions {
   onProgress?: (update: TranscriptionProgressUpdate) => void;
   // Called on a backend phase line (e.g. "diarizing") for a live status hint.
   onPhase?: (phase: string) => void;
+  onHeaders?: (response: Response) => void;
 }
 
 export interface BackendCapabilities {
   models?: string[];
+  audioStreamSelection?: boolean;
+  deferredSharedPublication?: boolean;
   modelInfo?: WhisperModelDescriptor[];
   nemoSpeech?: { available: boolean; version: string | null };
   [key: string]: unknown;
@@ -155,12 +174,6 @@ export interface BackendCapabilities {
 export interface BackendHealthResponse {
   capabilities?: BackendCapabilities;
   [key: string]: unknown;
-}
-
-export interface WhisperModelDownloadProgress {
-  pct: number;
-  downloadedMb?: number;
-  totalMb?: number;
 }
 
 export interface DownloadBackendModelOptions {

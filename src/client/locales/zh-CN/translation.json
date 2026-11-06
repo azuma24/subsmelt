@@ -238,7 +238,28 @@
       "folderCount_other": "{{name}}（{{count}} 个字幕）",
       "summaryNothingNew": "找到 {{subtitles}} 个字幕文件，但每个都已有任务或已完成的输出。不会有新任务加入队列。",
       "summaryNoTarget": "找到 {{subtitles}} 个字幕文件，但没有适用于它们的翻译目标。请在“翻译”中添加或启用一个。",
-      "scanAnyway": "仍然扫描"
+      "scanAnyway": "仍然扫描",
+      "intake": {
+        "title": "字幕来源选择",
+        "sidecar": "使用 {{file}}",
+        "embedded": "汇入内嵌字幕轨 {{track}}",
+        "imported": "已汇入 {{file}}",
+        "transcribe": "将转录加入伫列",
+        "transcribe_and_translate": "将转录与翻译加入伫列",
+        "absent": "找不到字幕",
+        "no_speech": "这部影片没有侦测到语音",
+        "settling": "等待影片档案写入完成",
+        "ambiguous": "多个或未标记的字幕需要审阅",
+        "forced_only": "只找到强制字幕",
+        "language_mismatch": "字幕为其他语言",
+        "invalid_sidecar": "现有字幕需要审阅",
+        "bitmap": "图像字幕需要 OCR",
+        "unsupported": "字幕格式需要审阅",
+        "probe_failed": "无法验证字幕轨",
+        "import_failed": "无法汇入字幕轨",
+        "asr_unavailable": "无法使用转录",
+        "summary": "扫描将依照下列字幕来源选择。现有字幕可建立 {{jobs}} 个翻译工作。"
+      }
     },
     "filtersLabel": "筛选",
     "bulkActionsLabel": "批量操作",
@@ -525,7 +546,18 @@
       "preferredChinese": "首选中文",
       "chineseTraditional": "繁体中文（台湾）",
       "chineseSimplified": "简体中文",
-      "preferredChineseHint": "以 .chi 标记，与大多数现有中文字幕一致；另一种字体则标记为 .chs（简体）或 .cht（繁体）。现有的 .chi 和 .zh 字幕都算作此项。只需选择一次：之后更改会改变新 .chi 文件的含义。"
+      "preferredChineseHint": "以 .chi 标记，与大多数现有中文字幕一致；另一种字体则标记为 .chs（简体）或 .cht（繁体）。现有的 .chi 和 .zh 字幕都算作此项。只需选择一次：之后更改会改变新 .chi 文件的含义。",
+      "subtitleIntake": {
+        "title": "字幕来源选择",
+        "hint": "选择优先使用现有字幕的资料夹。规则包含子资料夹，并以最接近的规则为准。",
+        "add": "新增资料夹规则",
+        "folder": "资料夹",
+        "language": "来源语言",
+        "fallback": "没有字幕时",
+        "off": "留待审阅",
+        "transcribe": "转录",
+        "transcribe_and_translate": "转录并翻译"
+      }
     },
     "notifications": {
       "title": "通知",
@@ -542,7 +574,8 @@
       "testFailed": "测试通知失败：{{message}}",
       "hint": "当下方选择的事件发生时发送 Webhook。将 URL 留空即可关闭通知。",
       "webhookSaved": "已保存（已隐藏）。输入新的 URL 即可替换。",
-      "webhookRemove": "移除 Webhook"
+      "webhookRemove": "移除 Webhook",
+      "eventTranscriptionNote": "逐字稿笔记已就绪"
     },
     "saved": "设置已保存",
     "saveFailed": "保存失败：{{message}}",
@@ -760,7 +793,10 @@
       "deleteConfirm": "从后端缓存中删除 {{model}} 模型？之后可以重新下载。",
       "deleteDone": "已删除 {{model}}（释放 {{freed}}）",
       "deleteFailed": "删除 {{model}} 失败：{{message}}",
-      "runtimeMissing": "缺少运行时"
+      "runtimeMissing": "缺少运行时",
+      "downloadCancelling": "正在取消…",
+      "downloadCancelled": "已取消下载",
+      "downloadCancelFailed": "无法取消 {{model}} 的下载（{{message}}）"
     },
     "setup": {
       "progress": "已完成 {{done}}/{{total}}",
@@ -1514,7 +1550,12 @@
       "conflict": "已有同名字幕文件。",
       "failed": "无法导入字幕轨道。",
       "changed": "视频已变更，请重新检查字幕轨道。",
-      "noText": "此视频没有可导入的文本字幕轨道。"
+      "noText": "此视频没有可导入的文本字幕轨道。",
+      "ocr": "辨识图像字幕",
+      "ocrRunning": "正在辨识图像字幕…",
+      "ocrReady": "可使用 OCR",
+      "ocrUnavailable": "此伺服器无法使用 OCR",
+      "cancelOcr": "取消 OCR"
     },
     "jobsUnavailable": "重新加载队列前，任务状态和文件详情不可用。",
     "sort": {
@@ -1795,6 +1836,81 @@
       "run": "在我的文件上预览",
       "again": "再次检查",
       "saveFirst": "请先保存列表。"
+    }
+  },
+  "processing": {
+    "profiles": "处理设定档",
+    "profilesHelp": "储存资料夹及其子资料夹的语音辨识、原文审阅与翻译预设值。",
+    "root": "媒体根目录",
+    "addProfile": "新增设定档",
+    "profileName": "设定档名称",
+    "folder": "相对于媒体根目录的资料夹",
+    "inherit": "沿用预设值",
+    "maxWidth": "审阅行宽上限",
+    "maxSpeed": "审阅每秒字元数",
+    "targets": "翻译目标",
+    "correctionLists": "校正清单",
+    "review": "翻译前审阅原文",
+    "reviewHelp": "语音辨识完成后暂停，以便编辑附时间码的逐字稿并选择翻译目标。",
+    "exportNote": "建立 Markdown 笔记",
+    "exportNoteHelp": "将逐字稿整理为附时间戳的段落，供下载使用。",
+    "invalidProfile": "请输入名称及未使用的资料夹，并检查上限数值。",
+    "applyProfile": "套用设定档",
+    "audioOnly": "只上传音讯",
+    "audioOnlyHelp": "语音后端需要上传时，传送无损音讯。",
+    "chooseAudio": "选择音轨",
+    "audioProbeFailed": "无法读取音轨。",
+    "defaultAudio": "自动选择音轨",
+    "useFolderProfiles": "使用资料夹设定档",
+    "confirmPlan": "确认处理计划",
+    "sourceTranscript": "原始逐字稿",
+    "sourceQuality": "字幕品质",
+    "reloadTranscript": "重新载入逐字稿",
+    "approve": "核准原文",
+    "cancelReview": "取消审阅",
+    "downloadTranscript": "下载逐字稿",
+    "downloadNote": "下载 Markdown 笔记",
+    "recentWork": "转录结果与审阅",
+    "pendingReview": "待审阅",
+    "checkpointHit": "已重用储存的语音辨识结果",
+    "milliseconds": "{{elapsed}} 毫秒",
+    "transforms": "时间与断行调整",
+    "transformType": "调整类型",
+    "offset": "时间位移（毫秒）",
+    "frameRate": "影格率校正",
+    "balance": "平衡纯文字字幕行",
+    "fromFps": "原始 FPS",
+    "toFps": "目标 FPS",
+    "addTransform": "新增调整",
+    "previewTransforms": "预览调整",
+    "usePreview": "将预览套用至编辑器",
+    "offsetSummary": "位移 {{milliseconds}} 毫秒",
+    "frameRateSummary": "从 {{from}} 转换为 {{to}} FPS",
+    "balanceSummary": "平衡至每行 {{width}} 个字元",
+    "translateWithProfile": "依设定档的目标翻译",
+    "inheritedFolderDefaults": "沿用资料夹预设值",
+    "environmentPins": "环境设定（{{settings}}）",
+    "uploadSummary": "已上传 {{size}}",
+    "audioUploadSummary": "已上传 {{size}} 音讯",
+    "phases": {
+      "gpuWait": "GPU 等待",
+      "preflight": "前置检查",
+      "uploadPrepare": "音讯准备",
+      "upload": "上传",
+      "uploadSave": "储存上传档案",
+      "backendPreflight": "后端前置检查",
+      "urlDownload": "下载媒体",
+      "checkpoint": "查询检查点",
+      "audioExtract": "撷取音讯",
+      "modelLoad": "载入模型",
+      "asr": "语音辨识",
+      "diarization": "辨识说话者",
+      "render": "产生字幕",
+      "publish": "发布输出"
+    },
+    "blockers": {
+      "speechDisabled": "语音辨识已停用",
+      "backendMissing": "未设定语音后端网址"
     }
   }
 }

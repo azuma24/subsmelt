@@ -238,7 +238,28 @@
       "folderCount_other": "{{name}}（字幕 {{count}} 件）",
       "summaryNothingNew": "{{subtitles}} 件の字幕ファイルが見つかりましたが、すべて既にジョブまたは完成した出力があります。新しくキューに追加されるものはありません。",
       "summaryNoTarget": "字幕ファイルが {{subtitles}} 件見つかりましたが、適用される翻訳ターゲットがありません。翻訳でターゲットを追加または有効にしてください。",
-      "scanAnyway": "それでもスキャン"
+      "scanAnyway": "それでもスキャン",
+      "intake": {
+        "title": "字幕ソースの選択",
+        "sidecar": "{{file}} を使用",
+        "embedded": "埋め込みトラック {{track}} を取り込む",
+        "imported": "{{file}} を取り込みました",
+        "transcribe": "文字起こしをキューに追加",
+        "transcribe_and_translate": "文字起こしと翻訳をキューに追加",
+        "absent": "字幕が見つかりませんでした",
+        "no_speech": "この動画に発話は見つかりませんでした",
+        "settling": "動画ファイルへの書き込みが終わるまで待機中",
+        "ambiguous": "複数の字幕、または言語情報のない字幕を確認してください",
+        "forced_only": "強制表示字幕のみ見つかりました",
+        "language_mismatch": "字幕の言語が異なります",
+        "invalid_sidecar": "既存の字幕を確認してください",
+        "bitmap": "画像字幕には OCR が必要です",
+        "unsupported": "字幕の形式を確認してください",
+        "probe_failed": "字幕トラックを確認できませんでした",
+        "import_failed": "字幕トラックを取り込めませんでした",
+        "asr_unavailable": "文字起こしを利用できません",
+        "summary": "以下のソース選択に従ってスキャンします。既存の字幕から翻訳ジョブ {{jobs}} 件をキューに追加できます。"
+      }
     },
     "filtersLabel": "フィルター",
     "bulkActionsLabel": "一括操作",
@@ -525,7 +546,18 @@
       "preferredChinese": "優先する中国語",
       "chineseTraditional": "繁体字中国語（台湾）",
       "chineseSimplified": "簡体字中国語",
-      "preferredChineseHint": "既存の中国語字幕の大半と同じく .chi と表記されます。もう一方の字体は .chs（簡体字）または .cht（繁体字）と表記されます。既存の .chi と .zh の字幕はこの設定として扱われます。選択は一度きりです。後から変更すると、新しい .chi ファイルの意味が変わります。"
+      "preferredChineseHint": "既存の中国語字幕の大半と同じく .chi と表記されます。もう一方の字体は .chs（簡体字）または .cht（繁体字）と表記されます。既存の .chi と .zh の字幕はこの設定として扱われます。選択は一度きりです。後から変更すると、新しい .chi ファイルの意味が変わります。",
+      "subtitleIntake": {
+        "title": "字幕ソースの選択",
+        "hint": "音声認識より先に既存の字幕を使うフォルダーを選びます。ルールはサブフォルダーにも適用され、対象に最も近いルールが優先されます。",
+        "add": "フォルダーのルールを追加",
+        "folder": "フォルダー",
+        "language": "原文の言語",
+        "fallback": "字幕がない場合",
+        "off": "確認待ちにする",
+        "transcribe": "文字起こし",
+        "transcribe_and_translate": "文字起こしと翻訳"
+      }
     },
     "notifications": {
       "title": "通知",
@@ -542,7 +574,8 @@
       "testFailed": "テスト通知に失敗しました：{{message}}",
       "hint": "下で選んだイベントが起きたときに Webhook を送信します。通知をオフにするには URL を空にしてください。",
       "webhookSaved": "保存済み（非表示）。置き換えるには新しい URL を入力してください。",
-      "webhookRemove": "Webhook を削除"
+      "webhookRemove": "Webhook を削除",
+      "eventTranscriptionNote": "文字起こしノートの準備完了"
     },
     "saved": "設定を保存しました",
     "saveFailed": "保存に失敗しました：{{message}}",
@@ -760,7 +793,10 @@
       "deleteConfirm": "バックエンドのキャッシュから {{model}} モデルを削除しますか？後で再ダウンロードできます。",
       "deleteDone": "{{model}} を削除しました（{{freed}} 解放）",
       "deleteFailed": "{{model}} の削除に失敗しました：{{message}}",
-      "runtimeMissing": "ランタイムなし"
+      "runtimeMissing": "ランタイムなし",
+      "downloadCancelling": "キャンセル中…",
+      "downloadCancelled": "ダウンロードをキャンセルしました",
+      "downloadCancelFailed": "{{model}} のダウンロードをキャンセルできませんでした（{{message}}）"
     },
     "setup": {
       "progress": "{{total}} 件中 {{done}} 件完了",
@@ -1514,7 +1550,12 @@
       "conflict": "同名の字幕ファイルがすでに存在します。",
       "failed": "字幕トラックを取り込めませんでした。",
       "changed": "動画が変更されました。トラックを再確認してください。",
-      "noText": "この動画に取り込めるテキスト字幕はありません。"
+      "noText": "この動画に取り込めるテキスト字幕はありません。",
+      "ocr": "画像字幕を読み取る",
+      "ocrRunning": "画像字幕を読み取り中…",
+      "ocrReady": "OCR を利用できます",
+      "ocrUnavailable": "このサーバーでは OCR を利用できません",
+      "cancelOcr": "OCR をキャンセル"
     },
     "jobsUnavailable": "キューを再読み込みするまで、ジョブの状態とファイルの詳細は利用できません。",
     "sort": {
@@ -1795,6 +1836,81 @@
       "run": "自分のファイルでプレビュー",
       "again": "再確認",
       "saveFirst": "先にリストを保存してください。"
+    }
+  },
+  "processing": {
+    "profiles": "処理プロファイル",
+    "profilesHelp": "フォルダーとそのサブフォルダーに適用する音声認識、原文確認、翻訳の既定値を保存します。",
+    "root": "メディアのルート",
+    "addProfile": "プロファイルを追加",
+    "profileName": "プロファイル名",
+    "folder": "メディアのルートからの相対フォルダーパス",
+    "inherit": "既定値を引き継ぐ",
+    "maxWidth": "確認時の1行の文字数上限",
+    "maxSpeed": "確認時の1秒あたりの文字数上限",
+    "targets": "翻訳先",
+    "correctionLists": "修正リスト",
+    "review": "翻訳前に原文を確認",
+    "reviewHelp": "音声認識後に一時停止し、タイムコード付きの文字起こしを編集して翻訳先を選べます。",
+    "exportNote": "Markdown ノートを作成",
+    "exportNoteHelp": "文字起こしをタイムスタンプ付きの段落にまとめてダウンロードできます。",
+    "invalidProfile": "名前と重複しないフォルダーを指定し、上限値を確認してください。",
+    "applyProfile": "プロファイルを適用",
+    "audioOnly": "音声のみアップロード",
+    "audioOnlyHelp": "音声認識バックエンドへのアップロードが必要な場合に、ロスレス音声を送信します。",
+    "chooseAudio": "音声トラックを選択",
+    "audioProbeFailed": "音声トラックを読み取れませんでした。",
+    "defaultAudio": "音声トラックを自動選択",
+    "useFolderProfiles": "フォルダーのプロファイルを使用",
+    "confirmPlan": "処理プランを確認",
+    "sourceTranscript": "原文の文字起こし",
+    "sourceQuality": "字幕の品質",
+    "reloadTranscript": "文字起こしを再読み込み",
+    "approve": "原文を承認",
+    "cancelReview": "確認をキャンセル",
+    "downloadTranscript": "文字起こしをダウンロード",
+    "downloadNote": "Markdown ノートをダウンロード",
+    "recentWork": "文字起こしの結果と確認",
+    "pendingReview": "確認が必要",
+    "checkpointHit": "保存済みの音声認識結果を再利用",
+    "milliseconds": "{{elapsed}} ミリ秒",
+    "transforms": "タイミングと改行の調整",
+    "transformType": "調整の種類",
+    "offset": "時間のずれを調整（ミリ秒）",
+    "frameRate": "フレームレートを補正",
+    "balance": "プレーンテキストの行の長さをそろえる",
+    "fromFps": "元の FPS",
+    "toFps": "変換先の FPS",
+    "addTransform": "調整を追加",
+    "previewTransforms": "調整結果をプレビュー",
+    "usePreview": "プレビュー結果をエディターに反映",
+    "offsetSummary": "{{milliseconds}} ミリ秒ずらす",
+    "frameRateSummary": "{{from}} FPS から {{to}} FPS に変換",
+    "balanceSummary": "1行 {{width}} 文字を目安に行の長さをそろえる",
+    "translateWithProfile": "プロファイルで指定した翻訳先に翻訳",
+    "inheritedFolderDefaults": "フォルダーから引き継いだ既定値",
+    "environmentPins": "環境変数で指定された設定（{{settings}}）",
+    "uploadSummary": "{{size}} をアップロードしました",
+    "audioUploadSummary": "音声を {{size}} アップロードしました",
+    "phases": {
+      "gpuWait": "GPU の空き待ち",
+      "preflight": "事前確認",
+      "uploadPrepare": "音声の準備",
+      "upload": "アップロード",
+      "uploadSave": "アップロードファイルの保存",
+      "backendPreflight": "バックエンドの事前確認",
+      "urlDownload": "メディアのダウンロード",
+      "checkpoint": "保存済み認識結果の検索",
+      "audioExtract": "音声の抽出",
+      "modelLoad": "モデルの読み込み",
+      "asr": "音声認識",
+      "diarization": "話者の識別",
+      "render": "字幕の生成",
+      "publish": "出力の保存"
+    },
+    "blockers": {
+      "speechDisabled": "音声認識が無効です",
+      "backendMissing": "音声認識バックエンドの URL が設定されていません"
     }
   }
 }

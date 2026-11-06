@@ -1,11 +1,21 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import type { AddressInfo } from "node:net";
 import os from "node:os";
 import path from "node:path";
 import test, { after } from "node:test";
+import { setTimeout as wait } from "node:timers/promises";
 import express from "express";
 import type { EmbeddedSubtitleProbe } from "../../shared/embedded-subtitles.js";
 
@@ -159,3 +169,151 @@ test("converts MP4 timed text and refuses a case-variant sidecar conflict", requ
   assert.equal((await importTrack(video, tracks[0].index, revision)).status, 200);
   assert.deepEqual(cueText(path.join(mediaDir, "Timed text.srt")), ["<i>Timed text</i>"]);
 });
+
+function bitmapFixture(file: string) {
+  const segment = (pts: number, type: number, hex = "") => {
+    const payload = Buffer.from(hex, "hex");
+    const header = Buffer.alloc(13);
+    header.write("PG");
+    header.writeUInt32BE(pts, 2);
+    header.writeUInt32BE(pts, 6);
+    header[10] = type;
+    header.writeUInt16BE(payload.length, 11);
+    return Buffer.concat([header, payload]);
+  };
+  // A four-by-two palette image in a 1080p PGS frame, followed by its clear frame.
+  writeFileSync(
+    file,
+    Buffer.concat([
+      segment(90_000, 0x16, "07800438100001800000010000000000100010"),
+      segment(90_000, 0x17, "01000010001000040002"),
+      segment(90_000, 0x14, "0000001080800001eb8080ff"),
+      segment(90_000, 0x15, "000000c000001000040002010101010000010101010000"),
+      segment(90_000, 0x80),
+      segment(270_000, 0x16, "0780043810000200000000"),
+      segment(270_000, 0x80),
+    ]),
+  );
+}
+
+test(
+  "explicit OCR isolates the selected PGS/VobSub stream and validates, cancels and publishes safely",
+  requireFfmpeg,
+  async () => {
+    const fixture = path.join(root, "bitmap.sup");
+    bitmapFixture(fixture);
+    const vobsub = path.join(root, "vobsub.mks");
+    runFfmpeg(["-i", fixture, "-map", "0:s", "-c:s", "dvd_subtitle", "-f", "matroska", vobsub]);
+    const video = path.join(mediaDir, "Bitmap.mkv");
+    runFfmpeg([
+      "-itsoffset",
+      "3",
+      "-i",
+      fixture,
+      "-itsoffset",
+      "5",
+      "-i",
+      vobsub,
+      "-map",
+      "0:s",
+      "-map",
+      "1:s",
+      "-c:s",
+      "copy",
+      "-metadata:s:s:0",
+      "language=eng",
+      "-metadata:s:s:1",
+      "language=fra",
+      video,
+    ]);
+
+    delete process.env.SUBSMELT_SECONV_PATH;
+    const unsupported = await tracksFor(video);
+    assert.deepEqual(
+      unsupported.tracks.map((track) => track.ocr),
+      ["unavailable", "unavailable"],
+    );
+    const helper = path.join(root, "seconv.mjs");
+    const observation = path.join(root, "ocr-visit.json");
+    writeFileSync(
+      helper,
+      `#!/usr/bin/env node
+import { execFileSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import path from "node:path";
+const args = process.argv.slice(2);
+if (args[0] === "list-ocr-engines") {
+  console.log(JSON.stringify({engines: [{id: "tesseract", ready: true}]}));
+} else {
+  const probe = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "stream=codec_name:packet=pts_time", "-of", "json", args[0]], { encoding: "utf8" }));
+  const scratch = path.dirname(args[0]);
+  writeFileSync(new URL("ocr-visit.json", import.meta.url), JSON.stringify({ scratch, ...probe }));
+  const mode = process.env.SUBSMELT_TEST_OCR_MODE;
+  if (mode === "cancel") {
+    setInterval(() => {}, 1000);
+  } else {
+    writeFileSync(path.join(scratch, "subtitle.srt"), mode === "invalid" ? "not an SRT" : ${JSON.stringify(srt("OCR dialogue"))});
+    console.log(JSON.stringify({ success: true }));
+  }
+}
+`,
+      { mode: 0o700 },
+    );
+    process.env.SUBSMELT_SECONV_PATH = helper;
+    const probe = await tracksFor(video);
+    assert.deepEqual(
+      probe.tracks.map((track) => track.ocr),
+      ["available", "available"],
+    );
+    const importImage = (position: number, signal?: AbortSignal) =>
+      fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          videoPath: video,
+          index: probe.tracks[position].index,
+          revision: probe.revision,
+          ocr: true,
+        }),
+        signal,
+      });
+
+    try {
+      assert.equal((await importTrack(video, probe.tracks[0].index, probe.revision)).status, 422);
+      assert.equal((await importImage(0)).status, 200);
+      assert.deepEqual(cueText(path.join(mediaDir, "Bitmap.eng.srt")), ["OCR dialogue"]);
+      const pgs = JSON.parse(readFileSync(observation, "utf8"));
+      assert.deepEqual(pgs.streams, [{ codec_name: "hdmv_pgs_subtitle" }]);
+      assert.ok(Number(pgs.packets[0].pts_time) >= 3);
+      assert.equal(existsSync(pgs.scratch), false);
+      assert.equal((await importImage(0)).status, 409);
+
+      process.env.SUBSMELT_TEST_OCR_MODE = "invalid";
+      assert.equal((await importImage(1)).status, 422);
+      const dvd = JSON.parse(readFileSync(observation, "utf8"));
+      assert.deepEqual(dvd.streams, [{ codec_name: "dvd_subtitle" }]);
+      assert.equal(existsSync(dvd.scratch), false);
+      assert.equal(existsSync(path.join(mediaDir, "Bitmap.fra.srt")), false);
+
+      rmSync(observation);
+      process.env.SUBSMELT_TEST_OCR_MODE = "cancel";
+      const controller = new AbortController();
+      const pending = importImage(1, controller.signal);
+      for (let attempt = 0; attempt < 100 && !existsSync(observation); attempt++) await wait(25);
+      assert.ok(existsSync(observation), "OCR subprocess should start");
+      const { scratch } = JSON.parse(readFileSync(observation, "utf8"));
+      controller.abort();
+      await assert.rejects(pending, { name: "AbortError" });
+      for (let attempt = 0; attempt < 100 && existsSync(scratch); attempt++) await wait(25);
+      assert.equal(existsSync(scratch), false);
+      assert.equal(existsSync(path.join(mediaDir, "Bitmap.fra.srt")), false);
+
+      delete process.env.SUBSMELT_TEST_OCR_MODE;
+      assert.equal((await importImage(1)).status, 200);
+      assert.deepEqual(cueText(path.join(mediaDir, "Bitmap.fra.srt")), ["OCR dialogue"]);
+    } finally {
+      delete process.env.SUBSMELT_SECONV_PATH;
+      delete process.env.SUBSMELT_TEST_OCR_MODE;
+    }
+  },
+);

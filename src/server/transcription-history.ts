@@ -2,7 +2,11 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { logger } from "./logger.js";
-import type { TranscriptionAttemptStatus, TranscriptionHistoryEntry } from "../shared/transcription.js";
+import type {
+  TranscriptionAttemptStatus,
+  TranscriptionHistoryEntry,
+  TranscriptionTimings,
+} from "../shared/transcription.js";
 import type {
   TranscribePostAction,
   TranscriptionAdvancedOptions,
@@ -33,6 +37,9 @@ interface StartAttemptInput {
   device?: string;
   computeType?: string;
   overwrite?: boolean;
+  audioStreamIndex?: number;
+  audioOnlyUpload?: boolean;
+  forceRecognition?: boolean;
   startedAt?: string;
 }
 
@@ -43,6 +50,10 @@ interface FinishAttemptInput {
   errorSummary?: string | null;
   /** Where the transcript ended up, when that differs from the path the attempt started with. */
   outputPath?: string;
+  timingsMs?: TranscriptionTimings;
+  checkpointHit?: boolean;
+  uploadedBytes?: number;
+  audioOnlyUploaded?: boolean;
 }
 
 function safeJsonParse(raw: string): TranscriptionHistoryEntry[] {
@@ -147,6 +158,9 @@ export class TranscriptionHistoryStore {
       ...(input.device ? { device: input.device } : {}),
       ...(input.computeType ? { computeType: input.computeType } : {}),
       ...(input.overwrite ? { overwrite: true } : {}),
+      ...(input.audioStreamIndex !== undefined ? { audioStreamIndex: input.audioStreamIndex } : {}),
+      ...(input.audioOnlyUpload !== undefined ? { audioOnlyUpload: input.audioOnlyUpload } : {}),
+      ...(input.forceRecognition ? { forceRecognition: true } : {}),
     };
     const entries = this.read();
     entries.unshift(entry);
@@ -163,6 +177,10 @@ export class TranscriptionHistoryStore {
     entry.durationSeconds = input.durationSeconds ?? entry.durationSeconds ?? null;
     entry.errorSummary = input.errorSummary ?? null;
     if (input.outputPath) entry.outputPath = input.outputPath;
+    if (input.timingsMs && Object.keys(input.timingsMs).length) entry.timingsMs = { ...input.timingsMs };
+    if (input.checkpointHit !== undefined) entry.checkpointHit = input.checkpointHit;
+    if (input.uploadedBytes !== undefined) entry.uploadedBytes = input.uploadedBytes;
+    if (input.audioOnlyUploaded !== undefined) entry.audioOnlyUploaded = input.audioOnlyUploaded;
     this.write(entries);
     return entry;
   }

@@ -1,3 +1,5 @@
+import type { SubtitleIntakeDecision } from "./subtitle-intake.js";
+
 export type ScanTaskState = "done" | "pending" | "translating" | "error" | "skipped" | "new";
 
 /** One task's standing for one source subtitle. */
@@ -27,6 +29,7 @@ export interface ScannedFile {
   /** Source subtitle mtime for an orphan; absent in older scan responses. */
   subtitleMtime?: number | null;
   subtitles: ScannedSubtitle[];
+  intake?: SubtitleIntakeDecision;
 }
 
 export interface ScanResult {

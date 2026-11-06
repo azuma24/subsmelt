@@ -9,6 +9,7 @@ from typing import Any
 
 from .gpu import cuda_device_count
 from .model_loader import free_device_cache
+from .secret_file import SecretFileError, secret_from_env
 from .segments import Segment, normalize_segments
 from .word_timing import Word
 
@@ -30,7 +31,7 @@ class DiarizationTokenMissingError(RuntimeError):
 
 
 def _hf_token() -> str:
-    return (os.environ.get("SUBSMELT_HF_TOKEN") or os.environ.get("HF_TOKEN") or "").strip()
+    return (secret_from_env("SUBSMELT_HF_TOKEN") or os.environ.get("HF_TOKEN") or "").strip()
 
 
 def diarize_available() -> bool:
@@ -39,9 +40,9 @@ def diarize_available() -> bool:
     Used to advertise capabilities.speakerDiarization honestly so the frontend
     only offers the toggle when the backend can fulfil it.
     """
-    if not _hf_token():
-        return False
     try:
+        if not _hf_token():
+            return False
         import pyannote.audio  # type: ignore  # noqa: F401
     except Exception:
         return False
@@ -56,10 +57,13 @@ def _resolve_torch_device(device: str) -> str:
 
 
 def _get_pipeline(device: str) -> Any:
-    token = _hf_token()
+    try:
+        token = _hf_token()
+    except SecretFileError as exc:
+        raise DiarizationTokenMissingError(str(exc)) from None
     if not token:
         raise DiarizationTokenMissingError(
-            "Speaker diarization needs a Hugging Face token; set SUBSMELT_HF_TOKEN "
+            "Speaker diarization needs a Hugging Face token; set SUBSMELT_HF_TOKEN or SUBSMELT_HF_TOKEN_FILE "
             "and accept the pyannote/speaker-diarization-3.1 license"
         )
     torch_device = _resolve_torch_device(device)

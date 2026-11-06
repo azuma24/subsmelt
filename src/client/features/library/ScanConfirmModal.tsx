@@ -64,7 +64,12 @@ const SECONDARY_BUTTON = "rounded-sm border border-border bg-surface-raised px-3
 const PRIMARY_BUTTON = "rounded-sm bg-accent px-3 py-2 text-sm font-medium text-accent-text sm:col-span-1";
 
 export function ScanConfirmModal({ scanPlan, onClose, onConfirm, t }: ScanConfirmModalProps) {
-  const nothingNew = scanPlan.newJobs === 0;
+  const intake = scanPlan.files.filter((file) => file.intake);
+  const willRunIntake = intake.some(
+    ({ intake: choice }) =>
+      choice?.action === "embedded" || choice?.action === "transcribe" || choice?.action === "transcribe_and_translate",
+  );
+  const nothingNew = scanPlan.newJobs === 0 && !willRunIntake;
   const subtitles = countScanSubtitles(scanPlan.files);
   const untargetedSubtitles = countUntargetedSubtitles(scanPlan.files);
   const noTargetApplies = subtitles === 0 && untargetedSubtitles > 0;
@@ -76,7 +81,7 @@ export function ScanConfirmModal({ scanPlan, onClose, onConfirm, t }: ScanConfir
     <ModalShell
       labelledBy={titleId}
       onClose={onClose}
-      overlayClassName="fixed inset-0 z-50 bg-scrim p-4"
+      overlayClassName="fixed inset-0 z-50 overflow-y-auto bg-scrim p-4"
       panelClassName="mx-auto mt-16 w-full max-w-xl rounded-md border border-border bg-surface p-6"
     >
       <div className="flex items-start justify-between gap-3">
@@ -96,11 +101,13 @@ export function ScanConfirmModal({ scanPlan, onClose, onConfirm, t }: ScanConfir
       <p className="mt-2 text-sm text-muted">
         {scanPlan.complete === false
           ? t("dashboard.scanPartialSummary", { subtitles, jobs: scanPlan.newJobs })
-          : noTargetApplies
-            ? t("dashboard.scanConfirm.summaryNoTarget", { subtitles: untargetedSubtitles })
-            : nothingNew
-              ? t("dashboard.scanConfirm.summaryNothingNew", { subtitles })
-              : t("dashboard.scanConfirm.summary", { subtitles, jobs: scanPlan.newJobs })}
+          : willRunIntake
+            ? t("dashboard.scanConfirm.intake.summary", { jobs: scanPlan.newJobs })
+            : noTargetApplies
+              ? t("dashboard.scanConfirm.summaryNoTarget", { subtitles: untargetedSubtitles })
+              : nothingNew
+                ? t("dashboard.scanConfirm.summaryNothingNew", { subtitles })
+                : t("dashboard.scanConfirm.summary", { subtitles, jobs: scanPlan.newJobs })}
       </p>
       {scanPlan.complete === false && <ScanWarning errors={scanPlan.errors ?? []} t={t} />}
       <div className="mt-3 rounded-sm border border-border bg-surface-raised p-3">
@@ -109,6 +116,28 @@ export function ScanConfirmModal({ scanPlan, onClose, onConfirm, t }: ScanConfir
           {folders.length > 0 ? folders.join(", ") : t("dashboard.scanConfirm.none")}
         </div>
       </div>
+      {intake.length > 0 && (
+        <section className="mt-3 rounded-sm border border-border">
+          <h4 className="border-b border-border px-3 py-2 text-sm font-medium text-text">
+            {t("dashboard.scanConfirm.intake.title")}
+          </h4>
+          <ul className="max-h-48 divide-y divide-border overflow-y-auto">
+            {intake.map(
+              ({ videoPath, videoName, intake: choice }) =>
+                choice && (
+                  <li key={videoPath} className="px-3 py-2 text-xs">
+                    <bdi className="block break-words font-medium text-text" title={videoPath ?? undefined}>
+                      {videoName}
+                    </bdi>
+                    <span className="text-muted">
+                      {t(`dashboard.scanConfirm.intake.${choice.action}`, { file: choice.file, track: choice.track })}
+                    </span>
+                  </li>
+                ),
+            )}
+          </ul>
+        </section>
+      )}
       {/* With nothing to queue, closing is the primary action; a scan still
           refreshes the scan-results tab, so it stays reachable as secondary. */}
       <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">

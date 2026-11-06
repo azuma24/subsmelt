@@ -2,11 +2,16 @@ from __future__ import annotations
 
 import getpass
 import io
-import queue
+import multiprocessing
+import os
 import shutil
 import threading
+import time
+from collections import deque
 from collections.abc import Callable, Iterator, Mapping
+from multiprocessing.connection import Connection
 from pathlib import Path
+from uuid import uuid4
 
 from . import nemotron_runtime, whispercpp_runtime
 from .catalog import ADVERTISED_MODELS, MODELS, ModelDescriptor, descriptor_for, to_wire
@@ -15,7 +20,7 @@ from .model_cache import (
     cache_dir_name_for_model,
     cache_root_from_env,
     describe_model_cache,
-    dir_has_weights,
+    is_model_cache_ready,
     repo_id_for_model,
 )
 from .model_loader import is_model_leased
@@ -70,6 +75,14 @@ class ModelInUseError(RuntimeError):
 
     def __init__(self, model: str) -> None:
         super().__init__(f"Model {model!r} is in use by a running transcription; retry when it finishes")
+        self.model = model
+
+
+class ModelDownloadInProgressError(RuntimeError):
+    """The download owns the cache entry until its worker has exited."""
+
+    def __init__(self, model: str) -> None:
+        super().__init__(f"Model {model!r} is being downloaded; cancel the download or wait for it to finish")
         self.model = model
 
 
@@ -134,14 +147,18 @@ def describe_models(env: Mapping[str, str] | None = None) -> list[dict]:
     downloaded, else the descriptor's approximate download size.
     """
     free_ram = available_ram_mb()
+    downloads = _download_statuses(cache_root_from_env(env).resolve())
     models: list[dict] = []
     for descriptor in MODELS:
         cache = describe_model_cache(descriptor.id, free_ram, env=env)
-        downloaded = bool(cache["cached"])
-        cache_path = cache["cache_path"]
+        download = downloads.get(descriptor.id)
+        downloaded = bool(cache["cached"]) and (not download or download["status"] not in _ACTIVE_DOWNLOAD_STATES)
+        cache_path = cache["cache_path"] if downloaded else None
         entry = _wire(descriptor)
         if downloaded and cache_path:
             entry["sizeMb"] = _dir_size_mb(Path(cache_path))
+        if download is not None:
+            entry["download"] = download
         models.append({**entry, "downloaded": downloaded, "cachePath": cache_path})
     return models
 
@@ -149,7 +166,10 @@ def describe_models(env: Mapping[str, str] | None = None) -> list[dict]:
 def is_model_downloaded(model: str, env: Mapping[str, str] | None = None) -> bool:
     """True when the (validated) model is already present in the cache root."""
     normalized = normalize_model(model)
-    cache = describe_model_cache(normalized, available_ram_mb(), env=env)
+    with _DOWNLOAD_CHANGED:
+        if (cache_root_from_env(env).resolve(), normalized) in _ACTIVE_DOWNLOADS:
+            return False
+        cache = describe_model_cache(normalized, available_ram_mb(), env=env)
     return bool(cache["cached"])
 
 
@@ -189,34 +209,15 @@ def _permission_message(error: PermissionError, cache_dir: Path) -> str:
     )
 
 
-def _download_cache_dir(env: Mapping[str, str] | None = None) -> Path:
-    """The cache_dir passed to ``snapshot_download`` (the HF cache root)."""
-    return cache_root_from_env(env)
-
-
-# Max seconds to wait for a single download progress tick before checking whether
-# the worker thread is still alive (defensive against a hung/dead worker).
-_DOWNLOAD_STALL_TIMEOUT_S = 900
-
-# One lock per model id so concurrent downloads of the same model serialize
-# instead of each spawning an independent snapshot_download (wasted bandwidth).
-_DOWNLOAD_LOCKS: dict[str, threading.Lock] = {}
-_DOWNLOAD_LOCKS_GUARD = threading.Lock()
-
-
-def _download_lock(model: str) -> threading.Lock:
-    with _DOWNLOAD_LOCKS_GUARD:
-        lock = _DOWNLOAD_LOCKS.get(model)
-        if lock is None:
-            lock = threading.Lock()
-            _DOWNLOAD_LOCKS[model] = lock
-        return lock
-
-
-def _snapshot_has_weights(snapshot_dir: str | None) -> bool:
-    """Guard against a partial download leaving the dir present but weightless
-    (which would otherwise read as "downloaded" and then fail every transcription)."""
-    return bool(snapshot_dir) and dir_has_weights(Path(snapshot_dir))
+_DOWNLOAD_STALL_TIMEOUT_S = 120
+_DOWNLOAD_RETRY_DELAYS_S = (1, 3)
+_DOWNLOAD_POLL_S = 0.25
+_DOWNLOAD_CONTEXT = multiprocessing.get_context("spawn")
+_DOWNLOAD_CHANGED = threading.Condition()
+_ACTIVE_DOWNLOAD_STATES = ("running", "cancelling")
+_ACTIVE_DOWNLOADS: dict[tuple[Path, str], ModelDownload] = {}
+_DOWNLOADS: dict[str, ModelDownload] = {}
+_MAX_FINISHED_DOWNLOADS = 64
 
 
 def _download_scope(model: str) -> dict:
@@ -225,8 +226,8 @@ def _download_scope(model: str) -> dict:
     return {"allow_patterns": [weights_file]} if weights_file else {}
 
 
-def _make_progress_tqdm(progress_queue: queue.Queue[dict], expected_bytes: float = 0.0):
-    """Build a tqdm subclass that pushes download progress into ``progress_queue``.
+def _make_progress_tqdm(emit: Callable[[dict], None], expected_bytes: float = 0.0):
+    """Build a tqdm subclass that publishes download progress.
 
     huggingface_hub 1.x builds three bars from ``tqdm_class`` per snapshot: bytes
     received ("Downloading bytes", updated often but against an inflated total
@@ -242,7 +243,14 @@ def _make_progress_tqdm(progress_queue: queue.Queue[dict], expected_bytes: float
     """
     from tqdm.auto import tqdm as _base_tqdm  # type: ignore
 
-    state = {"transfer": None, "written": None, "pct": 0.0, "last": None, "lock": threading.Lock()}
+    state = {
+        "transfer": None,
+        "written": None,
+        "pct": 0.0,
+        "last": None,
+        "last_activity": 0.0,
+        "lock": threading.Lock(),
+    }
 
     class _QueueTqdm(_base_tqdm):  # type: ignore[misc]
         def __init__(self, *args, **kwargs):
@@ -259,157 +267,321 @@ def _make_progress_tqdm(progress_queue: queue.Queue[dict], expected_bytes: float
 
         def update(self, n=1):
             result = super().update(n)
-            if self is state["transfer"] or self is state["written"]:
-                self._publish()
+            tracked = self is state["transfer"] or self is state["written"]
+            with state["lock"]:
+                if tracked and self._publish():
+                    state["last_activity"] = time.monotonic()
+                elif n > 0 and time.monotonic() - state["last_activity"] >= 1:
+                    state["last_activity"] = time.monotonic()
+                    emit({"type": "activity"})
             return result
 
-        def _publish(self, final: bool = False) -> None:
-            with state["lock"]:
-                bars = [bar for bar in (state["transfer"], state["written"]) if bar is not None]
-                written = state["written"]
-                total = float(written.total or 0) if written is not None else 0.0
-                if total <= 0:
-                    total = max(float(bar.total or 0) for bar in bars)
-                if not final:
-                    total = max(total, expected_bytes)
-                if total <= 0:
-                    return
-                downloaded = min(total, max(float(bar.n or 0) for bar in bars))
-                state["pct"] = max(state["pct"], min(100.0, downloaded / total * 100.0))
-                event = {
-                    "type": "progress",
-                    "pct": round(state["pct"], 2),
-                    "downloadedMb": round(downloaded / 1024 / 1024, 2),
-                    "totalMb": round(total / 1024 / 1024, 2),
-                }
-                if event == state["last"]:
-                    return
-                state["last"] = event
-            progress_queue.put(event)
+        def _publish(self, final: bool = False) -> bool:
+            bars = [bar for bar in (state["transfer"], state["written"]) if bar is not None]
+            written = state["written"]
+            total = float(written.total or 0) if written is not None else 0.0
+            if total <= 0:
+                total = max(float(bar.total or 0) for bar in bars)
+            if not final:
+                total = max(total, expected_bytes)
+            if total <= 0:
+                return False
+            downloaded = min(total, max(float(bar.n or 0) for bar in bars))
+            state["pct"] = max(state["pct"], min(100.0, downloaded / total * 100.0))
+            event = {
+                "type": "progress",
+                "pct": round(state["pct"], 2),
+                "downloadedMb": round(downloaded / 1024 / 1024, 2),
+                "totalMb": round(total / 1024 / 1024, 2),
+            }
+            if event == state["last"]:
+                return False
+            state["last"] = event
+            emit(event)
+            return True
 
         @classmethod
         def finish(cls) -> None:
-            bar = state["written"] or state["transfer"]
-            if bar is not None:
-                bar._publish(final=True)
+            with state["lock"]:
+                bar = state["written"] if state["written"] is not None else state["transfer"]
+                if bar is not None:
+                    bar._publish(final=True)
 
     return _QueueTqdm
 
 
-def download_model_events(
-    model: str,
-    env: Mapping[str, str] | None = None,
-) -> Iterator[dict]:
-    """Yield NDJSON-shaped dicts while downloading a model snapshot.
+class ModelDownload:
+    def __init__(self, model: str, cache_root: Path) -> None:
+        self.id = uuid4().hex
+        self.model = model
+        self.cache_root = cache_root
+        self.key = (cache_root.resolve(), model)
+        self.status = "running"
+        self.cancelled = threading.Event()
+        self.progress: dict | None = None
+        self.terminal: dict | None = None
+        self._events: deque[tuple[int, dict]] = deque(maxlen=32)
+        self._sequence = 0
 
-    Emits ``{"type":"progress", ...}`` lines during the download and a terminal
-    ``{"type":"result", ...}`` (or ``{"type":"error", ...}``) line. Already
-    downloaded → emits a single idempotent ``result`` immediately. The blocking
-    ``snapshot_download`` runs on a worker thread; progress flows back through a
-    queue this generator drains, mirroring the executor+queue pattern used by
-    ``/transcribe/stream`` so the event loop is never blocked.
+    def snapshot(self) -> dict:
+        with _DOWNLOAD_CHANGED:
+            return {
+                "id": self.id,
+                "model": self.model,
+                "status": self.status,
+                **({"progress": self.progress} if self.progress is not None else {}),
+                **({"error": self.terminal["error"]} if self.terminal and self.status == "failed" else {}),
+                **({"cachePath": self.terminal["cachePath"]} if self.terminal and self.status == "succeeded" else {}),
+            }
 
-    Validation (unknown model id) is the caller's responsibility — it must call
-    :func:`normalize_model` first so a 400 is raised before the stream opens.
-    """
+    def events_after(self, sequence: int) -> tuple[int, list[dict], bool]:
+        with _DOWNLOAD_CHANGED:
+            return (
+                self._sequence,
+                [event for index, event in self._events if index > sequence],
+                self.terminal is not None,
+            )
+
+    def _publish(self, event: dict) -> None:
+        self._sequence += 1
+        self._events.append((self._sequence, event))
+        _DOWNLOAD_CHANGED.notify_all()
+
+    def _progress(self, event: dict) -> None:
+        with _DOWNLOAD_CHANGED:
+            if self.progress is not None and event["pct"] < self.progress["pct"]:
+                # A new attempt can reconstruct cached bytes from zero. Keep
+                # showing the last known high-water mark until it catches up.
+                return
+            self.progress = {key: value for key, value in event.items() if key != "type"}
+            self._publish(event)
+
+    def _finish(self, event: dict) -> None:
+        with _DOWNLOAD_CHANGED:
+            if self.cancelled.is_set():
+                self.status = "cancelled"
+                event = {
+                    "type": "error",
+                    "error": "Model download cancelled",
+                    "code": "model_download_cancelled",
+                    "model": self.model,
+                }
+            else:
+                self.status = "succeeded" if event["type"] == "result" else "failed"
+            self.terminal = event
+            _ACTIVE_DOWNLOADS.pop(self.key, None)
+            _DOWNLOADS.pop(self.id)
+            _DOWNLOADS[self.id] = self
+            self._publish(event)
+            finished = [operation_id for operation_id, op in _DOWNLOADS.items() if op.terminal is not None]
+            for operation_id in finished[:-_MAX_FINISHED_DOWNLOADS]:
+                del _DOWNLOADS[operation_id]
+
+
+def _download_statuses(cache_root: Path) -> dict[str, dict]:
+    with _DOWNLOAD_CHANGED:
+        return {op.model: op.snapshot() for op in _DOWNLOADS.values() if op.key[0] == cache_root}
+
+
+def find_model_download(operation_id: str) -> dict | None:
+    with _DOWNLOAD_CHANGED:
+        operation = _DOWNLOADS.get(operation_id)
+        return operation.snapshot() if operation is not None else None
+
+
+def cancel_model_download(operation_id: str) -> dict | None:
+    with _DOWNLOAD_CHANGED:
+        operation = _DOWNLOADS.get(operation_id)
+        if operation is None:
+            return None
+        if operation.status == "running":
+            operation.status = "cancelling"
+            operation.cancelled.set()
+        return operation.snapshot()
+
+
+def shutdown_model_downloads() -> None:
+    with _DOWNLOAD_CHANGED:
+        for operation in _ACTIVE_DOWNLOADS.values():
+            cancel_model_download(operation.id)
+        _DOWNLOAD_CHANGED.wait_for(lambda: not _ACTIVE_DOWNLOADS)
+
+
+def start_model_download(model: str, env: Mapping[str, str] | None = None) -> ModelDownload:
     normalized = normalize_model(model)
-
-    if is_model_downloaded(normalized, env=env):
+    cache_root = cache_root_from_env(env)
+    key = (cache_root.resolve(), normalized)
+    with _DOWNLOAD_CHANGED:
+        active = _ACTIVE_DOWNLOADS.get(key)
+        if active is not None:
+            return active
         cache = describe_model_cache(normalized, available_ram_mb(), env=env)
-        yield {
-            "type": "result",
-            "ok": True,
-            "model": normalized,
-            "cachePath": cache["cache_path"],
-            "alreadyPresent": True,
-        }
-        return
-
-    # Serialize concurrent downloads of the SAME model: a second request blocks
-    # here, then re-checks is_model_downloaded below and returns the idempotent
-    # "already present" result instead of running a second snapshot_download.
-    with _download_lock(normalized):
-        if is_model_downloaded(normalized, env=env):
-            cache = describe_model_cache(normalized, available_ram_mb(), env=env)
-            yield {
-                "type": "result",
-                "ok": True,
-                "model": normalized,
-                "cachePath": cache["cache_path"],
-                "alreadyPresent": True,
-            }
-            return
-
-        progress_queue: queue.Queue[dict] = queue.Queue()
-        sentinel = object()
-        result_holder: dict = {}
-
-        def worker() -> None:
+        operation = ModelDownload(normalized, cache_root)
+        _DOWNLOADS[operation.id] = operation
+        if cache["cached"]:
+            operation._finish(_download_result(normalized, cache["cache_path"], alreadyPresent=True))
+        else:
+            _ACTIVE_DOWNLOADS[key] = operation
             try:
-                from huggingface_hub import snapshot_download  # type: ignore
-
-                tqdm_class = _make_progress_tqdm(progress_queue, descriptor_for(model).size_mb * 1024 * 1024)
-                path = snapshot_download(
-                    repo_id=repo_id_for(normalized),
-                    cache_dir=str(_download_cache_dir(env)),
-                    tqdm_class=tqdm_class,
-                    **_download_scope(normalized),
-                )
-                tqdm_class.finish()
-                result_holder["path"] = path
-            except PermissionError as exc:
-                result_holder["error"] = _permission_message(exc, _download_cache_dir(env))
+                threading.Thread(
+                    target=_supervise_download, args=(operation,), name=f"download-{normalized}", daemon=True
+                ).start()
             except Exception as exc:
-                result_holder["error"] = str(exc)
-            finally:
-                progress_queue.put(sentinel)  # type: ignore[arg-type]
+                operation._finish(_download_error(normalized, str(exc)))
+        return operation
 
-        thread = threading.Thread(target=worker, name=f"hf-download-{normalized}", daemon=True)
-        thread.start()
 
-        # Bounded get so a worker that dies WITHOUT posting the sentinel (a future
-        # exception-path bug) can never hang the stream forever — fall through when
-        # the thread is no longer alive.
-        while True:
-            try:
-                item = progress_queue.get(timeout=_DOWNLOAD_STALL_TIMEOUT_S)
-            except queue.Empty:
-                if not thread.is_alive():
-                    break
-                continue
-            if item is sentinel:
-                break
-            yield item
-
-        thread.join(timeout=_DOWNLOAD_STALL_TIMEOUT_S)
-
-        if "error" in result_holder:
-            yield {"type": "error", "error": result_holder["error"], "model": normalized}
+def download_model_events(model: str, env: Mapping[str, str] | None = None) -> Iterator[dict]:
+    """Stream the events of the existing download or start a new one."""
+    operation = start_model_download(model, env)
+    sequence = 0
+    while True:
+        with _DOWNLOAD_CHANGED:
+            _DOWNLOAD_CHANGED.wait_for(lambda current=sequence: operation._sequence > current)
+            sequence, events, finished = operation.events_after(sequence)
+        yield from events
+        if finished:
             return
 
-        # Re-describe so cachePath reflects the freshly-written snapshot.
-        cache = describe_model_cache(normalized, available_ram_mb(), env=env)
-        cache_path = cache["cache_path"] or result_holder.get("path")
-        # Integrity gate: a partial/interrupted download can leave a snapshot dir
-        # without the CTranslate2 weights. Reporting success here would make the
-        # model show as "downloaded" yet fail every transcription, so verify the
-        # weight file is actually present before declaring success.
-        if not _snapshot_has_weights(cache_path):
-            yield {
-                "type": "error",
-                "error": (
-                    "Download finished but the model weights (model.bin or .gguf) are "
-                    "missing; the snapshot is incomplete — delete it and download again"
-                ),
-                "model": normalized,
+
+def _is_transient_download_error(error: Exception) -> bool:
+    from httpx import TransportError
+
+    cause: BaseException | None = error
+    while cause is not None:
+        if isinstance(cause, (TimeoutError, ConnectionError, TransportError)):
+            return True
+        status = getattr(getattr(cause, "response", None), "status_code", None)
+        if status is not None:
+            return status in (408, 429) or 500 <= status <= 599
+        if (
+            isinstance(cause, RuntimeError)
+            and "CAS service error" in str(cause)
+            and any(term in str(cause).lower() for term in ("timed out", "connection reset", "503 service unavailable"))
+        ):
+            return True
+        cause = cause.__cause__
+    return False
+
+
+def _download_in_process(model: str, cache_root: Path, emit: Callable[[dict], None]) -> None:
+    try:
+        from huggingface_hub import snapshot_download  # type: ignore
+
+        tqdm_class = _make_progress_tqdm(emit, descriptor_for(model).size_mb * 1024 * 1024)
+        path = snapshot_download(
+            repo_id=repo_id_for(model),
+            cache_dir=str(cache_root),
+            tqdm_class=tqdm_class,
+            **_download_scope(model),
+        )
+        tqdm_class.finish()
+        emit({"type": "complete", "path": path})
+    except PermissionError as exc:
+        emit({"type": "failed", "error": _permission_message(exc, cache_root)})
+    except Exception as exc:
+        emit(
+            {
+                "type": "failed",
+                "error": str(exc)[:1200] or type(exc).__name__,
+                "retry": _is_transient_download_error(exc),
             }
-            return
-        yield {
-            "type": "result",
-            "ok": True,
-            "model": normalized,
-            "cachePath": cache_path,
-        }
+        )
+
+
+def _download_worker(model: str, cache_root: Path, sender: Connection) -> None:
+    parent = multiprocessing.parent_process()
+    if parent is not None:
+        # A forcibly stopped backend cannot terminate the child itself.
+        def exit_with_parent() -> None:
+            parent.join()
+            os._exit(1)
+
+        threading.Thread(target=exit_with_parent, daemon=True).start()
+    with sender:
+        _download_in_process(model, cache_root, sender.send)
+
+
+def _run_download_attempt(operation: ModelDownload) -> dict:
+    reader, writer = _DOWNLOAD_CONTEXT.Pipe(duplex=False)
+    process = _DOWNLOAD_CONTEXT.Process(
+        target=_download_worker, args=(operation.model, operation.cache_root, writer), daemon=True
+    )
+    with reader, writer:
+        process.start()
+        writer.close()
+        try:
+            deadline = time.monotonic() + _DOWNLOAD_STALL_TIMEOUT_S
+            while not operation.cancelled.is_set():
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return {"error": f"Model download stalled for {_DOWNLOAD_STALL_TIMEOUT_S:g} seconds", "retry": True}
+                if not reader.poll(min(remaining, _DOWNLOAD_POLL_S)):
+                    continue
+                try:
+                    event = reader.recv()
+                except EOFError:
+                    return {"error": "Model download worker stopped unexpectedly"}
+                if event["type"] in ("complete", "failed"):
+                    # Keep ownership until the process exits, even if it has
+                    # already reported a result or entered finalization.
+                    deadline = time.monotonic() + _DOWNLOAD_STALL_TIMEOUT_S
+                    while process.is_alive() and not operation.cancelled.is_set():
+                        remaining = deadline - time.monotonic()
+                        if remaining <= 0:
+                            return {"error": "Model download worker stalled while exiting", "retry": True}
+                        process.join(min(remaining, _DOWNLOAD_POLL_S))
+                    if process.exitcode not in (0, None):
+                        return {"error": f"Model download worker exited with code {process.exitcode}"}
+                    return event
+                deadline = time.monotonic() + _DOWNLOAD_STALL_TIMEOUT_S
+                if event["type"] == "progress":
+                    operation._progress(event)
+            return {"error": "Model download cancelled"}
+        finally:
+            if process.is_alive():
+                process.terminate()
+                process.join(1)
+                if process.is_alive():
+                    process.kill()
+            process.join()
+            process.close()
+
+
+def _download_error(model: str, message: str) -> dict:
+    return {"type": "error", "error": message, "model": model}
+
+
+def _download_result(model: str, path: str, **extra: bool) -> dict:
+    return {"type": "result", "ok": True, "model": model, "cachePath": path, **extra}
+
+
+def _supervise_download(operation: ModelDownload) -> None:
+    model = operation.model
+    result = _download_error(model, "Model download cancelled")
+    try:
+        delays = iter(_DOWNLOAD_RETRY_DELAYS_S)
+        while not operation.cancelled.is_set():
+            attempt = _run_download_attempt(operation)
+            if attempt.get("type") == "complete":
+                path = attempt["path"]
+                cache = describe_model_cache(model, available_ram_mb(), env={"HF_HOME": str(operation.cache_root)})
+                if path and is_model_cache_ready(model, Path(path)) and cache["cached"]:
+                    result = _download_result(model, cache["cache_path"])
+                else:
+                    result = _download_error(
+                        model,
+                        "Download finished with an incomplete snapshot (missing model.bin, model metadata, or weights)",
+                    )
+                break
+            result = _download_error(model, attempt["error"])
+            delay = next(delays, None)
+            if not attempt.get("retry") or delay is None or operation.cancelled.wait(delay):
+                break
+    except Exception as exc:
+        result = _download_error(model, str(exc) or type(exc).__name__)
+    finally:
+        operation._finish(result)
 
 
 def delete_model(model: str, env: Mapping[str, str] | None = None) -> dict:
@@ -425,6 +597,13 @@ def delete_model(model: str, env: Mapping[str, str] | None = None) -> dict:
     transcription leases the model.
     """
     normalized = normalize_model(model)
+    with _DOWNLOAD_CHANGED:
+        if (cache_root_from_env(env).resolve(), normalized) in _ACTIVE_DOWNLOADS:
+            raise ModelDownloadInProgressError(normalized)
+        return _delete_cached_model(normalized, env)
+
+
+def _delete_cached_model(normalized: str, env: Mapping[str, str] | None) -> dict:
     if not is_model_downloaded(normalized, env=env):
         raise ModelNotDownloadedError(normalized)
     if is_model_leased(normalized):
@@ -456,7 +635,7 @@ def delete_model(model: str, env: Mapping[str, str] | None = None) -> dict:
     freed_mb = 0
     removed_any = False
     for candidate in candidates:
-        if candidate.is_dir() and (candidate in repo_dirs or dir_has_weights(candidate)):
+        if candidate.is_dir() and (candidate in repo_dirs or is_model_cache_ready(normalized, candidate)):
             freed_mb += _try_remove(candidate)
             removed_any = True
 

@@ -55,6 +55,7 @@ import { queueFileTranslation, type FileTranslationTarget } from "../file-transl
 import { parsePositiveInteger, parsePositiveIntegerArray, sanitizeLanguageName } from "./validation.js";
 import { errorMessage } from "../errors.js";
 import { removeJobPartialOutput } from "../job-output.js";
+import { allowExplicitTranslationTarget, isSourceReviewPending } from "../transcription/review-gate.js";
 
 // Enrich job rows with task data (since settings/tasks are in config, not SQL JOIN).
 // Also surfaces token usage + an APPROXIMATE est_cost: jobs don't store which
@@ -137,7 +138,7 @@ export function registerJobsRoutes(app: Express): void {
       target = { langCode, targetLang };
     }
 
-    const result = queueFileTranslation(body.srtPath, target);
+    const result = queueFileTranslation(body.srtPath, target, true);
     if (result.kind === "rejected") return res.status(result.status).json({ error: result.error });
     setTimeout(() => runQueueSafely(), 100);
     res.json({ ok: true, jobId: result.jobId, taskId: result.taskId, created: result.kind === "queued" });
@@ -156,7 +157,11 @@ export function registerJobsRoutes(app: Express): void {
 
   app.post("/api/jobs/:id/force", (req, res) => {
     const id = parseInt(req.params.id, 10);
+    const job = getJob(id);
+    if (job && isSourceReviewPending(job.srt_path, job.video_path ?? undefined))
+      return res.status(409).json({ error: "Approve the source transcript before translating it" });
     if (forceJobFromScratch(id) === 0) return rejectUnchanged(res, id);
+    if (job) allowExplicitTranslationTarget(job.srt_path, job.task_id);
     logger.info("queue", `Job #${id} marked for force re-translate`, id);
     setTimeout(() => runQueueSafely(), 100);
     res.json({ ok: true });

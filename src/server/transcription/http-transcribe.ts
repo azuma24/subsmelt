@@ -12,6 +12,7 @@ import {
   fetchWithTimeout,
   normalizeTranscriptionBackendUrl,
   postTranscriptionStream,
+  relayTranscriptionMetrics,
   resolveTranscribeTimeoutMs,
   throwBackendError,
   transcriptionAuthHeaders,
@@ -38,6 +39,7 @@ export async function transcribeWithBackend(
   );
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throwBackendError(body, response.status);
+  relayTranscriptionMetrics(body, options);
   return body as BackendTranscriptionResponse;
 }
 

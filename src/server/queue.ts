@@ -43,6 +43,7 @@ import { writeJobTitle } from "./queue/titles.js";
 import { clearQueueRun, interruptedQueueRun, markQueueRun, writeQueueRun } from "./queue/run-marker.js";
 import { recordUsage } from "./usage.js";
 import { removeJobPartialOutput } from "./job-output.js";
+import { hasAutomaticTranslationRestrictions, isAutomaticTranslationAllowed } from "./transcription/review-gate.js";
 
 // The per-job state (what translates now, on which connection, what was
 // cancelled) lives in ./queue/state.ts; the routes read it through these.
@@ -475,6 +476,16 @@ async function adaptiveWorker(index: number, filter: Set<number> | null) {
     let stopped = false;
     try {
       if (isStopRequested()) break;
+      // A review can begin while this claimed job waits for its connection.
+      if (
+        releasePrimary &&
+        hasAutomaticTranslationRestrictions() &&
+        !isAutomaticTranslationAllowed(job.srt_path, job.video_path ?? undefined, job.task_id)
+      ) {
+        updateJob(job.id, { status: "pending" });
+        claimedJobs.delete(job.id);
+        continue;
+      }
       splitJobRunning = split;
       stopped = await runJob(job, order, jobMode, primary ? new Set([primary.id]) : new Set<string>(), split);
     } finally {

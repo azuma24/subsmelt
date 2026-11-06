@@ -1,20 +1,19 @@
 import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { getAllSettings, setSetting, getSetting } from "./config.js";
-import { scanFolder, listFolderTree, MEDIA_DIR } from "./scanner.js";
-import { runQueueSafely, isQueueRunning, startAutoScan, resumeQueueOnBoot } from "./queue.js";
+import { setSetting, getSetting } from "./config.js";
+import { listFolderTree, MEDIA_DIR } from "./scanner.js";
+import { isQueueRunning, startAutoScan, resumeQueueOnBoot } from "./queue.js";
 import { transcriptionHistory } from "./transcription-history.js";
 import { transcriptionWork } from "./transcription/work.js";
-import { enqueueMissingTranscripts } from "./transcription/scheduled.js";
+import { previewLibraryScan, scanAndEnqueue } from "./library-scan.js";
 import { logger } from "./logger.js";
 import { crossSiteGuard, createIngressGuard } from "./cross-site-guard.js";
 import db, { getLogs, clearLogs } from "./db.js";
-import { addSSEClient, broadcast } from "./sse.js";
+import { addSSEClient } from "./sse.js";
 import { notifyTest } from "./notify.js";
 import { startWatcher, stopWatcher, isWatcherRunning } from "./watcher.js";
 import { parseLogsQuery } from "./routes/validation.js";
-import { readSettings } from "./settings-schema.js";
 
 import { registerSettingsTasksRoutes } from "./routes/settings-tasks.js";
 import { registerConvertBatchRoutes } from "./routes/convert-batches.js";
@@ -27,7 +26,7 @@ import { registerYoutubeRoutes } from "./routes/youtube.js";
 import { registerUsageRoutes } from "./routes/usage.js";
 import { YoutubeStore } from "./youtube/store.js";
 import { YoutubeWorker } from "./youtube/worker.js";
-import { registerTranscriptionRoutes, getTranscriptionBackendUrl } from "./routes/transcription.js";
+import { registerTranscriptionRoutes } from "./routes/transcription.js";
 import { errorMessage } from "./errors.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -90,39 +89,6 @@ app.get("/api/folders/tree", async (_req, res) => {
 });
 
 // ======== Scanner ========
-// One walk of the media tree at a time: concurrent callers share the run
-// already in flight and receive its result instead of starting another.
-let scanInFlight: ReturnType<typeof scanFolder> | null = null;
-
-async function scanAndEnqueue() {
-  if (scanInFlight) return scanInFlight;
-  const run = (async (): ReturnType<typeof scanFolder> => {
-    const result = await scanFolder(true);
-    const settings = getAllSettings();
-    const typed = readSettings();
-    const behavior = typed.transcription_missing_subtitle_behavior;
-    if (result.complete && typed.transcription_enabled && getTranscriptionBackendUrl(settings) && behavior !== "ask") {
-      enqueueMissingTranscripts(result, behavior);
-    }
-    if (result.newJobs > 0 && getSetting("auto_translate") === "1") {
-      setTimeout(() => runQueueSafely(), 100);
-    }
-    broadcast("scan:complete", {
-      newJobs: result.newJobs,
-      total: result.totalSubtitles,
-      complete: result.complete,
-      errors: result.errors,
-    });
-    return result;
-  })();
-  scanInFlight = run;
-  try {
-    return await run;
-  } finally {
-    scanInFlight = null;
-  }
-}
-
 app.post("/api/scan", async (_req, res) => {
   try {
     res.json(await scanAndEnqueue());
@@ -133,7 +99,7 @@ app.post("/api/scan", async (_req, res) => {
 
 app.get("/api/scan/preview", async (_req, res) => {
   try {
-    res.json(await scanFolder(false));
+    res.json(await previewLibraryScan());
   } catch (error) {
     res.status(400).json({ error: errorMessage(error) });
   }

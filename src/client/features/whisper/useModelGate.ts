@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { isWhisperModelDownloadCancelled } from "../../api";
 import type { TFunction } from "../../i18n";
 import { getErrorMessage } from "../../lib";
 import type { WhisperModel } from "../../types";
@@ -91,7 +92,9 @@ export function useModelGate({
         addToast(t("whisper.modelDownloadDone", { model: modelId }), "success");
         return true;
       } catch (e: unknown) {
-        addToast(t("whisper.modelDownloadFailed", { model: modelId, message: getErrorMessage(e) }), "error");
+        if (!isWhisperModelDownloadCancelled(e)) {
+          addToast(t("whisper.modelDownloadFailed", { model: modelId, message: getErrorMessage(e) }), "error");
+        }
         return false;
       }
     },

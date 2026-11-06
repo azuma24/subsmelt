@@ -26,6 +26,7 @@ export async function fetchTranscriptionHealth(
   backendUrl: string,
   model?: string,
   token?: string,
+  signal?: AbortSignal,
 ): Promise<BackendHealthResponse> {
   const url = normalizeTranscriptionBackendUrl(backendUrl);
   if (!url) throw new Error("Transcription backend URL is not configured");
@@ -34,6 +35,7 @@ export async function fetchTranscriptionHealth(
     `${url}/health${qs}`,
     {
       headers: { ...transcriptionAuthHeaders(token) },
+      signal,
     },
     SHORT_REQUEST_TIMEOUT_MS,
     "Transcription backend health check",

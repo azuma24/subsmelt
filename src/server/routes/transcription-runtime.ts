@@ -11,20 +11,22 @@ import { getAllSettings, preferredChinese } from "../config.js";
 import { MEDIA_DIR } from "../scanner.js";
 import {
   applyPreflightPolicy,
+  assertAudioStreamIndex,
+  assertAudioStreamSupport,
   buildTranscriptionRequest,
+  fetchTranscriptionHealth,
   localTranscriptionOutputPath,
   transcribeTimeoutSeconds,
   transcribeWithBackend,
   transcribeWithBackendStreaming,
-  transcribeWithBackendUpload,
-  transcribeWithBackendUploadStreaming,
+  transcribeFileWithBackendUpload,
   resolveTransportMode,
   StreamingUnsupportedError,
+  type TranscribeStreamingOptions,
   type TranscriptionOverrides,
   type TranscribePostAction,
   type BackendTranscriptionResponse,
   type TranscriptionOutputFormat,
-  type TranscriptionTransportMode,
 } from "../transcription-client.js";
 import {
   NO_SPEECH_SUMMARY,
@@ -38,6 +40,7 @@ import { standardLangCode } from "../language-codes.js";
 import { correctSubtitleFile, correctionsForFile } from "../corrections.js";
 import { logger } from "../logger.js";
 import { describeCorrections, splitChecked } from "../../shared/corrections.js";
+import type { TranscriptionTimings } from "../../shared/transcription.js";
 import { startHeldQueue } from "../queue.js";
 import { translationHoldsGpu, waitUntilTranscriptionMayStart } from "../gpu-gate.js";
 import {
@@ -48,6 +51,8 @@ import {
   TranscriptionInFlightError,
 } from "../transcription/in-flight.js";
 import { errorMessage } from "../errors.js";
+import { publishSubtitleSidecar } from "../embedded-subtitles.js";
+import { assertSubtitleIntakeStillMissing } from "../subtitle-intake.js";
 
 const MAX_SUBTITLE_BYTES = 50 * 1024 * 1024; // 50 MB cap for written subtitle content
 
@@ -145,6 +150,7 @@ function isAbandonedRun(error: unknown, controller: AbortController): boolean {
 export interface TranscriptionRun {
   /** Aborted by the caller's signal, POST /api/transcribe/cancel or cancel-all. */
   readonly controller: AbortController;
+  readonly timingsMs: TranscriptionTimings;
   /** Takes a transcription slot, waits until the shared GPU is free, then calls `call` with the slot held. */
   withGpu<T>(call: () => Promise<T>): Promise<T>;
   /** From here the backend may stay busy after the app lets go, so a cancel or timeout keeps the GPU counted. */
@@ -171,11 +177,18 @@ export async function withTranscriptionRun<T>(
   let abandoned = false;
   const run: TranscriptionRun = {
     controller,
-    withGpu: (call) =>
-      withTranscriptionSlot(async () => {
-        await waitForGpu(runId, controller.signal);
+    timingsMs: {},
+    withGpu: (call) => {
+      const started = performance.now();
+      return withTranscriptionSlot(async () => {
+        try {
+          await waitForGpu(runId, controller.signal);
+        } finally {
+          run.timingsMs.gpuWait = Math.round(performance.now() - started);
+        }
         return call();
-      }),
+      });
+    },
     markReachedBackend: () => {
       reachedBackend = true;
     },
@@ -191,76 +204,52 @@ export async function withTranscriptionRun<T>(
   }
 }
 
-// Resolves to true when a streaming run succeeded, so we know whether to skip
-// the legacy fallback. Throws StreamingUnsupportedError only for 404s.
 async function transcribeRelayingProgress(
   backendUrl: string,
   request: ReturnType<typeof buildTranscriptionRequest>,
   settings: Record<string, string>,
   videoPath: string,
-  controller: AbortController,
+  run: TranscriptionRun,
   transport: ReturnType<typeof resolveTransportMode>,
-  reportProgress?: (pct: number) => void,
+  observations: {
+    onProgress?: (pct: number) => void;
+    onMetrics: NonNullable<TranscribeStreamingOptions["onMetrics"]>;
+    audioOnlyUpload: boolean;
+    onUploadPrepared: (bytes: number, audioOnly: boolean) => void;
+  },
 ) {
-  const token = settings.transcription_backend_token;
-  const onProgress = ({
-    pct,
-    processedSeconds,
-    totalSeconds,
-  }: {
-    pct: number;
-    processedSeconds: number;
-    totalSeconds: number;
-  }) => {
-    broadcast("transcription:progress", { path: videoPath, pct, processedSeconds, totalSeconds });
-    reportProgress?.(pct);
-  };
-  const onPhase = (phase: string) => {
-    broadcast("transcription:progress", { path: videoPath, phase });
+  const options: TranscribeStreamingOptions = {
+    timeoutSeconds: transcribeTimeoutSeconds(settings),
+    token: settings.transcription_backend_token,
+    signal: run.controller.signal,
+    onProgress({ pct, processedSeconds, totalSeconds }) {
+      broadcast("transcription:progress", { path: videoPath, pct, processedSeconds, totalSeconds });
+      observations.onProgress?.(pct);
+    },
+    onPhase(phase) {
+      broadcast("transcription:progress", { path: videoPath, phase });
+    },
+    onMetrics: observations.onMetrics,
   };
 
   if (transport === "upload") {
-    // Model B: stream the local media file to the backend; it returns content.
-    try {
-      return await transcribeWithBackendUploadStreaming(backendUrl, request, videoPath, {
-        timeoutSeconds: transcribeTimeoutSeconds(settings),
-        token,
-        signal: controller.signal,
-        onProgress,
-        onPhase,
-      });
-    } catch (error: unknown) {
-      if (error instanceof StreamingUnsupportedError) {
-        return await transcribeWithBackendUpload(backendUrl, request, videoPath, {
-          timeoutSeconds: transcribeTimeoutSeconds(settings),
-          token,
-          signal: controller.signal,
-        });
-      }
-      throw error;
-    }
+    return transcribeFileWithBackendUpload(backendUrl, request, videoPath, {
+      ...options,
+      audioOnlyUpload: observations.audioOnlyUpload,
+      onUploadPrepared(bytes, audioOnly) {
+        observations.onUploadPrepared(bytes, audioOnly);
+        run.markReachedBackend();
+      },
+    });
   }
 
-  // Model A (shared filesystem): backend reads/writes the mapped path.
+  await assertAudioStreamSupport(backendUrl, request.audio_stream_index, options);
+  run.markReachedBackend();
   try {
-    return await transcribeWithBackendStreaming(backendUrl, request, {
-      timeoutSeconds: transcribeTimeoutSeconds(settings),
-      token,
-      signal: controller.signal,
-      onProgress,
-      onPhase,
-    });
+    return await transcribeWithBackendStreaming(backendUrl, request, options);
   } catch (error: unknown) {
-    if (error instanceof StreamingUnsupportedError) {
-      // Older backend without the stream route: fall back to the JSON endpoint.
-      // No live progress is available, but transcription still completes.
-      return await transcribeWithBackend(backendUrl, request, {
-        timeoutSeconds: transcribeTimeoutSeconds(settings),
-        token,
-        signal: controller.signal,
-      });
-    }
-    throw error;
+    if (!(error instanceof StreamingUnsupportedError)) throw error;
+    return await transcribeWithBackend(backendUrl, request, options);
   }
 }
 
@@ -292,6 +281,7 @@ export function transcriptionErrorStatus(error: unknown): number {
 export function overridesFromBody(body: unknown): TranscriptionOverrides | undefined {
   if (!body || typeof body !== "object") return undefined;
   const b = body as Record<string, unknown>;
+  if (b.audioStreamIndex !== undefined) assertAudioStreamIndex(b.audioStreamIndex);
   const pick = (k: string): string | undefined => (typeof b[k] === "string" && b[k] ? (b[k] as string) : undefined);
   const ov: TranscriptionOverrides = {
     ...(pick("model") ? { model: pick("model") } : {}),
@@ -299,6 +289,9 @@ export function overridesFromBody(body: unknown): TranscriptionOverrides | undef
     ...(pick("device") ? { device: pick("device") } : {}),
     ...(pick("computeType") ? { compute_type: pick("computeType") } : {}),
     ...(typeof b.speakerDiarization === "boolean" ? { speaker_diarization: b.speakerDiarization } : {}),
+    ...(typeof b.audioStreamIndex === "number" ? { audio_stream_index: b.audioStreamIndex } : {}),
+    ...(typeof b.audioOnlyUpload === "boolean" ? { audio_only_upload: b.audioOnlyUpload } : {}),
+    ...(typeof b.forceRecognition === "boolean" ? { force_recognition: b.forceRecognition } : {}),
   };
   return Object.keys(ov).length ? ov : undefined;
 }
@@ -323,11 +316,11 @@ const BLANK_CHECK_MAX_BYTES = 4096;
  */
 async function foundNoSpeech(
   result: BackendTranscriptionResponse,
-  transport: TranscriptionTransportMode,
+  expectsContent: boolean,
   outputPath: string,
   startedAtMs: number,
 ): Promise<boolean> {
-  if (transport === "upload") {
+  if (expectsContent) {
     return result.segments === 0 || (typeof result.content === "string" && !result.content.trim());
   }
   let stat: fs.Stats;
@@ -387,6 +380,11 @@ export async function runTranscriptionAttempt(opts: {
    * unattended runs leave it off and never replace a subtitle.
    */
   overwrite?: boolean;
+  forceRecognition?: boolean;
+  /** An unattended intake may only publish while this revision still lacks a sidecar. */
+  subtitleIntakeRevision?: string;
+  /** Prefer local publication so an interrupted review run leaves no remote sidecar. */
+  deferSharedPublication?: boolean;
 }) {
   const settings = opts.settings || getAllSettings();
   const backendUrl = getTranscriptionBackendUrl(settings);
@@ -399,11 +397,22 @@ export async function runTranscriptionAttempt(opts: {
     settings,
     outputFormat: opts.outputFormat,
     postAction: opts.postAction,
-    overrides: opts.overrides,
+    overrides:
+      opts.forceRecognition === undefined
+        ? opts.overrides
+        : { ...opts.overrides, force_recognition: opts.forceRecognition },
   });
   const outputPath = localTranscriptionOutputPath(opts.videoPath, request.language, request.output_format);
   // Refuses a second run of the same file before anything is recorded.
   return withTranscriptionRun(opts.videoPath, opts.signal, async (run) => {
+    const transport = resolveTransportMode(settings);
+    const intakeRevision = opts.subtitleIntakeRevision;
+    const audioOnlyUpload = opts.overrides?.audio_only_upload ?? settings.transcription_audio_only_upload === "1";
+    let checkpointHit: boolean | undefined;
+    let uploadedBytes: number | undefined;
+    let audioOnlyUploaded: boolean | undefined;
+    let publishStarted: number | undefined;
+    const { timingsMs } = run;
     const attempt = transcriptionHistory.startAttempt({
       // Store the local SubSmelt media path so history retries re-run through
       // MEDIA_DIR validation and optional backend path mapping correctly.
@@ -418,9 +427,10 @@ export async function runTranscriptionAttempt(opts: {
       device: request.device,
       computeType: request.compute_type,
       overwrite: opts.overwrite === true,
+      audioStreamIndex: request.audio_stream_index,
+      audioOnlyUpload: transport === "upload" ? audioOnlyUpload : undefined,
+      forceRecognition: request.force_recognition,
     });
-
-    const transport = resolveTransportMode(settings);
 
     try {
       const startedAtMs = Date.parse(attempt.startedAt);
@@ -431,27 +441,62 @@ export async function runTranscriptionAttempt(opts: {
         // server-side media path, which does not exist in upload mode. The upload
         // endpoint runs its own resource preflight (422/409). We still honour
         // run_anyway by sending allow_unsafe so the backend won't block a low-RAM run.
+        if (intakeRevision !== undefined) await assertSubtitleIntakeStillMissing(opts.videoPath, intakeRevision);
         let checked = request;
+        if (transport === "shared" && (intakeRevision !== undefined || opts.deferSharedPublication)) {
+          const health = await fetchTranscriptionHealth(
+            backendUrl,
+            undefined,
+            settings.transcription_backend_token,
+            run.controller.signal,
+          ).catch((error) => {
+            if (intakeRevision !== undefined || run.controller.signal.aborted) throw error;
+            return null;
+          });
+          if (health?.capabilities?.deferredSharedPublication === true) checked = { ...request, defer_publish: true };
+          else if (intakeRevision !== undefined) {
+            throw new Error(
+              "This transcription backend needs an update to publish unattended shared-filesystem subtitles safely.",
+            );
+          }
+        }
         if (transport === "upload") {
           if ((settings.transcription_low_ram_behavior || "").trim() === "run_anyway") {
             checked = { ...request, allow_unsafe: true };
           }
         } else {
-          checked = await applyPreflightPolicy(backendUrl, request, settings);
+          const started = performance.now();
+          try {
+            checked = await applyPreflightPolicy(backendUrl, checked, settings);
+          } finally {
+            timingsMs.preflight = Math.round(performance.now() - started);
+          }
         }
-        run.markReachedBackend();
         const transcribed = await transcribeRelayingProgress(
           backendUrl,
           checked,
           settings,
           opts.videoPath,
-          run.controller,
+          run,
           transport,
-          opts.onProgress,
+          {
+            onProgress: opts.onProgress,
+            audioOnlyUpload,
+            onMetrics(metrics) {
+              Object.assign(timingsMs, metrics.timingsMs);
+              checkpointHit = metrics.checkpointHit ?? checkpointHit;
+            },
+            onUploadPrepared(bytes, audioOnly) {
+              uploadedBytes = bytes;
+              audioOnlyUploaded = audioOnly;
+            },
+          },
         );
         return { result: transcribed, checkedRequest: checked };
       });
-      if (await foundNoSpeech(result, transport, outputPath, startedAtMs)) throw new NoSpeechError();
+      publishStarted = performance.now();
+      const expectsContent = transport === "upload" || checkedRequest.defer_publish === true;
+      if (await foundNoSpeech(result, expectsContent, outputPath, startedAtMs)) throw new NoSpeechError();
       // Named with the standard code of its language (Movie.eng.srt), the one Whisper
       // was given or the one it detected, unless a subtitle is already there under
       // it and the user did not confirm an overwrite.
@@ -463,37 +508,53 @@ export async function runTranscriptionAttempt(opts: {
         opts.overwrite === true,
       );
       let finalPath = outputPath;
-      // Upload mode returns subtitle CONTENT; write it to the local output path
-      // (path mode wrote it on the shared filesystem already).
-      if (transport === "upload") {
+      // Upload and unattended shared runs return content for local publication.
+      if (expectsContent) {
         finalPath = namedPath ?? outputPath;
         if (typeof result.content !== "string") {
-          throw new Error("Upload transcription returned no subtitle content");
+          throw new Error("Transcription backend returned no subtitle content");
         }
         const contentBytes = Buffer.byteLength(result.content, "utf-8");
         if (contentBytes > MAX_SUBTITLE_BYTES) {
           throw new Error(`Subtitle content too large (${contentBytes} bytes, max ${MAX_SUBTITLE_BYTES})`);
         }
-        // Atomic write: write to a temp file in the same dir, then rename. This
-        // avoids leaving a half-written subtitle file if the process dies mid-write.
-        mkdirShared(path.dirname(finalPath));
-        // Unique tmp name (pid + timestamp): one run per file is enforced, but
-        // two files can share a transcript name (Movie.mkv, Movie.mp4).
-        const tmpPath = `${finalPath}.${process.pid}.${Date.now()}.tmp`;
-        await fs.promises.writeFile(tmpPath, result.content, "utf-8");
-        try {
-          await fs.promises.rename(tmpPath, finalPath);
-          shareFile(finalPath);
-        } catch (renameError) {
-          await fs.promises.unlink(tmpPath).catch(() => {});
-          throw renameError;
+        if (intakeRevision !== undefined) {
+          await publishSubtitleSidecar(
+            opts.videoPath,
+            intakeRevision,
+            finalPath,
+            result.content,
+            run.controller.signal,
+            async (staged) => {
+              applyTranscriptCorrections(staged, settings.correction_rule_sets, finalPath);
+              await assertSubtitleIntakeStillMissing(opts.videoPath, intakeRevision);
+            },
+          );
+        } else {
+          // Atomic write: write to a temp file in the same dir, then rename. This
+          // avoids leaving a half-written subtitle file if the process dies mid-write.
+          mkdirShared(path.dirname(finalPath));
+          // Unique tmp name (pid + timestamp): one run per file is enforced, but
+          // two files can share a transcript name (Movie.mkv, Movie.mp4).
+          const tmpPath = `${finalPath}.${process.pid}.${Date.now()}.tmp`;
+          try {
+            if (opts.deferSharedPublication) run.controller.signal.throwIfAborted();
+            await fs.promises.writeFile(tmpPath, result.content, "utf-8");
+            if (opts.deferSharedPublication) run.controller.signal.throwIfAborted();
+            await fs.promises.rename(tmpPath, finalPath);
+            shareFile(finalPath);
+          } catch (renameError) {
+            await fs.promises.unlink(tmpPath).catch(() => {});
+            throw renameError;
+          }
         }
       }
-      if (transport !== "upload" && namedPath && namedPath !== outputPath && fs.existsSync(outputPath)) {
+      if (!expectsContent && namedPath && namedPath !== outputPath && fs.existsSync(outputPath)) {
         await fs.promises.rename(outputPath, namedPath);
         finalPath = namedPath;
       }
-      applyTranscriptCorrections(finalPath);
+      if (intakeRevision === undefined) applyTranscriptCorrections(finalPath, settings.correction_rule_sets);
+      timingsMs.publish = Math.round(performance.now() - publishStarted);
       const finishedAt = new Date().toISOString();
       const durationSeconds =
         typeof result.duration_seconds === "number"
@@ -501,23 +562,39 @@ export async function runTranscriptionAttempt(opts: {
           : Number.isFinite(startedAtMs)
             ? Math.max(0, (Date.now() - startedAtMs) / 1000)
             : null;
-      noSpeechVideos.clear(opts.videoPath);
+      if (request.audio_stream_index === undefined) noSpeechVideos.clear(opts.videoPath);
       transcriptionHistory.finishAttempt(attempt.id, {
         status: "succeeded",
         finishedAt,
         durationSeconds,
         outputPath: finalPath,
+        timingsMs,
+        checkpointHit,
+        uploadedBytes,
+        audioOnlyUploaded,
       });
       broadcast("transcription:progress", { path: opts.videoPath, pct: 100, done: true });
-      return { attemptId: attempt.id, result, outputPath: finalPath, model: checkedRequest.model };
+      return {
+        attemptId: attempt.id,
+        result,
+        outputPath: finalPath,
+        model: checkedRequest.model,
+        timingsMs,
+        checkpointHit,
+        uploadedBytes,
+        audioOnlyUploaded,
+      };
     } catch (error: unknown) {
+      if (publishStarted !== undefined) timingsMs.publish = Math.round(performance.now() - publishStarted);
+      const metrics = { timingsMs, checkpointHit, uploadedBytes, audioOnlyUploaded };
       if (error instanceof NoSpeechError) {
         // Not retried by scans: the video stays silent until it changes.
-        noSpeechVideos.mark(opts.videoPath);
+        if (request.audio_stream_index === undefined) noSpeechVideos.mark(opts.videoPath);
         transcriptionHistory.finishAttempt(attempt.id, {
           status: "failed",
           finishedAt: new Date().toISOString(),
           errorSummary: NO_SPEECH_SUMMARY,
+          ...metrics,
         });
         broadcast("transcription:progress", { path: opts.videoPath, error: true, noSpeech: true });
         throw error;
@@ -528,6 +605,7 @@ export async function runTranscriptionAttempt(opts: {
         status: cancelled ? "cancelled" : "failed",
         finishedAt: new Date().toISOString(),
         errorSummary: cancelled ? "Transcription cancelled" : summary,
+        ...metrics,
       });
       // A cancel is not a failure: broadcast {cancelled:true} WITHOUT error so the
       // client renders "cancelled" rather than an error state. Real failures still
@@ -553,11 +631,11 @@ export async function runTranscriptionAttempt(opts: {
  * transcription: a rule problem is logged and the transcript kept as Whisper
  * wrote it (the translation still corrects it in memory).
  */
-function applyTranscriptCorrections(transcriptPath: string): void {
+function applyTranscriptCorrections(transcriptPath: string, raw?: string, rulePath = transcriptPath): void {
   // Rules checked with the translator wait for the translation job, which has an LLM.
-  const rules = splitChecked(correctionsForFile(transcriptPath, "source")).plain;
+  const rules = splitChecked(correctionsForFile(rulePath, "source", [], raw)).plain;
   if (!rules.length) return;
-  const name = path.basename(transcriptPath);
+  const name = path.basename(rulePath);
   const result = correctSubtitleFile(transcriptPath, rules);
   if (result.error) {
     logger.warn("system", `Transcript corrections not saved to ${name}: ${result.error}`);

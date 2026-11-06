@@ -3,7 +3,13 @@
 // parsing, and the streaming-unsupported sentinel. Used by every transport
 // (path/shared-FS, upload, URL) and by the model-manager client.
 
-import type { BackendTranscriptionResponse, TranscribeStreamingOptions, TranscriptionProgressUpdate } from "./types.js";
+import { transcriptionTimingPhases, type TranscriptionTimings } from "../../shared/transcription.js";
+import type {
+  BackendTranscriptionResponse,
+  TranscribeBackendOptions,
+  TranscribeStreamingOptions,
+  TranscriptionProgressUpdate,
+} from "./types.js";
 
 // Short timeout (ms) for lightweight backend calls (health, preflight).
 export const SHORT_REQUEST_TIMEOUT_MS = 10_000;
@@ -107,6 +113,44 @@ function backendErrorMessage(body: unknown, status: number): string {
     }
   }
   return `Transcription backend returned HTTP ${status}`;
+}
+
+/** Verify the backend will honor an explicit track instead of silently using its default. */
+export async function assertAudioStreamSupport(
+  backendUrl: string,
+  streamIndex: unknown,
+  options?: TranscribeBackendOptions,
+): Promise<void> {
+  if (streamIndex === undefined) return;
+  const response = await fetchWithTimeout(
+    `${normalizeTranscriptionBackendUrl(backendUrl)}/health`,
+    { headers: transcriptionAuthHeaders(options?.token), signal: options?.signal },
+    SHORT_REQUEST_TIMEOUT_MS,
+    "Transcription backend capabilities",
+  );
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok && response.status !== 404) throwBackendError(body, response.status);
+  if (body?.capabilities?.audioStreamSelection !== true) {
+    const error = new Error("This backend does not support selecting an audio stream");
+    throw Object.assign(error, { backendStatus: 400 });
+  }
+}
+
+export function relayTranscriptionMetrics(raw: unknown, options?: TranscribeBackendOptions): void {
+  if (!options?.onMetrics || !raw || typeof raw !== "object") return;
+  const record = raw as Record<string, unknown>;
+  const timingsMs: TranscriptionTimings = {};
+  if (record.timings_ms && typeof record.timings_ms === "object") {
+    const phases = record.timings_ms as Record<string, unknown>;
+    for (const phase of transcriptionTimingPhases) {
+      const elapsed = phases[phase];
+      if (typeof elapsed === "number" && Number.isFinite(elapsed) && elapsed >= 0) {
+        timingsMs[phase] = Math.round(elapsed);
+      }
+    }
+  }
+  const checkpointHit = typeof record.checkpoint_hit === "boolean" ? record.checkpoint_hit : undefined;
+  if (Object.keys(timingsMs).length || checkpointHit !== undefined) options.onMetrics({ timingsMs, checkpointHit });
 }
 
 export function resolveTranscribeTimeoutMs(timeoutSeconds: number | undefined): number {
@@ -226,7 +270,10 @@ async function consumeTranscriptionNdjson(
       }
     } else if (type === "phase") {
       if (typeof record.phase === "string") options?.onPhase?.(record.phase);
+    } else if (type === "timing") {
+      relayTranscriptionMetrics(record, options);
     } else if (type === "result") {
+      relayTranscriptionMetrics(record, options);
       const { type: _t, ...rest } = record;
       result = rest as unknown as BackendTranscriptionResponse;
     } else if (type === "error") {
@@ -290,6 +337,7 @@ export async function postTranscriptionStream(
       if (error instanceof Error && error.name === "AbortError") throw deadline.error();
       throw error;
     }
+    options?.onHeaders?.(response);
     if (!response.ok || !response.body) {
       // Stop the deadline before reading the error body so a hung .json()
       // cannot fire a stray abort.

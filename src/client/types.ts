@@ -43,6 +43,7 @@ export type {
   BackendHost,
   TranscriptionHost,
   WhisperModelDescriptor,
+  WhisperModelDownloadOperation,
   WhisperModelDownloadResult,
   WhisperModelInfo as WhisperModel,
 } from "../shared/transcription";

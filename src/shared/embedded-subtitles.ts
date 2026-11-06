@@ -12,6 +12,7 @@ export interface EmbeddedSubtitleTrack {
   isDefault: boolean;
   isForced: boolean;
   isBitmap: boolean;
+  ocr?: "available" | "unavailable";
   format: "srt" | "ass" | "ssa" | "vtt" | null;
 }
 

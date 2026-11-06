@@ -8,7 +8,7 @@ import { useToast } from "../../ui/Toast";
 import { useConfirm } from "../../ui/ConfirmModal";
 import { ActionButton, ProgressSmall } from "../../ui/primitives";
 import { InlineError } from "../../ui/QueryState";
-import type { TranscriptionHost, WhisperModel } from "../../types";
+import type { TranscriptionHost, WhisperModel, WhisperModelDownloadOperation } from "../../types";
 import { engineLabelKey, groupByEngine, isMetal, modelEngine } from "../whisper/whisper-shared";
 import { Icon } from "../../ui/Icon";
 
@@ -22,8 +22,24 @@ const badgeCls = "inline-flex items-center gap-1 rounded-full border px-2 py-1 t
 
 // The backend can list a model whose engine cannot run here; its file can
 // still be downloaded ahead of fixing the runtime, so only a badge flags it.
-function ModelStatus({ model }: { model: WhisperModel }) {
+function ModelStatus({
+  model,
+  downloading,
+  cancelling,
+}: {
+  model: WhisperModel;
+  downloading: boolean;
+  cancelling: boolean;
+}) {
   const { t } = useTranslation();
+  const download = model.download;
+  const status = cancelling
+    ? t("settings.models.downloadCancelling")
+    : downloading
+      ? t("settings.models.downloading")
+      : download?.status === "cancelled"
+        ? t("settings.models.downloadCancelled")
+        : t("settings.models.notDownloaded");
   return (
     <div className="flex flex-wrap gap-1">
       {model.available === false && (
@@ -36,41 +52,75 @@ function ModelStatus({ model }: { model: WhisperModel }) {
           {model.unavailableReason && <span className="sr-only">: {model.unavailableReason}</span>}
         </span>
       )}
-      {model.downloaded ? (
-        <span className={`${badgeCls} border-success-line bg-success-soft text-success`}>
-          <Icon name="done" /> {t("settings.models.downloaded")}
-        </span>
-      ) : (
-        <span className={`${badgeCls} border-border bg-surface-highlight text-muted`}>
-          {t("settings.models.notDownloaded")}
-        </span>
-      )}
+      <div aria-live="polite">
+        {downloading || !model.downloaded ? (
+          <span className={`${badgeCls} border-border bg-surface-highlight text-muted`}>{status}</span>
+        ) : (
+          <span className={`${badgeCls} border-success-line bg-success-soft text-success`}>
+            <Icon name="done" /> {t("settings.models.downloaded")}
+          </span>
+        )}
+        {!downloading && !model.downloaded && download?.status === "failed" && (
+          <p className="mt-1 max-w-64 break-words text-danger">
+            {t("settings.models.downloadFailed", { model: model.label ?? model.id, message: download.error })}
+          </p>
+        )}
+      </div>
     </div>
   );
+}
+
+function isActiveDownload(download?: WhisperModelDownloadOperation) {
+  return download?.status === "running" || download?.status === "cancelling";
 }
 
 export function ModelManagerPanel({ enabled, host }: { enabled: boolean; host: TranscriptionHost }) {
   const { t } = useTranslation();
   const { addToast } = useToast();
   const { confirm } = useConfirm();
+  const { downloads, downloadModel } = useModelDownload();
+  const locallyDownloading = Object.values(downloads).some((download) => download.active);
   const modelsQuery = useQuery({
     queryKey: ["whisper-models"],
     queryFn: ({ signal }) => api.listWhisperModels({ signal }),
     enabled,
     staleTime: 15_000,
+    refetchOnMount: "always",
+    refetchOnReconnect: "always",
+    refetchInterval: (query) =>
+      locallyDownloading || query.state.data?.models.some((model) => isActiveDownload(model.download)) ? 1_500 : 15_000,
   });
 
-  // `pct` drives the inline progress bar; `active` disables the row's Download
-  // button until the HTTP call settles (an SSE "done" alone must not clear it).
-  const { downloads, downloadModel } = useModelDownload();
   const [busyDelete, setBusyDelete] = useState<Record<string, boolean>>({});
+  const [pendingCancel, setPendingCancel] = useState<Record<string, boolean>>({});
 
   const handleDownload = async (model: string) => {
     try {
       await downloadModel(model);
       addToast(t("settings.models.downloadDone", { model }), "success");
     } catch (e: unknown) {
-      addToast(t("settings.models.downloadFailed", { model, message: getErrorMessage(e) }), "error");
+      if (!api.isWhisperModelDownloadCancelled(e)) {
+        addToast(t("settings.models.downloadFailed", { model, message: getErrorMessage(e) }), "error");
+      }
+    }
+  };
+
+  const handleCancel = async (download: WhisperModelDownloadOperation) => {
+    setPendingCancel((prev) => ({ ...prev, [download.id]: true }));
+    try {
+      await api.cancelWhisperModelDownload(download.id);
+      await modelsQuery.refetch();
+    } catch (e: unknown) {
+      addToast(
+        t("settings.models.downloadCancelFailed", { model: download.model, message: getErrorMessage(e) }),
+        "error",
+      );
+    } finally {
+      setPendingCancel((prev) => {
+        const next = { ...prev };
+        delete next[download.id];
+        return next;
+      });
     }
   };
 
@@ -158,7 +208,12 @@ export function ModelManagerPanel({ enabled, host }: { enabled: boolean; host: T
                 </tr>
                 {group.items.map((model) => {
                   const dl = downloads[model.id];
-                  const downloading = Boolean(dl?.active);
+                  const download = model.download;
+                  const downloading = Boolean(dl?.active) || isActiveDownload(download);
+                  const cancelling = Boolean(
+                    download && (pendingCancel[download.id] || download.status === "cancelling"),
+                  );
+                  const pct = Math.max(dl?.pct ?? 0, isActiveDownload(download) ? (download?.progress?.pct ?? 0) : 0);
                   const deleting = Boolean(busyDelete[model.id]);
                   return (
                     <tr key={model.id} className="border-t border-border align-middle">
@@ -173,14 +228,26 @@ export function ModelManagerPanel({ enabled, host }: { enabled: boolean; host: T
                       <td className="py-3 pr-3 text-muted">{formatMb(model.requiredRamMb)}</td>
                       {showVram && <td className="py-3 pr-3 text-muted">{formatMb(model.requiredVramMb)}</td>}
                       <td className="py-3 pr-3">
-                        <ModelStatus model={model} />
+                        <ModelStatus model={model} downloading={downloading} cancelling={cancelling} />
                       </td>
                       <td className="py-3 pr-0">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex flex-wrap items-center justify-end gap-2">
                           {downloading ? (
-                            <div className="w-28">
-                              <ProgressSmall pct={dl?.pct ?? 0} large />
-                            </div>
+                            <>
+                              <div className="w-28">
+                                <ProgressSmall pct={pct} large />
+                              </div>
+                              {download && isActiveDownload(download) && (
+                                <ActionButton
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleCancel(download)}
+                                  disabled={cancelling}
+                                >
+                                  {t("common.cancel")}
+                                </ActionButton>
+                              )}
+                            </>
                           ) : model.downloaded ? (
                             <ActionButton
                               variant="danger"

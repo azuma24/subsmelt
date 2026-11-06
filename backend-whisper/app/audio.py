@@ -31,33 +31,33 @@ def ffmpeg_binary() -> str:
     return os.environ.get("SUBSMELT_FFMPEG") or "ffmpeg"
 
 
+class AudioStreamSelectionError(RuntimeError):
+    """The explicit stream index did not point to an audio stream."""
+
+
 def extract_audio(
     input_path: Path,
     output_path: Path,
     timeout_seconds: int = DEFAULT_FFMPEG_TIMEOUT_SECONDS,
     is_cancelled: Callable[[], bool] | None = None,
+    *,
+    stream_index: int | None = None,
 ) -> Path:
     """Decode ``input_path`` to 16 kHz mono WAV. A cancel (``is_cancelled``
     turning True) or the timeout kills ffmpeg rather than waiting it out."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    command = [
-        ffmpeg_binary(),
-        "-y",
-        "-i",
-        str(input_path),
-        "-vn",
-        "-ac",
-        "1",
-        "-ar",
-        "16000",
-        "-f",
-        "wav",
-        str(output_path),
-    ]
+    command = [ffmpeg_binary(), "-nostdin", "-y", "-i", str(input_path)]
+    if stream_index is not None:
+        # FFmpeg normalizes the input to media start. Preserve lead-in silence
+        # on a later-starting track instead of letting WAV reset it to zero.
+        command += ["-map", f"0:{stream_index}", "-af", "aresample=16000:async=1:first_pts=0"]
+    command += ["-vn", "-sn", "-dn", "-ac", "1", "-ar", "16000", "-f", "wav", str(output_path)]
     returncode, raw_stderr = _run_ffmpeg(command, input_path, timeout_seconds, is_cancelled)
     stderr = raw_stderr.decode("utf-8", errors="replace").strip()
 
     if returncode != 0:
+        if stream_index is not None and (_looks_like_no_audio(stderr) or "matches no streams" in stderr.lower()):
+            raise AudioStreamSelectionError(f"Audio stream {stream_index} does not exist in this media file")
         if _looks_like_no_audio(stderr):
             raise RuntimeError(f"Input media has no audio track: {input_path}")
         detail = f"\n{stderr}" if stderr else ""

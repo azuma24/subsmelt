@@ -239,7 +239,28 @@
       "folderCount_other": "{{name}} ({{count}} legendas)",
       "summaryNothingNew": "{{subtitles}} arquivos de legenda encontrados, e todos já têm uma tarefa ou uma saída concluída. Nada novo será enfileirado.",
       "summaryNoTarget": "Foram encontrados {{subtitles}} arquivos de legenda, mas nenhum destino de tradução se aplica a eles. Adicione ou ative um em Traduções.",
-      "scanAnyway": "Verificar mesmo assim"
+      "scanAnyway": "Verificar mesmo assim",
+      "intake": {
+        "title": "Seleção da fonte das legendas",
+        "sidecar": "Usar {{file}}",
+        "embedded": "Importar a faixa incorporada {{track}}",
+        "imported": "{{file}} importado",
+        "transcribe": "Colocar a transcrição na fila",
+        "transcribe_and_translate": "Colocar a transcrição e a tradução na fila",
+        "absent": "Nenhuma legenda encontrada",
+        "no_speech": "Nenhuma fala detectada neste vídeo",
+        "settling": "Aguardando a estabilização do arquivo de vídeo",
+        "ambiguous": "Há várias faixas ou faixas sem identificação que precisam de revisão",
+        "forced_only": "Foram encontradas apenas legendas forçadas",
+        "language_mismatch": "As legendas estão em outro idioma",
+        "invalid_sidecar": "As legendas existentes precisam de revisão",
+        "bitmap": "Legendas em imagem precisam de OCR",
+        "unsupported": "O formato da legenda precisa de revisão",
+        "probe_failed": "Não foi possível verificar as faixas de legenda",
+        "import_failed": "Não foi possível importar a faixa de legenda",
+        "asr_unavailable": "A transcrição está indisponível",
+        "summary": "A verificação seguirá as opções de fonte abaixo. Há {{jobs}} tarefas de tradução prontas para entrar na fila a partir das legendas existentes."
+      }
     },
     "filtersLabel": "Filtros",
     "bulkActionsLabel": "Ações em massa",
@@ -527,7 +548,18 @@
       "preferredChinese": "Chinês preferido",
       "chineseTraditional": "Chinês tradicional (Taiwan)",
       "chineseSimplified": "Chinês simplificado",
-      "preferredChineseHint": "É escrito como .chi, como a maioria das legendas em chinês existentes; a outra escrita é escrita como .chs (simplificado) ou .cht (tradicional). As legendas .chi e .zh existentes contam como esta opção. Escolha uma vez só: mudar depois altera o significado dos novos arquivos .chi."
+      "preferredChineseHint": "É escrito como .chi, como a maioria das legendas em chinês existentes; a outra escrita é escrita como .chs (simplificado) ou .cht (tradicional). As legendas .chi e .zh existentes contam como esta opção. Escolha uma vez só: mudar depois altera o significado dos novos arquivos .chi.",
+      "subtitleIntake": {
+        "title": "Seleção da fonte das legendas",
+        "hint": "Escolha em quais pastas as legendas existentes têm prioridade sobre o reconhecimento de fala. As regras valem também para as subpastas. A regra da pasta mais próxima tem prioridade.",
+        "add": "Adicionar regra de pasta",
+        "folder": "Pasta",
+        "language": "Idioma de origem",
+        "fallback": "Quando não houver legendas",
+        "off": "Deixar para revisão",
+        "transcribe": "Transcrever",
+        "transcribe_and_translate": "Transcrever e traduzir"
+      }
     },
     "notifications": {
       "title": "Notificações",
@@ -544,7 +576,8 @@
       "testFailed": "Falha na notificação de teste: {{message}}",
       "hint": "Envia um webhook quando os eventos escolhidos abaixo acontecerem. Deixe a URL vazia para desativar as notificações.",
       "webhookSaved": "Salva (oculta). Digite uma nova URL para substituí-la.",
-      "webhookRemove": "Remover webhook"
+      "webhookRemove": "Remover webhook",
+      "eventTranscriptionNote": "Nota de transcrição pronta"
     },
     "saved": "Configurações salvas",
     "saveFailed": "Falha ao salvar: {{message}}",
@@ -762,7 +795,10 @@
       "deleteConfirm": "Excluir o modelo {{model}} do cache do backend? Ele pode ser baixado novamente depois.",
       "deleteDone": "{{model}} excluído ({{freed}} liberados)",
       "deleteFailed": "Falha ao excluir {{model}}: {{message}}",
-      "runtimeMissing": "Runtime ausente"
+      "runtimeMissing": "Runtime ausente",
+      "downloadCancelling": "Cancelando…",
+      "downloadCancelled": "Download cancelado",
+      "downloadCancelFailed": "Não foi possível cancelar o download de {{model}} ({{message}})"
     },
     "setup": {
       "progress": "{{done}} de {{total}} concluído",
@@ -1521,7 +1557,12 @@
       "conflict": "Já existe um arquivo de legendas com esse nome.",
       "failed": "Não foi possível importar a faixa de legenda.",
       "changed": "O vídeo mudou. Verifique as faixas novamente.",
-      "noText": "Este vídeo não tem faixas de texto que possam ser importadas."
+      "noText": "Este vídeo não tem faixas de texto que possam ser importadas.",
+      "ocr": "Ler legendas em imagem",
+      "ocrRunning": "Lendo legendas em imagem…",
+      "ocrReady": "OCR disponível",
+      "ocrUnavailable": "O OCR está indisponível neste servidor",
+      "cancelOcr": "Cancelar OCR"
     },
     "jobsUnavailable": "Os status dos trabalhos e detalhes dos arquivos ficarão indisponíveis até a fila ser recarregada.",
     "sort": {
@@ -1819,6 +1860,81 @@
       "run": "Pré-visualizar nos meus arquivos",
       "again": "Verificar de novo",
       "saveFirst": "Salve a lista primeiro."
+    }
+  },
+  "processing": {
+    "profiles": "Perfis de processamento",
+    "profilesHelp": "Salve as configurações padrão de reconhecimento de fala, revisão do texto de origem e tradução para uma pasta e suas subpastas.",
+    "root": "Pasta raiz de mídia",
+    "addProfile": "Adicionar perfil",
+    "profileName": "Nome do perfil",
+    "folder": "Pasta relativa à raiz de mídia",
+    "inherit": "Herdar configurações padrão",
+    "maxWidth": "Limite de caracteres por linha na revisão",
+    "maxSpeed": "Limite de caracteres por segundo na revisão",
+    "targets": "Destinos da tradução",
+    "correctionLists": "Listas de correções",
+    "review": "Revisar o texto de origem antes da tradução",
+    "reviewHelp": "Pause após o reconhecimento de fala para editar a transcrição com marcações de tempo e escolher os destinos da tradução.",
+    "exportNote": "Criar uma nota em Markdown",
+    "exportNoteHelp": "Agrupe a transcrição em parágrafos com marcações de tempo para baixar.",
+    "invalidProfile": "Informe um nome e escolha uma pasta sem outro perfil. Depois, confira os limites.",
+    "applyProfile": "Aplicar perfil",
+    "audioOnly": "Enviar somente o áudio",
+    "audioOnlyHelp": "Envie áudio sem perdas quando o servidor de transcrição precisar receber um arquivo.",
+    "chooseAudio": "Escolher faixa de áudio",
+    "audioProbeFailed": "Não foi possível ler as faixas de áudio.",
+    "defaultAudio": "Seleção automática da faixa de áudio",
+    "useFolderProfiles": "Usar perfis de pasta",
+    "confirmPlan": "Confirmar plano de processamento",
+    "sourceTranscript": "Transcrição de origem",
+    "sourceQuality": "Qualidade das legendas",
+    "reloadTranscript": "Recarregar transcrição",
+    "approve": "Aprovar texto de origem",
+    "cancelReview": "Cancelar revisão",
+    "downloadTranscript": "Baixar transcrição",
+    "downloadNote": "Baixar nota em Markdown",
+    "recentWork": "Resultados de transcrição e revisão",
+    "pendingReview": "Precisa de revisão",
+    "checkpointHit": "Resultado salvo do reconhecimento de fala reutilizado",
+    "milliseconds": "{{elapsed}} ms",
+    "transforms": "Ajustes de tempo e de linhas",
+    "transformType": "Tipo de ajuste",
+    "offset": "Deslocamento de tempo (ms)",
+    "frameRate": "Correção da taxa de quadros",
+    "balance": "Equilibrar linhas de texto simples",
+    "fromFps": "FPS original",
+    "toFps": "FPS de destino",
+    "addTransform": "Adicionar ajuste",
+    "previewTransforms": "Pré-visualizar ajustes",
+    "usePreview": "Usar prévia no editor",
+    "offsetSummary": "Deslocar em {{milliseconds}} ms",
+    "frameRateSummary": "Converter de {{from}} para {{to}} FPS",
+    "balanceSummary": "Equilibrar para {{width}} caracteres por linha",
+    "translateWithProfile": "Traduzir para os destinos do perfil",
+    "inheritedFolderDefaults": "Configurações padrão herdadas da pasta",
+    "environmentPins": "Configurações de ambiente ({{settings}})",
+    "uploadSummary": "{{size}} enviados",
+    "audioUploadSummary": "{{size}} de áudio enviados",
+    "phases": {
+      "gpuWait": "Aguardando a GPU",
+      "preflight": "Verificação prévia",
+      "uploadPrepare": "Preparação do áudio",
+      "upload": "Envio",
+      "uploadSave": "Salvar arquivo enviado",
+      "backendPreflight": "Verificação prévia no servidor",
+      "urlDownload": "Baixar mídia",
+      "checkpoint": "Buscar resultado intermediário salvo",
+      "audioExtract": "Extrair áudio",
+      "modelLoad": "Carregar modelo",
+      "asr": "Reconhecer fala",
+      "diarization": "Identificar quem fala",
+      "render": "Gerar legendas",
+      "publish": "Publicar resultado"
+    },
+    "blockers": {
+      "speechDisabled": "O reconhecimento de fala está desativado",
+      "backendMissing": "Falta a URL do servidor de transcrição"
     }
   }
 }

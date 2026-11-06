@@ -104,54 +104,52 @@ def _candidate_cache_paths(model: str, cache_root: Path) -> list[Path]:
     ]
 
 
-def dir_has_weights(d: Path) -> bool:
-    """True when a model dir holds weights: CTranslate2 ``model.bin`` (or
-    ``*.safetensors``) for Whisper, a ``*.gguf`` for Nemotron, a
-    ``ggml-*.bin`` for whisper.cpp.
-
-    Detection must require the actual weights, not just a snapshot directory:
-    a partial/interrupted download can leave the dir present but weightless, and
-    reporting that as "downloaded" makes the model show ✓ yet fail every
-    transcription.
-    """
+def _nonempty_file(path: Path) -> bool:
     try:
-        return (
-            (d / "model.bin").exists()
-            or any(d.glob("*.safetensors"))
-            or any(d.glob("*.gguf"))
-            or any(d.glob("ggml-*.bin"))
-        )
+        return path.is_file() and path.stat().st_size > 0
     except OSError:  # pragma: no cover - race with deletion
         return False
 
 
-def _snapshot_with_weights(snapshots_dir: Path) -> Path | None:
+def is_model_cache_ready(model: str, path: Path) -> bool:
+    """Check the files consumed by this model's runtime, including symlink targets."""
+    descriptor = descriptor_for(model)
+    if descriptor is not None and descriptor.weights_file:
+        return _nonempty_file(path / descriptor.weights_file)
+    return (
+        _nonempty_file(path / "model.bin")
+        and _nonempty_file(path / "config.json")
+        and any(_nonempty_file(path / name) for name in ("vocabulary.json", "vocabulary.txt"))
+    )
+
+
+def _snapshot_with_weights(model: str, snapshots_dir: Path) -> Path | None:
     """The snapshot ``refs/main`` names when it holds weights, else the
     newest-named one that does (an incomplete download leaves a weightless dir)."""
     try:
         ref = (snapshots_dir.parent / "refs" / "main").read_text(encoding="utf-8").strip()
     except OSError:
         ref = ""
-    if ref and dir_has_weights(snapshots_dir / ref):
+    if ref and is_model_cache_ready(model, snapshots_dir / ref):
         return snapshots_dir / ref
     try:
         snapshots = sorted((path for path in snapshots_dir.iterdir() if path.is_dir()), key=lambda path: path.name)
     except OSError:  # deleted or unreadable mid-scan: not cached
         return None
     for snapshot in reversed(snapshots):
-        if dir_has_weights(snapshot):
+        if is_model_cache_ready(model, snapshot):
             return snapshot
     return None
 
 
-def _first_existing_path(candidates: list[Path]) -> Path | None:
+def _first_existing_path(model: str, candidates: list[Path]) -> Path | None:
     for candidate in candidates:
         if not candidate.is_dir():
             continue
         if candidate.name == "snapshots":
-            found = _snapshot_with_weights(candidate)
+            found = _snapshot_with_weights(model, candidate)
         else:
-            found = candidate if dir_has_weights(candidate) else None
+            found = candidate if is_model_cache_ready(model, candidate) else None
         if found is not None:
             return found
     return None
@@ -183,7 +181,7 @@ def describe_model_cache(model: str, available_ram_mb: int, env: EnvMapping | No
         }
 
     cache_root = cache_root_from_env(env)
-    cache_path = _first_existing_path(_candidate_cache_paths(selected_model, cache_root))
+    cache_path = _first_existing_path(selected_model, _candidate_cache_paths(selected_model, cache_root))
     cached = cache_path is not None
     warning = (
         "Selected model is not cached yet. The first real transcription may download model weights into the configured cache root."

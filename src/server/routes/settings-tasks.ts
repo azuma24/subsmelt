@@ -29,6 +29,7 @@ import { normalizeMediaSubfolder } from "../media-paths.js";
 import { isWatcherRunning, restartWatcher } from "../watcher.js";
 import { parseTaskUpdate, settingError, validateOutputPattern } from "./validation.js";
 import { correctionRuleSetsErrors } from "../../shared/corrections.js";
+import { subtitleIntakeRulesError } from "../../shared/subtitle-intake.js";
 import { SECRET_SETTING_KEYS } from "../settings-schema.js";
 
 // Which keys are secrets is part of the settings schema (src/shared/settings.ts).
@@ -159,7 +160,8 @@ export function registerSettingsTasksRoutes(
       // blocks saving something else.
       const valueError =
         settingError(key, resolved) ??
-        (key === "correction_rule_sets" ? correctionRuleSetsErrors(resolved).join("; ") || null : null);
+        (key === "correction_rule_sets" ? correctionRuleSetsErrors(resolved).join("; ") || null : null) ??
+        (key === "subtitle_intake_rules" ? subtitleIntakeRulesError(resolved) : null);
       if (valueError) {
         invalid.push(valueError);
         continue;

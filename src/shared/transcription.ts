@@ -18,6 +18,25 @@ export interface TranscriptionAdvancedOptions {
   bgm_separation?: boolean;
 }
 
+export const transcriptionTimingPhases = [
+  "gpuWait",
+  "preflight",
+  "uploadPrepare",
+  "upload",
+  "uploadSave",
+  "backendPreflight",
+  "urlDownload",
+  "checkpoint",
+  "audioExtract",
+  "modelLoad",
+  "asr",
+  "diarization",
+  "render",
+  "publish",
+] as const;
+
+export type TranscriptionTimings = Partial<Record<(typeof transcriptionTimingPhases)[number], number>>;
+
 export type TranscriptionAttemptStatus = "running" | "succeeded" | "failed" | "cancelled";
 
 /** One run in transcription-history.json and GET /api/transcription/history. */
@@ -40,6 +59,13 @@ export interface TranscriptionHistoryEntry {
   device?: string;
   computeType?: string;
   overwrite?: boolean;
+  audioStreamIndex?: number;
+  audioOnlyUpload?: boolean;
+  forceRecognition?: boolean;
+  timingsMs?: TranscriptionTimings;
+  checkpointHit?: boolean;
+  uploadedBytes?: number;
+  audioOnlyUploaded?: boolean;
 }
 
 export type ModelEngine = "whisper" | "whispercpp" | "nemotron";
@@ -104,6 +130,22 @@ export interface WhisperModelInfo extends Partial<Omit<WhisperModelDescriptor, "
   id: string;
   downloaded: boolean;
   cachePath?: string | null;
+  download?: WhisperModelDownloadOperation;
+}
+
+export interface WhisperModelDownloadProgress {
+  pct: number;
+  downloadedMb?: number;
+  totalMb?: number;
+}
+
+export interface WhisperModelDownloadOperation {
+  id: string;
+  model: string;
+  status: "running" | "cancelling" | "succeeded" | "failed" | "cancelled";
+  progress?: WhisperModelDownloadProgress;
+  cachePath?: string | null;
+  error?: string;
 }
 
 export interface WhisperModelDownloadResult {
@@ -132,6 +174,10 @@ export interface TranscribeRequest {
   // The user confirmed replacing this video's existing subtitles: the new
   // transcript takes the standard name (Movie.eng.srt) even if a file is there.
   overwrite?: boolean;
+  /** Absolute FFprobe audio stream index for a Library file. */
+  audioStreamIndex?: number;
+  audioOnlyUpload?: boolean;
+  forceRecognition?: boolean;
 }
 
 /** What the backend's preflight reports, passed through by POST /api/transcription/preflight. */
@@ -184,6 +230,7 @@ export interface TranscriptionHealth {
       devices?: string[];
       computeTypes?: string[];
       outputFormats?: string[];
+      audioStreamSelection?: boolean;
       vad?: boolean;
       advancedOptions?: {
         beamSize?: boolean;

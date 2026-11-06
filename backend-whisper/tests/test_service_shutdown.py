@@ -8,6 +8,7 @@ kept the service in STOP_PENDING for good.
 """
 
 import socket
+import tempfile
 import threading
 import time
 import unittest
@@ -15,8 +16,10 @@ from unittest import mock
 
 import httpx
 import uvicorn
+from model_download_fixtures import stalled_download_worker
 
 import run_server
+from app import model_manager
 
 
 def _free_port() -> int:
@@ -29,15 +32,8 @@ class ShutdownWithAnOpenStreamTests(unittest.TestCase):
     def test_stop_returns_while_a_download_stream_never_ends(self):
         import app.main as main
 
-        release = threading.Event()
         started = threading.Event()
-        worker_threads: list[threading.Thread] = []
-
-        def endless_download(_model):
-            worker_threads.append(threading.current_thread())
-            started.set()
-            yield {"type": "progress", "pct": 0}
-            release.wait(60)  # a download stuck on the network
+        operations: list[str] = []
 
         config = run_server.ServerConfig(
             host="127.0.0.1",
@@ -52,9 +48,10 @@ class ShutdownWithAnOpenStreamTests(unittest.TestCase):
             version=None,
         )
         with (
+            tempfile.TemporaryDirectory() as cache_root,
+            mock.patch.dict("os.environ", {"HF_HOME": cache_root, "SUBSMELT_WHISPER_TOKEN": ""}),
             mock.patch.object(run_server, "SHUTDOWN_GRACE_SECONDS", 1),
-            mock.patch.object(main, "download_model_events", endless_download),
-            mock.patch.object(main, "normalize_model", lambda model: model),
+            mock.patch.object(model_manager, "_download_worker", stalled_download_worker),
         ):
             server = uvicorn.Server(uvicorn.Config(main.app, **run_server.uvicorn_kwargs(config, False)))
             serving = threading.Thread(target=server.run, daemon=True)
@@ -68,21 +65,21 @@ class ShutdownWithAnOpenStreamTests(unittest.TestCase):
                     with httpx.stream(
                         "POST", f"http://127.0.0.1:{config.port}/models/download", json={"model": "tiny"}, timeout=30
                     ) as response:
+                        operations.append(response.headers["X-Model-Download-Id"])
                         for _ in response.iter_lines():
-                            pass
+                            started.set()
                 except httpx.HTTPError:
                     pass
 
             threading.Thread(target=open_stream, daemon=True).start()
-            self.assertTrue(started.wait(10), "the download stream never started")
-
-            server.should_exit = True
-            serving.join(timeout=10)
-            release.set()
+            try:
+                self.assertTrue(started.wait(10), "the download stream never started")
+            finally:
+                server.should_exit = True
+                serving.join(timeout=10)
 
         self.assertFalse(serving.is_alive(), "the server did not stop while a stream was open")
-        # The stream worker must not hold the process open after the server stops.
-        self.assertTrue(all(thread.daemon for thread in worker_threads))
+        self.assertEqual(model_manager.find_model_download(operations[0])["status"], "cancelled")
 
     def test_the_grace_period_is_bounded(self):
         config = run_server.ServerConfig(

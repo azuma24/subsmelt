@@ -208,7 +208,7 @@ def run_chunks(
     return words, locales
 
 
-def run(
+def run_raw(
     request: TranscribeRequest,
     audio_path: Path,
     is_cancelled: Callable[[], bool] | None,
@@ -223,6 +223,16 @@ def run(
         words, locales = yield from run_chunks(
             handle, audio_path, chunks, duration, locale, _cli_device(request), is_cancelled
         )
-    segments = words_to_segments(words, request.subtitle_quality)
     language = short_code_for(locales[0]) if locales else None
-    return segments, SimpleNamespace(language=language, duration=duration)
+    return [], SimpleNamespace(language=language, duration=duration, raw_words=words)
+
+
+def run(
+    request: TranscribeRequest,
+    audio_path: Path,
+    is_cancelled: Callable[[], bool] | None,
+    min_progress_interval: float,
+) -> Generator[dict, None, tuple[list, object]]:
+    """Decode audio and return the engine's rendered cue inputs."""
+    _, info = yield from run_raw(request, audio_path, is_cancelled, min_progress_interval)
+    return words_to_segments(info.raw_words, request.subtitle_quality), info

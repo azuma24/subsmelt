@@ -49,6 +49,7 @@ class EngineSeamTests(unittest.TestCase):
         self.media = Path(self._tmp.name)
         (self.media / "clip.mkv").write_bytes(b"x")
         self._patches = [
+            mock.patch.dict(os.environ, {"SUBSMELT_WHISPER_CHECKPOINTS": "0"}),
             mock.patch.object(transcribe, "extract_audio", _copy_instead_of_ffmpeg),
             mock.patch.dict(transcribe.ENGINE_RUNNERS, {"whisper": _stub_runner}),
         ]
@@ -67,8 +68,10 @@ class EngineSeamTests(unittest.TestCase):
         events = list(
             transcribe.run_transcription_streaming(self._request(), self.media / "clip.mkv", deliver="content")
         )
+        self.assertFalse(events[-1].pop("checkpoint_hit"))
+        self.assertEqual(set(events[-1].pop("timings_ms")), {"audioExtract", "asr", "render"})
         self.assertEqual(
-            events,
+            [event for event in events if event["type"] != "timing"],
             [
                 {"type": "progress", "processedSeconds": 1.0, "totalSeconds": 2.0, "pct": 50.0},
                 {
@@ -87,6 +90,8 @@ class EngineSeamTests(unittest.TestCase):
         result = transcribe.run_transcription(
             self._request(output_format="txt"), self.media / "clip.mkv", deliver="path"
         )
+        self.assertFalse(result.pop("checkpoint_hit"))
+        self.assertEqual(set(result.pop("timings_ms")), {"audioExtract", "asr", "render"})
         self.assertEqual(
             result,
             {
@@ -212,6 +217,8 @@ class EngineSeamTests(unittest.TestCase):
     def test_no_speech_in_shared_mode_reports_zero_segments_and_writes_nothing(self):
         with mock.patch.dict(transcribe.ENGINE_RUNNERS, {"whisper": self._silent_runner}):
             result = transcribe.run_transcription(self._request(), self.media / "clip.mkv", deliver="path")
+        self.assertFalse(result.pop("checkpoint_hit"))
+        self.assertEqual(set(result.pop("timings_ms")), {"audioExtract", "asr", "render"})
         self.assertEqual(
             result,
             {

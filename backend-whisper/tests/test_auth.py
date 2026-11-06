@@ -1,5 +1,8 @@
 import os
+import tempfile
 import unittest
+from pathlib import Path
+from unittest import mock
 
 try:
     from fastapi.testclient import TestClient
@@ -107,6 +110,38 @@ class AuthTokenTests(unittest.TestCase):
 
         os.environ.pop("SUBSMELT_WHISPER_TOKEN", None)
         self.assertIsNone(self.client.get("/health").json()["tokenAccepted"])
+
+    def test_mounted_token_auth_and_environment_precedence(self):
+        with tempfile.TemporaryDirectory() as temp, mock.patch.dict(os.environ):
+            token_file = Path(temp) / "token"
+            token_file.write_text("mounted-token\n", encoding="utf-8")
+            os.environ["SUBSMELT_WHISPER_TOKEN_FILE"] = str(token_file)
+            os.environ.pop("SUBSMELT_WHISPER_TOKEN", None)
+
+            health = self.client.get("/health", headers={"Authorization": "Bearer mounted-token"}).json()
+            self.assertTrue(health["capabilities"]["authRequired"])
+            self.assertTrue(health["tokenAccepted"])
+            self.assertEqual(self.client.get("/models").status_code, 401)
+            self.assertEqual(
+                self.client.get("/models", headers={"Authorization": "Bearer mounted-token"}).status_code, 200
+            )
+
+            token_file.unlink()
+            os.environ["SUBSMELT_WHISPER_TOKEN"] = "direct-token"
+            self.assertEqual(
+                self.client.get("/models", headers={"Authorization": "Bearer direct-token"}).status_code, 200
+            )
+
+    def test_invalid_mounted_token_prevents_startup(self):
+        with tempfile.TemporaryDirectory() as temp, mock.patch.dict(os.environ):
+            token_file = Path(temp) / "private-token-path"
+            token_file.write_text("private token\nprivate second line", encoding="utf-8")
+            os.environ["SUBSMELT_WHISPER_TOKEN_FILE"] = str(token_file)
+            os.environ.pop("SUBSMELT_WHISPER_TOKEN", None)
+            with self.assertRaises(ValueError) as failure, TestClient(main_module.app):
+                pass
+            self.assertIn("SUBSMELT_WHISPER_TOKEN_FILE", str(failure.exception))
+            self.assertNotIn("private", str(failure.exception))
 
 
 if __name__ == "__main__":

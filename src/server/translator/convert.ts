@@ -94,7 +94,7 @@ export function normalizeTimeToMs(value: number | string | undefined): number {
   return parseAssTimestampToMs(trimmed);
 }
 
-function toAssTimestamp(value: number | string | undefined): string {
+export function toAssTimestamp(value: number | string | undefined): string {
   if (typeof value === "string" && /^\d+:\d{1,2}:\d{1,2}[.,]\d{1,3}$/.test(value.trim())) {
     const normalized = value.trim().replace(",", ".");
     const [h, m, secFrac] = normalized.split(":");

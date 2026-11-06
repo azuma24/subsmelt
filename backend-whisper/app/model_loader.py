@@ -12,9 +12,11 @@ from .catalog import descriptor_for
 from .gpu import cuda_device_count
 from .model_cache import cache_root_from_env, describe_model_cache
 from .nemotron_runtime import find_gguf, load_handle
+from .nemotron_runtime import resolve_binary as resolve_nemotron_binary
 from .preflight import available_ram_mb
 from .whispercpp_runtime import find_weights as find_ggml_weights
 from .whispercpp_runtime import load_handle as load_whispercpp_handle
+from .whispercpp_runtime import resolve_binary as resolve_whispercpp_binary
 
 # Module-level cache of loaded WhisperModel instances keyed by the parameters
 # that affect model identity. FastAPI runs sync handlers in a threadpool, so the
@@ -25,9 +27,10 @@ from .whispercpp_runtime import load_handle as load_whispercpp_handle
 # so its VRAM comes back instead of every variant pinning GPU memory forever.
 # A transcription holds a ``lease`` while it runs; an evicted model that is
 # still leased is parked in _RETIRED and released when the last lease ends.
-_MODEL_CACHE: dict[tuple[str, str, str], Any] = {}
-_LEASES: dict[tuple[str, str, str], int] = {}
-_RETIRED: dict[tuple[str, str, str], Any] = {}
+_ModelKey = tuple[str, str, str, tuple | None]
+_MODEL_CACHE: dict[_ModelKey, Any] = {}
+_LEASES: dict[_ModelKey, int] = {}
+_RETIRED: dict[_ModelKey, Any] = {}
 _CACHE_LOCK = threading.Lock()
 
 # Compute types CTranslate2 supports per device. float16 / int8_float16 are
@@ -114,14 +117,40 @@ def _resolve_model_source(model: str) -> str:
     return _resolve_snapshot_dir(model) or model
 
 
-def _cache_key(model: str, device: str, compute_type: str) -> tuple[str, str, str]:
-    """Cache key with managed model ids normalized so ``Small`` and ``small``
-    do not load (and pin VRAM for) two separate WhisperModel instances. Local
-    path ids keep their original case."""
-    key_model = model.strip()
-    if not (key_model.startswith(("/", "./", "../", "~")) or "/" in key_model or "\\" in key_model):
-        key_model = key_model.lower()
-    return (key_model, device, compute_type)
+def file_revision(path: Path) -> tuple[str, int, int, int, int, int]:
+    stat = path.stat()
+    return str(path.resolve()), stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns
+
+
+def model_revision(model: str) -> tuple | None:
+    """Fingerprint the exact on-disk assets the loader will use."""
+    try:
+        source = Path(_resolve_model_source(model)).expanduser()
+        if not source.is_dir():
+            return None
+        descriptor = descriptor_for(model)
+        engine = descriptor.engine if descriptor else "whisper"
+        if engine == "nemotron":
+            weights, binary = find_gguf(source), resolve_nemotron_binary()
+            return (file_revision(weights), file_revision(binary)) if weights and binary else None
+        if engine == "whispercpp":
+            weights, binary = find_ggml_weights(source), resolve_whispercpp_binary()
+            return (file_revision(weights), file_revision(binary)) if weights and binary else None
+        return tuple(file_revision(asset) for asset in sorted(source.iterdir()) if asset.is_file()) or None
+    except (OSError, RuntimeError):
+        return None
+
+
+def _model_id(model: str) -> str:
+    """Normalize managed model ids, keeping local paths case sensitive."""
+    key = model.strip()
+    if not (key.startswith(("/", "./", "../", "~")) or "/" in key or "\\" in key):
+        key = key.lower()
+    return key
+
+
+def _cache_key(model: str, device: str, compute_type: str) -> _ModelKey:
+    return _model_id(model), device, compute_type, model_revision(model)
 
 
 def validate_device_and_compute_type(device: str, compute_type: str) -> None:
@@ -168,13 +197,13 @@ def get_whisper_model(model: str, device: str, compute_type: str) -> Any:
     """
     validate_device_and_compute_type(device, compute_type)
     with _CACHE_LOCK:
-        return _resident_locked(model, device, compute_type)
+        return _resident_locked(model, _cache_key(model, device, compute_type))
 
 
-def _resident_locked(model: str, device: str, compute_type: str) -> Any:
+def _resident_locked(model: str, key: _ModelKey) -> Any:
     """The cached instance for the key, loading (and evicting the previous
     resident) when absent. Caller holds ``_CACHE_LOCK``."""
-    key = _cache_key(model, device, compute_type)
+    _, device, compute_type, _ = key
     cached = _MODEL_CACHE.get(key)
     if cached is not None:
         return cached
@@ -300,23 +329,26 @@ def lease(model: str, device: str, compute_type: str) -> Iterator[Any]:
     lease ends.
     """
     validate_device_and_compute_type(device, compute_type)
-    key = _cache_key(model, device, compute_type)
     with _CACHE_LOCK:
-        instance = _resident_locked(model, device, compute_type)
+        key = _cache_key(model, device, compute_type)
+        instance = _resident_locked(model, key)
         _LEASES[key] = _LEASES.get(key, 0) + 1
     try:
         yield instance
     finally:
         with _CACHE_LOCK:
             _LEASES[key] -= 1
-            retired = _RETIRED.pop(key, None) if _LEASES[key] == 0 else None
+            retired = None
+            if _LEASES[key] == 0:
+                del _LEASES[key]
+                retired = _RETIRED.pop(key, None)
         if retired is not None:
             release_device_memory(retired)
 
 
 def is_model_leased(model: str) -> bool:
     """True while a transcription holds a lease on ``model`` (any device or compute type)."""
-    wanted = _cache_key(model, "", "")[0]
+    wanted = _model_id(model)
     with _CACHE_LOCK:
         return any(count > 0 for key, count in _LEASES.items() if key[0] == wanted)
 
@@ -334,7 +366,7 @@ def unload_model(model: str) -> bool:
     Returns True when something was evicted. Used by DELETE /models/{id} so the
     weights are unloaded (and, on Windows, unlocked) before the cache dir goes.
     """
-    wanted = _cache_key(model, "", "")[0]
+    wanted = _model_id(model)
     with _CACHE_LOCK:
         return _evict_locked(lambda key: key[0] == wanted) > 0
 

@@ -37,7 +37,7 @@ class ProgressBarsWithoutAConsoleTests(unittest.TestCase):
 
         events: queue.Queue = queue.Queue()
         with mock.patch.object(sys, "stderr", None):
-            bar_class = mm._make_progress_tqdm(events, expected_bytes=100)
+            bar_class = mm._make_progress_tqdm(events.put, expected_bytes=100)
             bar = bar_class(total=100, unit="B", desc="Downloading")
             bar.update(40)
             bar.close()

@@ -81,8 +81,10 @@ class NemotronApiTests(unittest.TestCase):
         resp = self._upload("/transcribe/upload/stream", {"model": MODEL, "language": "auto", "output_format": "srt"})
         self.assertEqual(resp.status_code, 200)
         lines = [json.loads(line) for line in resp.text.splitlines() if line.strip()]
+        self.assertFalse(lines[-1].pop("checkpoint_hit"))
+        self.assertIn("backendPreflight", lines[-1].pop("timings_ms"))
         self.assertEqual(
-            lines,
+            [line for line in lines if line["type"] != "timing"],
             [
                 {"type": "progress", "processedSeconds": 3.0, "totalSeconds": 3.0, "pct": 100.0},
                 {
@@ -100,8 +102,11 @@ class NemotronApiTests(unittest.TestCase):
     def test_explicit_language_reaches_the_binary_and_comes_back_as_the_short_code(self):
         resp = self._upload("/transcribe/upload", {"model": MODEL, "language": "no", "output_format": "txt"})
         self.assertEqual(resp.status_code, 200)
+        result = resp.json()
+        self.assertFalse(result.pop("checkpoint_hit"))
+        self.assertIn("asr", result.pop("timings_ms"))
         self.assertEqual(
-            resp.json(),
+            result,
             {
                 "ok": True,
                 "content": "word0 word1 word2 word3 word4 word5\n",

@@ -88,6 +88,8 @@ export function useManualTranscription(): UseManualTranscriptionResult {
         device: attempt.device,
         computeType: attempt.computeType,
         advancedOptions: attempt.advancedOptions,
+        audioStreamIndex: attempt.audioStreamIndex,
+        audioOnlyUpload: attempt.audioOnlyUpload,
         overwrite: attempt.overwrite === true,
       });
       void client.invalidateQueries({ queryKey: LIBRARY_QUERY_KEY });

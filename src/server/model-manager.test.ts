@@ -1,7 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Readable } from "node:stream";
-import { listBackendModels, deleteBackendModel, downloadBackendModel } from "./transcription-client.js";
+import {
+  deleteBackendModel,
+  downloadBackendModel,
+  listBackendModels,
+  ModelDownloadCancelledError,
+  requestBackendModelDownloadOperation,
+} from "./transcription-client.js";
 
 // Minimal fetch stub helpers. We swap the global fetch per test and restore it.
 type FetchFn = typeof fetch;
@@ -114,6 +120,54 @@ test("downloadBackendModel throws when the stream emits an error line", async ()
     ])) as FetchFn;
   try {
     await assert.rejects(() => downloadBackendModel("http://backend:8001", "medium"), /disk full/);
+  } finally {
+    restoreFetch();
+  }
+});
+
+test("downloadBackendModel distinguishes explicit cancellation from a download failure", async () => {
+  globalThis.fetch = (async () =>
+    ndjsonResponse([
+      JSON.stringify({ type: "error", error: "Model download cancelled", code: "model_download_cancelled" }),
+    ])) as FetchFn;
+  try {
+    await assert.rejects(() => downloadBackendModel("http://backend:8001", "tiny"), ModelDownloadCancelledError);
+  } finally {
+    restoreFetch();
+  }
+});
+
+test("model download operations expose current progress and pass through cancellation", async () => {
+  const operationId = "5e8c47cfe3d841c2b5f337a61746b605";
+  const paths: string[] = [];
+  globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+    paths.push(`${init?.method} ${String(url)}`);
+    assert.equal(new Headers(init?.headers).get("Authorization"), "Bearer secret");
+    if (String(url).endsWith("/models")) {
+      return jsonResponse({
+        models: [
+          {
+            id: "tiny",
+            downloaded: false,
+            download: { id: operationId, model: "tiny", status: "running", progress: { pct: 30 } },
+          },
+        ],
+      });
+    }
+    return jsonResponse({ id: operationId, model: "tiny", status: init?.method === "POST" ? "cancelling" : "running" });
+  }) as FetchFn;
+  try {
+    const [tiny] = await listBackendModels("http://backend:8001", "secret");
+    assert.deepEqual(tiny.download?.progress, { pct: 30 });
+    const status = await requestBackendModelDownloadOperation("http://backend:8001", operationId, "secret", false);
+    assert.equal(status.id, operationId);
+    assert.equal(status.status, "running");
+    const cancelled = await requestBackendModelDownloadOperation("http://backend:8001", operationId, "secret", true);
+    assert.equal(cancelled.status, "cancelling");
+    assert.deepEqual(paths.slice(1), [
+      `GET http://backend:8001/models/download/${operationId}`,
+      `POST http://backend:8001/models/download/${operationId}/cancel`,
+    ]);
   } finally {
     restoreFetch();
   }

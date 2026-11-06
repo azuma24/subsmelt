@@ -114,3 +114,27 @@ test("subtitles with no applicable translation target are counted and point to T
   assert.ok(!page.text.includes("Found 0"));
   assert.deepEqual(page.buttons.slice(1), ["Scan anyway", "Close"]);
 });
+
+test("an embedded import remains actionable when no translation jobs exist yet", () => {
+  const planned: ScannedFile[] = [
+    {
+      videoPath: "/media/Shows/Import.mkv",
+      videoName: "Import.mkv",
+      videoMtime: 1,
+      subtitles: [],
+      intake: { action: "embedded", language: "en", track: 2 },
+    },
+    {
+      videoPath: "/media/Shows/Review.mkv",
+      videoName: "Review.mkv",
+      videoMtime: 1,
+      subtitles: [],
+      intake: { action: "forced_only", language: "en" },
+    },
+  ];
+  const page = renderPage(<Modal plan={{ files: planned, newJobs: 0, topFolders: [] }} />);
+
+  assert.ok(page.text.includes("Import embedded track 2"));
+  assert.ok(page.text.includes("Only forced captions found"));
+  assert.deepEqual(page.buttons.slice(1), ["Cancel", "Proceed"]);
+});

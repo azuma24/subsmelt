@@ -24,7 +24,7 @@ FROM node:22-slim AS ffmpeg
 ARG FFMPEG_VERSION=7.1.2
 ARG FFMPEG_SHA256=089bc60fb59d6aecc5d994ff530fd0dcb3ee39aa55867849a2bbc4e555f9c304
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends build-essential nasm curl ca-certificates xz-utils \
+  && apt-get install -y --no-install-recommends build-essential nasm curl ca-certificates xz-utils zlib1g-dev \
   && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 RUN curl -fsSL --connect-timeout 30 --retry 5 --retry-delay 5 --retry-all-errors -o ffmpeg.tar.xz "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz" \
@@ -32,12 +32,12 @@ RUN curl -fsSL --connect-timeout 30 --retry 5 --retry-delay 5 --retry-all-errors
   && tar -xJf ffmpeg.tar.xz --strip-components=1 \
   && rm ffmpeg.tar.xz
 RUN ./configure --prefix=/opt/ff --disable-everything --disable-autodetect --disable-doc --disable-debug \
-      --enable-small --disable-ffplay --enable-ffmpeg --enable-ffprobe \
+      --enable-small --disable-ffplay --enable-ffmpeg --enable-ffprobe --enable-zlib \
       --enable-protocol=file,pipe \
-      --enable-demuxer=mov,matroska,ogg,webvtt,srt,ass,aac,mp3,ffmetadata,concat \
-      --enable-muxer=mp4,ipod,mov,matroska,webm,ogg,opus,srt,webvtt,ass,adts,ffmetadata,null \
-      --enable-decoder=aac,opus,vorbis,mp3,webvtt,subrip,srt,ass,mov_text \
-      --enable-encoder=aac,srt,subrip,webvtt,ass,mov_text \
+      --enable-demuxer=mov,matroska,ogg,webvtt,srt,ass,aac,mp3,ffmetadata,concat,wav,flac \
+      --enable-muxer=mp4,ipod,mov,matroska,webm,ogg,opus,srt,webvtt,ass,adts,ffmetadata,null,flac \
+      --enable-decoder=aac,opus,vorbis,mp3,webvtt,subrip,srt,ass,mov_text,ac3,eac3,dca,flac,alac,pcm_s16le,pcm_s24le \
+      --enable-encoder=aac,srt,subrip,webvtt,ass,mov_text,flac \
       --enable-parsers --enable-bsfs \
       --enable-filter=aresample,aformat,anull,null,atrim,copy \
   && make -j"$(nproc)" \
@@ -70,8 +70,8 @@ RUN set -eu; \
 FROM node:22-slim
 WORKDIR /app
 
-# Install tzdata for timezone support
-RUN apt-get update && apt-get install -y --no-install-recommends tzdata && rm -rf /var/lib/apt/lists/*
+# Timezone support and compressed Matroska subtitle packets.
+RUN apt-get update && apt-get install -y --no-install-recommends tzdata zlib1g && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json* ./
 

@@ -38,15 +38,34 @@ class AvailabilityTests(unittest.TestCase):
     def test_unavailable_without_token(self):
         with mock.patch.dict(os.environ, {}, clear=False):
             os.environ.pop("SUBSMELT_HF_TOKEN", None)
+            os.environ.pop("SUBSMELT_HF_TOKEN_FILE", None)
             os.environ.pop("HF_TOKEN", None)
             self.assertFalse(diarize.diarize_available())
 
     def test_get_pipeline_raises_clear_error_without_token(self):
         with mock.patch.dict(os.environ, {}, clear=False):
             os.environ.pop("SUBSMELT_HF_TOKEN", None)
+            os.environ.pop("SUBSMELT_HF_TOKEN_FILE", None)
             os.environ.pop("HF_TOKEN", None)
             with self.assertRaises(diarize.DiarizationTokenMissingError):
                 diarize._get_pipeline("cpu")
+
+    def test_mounted_token_sits_between_subsmelt_env_and_hf_fallback(self):
+        with tempfile.TemporaryDirectory() as temp, mock.patch.dict(os.environ, {"HF_TOKEN": "fallback"}):
+            token_file = Path(temp) / "token"
+            token_file.write_text("mounted-hf-token\n", encoding="utf-8")
+            os.environ["SUBSMELT_HF_TOKEN_FILE"] = str(token_file)
+            os.environ.pop("SUBSMELT_HF_TOKEN", None)
+            self.assertEqual(diarize._hf_token(), "mounted-hf-token")
+            os.environ["SUBSMELT_HF_TOKEN"] = "direct"
+            self.assertEqual(diarize._hf_token(), "direct")
+            os.environ.pop("SUBSMELT_HF_TOKEN")
+            token_file.unlink()
+            self.assertFalse(diarize.diarize_available())
+            with self.assertRaisesRegex(diarize.DiarizationTokenMissingError, "SUBSMELT_HF_TOKEN_FILE"):
+                diarize._get_pipeline("cpu")
+            os.environ.pop("SUBSMELT_HF_TOKEN_FILE")
+            self.assertEqual(diarize._hf_token(), "fallback")
 
 
 class PipelineResidencyTests(unittest.TestCase):
