@@ -102,6 +102,7 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   notify_events: "job:error,queue:finished",
   notify_format: "json",
   watch_enabled: "0",
+  watcher_paused: "0",
   auto_translate: "1",
   video_extensions: ".mkv,.mp4,.avi,.m4v,.ts,.wmv,.mov",
   subtitle_extensions: ".srt,.ass,.ssa,.vtt",

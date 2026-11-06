@@ -16,6 +16,7 @@ export type SSEEventName =
   | "queue:stopped"
   | "queue:failed"
   | "scan:complete"
+  | "watcher:status"
   | "job:stopped"
   | "transcription:progress"
   | "transcription:work"
@@ -40,6 +41,7 @@ export const SSE_EVENT_NAMES: readonly SSEEventName[] = [
   "queue:stopped",
   "queue:failed",
   "scan:complete",
+  "watcher:status",
   "job:stopped",
   "transcription:progress",
   "transcription:work",
@@ -107,6 +109,8 @@ export function getSSEInvalidationKeys(name: SSEEventName, data: Record<string, 
         ["youtube", "pipeline"],
         ["usage"],
       ];
+    case "watcher:status":
+      return [["watcher-status"], ["settings"]];
     case "scan:complete":
       return [["jobs"], ["queue-status"], ["logs"], ["settings"], ["transcription-history"], ["library"]];
     case "transcription:progress":
@@ -314,7 +318,7 @@ function ensureSse(queryClient: ReturnType<typeof useQueryClient>): SseSingleton
     invalidator.schedule(
       name
         ? getSSEInvalidationKeys(name, data)
-        : [["jobs"], ["queue-status"], ["logs"], ["transcription-history"], ["usage"]],
+        : [["jobs"], ["queue-status"], ["logs"], ["transcription-history"], ["usage"], ["watcher-status"]],
     );
   };
 

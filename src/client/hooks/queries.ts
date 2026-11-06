@@ -17,6 +17,16 @@ import type {
 
 export type { JobsResponse };
 
+export const WATCHER_STATUS_QUERY_KEY = ["watcher-status"] as const;
+
+export function useWatcherStatusQuery() {
+  return useQuery({
+    queryKey: WATCHER_STATUS_QUERY_KEY,
+    queryFn: ({ signal }) => api.getWatcherStatus({ signal }),
+    refetchInterval: useSsePollInterval(10_000, 60_000),
+  });
+}
+
 export function useSettingsQuery() {
   return useQuery({ queryKey: ["settings"], queryFn: ({ signal }) => api.getSettings({ signal }), staleTime: 30_000 });
 }

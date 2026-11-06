@@ -1,9 +1,9 @@
 import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { setSetting, getSetting } from "./config.js";
+import { getSetting } from "./config.js";
 import { listFolderTree, MEDIA_DIR } from "./scanner.js";
-import { isQueueRunning, startAutoScan, resumeQueueOnBoot } from "./queue.js";
+import { isQueueRunning, resumeQueueOnBoot } from "./queue.js";
 import { transcriptionHistory } from "./transcription-history.js";
 import { transcriptionWork } from "./transcription/work.js";
 import { previewLibraryScan, scanAndEnqueue } from "./library-scan.js";
@@ -12,12 +12,13 @@ import { crossSiteGuard, createIngressGuard } from "./cross-site-guard.js";
 import db, { getLogs, clearLogs } from "./db.js";
 import { addSSEClient } from "./sse.js";
 import { notifyTest } from "./notify.js";
-import { startWatcher, stopWatcher, isWatcherRunning } from "./watcher.js";
+import { getWatcherStatus, syncWatcher } from "./watcher.js";
 import { parseLogsQuery } from "./routes/validation.js";
 
 import { registerSettingsTasksRoutes } from "./routes/settings-tasks.js";
 import { registerConvertBatchRoutes } from "./routes/convert-batches.js";
 import { registerJobsRoutes } from "./routes/jobs.js";
+import { registerWatcherRoutes } from "./routes/watcher.js";
 import { registerEmbeddedSubtitleRoutes } from "./routes/embedded-subtitles.js";
 import { registerCorrectionsRoutes } from "./routes/corrections.js";
 import { registerModelsRoutes } from "./routes/models.js";
@@ -81,7 +82,8 @@ app.get("/api/events", (_req, res) => {
   addSSEClient(res);
 });
 
-registerSettingsTasksRoutes(app, scanAndEnqueue);
+registerSettingsTasksRoutes(app);
+registerWatcherRoutes(app);
 registerConvertBatchRoutes(app);
 
 app.get("/api/folders/tree", async (_req, res) => {
@@ -108,23 +110,6 @@ app.get("/api/scan/preview", async (_req, res) => {
 registerJobsRoutes(app);
 registerEmbeddedSubtitleRoutes(app);
 registerCorrectionsRoutes(app);
-
-// ======== Watcher (Feature 4) ========
-app.post("/api/watcher/start", (_req, res) => {
-  setSetting("watch_enabled", "1");
-  startWatcher();
-  res.json({ ok: true, running: true });
-});
-
-app.post("/api/watcher/stop", (_req, res) => {
-  setSetting("watch_enabled", "0");
-  stopWatcher();
-  res.json({ ok: true, running: false });
-});
-
-app.get("/api/watcher/status", (_req, res) => {
-  res.json({ running: isWatcherRunning() });
-});
 
 // ======== Logs ========
 app.get("/api/logs", (req, res) => {
@@ -163,7 +148,7 @@ app.get("/api/health", (_req, res) => {
   res.json({
     ok: true,
     queueRunning: isQueueRunning(),
-    watcherRunning: isWatcherRunning(),
+    watcherRunning: getWatcherStatus().running,
   });
 });
 
@@ -187,11 +172,9 @@ app.listen(PORT, HOST, () => {
   console.log(`\n  SubSmelt`);
   console.log(`  → http://localhost:${PORT}\n`);
 
-  const interval = parseInt(getSetting("auto_scan_interval") || "0", 10);
   transcriptionWork.store.recover();
   transcriptionWork.start();
-  if (interval > 0) startAutoScan(interval, scanAndEnqueue);
-  if (getSetting("watch_enabled") === "1") startWatcher();
+  syncWatcher();
   resumeQueueOnBoot();
   youtubeWorker.start();
 });

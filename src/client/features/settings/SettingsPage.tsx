@@ -111,9 +111,6 @@ export function SettingsPage() {
       .then(() => api.saveSettings(body))
       .then((result): SaveOutcome => {
         applyForm(saved(formRef.current, body));
-        // The App-level settings cache feeds the sidebar (watcher state, LLM
-        // status); without this it keeps the pre-save values until an unrelated
-        // event refetches, so the sidebar lagged a connection change.
         void queryClient.invalidateQueries({ queryKey: ["settings"] });
         void queryClient.invalidateQueries({ queryKey: LLM_STATUS_QUERY_KEY });
         // The server keeps its value for these (an env-pinned key, say); the
@@ -254,32 +251,6 @@ export function SettingsPage() {
     setTestingNotification(false);
   };
 
-  // The watcher flag is server state, not a user edit: it changes the snapshot
-  // underneath any pending edits instead of becoming one of them.
-  const setWatcherRunning = (running: boolean) =>
-    applyForm(receiveServer(formRef.current, { ...formRef.current.server, _watcher_running: running }));
-
-  const toggleWatcher = async () => {
-    try {
-      if (settings._watcher_running) {
-        await api.stopWatcher();
-        setWatcherRunning(false);
-        // The sidebar's watcher dot reads the shared settings cache; without
-        // this it lagged the toggle for up to 30s.
-        void queryClient.invalidateQueries({ queryKey: ["settings"] });
-        addToast(t("settings.watcherStopped"), "info");
-      } else {
-        await api.startWatcher();
-        setWatcherRunning(true);
-        void queryClient.invalidateQueries({ queryKey: ["settings"] });
-        addToast(t("settings.watcherStarted"), "success");
-      }
-    } catch (e: unknown) {
-      const message = getErrorMessage(e);
-      addToast(t("settings.watcherError", { message }), "error");
-    }
-  };
-
   // NOTE: The five section trees below are intentionally NOT wrapped in useMemo.
   // Each one closes over the inline update()/updateAndSave()/
   // updateAndSaveDebounced() handlers, which are themselves recreated every
@@ -325,7 +296,6 @@ export function SettingsPage() {
             updateAndSave={updateAndSave}
             updateManyAndSave={updateManyAndSave}
             updateAndSaveDebounced={updateAndSaveDebounced}
-            onToggleWatcher={toggleWatcher}
             onNotificationTest={handleNotificationTest}
             testingNotification={testingNotification}
             notificationTestResult={notificationTestResult}

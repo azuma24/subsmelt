@@ -21,12 +21,11 @@ import {
 import { deletePendingJobsForTask, getPendingJobOutputsForTask } from "../db.js";
 import { removeJobPartialOutput } from "../job-output.js";
 import { standardTaskLangCode } from "../language-codes.js";
-import { scanFolder, MEDIA_DIR } from "../scanner.js";
-import { startAutoScan, stopAutoScan } from "../queue.js";
+import { MEDIA_DIR } from "../scanner.js";
 import { REDACTED_SECRET, parseConnections, restoreRedactedApiKeys } from "../connections.js";
 import { logger } from "../logger.js";
 import { normalizeMediaSubfolder } from "../media-paths.js";
-import { isWatcherRunning, restartWatcher } from "../watcher.js";
+import { getWatcherStatus, syncWatcher } from "../watcher.js";
 import { parseTaskUpdate, settingError, validateOutputPattern } from "./validation.js";
 import { correctionRuleSetsErrors } from "../../shared/corrections.js";
 import { subtitleIntakeRulesError } from "../../shared/subtitle-intake.js";
@@ -66,16 +65,13 @@ function redactSettings(settings: Record<string, string>): Record<string, string
   return redacted;
 }
 
-export function registerSettingsTasksRoutes(
-  app: Express,
-  scanAndEnqueue: () => Promise<{ newJobs: number; totalSubtitles: number }> = scanFolder,
-): void {
+export function registerSettingsTasksRoutes(app: Express): void {
   // ======== Settings ========
   app.get("/api/settings", (_req, res) => {
     res.json({
       ...redactSettings(getAllSettings()),
       _media_dir: MEDIA_DIR,
-      _watcher_running: isWatcherRunning(),
+      _watcher_running: getWatcherStatus().running,
       // Whether an LLM has actually been set up, as opposed to running on the
       // shipped defaults — the merged settings can't distinguish the two.
       _llm_configured: isLlmConfigured(),
@@ -179,12 +175,10 @@ export function registerSettingsTasksRoutes(
       logger.info("system", `Settings rejected (unknown keys): ${rejected.join(", ")}`);
     }
 
-    const interval = parseInt(getSetting("auto_scan_interval") || "0", 10);
-    if (interval > 0) startAutoScan(interval, scanAndEnqueue);
-    else stopAutoScan();
-
-    if (changedKeys.includes("watch_enabled")) {
-      restartWatcher();
+    if (
+      changedKeys.some((key) => key === "watch_enabled" || key === "auto_scan_interval" || key === "watcher_paused")
+    ) {
+      syncWatcher();
     }
     res.json({ ok: true, rejected });
   });

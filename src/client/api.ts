@@ -1,3 +1,4 @@
+import type { WatcherStatus } from "../shared/watcher";
 import type { ApplyReport, CorrectionRule, ScanReport } from "../shared/corrections";
 import type {
   UsageCleared,
@@ -181,8 +182,9 @@ export const stopQueue = () => fetchJSON("/queue/stop", { method: "POST" });
 export const getQueueStatus = (opts?: FetchOpts) => fetchJSON<QueueStatus>("/queue/status", opts);
 
 // Watcher
-export const startWatcher = () => fetchJSON("/watcher/start", { method: "POST" });
-export const stopWatcher = () => fetchJSON("/watcher/stop", { method: "POST" });
+export const getWatcherStatus = (opts?: FetchOpts) => fetchJSON<WatcherStatus>("/watcher/status", opts);
+export const setWatcherEnabled = (enabled: boolean) =>
+  fetchJSON<WatcherStatus>(`/watcher/${enabled ? "start" : "stop"}`, { method: "POST" });
 
 // Logs
 export const getLogs = (

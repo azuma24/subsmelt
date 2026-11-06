@@ -42,13 +42,13 @@ import {
 import { resolveConnectionPool } from "../connections.js";
 import { estimateCost } from "../pricing.js";
 import { assertMediaPathAllowed } from "../transcription-client.js";
-import { isWatcherRunning } from "../watcher.js";
+import { getWatcherStatus } from "../watcher.js";
 import { isQueueStartHeld } from "../gpu-gate.js";
 import { getAllSettings } from "../config.js";
 import { logger } from "../logger.js";
 import type { Job, PreviewLine } from "../../shared/jobs.js";
 import { normalizeTimeToMs, type SubtitleCue } from "../translator/convert.js";
-import { inspectSubtitle } from "../translator/subtitle-quality.js";
+import { inspectSubtitle, translatedSubtitleIssues } from "../translator/subtitle-quality.js";
 import { bilingualSrt } from "../translator/bilingual.js";
 import type { SubtitleQualityIssue } from "../../shared/subtitle-quality.js";
 import { queueFileTranslation, type FileTranslationTarget } from "../file-translation.js";
@@ -278,7 +278,7 @@ export function registerJobsRoutes(app: Express): void {
 
     try {
       const srcExt = path.extname(job.srt_path).slice(1).toLowerCase();
-      const { cues: srcCues, issues: originalIssues } = inspectSubtitle(readSubtitleFileText(sourcePath), srcExt);
+      const source = inspectSubtitle(readSubtitleFileText(sourcePath), srcExt);
 
       let trgCues: SubtitleCue[] = [];
       let translatedIssues: SubtitleQualityIssue[] = [];
@@ -287,12 +287,12 @@ export function registerJobsRoutes(app: Express): void {
         const trgExt = path.extname(job.output_path).slice(1).toLowerCase();
         const target = inspectSubtitle(readSubtitleFileText(previewTarget), trgExt);
         trgCues = target.cues;
-        translatedIssues = target.issues;
+        translatedIssues = translatedSubtitleIssues(source, target);
       }
 
       // Times in milliseconds whatever the format: an ASS cue carries them as
       // "0:00:01.00" strings, which the preview's timecode column cannot read.
-      const lines: PreviewLine[] = srcCues.map((cue, i) => ({
+      const lines: PreviewLine[] = source.cues.map((cue, i) => ({
         index: i + 1,
         start: normalizeTimeToMs(cue.data?.start),
         end: normalizeTimeToMs(cue.data?.end),
@@ -309,7 +309,7 @@ export function registerJobsRoutes(app: Express): void {
         analysis: job.analysis_context || "",
         totalLines: lines.length,
         lines,
-        quality: { original: originalIssues, translated: translatedIssues },
+        quality: { original: source.issues, translated: translatedIssues },
         canDownloadBilingual:
           job.status === "done" && hasTarget && !hasPartial && (!outputOwner || outputOwner.id === id),
       });
@@ -459,7 +459,7 @@ export function registerJobsRoutes(app: Express): void {
       // ("machine"); the dashboard shows the pairing.
       activeConnections: getActiveJobConnections(),
       pendingCount: countPendingJobs(),
-      watcherRunning: isWatcherRunning(),
+      watcherRunning: getWatcherStatus().running,
     });
   });
 }

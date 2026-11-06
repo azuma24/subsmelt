@@ -4,7 +4,7 @@ import type { ScanResult } from "../scanner.js";
 import type { TranscribePostAction } from "../transcription-client.js";
 import { transcriptionWork, type WorkRunner } from "./work.js";
 
-/** Shared by HTTP and timer scans; enqueues only missing, non-silent media. */
+/** Shared by all scans. Enqueues only missing, non-silent media. */
 export function enqueueMissingTranscripts(
   result: ScanResult,
   behavior: "ask" | "auto_transcribe" | "auto_transcribe_and_translate",

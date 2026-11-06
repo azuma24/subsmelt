@@ -6,14 +6,7 @@ import { ConfirmProvider } from "./ui/ConfirmModal";
 import { formatDur } from "./lib";
 import { applyTheme, getThemePref, watchSystemTheme } from "./lib/theme";
 import { applyFontScale, getFontScale } from "./lib/font-scale";
-import {
-  IsMobileContext,
-  useJobsQuery,
-  useQueueStatusQuery,
-  useSSE,
-  useSettingsQuery,
-  useViewportIsMobile,
-} from "./hooks";
+import { IsMobileContext, useJobsQuery, useQueueStatusQuery, useSSE, useViewportIsMobile } from "./hooks";
 import type { Job } from "./types";
 import { DesktopSidebar, MobileBottomNav } from "./app/shell";
 import { LANGUAGES } from "./app/constants";
@@ -70,7 +63,6 @@ function AppInner() {
   const { t, i18n } = useTranslation();
   const isMobile = useViewportIsMobile();
   const jobsQuery = useJobsQuery();
-  const settingsQuery = useSettingsQuery();
   const queueQuery = useQueueStatusQuery();
   const location = useLocation();
   const navigate = useNavigate();
@@ -124,7 +116,6 @@ function AppInner() {
 
   const queueRunning = Boolean(queueQuery.data?.running ?? jobsQuery.data?.queueRunning ?? false);
   const errorCount = jobsQuery.data?.jobs?.filter((j: Job) => j.status === "error").length || 0;
-  const watcherRunning = Boolean(queueQuery.data?.watcherRunning) || Boolean(settingsQuery.data?._watcher_running);
 
   useEffect(() => {
     const current = LANGUAGES.find((lang) => i18n.language === lang.code || i18n.language.startsWith(`${lang.code}-`));
@@ -145,12 +136,7 @@ function AppInner() {
     <IsMobileContext.Provider value={isMobile}>
       <div className="flex h-dvh min-h-dvh bg-canvas text-text">
         {!isMobile && (
-          <DesktopSidebar
-            queueRunning={queueRunning}
-            errorCount={errorCount}
-            watcherRunning={watcherRunning}
-            currentPath={location.pathname}
-          />
+          <DesktopSidebar queueRunning={queueRunning} errorCount={errorCount} currentPath={location.pathname} />
         )}
         <div className="flex min-w-0 flex-1 flex-col">
           <main className={`flex-1 overflow-auto ${isMobile ? "pb-[58px]" : ""}`}>

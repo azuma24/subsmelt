@@ -13,6 +13,7 @@ import { Icon } from "../../ui/Icon";
 import { IconButton } from "../../ui/primitives";
 import { FixDialog } from "../corrections/FixDialog";
 import { triggerDownload } from "../convert/download-outputs";
+import { isPlaybackSuggestion } from "../../../shared/subtitle-quality";
 import { SubtitleQualityReport } from "../../ui/SubtitleQualityReport";
 
 interface PreviewOverlayProps {
@@ -55,7 +56,7 @@ interface EditCtx {
   onChange: (index: number, value: string) => void;
   placeholder: string;
   editedLabel: string;
-  qualityCues: ReadonlySet<number>;
+  warningCues: ReadonlySet<number>;
 }
 
 export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose }: PreviewOverlayProps) {
@@ -86,12 +87,36 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
     for (const line of previewData?.lines || []) map.set(line.index, line.translated || "");
     return map;
   }, [previewData?.lines]);
-  const qualityCues = useMemo(() => {
-    const issues = [...(previewData?.quality?.original ?? []), ...(previewData?.quality?.translated ?? [])];
-    const cues = new Set<number>();
-    for (const issue of issues) if (issue.cue !== undefined) cues.add(issue.cue);
-    return cues;
+  const quality = useMemo(() => {
+    const original = previewData?.quality?.original ?? [];
+    const translated = previewData?.quality?.translated ?? [];
+    return [
+      {
+        label: "subtitleQuality.original",
+        issues: original.filter((issue) => !isPlaybackSuggestion(issue)),
+        advisory: false,
+      },
+      {
+        label: "subtitleQuality.translated",
+        issues: translated.filter((issue) => !isPlaybackSuggestion(issue)),
+        advisory: false,
+      },
+      { label: "subtitleQuality.originalSuggestions", issues: original.filter(isPlaybackSuggestion), advisory: true },
+      {
+        label: "subtitleQuality.translatedSuggestions",
+        issues: translated.filter(isPlaybackSuggestion),
+        advisory: true,
+      },
+    ].filter(({ issues }) => issues.length > 0);
   }, [previewData?.quality]);
+  const warningCues = useMemo(() => {
+    const cues = new Set<number>();
+    for (const { issues, advisory } of quality) {
+      if (advisory) continue;
+      for (const { cue } of issues) if (cue !== undefined) cues.add(cue);
+    }
+    return cues;
+  }, [quality]);
 
   // Reset edit buffer when switching jobs or when fresh data arrives.
   // biome-ignore lint/correctness/useExhaustiveDependencies: the buffer resets when the job changes, not when its own state does
@@ -156,13 +181,13 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
       onChange,
       placeholder: t("dashboard.preview.editPlaceholder"),
       editedLabel: t("dashboard.preview.edited"),
-      qualityCues,
+      warningCues,
     }),
-    [getValue, isDirty, onChange, qualityCues, t],
+    [getValue, isDirty, onChange, warningCues, t],
   );
 
   // The effective translated text for a line: edited value if present, else
-  // the server baseline. Drives filters, issue detection, and Copy TSV so they
+  // the server baseline. Drives text filters and Copy TSV so they
   // always reflect what the user currently sees.
   const effectiveTranslated = useCallback(
     (line: PreviewLine): string => {
@@ -184,9 +209,9 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
   const filteredLines = useMemo(() => {
     let lines = filterLines(previewData?.lines || [], previewSearch, effectiveTranslated);
     if (showOnlyChanged) lines = lines.filter((l) => l.original.trim() !== effectiveTranslated(l).trim());
-    if (showOnlyIssues) lines = lines.filter((l) => hasIssue(l, effectiveTranslated(l), qualityCues));
+    if (showOnlyIssues) lines = lines.filter((l) => warningCues.has(l.index));
     return lines;
-  }, [previewData?.lines, previewSearch, showOnlyChanged, showOnlyIssues, effectiveTranslated, qualityCues]);
+  }, [previewData?.lines, previewSearch, showOnlyChanged, showOnlyIssues, effectiveTranslated, warningCues]);
 
   const shouldVirtualize = filteredLines.length > VIRTUALIZE_THRESHOLD;
 
@@ -234,7 +259,7 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
   };
 
   const jumpToNextIssue = () => {
-    const issues = filteredLines.filter((line) => hasIssue(line, effectiveTranslated(line), qualityCues));
+    const issues = filteredLines.filter((line) => warningCues.has(line.index));
     const next = issues.find((line) => line.index > lastIssue.current) ?? issues[0];
     if (!next) {
       addToast(t("dashboard.preview.noIssues"), "info");
@@ -361,24 +386,19 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
         <div ref={listRef} className="relative flex-1 overflow-y-auto">
           {previewQuery.isLoading && <PageLoading label={t("dashboard.preview.loading")} />}
           {previewQuery.isError && !previewQuery.isLoading && <PageError onRetry={() => void previewQuery.refetch()} />}
-          {previewData?.quality && (
-            <div className="mx-4 mt-4 space-y-2 empty:hidden">
-              {previewData.quality.original.length > 0 && (
+          {quality.length > 0 && (
+            <div className="mx-4 mt-4 space-y-2">
+              <p className="text-xs text-muted">{t("subtitleQuality.previewHint")}</p>
+              {quality.map(({ label, issues, advisory }) => (
                 <SubtitleQualityReport
-                  label={t("subtitleQuality.original")}
-                  issues={previewData.quality.original}
+                  key={label}
+                  label={t(label)}
+                  issues={issues}
+                  advisory={advisory}
                   onCue={jumpToCue}
-                  lastCue={previewData.totalLines}
+                  lastCue={previewData?.totalLines}
                 />
-              )}
-              {previewData.quality.translated.length > 0 && (
-                <SubtitleQualityReport
-                  label={t("subtitleQuality.translated")}
-                  issues={previewData.quality.translated}
-                  onCue={jumpToCue}
-                  lastCue={previewData.totalLines}
-                />
-              )}
+              ))}
             </div>
           )}
           {previewData?.analysis && (
@@ -442,24 +462,14 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
             <div ref={listStartRef}>
               {shouldVirtualize ? (
                 isMobile ? (
-                  <PreviewMobileVirtual
-                    lines={filteredLines}
-                    virtualizer={virtualizer}
-                    editCtx={editCtx}
-                    effective={effectiveTranslated}
-                  />
+                  <PreviewMobileVirtual lines={filteredLines} virtualizer={virtualizer} editCtx={editCtx} />
                 ) : (
-                  <PreviewDesktopVirtual
-                    lines={filteredLines}
-                    virtualizer={virtualizer}
-                    editCtx={editCtx}
-                    effective={effectiveTranslated}
-                  />
+                  <PreviewDesktopVirtual lines={filteredLines} virtualizer={virtualizer} editCtx={editCtx} />
                 )
               ) : isMobile ? (
-                <PreviewMobileList lines={filteredLines} editCtx={editCtx} effective={effectiveTranslated} />
+                <PreviewMobileList lines={filteredLines} editCtx={editCtx} />
               ) : (
-                <PreviewDesktopTable lines={filteredLines} editCtx={editCtx} effective={effectiveTranslated} />
+                <PreviewDesktopTable lines={filteredLines} editCtx={editCtx} />
               )}
             </div>
           )}
@@ -566,18 +576,6 @@ function truncateSelection(text: string): string {
   return text.length > 24 ? `${text.slice(0, 23)}…` : text;
 }
 
-function hasIssue(line: PreviewLine, translatedOverride: string, qualityCues: ReadonlySet<number>): boolean {
-  if (qualityCues.has(line.index)) return true;
-  const original = line.original?.trim() || "";
-  const translated = translatedOverride.trim();
-
-  const isUntranslated = original.length > 0 && translated.length === 0;
-  const isSuspiciousShort = translated.length > 0 && original.length > 35 && translated.length < original.length * 0.12;
-  const isSuspiciousLong = translated.length > 0 && translated.length > original.length * 4;
-
-  return Boolean(isUntranslated || isSuspiciousShort || isSuspiciousLong);
-}
-
 function filterLines(lines: PreviewLine[], search: string, effective: (line: PreviewLine) => string): PreviewLine[] {
   if (!search) return lines;
   const q = search.toLowerCase();
@@ -607,15 +605,7 @@ function TranslatedEditor({ line, editCtx }: { line: PreviewLine; editCtx: EditC
   );
 }
 
-function PreviewDesktopTable({
-  lines,
-  editCtx,
-  effective,
-}: {
-  lines: PreviewLine[];
-  editCtx: EditCtx;
-  effective: (line: PreviewLine) => string;
-}) {
+function PreviewDesktopTable({ lines, editCtx }: { lines: PreviewLine[]; editCtx: EditCtx }) {
   const { t } = useTranslation();
   return (
     <table className="w-full text-sm">
@@ -630,26 +620,18 @@ function PreviewDesktopTable({
       </thead>
       <tbody className="divide-y divide-border-subtle">
         {lines.map((line) => (
-          <PreviewLineRow key={line.index} line={line} table editCtx={editCtx} effective={effective} />
+          <PreviewLineRow key={line.index} line={line} table editCtx={editCtx} />
         ))}
       </tbody>
     </table>
   );
 }
 
-function PreviewMobileList({
-  lines,
-  editCtx,
-  effective,
-}: {
-  lines: PreviewLine[];
-  editCtx: EditCtx;
-  effective: (line: PreviewLine) => string;
-}) {
+function PreviewMobileList({ lines, editCtx }: { lines: PreviewLine[]; editCtx: EditCtx }) {
   return (
     <div className="space-y-3 p-4">
       {lines.map((line) => (
-        <PreviewLineRow key={line.index} line={line} editCtx={editCtx} effective={effective} />
+        <PreviewLineRow key={line.index} line={line} editCtx={editCtx} />
       ))}
     </div>
   );
@@ -665,12 +647,10 @@ function PreviewDesktopVirtual({
   lines,
   virtualizer,
   editCtx,
-  effective,
 }: {
   lines: PreviewLine[];
   virtualizer: Virtualizer;
   editCtx: EditCtx;
-  effective: (line: PreviewLine) => string;
 }) {
   const { t } = useTranslation();
   const TH = "px-3 py-2 text-left";
@@ -697,7 +677,6 @@ function PreviewDesktopVirtual({
               measureRef={virtualizer.measureElement}
               start={vitem.start - virtualizer.options.scrollMargin}
               editCtx={editCtx}
-              effective={effective}
             />
           );
         })}
@@ -712,12 +691,10 @@ function PreviewMobileVirtual({
   lines,
   virtualizer,
   editCtx,
-  effective,
 }: {
   lines: PreviewLine[];
   virtualizer: Virtualizer;
   editCtx: EditCtx;
-  effective: (line: PreviewLine) => string;
 }) {
   return (
     <div className="p-4">
@@ -738,7 +715,7 @@ function PreviewMobileVirtual({
                 transform: `translateY(${vitem.start - virtualizer.options.scrollMargin}px)`,
               }}
             >
-              <PreviewLineRow line={line} editCtx={editCtx} effective={effective} />
+              <PreviewLineRow line={line} editCtx={editCtx} />
             </div>
           );
         })}
@@ -747,19 +724,9 @@ function PreviewMobileVirtual({
   );
 }
 
-function PreviewLineRow({
-  line,
-  table = false,
-  editCtx,
-  effective,
-}: {
-  line: PreviewLine;
-  table?: boolean;
-  editCtx: EditCtx;
-  effective: (line: PreviewLine) => string;
-}) {
+function PreviewLineRow({ line, table = false, editCtx }: { line: PreviewLine; table?: boolean; editCtx: EditCtx }) {
   const { t } = useTranslation();
-  const issue = hasIssue(line, effective(line), editCtx.qualityCues);
+  const issue = editCtx.warningCues.has(line.index);
 
   if (table) {
     return (
@@ -814,16 +781,14 @@ function PreviewLineGridRow({
   measureRef,
   start,
   editCtx,
-  effective,
 }: {
   line: PreviewLine;
   dataIndex: number;
   measureRef: (el: HTMLElement | null) => void;
   start: number;
   editCtx: EditCtx;
-  effective: (line: PreviewLine) => string;
 }) {
-  const issue = hasIssue(line, effective(line), editCtx.qualityCues);
+  const issue = editCtx.warningCues.has(line.index);
   return (
     <div
       id={`preview-line-${line.index}`}

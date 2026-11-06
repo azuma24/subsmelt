@@ -1,6 +1,6 @@
 # Library subtitle intake and image OCR
 
-In **Settings → Sources → Subtitle source selection**, add a rule for the folder you want to manage, choose a source language, and set the fallback. The closest rule applies to each subfolder. A Scan Preview shows the source decision for each opted-in video. Manual scans, the periodic timer, and the file watcher follow the same selection.
+In **Settings → Sources → Subtitle source selection**, add a rule for the folder you want to manage, choose a source language, and set the fallback. The closest rule applies to each subfolder. A Scan Preview shows the source decision for each opted-in video. Manual scans and both library watcher methods follow the same selection. Use Pause monitoring to stop scheduled scans and file change detection together. Manual scans and queued work are still available.
 
 A readable, timed sidecar whose filename identifies the source language takes priority. When the scan finds one unambiguous embedded text track in that language, it can import the track beside the video. Confirmed caption absence can trigger speech recognition if the rule permits it and a transcription backend is configured. Forced tracks, ambiguous languages, unsupported formats, image tracks and failed probes stay available for review.
 

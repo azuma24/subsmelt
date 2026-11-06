@@ -21,3 +21,9 @@ test("existing scan cadence survives changing transcription behavior", () => {
     transcription_missing_subtitle_behavior: "ask",
   });
 });
+
+test("a file-event watcher can drive automatic transcription without adding polling", () => {
+  assert.deepEqual(autoTranscriptionPatch("auto_transcribe", "0", true), {
+    transcription_missing_subtitle_behavior: "auto_transcribe",
+  });
+});

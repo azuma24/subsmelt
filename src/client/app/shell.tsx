@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "../i18n";
+import { useWatcherStatusQuery } from "../hooks";
+import { watcherLabelKey } from "../lib/watcher-status";
 import { isNavActive, NAV_GROUPS, NAV_ITEMS, navItemsInGroup } from "./constants";
 import { Icon, type IconName } from "../ui/Icon";
 import { LlmStatusPopover } from "./LlmStatusPopover";
@@ -42,12 +44,14 @@ function ThemeToggle() {
 interface DesktopSidebarProps {
   queueRunning: boolean;
   errorCount: number;
-  watcherRunning: boolean;
   currentPath: string;
 }
 
-export function DesktopSidebar({ queueRunning, errorCount, watcherRunning, currentPath }: DesktopSidebarProps) {
+export function DesktopSidebar({ queueRunning, errorCount, currentPath }: DesktopSidebarProps) {
   const { t } = useTranslation();
+  const watcher = useWatcherStatusQuery();
+  const watcherRunning = !watcher.isError && watcher.data?.running === true;
+  const watcherLabel = t(watcherLabelKey(watcher.data, watcher.isError));
   return (
     // Phase 5: auto-compact at small desktop widths (w-20 compact, lg:w-52 full)
     <nav className="flex h-full min-h-0 w-20 lg:w-52 shrink-0 flex-col overflow-hidden border-r border-border bg-surface">
@@ -131,16 +135,13 @@ export function DesktopSidebar({ queueRunning, errorCount, watcherRunning, curre
             <span className="sr-only lg:not-sr-only">{t(queueRunning ? "app.queueRunning" : "app.queueIdle")}</span>
           </div>
           {/* Watcher status */}
-          <div
-            className="flex items-center gap-2 px-1 py-1 text-xs"
-            title={t(watcherRunning ? "app.watcherActive" : "app.watcherInactive")}
-          >
+          <div className="flex items-center gap-2 px-1 py-1 text-xs" title={watcherLabel}>
             <span
               aria-hidden="true"
               className={`h-2 w-2 shrink-0 rounded-full ${watcherRunning ? "bg-success" : "bg-faint"}`}
             />
             <span className={`sr-only lg:not-sr-only ${watcherRunning ? "text-muted" : "text-faint"}`}>
-              {t(watcherRunning ? "app.watcherActive" : "app.watcherInactive")}
+              {watcherLabel}
             </span>
           </div>
           {/* LLM connections: which one is translating, which are offline.

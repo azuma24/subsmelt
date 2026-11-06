@@ -49,3 +49,16 @@ test("speech-to-text settings links directly to processing profiles on desktop a
     assert.match(page.html, /id="processing-profiles" tabindex="-1"/);
   }
 });
+
+test("Sources shows a polling-only watcher as active and offers to pause it", () => {
+  const page = renderPage(
+    <SettingsPage />,
+    [
+      ...freshInstall,
+      [["watcher-status"], { enabled: true, running: true, fileEvents: "off", pollIntervalMinutes: 30 }],
+    ],
+    { path: "/settings?section=sources" },
+  );
+  assert.ok(page.text.includes("Watcher active · Polling every 30 min"));
+  assert.ok(page.buttons.includes("Pause monitoring"));
+});

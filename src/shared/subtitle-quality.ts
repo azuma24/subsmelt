@@ -5,3 +5,7 @@ export interface SubtitleQualityIssue {
   value?: number;
   limit?: number;
 }
+
+export function isPlaybackSuggestion({ code }: SubtitleQualityIssue): boolean {
+  return code !== "noCues" && code !== "invalidTiming" && code !== "empty";
+}

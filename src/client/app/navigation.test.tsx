@@ -9,9 +9,7 @@ import { SettingsSubpageLinks } from "../features/settings/SettingsSubpageLinks"
 const ORDER = ["Library", "Transcribe", "YouTube", "Settings"];
 
 test("the sidebar lists the four destinations in order", () => {
-  const page = renderPage(
-    <DesktopSidebar queueRunning={false} errorCount={0} watcherRunning={false} currentPath="/" />,
-  );
+  const page = renderPage(<DesktopSidebar queueRunning={false} errorCount={0} currentPath="/" />);
   assert.deepEqual(page.links, ORDER);
 });
 
@@ -20,10 +18,9 @@ test("the sidebar's LLM line opens the connection list", () => {
     mode: "fallback",
     connections: ["a", "b", "c"].map((id) => ({ id, label: id, model: "m", host: "h", state: "idle", jobIds: [] })),
   };
-  const page = renderPage(
-    <DesktopSidebar queueRunning={false} errorCount={0} watcherRunning={false} currentPath="/" />,
-    [[["llm-status"], llmStatus]],
-  );
+  const page = renderPage(<DesktopSidebar queueRunning={false} errorCount={0} currentPath="/" />, [
+    [["llm-status"], llmStatus],
+  ]);
   assert.ok(page.buttons.includes("LLM · Fallback · 3 connections"));
   assert.match(page.html, /aria-expanded="false"/);
 });
@@ -36,9 +33,7 @@ test("the phone bar holds exactly the same four destinations and no More sheet",
 });
 
 test("failed jobs badge the Library item", () => {
-  const page = renderPage(
-    <DesktopSidebar queueRunning={false} errorCount={3} watcherRunning={false} currentPath="/" />,
-  );
+  const page = renderPage(<DesktopSidebar queueRunning={false} errorCount={3} currentPath="/" />);
   assert.deepEqual(page.links, ["Library 3", "Transcribe", "YouTube", "Settings"]);
 });
 

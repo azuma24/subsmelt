@@ -74,6 +74,7 @@ export const SETTINGS = {
   notify_format: oneOf(["json", "discord", "slack"]),
   // Monitoring
   watch_enabled: flag,
+  watcher_paused: flag,
   auto_translate: flag,
   video_extensions: s,
   subtitle_extensions: s,

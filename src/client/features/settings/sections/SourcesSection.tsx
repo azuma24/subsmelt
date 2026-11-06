@@ -1,10 +1,16 @@
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import * as api from "../../../api";
+import { getErrorMessage } from "../../../lib";
+import { useToast } from "../../../ui/Toast";
 import { useTranslation } from "../../../i18n";
 import { Accordion, ActionButton, Field, Select } from "../../../ui/primitives";
 import { str } from "../../../lib/settings-value";
+import { watcherLabelKey } from "../../../lib/watcher-status";
 import { MediaSourcesPanel } from "../MediaSourcesPanel";
 import { NotificationsFields } from "./NotificationsFields";
-import { ToggleRow, bool, labelCls } from "./shared";
-import { useIsMobile } from "../../../hooks";
+import { ToggleRow, labelCls } from "./shared";
+import { WATCHER_STATUS_QUERY_KEY, useIsMobile, useWatcherStatusQuery } from "../../../hooks";
 
 interface SourcesSectionProps {
   settings: Record<string, unknown>;
@@ -13,7 +19,6 @@ interface SourcesSectionProps {
   updateAndSave: (key: string, value: unknown) => void;
   updateManyAndSave: (updates: Record<string, unknown>) => void;
   updateAndSaveDebounced: (key: string, value: unknown) => void;
-  onToggleWatcher: () => void;
   onNotificationTest: () => void;
   testingNotification: boolean;
   notificationTestResult: { ok: boolean; message: string } | null;
@@ -34,13 +39,43 @@ export function SourcesSection({
   updateAndSave,
   updateManyAndSave,
   updateAndSaveDebounced,
-  onToggleWatcher,
   onNotificationTest,
   testingNotification,
   notificationTestResult,
 }: SourcesSectionProps) {
   const isMobile = useIsMobile();
   const { t } = useTranslation();
+  const { addToast } = useToast();
+  const queryClient = useQueryClient();
+  const watcherQuery = useWatcherStatusQuery();
+  const watcher = watcherQuery.data;
+  const [togglingWatcher, setTogglingWatcher] = useState(false);
+  const statusDetails = [];
+  if (!watcherQuery.isError && watcher?.running) {
+    if (watcher.fileEvents === "watching") statusDetails.push(t("settings.sources.watcherFileEvents"));
+    if (watcher.fileEvents === "starting") statusDetails.push(t("app.watcherStarting"));
+    if (watcher.fileEvents === "unavailable") statusDetails.push(t("settings.sources.watcherFileEventsUnavailable"));
+    if (watcher.pollIntervalMinutes > 0) {
+      statusDetails.push(t("settings.sources.watcherPollCadence", { minutes: watcher.pollIntervalMinutes }));
+    }
+  }
+
+  const toggleWatcher = async () => {
+    if (!watcher || togglingWatcher) return;
+    setTogglingWatcher(true);
+    try {
+      await api.setWatcherEnabled(!watcher.enabled);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: WATCHER_STATUS_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: ["settings"] }),
+      ]);
+    } catch (error) {
+      addToast(t("settings.watcherError", { message: getErrorMessage(error) }), "error");
+    } finally {
+      setTogglingWatcher(false);
+    }
+  };
+
   return (
     <>
       <MediaSourcesPanel
@@ -90,18 +125,28 @@ export function SourcesSection({
         <div>
           <p className="text-sm font-medium text-text">{t("settings.sources.fileWatcher")}</p>
           <p className="mt-1 text-xs text-muted">{t("settings.sources.fileWatcherDesc")}</p>
+          <p role="status" className="mt-2 text-xs text-muted">
+            {[t(watcherLabelKey(watcher, watcherQuery.isError)), ...statusDetails].join(" · ")}
+          </p>
         </div>
         <ActionButton
-          variant={bool(settings._watcher_running) ? "success" : "ghost"}
+          variant={watcher?.enabled ? "ghost" : "success"}
           size="sm"
-          onClick={onToggleWatcher}
+          disabled={!watcher || watcherQuery.isError || togglingWatcher}
+          onClick={() => void toggleWatcher()}
         >
-          {bool(settings._watcher_running) ? t("app.watcherActiveShort") : t("app.watcherInactiveShort")}
+          {t(watcher?.enabled ? "settings.watcherPause" : "settings.watcherStart")}
         </ActionButton>
       </div>
       {/* Video/subtitle extensions + auto-scan interval → Advanced accordion */}
       <Accordion title={t("settings.advanced")}>
         <div className="space-y-4">
+          <ToggleRow
+            title={t("settings.sources.watcherFileEvents")}
+            description={t("settings.sources.watcherFileEventsHint")}
+            checked={str(settings.watch_enabled, "0") === "1"}
+            onChange={(checked) => updateAndSave("watch_enabled", checked ? "1" : "0")}
+          />
           <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-2"} md:max-w-[480px]`}>
             <Field
               label={t("settings.sources.videoExtensions")}

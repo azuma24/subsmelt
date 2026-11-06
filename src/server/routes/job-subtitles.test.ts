@@ -81,3 +81,24 @@ test("bilingual export downloads completed matching cues on the original clock",
   const pending = fixture("pending", "pending");
   assert.equal((await fetch(`${base}/${pending.id}/download?format=bilingual`)).status, 409);
 });
+
+test("preview attributes inherited timing suggestions to the source only", async () => {
+  const { id, sourcePath, outputPath } = fixture("short", "done");
+  fs.writeFileSync(sourcePath, "1\n00:00:00,000 --> 00:00:00,500\nHello\n");
+  fs.writeFileSync(outputPath, translated.replace("0:00:02.00", "0:00:00.50").replace("Clé", "字".repeat(25)));
+  const response = await fetch(`${base}/${id}/preview`);
+  assert.equal(response.status, 200);
+  const { quality } = await response.json();
+  assert.deepEqual(
+    quality.original.map(({ code }: { code: string }) => code),
+    ["short"],
+  );
+  assert.deepEqual(
+    quality.translated.map(({ code }: { code: string }) => code),
+    ["width", "speed"],
+  );
+
+  fs.writeFileSync(outputPath, translated.replace("0:00:02.00", "0:00:00.40"));
+  const retimed = await (await fetch(`${base}/${id}/preview`)).json();
+  assert.deepEqual(retimed.quality.translated, [{ code: "short", cue: 1, value: 400, limit: 800 }]);
+});

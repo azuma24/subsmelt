@@ -91,3 +91,25 @@ export function inspectSubtitle(
   issues.sort((a, b) => (a.cue ?? 0) - (b.cue ?? 0));
   return { cues, issues };
 }
+
+type SubtitleInspection = ReturnType<typeof inspectSubtitle>;
+
+/** Report matching timing suggestions on the source only. Partial outputs
+ * can match the source prefix, while retimed outputs get their own report. */
+export function translatedSubtitleIssues(source: SubtitleInspection, target: SubtitleInspection) {
+  const sameTiming = target.cues.every(({ data }, index) => {
+    const original = source.cues[index]?.data;
+    const start = strictCueTime(data?.start);
+    const end = strictCueTime(data?.end);
+    return (
+      start !== null && end !== null && start === strictCueTime(original?.start) && end === strictCueTime(original?.end)
+    );
+  });
+  if (!sameTiming) return target.issues;
+
+  const key = ({ cue, code, value }: SubtitleQualityIssue) => `${cue}:${code}:${value}`;
+  const originalTiming = new Set(
+    source.issues.filter(({ code }) => code === "short" || code === "long" || code === "overlap").map(key),
+  );
+  return target.issues.filter((issue) => !originalTiming.has(key(issue)));
+}

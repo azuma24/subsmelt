@@ -1,96 +1,161 @@
 import chokidar, { type FSWatcher } from "chokidar";
 import path from "node:path";
 import fs from "node:fs";
-import { getSetting } from "./config.js";
+import { getSetting, setSettings } from "./config.js";
 import { MEDIA_DIR } from "./scanner.js";
 import { scanAndEnqueue } from "./library-scan.js";
 import { logger } from "./logger.js";
 import { errorMessage } from "./errors.js";
+import { broadcast } from "./sse.js";
+import type { WatcherStatus } from "../shared/watcher.js";
 
-let watcher: FSWatcher | null = null;
+const DEBOUNCE_MS = 5000;
+let watcher: { source: FSWatcher; controller: AbortController } | null = null;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+let poll: { timer: ReturnType<typeof setInterval>; minutes: number; controller: AbortController } | null = null;
+let pollInProgress = false;
+let status: WatcherStatus = { enabled: false, running: false, fileEvents: "off", pollIntervalMinutes: 0 };
 
-const DEBOUNCE_MS = 5000; // Wait 5s after last file change before scanning
-
-function getWatchedExts(): string[] {
-  return `${getSetting("subtitle_extensions")},${getSetting("video_extensions")}`
-    .split(",")
-    .map((e) => e.trim().toLowerCase());
+export function getWatcherStatus(): WatcherStatus {
+  return status;
 }
 
-function handleFileChange(filePath: string) {
-  const ext = path.extname(filePath).toLowerCase();
-  const extensions = getWatchedExts();
+function publishStatus(enabled: boolean, fileEvents: WatcherStatus["fileEvents"]): void {
+  const pollIntervalMinutes = poll?.minutes ?? 0;
+  if (
+    enabled === status.enabled &&
+    fileEvents === status.fileEvents &&
+    pollIntervalMinutes === status.pollIntervalMinutes
+  )
+    return;
+  status = {
+    enabled,
+    fileEvents,
+    pollIntervalMinutes,
+    running: fileEvents === "watching" || pollIntervalMinutes > 0,
+  };
+  broadcast("watcher:status", status);
+}
 
+async function scan(trigger: "watcher" | "poll", signal: AbortSignal): Promise<void> {
+  try {
+    await scanAndEnqueue(trigger, signal);
+  } catch (error) {
+    if (!signal.aborted || error !== signal.reason)
+      logger.error("scan", `${trigger === "poll" ? "Polling" : "Watcher"} scan error: ${errorMessage(error)}`);
+  }
+}
+
+function handleFileChange(filePath: string, signal: AbortSignal): void {
+  if (signal.aborted) return;
+  const ext = path.extname(filePath).toLowerCase();
+  const extensions = `${getSetting("subtitle_extensions")},${getSetting("video_extensions")}`
+    .split(",")
+    .map((value) => value.trim().toLowerCase());
   // A video can arrive after its subtitle, making an orphan eligible for work.
   if (!ext || !extensions.includes(ext)) return;
 
   logger.info("scan", `File watcher detected: ${path.basename(filePath)}`);
-
-  // Debounce — wait for batch of files to settle before scanning
   if (debounceTimer) clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
-    void (async () => {
-      try {
-        await scanAndEnqueue("watcher");
-      } catch (e) {
-        logger.error("scan", `Watcher scan error: ${errorMessage(e)}`);
-      }
-    })();
+    debounceTimer = null;
+    void scan("watcher", signal);
   }, DEBOUNCE_MS);
 }
 
-export function startWatcher() {
-  stopWatcher();
+function startFileEvents(): WatcherStatus["fileEvents"] {
+  try {
+    if (!fs.statSync(MEDIA_DIR, { throwIfNoEntry: false })?.isDirectory()) {
+      logger.warn("system", `File watcher: ${MEDIA_DIR} is not a directory`);
+      return "unavailable";
+    }
+    const source = chokidar.watch(MEDIA_DIR, {
+      ignoreInitial: true,
+      persistent: true,
+      depth: 10,
+      ignored: /(^|[/\\])\../,
+      awaitWriteFinish: { stabilityThreshold: 2000, pollInterval: 500 },
+    });
+    const controller = new AbortController();
+    const { signal } = controller;
+    watcher = { source, controller };
 
-  if (!fs.existsSync(MEDIA_DIR)) {
-    logger.warn("system", `File watcher: ${MEDIA_DIR} does not exist`);
-    return;
-  }
-
-  watcher = chokidar.watch(MEDIA_DIR, {
-    ignoreInitial: true,
-    persistent: true,
-    depth: 10,
-    ignored: /(^|[/\\])\../, // ignore dotfiles
-    awaitWriteFinish: {
-      stabilityThreshold: 2000,
-      pollInterval: 500,
-    },
-  });
-
-  watcher.on("add", handleFileChange);
-  watcher.on("change", handleFileChange);
-
-  watcher.on("error", (error: unknown) => {
+    source.on("add", (filePath) => handleFileChange(filePath, signal));
+    source.on("change", (filePath) => handleFileChange(filePath, signal));
+    source.once("ready", () => {
+      if (signal.aborted) return;
+      logger.info("system", `File watcher started on ${MEDIA_DIR}`);
+      publishStatus(true, "watching");
+    });
+    source.on("error", (error: unknown) => {
+      if (signal.aborted) return;
+      logger.error("system", `File watcher error: ${errorMessage(error)}`);
+      stopFileEvents();
+      publishStatus(true, "unavailable");
+    });
+    return "starting";
+  } catch (error) {
     logger.error("system", `File watcher error: ${errorMessage(error)}`);
-  });
-
-  logger.info("system", `File watcher started on ${MEDIA_DIR}`);
+    return "unavailable";
+  }
 }
 
-export function stopWatcher() {
+function stopFileEvents(): void {
   if (debounceTimer) {
     clearTimeout(debounceTimer);
     debounceTimer = null;
   }
-  if (watcher) {
-    watcher.close();
-    watcher = null;
-    logger.info("system", "File watcher stopped");
-  }
+  if (!watcher) return;
+  const { source, controller } = watcher;
+  watcher = null;
+  controller.abort();
+  void source.close().catch((error) => logger.error("system", `File watcher close error: ${errorMessage(error)}`));
 }
 
-export function isWatcherRunning(): boolean {
-  return watcher !== null;
+function syncPoll(minutes: number): void {
+  if ((poll?.minutes ?? 0) === minutes) return;
+  if (poll) {
+    clearInterval(poll.timer);
+    poll.controller.abort();
+    poll = null;
+  }
+  if (minutes === 0) return;
+
+  const controller = new AbortController();
+  const timer = setInterval(() => {
+    if (pollInProgress) return;
+    pollInProgress = true;
+    void scan("poll", controller.signal).finally(() => {
+      pollInProgress = false;
+    });
+  }, minutes * 60_000);
+  poll = { timer, minutes, controller };
+  logger.info("system", `Watcher polling every ${minutes} minutes`);
 }
 
-/** Restart watcher with current folder config */
-export function restartWatcher() {
-  const enabled = getSetting("watch_enabled") === "1";
-  if (enabled) {
-    startWatcher();
-  } else {
-    stopWatcher();
-  }
+function configuredPollInterval(): number {
+  const minutes = Number(getSetting("auto_scan_interval"));
+  return Number.isInteger(minutes) && minutes > 0 && minutes <= 10080 ? minutes : 0;
+}
+
+/** Both sources share the persisted pause and the same scan pipeline. */
+export function syncWatcher(): void {
+  const allowed = getSetting("watcher_paused") !== "1";
+  const useFileEvents = allowed && getSetting("watch_enabled") === "1";
+  const minutes = allowed ? configuredPollInterval() : 0;
+  syncPoll(minutes);
+  if (!useFileEvents) stopFileEvents();
+  const fileEvents = useFileEvents ? (watcher ? status.fileEvents : startFileEvents()) : "off";
+  publishStatus(useFileEvents || minutes > 0, fileEvents);
+}
+
+export function setWatcherEnabled(enabled: boolean): WatcherStatus {
+  setSettings({
+    watcher_paused: enabled ? "0" : "1",
+    // An unconfigured watcher starts with file events. A polling-only
+    // installation keeps its original detection method when resumed.
+    ...(enabled && getSetting("watch_enabled") !== "1" && configuredPollInterval() === 0 ? { watch_enabled: "1" } : {}),
+  });
+  syncWatcher();
+  return getWatcherStatus();
 }

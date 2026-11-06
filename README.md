@@ -41,12 +41,15 @@ many media folders under `/media` as you like; SubSmelt scans it recursively.
 3. **Library → Scan**: the **Jobs** view lists every translation job and the
    work not started yet; **Files** shows one row per video with a chip for each
    language. Click a file to translate, retry or transcribe it.
-4. Turn on the **File Watcher** in Settings to queue new subtitles as they appear.
+4. Use **Settings → Sources & Monitoring → Library watcher** to detect new
+   videos and subtitles. The watcher uses file change events, scheduled scans,
+   or both. Pausing it stops both detection methods and keeps their settings.
 
 Use **Find embedded tracks** in a Library video's panel to import a text
 subtitle from MKV or MP4 as a sidecar. **Convert** can check staged files for
-quality warnings. The **Jobs** preview lists warnings for both subtitle files
-and offers a bilingual SRT download for completed translations with matching cues.
+quality warnings. The **Jobs** preview separates subtitle warnings from
+playback suggestions and reports shared timing suggestions once. It offers
+bilingual SRT downloads for completed translations with matching cues.
 Publishing an imported sidecar requires hard-link support on the media filesystem.
 See [caption-first scans and image OCR](docs/library-subtitle-intake.md) and
 [processing profiles, review, and JSON automation](docs/processing-workflows.md).
