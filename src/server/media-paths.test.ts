@@ -91,7 +91,7 @@ test("canonical containment rejects escaping and dangling symlinks, including mi
   const linkedRoot = `${root}-link`;
   fs.symlinkSync(root, linkedRoot);
   assert.notEqual(resolveMediaSubfolder("inside/new", linkedRoot), null);
-  fs.rmSync(linkedRoot);
+  fs.unlinkSync(linkedRoot);
   fs.rmSync(root, { recursive: true, force: true });
   fs.rmSync(outside, { recursive: true, force: true });
 });
