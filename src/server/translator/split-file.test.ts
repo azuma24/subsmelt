@@ -126,6 +126,31 @@ test("without a split option a slow chunk is requested once", async (t) => {
   assert.equal(calls.filter((c) => c.lines.includes("cue 2")).length, 1);
 });
 
+test("split translation keeps a model contributing when it can only answer smaller batches", async (t) => {
+  const calls = useFetch(t, async ({ host, lines }) => {
+    if (host === "grace.test") {
+      return lines.length > 4 ? chatCompletion("I could not return the requested array.") : answer("Grace", lines);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    return answer("RTX", lines);
+  });
+  const texts = await translate(t, 128, 8, [conn("rtx"), conn("grace")]);
+  assert.equal(texts.length, 128);
+  assert.ok(texts.some((line) => line.startsWith("RTX-")));
+  assert.ok(
+    texts.some((line) => line.startsWith("Grace-")),
+    "Grace should still translate part of the file",
+  );
+  assert.deepEqual(
+    texts.map((line) => line.replace(/^(RTX|Grace)-/, "")),
+    Array.from({ length: 128 }, (_, i) => `cue ${i + 1}`),
+  );
+  const graceSizes = calls.filter(({ host }) => host === "grace.test").map(({ lines }) => lines.length);
+  assert.deepEqual(graceSizes.slice(0, 2), [8, 8]);
+  assert.ok(graceSizes.slice(2).every((size) => size === 4));
+  assert.ok(calls.filter(({ host }) => host === "rtx.test").every(({ lines }) => lines.length === 8));
+});
+
 test("the original wins when it answers after a duplicate started", async (t) => {
   let answerOriginal: () => void = () => {};
   const stuck: Call[] = [];

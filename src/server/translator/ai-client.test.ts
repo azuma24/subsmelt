@@ -89,6 +89,15 @@ test("translateSingle: extracts the final answer from a reasoning-only reply", a
   assert.equal(await translateSingleReply({ content: "", reasoning_content: reasoning }), "我要走了");
 });
 
+test("translateChunk rejects numbered replies that skip a cue even when the total count matches", async () => {
+  await withChatServer({ content: "1. 第一行\n3. 第三行" }, async (apiHost) => {
+    await assert.rejects(
+      translateChunk(["first", "second"], { ...modelOpts(apiHost), disableToolCalls: true }),
+      /2 cues requested, no array, finish reason: stop/,
+    );
+  });
+});
+
 // ── tool-call path timeouts ─────────────────────────────────────────────────
 
 async function timedOutToolCall(run: (apiHost: string) => Promise<unknown>) {

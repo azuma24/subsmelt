@@ -347,6 +347,14 @@ export async function retryTranslate<T>(
   throw new Error("Unreachable");
 }
 
+export class InvalidChunkTranslationError extends Error {
+  constructor(expected: number, received: number | undefined, finishReason: string) {
+    super(
+      `Model did not return a valid translated array payload (${expected} cues requested, ${received === undefined ? "no array" : `${received} received`}, finish reason: ${finishReason})`,
+    );
+  }
+}
+
 export async function translateChunk(
   subtitles: string[],
   opts: {
@@ -409,11 +417,12 @@ export async function translateChunk(
       );
       reportUsage(result, opts.onUsage);
 
-      if (toolResult && Array.isArray(toolResult)) return toolResult;
+      const fromTool = coerceTranslatedArray(toolResult);
+      if (fromTool?.length === subtitles.length) return fromTool;
 
       // normalizeResult promoted reasoning→text; try to parse it as an array
       const fromText = coerceTranslatedArray(extractJsonFromText(result.text || ""));
-      if (fromText) return fromText;
+      if (fromText?.length === subtitles.length) return fromText;
       const fromNumbered = extractNumberedTranslations(result.text || "", subtitles.length);
       if (fromNumbered) return fromNumbered;
     } catch (e) {
@@ -450,13 +459,13 @@ export async function translateChunk(
 
   const parsed = extractJsonFromText(textResult.text || "");
   const translated = coerceTranslatedArray(parsed);
-  if (translated) return translated;
+  if (translated?.length === subtitles.length) return translated;
 
   // Text may be a reasoning trace — try numbered list extraction
   const fromNumbered = extractNumberedTranslations(textResult.text || "", subtitles.length);
   if (fromNumbered) return fromNumbered;
 
-  throw new Error("Model did not return a valid translated array payload");
+  throw new InvalidChunkTranslationError(subtitles.length, translated?.length, textResult.finishReason);
 }
 
 export async function translateSingle(

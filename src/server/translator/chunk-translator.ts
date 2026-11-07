@@ -3,7 +3,7 @@ import type { UsageKind } from "../../shared/usage.js";
 import { errorMessage } from "../errors.js";
 import { serverOf } from "../machine.js";
 import type { TokenUsage } from "./ai-client.js";
-import { retryTranslate, translateChunk, translateSingle } from "./ai-client.js";
+import { InvalidChunkTranslationError, retryTranslate, translateChunk, translateSingle } from "./ai-client.js";
 import type { ConnectionHealth } from "./connection-health.js";
 import { ContextOverflowError } from "./context-overflow.js";
 import { SINGLE_LINE_RETRIES } from "./fallback-policy.js";
@@ -23,6 +23,7 @@ export interface ChunkTranslatorDeps {
   systemPrompt: string;
   temperature: number;
   disableToolCalls?: boolean;
+  chunkSize: number;
   chunkTimeoutMs?: number;
   singleLineTimeoutMs: number;
   markUsed: (conn: ResolvedConnection) => void;
@@ -44,10 +45,26 @@ export function createChunkTranslator(deps: ChunkTranslatorDeps) {
   // context window across concurrent requests, so an overflow on a server that
   // was also serving a sibling means "too many at once", not "too big".
   const chunksInFlight = new Map<string, number>();
+  const batchLimits = new Map<string, { size: number; failures: number }>();
+  const minimumBatchSize = Math.ceil(deps.chunkSize / 4);
 
-  function reportFailure(conn: ResolvedConnection, error: unknown) {
+  function reportFailure(conn: ResolvedConnection, error: unknown, attemptedSize = 0) {
     health.noteFailure(conn, error);
-    deps.onConnectionError?.({ id: conn.id, label: conn.label, error: String(errorMessage(error) || error) });
+    let message = String(errorMessage(error) || error);
+    if (error instanceof InvalidChunkTranslationError) {
+      const batch = batchLimits.get(conn.id) ?? { size: deps.chunkSize, failures: 0 };
+      // Ignore a shorter tail batch and older requests still in flight after a reduction.
+      if (batch.size === attemptedSize && batch.size > minimumBatchSize) {
+        batch.failures += 1;
+        if (batch.failures >= 2) {
+          batch.size = Math.max(minimumBatchSize, Math.ceil(batch.size / 2));
+          batch.failures = 0;
+          message += `. Future batches on this connection will use up to ${batch.size} cues per request`;
+        }
+        batchLimits.set(conn.id, batch);
+      }
+    }
+    deps.onConnectionError?.({ id: conn.id, label: conn.label, error: message });
   }
 
   return {
@@ -66,48 +83,53 @@ export function createChunkTranslator(deps: ChunkTranslatorDeps) {
         hooks.onConnection?.(conn);
         const signal = hooks.signal ?? jobSignal;
         let sharedServer = false;
+        let attemptedSize = 0;
         try {
           const result = await health.withConnection(
             conn,
-            () =>
-              retryTranslate(
-                (attempt) => {
-                  const temperature = Math.max(
-                    0.1,
-                    Math.min(2, deps.temperature + (attempt - 1) * 0.15 + (Math.random() - 0.5) * 0.1),
-                  );
-                  const server = serverOf(conn);
-                  const inFlight = (chunksInFlight.get(server) ?? 0) + 1;
-                  chunksInFlight.set(server, inFlight);
-                  sharedServer = inFlight > 1;
-                  return translateChunk(coreText, {
-                    apiKey: conn.apiKey,
-                    apiHost: conn.apiHost,
-                    model: conn.model,
-                    provider: conn.provider,
-                    systemPrompt: deps.systemPrompt,
-                    temperature,
-                    abortSignal: signal,
-                    disableToolCalls: deps.disableToolCalls,
-                    requestTimeoutMs: deps.chunkTimeoutMs,
-                    contextPromptPrefix,
-                    onUsage: deps.usageFor("chunk", conn),
-                  })
-                    .then((result) => {
-                      if (!Array.isArray(result) || result.length !== coreText.length) {
-                        throw new Error("did not match schema");
-                      }
-                      return result;
-                    })
-                    .finally(() => {
+            async () => {
+              const translations: string[] = [];
+              while (translations.length < coreText.length) {
+                const size = batchLimits.get(conn.id)?.size ?? deps.chunkSize;
+                const cues = coreText.slice(translations.length, translations.length + size);
+                attemptedSize = cues.length;
+                const batch = await retryTranslate(
+                  (attempt) => {
+                    const temperature = Math.max(
+                      0.1,
+                      Math.min(2, deps.temperature + (attempt - 1) * 0.15 + (Math.random() - 0.5) * 0.1),
+                    );
+                    const server = serverOf(conn);
+                    const inFlight = (chunksInFlight.get(server) ?? 0) + 1;
+                    chunksInFlight.set(server, inFlight);
+                    sharedServer = inFlight > 1;
+                    return translateChunk(cues, {
+                      apiKey: conn.apiKey,
+                      apiHost: conn.apiHost,
+                      model: conn.model,
+                      provider: conn.provider,
+                      systemPrompt: deps.systemPrompt,
+                      temperature,
+                      abortSignal: signal,
+                      disableToolCalls: deps.disableToolCalls,
+                      requestTimeoutMs: deps.chunkTimeoutMs,
+                      contextPromptPrefix,
+                      onUsage: deps.usageFor("chunk", conn),
+                    }).finally(() => {
                       chunksInFlight.set(server, (chunksInFlight.get(server) ?? 1) - 1);
                     });
-                },
-                2,
-                1000,
-                deps.onRetry,
-                signal,
-              ),
+                  },
+                  2,
+                  1000,
+                  deps.onRetry,
+                  signal,
+                );
+                const limit = batchLimits.get(conn.id);
+                if (limit?.size === attemptedSize) limit.failures = 0;
+                translations.push(...batch);
+              }
+              return translations;
+            },
             signal,
           );
           deps.markUsed(conn);
@@ -117,7 +139,7 @@ export function createChunkTranslator(deps: ChunkTranslatorDeps) {
           // Retried later at lower concurrency (see processChunk).
           if (sharedServer && error instanceof ContextOverflowError) throw error;
           // exhausted retries on this connection — cascade to the next
-          reportFailure(conn, error);
+          reportFailure(conn, error, attemptedSize);
         }
       }
       return null;

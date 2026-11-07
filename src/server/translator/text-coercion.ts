@@ -193,16 +193,12 @@ export function extractNumberedTranslations(text: string, expectedCount: number)
     }
   }
 
-  if (results.size === 0) return null;
-
-  // Build ordered array — use last seen value for each index
+  if (results.size !== expectedCount) return null;
   const arr: string[] = [];
-  for (let i = 1; i <= Math.max(expectedCount, ...results.keys()); i++) {
+  for (let i = 1; i <= expectedCount; i++) {
     const v = results.get(i);
-    if (v !== undefined) arr.push(v);
+    if (v === undefined) return null;
+    arr.push(v);
   }
-
-  // Only return if we got close to the expected count
-  if (arr.length >= Math.floor(expectedCount * 0.7)) return arr;
-  return null;
+  return arr;
 }

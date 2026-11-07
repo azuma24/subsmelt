@@ -441,6 +441,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     systemPrompt,
     temperature: opts.temperature,
     disableToolCalls: opts.disableToolCalls,
+    chunkSize: opts.chunkSize,
     chunkTimeoutMs: jobTimeoutMs,
     singleLineTimeoutMs: SINGLE_LINE_TIMEOUT_MS,
     markUsed,
