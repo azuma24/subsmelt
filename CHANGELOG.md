@@ -6,6 +6,24 @@ under `whisper-v<version>` with the same version number.
 
 ## [Unreleased]
 
+## [0.9.1] — 2026-11-08
+
+### Library and translation
+
+- Control file events and scheduled scans from one Library watcher. Its status shows the detection methods in use, and pausing it stops both.
+- Split File reduces batch size for the rest of a job when a model repeatedly returns invalid replies. Other models keep their batch sizes.
+- Subtitle quality warnings are off by default. Turn them on in **Settings → Interface**. Bilingual downloads appear when the source and translated cue timings match.
+- Mobile Transcribe keeps selection within the open folder and shows Cancel while a batch is active. Library cleanup respects folders named `all`, and incompatible transcription requests report a conflict.
+- Escape closes the Fix a word drawer and keeps unsaved edits in Preview. Convert keeps duplicate filenames distinct in ZIP downloads, and YouTube Notes updates after export.
+- Settings keeps its navigation across Engine, Languages, Usage, and Logs. Recent usage calls show a compact row with expandable details.
+
+### Security and publishing
+
+- Hardened subtitle writes, redacted malformed connection settings, and restricted legacy model discovery. Scripts using `GET /api/models` can send `X-SubSmelt-Client: cli` or switch to JSON `POST /api/models`.
+- Whisper restricts local inputs to standalone media and checks public URL connections and redirects. Safe URL mode uses native HTTP, HLS, and DASH downloads.
+- The Windows installer runs system utilities from the Windows system directory. GPU checks are available from the tray after setup.
+- Older Docker builds preserve the `latest` alias. Manual branch builds publish under a commit tag.
+
 ## [0.9.0] — 2026-11-06
 
 ### Library and translation
