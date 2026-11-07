@@ -18,7 +18,6 @@
 ;     carries its host, port and key over.
 ;   * Installs the --onedir output (dist\whisper-server\) into Program Files.
 ;   * Bundles + silently installs the VC++ redistributable.
-;   * Runs a driver-version / hardware PRE-CHECK gate (Phase 3a provisioning).
 ;   * The backend runs as the signed-in user, from %LOCALAPPDATA%\SubSmelt: an
 ;     all-users Startup shortcut opens the tray at sign-in, and the tray starts
 ;     the backend. Start, stop and restart never need administrator approval.
@@ -48,7 +47,7 @@ AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\SubSmelt\WhisperBackend
 DefaultGroupName=SubSmelt
-; Program Files, the firewall rule and the driver check require admin.
+; Program Files, service cleanup and the firewall rule require admin.
 PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
@@ -110,11 +109,11 @@ Filename: "{app}\whisper-gui.exe"; Description: "Open the control window (backen
 Filename: "{sys}\taskkill.exe"; Parameters: "/F /T /IM whisper-tray.exe /IM whisper-gui.exe /IM run_server.exe"; \
     RunOnceId: "CloseApps"; Flags: runhidden waituntilterminated
 ; A service left by an older version, if any.
-Filename: "powershell.exe"; \
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; \
     Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\uninstall-service.ps1"" -ServiceName ""{#MyServiceName}"" -KeepConfig"; \
     RunOnceId: "RemoveService"; Flags: runhidden waituntilterminated
 ; Remove the firewall rule.
-Filename: "netsh.exe"; \
+Filename: "{sys}\netsh.exe"; \
     Parameters: "advfirewall firewall delete rule name=""{#MyFirewallRule}"""; \
     RunOnceId: "RemoveFirewall"; Flags: runhidden waituntilterminated
 
@@ -152,13 +151,13 @@ var
   Attempt: Integer;
 begin
   Result := True;
-  if Exec('net.exe', 'stop {#MyServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+  if Exec(ExpandConstant('{sys}\net.exe'), 'stop {#MyServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
     Log(Format('net stop {#MyServiceName} exited %d', [ResultCode]));
   for Attempt := 1 to 30 do
   begin
-    if Exec('cmd.exe', '/C sc.exe query {#MyServiceName} | find "STOPPED"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
+    if Exec(ExpandConstant('{sys}\cmd.exe'), '/D /C sc.exe query {#MyServiceName} | find.exe "STOPPED"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
       Exit;
-    if Exec('cmd.exe', '/C sc.exe query {#MyServiceName} | find "1060"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
+    if Exec(ExpandConstant('{sys}\cmd.exe'), '/D /C sc.exe query {#MyServiceName} | find.exe "1060"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
       Exit;  { 1060: not installed }
     Sleep(1000);
   end;
@@ -174,7 +173,7 @@ procedure RemoveOldService;
 var
   ResultCode: Integer;
 begin
-  if Exec('sc.exe', 'delete {#MyServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+  if Exec(ExpandConstant('{sys}\sc.exe'), 'delete {#MyServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
     Log(Format('sc.exe delete {#MyServiceName} exited %d (1060 = not installed)', [ResultCode]));
 end;
 
@@ -234,60 +233,14 @@ begin
   Log('Removed the previous program files from ' + Dir);
 end;
 
-{ =========================================================================
-  Phase 3a PROVISIONING PRE-CHECK (driver / hardware gate).
-
-  PrepareToInstall runs before any file is copied. We call the provisioning
-  "doctor" to verify the NVIDIA driver meets the pinned minimum for the CUDA 12 /
-  cuDNN 9 runtime CTranslate2 needs. The detection logic lives in the Phase 3a
-  provision module (plan §Phase 3a "Implementation notes").
-
-  INTEGRATION POINT / TODO (Phase 3a):
-    Replace the placeholder below with a real call once the provision module
-    ships. Two supported shapes:
-      (a) python -m app.provision doctor --json     (when Python is on PATH), or
-      (b) a bundled provision.exe doctor --json      (preferred for installers).
-    The doctor should exit 0 = OK, non-zero = blocking issue, and print JSON the
-    installer can parse. For now we run it best-effort and NEVER hard-block:
-    the plan requires a "Skip -> CPU-only mode" escape so a driver step never
-    bricks the install.
-  ========================================================================= }
+{ Prepare an existing installation for replacement before copying files. }
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
-  ResultCode: Integer;
-  DoctorExe: String;
   FailedPath: String;
 begin
   Result := '';  { empty string => proceed with install }
   NeedsRestart := False;
 
-  { TODO(Phase 3a): point this at the bundled provision.exe once it exists.
-    Until then we look for it next to the source bundle; if absent, we skip the
-    gate rather than block (CPU-only mode is always allowed). }
-  DoctorExe := ExpandConstant('{src}\provision.exe');
-  if FileExists(DoctorExe) then
-  begin
-    if not Exec(DoctorExe, 'doctor --quiet', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-      { Could not even launch the doctor — warn but continue (non-fatal). }
-      Log('Provisioning doctor failed to launch; continuing (CPU-only fallback available).')
-    else if ResultCode <> 0 then
-    begin
-      { Driver missing/too old. Inform the user but allow continue -> CPU-only.
-        A future revision can offer the guided driver install from Phase 3a here. }
-      if MsgBox('GPU prerequisites are not fully met (NVIDIA driver missing or too old).' + #13#10 +
-                'You can continue and run in CPU-only mode, then fix the driver later' + #13#10 +
-                'via the tray app''s "Run diagnostics".' + #13#10#13#10 +
-                'Continue installation?', mbConfirmation, MB_YESNO) = IDNO then
-        Result := 'Installation cancelled: resolve the NVIDIA driver and re-run setup.';
-    end;
-  end
-  else
-    Log('provision.exe not found; skipping driver pre-check (Phase 3a integration pending).');
-  if Result <> '' then
-    Exit;
-
-  { Destructive steps last, after every check that can still cancel setup:
-    a cancel after the old files were deleted would leave no working backend. }
   if not StopExistingService then
   begin
     Result := 'The {#MyServiceName} service did not stop within 30 seconds, so its files cannot be replaced.' + #13#10 +
@@ -329,16 +282,15 @@ procedure AddFirewallRule;
 var
   ResultCode: Integer;
 begin
-  Exec('netsh.exe', 'advfirewall firewall delete rule name="{#MyFirewallRule}"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  if not Exec('netsh.exe', 'advfirewall firewall add rule name="{#MyFirewallRule}" dir=in action=allow protocol=TCP program="'
+  Exec(ExpandConstant('{sys}\netsh.exe'), 'advfirewall firewall delete rule name="{#MyFirewallRule}"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  if not Exec(ExpandConstant('{sys}\netsh.exe'), 'advfirewall firewall add rule name="{#MyFirewallRule}" dir=in action=allow protocol=TCP program="'
       + ExpandConstant('{app}\run_server.exe') + '" profile=private,domain', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
     Log('netsh failed to launch')
   else
     Log(Format('netsh add rule exited %d', [ResultCode]));
 end;
 
-{ VC++ runtime, then the firewall rule. The driver pre-check ran earlier
-  (PrepareToInstall). }
+{ VC++ runtime, then the firewall rule. }
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then

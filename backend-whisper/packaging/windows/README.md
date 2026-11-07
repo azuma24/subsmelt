@@ -18,7 +18,7 @@ system-tray controller.
 | `whisper-server.spec` | PyInstaller spec → `dist\whisper-server\` onedir bundle | yes |
 | `../../run_server.py` | uvicorn launcher / frozen entrypoint (cross-platform) | runnable anywhere |
 | `../../winservice.py` | Windows Service entry (`run_server.exe --service`), kept for installs from before 0.7.6 | imports anywhere; runs on Windows |
-| `installer.iss` | Inno Setup installer (Program Files, VC++, Startup shortcut, firewall, driver gate, uninstaller) | yes (ISCC.exe) |
+| `installer.iss` | Inno Setup installer (Program Files, VC++, Startup shortcut, firewall, uninstaller) | yes (ISCC.exe) |
 | `uninstall-service.ps1` | removes the `SubSmeltWhisper` service versions before 0.7.6 installed | yes (admin) |
 | `tray/whisper_tray.py` | pystray/pillow tray controller; starts the user's backend at sign-in | builds on Windows; imports anywhere |
 | `tray/user_backend.py` | starts the backend detached and stops it with `taskkill`, as the user | imports anywhere |
@@ -85,7 +85,6 @@ pwsh packaging\windows\fetch-vendor.ps1
 | `vc_redist.x64.exe` | Microsoft Visual C++ Redistributable (x64) | `installer.iss` installs it silently |
 | `nemo-speech\bin\` | the `bin\` folder of `nemo-speech-0.1.0-windows-x86_64-cuda.zip` from the [NeMo-Speech.cpp v0.1.0 release](https://github.com/NVIDIA/NeMo-Speech.cpp/releases/tag/v0.1.0) | bundled as `nemo-speech\bin\` in the onedir; the service gets `SUBSMELT_NEMO_SPEECH` |
 | `whisper.ico` *(optional)* | your icon | exe icon (enable the `icon=` line in the spec) |
-| `provision.exe` *(Phase 3a, optional)* | built from the provision module | installer driver pre-check + tray diagnostics |
 
 The `vendor\` dir is gitignored — these binaries are never committed.
 
@@ -197,9 +196,10 @@ iscc packaging\windows\installer.iss
 
 The installer stops and removes the `SubSmeltWhisper` service an older version
 installed, copies the bundle to `C:\Program Files\SubSmelt\WhisperBackend`,
-installs VC++, runs the Phase 3a driver pre-check, allows `run_server.exe`
-through the firewall (private and domain profiles, replacing any rule of the
-same name), and puts the tray in the all-users Startup folder.
+installs VC++, allows `run_server.exe` through the firewall (private and domain
+profiles, replacing any rule of the same name), and puts the tray in the
+all-users Startup folder. The tray's **Run diagnostics** checks GPU support
+after setup.
 
 ### How the backend runs
 

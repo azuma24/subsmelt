@@ -92,11 +92,18 @@ jobs:
   merge:
     needs: build
     runs-on: ubuntu-latest
+    concurrency:
+      group: docker-publish-manifest
+      queue: max
     permissions:
       contents: read
       packages: write
 
     steps:
+      - name: Checkout for release tag lookup
+        if: github.ref_type == 'tag'
+        uses: actions/checkout@v6.0.3
+
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
@@ -114,26 +121,50 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4.1.0
 
-      - name: Extract metadata (tags, labels)
+      - name: Extract metadata (version or commit tag)
         id: meta
         uses: docker/metadata-action@v6.1.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: latest=false
           tags: |
             type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') || github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+            type=sha,format=long,enable=${{ github.ref_type == 'branch' }}
 
       - name: Create and push the multi-arch manifest
-        working-directory: ${{ runner.temp }}/digests
+        shell: bash
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          DIGESTS_DIR: ${{ runner.temp }}/digests
         run: |
-          test "$(ls | wc -l)" -eq 2
-          # shellcheck disable=SC2046
-          docker buildx imagetools create \
-            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf "$IMAGE@sha256:%s " *)
+          tag=$(jq -er '.tags[0]' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+          tags=(-t "$tag")
+
+          # Check the live release order while holding the publish lock. The
+          # minor alias follows its highest stable patch. latest follows the
+          # highest stable version across all minor lines.
+          if [[ $GITHUB_REF_TYPE == tag && $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            version=${GITHUB_REF_NAME#v}
+            minor=${version%.*}
+            stable_tags=$(git ls-remote --refs --tags --sort=-version:refname origin 'refs/tags/v*' |
+              awk '$2 ~ /^refs\/tags\/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/ {
+                sub("^refs/tags/v", "", $2)
+                print $2
+              }')
+            newest_patch=$(awk -v prefix="$minor." 'index($0, prefix) == 1 {print; exit}' <<< "$stable_tags")
+            if [[ $version == "$newest_patch" ]]; then
+              tags+=(-t "$IMAGE:$minor")
+            fi
+            if [[ $version == "${stable_tags%%$'\n'*}" ]]; then
+              tags+=(-t "$IMAGE:latest")
+            fi
+          fi
+
+          shopt -s nullglob
+          digests=("$DIGESTS_DIR"/*)
+          test "${#digests[@]}" -eq 2
+          docker buildx imagetools create "${tags[@]}" \
+            "$IMAGE@sha256:${digests[0]##*/}" "$IMAGE@sha256:${digests[1]##*/}"
 
       - name: Inspect image
         run: docker buildx imagetools inspect "$(jq -r '.tags[0]' <<< "$DOCKER_METADATA_OUTPUT_JSON")"

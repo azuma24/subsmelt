@@ -13,7 +13,7 @@ services:
       # Or mount a single root:
       # - /nas/media:/media
       #
-      # Config (settings + translation tasks — version-control this)
+      # Persistent settings and translation tasks. Keep this directory private because it holds API keys.
       - ./config:/app/config
       # Data (jobs, logs, and queued transcription work — keep across restarts)
       - ./data:/app/data
