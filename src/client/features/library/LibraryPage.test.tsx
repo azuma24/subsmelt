@@ -387,3 +387,21 @@ test("a file awaiting source review has a review label in the Files list", () =>
 
   assert.ok(page.buttons.some((label) => label.includes(episode.videoName!) && label.includes("Needs review")));
 });
+
+test("a folder named all shows finished jobs in that subtree only", () => {
+  const jobs = [
+    { ...job(1, "Root.en.srt", "done"), srt_path: "/media/all/Root.en.srt" },
+    { ...job(2, "Child.en.srt", "done"), srt_path: "/media/all/nested/Child.en.srt" },
+    job(3, "Sibling.en.srt", "done"),
+  ];
+  const seed: QuerySeed = [...configured, [["jobs"], { jobs, queueRunning: false, currentJobId: null }]];
+  const global = renderPage(<LibraryPage />, seed, { path: "/?folder=all" });
+  assert.match(global.text, /Sibling\.en\.srt/);
+
+  const scoped = renderPage(<LibraryPage />, seed, { path: "/?folder=all&folderScope=path" });
+  assert.match(scoped.text, /Root\.en\.srt/);
+  assert.match(scoped.text, /Child\.en\.srt/);
+  assert.doesNotMatch(scoped.text, /Sibling\.en\.srt/);
+  assert.ok(scoped.buttons.includes("Clear finished"));
+  assert.ok(scoped.buttons.includes("Done 2"));
+});

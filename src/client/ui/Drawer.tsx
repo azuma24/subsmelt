@@ -32,6 +32,7 @@ export function Drawer({ open, onClose, title, children, width = "max-w-md" }: D
   if (!open) return null;
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.defaultPrevented) return;
     if (event.key === "Escape") {
       event.preventDefault();
       onClose();

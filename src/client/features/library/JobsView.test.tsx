@@ -30,7 +30,7 @@ test("selected status and target are suspended on jobs failure and restored on r
     ),
     new Map([[1, makeJob({ id: 1, status: "error" })]]),
   );
-  const names = (unavailable: boolean, query = "", folder = "all") =>
+  const names = (unavailable: boolean, query = "", folder = "") =>
     visibleFileEntries(entries, "error", "Japanese (jpn)", query, folder, "Media root", "name-asc", unavailable).map(
       (entry) => entry.item.name,
     );

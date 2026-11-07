@@ -69,8 +69,8 @@ test("a not-queued row names its target the way the target filter lists jobs", (
 
 test("search and folder filters match the file's name and folder", () => {
   const [untranscribed, unqueued] = fileRows(toLibraryItems(files, MEDIA), jobs);
-  assert.equal(fileRowMatches(untranscribed, "perfect", "all"), true);
-  assert.equal(fileRowMatches(untranscribed, "arrival", "all"), false);
+  assert.equal(fileRowMatches(untranscribed, "perfect", ""), true);
+  assert.equal(fileRowMatches(untranscribed, "arrival", ""), false);
   assert.equal(fileRowMatches(unqueued, "", "Movies"), true);
   assert.equal(fileRowMatches(unqueued, "", "Shows"), false);
 });

@@ -7,7 +7,14 @@ test("a folder includes its subfolders, but not folders that merely share a pref
   assert.equal(folderInScope("AnKor/Tutorials", "AnKor"), true);
   assert.equal(folderInScope("AnKor Extras", "AnKor"), false);
   assert.equal(folderInScope("Movies", "AnKor"), false);
-  assert.equal(folderInScope("anything", "all"), true);
+  assert.equal(folderInScope("anything", ""), true);
+});
+
+test("a real folder named all only matches that subtree", () => {
+  assert.equal(folderInScope("all", "all"), true);
+  assert.equal(folderInScope("all/subfolder", "all"), true);
+  assert.equal(folderInScope("all-other", "all"), false);
+  assert.equal(folderInScope("sibling", "all"), false);
 });
 
 test("the root and outside stand-in labels match only themselves", () => {

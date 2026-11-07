@@ -64,7 +64,7 @@ interface JobsViewProps {
   onRowsChange: (rows: RowLayout) => void;
   fileSort: FileSort;
   onFileSortChange: (sort: FileSort) => void;
-  /** The folder shown with its subfolders ("all" for everything), kept in the URL by the page. */
+  /** The folder shown with its subfolders (empty for the whole library), kept in the URL by the page. */
   folder: string;
   onFolderChange: (folder: string) => void;
   queueRunning: boolean;
@@ -297,7 +297,7 @@ export function JobsView({
     try {
       // With a folder chosen, the count above was that folder's: clear exactly those jobs.
       await clearJobsMutation.mutateAsync(
-        folderFilter === "all"
+        folderFilter === ""
           ? undefined
           : jobs.filter((j) => j.status === "done" || j.status === "error" || j.status === "skipped").map((j) => j.id),
       );
@@ -557,7 +557,7 @@ export function JobsView({
                 onTargetFilterChange={setTargetFilter}
                 onClearFilters={() => {
                   onStatusChange("all");
-                  setFolderFilter("all");
+                  setFolderFilter("");
                   setTargetFilter("all");
                   setQuery("");
                 }}

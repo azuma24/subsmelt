@@ -38,7 +38,7 @@ export function indexFolders(
 
 interface FolderTreeProps {
   root: FolderNode;
-  /** Selected folder path, or "all". */
+  /** Selected folder path, or empty for the whole library. */
   selected: string;
   /** Per-folder totals from the Library's own rows (see folderStats). */
   stats: ReadonlyMap<string, FolderStats>;
@@ -59,7 +59,7 @@ export function FolderTree({ root, selected, stats, onSelect }: FolderTreeProps)
 
   // The selected folder is always visible: its ancestors open with it (a link, a breadcrumb click).
   useEffect(() => {
-    if (selected === "all") return;
+    if (selected === "") return;
     const ancestors = folderTrail(selected).slice(0, -1);
     if (ancestors.every((a) => open.has(a))) return;
     setOpen((current) => {
@@ -94,8 +94,8 @@ export function FolderTree({ root, selected, stats, onSelect }: FolderTreeProps)
           count={statsFor(stats, "").files}
           errors={statsFor(stats, "").errors}
           depth={0}
-          selected={selected === "all"}
-          onSelect={() => onSelect("all")}
+          selected={selected === ""}
+          onSelect={() => onSelect("")}
         />
       </ul>
       {livePins.length > 0 && (

@@ -50,7 +50,7 @@ export interface LibraryPickerProps {
 
 /**
  * The "Library" settings section — the primary working surface. Filter/search
- * bar, selection bar with transcribe/cancel actions, a flat filtered list when
+ * bar, selection and active batch controls, a flat filtered list when
  * a text filter is active, and the folder-tree view otherwise.
  */
 export function LibraryPicker({
@@ -88,12 +88,6 @@ export function LibraryPicker({
   drill,
 }: LibraryPickerProps) {
   const { t } = useTranslation();
-  // Progress events land here for every server-side run, batch-owned or not:
-  // show Cancel while any run is live, or an orphan run (another tab, a
-  // reload survivor) would have no way to be stopped from this page.
-  const liveTranscribing = Object.values(fileProgress).some(
-    (fp) => !fp.done && !fp.error && !fp.cancelled && (fp.pct !== undefined || fp.phase !== undefined),
-  );
 
   return (
     <SettingsSection title={t("whisper.pickerTitle")} description={t("whisper.pickerHint")}>
@@ -140,6 +134,16 @@ export function LibraryPicker({
       )}
 
       <div className="overflow-hidden rounded-md border border-border bg-surface">
+        {progress && (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface-raised px-4 py-3">
+            <p role="status" className="text-sm font-medium text-text">
+              {t("whisper.transcribingProgress", progress)}
+            </p>
+            <ActionButton variant="danger" size="sm" onClick={() => void onCancelBatch()}>
+              {t("whisper.cancel")}
+            </ActionButton>
+          </div>
+        )}
         <SelectionBar
           count={selectedVisibleCount}
           summaryLabel={t("whisper.selectedSummary", { count: selectedVisibleCount })}
@@ -154,23 +158,9 @@ export function LibraryPicker({
               void onTranscribeSelected();
             }}
             disabled={running || downloadsActive}
-            busy={running}
           >
-            {running && progress
-              ? t("whisper.transcribingProgress", { done: progress.done, total: progress.total })
-              : t("whisper.transcribeSelected", { count: selectedVisibleCount })}
+            {t("whisper.transcribeSelected", { count: selectedVisibleCount })}
           </ActionButton>
-          {(running || liveTranscribing) && (
-            <ActionButton
-              variant="danger"
-              size="sm"
-              onClick={() => {
-                void onCancelBatch();
-              }}
-            >
-              {t("whisper.cancel")}
-            </ActionButton>
-          )}
         </SelectionBar>
 
         <div className="max-h-[45vh] overflow-y-auto">
@@ -228,10 +218,6 @@ export function LibraryPicker({
           )}
         </div>
       </div>
-
-      <span aria-live="polite" className="sr-only">
-        {running && progress ? t("whisper.transcribingProgress", { done: progress.done, total: progress.total }) : ""}
-      </span>
     </SettingsSection>
   );
 }

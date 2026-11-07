@@ -207,15 +207,29 @@ export function WhisperPage() {
     [videoFiles, libraryQuery, hideWithSubtitles],
   );
   const isFiltered = visibleFiles.length !== videoFiles.length;
-  // Selections survive a filter change (so narrowing the view does not silently
-  // discard them), which means `selected` can hold paths that are no longer on
-  // screen. Every action works from the intersection instead — transcribing a
-  // file the user cannot see is worse than forgetting it was ticked.
-  const visiblePaths = useMemo(() => new Set(visibleFiles.map((f) => f.videoPath as string)), [visibleFiles]);
   const tree = useMemo(
     () => buildFolderTree(visibleFiles, sortBy, sortDir, mediaDir),
     [visibleFiles, sortBy, sortDir, mediaDir],
   );
+
+  // Expand/collapse is persisted per folder in localStorage (default collapsed)
+  // and pruned against the folders present after each scan. Prune against the
+  // unfiltered tree so narrowing the filter can't silently discard state.
+  const fullTree = useMemo(
+    () => buildFolderTree(videoFiles, sortBy, sortDir, mediaDir),
+    [videoFiles, sortBy, sortDir, mediaDir],
+  );
+  const folderPaths = useMemo(() => collectFolderPaths(fullTree.children), [fullTree]);
+  const expansion = usePersistedExpansion("whisper", folderPaths);
+  // Text filter switches to a flat list, so the tree (and drill-down) only
+  // drives the unfiltered / subtitle-toggle views.
+  const filterActive = libraryQuery.trim().length > 0;
+  const drill = useDrillDown(tree.children, isMobile && !filterActive);
+
+  // Keep selections when navigating or filtering, but use only the files in
+  // the current view for the count, Select all, and submission.
+  const scopedFiles = filterActive ? visibleFiles : (drill.current?.allFiles ?? visibleFiles);
+  const visiblePaths = useMemo(() => new Set(scopedFiles.map((f) => f.videoPath as string)), [scopedFiles]);
 
   // Per-run options (default from Settings + advertised capabilities).
   const [model, setModel] = useState("");
@@ -383,23 +397,16 @@ export function WhisperPage() {
       ]),
   );
   const cancelBatch = async () => {
-    await Promise.all(cancellableBatchIds(work, currentBatch[0]?.batchId).map((id) => api.cancelTranscriptionWork(id)));
-    void workQuery.refetch();
+    try {
+      await Promise.all(
+        cancellableBatchIds(work, currentBatch[0]?.batchId).map((id) => api.cancelTranscriptionWork(id)),
+      );
+    } catch (error) {
+      addToast(getErrorMessage(error), "error");
+    } finally {
+      void workQuery.refetch();
+    }
   };
-
-  // Expand/collapse is persisted per folder in localStorage (default collapsed)
-  // and pruned against the folders present after each scan. Prune against the
-  // unfiltered tree so narrowing the filter can't silently discard state.
-  const fullTree = useMemo(
-    () => buildFolderTree(videoFiles, sortBy, sortDir, mediaDir),
-    [videoFiles, sortBy, sortDir, mediaDir],
-  );
-  const folderPaths = useMemo(() => collectFolderPaths(fullTree.children), [fullTree]);
-  const expansion = usePersistedExpansion("whisper", folderPaths);
-  // Text filter switches to a flat list, so the tree (and drill-down) only
-  // drives the unfiltered / subtitle-toggle views.
-  const filterActive = libraryQuery.trim().length > 0;
-  const drill = useDrillDown(tree.children, isMobile && !filterActive);
 
   // Drop stale selections when the library refetches (a file may be gone).
   useEffect(() => {
@@ -441,7 +448,7 @@ export function WhisperPage() {
       return next;
     });
   };
-  const selectAll = () => setSelected(new Set(visibleFiles.map((f) => f.videoPath as string)));
+  const selectAll = () => setSelected(new Set(visiblePaths));
 
   const transcribeSelected = async () => {
     const paths = selectedVisible;
@@ -503,7 +510,7 @@ export function WhisperPage() {
       return;
     }
 
-    const withSubs = visibleFiles.filter((f) => f.videoPath && paths.includes(f.videoPath) && f.subtitles.length > 0);
+    const withSubs = scopedFiles.filter((f) => f.videoPath && paths.includes(f.videoPath) && f.subtitles.length > 0);
     // Reaching the run means the user agreed to replace these videos' subtitles.
     const overwritten = new Set(withSubs.map((f) => f.videoPath as string));
     if (withSubs.length > 0) {
@@ -520,9 +527,9 @@ export function WhisperPage() {
           request: { ...entry.request, overwrite: overwritten.has(entry.input) },
         })),
       );
+      await workQuery.refetch();
       setAudioTrack(undefined);
       setSelected(new Set());
-      void workQuery.refetch();
     } catch (e: unknown) {
       addToast(getErrorMessage(e), "error");
     }
@@ -665,7 +672,7 @@ export function WhisperPage() {
                 onSelectAll={selectAll}
                 running={running}
                 mediaDir={mediaDir}
-                visibleFiles={visibleFiles}
+                visibleFiles={scopedFiles}
                 videoFiles={videoFiles}
                 isFiltered={isFiltered}
                 isScanFetching={scanQuery.isFetching}

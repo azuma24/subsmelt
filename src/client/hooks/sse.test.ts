@@ -86,6 +86,14 @@ test("SSE invalidation keys are targeted by event type", () => {
   ]);
 });
 
+test("a YouTube note export refreshes Notes lists and the exported video's detail", () => {
+  assert.ok(SSE_EVENT_NAMES.includes("youtube:note"));
+  assert.deepEqual(getSSEInvalidationKeys("youtube:note", { videoId: "qD0_yWgifDM" }), [
+    ["youtube", "notes"],
+    ["youtube", "note", "qD0_yWgifDM"],
+  ]);
+});
+
 test("a youtube:video progress tick patches only the matching cached row", () => {
   const row = (video_id: string, status: YoutubeVideo["status"]) => ({ video_id, status }) as YoutubeVideo;
   const patched = withVideoProgress(

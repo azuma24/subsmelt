@@ -103,7 +103,7 @@ export function LibraryPage() {
     [items, jobs, mediaDir],
   );
   const [foldersOpen, setFoldersOpen] = useState(false);
-  const selectFolder = useCallback((folder: string) => setParams({ folder: folder || "all" }), [setParams]);
+  const selectFolder = useCallback((folder: string) => setParams({ folder }), [setParams]);
 
   const reportFailure = (e: unknown) =>
     addToast(e instanceof Error ? e.message : t("dashboard.toast.actionFailed"), "error");
@@ -261,10 +261,10 @@ export function LibraryPage() {
             </ResizableSidebar>
           )}
           <div className="flex min-w-0 flex-1 flex-col">
-            {(params.folder !== "all" || isMobile) && folderTree.data && (
+            {(params.folder !== "" || isMobile) && folderTree.data && (
               <FolderHeader
-                folder={params.folder === "all" ? "" : params.folder}
-                stats={statsFor(stats, params.folder === "all" ? "" : params.folder)}
+                folder={params.folder}
+                stats={statsFor(stats, params.folder)}
                 onSelect={selectFolder}
                 onOpenTree={isMobile ? () => setFoldersOpen(true) : undefined}
               />
@@ -277,7 +277,7 @@ export function LibraryPage() {
               fileSort={params.sort}
               onFileSortChange={(sort) => setParams({ sort })}
               folder={params.folder}
-              onFolderChange={(folder) => setParams({ folder })}
+              onFolderChange={selectFolder}
               queueRunning={queueRunning}
               currentJobId={currentJobId}
               onPreview={setPreviewJobId}

@@ -49,6 +49,7 @@ export function ModalShell({
   }, []);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.defaultPrevented) return;
     if (event.key === "Escape") {
       event.preventDefault();
       onClose();

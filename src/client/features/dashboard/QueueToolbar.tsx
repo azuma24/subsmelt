@@ -106,7 +106,7 @@ export function QueueToolbar({
               {t("dashboard.queueFilterFolder")}
             </span>
             <Select value={folderFilter} onChange={(value) => onFolderFilterChange(value)}>
-              <option value="all">{t("dashboard.queueFilterAllFolders")}</option>
+              <option value="">{t("dashboard.queueFilterAllFolders")}</option>
               {folderOptions.map((folder) => (
                 <option key={folder} value={folder}>
                   {folder}

@@ -23,6 +23,7 @@ export type SSEEventName =
   | "model:download"
   | "youtube:playlist"
   | "youtube:video"
+  | "youtube:note"
   | "youtube:cooldown";
 
 export type SSEEventHandler = (type: SSEEventName, data: Record<string, unknown>) => void;
@@ -48,6 +49,7 @@ export const SSE_EVENT_NAMES: readonly SSEEventName[] = [
   "model:download",
   "youtube:playlist",
   "youtube:video",
+  "youtube:note",
   "youtube:cooldown",
 ];
 
@@ -136,6 +138,11 @@ export function getSSEInvalidationKeys(name: SSEEventName, data: Record<string, 
         ["youtube", "playlists"],
         ["youtube", "videos"],
         ["youtube", "pipeline"],
+      ];
+    case "youtube:note":
+      return [
+        ["youtube", "notes"],
+        typeof data.videoId === "string" ? ["youtube", "note", data.videoId] : ["youtube", "note"],
       ];
     case "youtube:cooldown":
       return [
@@ -318,7 +325,16 @@ function ensureSse(queryClient: ReturnType<typeof useQueryClient>): SseSingleton
     invalidator.schedule(
       name
         ? getSSEInvalidationKeys(name, data)
-        : [["jobs"], ["queue-status"], ["logs"], ["transcription-history"], ["usage"], ["watcher-status"]],
+        : [
+            ["jobs"],
+            ["queue-status"],
+            ["logs"],
+            ["transcription-history"],
+            ["usage"],
+            ["watcher-status"],
+            ["youtube", "notes"],
+            ["youtube", "note"],
+          ],
     );
   };
 
@@ -329,11 +345,10 @@ function ensureSse(queryClient: ReturnType<typeof useQueryClient>): SseSingleton
     let opened = false;
 
     es.onopen = () => {
+      // Recover after an automatic reconnect or a retry that opened a new source.
+      if (opened || attempts > 0) refresh();
       opened = true;
       setConnectionOpen(true);
-      // Recover the events missed while the connection was down — but only
-      // after a real gap; the first open has nothing to recover.
-      if (attempts > 0) refresh();
       attempts = 0;
     };
 
@@ -391,10 +406,6 @@ function ensureSse(queryClient: ReturnType<typeof useQueryClient>): SseSingleton
             if (sseSingleton) sseSingleton.es = open();
           }, delay);
         }
-      } else if (opened) {
-        // A dropped socket that EventSource is auto-retrying: recover the
-        // events missed during the gap.
-        refresh();
       }
     };
 

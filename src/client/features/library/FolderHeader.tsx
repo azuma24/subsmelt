@@ -50,7 +50,7 @@ export function FolderHeader({
           </button>
         )}
         <nav aria-label={t("library.folders.breadcrumb")} className="flex min-w-0 flex-wrap items-center gap-1">
-          <button type="button" onClick={() => onSelect("all")} className="text-muted hover:text-text hover:underline">
+          <button type="button" onClick={() => onSelect("")} className="text-muted hover:text-text hover:underline">
             {t("library.folders.all")}
           </button>
           {trail.map((path, i) => (

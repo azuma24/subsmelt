@@ -74,10 +74,10 @@ test("the dropdowns offer every file's folder and languages", () => {
 });
 
 test("search, folder and language filters apply to files", () => {
-  assert.equal(fileMatchesFilters(episode, "ep1", "all", "all", "Media root"), true);
+  assert.equal(fileMatchesFilters(episode, "ep1", "", "all", "Media root"), true);
   assert.equal(fileMatchesFilters(episode, "", "Movies", "all", "Media root"), false);
-  assert.equal(fileMatchesFilters(episode, "", "all", "jpn (jpn)", "Media root"), true);
-  assert.equal(fileMatchesFilters(bare, "", "all", "jpn (jpn)", "Media root"), false);
+  assert.equal(fileMatchesFilters(episode, "", "", "jpn (jpn)", "Media root"), true);
+  assert.equal(fileMatchesFilters(bare, "", "", "jpn (jpn)", "Media root"), false);
 });
 
 test("global sorting covers all directions, stable ties, absent dates and filtered entries without mutation", async () => {

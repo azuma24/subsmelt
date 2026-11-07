@@ -86,3 +86,24 @@ test("the header links to pending reviews even with speech-to-text disabled", ()
   assert.match(page.html, /id="transcription-reviews"/);
   assert.match(page.html, /id="transcription-review-source-2"/);
 });
+
+test("an active batch can be cancelled on opening Transcribe without any selection", () => {
+  const page = renderPage(<WhisperPage />, [
+    [["settings"], { transcription_enabled: "1", transcription_backend_url: "http://whisper:8000" }],
+    [["library"], { files: [], newJobs: 0, totalSubtitles: 0 }],
+    [
+      ["transcription-work"],
+      {
+        items: [
+          { id: "done", kind: "file", status: "succeeded", batchId: "existing", input: "/media/Done.mkv" },
+          { id: "next", kind: "file", status: "queued", batchId: "existing", input: "/media/Next.mkv" },
+        ],
+      },
+    ],
+    emptyHistory,
+  ]);
+
+  assert.ok(page.buttons.includes("Cancel"));
+  assert.match(page.text, /Transcribing 1\/2…/);
+  assert.doesNotMatch(page.text, /0 selected/);
+});

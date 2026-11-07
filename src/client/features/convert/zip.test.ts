@@ -83,3 +83,24 @@ test("the download gives files that share a name a numbered suffix instead of ov
     ["a", "b", "c", "d", "e"],
   );
 });
+
+test("a ZIP keeps original names even when they match a duplicate's generated suffix", async () => {
+  const blob = await buildZipBlob([
+    { name: "Show.srt", content: "a" },
+    { name: "Show.srt", content: "b" },
+    { name: "Show(1).srt", content: "c" },
+    { name: "Show.srt", content: "d" },
+    { name: "Show(3).srt", content: "e" },
+  ]);
+  const entries = readZip(new Uint8Array(await blob.arrayBuffer()));
+  assert.deepEqual(
+    entries.map(({ name, content }) => [name, content]),
+    [
+      ["Show.srt", "a"],
+      ["Show(2).srt", "b"],
+      ["Show(1).srt", "c"],
+      ["Show(4).srt", "d"],
+      ["Show(3).srt", "e"],
+    ],
+  );
+});

@@ -142,7 +142,7 @@ export function useDashboardDerivedState({
     [filteredJobs],
   );
   const hasQueueFilters = useMemo(
-    () => statusFilter !== "all" || folderFilter !== "all" || targetFilter !== "all" || query.trim() !== "",
+    () => statusFilter !== "all" || folderFilter !== "" || targetFilter !== "all" || query.trim() !== "",
     [statusFilter, folderFilter, targetFilter, query],
   );
 

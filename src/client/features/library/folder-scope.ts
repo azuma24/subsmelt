@@ -6,7 +6,7 @@
  * stand-in label matches only itself.
  */
 export function folderInScope(label: string, filter: string, ...standIns: string[]): boolean {
-  if (filter === "all" || label === filter) return true;
+  if (filter === "" || label === filter) return true;
   if (standIns.includes(filter)) return false;
   return label.startsWith(`${filter}/`);
 }

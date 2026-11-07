@@ -31,7 +31,7 @@ export interface DashboardParams {
   status: JobStatusFilter;
   rows: RowLayout;
   sort: FileSort;
-  /** The folder shown, media-relative ("AnKor/Tutorials"), with its subfolders; "all" for the whole library. */
+  /** The folder shown, media-relative ("AnKor/Tutorials"), with its subfolders; empty for the whole library. */
   folder: string;
 }
 
@@ -40,7 +40,7 @@ export const DEFAULT_DASHBOARD_PARAMS: Readonly<DashboardParams> = {
   status: "all",
   rows: "jobs",
   sort: "name-asc",
-  folder: "all",
+  folder: "",
 };
 
 // Links from before the Files view was merged into Jobs: `?filter=` named a
@@ -59,13 +59,15 @@ function oneOf<T extends string>(allowed: readonly T[], value: string | null, fa
 
 export function parseDashboardParams(search: URLSearchParams): DashboardParams {
   const legacy = LEGACY_FILTER_STATUS[search.get("filter") ?? ""];
+  const folder = search.get("folder")?.replace(/^\/+|\/+$/g, "") ?? "";
   return {
     view: oneOf(DASHBOARD_VIEWS, search.get("view"), DEFAULT_DASHBOARD_PARAMS.view),
     status: oneOf(JOB_STATUS_FILTERS, search.get("status"), legacy ?? DEFAULT_DASHBOARD_PARAMS.status),
     // view=files is a link from before Files became a row layout of the Jobs view.
     rows: oneOf(ROW_LAYOUTS, search.get("rows") ?? (search.get("view") === "files" ? "files" : null), "jobs"),
     sort: oneOf(FILE_SORTS, search.get("sort"), DEFAULT_DASHBOARD_PARAMS.sort),
-    folder: search.get("folder")?.replace(/^\/+|\/+$/g, "") || DEFAULT_DASHBOARD_PARAMS.folder,
+    // Older links can spell the whole library as `folder=all`.
+    folder: folder === "all" && search.get("folderScope") !== "path" ? "" : folder,
   };
 }
 
@@ -76,6 +78,7 @@ export function dashboardSearchParams(params: Partial<DashboardParams>): URLSear
     const value = params[key];
     if (value !== undefined && value !== DEFAULT_DASHBOARD_PARAMS[key]) search.set(key, value);
   }
+  if (params.folder === "all") search.set("folderScope", "path");
   return search;
 }
 
