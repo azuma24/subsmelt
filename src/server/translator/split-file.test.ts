@@ -134,8 +134,8 @@ test("split translation keeps a model contributing when it can only answer small
     await new Promise((resolve) => setTimeout(resolve, 5));
     return answer("RTX", lines);
   });
-  const texts = await translate(t, 128, 8, [conn("rtx"), conn("grace")]);
-  assert.equal(texts.length, 128);
+  const cueCount = 128;
+  const texts = await translate(t, cueCount, 8, [conn("rtx"), conn("grace")]);
   assert.ok(texts.some((line) => line.startsWith("RTX-")));
   assert.ok(
     texts.some((line) => line.startsWith("Grace-")),
@@ -143,7 +143,7 @@ test("split translation keeps a model contributing when it can only answer small
   );
   assert.deepEqual(
     texts.map((line) => line.replace(/^(RTX|Grace)-/, "")),
-    Array.from({ length: 128 }, (_, i) => `cue ${i + 1}`),
+    Array.from({ length: cueCount }, (_, i) => `cue ${i + 1}`),
   );
   const graceSizes = calls.filter(({ host }) => host === "grace.test").map(({ lines }) => lines.length);
   assert.deepEqual(graceSizes.slice(0, 2), [8, 8]);

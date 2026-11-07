@@ -194,11 +194,11 @@ export function extractNumberedTranslations(text: string, expectedCount: number)
   }
 
   if (results.size !== expectedCount) return null;
-  const arr: string[] = [];
-  for (let i = 1; i <= expectedCount; i++) {
-    const v = results.get(i);
-    if (v === undefined) return null;
-    arr.push(v);
+  const translations: string[] = [];
+  for (let index = 1; index <= expectedCount; index++) {
+    const translation = results.get(index);
+    if (translation === undefined) return null;
+    translations.push(translation);
   }
-  return arr;
+  return translations;
 }

@@ -349,8 +349,9 @@ export async function retryTranslate<T>(
 
 export class InvalidChunkTranslationError extends Error {
   constructor(expected: number, received: number | undefined, finishReason: string) {
+    const receivedSummary = received === undefined ? "no array" : `${received} received`;
     super(
-      `Model did not return a valid translated array payload (${expected} cues requested, ${received === undefined ? "no array" : `${received} received`}, finish reason: ${finishReason})`,
+      `Model did not return a valid translated array payload (${expected} cues requested, ${receivedSummary}, finish reason: ${finishReason})`,
     );
   }
 }
@@ -377,9 +378,8 @@ export async function translateChunk(
   const timeoutMs = opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
   const prefix = opts.contextPromptPrefix || "";
 
-  let toolResult: string[] | null = null;
-
   if (!opts.disableToolCalls) {
+    const toolResult: { translated?: string[] } = {};
     const tools = {
       submit_translation: tool({
         description: "Provide the final translated subtitles. Keep order and length identical to input.",
@@ -389,7 +389,7 @@ export async function translateChunk(
           })
           .strict(),
         execute: async ({ translated }) => {
-          toolResult = translated;
+          toolResult.translated = translated;
           return JSON.stringify(translated);
         },
       }),
@@ -417,13 +417,13 @@ export async function translateChunk(
       );
       reportUsage(result, opts.onUsage);
 
-      const fromTool = coerceTranslatedArray(toolResult);
+      const fromTool = toolResult.translated;
       if (fromTool?.length === subtitles.length) return fromTool;
 
-      // normalizeResult promoted reasoning→text; try to parse it as an array
-      const fromText = coerceTranslatedArray(extractJsonFromText(result.text || ""));
+      const text = result.text || "";
+      const fromText = coerceTranslatedArray(extractJsonFromText(text));
       if (fromText?.length === subtitles.length) return fromText;
-      const fromNumbered = extractNumberedTranslations(result.text || "", subtitles.length);
+      const fromNumbered = extractNumberedTranslations(text, subtitles.length);
       if (fromNumbered) return fromNumbered;
     } catch (e) {
       if (
@@ -457,12 +457,11 @@ export async function translateChunk(
   );
   reportUsage(textResult, opts.onUsage);
 
-  const parsed = extractJsonFromText(textResult.text || "");
-  const translated = coerceTranslatedArray(parsed);
+  const text = textResult.text || "";
+  const translated = coerceTranslatedArray(extractJsonFromText(text));
   if (translated?.length === subtitles.length) return translated;
 
-  // Text may be a reasoning trace — try numbered list extraction
-  const fromNumbered = extractNumberedTranslations(textResult.text || "", subtitles.length);
+  const fromNumbered = extractNumberedTranslations(text, subtitles.length);
   if (fromNumbered) return fromNumbered;
 
   throw new InvalidChunkTranslationError(subtitles.length, translated?.length, textResult.finishReason);
