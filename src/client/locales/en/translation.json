@@ -1532,6 +1532,7 @@
     "noCues": "No subtitle cues found.",
     "invalidTiming": "Invalid cue timing.",
     "empty": "No visible text.",
+    "missingCue": "The translated cue is missing.",
     "short": "Duration {{value}} ms is below {{limit}} ms.",
     "long": "Duration {{value}} ms exceeds {{limit}} ms.",
     "lines": "{{value}} lines, maximum {{limit}}.",

@@ -75,8 +75,10 @@ async function walkDir(
   directories: Set<string>,
   errors: { path: string; message: string }[],
   skippedFolders: string[],
+  signal?: AbortSignal,
   depth = 999,
 ): Promise<void> {
+  signal?.throwIfAborted();
   const relativePath = path.relative(path.resolve(MEDIA_DIR), path.resolve(dir)).split(path.sep).join("/");
   if (pathIsInScope(relativePath, skippedFolders)) return;
   let entries: fs.Dirent[];
@@ -86,13 +88,14 @@ async function walkDir(
     errors.push({ path: dir, message: errorMessage(error) });
     return;
   }
+  signal?.throwIfAborted();
   directories.add(dir);
   for (const entry of entries) {
     if (entry.name.startsWith(".")) continue; // skip hidden
     if (entry.isSymbolicLink()) continue; // skip symlinks to avoid cycles
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (depth > 0) await walkDir(fullPath, results, directories, errors, skippedFolders, depth - 1);
+      if (depth > 0) await walkDir(fullPath, results, directories, errors, skippedFolders, signal, depth - 1);
     } else {
       results.push(fullPath);
     }
@@ -100,9 +103,11 @@ async function walkDir(
 }
 
 /** Modification times for many files at once, a few stats in flight; unreadable files map to null. */
-async function statMtimes(files: string[], concurrency = 16): Promise<Map<string, number | null>> {
+async function statMtimes(files: string[], signal?: AbortSignal): Promise<Map<string, number | null>> {
   const mtimes = new Map<string, number | null>();
+  const concurrency = 16;
   for (let i = 0; i < files.length; i += concurrency) {
+    signal?.throwIfAborted();
     const batch = files.slice(i, i + concurrency);
     const stats = await Promise.all(
       batch.map((file) =>
@@ -257,10 +262,17 @@ function youtubeFolder(): string | null {
   return normalizeMediaSubfolder(getSetting("youtube_download_dir"));
 }
 
-export async function scanFolder(
-  createJobs = true,
-  options?: { intake: "preview" | "run"; transcriptionAvailable: boolean },
-): Promise<ScanResult> {
+interface ScanOptions {
+  intake?: "preview" | "run";
+  transcriptionAvailable?: boolean;
+  signal?: AbortSignal;
+  translateVideo?: string;
+}
+
+export async function scanFolder(createJobs = true, options?: ScanOptions): Promise<ScanResult> {
+  const signal = options?.signal;
+  const translateVideo = options?.translateVideo ? path.resolve(options.translateVideo) : undefined;
+  signal?.throwIfAborted();
   const videoExts = getSetting("video_extensions")
     .split(",")
     .map((e) => e.trim().toLowerCase());
@@ -297,13 +309,13 @@ export async function scanFolder(
   const skippedFolders = [...excludedFolders, youtubeFolder()].filter((folder): folder is string => Boolean(folder));
   if (scanMode === "root_only") {
     // Only files directly in MEDIA_DIR, no subdirectories
-    await walkDir(MEDIA_DIR, allFiles, walkedDirs, errors, skippedFolders, 0);
+    await walkDir(MEDIA_DIR, allFiles, walkedDirs, errors, skippedFolders, signal, 0);
   } else if (scanMode === "selected") {
     // Scan only selected subdirectories. Root files are covered by root_only mode.
     for (const folder of selectedFolders) {
       if (pathIsInScope(folder, skippedFolders)) continue;
       const folderPath = resolveMediaSubfolder(folder, MEDIA_DIR);
-      if (folderPath) await walkDir(folderPath, allFiles, walkedDirs, errors, skippedFolders);
+      if (folderPath) await walkDir(folderPath, allFiles, walkedDirs, errors, skippedFolders, signal);
       else
         errors.push({
           path: path.join(MEDIA_DIR, folder),
@@ -312,8 +324,9 @@ export async function scanFolder(
     }
   } else {
     // Default: full recursive scan
-    await walkDir(MEDIA_DIR, allFiles, walkedDirs, errors, skippedFolders);
+    await walkDir(MEDIA_DIR, allFiles, walkedDirs, errors, skippedFolders, signal);
   }
+  signal?.throwIfAborted();
   allFiles = Array.from(new Set(allFiles)).filter((file) => {
     const relativePath = path.relative(path.resolve(MEDIA_DIR), path.resolve(file)).split(path.sep).join("/");
     return !pathIsInScope(relativePath, skippedFolders);
@@ -339,14 +352,6 @@ export async function scanFolder(
     }
   }
 
-  // "Media discovered" is a sticky fact, not a live one: the setup checklists
-  // read this flag, and the jobs table they used before empties on every
-  // clear/delete — a rescan then creates no jobs (outputs exist), so a
-  // jobs-based step could never clear again. One guarded write, ever.
-  if (createJobs && videoFiles.length > 0 && getSetting("media_scanned") !== "1") {
-    setSetting("media_scanned", "1");
-  }
-
   // Find subtitles
   const srtFiles = allFiles.filter((f) => subExts.includes(path.extname(f).toLowerCase()));
 
@@ -362,7 +367,7 @@ export async function scanFolder(
     .filter((srtPath) => !taskOutputs.has(caseKey(srtPath)))
     .sort((a, b) => path.basename(a).length - path.basename(b).length);
   const intakeDecisions = new Map<string, SubtitleIntakeDecision>();
-  if (options) {
+  if (options?.intake) {
     const rules = parseSubtitleIntakeRules(getSetting("subtitle_intake_rules")).sort(
       (a, b) => b.path.length - a.path.length,
     );
@@ -406,11 +411,13 @@ export async function scanFolder(
               rule,
               preferredChinese: preferredChinese(),
               run: options.intake === "run",
-              transcriptionAvailable: options.transcriptionAvailable && errors.length === 0,
+              transcriptionAvailable: options.transcriptionAvailable === true && errors.length === 0,
+              signal,
             });
             return { video, decision };
           }),
         );
+        signal?.throwIfAborted();
         for (const planned of decisions) {
           if (!planned) continue;
           const { video, decision } = planned;
@@ -452,7 +459,10 @@ export async function scanFolder(
     sourcePlans.set(srtPath, { videoPath, effectiveTasks });
   }
   // Only source subtitles without a video need their own modification time.
-  const orphanMtimes = await statMtimes(sourcesShortestFirst.filter((file) => !sourcePlans.get(file)?.videoPath));
+  const orphanMtimes = await statMtimes(
+    sourcesShortestFirst.filter((file) => !sourcePlans.get(file)?.videoPath),
+    signal,
+  );
 
   // Group by video file
   // Key: videoPath or "orphan:{srtPath}"
@@ -460,7 +470,13 @@ export async function scanFolder(
 
   // Pre-populate video entries (even those without subtitles). One stat per
   // video, a few at a time, instead of a blocking stat each.
-  const videoMtimes = await statMtimes(videoFiles);
+  const videoMtimes = await statMtimes(videoFiles, signal);
+  signal?.throwIfAborted();
+
+  // Record media discovery with the rest of the synchronous scan writes.
+  if (createJobs && videoFiles.length > 0 && getSetting("media_scanned") !== "1") {
+    setSetting("media_scanned", "1");
+  }
   for (const vf of videoFiles) {
     grouped.set(vf, {
       videoPath: vf,
@@ -539,6 +555,7 @@ export async function scanFolder(
     const plan = sourcePlans.get(srtPath);
     if (!plan) continue;
     const { videoPath, effectiveTasks } = plan;
+    if (translateVideo && (!videoPath || path.resolve(videoPath) !== translateVideo)) continue;
 
     const ext = path.extname(srtPath);
     const dir = path.dirname(srtPath);
@@ -693,9 +710,10 @@ export async function scanFolder(
   // Queued behind the per-directory title lock so a prune never interleaves
   // with an in-flight title write from the queue. Never prune a preview or a
   // scan that could not read every directory in its scope.
-  if (createJobs && errors.length === 0 && getSetting("title_sidecar") === "1") {
+  if (createJobs && !translateVideo && errors.length === 0 && getSetting("title_sidecar") === "1") {
     for (const [dir, bases] of titleBasesByDir) {
       void pruneTitleSidecarQueued(dir, () => {
+        if (signal?.aborted) return null;
         // The walk may predate a title write. Re-read while holding the title
         // lock so newly created media and its title cannot be pruned.
         try {

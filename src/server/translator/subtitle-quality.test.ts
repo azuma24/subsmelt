@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { inspectSubtitle } from "./subtitle-quality.js";
+import { convertSubtitle } from "./convert.js";
+import { inspectSubtitle, translatedSubtitleIssues } from "./subtitle-quality.js";
 
 test("reports malformed timing separately from a valid zero start and finds nested overlaps", () => {
   const { issues } = inspectSubtitle(
@@ -37,4 +38,30 @@ test("ignores overlap between ASS layers and separates visual breaks from overri
     "ass",
   );
   assert.deepEqual(issues, [{ cue: 1, code: "lines", value: 3, limit: 2 }]);
+});
+
+test("centisecond exports deduplicate inherited short, long and overlap suggestions", () => {
+  const text =
+    "1\n00:00:00,009 --> 00:00:01,009\nFirst\n\n" +
+    "2\n00:00:00,501 --> 00:00:01,289\nSecond\n\n" +
+    "3\n00:00:02,009 --> 00:00:09,021\nThird\n";
+  const source = inspectSubtitle(text, "srt");
+  for (const ext of ["ass", "ssa"]) {
+    const target = inspectSubtitle(convertSubtitle(text, "srt", ext), ext);
+    assert.deepEqual(target.issues, [
+      { cue: 2, code: "short", value: 780, limit: 800 },
+      { cue: 2, code: "overlap", value: 500 },
+      { cue: 3, code: "long", value: 7020, limit: 7000 },
+    ]);
+    assert.deepEqual(translatedSubtitleIssues(source, target), []);
+  }
+});
+
+test("a millisecond change to an ASS-to-SRT export keeps its own timing suggestion", () => {
+  const text = "[Events]\nFormat: Layer, Start, End, Text\nDialogue: 0,0:00:00.00,0:00:00.50,First\n";
+  const source = inspectSubtitle(text, "ass");
+  const exportText = convertSubtitle(text, "ass", "srt");
+  assert.deepEqual(translatedSubtitleIssues(source, inspectSubtitle(exportText, "srt")), []);
+  const retimed = inspectSubtitle(exportText.replace("00:00:00,500", "00:00:00,501"), "srt");
+  assert.deepEqual(translatedSubtitleIssues(source, retimed), [{ cue: 1, code: "short", value: 501, limit: 800 }]);
 });

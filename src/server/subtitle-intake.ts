@@ -9,6 +9,7 @@ import {
   EmbeddedSubtitleError,
   extractTrack,
   probeVideo,
+  VIDEO_SETTLE_MS,
 } from "./embedded-subtitles.js";
 import { getSetting } from "./config.js";
 import { errorMessage } from "./errors.js";
@@ -18,7 +19,6 @@ import { noSpeechVideos } from "./transcription-history.js";
 import { hasValidSubtitleText, readSubtitleText } from "./subtitle-text.js";
 import { languageKey, preferredChineseKey, type PreferredChinese } from "./youtube/subtitle-routes.js";
 
-const SETTLE_MS = 2_000;
 const MAX_CACHE_ENTRIES = 2_048;
 const MAX_PROBES = 3;
 const probeCache = new Map<string, EmbeddedSubtitleProbe>();
@@ -106,6 +106,7 @@ interface SubtitleIntakeOptions {
   preferredChinese: PreferredChinese;
   run: boolean;
   transcriptionAvailable: boolean;
+  signal?: AbortSignal;
 }
 
 export function createSubtitleIntakeDecider() {
@@ -119,7 +120,8 @@ async function decideSubtitleIntake(
   options: SubtitleIntakeOptions,
   cachedAtStart: ReadonlyMap<string, EmbeddedSubtitleProbe>,
 ): Promise<SubtitleIntakeDecision> {
-  const { video, sources, allSidecars, rule } = options;
+  const { video, sources, allSidecars, rule, signal } = options;
+  signal?.throwIfAborted();
   const language = languageKey(rule.language);
   const decision = (
     action: SubtitleIntakeDecision["action"],
@@ -145,6 +147,7 @@ async function decideSubtitleIntake(
     } catch {
       // Missing, oversized, unsupported, unreadable or non-UTF-8 sidecar.
     }
+    signal?.throwIfAborted();
     invalidSidecar = true;
   }
 
@@ -152,11 +155,14 @@ async function decideSubtitleIntake(
   let probe: EmbeddedSubtitleProbe;
   try {
     const identity = await embeddedVideoIdentity(video);
-    if (Date.now() - identity.changedAt < SETTLE_MS) return decision("settling");
+    signal?.throwIfAborted();
+    if (Date.now() - identity.changedAt < VIDEO_SETTLE_MS) return decision("settling");
     probe = await cachedProbe(video, identity.revision, cachedAtStart);
   } catch (error) {
+    signal?.throwIfAborted();
     return decision(error instanceof EmbeddedSubtitleError && error.status === 412 ? "settling" : "probe_failed");
   }
+  signal?.throwIfAborted();
   const forced = (track: EmbeddedSubtitleProbe["tracks"][number]) => track.isForced || titleIsForced(track.title);
   const full = probe.tracks.filter((track) => !forced(track));
   const matching = full.filter((track) => track.language && matches(track.language));
@@ -172,9 +178,10 @@ async function decideSubtitleIntake(
         checkDestination(video, selected, selected.format);
         return decision("embedded", { track, revision: probe.revision });
       }
-      const result = await extractTrack(video, probe.revision, selected, { validateTiming: true });
+      const result = await extractTrack(video, probe.revision, selected, { validateTiming: true, signal });
       return decision("imported", { track, file: result.file });
     } catch (error) {
+      signal?.throwIfAborted();
       if (error instanceof EmbeddedSubtitleError && error.status === 409) return decision("invalid_sidecar");
       if (options.run)
         logger.warn("scan", `Could not import subtitle for ${path.basename(video)}: ${errorMessage(error)}`);

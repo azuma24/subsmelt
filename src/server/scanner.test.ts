@@ -775,3 +775,12 @@ test("pruning rechecks files after a concurrent title write", async (t) => {
   await pruneTitleSidecarQueued(dir, () => null);
   assert.equal(loadTitleSidecar(dir).titles.New?.zh, "new title");
 });
+
+test("the transcription handoff queues only subtitles for the completed video", async () => {
+  useTasks("zh");
+  const dir = library("scoped-translation", ["Finished.mkv", "Finished.eng.srt", "New.mkv", "New.srt"]);
+
+  const result = await scanFolder(true, { translateVideo: path.join(dir, "Finished.mkv") });
+  assert.equal(result.newJobs, 1);
+  assert.deepEqual(jobsIn(dir), [["Finished.eng.srt", "Finished.zh.srt"]]);
+});

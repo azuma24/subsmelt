@@ -204,7 +204,7 @@ function loadConfig(): ConfigData {
       }));
       // Tasks from before the language-code standard move to it ("en" -> "eng").
       // One at a time, so two old spellings of one language never both take its code.
-      data.tasks = standardizeTasks(data.tasks, data.settings.preferred_chinese === "zh-CN" ? "zh-CN" : "zh-TW");
+      data.tasks = standardizeTasks(data.tasks, preferredChineseFor(data.settings.preferred_chinese));
       if (!data._next_task_id) data._next_task_id = Math.max(0, ...data.tasks.map((t) => t.id)) + 1;
       return data;
     }
@@ -249,16 +249,29 @@ function saveConfig(config: ConfigData): void {
     }
     return;
   }
+  writeConfig(config);
+}
+
+function writePrivateFile(file: string, json: string): void {
+  // The mode passed to open only applies to new files. Secure an existing file before writing keys to it.
+  const fd = fs.openSync(file, fs.constants.O_WRONLY | fs.constants.O_CREAT, 0o600);
+  try {
+    fs.fchmodSync(fd, 0o600);
+    fs.ftruncateSync(fd);
+    fs.writeFileSync(fd, json, "utf8");
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+function writeConfig(config: ConfigData): void {
   const tmpPath = `${CONFIG_FILE}.tmp`;
   const json = JSON.stringify(config, null, 2);
-  // Holds API keys: never world-readable, not even before the chmod below.
-  fs.writeFileSync(tmpPath, json, { encoding: "utf8", mode: 0o600 });
+  writePrivateFile(tmpPath, json);
   try {
     fs.renameSync(tmpPath, CONFIG_FILE);
-    fs.chmodSync(CONFIG_FILE, 0o600);
   } catch {
-    fs.writeFileSync(CONFIG_FILE, json, { encoding: "utf8", mode: 0o600 });
-    fs.chmodSync(CONFIG_FILE, 0o600);
+    writePrivateFile(CONFIG_FILE, json);
     try {
       fs.unlinkSync(tmpPath);
     } catch (e) {
@@ -276,9 +289,9 @@ export function getConfigLoadFailure(): ConfigLoadFailure | null {
 
 /** The user chose to replace the unreadable file with the settings running now. */
 export function replaceBrokenConfig(): void {
+  writeConfig(_config);
   configLoadFailure = null;
   skippedSaveLogged = false;
-  saveConfig(_config);
 }
 
 // --- Settings ---
@@ -296,17 +309,17 @@ export function setSetting(key: string, value: string): void {
   setSettings({ [key]: value });
 }
 
-// Batch variant: mutate the in-memory config once for all keys in `patch`, then
-// persist with a SINGLE saveConfig. Avoids N disk writes per multi-key save and
-// the concurrent-request clobber window of calling setSetting in a loop.
+// Save the whole patch before exposing it to readers so a failed write is safe to retry.
 export function setSettings(patch: Record<string, string>): void {
-  const before = preferredChinese();
   const persistable =
     "llm_connections" in patch ? { ...patch, llm_connections: persistableConnections(patch.llm_connections) } : patch;
-  _config.settings = { ..._config.settings, ...persistable };
+  const settings = { ..._config.settings, ...persistable };
+  const preferred = preferredChineseFor(envPinnedSettings.preferred_chinese ?? settings.preferred_chinese);
   // .chi is the preferred script: a switch moves the Chinese tasks now, not at the next start.
-  if (preferredChinese() !== before) _config.tasks = standardizeTasks(_config.tasks, preferredChinese());
-  saveConfig(_config);
+  const tasks = preferred === preferredChinese() ? _config.tasks : standardizeTasks(_config.tasks, preferred);
+  saveConfig({ ..._config, settings, tasks });
+  _config.settings = settings;
+  _config.tasks = tasks;
 }
 
 // Allow-list of writable setting keys for POST /api/settings. Derived from the
@@ -410,9 +423,13 @@ export function isLlmConfigured(): boolean {
 
 // --- Translation Tasks ---
 
+function preferredChineseFor(value: string): PreferredChinese {
+  return value === "zh-CN" ? "zh-CN" : "zh-TW";
+}
+
 /** The Chinese script written as .chi; the other one is .chs or .cht. */
 export function preferredChinese(): PreferredChinese {
-  return getSetting("preferred_chinese") === "zh-CN" ? "zh-CN" : "zh-TW";
+  return preferredChineseFor(getSetting("preferred_chinese"));
 }
 
 export function getTasks(): TranslationTask[] {

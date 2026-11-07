@@ -117,7 +117,7 @@ test(
       start() {},
       store: { enqueue: (items: typeof inputs) => inputs.push(...items) },
     } as unknown as WorkRunner;
-    enqueueMissingTranscripts(snapshot, "auto_transcribe", runner, () => false);
+    await enqueueMissingTranscripts(snapshot, "auto_transcribe", { runner, silent: () => false });
     assert.deepEqual(
       inputs.map((input) => input.input),
       [legacy],

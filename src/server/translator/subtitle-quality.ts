@@ -1,15 +1,16 @@
 import type { SubtitleQualityIssue } from "../../shared/subtitle-quality.js";
-import { assField, cuesOf, isAssDocument, parseSubtitle } from "./convert.js";
+import { assField, cuesOf, isAssDocument, parseSubtitle, type SubtitleCue } from "./convert.js";
 import { strictCueTime } from "./srt-vtt.js";
 
 const CJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
 const WIDE = /[\uFF01-\uFF60\uFFE0-\uFFE6\p{Extended_Pictographic}]/u;
 const SPACE = /^\s+$/u;
 const GRAPHEMES = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+const isAssFormat = (ext: string) => ext === "ass" || ext === "ssa";
 
 /** Display text for measurement and plain-text SRT export. */
 export function visibleCueText(text: string, ext: string): string {
-  if (ext === "ass" || ext === "ssa") {
+  if (isAssFormat(ext)) {
     return text
       .replace(/\{\\[^}]*\}/g, "")
       .replace(/\\[Nn]/g, "\n")
@@ -89,27 +90,72 @@ export function inspectSubtitle(
     furthestEnd.set(layer, Math.max(previousEnd, end));
   }
   issues.sort((a, b) => (a.cue ?? 0) - (b.cue ?? 0));
-  return { cues, issues };
+  return { ext, cues, issues };
 }
 
 type SubtitleInspection = ReturnType<typeof inspectSubtitle>;
+type CueTrack = Pick<SubtitleInspection, "ext" | "cues">;
 
-/** Report matching timing suggestions on the source only. Partial outputs
- * can match the source prefix, while retimed outputs get their own report. */
-export function translatedSubtitleIssues(source: SubtitleInspection, target: SubtitleInspection) {
-  const sameTiming = target.cues.every(({ data }, index) => {
-    const original = source.cues[index]?.data;
-    const start = strictCueTime(data?.start);
-    const end = strictCueTime(data?.end);
+// An export into ASS/SSA truncates milliseconds. Other exports preserve the source clock.
+function clockPrecision(source: CueTrack, target: CueTrack): number {
+  return !isAssFormat(source.ext) && isAssFormat(target.ext) ? 10 : 1;
+}
+
+function matchingClocks(source: SubtitleCue | undefined, target: SubtitleCue, precision: number): boolean {
+  const start = strictCueTime(source?.data?.start);
+  const end = strictCueTime(source?.data?.end);
+  const targetStart = strictCueTime(target.data?.start);
+  const targetEnd = strictCueTime(target.data?.end);
+  return (
+    start !== null &&
+    end !== null &&
+    targetStart !== null &&
+    targetEnd !== null &&
+    (start === targetStart || Math.floor(start / precision) * precision === targetStart) &&
+    (end === targetEnd || Math.floor(end / precision) * precision === targetEnd)
+  );
+}
+
+/** Source row for each cue in a shorter output whose clocks identify it as a subsequence. */
+export function alignShorterTranslation(source: CueTrack, target: CueTrack): number[] | undefined {
+  if (target.cues.length >= source.cues.length) return undefined;
+
+  const precision = clockPrecision(source, target);
+  const rows: number[] = [];
+  let row = 0;
+  for (const cue of target.cues) {
+    while (row < source.cues.length && !matchingClocks(source.cues[row], cue, precision)) row++;
+    if (row === source.cues.length) return undefined;
+    rows.push(row++);
+  }
+  return rows;
+}
+
+/** Report inherited timing suggestions on the source only. Retimed outputs get their own report. */
+export function translatedSubtitleIssues(
+  source: SubtitleInspection,
+  target: SubtitleInspection,
+  rows?: readonly number[],
+) {
+  const precision = clockPrecision(source, target);
+  const sameTiming = target.cues.every((cue, index) =>
+    matchingClocks(source.cues[rows?.[index] ?? index], cue, precision),
+  );
+  const issues = rows
+    ? target.issues.map((issue) => (issue.cue === undefined ? issue : { ...issue, cue: rows[issue.cue - 1] + 1 }))
+    : target.issues;
+  if (!sameTiming) return issues;
+
+  const key = ({ cue, code }: SubtitleQualityIssue) => `${cue}:${code}`;
+  const originalTiming = new Map(
+    source.issues
+      .filter(({ code }) => code === "short" || code === "long" || code === "overlap")
+      .map((issue) => [key(issue), issue.value]),
+  );
+  return issues.filter((issue) => {
+    const originalValue = originalTiming.get(key(issue));
     return (
-      start !== null && end !== null && start === strictCueTime(original?.start) && end === strictCueTime(original?.end)
+      originalValue === undefined || issue.value === undefined || Math.abs(issue.value - originalValue) >= precision
     );
   });
-  if (!sameTiming) return target.issues;
-
-  const key = ({ cue, code, value }: SubtitleQualityIssue) => `${cue}:${code}:${value}`;
-  const originalTiming = new Set(
-    source.issues.filter(({ code }) => code === "short" || code === "long" || code === "overlap").map(key),
-  );
-  return target.issues.filter((issue) => !originalTiming.has(key(issue)));
 }

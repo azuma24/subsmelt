@@ -1532,6 +1532,7 @@
     "noCues": "자막 구간을 찾지 못했습니다.",
     "invalidTiming": "자막 시간이 올바르지 않습니다.",
     "empty": "표시할 텍스트가 없습니다.",
+    "missingCue": "번역된 자막이 누락되었습니다.",
     "short": "표시 시간 {{value}}ms가 최소 {{limit}}ms보다 짧습니다.",
     "long": "표시 시간 {{value}}ms가 최대 {{limit}}ms를 초과합니다.",
     "lines": "{{value}}줄, 최대 {{limit}}줄.",

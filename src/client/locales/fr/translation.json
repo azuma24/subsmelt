@@ -1539,6 +1539,7 @@
     "noCues": "Aucun segment de sous-titres trouvé.",
     "invalidTiming": "Minutage du sous-titre invalide.",
     "empty": "Aucun texte visible.",
+    "missingCue": "Le sous-titre traduit est manquant.",
     "short": "La durée de {{value}} ms est inférieure à {{limit}} ms.",
     "long": "La durée de {{value}} ms dépasse {{limit}} ms.",
     "lines": "{{value}} lignes, maximum {{limit}}.",

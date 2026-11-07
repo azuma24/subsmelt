@@ -1532,6 +1532,7 @@
     "noCues": "找不到字幕段落。",
     "invalidTiming": "字幕時間無效。",
     "empty": "沒有可見文字。",
+    "missingCue": "缺少這一條翻譯字幕。",
     "short": "顯示時間 {{value}} 毫秒，低於 {{limit}} 毫秒。",
     "long": "顯示時間 {{value}} 毫秒，超過 {{limit}} 毫秒。",
     "lines": "共 {{value}} 行，上限 {{limit}} 行。",

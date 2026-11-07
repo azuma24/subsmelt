@@ -75,7 +75,7 @@ test("explicit cancellation stops current work and prevents queued work executin
   }
 });
 
-test("scheduled and manual scans share durable claims and respect silence", () => {
+test("scheduled and manual scans share durable claims and respect silence", async () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), "subsmelt-scan-"));
   try {
     const store = new WorkStore(path.join(dir, "work.json"));
@@ -88,11 +88,17 @@ test("scheduled and manual scans share durable claims and respect silence", () =
         { videoPath: "/media/subbed.mkv", subtitles: ["sub"] },
       ],
     } as unknown as ScanResult;
-    enqueueMissingTranscripts(scan, "auto_transcribe_and_translate", runner, (p) => p.includes("silent"));
-    enqueueMissingTranscripts(scan, "auto_transcribe_and_translate", runner, (p) => p.includes("silent"));
+    await enqueueMissingTranscripts(scan, "auto_transcribe_and_translate", {
+      runner,
+      silent: (p) => p.includes("silent"),
+    });
+    await enqueueMissingTranscripts(scan, "auto_transcribe_and_translate", {
+      runner,
+      silent: (p) => p.includes("silent"),
+    });
     assert.equal(store.list().length, 1);
     assert.equal(store.list()[0].request.postAction, "transcribe_and_translate");
-    enqueueMissingTranscripts(scan, "ask", runner, () => false);
+    await enqueueMissingTranscripts(scan, "ask", { runner, silent: () => false });
     assert.equal(store.list().length, 1);
   } finally {
     rmSync(dir, { recursive: true, force: true });

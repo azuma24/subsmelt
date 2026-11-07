@@ -1539,6 +1539,7 @@
     "noCues": "Nenhum trecho de legenda encontrado.",
     "invalidTiming": "Tempo de exibição inválido.",
     "empty": "Sem texto visível.",
+    "missingCue": "A legenda traduzida está faltando.",
     "short": "A duração de {{value}} ms está abaixo de {{limit}} ms.",
     "long": "A duração de {{value}} ms excede {{limit}} ms.",
     "lines": "{{value}} linhas, máximo de {{limit}}.",

@@ -62,7 +62,18 @@ test("a broken config is never silently replaced: background saves and settings 
 });
 
 test("the file is replaced only when the user confirms it, after which saves work again", async () => {
-  const res = await fetch(`${base}/api/settings/replace-broken-config`, { method: "POST" });
+  const replaceConfig = () => fetch(`${base}/api/settings/replace-broken-config`, { method: "POST" });
+  const tmpPath = `${configFile}.tmp`;
+  fs.mkdirSync(tmpPath);
+  try {
+    assert.equal((await replaceConfig()).status, 500);
+    assert.equal(fs.readFileSync(configFile, "utf8"), brokenBytes);
+    assert.equal(config.getConfigLoadFailure()?.file, configFile);
+  } finally {
+    fs.rmdirSync(tmpPath);
+  }
+
+  const res = await replaceConfig();
   assert.deepEqual(await res.json(), { ok: true });
 
   assert.equal(JSON.parse(fs.readFileSync(configFile, "utf8")).settings.media_scanned, "1");

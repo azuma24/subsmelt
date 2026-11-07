@@ -47,8 +47,8 @@ import { isQueueStartHeld } from "../gpu-gate.js";
 import { getAllSettings } from "../config.js";
 import { logger } from "../logger.js";
 import type { Job, PreviewLine } from "../../shared/jobs.js";
-import { normalizeTimeToMs, type SubtitleCue } from "../translator/convert.js";
-import { inspectSubtitle, translatedSubtitleIssues } from "../translator/subtitle-quality.js";
+import { cuesOf, normalizeTimeToMs, parseSubtitle, type SubtitleCue } from "../translator/convert.js";
+import { alignShorterTranslation, inspectSubtitle, translatedSubtitleIssues } from "../translator/subtitle-quality.js";
 import { bilingualSrt } from "../translator/bilingual.js";
 import type { SubtitleQualityIssue } from "../../shared/subtitle-quality.js";
 import { queueFileTranslation, type FileTranslationTarget } from "../file-translation.js";
@@ -261,6 +261,7 @@ export function registerJobsRoutes(app: Express): void {
     const job = getJob(id);
     if (!job) return res.status(404).json({ error: "Job not found" });
 
+    const complete = job.status === "done";
     let sourcePath: string;
     let previewTarget = "";
     let hasPartial = false;
@@ -268,7 +269,7 @@ export function registerJobsRoutes(app: Express): void {
       sourcePath = assertMediaPathAllowed(job.srt_path, MEDIA_DIR);
       if (job.output_path) {
         const outputPath = assertMediaPathAllowed(job.output_path, MEDIA_DIR);
-        const candidate = resolveTranslatedOutputPath(job.output_path);
+        const candidate = complete ? job.output_path : resolveTranslatedOutputPath(job.output_path);
         hasPartial = candidate !== job.output_path;
         previewTarget = hasPartial ? assertMediaPathAllowed(candidate, MEDIA_DIR) : outputPath;
       }
@@ -285,9 +286,28 @@ export function registerJobsRoutes(app: Express): void {
       const hasTarget = Boolean(previewTarget) && fs.existsSync(previewTarget);
       if (hasTarget) {
         const trgExt = path.extname(job.output_path).slice(1).toLowerCase();
-        const target = inspectSubtitle(readSubtitleFileText(previewTarget), trgExt);
-        trgCues = target.cues;
-        translatedIssues = translatedSubtitleIssues(source, target);
+        const content = readSubtitleFileText(previewTarget);
+        if (hasPartial) {
+          // Partial files include source placeholders with no translation provenance.
+          trgCues = cuesOf(parseSubtitle(content, trgExt));
+        } else {
+          const target = inspectSubtitle(content, trgExt);
+          const rows = complete ? alignShorterTranslation(source, target) : undefined;
+          trgCues = target.cues;
+          if (rows) {
+            trgCues = [];
+            target.cues.forEach((cue, index) => {
+              trgCues[rows[index]] = cue;
+            });
+          }
+          translatedIssues = translatedSubtitleIssues(source, target, rows);
+        }
+      }
+      if (complete) {
+        source.cues.forEach((_, index) => {
+          if (!trgCues[index]) translatedIssues.push({ code: "missingCue", cue: index + 1 });
+        });
+        translatedIssues.sort((a, b) => (a.cue ?? 0) - (b.cue ?? 0));
       }
 
       // Times in milliseconds whatever the format: an ASS cue carries them as
@@ -301,7 +321,7 @@ export function registerJobsRoutes(app: Express): void {
       }));
 
       const task = getTask(job.task_id);
-      const outputOwner = job.status === "done" ? getJobOutputOwner(job.output_path) : undefined;
+      const outputOwner = complete ? getJobOutputOwner(job.output_path) : undefined;
       res.json({
         srtPath: job.srt_path,
         outputPath: job.output_path,
@@ -311,7 +331,10 @@ export function registerJobsRoutes(app: Express): void {
         lines,
         quality: { original: source.issues, translated: translatedIssues },
         canDownloadBilingual:
-          job.status === "done" && hasTarget && !hasPartial && (!outputOwner || outputOwner.id === id),
+          complete &&
+          hasTarget &&
+          (!outputOwner || outputOwner.id === id) &&
+          !translatedIssues.some(({ code }) => code === "missingCue"),
       });
     } catch (error) {
       res.status(500).json({ error: errorMessage(error) });
@@ -346,7 +369,7 @@ export function registerJobsRoutes(app: Express): void {
 
     // Coerce to well-typed edits; malformed entries are dropped here and any
     // out-of-range indices are skipped (and counted) inside applyCueEdits.
-    const edits: CueEdit[] = rawEdits
+    let edits: CueEdit[] = rawEdits
       .filter((e): e is CueEdit => {
         const candidate = e as { index?: unknown; text?: unknown } | null;
         return (
@@ -362,6 +385,17 @@ export function registerJobsRoutes(app: Express): void {
     try {
       const ext = path.extname(job.output_path).slice(1).toLowerCase();
       const content = readSubtitleFileText(job.output_path);
+      if (job.status === "done" && fs.existsSync(job.srt_path)) {
+        const sourcePath = assertMediaPathAllowed(job.srt_path, MEDIA_DIR);
+        const srcExt = path.extname(job.srt_path).slice(1).toLowerCase();
+        const source = { ext: srcExt, cues: cuesOf(parseSubtitle(readSubtitleFileText(sourcePath), srcExt)) };
+        const target = { ext, cues: cuesOf(parseSubtitle(content, ext)) };
+        const rows = alignShorterTranslation(source, target);
+        if (rows) {
+          const positions = new Map(rows.map((row, index) => [row + 1, index + 1]));
+          edits = edits.map((edit) => ({ ...edit, index: positions.get(edit.index) ?? 0 }));
+        }
+      }
       const { output, updated } = applyCueEdits(content, ext, edits);
       writeSubtitleFile(job.output_path, output);
       res.json({ ok: true, updated });

@@ -25,6 +25,7 @@ import { logger } from "../logger.js";
 import { notify } from "../notify.js";
 import { createWorkPlan, taskSignature, workOverrides, type WorkPlan } from "./work-plan.js";
 import { readWorkArtifact, reviseTranscript, transcriptNote } from "./work-artifacts.js";
+import { embeddedVideoIdentity } from "../embedded-subtitles.js";
 import { assertSubtitleIntakeStillMissing } from "../subtitle-intake.js";
 import { registerSourceReviewGate } from "./review-gate.js";
 import type { TranscriptionTimings } from "../../shared/transcription.js";
@@ -489,6 +490,12 @@ async function executeWork(
     assertMediaPathAllowed(item.input, MEDIA_DIR);
     const request = item.request;
     if (item.artifactReady && item.outputPath) return finishFileWork(item, signal);
+    if (
+      typeof request.videoRevision === "string" &&
+      (await embeddedVideoIdentity(item.input)).revision !== request.videoRevision
+    ) {
+      throw new Error("The video changed after the automatic scan.");
+    }
     if (typeof request.subtitleIntakeRevision === "string") {
       await assertSubtitleIntakeStillMissing(item.input, request.subtitleIntakeRevision);
     }
@@ -529,7 +536,7 @@ async function executeWork(
         status: "queued",
       };
     if (request.postAction === "transcribe_and_translate" && !signal.aborted) {
-      const result = await scanFolder(true);
+      const result = await scanFolder(true, { translateVideo: item.input, signal });
       if (result.newJobs > 0) setTimeout(() => runQueueSafely(), 100);
     }
     return { outputPath, timingsMs, checkpointHit, uploadedBytes, audioOnlyUploaded };

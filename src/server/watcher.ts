@@ -3,13 +3,18 @@ import path from "node:path";
 import fs from "node:fs";
 import { getSetting, setSettings } from "./config.js";
 import { MEDIA_DIR } from "./scanner.js";
+import { VIDEO_SETTLE_MS } from "./embedded-subtitles.js";
+import { normalizeMediaSubfolder } from "./media-paths.js";
 import { scanAndEnqueue } from "./library-scan.js";
 import { logger } from "./logger.js";
 import { errorMessage } from "./errors.js";
 import { broadcast } from "./sse.js";
 import type { WatcherStatus } from "../shared/watcher.js";
 
-const DEBOUNCE_MS = 5000;
+const DEBOUNCE_MS = 5_000;
+const FILE_RETRY_MS = 10_000;
+let fileRetryTimer: ReturnType<typeof setTimeout> | null = null;
+const inaccessible = new Set<string>();
 let watcher: { source: FSWatcher; controller: AbortController } | null = null;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let poll: { timer: ReturnType<typeof setInterval>; minutes: number; controller: AbortController } | null = null;
@@ -56,6 +61,10 @@ function handleFileChange(filePath: string, signal: AbortSignal): void {
   if (!ext || !extensions.includes(ext)) return;
 
   logger.info("scan", `File watcher detected: ${path.basename(filePath)}`);
+  scheduleFileScan(signal);
+}
+
+function scheduleFileScan(signal: AbortSignal): void {
   if (debounceTimer) clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
     debounceTimer = null;
@@ -63,18 +72,58 @@ function handleFileChange(filePath: string, signal: AbortSignal): void {
   }, DEBOUNCE_MS);
 }
 
+function watchAccess(target: string, directoryOnly = false): "available" | "missing" | "blocked" {
+  try {
+    const info = fs.statSync(target, { throwIfNoEntry: false });
+    if (!info) return "missing";
+    if (directoryOnly && !info.isDirectory()) return "blocked";
+    fs.accessSync(target, fs.constants.R_OK | (info.isDirectory() ? fs.constants.X_OK : 0));
+    return "available";
+  } catch {
+    return "blocked";
+  }
+}
+
+function retryFileEvents(): void {
+  if (fileRetryTimer) return;
+  fileRetryTimer = setTimeout(() => {
+    fileRetryTimer = null;
+    if (!watcher) {
+      syncWatcher();
+      return;
+    }
+    for (const target of inaccessible) {
+      const access = watchAccess(target);
+      if (access === "blocked") continue;
+      inaccessible.delete(target);
+      if (access === "available") {
+        watcher.source.add(target);
+        scheduleFileScan(watcher.controller.signal);
+      }
+    }
+    if (inaccessible.size > 0) retryFileEvents();
+  }, FILE_RETRY_MS);
+  fileRetryTimer.unref();
+}
+
+function fileEventsUnavailable(): "unavailable" {
+  stopFileEvents();
+  retryFileEvents();
+  return "unavailable";
+}
+
 function startFileEvents(): WatcherStatus["fileEvents"] {
   try {
-    if (!fs.statSync(MEDIA_DIR, { throwIfNoEntry: false })?.isDirectory()) {
-      logger.warn("system", `File watcher: ${MEDIA_DIR} is not a directory`);
-      return "unavailable";
+    if (watchAccess(MEDIA_DIR, true) !== "available") {
+      if (status.fileEvents !== "unavailable") logger.warn("system", `File watcher: cannot watch ${MEDIA_DIR}`);
+      return fileEventsUnavailable();
     }
     const source = chokidar.watch(MEDIA_DIR, {
       ignoreInitial: true,
       persistent: true,
       depth: 10,
       ignored: /(^|[/\\])\../,
-      awaitWriteFinish: { stabilityThreshold: 2000, pollInterval: 500 },
+      awaitWriteFinish: { stabilityThreshold: VIDEO_SETTLE_MS, pollInterval: 500 },
     });
     const controller = new AbortController();
     const { signal } = controller;
@@ -86,21 +135,43 @@ function startFileEvents(): WatcherStatus["fileEvents"] {
       if (signal.aborted) return;
       logger.info("system", `File watcher started on ${MEDIA_DIR}`);
       publishStatus(true, "watching");
+      // The initial crawl suppresses file events. Reconcile files added while
+      // the listener was paused or unavailable.
+      scheduleFileScan(signal);
     });
-    source.on("error", (error: unknown) => {
+    source.on("unlinkDir", (dir) => {
+      if (signal.aborted || path.resolve(dir) !== path.resolve(MEDIA_DIR)) return;
+      publishStatus(true, fileEventsUnavailable());
+    });
+    source.on("error", (error) => {
       if (signal.aborted) return;
       logger.error("system", `File watcher error: ${errorMessage(error)}`);
-      stopFileEvents();
-      publishStatus(true, "unavailable");
+      const { code, path: failedPath } = error instanceof Error ? (error as NodeJS.ErrnoException) : {};
+      if (
+        (code === "EACCES" || code === "EPERM") &&
+        failedPath &&
+        normalizeMediaSubfolder(path.relative(MEDIA_DIR, failedPath)) !== null
+      ) {
+        // An inaccessible child should not disconnect the rest of the tree.
+        inaccessible.add(path.resolve(failedPath));
+        retryFileEvents();
+        return;
+      }
+      publishStatus(true, fileEventsUnavailable());
     });
     return "starting";
   } catch (error) {
     logger.error("system", `File watcher error: ${errorMessage(error)}`);
-    return "unavailable";
+    return fileEventsUnavailable();
   }
 }
 
 function stopFileEvents(): void {
+  if (fileRetryTimer) {
+    clearTimeout(fileRetryTimer);
+    fileRetryTimer = null;
+  }
+  inaccessible.clear();
   if (debounceTimer) {
     clearTimeout(debounceTimer);
     debounceTimer = null;

@@ -41,6 +41,8 @@ export class EmbeddedSubtitleError extends Error {
   }
 }
 
+export const VIDEO_SETTLE_MS = 2_000;
+
 export async function embeddedVideoIdentity(file: string): Promise<{ revision: string; changedAt: number }> {
   const info = await stat(file).catch(() => null);
   if (!info?.isFile()) throw new EmbeddedSubtitleError(404, "The video file could not be opened.");

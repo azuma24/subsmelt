@@ -17,6 +17,7 @@ fs.mkdirSync(media);
 const { createJob } = await import("../db.js");
 const { registerJobsRoutes } = await import("./jobs.js");
 const app = express();
+app.use(express.json());
 registerJobsRoutes(app);
 const server = app.listen(0, "127.0.0.1");
 await once(server, "listening");
@@ -84,7 +85,7 @@ test("bilingual export downloads completed matching cues on the original clock",
 
 test("preview attributes inherited timing suggestions to the source only", async () => {
   const { id, sourcePath, outputPath } = fixture("short", "done");
-  fs.writeFileSync(sourcePath, "1\n00:00:00,000 --> 00:00:00,500\nHello\n");
+  fs.writeFileSync(sourcePath, "1\n00:00:00,002 --> 00:00:00,509\nHello\n");
   fs.writeFileSync(outputPath, translated.replace("0:00:02.00", "0:00:00.50").replace("Clé", "字".repeat(25)));
   const response = await fetch(`${base}/${id}/preview`);
   assert.equal(response.status, 200);
@@ -98,7 +99,77 @@ test("preview attributes inherited timing suggestions to the source only", async
     ["width", "speed"],
   );
 
-  fs.writeFileSync(outputPath, translated.replace("0:00:02.00", "0:00:00.40"));
+  // The next centisecond is a different clock, even though it is only 1 ms away.
+  fs.writeFileSync(outputPath, translated.replace("0:00:02.00", "0:00:00.51"));
   const retimed = await (await fetch(`${base}/${id}/preview`)).json();
-  assert.deepEqual(retimed.quality.translated, [{ code: "short", cue: 1, value: 400, limit: 800 }]);
+  assert.deepEqual(retimed.quality.translated, [{ code: "short", cue: 1, value: 510, limit: 800 }]);
+});
+
+test("completed preview warns on the actual missing row and keeps empty cues editable", async () => {
+  const { id, sourcePath, outputPath } = fixture("missing-cue", "done");
+  fs.appendFileSync(sourcePath, "\n2\n00:00:03,004 --> 00:00:05,000\nTwo\n\n3\n00:00:06,008 --> 00:00:08,009\nThree\n");
+  fs.appendFileSync(outputPath, "Dialogue: 0,0:00:06.00,0:00:08.00,\n");
+
+  const response = await fetch(`${base}/${id}/preview`);
+  assert.equal(response.status, 200);
+  const { lines, quality, canDownloadBilingual } = await response.json();
+  assert.equal(canDownloadBilingual, false);
+  assert.deepEqual(quality.translated, [
+    { code: "missingCue", cue: 2 },
+    { code: "empty", cue: 3 },
+  ]);
+  assert.deepEqual(
+    lines.map((line: { translated: string }) => line.translated),
+    ["{\\i1}Clé", "", ""],
+  );
+
+  const save = await fetch(`${base}/${id}/cues`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      edits: [
+        { index: 2, text: "Skipped" },
+        { index: 3, text: "Trois" },
+      ],
+    }),
+  });
+  assert.equal(save.status, 200);
+  assert.deepEqual(await save.json(), { ok: true, updated: 1 });
+  const edited = await (await fetch(`${base}/${id}/preview`)).json();
+  assert.equal(edited.lines[2].translated, "Trois");
+  assert.deepEqual(edited.quality.translated, [{ code: "missingCue", cue: 2 }]);
+});
+
+test("completed preview flags an absent final file while unfinished jobs can lack cues", async () => {
+  const done = fixture("missing-output", "done");
+  fs.renameSync(done.outputPath, `${done.outputPath}.part`);
+  const completed = await (await fetch(`${base}/${done.id}/preview`)).json();
+  assert.deepEqual(completed.quality.translated, [{ code: "missingCue", cue: 1 }]);
+  assert.equal(completed.lines[0].translated, "");
+  assert.equal(completed.canDownloadBilingual, false);
+
+  const pending = fixture("missing-pending", "pending");
+  fs.appendFileSync(pending.sourcePath, "\n2\n00:00:03,000 --> 00:00:05,000\nTwo\n");
+  const shortened = await (await fetch(`${base}/${pending.id}/preview`)).json();
+  assert.deepEqual(shortened.quality.translated, []);
+  fs.unlinkSync(pending.outputPath);
+  const absent = await (await fetch(`${base}/${pending.id}/preview`)).json();
+  assert.deepEqual(absent.quality.translated, []);
+});
+
+test("partial preview keeps placeholder text out of translated quality reports", async () => {
+  const { id, sourcePath, outputPath } = fixture("partial-placeholders", "translating");
+  const placeholder = "A".repeat(60);
+  fs.writeFileSync(sourcePath, `1\n00:00:00,000 --> 00:00:02,000\n${placeholder}\n`);
+  fs.writeFileSync(`${outputPath}.part`, translated.replace("{\\i1}Clé", placeholder));
+
+  const response = await fetch(`${base}/${id}/preview`);
+  assert.equal(response.status, 200);
+  const { lines, quality } = await response.json();
+  assert.equal(lines[0].translated, placeholder);
+  assert.deepEqual(
+    quality.original.map(({ code }: { code: string }) => code),
+    ["width", "speed"],
+  );
+  assert.deepEqual(quality.translated, []);
 });

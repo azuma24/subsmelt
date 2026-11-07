@@ -8,21 +8,28 @@ import { broadcast } from "./sse.js";
 import { enqueueIntakeTranscripts, enqueueMissingTranscripts } from "./transcription/scheduled.js";
 
 type ScanTrigger = "full" | "watcher" | "poll";
-let inFlight: { trigger: ScanTrigger; result: Promise<ScanResult> } | null = null;
+let inFlight: { trigger: ScanTrigger; signal?: AbortSignal; result: Promise<ScanResult> } | null = null;
 
 export async function scanAndEnqueue(trigger: ScanTrigger = "full", signal?: AbortSignal): Promise<ScanResult> {
-  // A watcher event can refer to a file created after the current walk passed
-  // its directory. Reconcile it after that walk instead of losing the event.
   signal?.throwIfAborted();
+  // An event may refer to a file behind the current walk. Let the first
+  // waiter start a follow-up and share it with events waiting on that walk.
+  let needsFollowUp = trigger === "watcher";
   while (inFlight) {
-    if (trigger === "poll" || (trigger === "full" && inFlight.trigger !== "watcher")) return inFlight.result;
-    await inFlight.result.catch(() => {});
+    const current = inFlight;
+    // A manual scan must survive pausing either automatic source.
+    const share = trigger === "full" ? current.trigger === "full" : !needsFollowUp;
+    try {
+      const result = await current.result;
+      if (share) return result;
+    } catch (error) {
+      if (share && !current.signal?.aborted) throw error;
+    }
     signal?.throwIfAborted();
-    // File signals waiting on the same walk can share the next pass.
-    if (trigger === "watcher" && inFlight) return inFlight.result;
+    needsFollowUp = false;
   }
-  const result = runScan(trigger);
-  inFlight = { trigger, result };
+  const result = runScan(trigger, signal);
+  inFlight = { trigger, signal, result };
   try {
     return await result;
   } finally {
@@ -30,28 +37,36 @@ export async function scanAndEnqueue(trigger: ScanTrigger = "full", signal?: Abo
   }
 }
 
-async function runScan(trigger: ScanTrigger): Promise<ScanResult> {
+async function runScan(trigger: ScanTrigger, signal?: AbortSignal): Promise<ScanResult> {
   const typed = readSettings();
   const transcriptionAvailable = typed.transcription_enabled && Boolean(getTranscriptionBackendUrl(getAllSettings()));
-  const result = await scanFolder(true, { intake: "run", transcriptionAvailable });
-  if (result.complete && transcriptionAvailable) {
-    enqueueMissingTranscripts(result, typed.transcription_missing_subtitle_behavior);
-    await enqueueIntakeTranscripts(result);
-  }
+  const result = await scanFolder(true, { intake: "run", transcriptionAvailable, signal });
+  // These translation jobs are committed. Let them run even if the watcher
+  // is paused during the remaining subtitle checks.
   if (result.newJobs > 0 && getSetting("auto_translate") === "1") setTimeout(() => runQueueSafely(), 100);
-  broadcast("scan:complete", {
-    newJobs: result.newJobs,
-    total: result.totalSubtitles,
-    complete: result.complete,
-    errors: result.errors,
-  });
-  if (trigger === "watcher") {
-    for (const error of result.errors) {
-      logger.warn("scan", `Watcher scan could not read ${error.path}: ${error.message}`);
+  try {
+    if (result.complete && transcriptionAvailable) {
+      await enqueueMissingTranscripts(result, typed.transcription_missing_subtitle_behavior, {
+        requireSettled: trigger !== "full",
+        signal,
+      });
+      await enqueueIntakeTranscripts(result, signal);
     }
-    if (result.newJobs > 0) logger.info("scan", `Watcher: ${result.newJobs} new jobs queued`);
+    return result;
+  } finally {
+    broadcast("scan:complete", {
+      newJobs: result.newJobs,
+      total: result.totalSubtitles,
+      complete: result.complete,
+      errors: result.errors,
+    });
+    if (trigger === "watcher") {
+      for (const error of result.errors) {
+        logger.warn("scan", `Watcher scan could not read ${error.path}: ${error.message}`);
+      }
+      if (result.newJobs > 0) logger.info("scan", `Watcher: ${result.newJobs} new jobs queued`);
+    }
   }
-  return result;
 }
 
 export function previewLibraryScan(): Promise<ScanResult> {

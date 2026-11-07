@@ -1532,6 +1532,7 @@
     "noCues": "Keine Untertiteleinträge gefunden.",
     "invalidTiming": "Ungültige Zeitangabe.",
     "empty": "Kein sichtbarer Text.",
+    "missingCue": "Der übersetzte Untertitel fehlt.",
     "short": "Die Dauer von {{value}} ms liegt unter {{limit}} ms.",
     "long": "Die Dauer von {{value}} ms überschreitet {{limit}} ms.",
     "lines": "{{value}} Zeilen, höchstens {{limit}}.",

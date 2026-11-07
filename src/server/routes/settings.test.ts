@@ -163,3 +163,37 @@ test("polling-only monitoring queues new media, pauses and keeps its cadence on 
     t.mock.timers.reset();
   }
 });
+
+test("a failed settings write leaves polling configured and can be retried", async () => {
+  const configFile = path.join(process.env.CONFIG_DIR!, "config.json");
+  const tmpPath = `${configFile}.tmp`;
+  const savedInterval = () => JSON.parse(fs.readFileSync(configFile, "utf8")).settings.auto_scan_interval;
+  const pollInterval = async () => (await (await fetch(`${base}/api/watcher/status`)).json()).pollIntervalMinutes;
+  const disablePolling = { auto_scan_interval: "0" };
+
+  try {
+    assert.equal(
+      (await saveSettings({ watch_enabled: "0", watcher_paused: "0", auto_scan_interval: "30" })).status,
+      200,
+    );
+    assert.equal(await pollInterval(), 30);
+
+    fs.mkdirSync(tmpPath);
+    try {
+      assert.equal((await saveSettings(disablePolling)).status, 500);
+      assert.equal((await getSettings()).auto_scan_interval, "30");
+      assert.equal(savedInterval(), "30");
+      assert.equal(await pollInterval(), 30);
+    } finally {
+      fs.rmdirSync(tmpPath);
+    }
+
+    assert.equal((await saveSettings(disablePolling)).status, 200);
+    assert.equal((await getSettings()).auto_scan_interval, "0");
+    assert.equal(savedInterval(), "0");
+    assert.equal(await pollInterval(), 0);
+  } finally {
+    setSetting("auto_scan_interval", "0");
+    syncWatcher();
+  }
+});
