@@ -67,7 +67,7 @@ system-tray controller.
 ## Vendor files (required before building)
 
 **Automatic (recommended):** run the fetch script — it downloads `ffmpeg.exe`
-(a pinned, SHA-256 verified BtbN win64 release build), `vc_redist.x64.exe`
+(a pinned, SHA-256 verified Gyan win64 release build), `vc_redist.x64.exe`
 (Microsoft permalink) and the pinned, SHA-256 verified NeMo-Speech.cpp runtime
 into `packaging\windows\vendor\`. Idempotent: each item keeps a
 `vendor\<name>.version` marker and is re-fetched when the pin at the top of the

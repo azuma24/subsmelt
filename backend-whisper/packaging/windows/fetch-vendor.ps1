@@ -8,7 +8,7 @@
   and licensed separately):
 
     vendor\ffmpeg.exe         static ffmpeg from a pinned, SHA-256 verified
-                              BtbN release build, bundled beside run_server.exe;
+                              Gyan release build, bundled beside run_server.exe;
                               app/audio.py uses it via SUBSMELT_FFMPEG.
     vendor\vc_redist.x64.exe  Microsoft VC++ runtime, silently installed by the
                               installer ([Files]/[Run] in installer.iss).
@@ -34,13 +34,11 @@ param(
     [switch]$Force
 )
 
-# ffmpeg: a dated BtbN release build of the 8.1 branch, not the moving "latest".
-# To bump: `gh release list --repo BtbN/FFmpeg-Builds`, pick a win64-gpl (static,
-# non-shared) zip from `gh release view <tag> --repo BtbN/FFmpeg-Builds --json
-# assets`, and copy its sha256 digest here.
-$FfmpegRelease = "autobuild-2026-10-24-13-02"
-$FfmpegZip = "ffmpeg-n8.1.3-24-g92611900bb-win64-gpl-8.1.zip"
-$FfmpegSha256 = "0b1a903367bfbe906125aad78069e3b9dfecac74ea76db05ada2e667c80ac2c9"
+# Pin a versioned static full build so rebuilds can verify the same archive.
+# The release's asset list provides the SHA-256 for the full_build.zip.
+$FfmpegVersion = "9.0.2"
+$FfmpegZip = "ffmpeg-$FfmpegVersion-full_build.zip"
+$FfmpegSha256 = "759d0a9831c436a0eb331ad36f236c06cb04aaa0005da46571f0e9d3d9206f6b"
 
 $NemoSpeechVersion = "0.1.0"
 $NemoSpeechSha256 = "ba024204e76ca2fa4eefa8787506c3c49e418147f627f60cf9206a582b60089c"
@@ -51,7 +49,7 @@ $ProgressPreference = "SilentlyContinue"  # huge speedup for Invoke-WebRequest o
 $VendorDir = Join-Path $PSScriptRoot "vendor"
 New-Item -ItemType Directory -Force -Path $VendorDir | Out-Null
 
-$FfmpegUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/$FfmpegRelease/$FfmpegZip"
+$FfmpegUrl = "https://github.com/GyanD/codexffmpeg/releases/download/$FfmpegVersion/$FfmpegZip"
 # VC++ redistributable: Microsoft's permalink to the latest x64 runtime.
 $VcRedistUrl = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
 $NemoSpeechZip = "nemo-speech-$NemoSpeechVersion-windows-x86_64-cuda.zip"
