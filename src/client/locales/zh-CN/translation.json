@@ -361,6 +361,8 @@
       "title": "界面",
       "description": "选择此浏览器中的 SubSmelt 显示方式。",
       "language": "语言",
+      "subtitleWarnings": "显示字幕警告",
+      "subtitleWarningsHint": "显示字幕质量检查和播放建议。",
       "languageHint": "会保存在此浏览器中，并立即应用。",
       "theme": "主题",
       "themeHint": "选择浅色或深色界面，或跟随系统设置。",
@@ -1797,7 +1799,8 @@
       "title": "热门文件"
     },
     "recent": {
-      "title": "最近调用"
+      "title": "最近调用",
+      "sort": "排序最近调用"
     }
   },
   "corrections": {

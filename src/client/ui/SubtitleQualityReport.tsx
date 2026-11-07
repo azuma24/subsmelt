@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { SubtitleQualityIssue } from "../../shared/subtitle-quality";
+import { useSubtitleWarningsEnabled } from "../hooks";
 import { useTranslation } from "../i18n";
 
 const PAGE_SIZE = 25;
@@ -19,6 +20,8 @@ export function SubtitleQualityReport({
 }) {
   const { t } = useTranslation();
   const [limit, setLimit] = useState(PAGE_SIZE);
+  const showWarnings = useSubtitleWarningsEnabled();
+  if (!showWarnings) return null;
   if (!issues.length) return <p className="text-xs text-muted">{t("subtitleQuality.clear")}</p>;
 
   return (

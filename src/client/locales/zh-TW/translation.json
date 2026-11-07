@@ -361,6 +361,8 @@
       "title": "介面",
       "description": "選擇此瀏覽器中的 SubSmelt 顯示方式。",
       "language": "語言",
+      "subtitleWarnings": "顯示字幕警告",
+      "subtitleWarningsHint": "顯示字幕品質檢查與播放建議。",
       "languageHint": "會儲存在此瀏覽器中，並立即套用。",
       "theme": "佈景主題",
       "themeHint": "選擇淺色或深色介面，或跟隨系統設定。",
@@ -1797,7 +1799,8 @@
       "title": "熱門檔案"
     },
     "recent": {
-      "title": "最近呼叫"
+      "title": "最近呼叫",
+      "sort": "排序最近呼叫"
     }
   },
   "corrections": {

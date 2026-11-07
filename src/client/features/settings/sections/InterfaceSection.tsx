@@ -4,14 +4,16 @@ import { ActionButton, Select } from "../../../ui/primitives";
 import { LANGUAGES } from "../../../app/constants";
 import { getThemePref, setThemePref, THEME_PREFS, type ThemePref } from "../../../lib/theme";
 import { getFontScale, setFontScale, DEFAULT_SCALE, MIN_SCALE, MAX_SCALE, SCALE_STEP } from "../../../lib/font-scale";
-import { labelCls } from "./shared";
+import { ToggleRow, labelCls } from "./shared";
 
-/**
- * Interface preferences. Nothing here touches the server settings blob — theme
- * and font scale are device-local and the language switch is i18next state —
- * so this section owns its own state and never marks the page dirty.
- */
-export function InterfaceSection() {
+/** Theme, font size and language are device-local. Subtitle warnings are saved with the app settings. */
+export function InterfaceSection({
+  subtitleWarnings,
+  onSubtitleWarningsChange,
+}: {
+  subtitleWarnings: boolean;
+  onSubtitleWarningsChange: (checked: boolean) => void;
+}) {
   const { t, i18n } = useTranslation();
   const [themePref, setThemePrefState] = useState<ThemePref>(getThemePref());
   const [fontScale, setFontScaleState] = useState<number>(getFontScale());
@@ -88,6 +90,12 @@ export function InterfaceSection() {
         </Select>
         <p className="mt-1 text-xs text-faint">{t("settings.interface.languageHint")}</p>
       </div>
+      <ToggleRow
+        title={t("settings.interface.subtitleWarnings")}
+        description={t("settings.interface.subtitleWarningsHint")}
+        checked={subtitleWarnings}
+        onChange={onSubtitleWarningsChange}
+      />
     </div>
   );
 }

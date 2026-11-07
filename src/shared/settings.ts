@@ -76,6 +76,7 @@ export const SETTINGS = {
   watch_enabled: flag,
   watcher_paused: flag,
   auto_translate: flag,
+  show_subtitle_warnings: flag,
   video_extensions: s,
   subtitle_extensions: s,
   // Speech-to-text

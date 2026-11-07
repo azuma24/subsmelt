@@ -40,10 +40,13 @@ import { SttSection } from "./sections/SttSection";
 import { YoutubeSection } from "./sections/YoutubeSection";
 import { SettingsSubpageLinks } from "./SettingsSubpageLinks";
 import { ConfigLoadErrorBanner, configLoadFailureOf } from "./ConfigLoadErrorBanner";
+import {
+  SETTINGS_SECTIONS,
+  SETTINGS_SECTION_KEYS,
+  settingsSection,
+  type SettingsSectionKey,
+} from "./settings-navigation";
 
-const SECTION_KEYS = ["llm", "engine", "corrections", "sources", "stt", "youtube", "iface"] as const;
-type SectionKey = (typeof SECTION_KEYS)[number];
-const isSectionKey = (value: string | null): value is SectionKey => SECTION_KEYS.includes(value as SectionKey);
 /** saved: written as sent. rejected: written, minus keys the server refused. failed: nothing written. */
 type SaveOutcome = "saved" | "rejected" | "failed";
 
@@ -68,10 +71,7 @@ export function SettingsPage() {
   const [notificationTestResult, setNotificationTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   // ?section=youtube lets other pages link straight to a section.
   const [params] = useSearchParams();
-  const requestedSection = params.get("section");
-  const [activeSection, setActiveSection] = useState<SectionKey>(
-    isSectionKey(requestedSection) ? requestedSection : "llm",
-  );
+  const activeSection = settingsSection(params.get("section"));
 
   // Synchronous mirror of `form` so rapid update()/updateAndSave() calls in the
   // same tick build on each other instead of overwriting from a stale render closure.
@@ -265,77 +265,66 @@ export function SettingsPage() {
   // extraction: LLM and Engine autosave everything (debounced); Sources saves
   // its pickers immediately but leaves the four Advanced fields to the topbar
   // Save; STT is deferred throughout except the backend token.
-  const sectionMeta: Record<SectionKey, { navLabel: string; title: string; description: string; content: ReactNode }> =
-    {
-      llm: {
-        navLabel: t("settings.llmConnection.title"),
-        title: t("settings.llmConnection.title"),
-        description: t("settings.llmConnection.description"),
-        content: <LlmSection settings={settings} updateAndSaveDebounced={updateAndSaveDebounced} addToast={addToast} />,
-      },
-      engine: {
-        navLabel: t("settings.translationEngine.title"),
-        title: t("settings.translationEngine.title"),
-        description: t("settings.translationEngine.description"),
-        content: <EngineSection settings={settings} updateAndSaveDebounced={updateAndSaveDebounced} />,
-      },
-      corrections: {
-        navLabel: t("settings.corrections.title"),
-        title: t("settings.corrections.title"),
-        description: t("settings.corrections.description"),
-        content: <CorrectionsSection settings={settings} updateAndSave={updateAndSave} />,
-      },
-      sources: {
-        navLabel: t("settings.sources.title"),
-        title: t("settings.sources.title"),
-        description: t("settings.sources.description"),
-        content: (
-          <SourcesSection
-            settings={settings}
-            update={update}
-            updateAndSave={updateAndSave}
-            updateManyAndSave={updateManyAndSave}
-            updateAndSaveDebounced={updateAndSaveDebounced}
-            onNotificationTest={handleNotificationTest}
-            testingNotification={testingNotification}
-            notificationTestResult={notificationTestResult}
-          />
-        ),
-      },
-      stt: {
-        navLabel: t("settings.transcription.title"),
-        title: t("settings.transcription.title"),
-        description: t("settings.transcription.description"),
-        content: (
-          <SttSection
-            settings={settings}
-            tasks={tasksQuery.data ?? []}
-            update={update}
-            updateAndSaveDebounced={updateAndSaveDebounced}
-            healthQuery={transcriptionHealthQuery}
-            dirty={dirty}
-            saving={saving}
-            onSave={handleSave}
-            onTest={handleTranscriptionTest}
-            testing={testingTranscription}
-            testResult={transcriptionTestResult}
-          />
-        ),
-      },
-      youtube: {
-        navLabel: t("settings.youtube.title"),
-        title: t("settings.youtube.title"),
-        description: t("settings.youtube.description"),
-        content: <YoutubeSection settings={settings} update={update} updateAndSaveDebounced={updateAndSaveDebounced} />,
-      },
-      iface: {
-        navLabel: t("settings.interface.title"),
-        title: t("settings.interface.title"),
-        description: t("settings.interface.description"),
-        content: <InterfaceSection />,
-      },
-    };
-  const navOrder: readonly SectionKey[] = SECTION_KEYS;
+  const sectionMeta: Record<SettingsSectionKey, { description: string; content: ReactNode }> = {
+    llm: {
+      description: t("settings.llmConnection.description"),
+      content: <LlmSection settings={settings} updateAndSaveDebounced={updateAndSaveDebounced} addToast={addToast} />,
+    },
+    engine: {
+      description: t("settings.translationEngine.description"),
+      content: <EngineSection settings={settings} updateAndSaveDebounced={updateAndSaveDebounced} />,
+    },
+    corrections: {
+      description: t("settings.corrections.description"),
+      content: <CorrectionsSection settings={settings} updateAndSave={updateAndSave} />,
+    },
+    sources: {
+      description: t("settings.sources.description"),
+      content: (
+        <SourcesSection
+          settings={settings}
+          update={update}
+          updateAndSave={updateAndSave}
+          updateManyAndSave={updateManyAndSave}
+          updateAndSaveDebounced={updateAndSaveDebounced}
+          onNotificationTest={handleNotificationTest}
+          testingNotification={testingNotification}
+          notificationTestResult={notificationTestResult}
+        />
+      ),
+    },
+    stt: {
+      description: t("settings.transcription.description"),
+      content: (
+        <SttSection
+          settings={settings}
+          tasks={tasksQuery.data ?? []}
+          update={update}
+          updateAndSaveDebounced={updateAndSaveDebounced}
+          healthQuery={transcriptionHealthQuery}
+          dirty={dirty}
+          saving={saving}
+          onSave={handleSave}
+          onTest={handleTranscriptionTest}
+          testing={testingTranscription}
+          testResult={transcriptionTestResult}
+        />
+      ),
+    },
+    youtube: {
+      description: t("settings.youtube.description"),
+      content: <YoutubeSection settings={settings} update={update} updateAndSaveDebounced={updateAndSaveDebounced} />,
+    },
+    iface: {
+      description: t("settings.interface.description"),
+      content: (
+        <InterfaceSection
+          subtitleWarnings={settings.show_subtitle_warnings === "1"}
+          onSubtitleWarningsChange={(checked) => void updateAndSave("show_subtitle_warnings", checked ? "1" : "0")}
+        />
+      ),
+    },
+  };
 
   // First-run signposting. Both queries are already in the app-level cache, so
   // this costs no extra requests. Copy is shared with the Dashboard checklist
@@ -353,7 +342,7 @@ export function SettingsPage() {
       hint: t("dashboard.quickStart.llmHint"),
       actionLabel: t("settings.setup.goToSection"),
       // Already in Settings — jump to the section rather than navigating away.
-      onAction: () => setActiveSection("llm"),
+      onAction: () => navigate("/settings"),
     },
     {
       key: "tasks",
@@ -388,9 +377,7 @@ export function SettingsPage() {
         }
       />
 
-      {/* One max width for the checklist and the nav + panel grid, so the
-          checklist does not run past the column it introduces. */}
-      <div className="max-w-[920px] flex-1 p-4 md:p-4">
+      <div className="w-full max-w-5xl flex-1 p-4">
         {settingsQuery.isError && (
           <div className="mb-4">
             <InlineError onRetry={() => void settingsQuery.refetch()} />
@@ -403,14 +390,11 @@ export function SettingsPage() {
         )}
         <SetupProgress steps={setupSteps} />
         {isMobile ? (
-          // One disclosure mechanism for all five sections — the shared
-          // Accordion, which carries aria-expanded/aria-controls and a caret
-          // that actually rotates. LLM stays open on arrival as before.
-          <div className="space-y-3">
+          <div key={activeSection} className="space-y-3">
             {/* The pages of their own come first: below, an open section can run several screens long. */}
             <SettingsSubpageLinks variant="rows" />
-            {navOrder.map((key) => (
-              <Accordion key={key} title={sectionMeta[key].title} defaultOpen={key === activeSection}>
+            {SETTINGS_SECTION_KEYS.map((key) => (
+              <Accordion key={key} title={t(SETTINGS_SECTIONS[key])} defaultOpen={key === activeSection}>
                 <div className="space-y-4">
                   <p className="text-xs leading-6 text-muted">{sectionMeta[key].description}</p>
                   {sectionMeta[key].content}
@@ -419,29 +403,12 @@ export function SettingsPage() {
             ))}
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-[185px_1fr]">
-            <nav className="flex flex-col gap-px">
-              {navOrder.map((key) => (
-                <button
-                  type="button"
-                  key={key}
-                  onClick={() => setActiveSection(key)}
-                  className={`rounded-sm border px-2 py-2 text-left text-sm transition-colors ${activeSection === key ? "border-accent-line bg-accent-soft text-accent" : "border-transparent text-muted hover:bg-surface-raised hover:text-text"}`}
-                >
-                  {sectionMeta[key].navLabel}
-                </button>
-              ))}
-              <SettingsSubpageLinks variant="nav" />
-            </nav>
-            <div>
-              <SettingsSection
-                title={sectionMeta[activeSection].title}
-                description={sectionMeta[activeSection].description}
-              >
-                {sectionMeta[activeSection].content}
-              </SettingsSection>
-            </div>
-          </div>
+          <SettingsSection
+            title={t(SETTINGS_SECTIONS[activeSection])}
+            description={sectionMeta[activeSection].description}
+          >
+            {sectionMeta[activeSection].content}
+          </SettingsSection>
         )}
 
         <p className="pt-4 text-center text-xs text-faint">

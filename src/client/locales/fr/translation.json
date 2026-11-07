@@ -362,6 +362,8 @@
       "title": "Interface",
       "description": "Choisissez l’apparence de SubSmelt dans ce navigateur.",
       "language": "Langue",
+      "subtitleWarnings": "Afficher les avertissements de sous-titres",
+      "subtitleWarningsHint": "Affiche les contrôles de qualité et les suggestions de lecture des sous-titres.",
       "languageHint": "Enregistré dans ce navigateur et appliqué immédiatement.",
       "theme": "Thème",
       "themeHint": "Choisissez une interface claire ou sombre, ou suivez le réglage de votre système.",
@@ -1812,7 +1814,8 @@
       "title": "Fichiers les plus utilisés"
     },
     "recent": {
-      "title": "Appels récents"
+      "title": "Appels récents",
+      "sort": "Trier les appels récents"
     }
   },
   "corrections": {

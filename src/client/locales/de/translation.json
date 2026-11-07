@@ -361,6 +361,8 @@
       "title": "Oberfläche",
       "description": "Wähle aus, wie sich SubSmelt in diesem Browser anfühlen soll.",
       "language": "Sprache",
+      "subtitleWarnings": "Untertitelwarnungen anzeigen",
+      "subtitleWarningsHint": "Zeigt Qualitätsprüfungen und Wiedergabehinweise für Untertitel.",
       "languageHint": "Wird in diesem Browser gespeichert und sofort angewendet.",
       "theme": "Design",
       "themeHint": "Wähle eine helle oder dunkle Oberfläche oder folge deiner Systemeinstellung.",
@@ -1797,7 +1799,8 @@
       "title": "Meistgenutzte Dateien"
     },
     "recent": {
-      "title": "Letzte Aufrufe"
+      "title": "Letzte Aufrufe",
+      "sort": "Aufrufe sortieren"
     }
   },
   "corrections": {

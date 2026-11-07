@@ -362,6 +362,8 @@
       "title": "Interface",
       "description": "Escolha como o SubSmelt deve funcionar neste navegador.",
       "language": "Idioma",
+      "subtitleWarnings": "Mostrar avisos de legendas",
+      "subtitleWarningsHint": "Mostra verificações de qualidade e sugestões de reprodução de legendas.",
       "languageHint": "Salvo neste navegador e aplicado imediatamente.",
       "theme": "Tema",
       "themeHint": "Escolha uma interface clara ou escura, ou siga a configuração do seu sistema.",
@@ -1812,7 +1814,8 @@
       "title": "Principais arquivos"
     },
     "recent": {
-      "title": "Chamadas recentes"
+      "title": "Chamadas recentes",
+      "sort": "Ordenar chamadas recentes"
     }
   },
   "corrections": {

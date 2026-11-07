@@ -15,7 +15,7 @@ import { axisCost, axisTokens } from "./chart-scale";
 import { type ChartSeries, DailyBarChart } from "./DailyBarChart";
 import { ByKindList, ByModelList } from "./UsageBreakdowns";
 import { UsageStats } from "./UsageStats";
-import { RecentCallsTable, TopFilesTable } from "./UsageTables";
+import { RecentCalls, TopFilesTable } from "./UsageTables";
 
 const DEFAULT_RANGE: UsageRange = "30d";
 
@@ -141,7 +141,7 @@ function UsageBody({ report }: { report: UsageReport }) {
         <ByKindList rows={report.byKind} />
       </div>
       <TopFilesTable rows={report.topFiles} />
-      <RecentCallsTable rows={report.recent} />
+      <RecentCalls rows={report.recent} />
     </div>
   );
 }

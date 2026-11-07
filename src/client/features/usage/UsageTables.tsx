@@ -9,12 +9,15 @@ import { Icon } from "../../ui/Icon";
 import { selectCls } from "../../ui/SortControls";
 import { nextSort, type SortDir, type SortValue, sortRows, type TableSort } from "./table-sort";
 
-interface Column<Row> {
+interface SortColumn<Row> {
   key: string;
   label: string;
   numeric?: boolean;
-  cell: (row: Row) => ReactNode;
   sortValue: (row: Row) => SortValue;
+}
+
+interface Column<Row> extends SortColumn<Row> {
+  cell: (row: Row) => ReactNode;
 }
 
 interface UsageTableProps<Row> {
@@ -31,18 +34,54 @@ interface UsageTableProps<Row> {
 const firstDir = (column: { numeric?: boolean }): SortDir => (column.numeric ? "desc" : "asc");
 const dirIcon = (dir: SortDir) => (dir === "asc" ? "arrow-up" : "arrow-down");
 
+function useUsageSort<Row>(columns: SortColumn<Row>[], defaultSort: TableSort) {
+  const [sort, setSort] = useState(defaultSort);
+  const active = columns.find((c) => c.key === sort.key) ?? columns[0];
+  const sortBy = (key: string) => {
+    const column = columns.find((c) => c.key === key) ?? active;
+    setSort((current) => nextSort(current, column.key, firstDir(column)));
+  };
+  return { active, dir: sort.dir, sortBy };
+}
+
+function UsageSortControls({
+  columns,
+  column,
+  dir,
+  sortBy,
+  label,
+}: {
+  columns: Pick<SortColumn<unknown>, "key" | "label">[];
+  column: string;
+  dir: SortDir;
+  sortBy: (key: string) => void;
+  label: string;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center gap-1">
+      <select aria-label={label} value={column} onChange={(event) => sortBy(event.target.value)} className={selectCls}>
+        {columns.map((c) => (
+          <option key={c.key} value={c.key}>
+            {c.label}
+          </option>
+        ))}
+      </select>
+      <ActionButton variant="ghost" size="sm" onClick={() => sortBy(column)}>
+        <Icon name={dirIcon(dir)} />
+        <span className="sr-only">{dir === "asc" ? t("whisper.sortAsc") : t("whisper.sortDesc")}</span>
+      </ActionButton>
+    </div>
+  );
+}
+
 /** A real table on wide screens, stacked rows on phones; both sort by any column. */
 function UsageTable<Row>({ title, rows, rowKey, columns, defaultSort, primary, meta }: UsageTableProps<Row>) {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const headingId = useId();
-  const [sort, setSort] = useState(defaultSort);
-  const active = columns.find((c) => c.key === sort.key) ?? columns[0];
-  const sorted = sortRows(rows, active.sortValue, sort.dir);
-  const sortBy = (key: string) => {
-    const column = columns.find((c) => c.key === key) ?? active;
-    setSort((current) => nextSort(current, column.key, firstDir(column)));
-  };
+  const { active, dir, sortBy } = useUsageSort(columns, defaultSort);
+  const sorted = sortRows(rows, active.sortValue, dir);
   return (
     <section aria-labelledby={headingId} className="rounded-md border border-border bg-surface p-4">
       <h2 id={headingId} className="text-sm font-semibold text-text">
@@ -50,23 +89,14 @@ function UsageTable<Row>({ title, rows, rowKey, columns, defaultSort, primary, m
       </h2>
       {isMobile ? (
         <>
-          <div className="mt-2 flex items-center gap-2">
-            <select
-              aria-label={t("whisper.sortAriaLabel")}
-              value={active.key}
-              onChange={(event) => sortBy(event.target.value)}
-              className={selectCls}
-            >
-              {columns.map((c) => (
-                <option key={c.key} value={c.key}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-            <ActionButton variant="ghost" size="sm" onClick={() => sortBy(active.key)}>
-              <Icon name={dirIcon(sort.dir)} />
-              <span className="sr-only">{sort.dir === "asc" ? t("whisper.sortAsc") : t("whisper.sortDesc")}</span>
-            </ActionButton>
+          <div className="mt-2">
+            <UsageSortControls
+              columns={columns}
+              column={active.key}
+              dir={dir}
+              sortBy={sortBy}
+              label={t("whisper.sortAriaLabel")}
+            />
           </div>
           <ul className="mt-2">
             {sorted.map((row, i) => (
@@ -88,7 +118,7 @@ function UsageTable<Row>({ title, rows, rowKey, columns, defaultSort, primary, m
                     <th
                       key={c.key}
                       scope="col"
-                      aria-sort={isActive ? (sort.dir === "asc" ? "ascending" : "descending") : undefined}
+                      aria-sort={isActive ? (dir === "asc" ? "ascending" : "descending") : undefined}
                       className="p-0 font-medium"
                     >
                       <button
@@ -96,9 +126,9 @@ function UsageTable<Row>({ title, rows, rowKey, columns, defaultSort, primary, m
                         onClick={() => sortBy(c.key)}
                         className={`flex w-full items-center gap-1 rounded-sm px-2 py-2 font-medium transition-colors hover:text-text ${c.numeric ? "justify-end" : ""} ${isActive ? "text-text" : ""}`}
                       >
-                        {c.numeric && isActive && <Icon name={dirIcon(sort.dir)} size={16} />}
+                        {c.numeric && isActive && <Icon name={dirIcon(dir)} size={16} />}
                         {c.label}
-                        {!c.numeric && isActive && <Icon name={dirIcon(sort.dir)} size={16} />}
+                        {!c.numeric && isActive && <Icon name={dirIcon(dir)} size={16} />}
                       </button>
                     </th>
                   );
@@ -201,62 +231,95 @@ export function TopFilesTable({ rows }: { rows: UsageFile[] }) {
   );
 }
 
-export function RecentCallsTable({ rows }: { rows: UsageCall[] }) {
+export function RecentCalls({ rows }: { rows: UsageCall[] }) {
   const { t } = useTranslation();
-  const when = (c: UsageCall) => <time title={fullTime(c.ts)}>{relativeTime(c.ts)}</time>;
+  const headingId = useId();
+  const columns: SortColumn<UsageCall>[] = [
+    { key: "time", label: t("usage.table.time"), sortValue: (c) => c.ts },
+    { key: "file", label: t("usage.table.file"), sortValue: (c) => c.srtName },
+    { key: "kind", label: t("usage.table.kind"), sortValue: (c) => t(`usage.kind.${c.kind}`) },
+    { key: "model", label: t("usage.table.model"), sortValue: (c) => c.model },
+    { key: "in", label: t("usage.table.input"), numeric: true, sortValue: (c) => c.inputTokens },
+    { key: "out", label: t("usage.table.output"), numeric: true, sortValue: (c) => c.outputTokens },
+    { key: "cost", label: t("usage.table.cost"), numeric: true, sortValue: (c) => c.costUsd },
+  ];
+  const { active, dir, sortBy } = useUsageSort(columns, { key: "time", dir: "desc" });
+  // Keep open rows attached to the same call when sorting or receiving new calls.
+  const duplicates = new Map<string, number>();
+  const keyed = rows.map((call) => {
+    const identity = JSON.stringify([
+      call.ts,
+      call.jobId,
+      call.srtName,
+      call.kind,
+      call.model,
+      call.inputTokens,
+      call.outputTokens,
+      call.costUsd,
+    ]);
+    const occurrence = duplicates.get(identity) ?? 0;
+    duplicates.set(identity, occurrence + 1);
+    return { call, key: `${identity}/${occurrence}` };
+  });
+  const sorted = sortRows(keyed, ({ call }) => active.sortValue(call), dir);
+
   return (
-    <UsageTable
-      title={t("usage.recent.title")}
-      rows={rows}
-      defaultSort={{ key: "time", dir: "desc" }}
-      rowKey={(c, i) => `${c.ts}/${i}`}
-      primary={(c) => <FileName jobId={c.jobId} name={c.srtName} />}
-      meta={(c) =>
-        [
-          relativeTime(c.ts),
-          t(`usage.kind.${c.kind}`),
-          c.model,
-          t("usage.inOut", { input: formatTokens(c.inputTokens), output: formatTokens(c.outputTokens) }),
-          formatCost(c.costUsd),
-        ].join(" · ")
-      }
-      columns={[
-        { key: "time", label: t("usage.table.time"), cell: when, sortValue: (c) => c.ts },
-        {
-          key: "file",
-          label: t("usage.table.file"),
-          cell: (c) => <FileName jobId={c.jobId} name={c.srtName} />,
-          sortValue: (c) => c.srtName,
-        },
-        {
-          key: "kind",
-          label: t("usage.table.kind"),
-          cell: (c) => t(`usage.kind.${c.kind}`),
-          sortValue: (c) => t(`usage.kind.${c.kind}`),
-        },
-        { key: "model", label: t("usage.table.model"), cell: (c) => c.model, sortValue: (c) => c.model },
-        {
-          key: "in",
-          label: t("usage.table.input"),
-          numeric: true,
-          cell: (c) => formatTokens(c.inputTokens),
-          sortValue: (c) => c.inputTokens,
-        },
-        {
-          key: "out",
-          label: t("usage.table.output"),
-          numeric: true,
-          cell: (c) => formatTokens(c.outputTokens),
-          sortValue: (c) => c.outputTokens,
-        },
-        {
-          key: "cost",
-          label: t("usage.table.cost"),
-          numeric: true,
-          cell: (c) => formatCost(c.costUsd),
-          sortValue: (c) => c.costUsd,
-        },
-      ]}
-    />
+    <section aria-labelledby={headingId} className="@container rounded-md border border-border bg-surface p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id={headingId} className="text-sm font-semibold text-text">
+          {t("usage.recent.title")}
+        </h2>
+        <UsageSortControls
+          columns={columns}
+          column={active.key}
+          dir={dir}
+          sortBy={sortBy}
+          label={t("usage.recent.sort")}
+        />
+      </div>
+      <ul className="mt-2 divide-y divide-border-subtle">
+        {sorted.map(({ call, key }) => (
+          <li key={key}>
+            <details className="group">
+              <summary className="flex min-h-touch cursor-pointer list-none items-center gap-2 rounded-sm px-1 py-1.5 text-sm hover:bg-surface-raised md:min-h-8 [&::-webkit-details-marker]:hidden">
+                <time dateTime={call.ts} className="shrink-0 whitespace-nowrap text-xs tabular-nums text-muted">
+                  {relativeTime(call.ts)}
+                </time>
+                <span className="min-w-0 flex-1 truncate text-text" title={call.srtName ?? undefined}>
+                  {call.srtName ?? t("usage.noFile")}
+                </span>
+                <span className="hidden max-w-1/4 truncate font-mono text-xs text-muted @lg:block">{call.model}</span>
+                <Icon
+                  name="chevron-down"
+                  size={16}
+                  className="shrink-0 text-muted transition-transform group-open:rotate-180"
+                />
+              </summary>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 px-1 pb-3 pt-2 text-xs @lg:grid-cols-3">
+                <div className="col-span-full">
+                  <dt className="text-muted">{t("usage.table.file")}</dt>
+                  <dd className="mt-0.5 [overflow-wrap:anywhere]">
+                    <FileName jobId={call.jobId} name={call.srtName} />
+                  </dd>
+                </div>
+                {[
+                  ["time", fullTime(call.ts)],
+                  ["kind", t(`usage.kind.${call.kind}`)],
+                  ["model", call.model],
+                  ["input", call.inputTokens.toLocaleString()],
+                  ["output", call.outputTokens.toLocaleString()],
+                  ["cost", formatCost(call.costUsd)],
+                ].map(([key, value]) => (
+                  <div key={key} className="min-w-0">
+                    <dt className="text-muted">{t(`usage.table.${key}`)}</dt>
+                    <dd className="mt-0.5 tabular-nums text-text [overflow-wrap:anywhere]">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </details>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

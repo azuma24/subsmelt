@@ -181,10 +181,22 @@ test("top files rank by total tokens with only that header marked sorted", () =>
   assert.ok(page.text.includes("Big.srt 2 80.0k 10.0k 90.0k $0.50"));
 });
 
-test("recent calls start newest first", () => {
-  const page = render(report);
-
-  assert.deepEqual(headerSorts(page.html, "Recent calls")[0], ["Time", "descending"]);
+test("recent calls start newest first and keep full details inside collapsed rows", () => {
+  const early = { ...report.recent[0], srtName: "Earlier.srt", ts: "2026-10-07T11:00:00.000Z" };
+  for (const isMobile of [false, true]) {
+    const page = render({ ...report, recent: [early, ...report.recent] }, { isMobile });
+    const recent = page.html.slice(page.html.indexOf(">Recent calls</h2>"));
+    assert.match(recent, /<select aria-label="Sort recent calls"[^>]*><option value="time" selected="">Time<\/option>/);
+    const summaries = Array.from(
+      recent.matchAll(/<details class="group"><summary[\s\S]*?<\/summary>/g),
+      ([row]) => row,
+    );
+    assert.equal(summaries.length, 2);
+    assert.match(summaries[0], /Show\.S01E01\.srt/);
+    assert.match(summaries[1], /Earlier\.srt/);
+    assert.doesNotMatch(summaries[0], /href=/);
+    assert.match(recent, /<dl[\s\S]*href="\/jobs\/7"/);
+  }
 });
 
 test("phones sort with a column select and a direction toggle", () => {

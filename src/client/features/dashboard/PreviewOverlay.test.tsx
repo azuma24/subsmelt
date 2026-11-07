@@ -47,3 +47,26 @@ test("the analysis opens collapsed to a heading and a one-line teaser, with the 
   assert.ok(page.text.includes("Hello there."));
   assert.ok(page.text.includes("肯諾比將軍。"));
 });
+
+test("subtitle warnings, highlights, and issue navigation require opt-in", () => {
+  const preview = {
+    srtPath: "/media/Example.srt",
+    totalLines: 1,
+    lines: [{ index: 1, start: 0, end: 1000, original: "Text", translated: "" }],
+    quality: { original: [], translated: [{ code: "missingCue", cue: 1 }] },
+  };
+  const render = (settings: Record<string, unknown>) =>
+    renderPage(<PreviewOverlay jobId={1} previewSearch="" setPreviewSearch={() => {}} onClose={() => {}} />, [
+      [["job-preview", 1], preview],
+      [["settings"], settings],
+    ]);
+  for (const settings of [{}, { show_subtitle_warnings: "0" }]) {
+    const page = render(settings);
+    assert.doesNotMatch(page.text, /Translated subtitle warnings|Jump to next issue/);
+    assert.match(page.html, /id="preview-line-1" class=""/);
+  }
+  const enabled = render({ show_subtitle_warnings: "1" });
+  assert.match(enabled.text, /Translated subtitle warnings 1/);
+  assert.match(enabled.html, /id="preview-line-1" class="bg-warning-soft"/);
+  assert.ok(enabled.buttons.includes("Jump to next issue"));
+});

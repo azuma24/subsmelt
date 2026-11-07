@@ -31,6 +31,10 @@ export function useSettingsQuery() {
   return useQuery({ queryKey: ["settings"], queryFn: ({ signal }) => api.getSettings({ signal }), staleTime: 30_000 });
 }
 
+export function useSubtitleWarningsEnabled() {
+  return useSettingsQuery().data?.show_subtitle_warnings === "1";
+}
+
 export function useTasksQuery() {
   return useQuery<Task[]>({
     queryKey: ["tasks"],

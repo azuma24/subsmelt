@@ -60,6 +60,7 @@ export interface ClientSettings {
   monthly_token_budget?: string;
   watch_enabled?: StringBool;
   auto_translate?: StringBool;
+  show_subtitle_warnings?: StringBool;
   video_extensions?: string;
   subtitle_extensions?: string;
 

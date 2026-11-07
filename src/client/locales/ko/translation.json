@@ -361,6 +361,8 @@
       "title": "인터페이스",
       "description": "이 브라우저에서 SubSmelt가 표시되는 방식을 선택합니다.",
       "language": "언어",
+      "subtitleWarnings": "자막 경고 표시",
+      "subtitleWarningsHint": "자막 품질 검사와 재생 제안을 표시합니다.",
       "languageHint": "이 브라우저에 저장되고 즉시 적용됩니다.",
       "theme": "테마",
       "themeHint": "밝은 또는 어두운 인터페이스를 선택하거나 시스템 설정을 따릅니다.",
@@ -1797,7 +1799,8 @@
       "title": "상위 파일"
     },
     "recent": {
-      "title": "최근 호출"
+      "title": "최근 호출",
+      "sort": "최근 호출 정렬"
     }
   },
   "corrections": {

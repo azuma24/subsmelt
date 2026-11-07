@@ -1,8 +1,8 @@
 import { useTranslation } from "../../../i18n";
-import { Accordion, Field, TextArea } from "../../../ui/primitives";
+import { Accordion, ActionButton, Field, TextArea } from "../../../ui/primitives";
 import { DEFAULT_PROMPT } from "../../../app/constants";
 import { str } from "../../../lib/settings-value";
-import { ToggleRow, labelCls } from "./shared";
+import { ToggleRow } from "./shared";
 import { useIsMobile } from "../../../hooks";
 
 interface EngineSectionProps {
@@ -23,44 +23,40 @@ export function EngineSection({ settings, updateAndSaveDebounced }: EngineSectio
   const { t } = useTranslation();
   return (
     <>
-      {/* Prompt + context behind "Prompt" accordion */}
-      <Accordion title={t("settings.promptSection")} defaultOpen>
+      <Accordion
+        title={t("settings.promptSection")}
+        variant="inline"
+        className="border-t border-border-subtle"
+        defaultOpen
+      >
         <div className="space-y-4">
           <div>
-            <div className="mb-2 flex items-center justify-between">
-              <label className="text-xs font-medium text-muted">{t("settings.translationEngine.systemPrompt")}</label>
-              <button
-                type="button"
-                onClick={() => updateAndSaveDebounced("prompt", DEFAULT_PROMPT)}
-                className="text-xs text-faint"
-              >
+            <div className="mb-1 flex flex-wrap items-center justify-between gap-x-3">
+              <span className="text-xs font-medium text-muted">{t("settings.translationEngine.systemPrompt")}</span>
+              <ActionButton size="sm" variant="ghost" onClick={() => updateAndSaveDebounced("prompt", DEFAULT_PROMPT)}>
                 {t("common.reset")}
-              </button>
+              </ActionButton>
             </div>
             <TextArea
               ariaLabel={t("settings.translationEngine.systemPrompt")}
               value={str(settings.prompt)}
               onChange={(value) => updateAndSaveDebounced("prompt", value)}
-              rows={8}
+              rows={isMobile ? 8 : 12}
               mono
             />
           </div>
-          <div>
-            <label className={labelCls}>{t("settings.translationEngine.additionalContext")}</label>
-            <TextArea
-              ariaLabel={t("settings.translationEngine.additionalContext")}
-              value={str(settings.additional_context)}
-              onChange={(value) => updateAndSaveDebounced("additional_context", value)}
-              rows={3}
-              placeholder={t("settings.translationEngine.additionalContextPlaceholder")}
-            />
-          </div>
+          <TextArea
+            label={t("settings.translationEngine.additionalContext")}
+            value={str(settings.additional_context)}
+            onChange={(value) => updateAndSaveDebounced("additional_context", value)}
+            rows={3}
+            placeholder={t("settings.translationEngine.additionalContextPlaceholder")}
+          />
         </div>
       </Accordion>
-      {/* Chunk/parallel/timeout + disable tool calls → Advanced accordion */}
-      <Accordion title={t("settings.advanced")}>
+      <Accordion title={t("settings.advanced")} variant="inline" className="border-t border-border-subtle">
         <div className="space-y-4">
-          <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-2"} md:max-w-[480px]`}>
+          <div className="grid gap-x-4 gap-y-3 md:grid-cols-2 xl:grid-cols-3">
             <Field
               label={t("settings.translationEngine.chunkSize")}
               value={str(settings.chunk_size, "20")}

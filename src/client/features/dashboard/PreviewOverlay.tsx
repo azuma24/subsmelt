@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "../../i18n";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useJobPreview, useIsMobile } from "../../hooks";
+import { useJobPreview, useIsMobile, useSubtitleWarningsEnabled } from "../../hooks";
 import { formatTimecode } from "../../lib";
 import { copyText } from "../../lib/clipboard";
 import { ModalShell } from "../../ui/ModalShell";
@@ -64,6 +64,7 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
   const { t } = useTranslation();
   const titleId = useId();
   const { addToast } = useToast();
+  const showWarnings = useSubtitleWarningsEnabled();
   const previewQuery = useJobPreview(jobId);
   const previewData = previewQuery.data;
   const [showOnlyChanged, setShowOnlyChanged] = useState(false);
@@ -88,6 +89,7 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
     return map;
   }, [previewData?.lines]);
   const quality = useMemo(() => {
+    if (!showWarnings) return [];
     const original = previewData?.quality?.original ?? [];
     const translated = previewData?.quality?.translated ?? [];
     return [
@@ -108,7 +110,7 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
         advisory: true,
       },
     ].filter(({ issues }) => issues.length > 0);
-  }, [previewData?.quality]);
+  }, [previewData?.quality, showWarnings]);
   const warningCues = useMemo(() => {
     const cues = new Set<number>();
     for (const { issues, advisory } of quality) {
@@ -209,9 +211,17 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
   const filteredLines = useMemo(() => {
     let lines = filterLines(previewData?.lines || [], previewSearch, effectiveTranslated);
     if (showOnlyChanged) lines = lines.filter((l) => l.original.trim() !== effectiveTranslated(l).trim());
-    if (showOnlyIssues) lines = lines.filter((l) => warningCues.has(l.index));
+    if (showWarnings && showOnlyIssues) lines = lines.filter((l) => warningCues.has(l.index));
     return lines;
-  }, [previewData?.lines, previewSearch, showOnlyChanged, showOnlyIssues, effectiveTranslated, warningCues]);
+  }, [
+    previewData?.lines,
+    previewSearch,
+    showOnlyChanged,
+    showOnlyIssues,
+    showWarnings,
+    effectiveTranslated,
+    warningCues,
+  ]);
 
   const shouldVirtualize = filteredLines.length > VIRTUALIZE_THRESHOLD;
 
@@ -354,20 +364,25 @@ export function PreviewOverlay({ jobId, previewSearch, setPreviewSearch, onClose
             >
               {t("dashboard.preview.showOnlyChanged")}
             </button>
-            <button
-              type="button"
-              onClick={() => setShowOnlyIssues((v) => !v)}
-              className={`rounded-sm px-2 py-1 ${showOnlyIssues ? "bg-warning text-canvas" : "bg-surface-raised text-muted"}`}
-            >
-              {t("dashboard.preview.showOnlyIssues")}
-            </button>
-            <button
-              type="button"
-              onClick={jumpToNextIssue}
-              className="rounded-sm bg-surface-raised px-2 py-1 text-muted"
-            >
-              {t("dashboard.preview.nextIssue")}
-            </button>
+            {showWarnings && (
+              <>
+                <button
+                  type="button"
+                  aria-pressed={showOnlyIssues}
+                  onClick={() => setShowOnlyIssues((v) => !v)}
+                  className={`rounded-sm px-2 py-1 ${showOnlyIssues ? "bg-warning text-canvas" : "bg-surface-raised text-muted"}`}
+                >
+                  {t("dashboard.preview.showOnlyIssues")}
+                </button>
+                <button
+                  type="button"
+                  onClick={jumpToNextIssue}
+                  className="rounded-sm bg-surface-raised px-2 py-1 text-muted"
+                >
+                  {t("dashboard.preview.nextIssue")}
+                </button>
+              </>
+            )}
             {previewData && (
               <button
                 type="button"

@@ -519,6 +519,8 @@
       "title": "Interface",
       "description": "Choose how SubSmelt should feel across this browser.",
       "language": "Language",
+      "subtitleWarnings": "Show subtitle warnings",
+      "subtitleWarningsHint": "Show subtitle quality checks and playback suggestions.",
       "languageHint": "Saved in this browser and applied immediately.",
       "theme": "Theme",
       "themeHint": "Choose a light or dark interface, or follow your system setting.",
@@ -1797,7 +1799,8 @@
       "title": "Top files"
     },
     "recent": {
-      "title": "Recent calls"
+      "title": "Recent calls",
+      "sort": "Sort recent calls"
     }
   },
   "corrections": {

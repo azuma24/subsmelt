@@ -1,3 +1,4 @@
+import { useSubtitleWarningsEnabled } from "../../hooks";
 import { useTranslation } from "../../i18n";
 import { LANGUAGES, findLanguage, type LanguageEntry } from "./language-table";
 import { extOf, formatBytes } from "./download-outputs";
@@ -35,6 +36,7 @@ export function StagedFileList({
   clearFiles,
 }: StagedFileListProps) {
   const { t } = useTranslation();
+  const showWarnings = useSubtitleWarningsEnabled();
 
   if (staged.length === 0) return null;
 
@@ -124,7 +126,7 @@ export function StagedFileList({
                   )}
                 </div>
               )}
-              <FileQualityCheck file={file} />
+              {showWarnings && <FileQualityCheck file={file} />}
             </li>
           );
         })}

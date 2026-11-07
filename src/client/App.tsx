@@ -14,6 +14,7 @@ import { LibraryPage } from "./features/library/LibraryPage";
 import { dashboardHref } from "./features/library/dashboard-params";
 import { scanPartialMessage } from "./features/library/ScanWarning";
 import { LEGACY_REDIRECTS, LegacyRedirect } from "./app/redirects";
+import { SettingsLayout } from "./features/settings/SettingsLayout";
 
 const UsagePage = lazy(() => import("./features/usage/UsagePage").then((m) => ({ default: m.UsagePage })));
 const LogsPage = lazy(() => import("./features/logs/LogsPage").then((m) => ({ default: m.LogsPage })));
@@ -146,10 +147,12 @@ function AppInner() {
                 <Route path="/whisper" element={<WhisperPage />} />
                 <Route path="/youtube" element={<YoutubePage />} />
                 <Route path="/convert" element={<ConvertPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/settings/languages" element={<TranslationLanguagesPage />} />
-                <Route path="/settings/usage" element={<UsagePage />} />
-                <Route path="/settings/logs" element={<LogsPage />} />
+                <Route path="/settings" element={<SettingsLayout />}>
+                  <Route index element={<SettingsPage />} />
+                  <Route path="languages" element={<TranslationLanguagesPage />} />
+                  <Route path="usage" element={<UsagePage />} />
+                  <Route path="logs" element={<LogsPage />} />
+                </Route>
                 {Object.keys(LEGACY_REDIRECTS).map((from) => (
                   <Route key={from} path={from} element={<LegacyRedirect />} />
                 ))}
