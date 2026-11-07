@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import { scanFolder, MEDIA_DIR } from "../scanner.js";
 import { runQueueSafely } from "../queue.js";
 import { getAllSettings, getTask } from "../config.js";
@@ -83,6 +84,43 @@ interface WorkState {
   items: WorkItem[];
   receipts: SubmissionReceipt[];
   reviewSelections?: Record<string, ReviewSelection>;
+}
+
+function executionPlan(plan: WorkPlan) {
+  return {
+    effective: plan.effective,
+    profileId: plan.profile?.id,
+    review: plan.review,
+    exportNote: plan.exportNote,
+    targets: plan.targets,
+    transport: plan.transport,
+    maxLineWidth: plan.quality?.maxLineWidth,
+    maxReadingSpeed: plan.quality?.maxReadingSpeed,
+    correctionRules: plan.settings.correction_rule_sets,
+    allowUnsafe: plan.settings.transcription_low_ram_behavior === "run_anyway",
+  };
+}
+
+function canReuseWork(existing: WorkItem, input: WorkInput, plan: WorkPlan | undefined): boolean {
+  if (!existing.plan || !plan) {
+    // Legacy entries run the stored request with live defaults. They cannot
+    // satisfy features that require a frozen plan.
+    return (
+      !existing.plan &&
+      !plan?.profile &&
+      !plan?.review &&
+      !plan?.exportNote &&
+      !plan?.targets &&
+      isDeepStrictEqual(existing.request, input.request)
+    );
+  }
+  if (!isDeepStrictEqual(executionPlan(existing.plan), executionPlan(plan))) return false;
+  return (
+    input.kind === "url" ||
+    ((existing.request.overwrite === true) === (input.request.overwrite === true) &&
+      existing.request.videoRevision === input.request.videoRevision &&
+      existing.request.subtitleIntakeRevision === input.request.subtitleIntakeRevision)
+  );
 }
 
 const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -284,12 +322,20 @@ export class WorkStore {
     const batchId = crypto.randomUUID();
     const now = new Date().toISOString();
     const created: WorkItem[] = [];
+    const staged: WorkItem[] = [];
+    const active = new Map<string, WorkItem>();
+    for (const item of this.items) {
+      const key = `${item.kind}:${item.input}`;
+      if (["queued", "running", "needs_review"].includes(item.status) && !active.has(key)) active.set(key, item);
+    }
     const initialLength = this.items.length;
     for (const { input, plan } of prepared) {
-      const existing = this.items.find(
-        (item) => item.input === input.input && ["queued", "running", "needs_review"].includes(item.status),
-      );
+      const key = `${input.kind}:${input.input}`;
+      const existing = active.get(key);
       if (existing) {
+        if (!canReuseWork(existing, input, plan)) {
+          throw new WorkConflict("This input already has active transcription work with a different plan");
+        }
         created.push(existing);
         continue;
       }
@@ -304,9 +350,11 @@ export class WorkStore {
         ...(plan && { plan }),
         ...(plan?.review && { reviewVideoPath: realFilePath(input.input) }),
       };
-      this.items.push(item);
+      active.set(key, item);
+      staged.push(item);
       created.push(item);
     }
+    for (const item of staged) this.items.push(item);
     if (submission) this.receipts.push({ ...submission, ids: created.map((item) => item.id) });
     if (this.items.length !== initialLength || submission) {
       try {

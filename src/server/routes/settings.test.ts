@@ -31,7 +31,7 @@ after(() => server.close());
 const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 
 const getSettings = async () => (await fetch(`${base}/api/settings`)).json();
-const saveSettings = (body: Record<string, string>) =>
+const saveSettings = (body: Record<string, unknown>) =>
   fetch(`${base}/api/settings`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -53,6 +53,44 @@ test("the webhook URL, which carries its token, is redacted and kept when the ma
   assert.equal(getSetting("notify_webhook_url"), "https://hooks.slack.com/services/new");
   await saveSettings({ notify_webhook_url: "" });
   assert.equal(getSetting("notify_webhook_url"), "");
+});
+
+test("malformed connection settings stay private and recover through a valid save", async () => {
+  const oldModel = getSetting("model");
+  for (const invalid of ['{"apiKey":"fixture-key"}', '[{"apiKey":"fixture-key"}', '["fixture-key"]']) {
+    setSetting("llm_connections", invalid);
+    const settings = await getSettings();
+    assert.equal(settings.llm_connections, "[]");
+    assert.doesNotMatch(JSON.stringify(settings), /fixture-key/);
+    assert.equal((await saveSettings({ ...settings, temperature: ".4" })).status, 200);
+    assert.equal(getSetting("llm_connections"), invalid);
+    const refused = await saveSettings({ llm_connections: invalid, model: "must-not-save" });
+    assert.equal(refused.status, 400);
+    assert.match((await refused.json()).error, /llm_connections/);
+    assert.equal(getSetting("model"), oldModel);
+  }
+  assert.equal((await saveSettings({ llm_connections: { apiKey: "fixture-key" } })).status, 400);
+  assert.equal(
+    (await saveSettings({ llm_connections: JSON.stringify([{ id: "local", model: "recovered" }]) })).status,
+    200,
+  );
+  assert.equal(JSON.parse((await getSettings()).llm_connections)[0].model, "recovered");
+
+  // Old records may omit fields that the server supplies from defaults.
+  setSetting(
+    "llm_connections",
+    JSON.stringify([{ id: "old", model: "local-model", apiKey: "fixture-key", extra: { apiKey: "extra-key" } }]),
+  );
+  const settings = await getSettings();
+  assert.doesNotMatch(JSON.stringify(settings), /fixture-key|extra-key/);
+  const connections = JSON.parse(settings.llm_connections);
+  assert.equal(connections[0].provider, "local");
+  assert.equal(connections[0].model, "local-model");
+  assert.equal(connections[0].apiKey, "__SUBSMELT_SECRET_REDACTED__");
+  connections[0].label = "Repaired local connection";
+  assert.equal((await saveSettings({ llm_connections: JSON.stringify(connections) })).status, 200);
+  assert.equal(JSON.parse(getSetting("llm_connections"))[0].apiKey, "fixture-key");
+  assert.equal((await saveSettings({ llm_connections: "[]" })).status, 200);
 });
 
 test("out-of-range numeric settings are refused with the allowed range, and nothing in the request is saved", async () => {

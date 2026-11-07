@@ -247,6 +247,13 @@ test("a resolved profile keeps its source in review, then publishes only selecte
     await transcriptionWork.idle();
     const pending = transcriptionWork.store.get(item.id);
     assert.equal(pending?.status, "needs_review", pending?.error);
+    const conflict = await fetch(`${appUrl}/api/transcribe/work`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ inputs: [{ kind: "file", input: video, request: { review: false } }] }),
+    });
+    assert.equal(conflict.status, 409);
+    assert.match((await conflict.json()).error, /different plan/);
     const source = pending?.outputPath;
     assert.ok(source);
     assert.equal(fs.readFileSync(source, "utf8"), content);

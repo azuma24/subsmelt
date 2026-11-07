@@ -241,6 +241,7 @@ async function translateJob(ctx: JobContext, plan: JobPlan): Promise<void> {
   await translateFile({
     srtPath: job.srt_path,
     outputPath: job.output_path,
+    mediaDir: MEDIA_DIR,
     ...plan.translation.options,
     llmMode: ctx.llmMode,
     split: ctx.splitFile ? { limits: plan.translation.parallelByConnection } : undefined,

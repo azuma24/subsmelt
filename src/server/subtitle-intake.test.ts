@@ -113,15 +113,22 @@ test(
     setSettings({ scan_mode: "recursive" });
 
     const inputs: { input: string }[] = [];
+    const claimed = new Set<string>();
     const runner = {
       start() {},
-      store: { enqueue: (items: typeof inputs) => inputs.push(...items) },
+      store: {
+        enqueue: (items: typeof inputs) => inputs.push(...items),
+        list: () => [...claimed].map((input) => ({ input, kind: "file", status: "needs_review" })),
+      },
     } as unknown as WorkRunner;
     await enqueueMissingTranscripts(snapshot, "auto_transcribe", { runner, silent: () => false });
     assert.deepEqual(
       inputs.map((input) => input.input),
       [legacy],
     );
+    claimed.add(legacy);
+    await enqueueMissingTranscripts(snapshot, "auto_transcribe_and_translate", { runner, silent: () => false });
+    assert.equal(inputs.length, 1, "scheduled scans leave work awaiting review alone");
 
     await assertSubtitleIntakeStillMissing(video("Absent"), revision);
     writeFileSync(path.join(folder, "Absent.eng.srt"), srt("Arrived after preview"));

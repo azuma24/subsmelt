@@ -22,7 +22,7 @@ import { deletePendingJobsForTask, getPendingJobOutputsForTask } from "../db.js"
 import { removeJobPartialOutput } from "../job-output.js";
 import { standardTaskLangCode } from "../language-codes.js";
 import { MEDIA_DIR } from "../scanner.js";
-import { REDACTED_SECRET, parseConnections, restoreRedactedApiKeys } from "../connections.js";
+import { REDACTED_SECRET, parseConnections, readConnectionList, restoreRedactedApiKeys } from "../connections.js";
 import { logger } from "../logger.js";
 import { normalizeMediaSubfolder } from "../media-paths.js";
 import { getWatcherStatus, syncWatcher } from "../watcher.js";
@@ -46,22 +46,10 @@ function redactSettings(settings: Record<string, string>): Record<string, string
     if (redacted[key]) redacted[key] = REDACTED_SECRET;
   }
 
-  if (redacted.llm_connections) {
-    try {
-      const connections = JSON.parse(redacted.llm_connections);
-      if (Array.isArray(connections)) {
-        redacted.llm_connections = JSON.stringify(
-          connections.map((connection) =>
-            connection && typeof connection === "object" && connection.apiKey
-              ? { ...connection, apiKey: REDACTED_SECRET }
-              : connection,
-          ),
-        );
-      }
-    } catch {
-      // Preserve malformed settings for the existing client-side recovery path.
-    }
-  }
+  const connections = readConnectionList(settings.llm_connections) ?? [];
+  redacted.llm_connections = JSON.stringify(
+    connections.map((connection) => ({ ...connection, apiKey: connection.apiKey ? REDACTED_SECRET : "" })),
+  );
   return redacted;
 }
 
@@ -117,6 +105,7 @@ export function registerSettingsTasksRoutes(app: Express): void {
     // disk write, no per-key concurrent-clobber window).
     const patch: Record<string, string> = {};
     const invalid: string[] = [];
+    const connectionListError = "llm_connections must contain an array of valid LLM connections with unique IDs";
     for (const [key, value] of Object.entries(settings)) {
       if (key.startsWith("_") || SERVER_RECORDED_SETTING_KEYS.has(key)) continue;
       if (!isWritableSettingKey(key) || ROUTE_OWNED_SETTING_KEYS.has(key)) {
@@ -127,13 +116,19 @@ export function registerSettingsTasksRoutes(app: Express): void {
       // are rejected rather than silently coerced via String(value) — e.g.
       // ["a"] must not become "a".
       if (typeof value !== "string") {
-        rejected.push(key);
+        if (key === "llm_connections") invalid.push(connectionListError);
+        else rejected.push(key);
         continue;
       }
       // GET may show connections synthesized from env-set values. Posting that
       // list back unchanged is not an edit, and saving it would copy the env
       // values (the API key included) into config.json.
       if (key === "llm_connections" && value === redactSettings(getAllSettings()).llm_connections) continue;
+      const connectionList = key === "llm_connections" && value.trim() ? readConnectionList(value) : undefined;
+      if (connectionList === null) {
+        invalid.push(connectionListError);
+        continue;
+      }
       // Secret values are never returned by GET. A client that saves unrelated
       // settings therefore sends the redaction marker back; preserve the
       // existing secret in that case, while an empty/new value still edits it.
@@ -141,7 +136,12 @@ export function registerSettingsTasksRoutes(app: Express): void {
         SECRET_SETTING_KEYS.has(key) && value === REDACTED_SECRET
           ? getSetting(key)
           : key === "llm_connections"
-            ? persistableConnections(restoreRedactedApiKeys(value, parseConnections(getAllSettings())))
+            ? persistableConnections(
+                restoreRedactedApiKeys(
+                  connectionList ? JSON.stringify(connectionList) : value,
+                  parseConnections(getAllSettings()),
+                ),
+              )
             : value;
       // Clients (the Settings page included) PUT the whole settings object, so
       // most keys in any given request are unchanged. Writing and logging all of

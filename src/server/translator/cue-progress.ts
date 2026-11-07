@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { logger } from "../logger.js";
 import { errorMessage } from "../errors.js";
+import { writeFileAtomically } from "../shared-files.js";
 
 /**
  * Which cues of a stopped job are really translated. The `.part` subtitle cannot
@@ -65,13 +66,10 @@ export function saveCueProgress(
   connections: readonly string[] = [],
 ): void {
   const file = cueProgressPath(outputPath);
-  const temporary = `${file}.tmp`;
   try {
     const stored: StoredProgress = { workKey, cues: Object.fromEntries(cues), connections: [...connections] };
-    fs.writeFileSync(temporary, JSON.stringify(stored), "utf8");
-    fs.renameSync(temporary, file);
+    writeFileAtomically(file, JSON.stringify(stored));
   } catch (error) {
     logger.warn("translate", `Could not save translation progress for ${outputPath}: ${errorMessage(error) || error}`);
-    fs.rmSync(temporary, { force: true });
   }
 }

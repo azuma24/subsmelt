@@ -53,7 +53,7 @@ export function computeLlmConfigured(
   defaultConnections: ConnectionLike[] = [],
 ): boolean {
   const raw = stored.llm_connections;
-  if (raw?.trim()) {
+  if (typeof raw === "string" && raw.trim()) {
     try {
       const parsed: unknown = JSON.parse(raw);
       if (Array.isArray(parsed)) {

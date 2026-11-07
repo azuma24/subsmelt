@@ -27,6 +27,7 @@ import {
   type SeriesGlossary,
 } from "./context.js";
 import { errorMessage } from "../errors.js";
+import { assertMediaPathAllowed } from "../transcription/request.js";
 import { askConnection, checkCorrections, type CheckResult } from "./correction-check.js";
 import {
   correctCueText,
@@ -52,6 +53,7 @@ export {
 export interface TranslateFileOptions {
   srtPath: string;
   outputPath: string;
+  mediaDir?: string;
   prompt: string;
   lang: string;
   sourceLang?: string;
@@ -153,7 +155,7 @@ export interface TranslateFileOptions {
 /** One successful LLM call's tokens, attributed. */
 export type UsageEvent = TokenUsage & { kind: UsageKind; connection: ResolvedConnection };
 
-/** Suffix for in-progress translations; renamed onto the real path when done. */
+/** Suffix for in-progress translations. */
 export const PARTIAL_SUFFIX = ".part";
 
 /** Path incremental saves are written to while a translation is in flight. */
@@ -181,13 +183,15 @@ export function resolveTranslatedOutputPath(outputPath: string): string {
 export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   const sourceExt = path.extname(opts.srtPath).slice(1).toLowerCase();
   const outputExt = path.extname(opts.outputPath).slice(1).toLowerCase() || sourceExt;
-  // Incremental progress lands here and is renamed onto outputPath only when the
-  // job finishes, so an interrupted run never leaves a partial file that looks
-  // like a completed translation.
+  // Incremental progress stays separate until the complete output is published.
   const partialPath = partialOutputPath(opts.outputPath);
+  const checkedOutputPath = () =>
+    opts.mediaDir
+      ? path.join(assertMediaPathAllowed(path.dirname(opts.outputPath), opts.mediaDir), path.basename(opts.outputPath))
+      : opts.outputPath;
   // Drop debris from a previous crashed run so this job starts from a clean file.
   try {
-    fs.rmSync(partialPath, { force: true });
+    fs.rmSync(partialOutputPath(checkedOutputPath()), { force: true });
   } catch {
     // Non-fatal: the first partial save overwrites whatever is there anyway.
   }
@@ -463,7 +467,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // Concurrency-limited chunk processor.
   // Each slot processes chunks from the shared queue independently.
   // Progress and partial saves are guarded by a simple mutex flag.
-  const saved = opts.resumeKey ? loadCueProgress(opts.outputPath, opts.resumeKey) : null;
+  const saved = opts.resumeKey ? loadCueProgress(checkedOutputPath(), opts.resumeKey) : null;
   const savedCues = saved?.cues ?? new Map<number, string>();
   // Only whole chunks are kept. A chunk with any cue missing runs again in full, so
   // its lines come from one answer and progress counts each cue once.
@@ -481,7 +485,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     for (const label of saved?.connections ?? []) contributingLabels.add(label);
     opts.onResumed?.(completedCues, totalCues, [...contributingLabels]);
     opts.onProgress?.(Math.min(completedCues, totalCues), totalCues);
-    saveTranslated(partialPath, parsed, outputExt, subtitle);
+    saveTranslated(partialOutputPath(checkedOutputPath()), parsed, outputExt, subtitle);
   }
   const chunkQueue = chunks.filter((block) => !chunkIsSaved(block));
   // Promise-chain mutex: each save is serialized by chaining onto the previous one.
@@ -686,8 +690,9 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     // Each processChunk call appends to the chain; writes never interleave.
     saveChain = saveChain.then(() => {
       try {
-        saveTranslated(partialPath, parsed, outputExt, subtitle);
-        if (opts.resumeKey) saveCueProgress(opts.outputPath, opts.resumeKey, translatedCues, [...contributingLabels]);
+        const outputPath = checkedOutputPath();
+        saveTranslated(partialOutputPath(outputPath), parsed, outputExt, subtitle);
+        if (opts.resumeKey) saveCueProgress(outputPath, opts.resumeKey, translatedCues, [...contributingLabels]);
       } catch (e) {
         // Best-effort partial save — never throw (the final write at job end is
         // authoritative), but don't swallow silently: surface it for operators.
@@ -833,14 +838,16 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     });
   }
 
-  // Final write: land the complete translation at the real output path and drop
-  // the partial. Renaming (rather than writing in place mid-run) is what keeps a
-  // crashed or stopped job from leaving a truncated subtitle that the queue would
-  // then treat as finished work and skip.
+  // Publish the complete subtitle from private staging. The public .part file
+  // remains available to Preview until the finished subtitle is in place.
   await saveChain;
-  saveTranslated(partialPath, parsed, outputExt, subtitle);
-  fs.renameSync(partialPath, opts.outputPath);
-  removeCueProgress(opts.outputPath);
+  const outputPath = checkedOutputPath();
+  saveTranslated(outputPath, parsed, outputExt, subtitle);
+  try {
+    removePartialOutput(outputPath);
+  } catch (error) {
+    logger.warn("translate", `Could not remove partial output for ${outputPath}: ${errorMessage(error) || error}`);
+  }
 }
 
 /** Test LLM connection by translating a simple phrase */

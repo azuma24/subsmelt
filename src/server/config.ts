@@ -337,7 +337,7 @@ export function getAllSettings(): Record<string, string> {
   const merged = { ...DEFAULT_SETTINGS, ..._config.settings, ...envPinnedSettings };
   // Backfill the connections array from legacy flat keys so the client and the
   // queue always see a populated list, even before the first multi-connection save.
-  if (!merged.llm_connections?.trim()) {
+  if (typeof merged.llm_connections !== "string" || !merged.llm_connections.trim()) {
     merged.llm_connections = JSON.stringify(migrateConnectionsFromFlat(merged));
   } else {
     merged.llm_connections = withEnvLocalConnection(merged.llm_connections);
@@ -392,9 +392,10 @@ function withEnvLocalConnection(json: string): string {
 export function persistableConnections(json: string): string {
   const pinned = Object.entries(ENV_LOCAL_CONNECTION_FIELDS).filter(([key]) => key in envPinnedSettings);
   if (pinned.length === 0) return json;
-  const stored = _config.settings.llm_connections?.trim()
-    ? parseConnections({ llm_connections: _config.settings.llm_connections })
-    : migrateConnectionsFromFlat({ ...DEFAULT_SETTINGS, ..._config.settings });
+  const stored =
+    typeof _config.settings.llm_connections === "string" && _config.settings.llm_connections.trim()
+      ? parseConnections({ llm_connections: _config.settings.llm_connections })
+      : migrateConnectionsFromFlat({ ...DEFAULT_SETTINGS, ..._config.settings });
   const storedLocal = stored.find((c) => c.id === LOCAL_CONNECTION_ID && c.provider === "local");
   return mapLocalConnection(json, (c) => ({
     ...c,

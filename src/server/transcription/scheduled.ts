@@ -3,13 +3,25 @@ import { assertSubtitleIntakeStillMissing } from "../subtitle-intake.js";
 import { noSpeechVideos } from "../transcription-history.js";
 import type { ScanResult } from "../scanner.js";
 import type { TranscribePostAction } from "../transcription-client.js";
-import { transcriptionWork, type WorkRunner } from "./work.js";
+import { transcriptionWork, type WorkInput, type WorkRunner } from "./work.js";
 
 interface MissingTranscriptOptions {
   runner?: WorkRunner;
   silent?: (path: string) => boolean;
   requireSettled?: boolean;
   signal?: AbortSignal;
+}
+
+function enqueueUnclaimed(runner: WorkRunner, inputs: WorkInput[]): void {
+  // Scheduled scans leave already claimed files with their active plan.
+  const claimed = new Set(
+    runner.store
+      .list()
+      .filter((item) => item.kind === "file" && ["queued", "running", "needs_review"].includes(item.status))
+      .map((item) => item.input),
+  );
+  runner.store.enqueue(inputs.filter(({ input }) => !claimed.has(input)));
+  runner.start();
 }
 
 /** Shared by all scans. Automatic scans also wait for each video to settle. */
@@ -50,14 +62,14 @@ export async function enqueueMissingTranscripts(
 
   signal?.throwIfAborted();
   if (candidates.length) {
-    runner.store.enqueue(
+    enqueueUnclaimed(
+      runner,
       candidates.map(({ input, videoRevision }) => ({
         kind: "file",
         input,
         request: { postAction, ...(videoRevision && { videoRevision }) },
       })),
     );
-    runner.start();
   }
   return candidates.length;
 }
@@ -90,8 +102,5 @@ export async function enqueueIntakeTranscripts(result: ScanResult, signal?: Abor
     });
   }
   signal?.throwIfAborted();
-  if (inputs.length) {
-    runner.store.enqueue(inputs);
-    runner.start();
-  }
+  if (inputs.length) enqueueUnclaimed(runner, inputs);
 }

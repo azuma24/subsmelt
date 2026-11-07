@@ -49,7 +49,7 @@ import { logger } from "../logger.js";
 import type { Job, PreviewLine } from "../../shared/jobs.js";
 import { cuesOf, normalizeTimeToMs, parseSubtitle, type SubtitleCue } from "../translator/convert.js";
 import { alignShorterTranslation, inspectSubtitle, translatedSubtitleIssues } from "../translator/subtitle-quality.js";
-import { bilingualSrt } from "../translator/bilingual.js";
+import { bilingualSrt, matchBilingualClocks } from "../translator/bilingual.js";
 import type { SubtitleQualityIssue } from "../../shared/subtitle-quality.js";
 import { queueFileTranslation, type FileTranslationTarget } from "../file-translation.js";
 import { parsePositiveInteger, parsePositiveIntegerArray, sanitizeLanguageName } from "./validation.js";
@@ -283,6 +283,7 @@ export function registerJobsRoutes(app: Express): void {
 
       let trgCues: SubtitleCue[] = [];
       let translatedIssues: SubtitleQualityIssue[] = [];
+      let hasBilingualClocks = false;
       const hasTarget = Boolean(previewTarget) && fs.existsSync(previewTarget);
       if (hasTarget) {
         const trgExt = path.extname(job.output_path).slice(1).toLowerCase();
@@ -292,6 +293,14 @@ export function registerJobsRoutes(app: Express): void {
           trgCues = cuesOf(parseSubtitle(content, trgExt));
         } else {
           const target = inspectSubtitle(content, trgExt);
+          hasBilingualClocks =
+            complete &&
+            Boolean(
+              matchBilingualClocks(
+                { ...source, invalidTiming: source.issues.some(({ code }) => code === "invalidTiming") },
+                { ...target, invalidTiming: target.issues.some(({ code }) => code === "invalidTiming") },
+              ),
+            );
           const rows = complete ? alignShorterTranslation(source, target) : undefined;
           trgCues = target.cues;
           if (rows) {
@@ -330,11 +339,7 @@ export function registerJobsRoutes(app: Express): void {
         totalLines: lines.length,
         lines,
         quality: { original: source.issues, translated: translatedIssues },
-        canDownloadBilingual:
-          complete &&
-          hasTarget &&
-          (!outputOwner || outputOwner.id === id) &&
-          !translatedIssues.some(({ code }) => code === "missingCue"),
+        canDownloadBilingual: hasBilingualClocks && (!outputOwner || outputOwner.id === id),
       });
     } catch (error) {
       res.status(500).json({ error: errorMessage(error) });
@@ -397,7 +402,7 @@ export function registerJobsRoutes(app: Express): void {
         }
       }
       const { output, updated } = applyCueEdits(content, ext, edits);
-      writeSubtitleFile(job.output_path, output);
+      writeSubtitleFile(job.output_path, output, MEDIA_DIR);
       res.json({ ok: true, updated });
     } catch (error) {
       res.status(500).json({

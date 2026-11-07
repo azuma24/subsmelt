@@ -28,6 +28,52 @@ test("a written subtitle and the folders created for it are writable by everyone
   assert.equal(mode(root), 0o755);
 });
 
+test("subtitle publication replaces entries without opening links at the old staging or output paths", (t) => {
+  const root = mediaRoot();
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const subtitle = path.join(root, "video.srt");
+  const original = path.join(root, "original.srt");
+  fs.writeFileSync(original, "Original");
+  fs.chmodSync(original, 0o600);
+  fs.symlinkSync(original, subtitle);
+  fs.symlinkSync(original, `${subtitle}.tmp`);
+
+  writeSubtitleFile(subtitle, "Complete");
+  assert.equal(fs.readFileSync(subtitle, "utf8"), "Complete");
+  assert.equal(mode(subtitle), 0o666);
+  assert.equal(fs.readFileSync(original, "utf8"), "Original");
+  assert.equal(mode(original), 0o600);
+  assert.equal(fs.lstatSync(`${subtitle}.tmp`).isSymbolicLink(), true);
+  assert.deepEqual(fs.readdirSync(root).sort(), ["original.srt", "video.srt", "video.srt.tmp"]);
+});
+
+test("a failed subtitle rename leaves the existing output and removes private staging", (t) => {
+  const root = mediaRoot();
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const subtitle = path.join(root, "video.srt");
+  fs.writeFileSync(subtitle, "Previous version");
+  t.mock.method(fs, "renameSync", () => {
+    throw new Error("Rename failed");
+  });
+
+  assert.throws(() => writeSubtitleFile(subtitle, "Complete"), /Rename failed/);
+  assert.equal(fs.readFileSync(subtitle, "utf8"), "Previous version");
+  assert.deepEqual(fs.readdirSync(root), ["video.srt"]);
+});
+
+test("subtitle publication checks the destination directory when a media root is supplied", (t) => {
+  const root = mediaRoot();
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const media = path.join(root, "media");
+  const other = path.join(root, "other");
+  fs.mkdirSync(media);
+  fs.mkdirSync(other);
+  fs.symlinkSync(other, path.join(media, "alias"), "dir");
+
+  assert.throws(() => writeSubtitleFile(path.join(media, "alias", "video.srt"), "Complete", media), /outside media/);
+  assert.deepEqual(fs.readdirSync(other), []);
+});
+
 test("an exported note is writable by everyone", () => {
   const root = mediaRoot();
   const note = path.join(root, "note.md");

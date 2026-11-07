@@ -13,8 +13,8 @@ import type { NextFunction, Request, Response } from "express";
  * Browsers say where a request came from. Sec-Fetch-Site is the most direct
  * answer and is trusted when present: only "same-origin" (the bundled UI) and
  * "none" (typed by the user) pass. Older browsers send only Origin, which must
- * then name the host the request was sent to. A request with neither header did
- * not come from a web page (curl, scripts, the healthcheck) and passes.
+ * then name the host the request was sent to. Requests without these headers
+ * are treated as non-browser clients such as curl, scripts, and healthchecks.
  *
  * Host allow-listing and optional Basic authentication are separate ingress guards.
  * Without an allow-list DNS rebinding remains possible.
@@ -34,11 +34,11 @@ function firstHeader(value: string | string[] | undefined): string {
   return (Array.isArray(value) ? value[0] : (value ?? "")).split(",")[0].trim().toLowerCase();
 }
 
-export function isCrossSiteRequest(req: Pick<Request, "method" | "headers">): boolean {
-  if (SAFE_METHODS.has(req.method.toUpperCase())) return false;
+export function isCrossSiteRequest(req: Pick<Request, "method" | "headers">, checkSafeMethod = false): boolean {
+  if (!checkSafeMethod && SAFE_METHODS.has(req.method.toUpperCase())) return false;
   const fetchSite = firstHeader(req.headers["sec-fetch-site"]);
   if (fetchSite) return !TRUSTED_FETCH_SITES.has(fetchSite);
-  const origin = firstHeader(req.headers.origin);
+  const origin = firstHeader(req.headers.origin) || (checkSafeMethod ? firstHeader(req.headers.referer) : "");
   if (!origin) return false;
   const host = originHost(origin);
   if (!host) return true;
@@ -47,10 +47,30 @@ export function isCrossSiteRequest(req: Pick<Request, "method" | "headers">): bo
 }
 
 export function crossSiteGuard(req: Request, res: Response, next: NextFunction): void {
-  if (!isCrossSiteRequest(req)) {
-    next();
+  if (isCrossSiteRequest(req)) rejectCrossSiteRequest(res);
+  else next();
+}
+
+/** Model discovery also sends an outbound request when called with GET or HEAD. */
+export function outboundRequestGuard(req: Request, res: Response, next: NextFunction): void {
+  if (isCrossSiteRequest(req, true)) {
+    rejectCrossSiteRequest(res);
     return;
   }
+  const fetchSite = firstHeader(req.headers["sec-fetch-site"]);
+  const fromApp =
+    fetchSite === "same-origin" ||
+    (!fetchSite && (firstHeader(req.headers.origin) || firstHeader(req.headers.referer)));
+  // On HTTP LAN addresses browsers can omit fetch metadata, and a foreign
+  // page can suppress its referrer. Require an explicit client header in that case.
+  if (fromApp || firstHeader(req.headers["x-subsmelt-client"]) === "cli") {
+    next();
+  } else {
+    res.status(403).json({ error: "Legacy model discovery requires a same-origin request or X-SubSmelt-Client: cli" });
+  }
+}
+
+function rejectCrossSiteRequest(res: Response): void {
   res
     .status(403)
     .json({ error: "Cross-site request blocked: change settings and start work from the SubSmelt page itself" });

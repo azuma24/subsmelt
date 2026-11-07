@@ -1,24 +1,28 @@
-import { cuesOf, parseSubtitle } from "./convert.js";
+import { cuesOf, parseSubtitle, type SubtitleCue } from "./convert.js";
 import { strictCueTime, stringifySubtitle, type SubtitleCueNode } from "./srt-vtt.js";
 import { visibleCueText } from "./subtitle-quality.js";
 
-export function bilingualSrt(
-  source: { content: string; ext: string },
-  target: { content: string; ext: string },
-): string | null {
-  let invalidTiming = false;
-  const markInvalid = () => {
-    invalidTiming = true;
-  };
-  const original = cuesOf(parseSubtitle(source.content, source.ext, markInvalid));
-  const translated = cuesOf(parseSubtitle(target.content, target.ext, markInvalid));
-  if (invalidTiming || !original.length || original.length !== translated.length) return null;
+interface TimedTrack {
+  ext: string;
+  cues: SubtitleCue[];
+  invalidTiming: boolean;
+}
+
+export function matchBilingualClocks(source: TimedTrack, target: TimedTrack) {
+  if (
+    source.invalidTiming ||
+    target.invalidTiming ||
+    !source.cues.length ||
+    source.cues.length !== target.cues.length
+  ) {
+    return null;
+  }
 
   // ASS/SSA conversion rounds millisecond clocks down to centiseconds.
   const tolerance = [source.ext, target.ext].some((ext) => ext === "ass" || ext === "ssa") ? 9 : 0;
-  const cues: SubtitleCueNode[] = [];
-  for (const [index, cue] of original.entries()) {
-    const other = translated[index];
+  const clocks: { start: number; end: number }[] = [];
+  for (const [index, cue] of source.cues.entries()) {
+    const other = target.cues[index];
     const start = strictCueTime(cue.data?.start);
     const end = strictCueTime(cue.data?.end);
     const targetStart = strictCueTime(other.data?.start);
@@ -35,13 +39,38 @@ export function bilingualSrt(
     ) {
       return null;
     }
+    clocks.push({ start, end });
+  }
+  return clocks;
+}
+
+export function bilingualSrt(
+  source: { content: string; ext: string },
+  target: { content: string; ext: string },
+): string | null {
+  function parseTrack(track: { content: string; ext: string }): TimedTrack {
+    let invalidTiming = false;
+    const cues = cuesOf(
+      parseSubtitle(track.content, track.ext, () => {
+        invalidTiming = true;
+      }),
+    );
+    return { ext: track.ext, cues, invalidTiming };
+  }
+
+  const original = parseTrack(source);
+  const translated = parseTrack(target);
+  const clocks = matchBilingualClocks(original, translated);
+  if (!clocks) return null;
+
+  const cues: SubtitleCueNode[] = clocks.map(({ start, end }, index) => {
     const text = [
-      visibleCueText(cue.data?.text ?? "", source.ext).trim(),
-      visibleCueText(other.data?.text ?? "", target.ext).trim(),
+      visibleCueText(original.cues[index].data?.text ?? "", source.ext).trim(),
+      visibleCueText(translated.cues[index].data?.text ?? "", target.ext).trim(),
     ]
       .filter(Boolean)
       .join("\n");
-    cues.push({ type: "cue", data: { start, end, text } });
-  }
+    return { type: "cue", data: { start, end, text } };
+  });
   return stringifySubtitle(cues, "SRT");
 }

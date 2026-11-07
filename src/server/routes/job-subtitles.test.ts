@@ -69,6 +69,8 @@ test("preview refuses an out-of-root partial subtitle and reads an ordinary one"
 
 test("bilingual export downloads completed matching cues on the original clock", async () => {
   const { id, sourcePath, outputPath } = fixture("Movie", "done");
+  const preview = async () => (await (await fetch(`${base}/${id}/preview`)).json()).canDownloadBilingual;
+  assert.equal(await preview(), true);
   const res = await fetch(`${base}/${id}/download?format=bilingual`);
   assert.equal(res.status, 200);
   assert.equal(res.headers.get("content-disposition"), 'attachment; filename="Movie.fra.bilingual.srt"');
@@ -78,6 +80,10 @@ test("bilingual export downloads completed matching cues on the original clock",
 
   // Replacing the result with a same-count file is still a mismatch when its clocks differ.
   fs.writeFileSync(outputPath, translated.replace("0:00:02.00", "0:00:03.00"));
+  assert.equal(await preview(), false);
+  assert.equal((await fetch(`${base}/${id}/download?format=bilingual`)).status, 409);
+  fs.writeFileSync(outputPath, translated.replace("0:00:02.00", "0:00:00.00"));
+  assert.equal(await preview(), false);
   assert.equal((await fetch(`${base}/${id}/download?format=bilingual`)).status, 409);
   const pending = fixture("pending", "pending");
   assert.equal((await fetch(`${base}/${pending.id}/download?format=bilingual`)).status, 409);

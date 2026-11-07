@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import path from "node:path";
 import { parseAss, stringifyAss } from "./ass.js";
 import { parseSrtVtt, stringifySubtitle } from "./srt-vtt.js";
@@ -11,7 +10,8 @@ import {
   type ParsedSubtitle,
   type SubtitleCue,
 } from "./convert.js";
-import { mkdirShared, shareFile } from "../shared-files.js";
+import { mkdirShared, writeFileAtomically } from "../shared-files.js";
+import { assertMediaPathAllowed } from "../transcription/request.js";
 
 /** A single manual edit from the preview UI. `index` is the 1-based cue index
  * exposed by the preview rows; `text` is the new translated text for that cue. */
@@ -110,24 +110,12 @@ export function applyCueEdits(content: string, ext: string, edits: CueEdit[]): {
   throw new Error(`Unsupported extension: ${normalizedExt}`);
 }
 
-/**
- * Write an already-stringified subtitle document to disk atomically. Shares the
- * tmp-rename + shared-permission strategy with saveTranslated so manual edits
- * persist with the same durability/permission guarantees.
- */
-export function writeSubtitleFile(outputPath: string, content: string): void {
-  mkdirShared(path.dirname(outputPath));
-  const tmpPath = `${outputPath}.tmp`;
-  fs.writeFileSync(tmpPath, content, "utf8");
-  try {
-    fs.renameSync(tmpPath, outputPath);
-  } catch {
-    fs.writeFileSync(outputPath, content, "utf8");
-    try {
-      fs.unlinkSync(tmpPath);
-    } catch {}
-  }
-  shareFile(outputPath);
+/** Write a finished, partial, or edited subtitle with shared-file permissions. */
+export function writeSubtitleFile(outputPath: string, content: string, mediaDir?: string): void {
+  const parent = path.dirname(outputPath);
+  const destination = mediaDir ? assertMediaPathAllowed(parent, mediaDir) : parent;
+  mkdirShared(destination);
+  writeFileAtomically(path.join(destination, path.basename(outputPath)), content, true);
 }
 
 export function saveTranslated(

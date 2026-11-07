@@ -31,3 +31,28 @@ export function mkdirShared(dir: string): void {
     if (current === path.resolve(firstCreated) || current === path.dirname(current)) break;
   }
 }
+
+/** Stage privately on the destination filesystem, then replace the directory entry. */
+export function writeFileAtomically(file: string, content: string, shared = false): void {
+  const parent = fs.realpathSync(path.dirname(file));
+  const staging = fs.mkdtempSync(path.join(parent, ".subsmelt-write-"));
+  const temporary = path.join(staging, "content");
+  try {
+    const fd = fs.openSync(temporary, "wx", 0o600);
+    try {
+      fs.writeFileSync(fd, content, "utf8");
+      if (shared) {
+        try {
+          fs.fchmodSync(fd, SHARED_FILE_MODE);
+        } catch {
+          // Some network filesystems ignore chmod.
+        }
+      }
+    } finally {
+      fs.closeSync(fd);
+    }
+    fs.renameSync(temporary, path.join(parent, path.basename(file)));
+  } finally {
+    fs.rmSync(staging, { recursive: true, force: true });
+  }
+}

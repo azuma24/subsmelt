@@ -103,7 +103,7 @@ function normalizeConnection(c: unknown, index: number): LlmConnection {
  */
 export function parseConnections(s: Record<string, string>): LlmConnection[] {
   const raw = s.llm_connections;
-  if (raw?.trim()) {
+  if (typeof raw === "string" && raw.trim()) {
     try {
       const arr = JSON.parse(raw);
       if (Array.isArray(arr) && arr.length > 0) {
@@ -121,6 +121,40 @@ export function parseConnections(s: Record<string, string>): LlmConnection[] {
 
 /** GET /api/settings sends this in place of every stored secret. */
 export const REDACTED_SECRET = "__SUBSMELT_SECRET_REDACTED__";
+
+/** The settings API only exposes fields it understands, even on hand-edited configs. */
+export function readConnectionList(raw: string): LlmConnection[] | null {
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(value)) return null;
+  const connections: LlmConnection[] = [];
+  const ids = new Set<string>();
+  for (const item of value) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+    const { id, label, provider, apiKey, model, endpoint, enabled, order } = item as Record<string, unknown>;
+    const resolvedProvider = ALL_PROVIDERS.find((entry) => entry === provider);
+    if (
+      (id !== undefined && (typeof id !== "string" || !id.trim())) ||
+      (provider !== undefined && !resolvedProvider) ||
+      (label !== undefined && typeof label !== "string") ||
+      (apiKey !== undefined && typeof apiKey !== "string") ||
+      (model !== undefined && typeof model !== "string") ||
+      (endpoint !== undefined && typeof endpoint !== "string") ||
+      (enabled !== undefined && typeof enabled !== "boolean") ||
+      (order !== undefined && (typeof order !== "number" || !Number.isFinite(order)))
+    )
+      return null;
+    const defaults = normalizeConnection(item, connections.length);
+    if (ids.has(defaults.id)) return null;
+    connections.push({ ...defaults, label: label ?? defaults.label, endpoint: endpoint ?? defaults.endpoint });
+    ids.add(defaults.id);
+  }
+  return connections;
+}
 
 /**
  * Put stored keys back into an `llm_connections` value posted by a client that

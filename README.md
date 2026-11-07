@@ -179,6 +179,8 @@ Host validation and authentication intentionally do not exempt `/api/health`.
 The existing cross-site request guard blocks common browser cross-origin writes,
 but is not authentication and, without a configured host allow-list, cannot
 prevent DNS rebinding. Non-browser clients can forge browser headers.
+Scripts that use legacy `GET /api/models` should send `X-SubSmelt-Client: cli`.
+Model discovery also accepts a JSON `POST /api/models` request.
 
 Media subfolder checks reject traversal and resolve existing symlinks (including
 existing ancestors of new paths); symlinks that resolve outside the media root

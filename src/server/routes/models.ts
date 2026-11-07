@@ -5,6 +5,7 @@ import { parseConnections, resolveConnectionPool, resolveRequestApiKey } from ".
 import type { CloudProvider } from "../translator.js";
 import { logger } from "../logger.js";
 import { errorMessage, errorName } from "../errors.js";
+import { outboundRequestGuard } from "../cross-site-guard.js";
 
 // ======== List Models ========
 // Basic SSRF guard for a caller-supplied `endpoint` override. We intentionally
@@ -279,7 +280,7 @@ export function registerModelsRoutes(app: Express): void {
 
   // GET retained for backward-compat. The key may still arrive via query string
   // here; it is used only as an outbound auth header and is never logged.
-  app.get("/api/models", async (req, res) => {
+  app.get("/api/models", outboundRequestGuard, async (req, res) => {
     const result = await listModels(
       (req.query.provider as string) || "local",
       (req.query.key as string) || "",
