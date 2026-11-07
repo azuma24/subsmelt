@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+import http.client
 import os
+import shutil
 import socket
+import urllib.request
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as DnsTimeoutError
+from functools import cached_property, partial
+from importlib.util import find_spec
 from ipaddress import IPv6Address, ip_address
 from pathlib import Path
 from typing import Any
@@ -46,8 +52,7 @@ def _allow_unsafe() -> bool:
 # reach this backend could point it at an internal host. This guard rejects
 # loopback, RFC1918, link-local (incl. the 169.254.169.254 metadata endpoint),
 # unique-local and other non-public targets unless SUBSMELT_WHISPER_ALLOW_UNSAFE
-# is explicitly set. A hostname that only resolves to a non-global address is
-# also rejected (best-effort, see _assert_hostname_public).
+# is explicitly set. Connections are made directly to checked DNS answers.
 
 #: Hostnames that are unresolvable by design on the public internet. `.internal`,
 #: `.local` and `.localhost` are RFC 6761/6762 reserved and are the common
@@ -73,9 +78,12 @@ def _is_public_ip(ip: str) -> bool:
         addr = ip_address(ip)
     except ValueError:
         return False
-    if isinstance(addr, IPv6Address) and addr.ipv4_mapped is not None:
-        addr = addr.ipv4_mapped
-    return bool(addr.is_global)
+    if isinstance(addr, IPv6Address):
+        if addr.is_site_local or addr.scope_id is not None:
+            return False
+        if addr.ipv4_mapped is not None:
+            addr = addr.ipv4_mapped
+    return bool(addr.is_global and not addr.is_multicast and not addr.is_reserved and not addr.is_unspecified)
 
 
 def _validate_url(url: str, allow_unsafe: bool = False) -> str:
@@ -83,8 +91,7 @@ def _validate_url(url: str, allow_unsafe: bool = False) -> str:
 
     Deterministic and DNS-free: IP-literal hostnames are range-checked directly
     and reserved hostnames (``localhost``, ``*.local``, ``*.internal``) are
-    rejected by name. Hostname-resolution SSRF is handled separately in
-    ``_assert_hostname_public`` (which only runs on a real download). Returns the
+    rejected by name. Hostnames are resolved and checked when connecting. Returns the
     trimmed URL. Raises UrlFetchError on a bad URL or a guarded target.
     """
     u = (url or "").strip()
@@ -92,8 +99,12 @@ def _validate_url(url: str, allow_unsafe: bool = False) -> str:
     if not (u.startswith("http://") or u.startswith("https://")):
         raise UrlFetchError("Only http(s) URLs are supported")
 
-    parsed = urlparse(u)
-    host = parsed.hostname or ""
+    try:
+        parsed = urlparse(u)
+        host = parsed.hostname or ""
+        _ = parsed.port
+    except ValueError as exc:
+        raise UrlFetchError("Invalid URL host or port") from exc
     if not host:
         raise UrlFetchError("URL must include a host")
 
@@ -109,7 +120,7 @@ def _validate_url(url: str, allow_unsafe: bool = False) -> str:
     except ValueError:
         pass  # not an IP literal — a hostname; check by reserved name below
 
-    low = host.lower()
+    low = host.lower().rstrip(".")
     if low in _RESERVED_HOSTNAMES or low.endswith(_RESERVED_HOSTNAME_SUFFIXES):
         raise UrlFetchError(_internal_host_message(host))
 
@@ -124,14 +135,12 @@ def _resolve_host(host: str, timeout: float = 3.0) -> list[str]:
     """Resolve a hostname to its list of IP strings, bounded by ``timeout``.
 
     Runs the blocking ``socket.getaddrinfo`` in a worker thread so a slow DNS
-    server can never hang a fetch indefinitely. Raises on resolution failure or
-    timeout; the caller decides whether that should block the request (it should
-    not — an unresolvable host is the client's problem, not an SSRF signal).
+    server can never hang a fetch indefinitely.
     """
 
     def _lookup() -> list[str]:
         seen: list[str] = []
-        for info in socket.getaddrinfo(host, None):
+        for info in socket.getaddrinfo(host, None, type=socket.SOCK_STREAM):
             ip = str(info[4][0])
             if ip not in seen:
                 seen.append(ip)
@@ -140,42 +149,117 @@ def _resolve_host(host: str, timeout: float = 3.0) -> list[str]:
     # One shared, bounded pool: a lookup that outlives its timeout keeps its
     # thread until the resolver returns, so a stalled resolver can tie up at
     # most DNS_LOOKUP_THREADS threads instead of one per request.
-    return _DNS_POOL.submit(_lookup).result(timeout=timeout)
-
-
-def _assert_hostname_public(
-    url: str,
-    allow_unsafe: bool = False,
-    resolver: Callable[[str], list[str]] | None = None,
-) -> None:
-    """Best-effort DNS guard for hostname-based URLs.
-
-    IP literals are already handled by ``_validate_url``; this covers a hostname
-    that resolves to a non-global address. It only raises when it can *positively*
-    confirm a non-public target — any resolution failure/timeout is swallowed and
-    the fetch proceeds, so a transient DNS outage can never break a legitimate
-    download. ``resolver`` is injectable for tests (defaults to ``_resolve_host``).
-    """
-    if allow_unsafe:
-        return
-    host = urlparse(url).hostname or ""
-    if not host:
-        return
+    lookup = _DNS_POOL.submit(_lookup)
     try:
-        ip_address(host)  # literal — already validated
-        return
+        return lookup.result(timeout=timeout)
+    except DnsTimeoutError as exc:
+        lookup.cancel()
+        raise TimeoutError(f"DNS lookup timed out for {host!r}") from exc
+
+
+def _public_addresses(host: str, resolver: Callable[[str], list[str]] | None = None) -> list[str]:
+    try:
+        ip_address(host)
     except ValueError:
-        pass
+        try:
+            ips = (resolver or _resolve_host)(host)
+        except OSError as exc:
+            raise UrlFetchError(f"Could not resolve URL host {host!r}") from exc
+    else:
+        ips = [host]
 
-    try:
-        ips = resolver(host) if resolver else _resolve_host(host)
-    except Exception:
-        return
-
-    # Block when the hostname positively resolves to at least one non-public
-    # address (split-horizon/DNS-rebinding). `not all(public)` == `any(non-public)`.
-    if ips and not all(_is_public_ip(ip) for ip in ips):
+    if not ips:
+        raise UrlFetchError(f"Could not resolve URL host {host!r}")
+    if not all(_is_public_ip(ip) for ip in ips):
         raise UrlFetchError(_internal_host_message(host))
+    return ips
+
+
+def _connect_public(address, timeout, source_address):
+    host, port = address
+    for ip in _public_addresses(host):
+        try:
+            # Connect to this numeric address, keeping the original hostname
+            # on the HTTPConnection for the Host header and TLS verification.
+            return socket.create_connection((ip, port), timeout, source_address)
+        except OSError as exc:
+            last_error = exc
+    raise last_error
+
+
+_NATIVE_FORMAT = "[protocol~='^(https?|m3u8(_native)?|http_dash_segments(_generator)?)$']"
+
+
+def _public_ydl_class():
+    """Restrict this downloader instance before any extractor can send a request."""
+    from yt_dlp import YoutubeDL
+    from yt_dlp.downloader import get_suitable_downloader
+    from yt_dlp.downloader.dash import DashSegmentsFD
+    from yt_dlp.downloader.hls import HlsFD
+    from yt_dlp.downloader.http import HttpFD
+    from yt_dlp.networking._urllib import HTTPHandler, RedirectHandler, UrllibRH
+    from yt_dlp.networking.exceptions import RequestError
+
+    # Older extractors can launch PhantomJS to load webpages independently of
+    # yt-dlp's request handler, including when invoked as a fallback.
+    if shutil.which("phantomjs") and find_spec("yt_dlp.extractor.openload") is not None:
+        raise UrlFetchError("Guarded URL fetching requires yt-dlp without its legacy PhantomJS helper")
+
+    def connection(cls, *args, **kwargs):
+        conn = cls(*args, **kwargs)
+        conn._create_connection = _connect_public
+        return conn
+
+    class PublicHTTPHandler(HTTPHandler):
+        def http_open(self, req):
+            return self.do_open(partial(connection, http.client.HTTPConnection), req)
+
+        def https_open(self, req):
+            return self.do_open(partial(connection, http.client.HTTPSConnection), req, context=self._context)
+
+    class PublicRedirectHandler(RedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            _validate_url(newurl)
+            return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+    class PublicUrllibRH(UrllibRH):
+        _SUPPORTED_URL_SCHEMES = ("http", "https")
+        _SUPPORTED_PROXY_SCHEMES = ()
+
+        def _create_instance(self, proxies, cookiejar, legacy_ssl_support=None):
+            # Reuse yt-dlp's content decoding and redirect method/cookie
+            # handling. Disable urllib's ambient proxies and other protocols.
+            opener = urllib.request.OpenerDirector()
+            for handler in (
+                PublicHTTPHandler(context=self._make_sslcontext(legacy_ssl_support=legacy_ssl_support)),
+                PublicRedirectHandler(),
+                urllib.request.HTTPCookieProcessor(cookiejar),
+                urllib.request.HTTPDefaultErrorHandler(),
+                urllib.request.HTTPErrorProcessor(),
+                urllib.request.UnknownHandler(),
+            ):
+                opener.add_handler(handler)
+            return opener
+
+        def _send(self, request):
+            try:
+                _validate_url(request.url)
+                return super()._send(request)
+            except UrlFetchError as exc:
+                raise RequestError(str(exc)) from exc
+
+    class PublicYoutubeDL(YoutubeDL):
+        @cached_property
+        def _request_director(self):
+            return self.build_request_director([PublicUrllibRH])
+
+        def dl(self, name, info, subtitle=False, test=False):
+            downloader = get_suitable_downloader(info, self.params, to_stdout=(name == "-"))
+            if downloader not in (HttpFD, HlsFD, DashSegmentsFD):
+                raise UrlFetchError("This media requires a downloader outside the URL safety guard")
+            return super().dl(name, info, subtitle=subtitle, test=test)
+
+    return PublicYoutubeDL
 
 
 #: Cap on a fetched media file. Matches the frontend's upload cap
@@ -185,7 +269,7 @@ MAX_FETCH_BYTES = 5 * 1024 * 1024 * 1024
 
 
 def _media_urls(info: dict) -> list[str]:
-    """Every URL yt-dlp will actually fetch from, after redirects and extractor hops."""
+    """Known result URLs for early rejection before starting the media download."""
     urls = [info.get("webpage_url"), info.get("url")]
     for fmt in info.get("requested_formats") or []:
         urls.extend(fmt.get(field) for field in ("url", "manifest_url", "fragment_base_url"))
@@ -200,7 +284,7 @@ def _assert_media_hosts_public(info: dict, allow_unsafe: bool) -> None:
     for media_url in _media_urls(info):
         try:
             _validate_url(media_url)
-            _assert_hostname_public(media_url)
+            _public_addresses(urlparse(media_url).hostname)
         except UrlFetchError as exc:
             raise UrlFetchError(f"Media URL {media_url!r} refused: {exc}") from exc
 
@@ -248,15 +332,9 @@ def download_url(url: str, dest_dir: Path) -> Path:
     except Exception as exc:
         raise UrlFetchUnavailableError("yt-dlp is not installed in this backend") from exc
 
-    # Only reachable when yt-dlp is present (a real download is happening).
-    _assert_hostname_public(u, allow_unsafe)
-
     opts: Any = {
         "outtmpl": str(dest_dir / "%(id)s.%(ext)s"),
-        # Only site extractors. The generic one treats any URL as media and
-        # follows redirects and HLS segment lists to hosts the guard below
-        # never sees, so a page on a public host could point it at an
-        # internal one.
+        # Keep this endpoint scoped to supported sites.
         "allowed_extractors": ["default", "-generic"],
         "noplaylist": True,
         # Leave playlist entries unresolved during the probe: a channel URL would
@@ -270,7 +348,19 @@ def download_url(url: str, dest_dir: Path) -> Path:
         "progress_hooks": [_abort_over_cap],
     }
     try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
+        downloader = yt_dlp.YoutubeDL if allow_unsafe else _public_ydl_class()
+        if not allow_unsafe:
+            opts.update(
+                proxy="",
+                external_downloader={"default": "native"},
+                format=f"bestaudio{_NATIVE_FORMAT}/best{_NATIVE_FORMAT}",
+                check_formats=False,
+                fixup="never",
+                # Native HLS can fall back to FFmpeg for unsupported manifests.
+                # Keep that fallback from launching an unguarded network client.
+                ffmpeg_location=str(dest_dir / ".disabled-ffmpeg" / "ffmpeg"),
+            )
+        with downloader(opts) as ydl:
             info = ydl.extract_info(u, download=False)
             _assert_single_media(info)
             _assert_media_hosts_public(info, allow_unsafe)

@@ -28,7 +28,7 @@ from .engine import EngineRunner, LanguageNotSupportedError, TranscriptionCancel
 from .formatters import write_transcript
 from .model_loader import file_revision, model_revision
 from .nemotron_languages import fold_iso3, normalize_language
-from .paths import output_path_for
+from .paths import SubtitlePublishError, output_path_for, publish_transcript
 from .schemas import TranscribeRequest
 from .segments import clamp_to_duration, postprocess_segments, snap_start_to_words
 from .transcript_checkpoint import (
@@ -153,7 +153,9 @@ def apply_subtitle_quality(segments: list, request: TranscribeRequest, *, audio_
     )
 
 
-def _finalize(segments: list, info: object, request: TranscribeRequest, input_path: Path, deliver: Deliver) -> dict:
+def _finalize(
+    segments: list, info: object, request: TranscribeRequest, input_path: Path, deliver: Deliver, *, shared_input: bool
+) -> dict:
     """Render the subtitle and build the result payload for either transport."""
     # Speech models invent tail text on trailing silence, and their timestamps
     # are estimates that can run past the file. The decoded audio duration is
@@ -170,7 +172,7 @@ def _finalize(segments: list, info: object, request: TranscribeRequest, input_pa
     chinese_script = _chinese_script_for(request, language, detected)
     if chinese_script:
         processed = convert_segments(processed, chinese_script)
-    count, delivered = _deliver(processed, request, input_path, language, deliver)
+    count, delivered = _deliver(processed, request, input_path, language, deliver, shared_input=shared_input)
     # Never report the literal "auto" — if detection produced nothing, return the
     # explicit language (when given) or None, not the sentinel.
     return {
@@ -191,7 +193,13 @@ def _chinese_script_for(request: TranscribeRequest, language: str, detected: str
 
 
 def _deliver(
-    processed: list, request: TranscribeRequest, input_path: Path, language: str, deliver: Deliver
+    processed: list,
+    request: TranscribeRequest,
+    input_path: Path,
+    language: str,
+    deliver: Deliver,
+    *,
+    shared_input: bool,
 ) -> tuple[int, dict]:
     """Write the subtitle beside the input ("path") or render it to a string
     ("content"); returns (cue count, the transport's payload fields)."""
@@ -200,13 +208,18 @@ def _deliver(
         # finished transcript, so shared mode writes none.
         return 0, ({"subtitle_path": None} if deliver == "path" else {"content": ""})
     max_line_length = request.subtitle_quality.max_line_length if request.subtitle_quality else None
-    if deliver == "path":
-        output_path = output_path_for(input_path, language, request.output_format)
-        count = write_transcript(processed, output_path, request.output_format, max_line_length=max_line_length)
-        return count, {"subtitle_path": str(output_path)}
     with tempfile.TemporaryDirectory(prefix="subsmelt-whisper-out-") as out_tmp:
         out_path = Path(out_tmp) / f"transcript.{request.output_format}"
         count = write_transcript(processed, out_path, request.output_format, max_line_length=max_line_length)
+        if deliver == "path":
+            output_path = output_path_for(input_path, language, request.output_format)
+            if output_path == input_path:
+                raise SubtitlePublishError("Subtitle output path is the input media file")
+            # Shared API inputs are already canonical. Internal callers may
+            # supply paths through platform aliases such as /var on macOS.
+            target = output_path if shared_input else output_path.parent.resolve(strict=True) / output_path.name
+            publish_transcript(out_path, target)
+            return count, {"subtitle_path": str(output_path)}
         return count, {"content": out_path.read_text(encoding="utf-8")}
 
 
@@ -335,7 +348,7 @@ def run_transcription_streaming(
             if revision is not None and _input_revision(input_path) != revision:
                 raise RuntimeError("Media file changed during transcription")
             active, started = "render", time.monotonic()
-            result = _finalize(segments, info, request, input_path, deliver)
+            result = _finalize(segments, info, request, input_path, deliver, shared_input=shared_input)
             timings[active] = elapsed_ms(started)
     except Exception:
         if active is not None and active not in timings:
@@ -384,6 +397,7 @@ def fake_transcribe_streaming_for_tests(
     is_cancelled: Callable[[], bool] | None = None,
     *,
     deliver: Deliver = "path",
+    shared_input: bool = False,
 ) -> Iterator[dict]:
     """The pipeline without ffmpeg or a model: canned segments, progress lines,
     then the terminal result, so the NDJSON protocol can be exercised in tests."""
@@ -398,11 +412,13 @@ def fake_transcribe_streaming_for_tests(
     collected = _maybe_fake_diarize(collected, request)
     _raise_if_cancelled(is_cancelled)
     info = SimpleNamespace(language=request.language, duration=total_seconds)
-    yield {**_finalize(collected, info, request, input_path, deliver), "type": "result"}
+    yield {**_finalize(collected, info, request, input_path, deliver, shared_input=shared_input), "type": "result"}
 
 
-def fake_transcribe_for_tests(input_path: Path, request: TranscribeRequest, *, deliver: Deliver = "path") -> dict:
+def fake_transcribe_for_tests(
+    input_path: Path, request: TranscribeRequest, *, deliver: Deliver = "path", shared_input: bool = False
+) -> dict:
     result = None
-    for event in fake_transcribe_streaming_for_tests(input_path, request, deliver=deliver):
+    for event in fake_transcribe_streaming_for_tests(input_path, request, deliver=deliver, shared_input=shared_input):
         result = event
     return {key: value for key, value in result.items() if key != "type"}

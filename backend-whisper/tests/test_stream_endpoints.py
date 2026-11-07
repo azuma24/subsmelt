@@ -94,6 +94,42 @@ class PreStreamWorkOffLoopTests(unittest.TestCase):
         self.assertIsNone(plain.json()["subtitle_path"])
         self.assertEqual(sidecar.read_text(), "existing subtitle")
 
+    def test_legacy_shared_delivery_refuses_a_link_and_can_replace_a_regular_subtitle(self):
+        media = self.media / "clip.mkv"
+        sidecar = media.with_suffix(".srt")
+        body = {"input_path": str(media), "model": "small"}
+        with (
+            tempfile.TemporaryDirectory() as outside_dir,
+            mock.patch.object(main_module, "MEDIA_ROOT", str(self.media)),
+            mock.patch.object(main_module, "available_ram_mb", return_value=64000),
+            mock.patch.object(main_module, "ffmpeg_available", return_value=True),
+            mock.patch.object(main_module, "assert_model_downloaded", return_value=None),
+        ):
+            outside = Path(outside_dir) / "preserve.txt"
+            outside.write_text("outside subtitle", encoding="utf-8")
+            try:
+                sidecar.symlink_to(outside)
+            except OSError as exc:
+                if getattr(exc, "winerror", None) != 1314:
+                    raise
+                self.skipTest("Windows symlink creation needs Developer Mode or privilege")
+
+            plain = self.client.post("/transcribe", json=body)
+            streamed = self.client.post("/transcribe/stream", json=body)
+            self.assertEqual((plain.status_code, streamed.status_code), (400, 200))
+            self.assertEqual(plain.json()["detail"]["code"], "subtitle_path_not_allowed")
+            self.assertEqual(json.loads(streamed.text.splitlines()[-1])["code"], "subtitle_path_not_allowed")
+            self.assertEqual(outside.read_text(encoding="utf-8"), "outside subtitle")
+            self.assertTrue(sidecar.is_symlink())
+
+            sidecar.unlink()
+            sidecar.write_text("old transcript", encoding="utf-8")
+            result = self.client.post("/transcribe", json=body)
+            self.assertEqual(result.status_code, 200)
+            self.assertEqual(Path(result.json()["subtitle_path"]), sidecar.resolve())
+            self.assertIn("Test transcription", sidecar.read_text(encoding="utf-8"))
+            self.assertEqual(sorted(path.name for path in self.media.iterdir()), ["clip.mkv", "clip.srt"])
+
     def test_upload_stream_saves_and_validates_off_the_loop(self):
         with (
             mock.patch.object(main_module, "_save_upload", self._recording("save", main_module._save_upload)),

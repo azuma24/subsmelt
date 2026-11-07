@@ -1,6 +1,8 @@
+import shutil
 import subprocess
 import tempfile
 import unittest
+import wave
 from pathlib import Path
 from unittest import mock
 
@@ -88,6 +90,34 @@ class ExtractAudioRobustnessTests(unittest.TestCase):
             result = self._extract(fake, out, is_cancelled=lambda: False)
             self.assertEqual(result, out)
             self.assertFalse(fake.killed)
+
+
+@unittest.skipUnless(shutil.which(audio.ffmpeg_binary()), "ffmpeg not installed")
+class LocalMediaInputTests(unittest.TestCase):
+    def test_probe_uses_the_file_contents_for_standalone_audio(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "sound.unknown"
+            with wave.open(str(source), "wb") as wav:
+                wav.setparams((1, 2, 16000, 0, "NONE", "not compressed"))
+                wav.writeframes(bytes(3200))
+            result = audio.extract_audio(source, Path(tmp) / "result.wav")
+            with wave.open(str(result), "rb") as wav:
+                self.assertEqual((wav.getframerate(), wav.getnframes()), (16000, 1600))
+
+    def test_playlist_formats_are_rejected_even_with_a_media_extension(self):
+        manifests = (
+            "ffconcat version 1.0\nfile 'unavailable.wav'\n",
+            "#EXTM3U\n#EXT-X-TARGETDURATION:1\n#EXTINF:1,\nunavailable.wav\n#EXT-X-ENDLIST\n",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "clip.mkv"
+            output = Path(tmp) / "result.wav"
+            for manifest in manifests:
+                with self.subTest(manifest=manifest.splitlines()[0]):
+                    source.write_text(manifest, encoding="utf-8")
+                    with self.assertRaisesRegex(RuntimeError, "ffmpeg failed"):
+                        audio.extract_audio(source, output)
+                    self.assertFalse(output.exists())
 
 
 if __name__ == "__main__":

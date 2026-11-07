@@ -14,6 +14,18 @@ DEFAULT_FFMPEG_TIMEOUT_SECONDS = 30 * 60
 # How often a running ffmpeg is checked for a client cancel.
 CANCEL_POLL_SECONDS = 0.5
 
+# Probe standalone media by content. Playlists, image sequences, and other
+# demuxers that can open additional inputs are deliberately absent. MOV/MP4's
+# external data references are disabled by FFmpeg unless explicitly enabled.
+LOCAL_MEDIA_FORMATS = (
+    "aac,ac3,aiff,alac,amr,ape,asf,asf_o,au,avi,caf,dts,eac3,flac,flv,matroska,"
+    "webm,mov,mp4,m4a,3gp,3g2,mj2,mp3,mpeg,mpegts,mpegtsraw,ogg,rm,truehd,wav,w64,wv"
+)
+
+
+def local_media_input(path: Path, *, formats: str = LOCAL_MEDIA_FORMATS) -> list[str]:
+    return ["-protocol_whitelist", "file", "-format_whitelist", formats, "-i", str(path.absolute())]
+
 
 def ffmpeg_binary() -> str:
     """Resolve the ffmpeg executable to invoke.
@@ -46,7 +58,7 @@ def extract_audio(
     """Decode ``input_path`` to 16 kHz mono WAV. A cancel (``is_cancelled``
     turning True) or the timeout kills ffmpeg rather than waiting it out."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    command = [ffmpeg_binary(), "-nostdin", "-y", "-i", str(input_path)]
+    command = [ffmpeg_binary(), "-nostdin", "-y", *local_media_input(input_path)]
     if stream_index is not None:
         # FFmpeg normalizes the input to media start. Preserve lead-in silence
         # on a later-starting track instead of letting WAV reset it to zero.

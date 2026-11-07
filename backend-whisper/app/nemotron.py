@@ -17,7 +17,7 @@ from collections.abc import Callable, Generator, Sequence
 from pathlib import Path
 from types import SimpleNamespace
 
-from .audio import ffmpeg_binary
+from .audio import ffmpeg_binary, local_media_input
 from .engine import TranscriptionCancelled, progress_event
 from .gpu import effective_device
 from .model_loader import lease
@@ -65,10 +65,10 @@ def parse_silences(ffmpeg_stderr: str) -> list[Silence]:
 def detect_silences(audio_path: Path, is_cancelled: Callable[[], bool] | None = None) -> list[Silence]:
     command = [
         ffmpeg_binary(),
+        "-nostdin",
         "-hide_banner",
         "-nostats",
-        "-i",
-        str(audio_path),
+        *local_media_input(audio_path, formats="wav"),
         "-af",
         SILENCE_FILTER,
         "-f",

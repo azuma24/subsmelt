@@ -65,6 +65,7 @@ from .model_manager import (
 )
 from .nemotron_runtime import availability as nemo_speech_availability
 from .nemotron_runtime import binary_version as nemo_speech_version
+from .paths import SubtitlePublishError
 from .preflight import (
     DIARIZATION_RAM_MB,
     DIARIZATION_VRAM_MB,
@@ -801,7 +802,7 @@ def transcribe(request: TranscribeRequest, _auth: None = Depends(require_token))
     deliver: Deliver = "content" if request.defer_publish else "path"
     try:
         if USE_FAKE_TRANSCRIBE:
-            result = fake_transcribe_for_tests(input_path, request, deliver=deliver)
+            result = fake_transcribe_for_tests(input_path, request, deliver=deliver, shared_input=True)
         else:
             result = run_transcription(request, input_path, deliver=deliver, shared_input=True, initial_timings=timings)
     except Exception as exc:
@@ -836,7 +837,9 @@ async def transcribe_stream(
 
     cancel_event = asyncio.Event()
     if USE_FAKE_TRANSCRIBE:
-        gen = fake_transcribe_streaming_for_tests(input_path, request, cancel_event.is_set, deliver=deliver)
+        gen = fake_transcribe_streaming_for_tests(
+            input_path, request, cancel_event.is_set, deliver=deliver, shared_input=True
+        )
     else:
         gen = run_transcription_streaming(
             request, input_path, cancel_event.is_set, deliver=deliver, shared_input=True, initial_timings=timings
@@ -974,6 +977,8 @@ def _map_transcription_error(exc: Exception) -> HTTPException:
         return HTTPException(status_code=409, detail={"code": "model_not_downloaded", "model": exc.model})
     if isinstance(exc, AudioStreamSelectionError):
         return HTTPException(status_code=400, detail={"code": "invalid_audio_stream", "message": str(exc)})
+    if isinstance(exc, SubtitlePublishError):
+        return HTTPException(status_code=400, detail={"code": "subtitle_path_not_allowed", "message": str(exc)})
     if isinstance(exc, (CudaUnavailableError, InvalidComputeTypeError)):
         return HTTPException(status_code=400, detail={"code": "invalid_device", "message": str(exc)})
     if isinstance(exc, LanguageNotSupportedError):

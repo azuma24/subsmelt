@@ -8,6 +8,7 @@ import threading
 import time
 import types
 import unittest
+from contextlib import ExitStack
 from pathlib import Path
 from unittest import mock
 
@@ -36,12 +37,14 @@ class FetchUrlTests(unittest.TestCase):
             "http://169.254.169.254/latest/meta-data",
             "http://[::1]/x",
             "http://[::ffff:127.0.0.1]/x",
+            "http://[fec0::1]/x",
+            "http://224.0.0.1/x",
         ]:
             with self.assertRaises(fetch_url.UrlFetchError):
                 fetch_url._validate_url(bad)
 
     def test_validate_rejects_reserved_hostnames(self):
-        for bad in ["http://localhost/x", "http://foo.local/x", "http://srv.internal/x"]:
+        for bad in ["http://localhost/x", "http://localhost./x", "http://foo.local/x", "http://srv.internal/x"]:
             with self.assertRaises(fetch_url.UrlFetchError):
                 fetch_url._validate_url(bad)
 
@@ -53,28 +56,35 @@ class FetchUrlTests(unittest.TestCase):
         self.assertEqual(fetch_url._validate_url("http://127.0.0.1/x", allow_unsafe=True), "http://127.0.0.1/x")
         self.assertEqual(fetch_url._validate_url("http://localhost/x", allow_unsafe=True), "http://localhost/x")
 
-    def test_hostname_public_blocks_private_resolution(self):
+    def test_hostname_public_blocks_mixed_public_and_private_resolution(self):
         def resolver(host):
-            return ["192.168.1.5"]
+            return ["8.8.8.8", "192.168.1.5"]
 
         with self.assertRaises(fetch_url.UrlFetchError):
-            fetch_url._assert_hostname_public("http://internal.example/x", resolver=resolver)
-        # allow_unsafe bypasses the DNS guard too.
-        fetch_url._assert_hostname_public("http://internal.example/x", allow_unsafe=True, resolver=resolver)
+            fetch_url._public_addresses("internal.example", resolver=resolver)
 
     def test_hostname_public_allows_public_resolution(self):
         def resolver(host):
             return ["8.8.8.8", "1.1.1.1"]
 
-        # Nothing raised.
-        fetch_url._assert_hostname_public("http://public.example/x", resolver=resolver)
+        self.assertEqual(fetch_url._public_addresses("public.example", resolver=resolver), ["8.8.8.8", "1.1.1.1"])
 
-    def test_hostname_public_swallows_resolution_failure(self):
+    def test_hostname_public_refuses_resolution_failure(self):
         def resolver(host):
             raise OSError("no such host")
 
-        # A resolution failure is not an SSRF signal — do not block the fetch.
-        fetch_url._assert_hostname_public("http://maybe.example/x", resolver=resolver)
+        with self.assertRaisesRegex(fetch_url.UrlFetchError, "Could not resolve"):
+            fetch_url._public_addresses("maybe.example", resolver=resolver)
+
+    def test_connect_uses_the_checked_numeric_address(self):
+        with (
+            mock.patch.object(fetch_url, "_resolve_host", return_value=["8.8.8.8"]) as resolve,
+            mock.patch.object(socket, "create_connection", return_value=mock.sentinel.connection) as connect,
+        ):
+            result = fetch_url._connect_public(("public.example", 443), 2, None)
+        self.assertIs(result, mock.sentinel.connection)
+        resolve.assert_called_once_with("public.example")
+        connect.assert_called_once_with(("8.8.8.8", 443), 2, None)
 
     def test_resolve_host_timeout_is_not_defeated_by_a_slow_lookup(self):
         def slow_getaddrinfo(*args, **kwargs):
@@ -160,6 +170,7 @@ class DownloadUrlTests(unittest.TestCase):
         _FakeYoutubeDL.calls = []
         self._patchers = [
             mock.patch.dict(sys.modules, {"yt_dlp": fake}),
+            mock.patch.object(fetch_url, "_public_ydl_class", return_value=_FakeYoutubeDL),
             mock.patch.dict(os.environ, {fetch_url.ALLOW_UNSAFE_ENV: "0"}),
             # Keep CI offline: every hostname "resolves" to a public address.
             mock.patch.object(fetch_url, "_resolve_host", lambda host, timeout=3.0: ["93.184.216.34"]),
@@ -262,8 +273,6 @@ class DownloadUrlTests(unittest.TestCase):
         self.assertEqual(produced, self.dest / "v1.m4a")
 
     def test_generic_extractor_is_disabled(self):
-        # The generic extractor follows redirects and HLS segment URLs to hosts the
-        # guard never sees; only site extractors may run.
         _FakeYoutubeDL.info = {"id": "v1", "ext": "m4a", "webpage_url": "https://example.com/v1"}
         fetch_url.download_url("https://example.com/v1", self.dest)
         self.assertEqual(_FakeYoutubeDL.last_opts["allowed_extractors"], ["default", "-generic"])
@@ -294,6 +303,7 @@ class RealYtDlpRefusesArbitraryUrlsTests(unittest.TestCase):
         self.hits = hits
         self.server = HTTPServer(("127.0.0.1", 0), Handler)
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        self.addCleanup(self.server.server_close)
         self.addCleanup(self.server.shutdown)
         self.base = f"http://127.0.0.1:{self.server.server_address[1]}"
         # The loopback server stands in for an attacker's public host.
@@ -310,3 +320,93 @@ class RealYtDlpRefusesArbitraryUrlsTests(unittest.TestCase):
                 fetch_url.download_url(self.base + path, Path(self._tmp.name))
             self.assertIn("No suitable extractor", str(ctx.exception), path)
         self.assertEqual(self.hits, [])
+
+
+@unittest.skipUnless(fetch_url.url_fetch_available(), "yt-dlp not installed")
+class RealYtDlpTransportTests(unittest.TestCase):
+    def setUp(self):
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+
+        from yt_dlp.extractor.common import InfoExtractor
+
+        hits = []
+        fixture = self
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                hits.append((self.headers["Host"], self.path))
+                if self.path == "/clip":
+                    self.send_response(302)
+                    self.send_header("Location", f"http://{fixture.redirect_host}:{fixture.port}/metadata")
+                    self.end_headers()
+                    return
+                body = b"metadata" if self.path == "/metadata" else b"fixture audio"
+                self.send_response(200)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *args):
+                pass
+
+        server = HTTPServer(("127.0.0.1", 0), Handler)
+        self.port = server.server_port
+        self.hits = hits
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+
+        class FixtureIE(InfoExtractor):
+            _VALID_URL = r"http://page\.example:\d+/clip"
+
+            def _real_extract(self, url):
+                self._download_webpage(url, "v1")
+                return {
+                    "id": "v1",
+                    "title": "Fixture clip",
+                    "url": f"http://media.example:{fixture.port}/audio",
+                    "ext": "mp3",
+                    "vcodec": "none",
+                    "acodec": "mp3",
+                }
+
+        class FixtureYoutubeDL(fetch_url._public_ydl_class()):
+            def __init__(self, opts):
+                super().__init__(opts, auto_init=False)
+                self.add_info_extractor(FixtureIE())
+
+        real_connect = socket.create_connection
+
+        def local_connect(address, timeout, source_address):
+            self.assertEqual(address, ("8.8.8.8", self.port))
+            return real_connect(("127.0.0.1", self.port), timeout, source_address)
+
+        contexts = ExitStack()
+        self.addCleanup(contexts.close)
+        contexts.enter_context(mock.patch.dict(os.environ, {fetch_url.ALLOW_UNSAFE_ENV: "0"}))
+        contexts.enter_context(mock.patch.object(fetch_url, "_public_ydl_class", return_value=FixtureYoutubeDL))
+        contexts.enter_context(
+            mock.patch.object(
+                fetch_url, "_resolve_host", side_effect=lambda h: ["127.0.0.1" if h == "private.example" else "8.8.8.8"]
+            )
+        )
+        contexts.enter_context(mock.patch.object(socket, "create_connection", side_effect=local_connect))
+        self.dest = Path(contexts.enter_context(tempfile.TemporaryDirectory()))
+        self.url = f"http://page.example:{self.port}/clip"
+
+    def test_private_redirect_is_blocked_during_extraction(self):
+        self.redirect_host = "private.example"
+        with self.assertRaisesRegex(fetch_url.UrlFetchError, "not a public internet address"):
+            fetch_url.download_url(self.url, self.dest)
+        self.assertEqual(self.hits, [(f"page.example:{self.port}", "/clip")])
+
+    def test_public_redirect_and_native_download_use_checked_connections(self):
+        self.redirect_host = "cdn.example"
+        self.assertEqual(fetch_url.download_url(self.url, self.dest).read_bytes(), b"fixture audio")
+        self.assertEqual(
+            self.hits,
+            [
+                (f"{host}.example:{self.port}", path)
+                for host, path in (("page", "/clip"), ("cdn", "/metadata"), ("media", "/audio"))
+            ],
+        )

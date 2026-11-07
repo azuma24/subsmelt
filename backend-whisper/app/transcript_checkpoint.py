@@ -19,6 +19,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from .audio import LOCAL_MEDIA_FORMATS
 from .catalog import descriptor_for
 from .engine import TranscriptionCancelled
 from .gpu import effective_compute_type, effective_device
@@ -162,6 +163,7 @@ def checkpoint_key(
         "version": _FORMAT_VERSION,
         "backend": backend_version(),
         "input": input_identity,
+        "input_formats": LOCAL_MEDIA_FORMATS,
         "extractor": extractor_identity,
         "engine": engine,
         "model": request.model,
