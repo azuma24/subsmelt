@@ -4,7 +4,7 @@ import { logger } from "../logger.js";
 import type { LlmMode, ResolvedConnection } from "../connections.js";
 import type { UsageKind } from "../../shared/usage.js";
 import type { CloudProvider, TokenUsage } from "./ai-client.js";
-import { translateSingle } from "./ai-client.js";
+import { controlledAbortError, translateSingle } from "./ai-client.js";
 import { parseSubtitle, readSubtitleFileText, saveTranslated, splitIntoChunks, type SubtitleCue } from "./utils.js";
 import { createConnectionHealth } from "./connection-health.js";
 import { ContextOverflowError } from "./context-overflow.js";
@@ -320,13 +320,22 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     .map((text: string) => text.replace(/\n/g, " ").trim())
     .filter((text: string) => text.length > 0);
 
+  const publishOutput = () => {
+    if (abortSignal.aborted) throw controlledAbortError(abortSignal);
+    const outputPath = checkedOutputPath();
+    saveTranslated(outputPath, parsed, outputExt, subtitle);
+    try {
+      removePartialOutput(outputPath);
+    } catch (error) {
+      logger.warn("translate", `Could not remove partial output for ${outputPath}: ${errorMessage(error) || error}`);
+    }
+  };
+
   if (allTexts.length === 0) {
     for (const cue of subtitle) {
       if (cue.data) cue.data.translatedText = "";
     }
-    const outputPath = checkedOutputPath();
-    saveTranslated(outputPath, parsed, outputExt, subtitle);
-    removePartialOutput(outputPath);
+    publishOutput();
     opts.onProgress?.(totalCues, totalCues);
     return;
   }
@@ -544,6 +553,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     const coreText = subtitle
       .slice(coreStart, coreEnd + 1)
       .map((c: SubtitleCue) => (c?.data ? String(c.data.text).replace(/\n/g, " ").trim() : ""));
+    const hasSourceText = coreText.some((text) => text.length > 0);
 
     // Build context-aware prompt prefix
     let contextPromptPrefix = "";
@@ -576,7 +586,10 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     // fallback/parallel mode, stalling every chunk on a dead primary).
     let pass1Conn: ResolvedConnection | null = null;
     const attemptSignal = attempt?.signal ?? abortSignal;
-    if (attempt?.targetConn) {
+    if (attemptSignal.aborted) throw controlledAbortError(attemptSignal);
+    if (!hasSourceText) {
+      translatedWindow = coreText.map(() => "");
+    } else if (attempt?.targetConn) {
       // A duplicate tries its one connection and ends quietly on any failure:
       // the original attempt is still running and owns the fallback path.
       try {
@@ -639,7 +652,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     // Refinement Pass (Pass 2) — optional editor pass over the pass-1 output.
     // Additive only: accepted solely when it returns the exact same line count;
     // any failure/mismatch keeps the pass-1 translation untouched.
-    if (opts.refinePass && translatedWindow?.every((t) => typeof t === "string")) {
+    if (opts.refinePass && hasSourceText && translatedWindow?.every((t) => typeof t === "string")) {
       // Reuse the connection that produced pass-1 (falls back to the primary
       // only when pass-1 came from the single-line fallback path).
       const refineConn = pass1Conn ?? connOrder[0];
@@ -848,13 +861,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // Publish the complete subtitle from private staging. The public .part file
   // remains available to Preview until the finished subtitle is in place.
   await saveChain;
-  const outputPath = checkedOutputPath();
-  saveTranslated(outputPath, parsed, outputExt, subtitle);
-  try {
-    removePartialOutput(outputPath);
-  } catch (error) {
-    logger.warn("translate", `Could not remove partial output for ${outputPath}: ${errorMessage(error) || error}`);
-  }
+  publishOutput();
 }
 
 /** Test LLM connection by translating a simple phrase */

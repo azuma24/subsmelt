@@ -2,6 +2,7 @@ import { generateText } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
 import {
+  controlledAbortError,
   getAi,
   normalizeResult,
   withAbortTimeout,
@@ -105,6 +106,7 @@ export async function refineChunk(
     onUsage?: (u: TokenUsage) => void;
   },
 ): Promise<string[] | null> {
+  if (opts.abortSignal?.aborted) throw controlledAbortError(opts.abortSignal);
   const pairs = originalLines.flatMap((src, i) =>
     src.trim() ? [{ index: i, original: src, draft: pass1Lines[i] ?? "" }] : [],
   );

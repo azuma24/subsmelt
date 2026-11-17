@@ -374,6 +374,7 @@ export async function translateChunk(
     onUsage?: (u: TokenUsage) => void;
   },
 ): Promise<string[]> {
+  if (opts.abortSignal?.aborted) throw controlledAbortError(opts.abortSignal);
   const nonblankSubtitles = subtitles.filter((subtitle) => subtitle.trim());
   if (nonblankSubtitles.length === 0) return subtitles.map(() => "");
   if (nonblankSubtitles.length !== subtitles.length) {
@@ -491,6 +492,7 @@ export async function translateSingle(
     onUsage?: (u: TokenUsage) => void;
   },
 ): Promise<string> {
+  if (opts.abortSignal?.aborted) throw controlledAbortError(opts.abortSignal);
   if (!subtitle.trim()) return "";
 
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost, provider: opts.provider });
