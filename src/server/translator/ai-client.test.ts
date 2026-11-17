@@ -195,6 +195,17 @@ for (const disableToolCalls of [false, true]) {
   });
 }
 
+for (const reason of [new Error("STOP_REQUESTED"), new Error("JOB_CANCELLED")]) {
+  test(`blank translation requests respect ${reason.message}`, async () => {
+    const opts = { ...modelOpts("http://unused.test/v1"), abortSignal: AbortSignal.abort(reason) };
+    await assert.rejects(translateSingle("", opts), { message: reason.message });
+    await assert.rejects(translateChunk(["", " \t\n"], opts), { message: reason.message });
+    await assert.rejects(refineChunk([""], ["old hallucination"], { ...opts, lang: "French", additional: "" }), {
+      message: reason.message,
+    });
+  });
+}
+
 test("refineChunk keeps its null fallback for an invalid mixed-batch response", async () => {
   await withChatServer({ content: '["too short"]' }, async (apiHost) => {
     assert.equal(

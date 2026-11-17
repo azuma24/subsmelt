@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { saveCueProgress } from "./cue-progress.js";
+import { cueProgressPath, saveCueProgress } from "./cue-progress.js";
 import { partialOutputPath, translateFile } from "./engine.js";
 import { extractJsonFromText, parseSubtitle, type SubtitleCue } from "./utils.js";
 
@@ -28,8 +28,8 @@ function cueTexts(filePath: string): string[] {
   return parsed.filter((cue) => cue.type === "cue").map((cue) => (cue.data?.text ?? "").trim());
 }
 
-for (const refinePass of [false, true]) {
-  test(`empty cues stay blank in final and partial output with refinement ${refinePass}`, async (t) => {
+for (const refinement of ["off", "valid", "invalid"] as const) {
+  test(`empty cues stay blank in final and partial output with refinement ${refinement}`, async (t) => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-empty-cues-"));
     t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
     const srtPath = path.join(dir, "in.srt");
@@ -51,6 +51,7 @@ for (const refinePass of [false, true]) {
       const prompt = String(body.messages.at(-1).content);
       if (fs.existsSync(partialOutputPath(outputPath))) partials.push(cueTexts(partialOutputPath(outputPath)));
       const payload = extractJsonFromText(prompt) as Array<string | { original: string; draft: string }>;
+      if (refinement === "invalid" && typeof payload[0] !== "string") return completion("[]");
       return completion(
         JSON.stringify(
           payload.map((line) => {
@@ -74,7 +75,7 @@ for (const refinePass of [false, true]) {
       parallelChunks: 1,
       disableToolCalls: true,
       savedAnalysis: "A greeting.",
-      refinePass,
+      refinePass: refinement !== "off",
     });
 
     assert.deepEqual(cueTexts(outputPath), ["T Hello", "", "", "T World"]);
@@ -169,3 +170,114 @@ test("an entirely blank subtitle completes without contacting a model", async (t
   assert.equal(requests, 0);
   assert.deepEqual(progress, [0, 1]);
 });
+
+for (const reason of [new Error("STOP_REQUESTED"), new Error("JOB_CANCELLED")]) {
+  test(`a blank subtitle respects ${reason.message} before publication`, async (t) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-blank-cancel-"));
+    t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+    const srtPath = path.join(dir, "in.srt");
+    const outputPath = path.join(dir, "out.srt");
+    fs.writeFileSync(srtPath, "1\n00:00:01,000 --> 00:00:02,000\n\n");
+    fs.writeFileSync(outputPath, "Existing output");
+    const controller = new AbortController();
+
+    await assert.rejects(
+      translateFile({
+        srtPath,
+        outputPath,
+        connections: [{ id: "test", label: "Test", apiKey: "", apiHost: "http://empty.test/v1", model: "test" }],
+        prompt: "Translate.",
+        lang: "Chinese",
+        additional: "",
+        temperature: 0.3,
+        chunkSize: 2,
+        contextSize: 0,
+        parallelChunks: 1,
+        abortSignal: controller.signal,
+        onProgress: () => controller.abort(reason),
+      }),
+      { message: reason.message },
+    );
+
+    assert.equal(fs.readFileSync(outputPath, "utf8"), "Existing output");
+  });
+}
+
+test("blank output succeeds when stale progress cleanup fails", async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-blank-cleanup-"));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const srtPath = path.join(dir, "in.srt");
+  const outputPath = path.join(dir, "out.srt");
+  fs.writeFileSync(srtPath, "1\n00:00:01,000 --> 00:00:02,000\n\n");
+  fs.mkdirSync(cueProgressPath(outputPath));
+
+  await translateFile({
+    srtPath,
+    outputPath,
+    connections: [{ id: "test", label: "Test", apiKey: "", apiHost: "http://empty.test/v1", model: "test" }],
+    prompt: "Translate.",
+    lang: "Chinese",
+    additional: "",
+    temperature: 0.3,
+    chunkSize: 2,
+    contextSize: 0,
+    parallelChunks: 1,
+  });
+
+  assert.deepEqual(cueTexts(outputPath), [""]);
+});
+
+for (const splitFile of [false, true]) {
+  test(`a resumed file completes unsaved blank chunks without a backend with split ${splitFile}`, async (t) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-blank-chunk-"));
+    t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+    const srtPath = path.join(dir, "in.srt");
+    const outputPath = path.join(dir, "out.srt");
+    fs.writeFileSync(
+      srtPath,
+      ["", "", "Hello", "World"]
+        .map((text, i) => `${i + 1}\n00:00:0${i},000 --> 00:00:0${i},500\n${text}\n`)
+        .join("\n"),
+    );
+    saveCueProgress(
+      outputPath,
+      "same-work",
+      new Map([
+        [2, "T Hello"],
+        [3, "T World"],
+      ]),
+    );
+    let acquisitions = 0;
+    let usedConnections = 0;
+
+    await translateFile({
+      srtPath,
+      outputPath,
+      connections: [
+        { id: "test", label: "Test", apiKey: "", apiHost: "http://empty.test/v1", model: "test", provider: "openai" },
+      ],
+      prompt: "Translate.",
+      lang: "Chinese",
+      additional: "",
+      temperature: 0.3,
+      chunkSize: 2,
+      contextSize: 0,
+      parallelChunks: 1,
+      savedAnalysis: "A greeting.",
+      resumeKey: "same-work",
+      refinePass: true,
+      split: splitFile ? { limits: new Map([["test", 1]]) } : undefined,
+      onConnectionUsed: () => {
+        usedConnections++;
+      },
+      acquireConnection: async () => {
+        acquisitions++;
+        throw new Error("STOP_REQUESTED");
+      },
+    });
+
+    assert.equal(acquisitions, 0);
+    assert.equal(usedConnections, 0);
+    assert.deepEqual(cueTexts(outputPath), ["", "", "T Hello", "T World"]);
+  });
+}
