@@ -10,22 +10,38 @@ import {
   translateSingle,
   type TokenUsage,
 } from "./ai-client.js";
+import { refineChunk } from "./prompt.js";
 
 (globalThis as { AI_SDK_LOG_WARNINGS?: boolean }).AI_SDK_LOG_WARNINGS = false;
 
-type ChatMessage = { content: string; reasoning_content?: string };
+type ChatMessage = {
+  content: string | null;
+  reasoning_content?: string;
+  tool_calls?: { id: string; type: "function"; function: { name: string; arguments: string } }[];
+};
+type ChatRequest = {
+  messages: { role: string; content: string }[];
+  tools?: { function: { name: string } }[];
+};
 
 /**
  * Runs `fn` against a local OpenAI-compatible endpoint and returns how many
  * requests it received. "hang" accepts requests and never answers them.
  */
-async function withChatServer(message: ChatMessage | "hang", fn: (apiHost: string) => Promise<void>): Promise<number> {
+async function withChatServer(
+  message: ChatMessage | "hang" | ((request: ChatRequest) => ChatMessage),
+  fn: (apiHost: string) => Promise<void>,
+): Promise<number> {
   let requests = 0;
   const server = http.createServer((req, res) => {
     requests++;
     if (message === "hang") return;
-    req.resume();
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+    });
     req.on("end", () => {
+      const reply = typeof message === "function" ? message(JSON.parse(body) as ChatRequest) : message;
       res.setHeader("content-type", "application/json");
       res.end(
         JSON.stringify({
@@ -33,7 +49,13 @@ async function withChatServer(message: ChatMessage | "hang", fn: (apiHost: strin
           object: "chat.completion",
           created: 0,
           model: "test-model",
-          choices: [{ index: 0, message: { role: "assistant", ...message }, finish_reason: "stop" }],
+          choices: [
+            {
+              index: 0,
+              message: { role: "assistant", ...reply },
+              finish_reason: reply.tool_calls ? "tool_calls" : "stop",
+            },
+          ],
         }),
       );
     });
@@ -52,6 +74,140 @@ async function withChatServer(message: ChatMessage | "hang", fn: (apiHost: strin
 function modelOpts(apiHost: string) {
   return { apiKey: "", apiHost, model: "test-model", systemPrompt: "Translate.", temperature: 0 };
 }
+
+function arrayReply(request: ChatRequest, key: "translated" | "refined", values: string[]): ChatMessage {
+  const toolName = request.tools?.[0]?.function.name;
+  return toolName
+    ? {
+        content: null,
+        tool_calls: [
+          {
+            id: "test-call",
+            type: "function",
+            function: { name: toolName, arguments: JSON.stringify({ [key]: values }) },
+          },
+        ],
+      }
+    : { content: JSON.stringify(values) };
+}
+
+function promptArray(request: ChatRequest): unknown[] {
+  const prompt = request.messages.find((message) => message.role === "user")?.content ?? "";
+  return JSON.parse(prompt.split("\n\n").find((part) => part.startsWith("[")) ?? "[]") as unknown[];
+}
+
+for (const disableToolCalls of [false, true]) {
+  const mode = disableToolCalls ? "plain text" : "tools";
+
+  test(`translateSingle keeps blank sources empty without a request (${mode})`, async () => {
+    const requests = await withChatServer({ content: "invented text" }, async (apiHost) => {
+      for (const source of ["", " \t\r\n", "\u3000"]) {
+        assert.equal(await translateSingle(source, { ...modelOpts(apiHost), disableToolCalls }), "");
+      }
+    });
+    assert.equal(requests, 0);
+  });
+
+  test(`translateChunk keeps blank and empty batches without a request (${mode})`, async () => {
+    const requests = await withChatServer(
+      (request) => arrayReply(request, "translated", ["invented text", "invented text"]),
+      async (apiHost) => {
+        const opts = { ...modelOpts(apiHost), disableToolCalls };
+        assert.deepEqual(await translateChunk(["", " \t\n"], opts), ["", ""]);
+        assert.deepEqual(await translateChunk([], opts), []);
+      },
+    );
+    assert.equal(requests, 0);
+  });
+
+  test(`translateChunk preserves blank positions and only sends nonblank sources (${mode})`, async () => {
+    const sent: unknown[][] = [];
+    const requests = await withChatServer(
+      (request) => {
+        const source = promptArray(request);
+        sent.push(source);
+        return arrayReply(
+          request,
+          "translated",
+          source.map((text) =>
+            text === " first " ? "translated first" : text === "last" ? "translated last" : "invented text",
+          ),
+        );
+      },
+      async (apiHost) => {
+        assert.deepEqual(
+          await translateChunk(["", " first ", " \t\n", "last", "\u3000"], {
+            ...modelOpts(apiHost),
+            disableToolCalls,
+          }),
+          ["", "translated first", "", "translated last", ""],
+        );
+      },
+    );
+    assert.equal(requests, 1);
+    assert.deepEqual(sent, [[" first ", "last"]]);
+  });
+
+  test(`refineChunk keeps blank and empty batches without a request (${mode})`, async () => {
+    const requests = await withChatServer(
+      (request) => arrayReply(request, "refined", ["invented text", "invented text"]),
+      async (apiHost) => {
+        const opts = { ...modelOpts(apiHost), lang: "French", additional: "", disableToolCalls };
+        assert.deepEqual(await refineChunk(["", " \t\n"], ["old hallucination", ""], opts), ["", ""]);
+        assert.deepEqual(await refineChunk([], [], opts), []);
+      },
+    );
+    assert.equal(requests, 0);
+  });
+
+  test(`refineChunk preserves blank positions and sends matching nonblank drafts (${mode})`, async () => {
+    const sent: unknown[][] = [];
+    const requests = await withChatServer(
+      (request) => {
+        const pairs = promptArray(request) as { original: string; draft: string }[];
+        sent.push(pairs.map(({ original, draft }) => ({ original, draft })));
+        return arrayReply(
+          request,
+          "refined",
+          pairs.map(({ original }) =>
+            original === " first " ? "refined first" : original === "last" ? "refined last" : "invented text",
+          ),
+        );
+      },
+      async (apiHost) => {
+        assert.deepEqual(
+          await refineChunk(
+            ["", " first ", " \t\n", "last", "\u3000"],
+            ["old hallucination", "draft first", "", "draft last", ""],
+            { ...modelOpts(apiHost), lang: "French", additional: "", disableToolCalls },
+          ),
+          ["", "refined first", "", "refined last", ""],
+        );
+      },
+    );
+    assert.equal(requests, 1);
+    assert.deepEqual(sent, [
+      [
+        { original: " first ", draft: "draft first" },
+        { original: "last", draft: "draft last" },
+      ],
+    ]);
+  });
+}
+
+test("refineChunk keeps its null fallback for an invalid mixed-batch response", async () => {
+  await withChatServer({ content: '["too short"]' }, async (apiHost) => {
+    assert.equal(
+      await refineChunk(["first", "", "last"], ["draft first", "", "draft last"], {
+        ...modelOpts(apiHost),
+        lang: "French",
+        additional: "",
+        disableToolCalls: true,
+      }),
+      null,
+    );
+  });
+});
 
 async function translateSingleReply(message: ChatMessage): Promise<string> {
   let out = "";
