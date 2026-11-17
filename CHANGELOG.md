@@ -6,6 +6,13 @@ under `whisper-v<version>` with the same version number.
 
 ## [Unreleased]
 
+## [0.9.2] — 2026-11-17
+
+### Translation
+
+- Empty and whitespace-only subtitle cues stay blank through translation, refinement, retries, and resume. Cue timing and order are preserved.
+- Blank translation requests respect Stop and Cancel. Resumed blank chunks complete without a model connection, and progress cleanup failures preserve completed output.
+
 ## [0.9.1] — 2026-11-08
 
 ### Library and translation
