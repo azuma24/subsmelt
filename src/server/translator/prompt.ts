@@ -105,10 +105,14 @@ export async function refineChunk(
     onUsage?: (u: TokenUsage) => void;
   },
 ): Promise<string[] | null> {
+  const pairs = originalLines.flatMap((src, i) =>
+    src.trim() ? [{ index: i, original: src, draft: pass1Lines[i] ?? "" }] : [],
+  );
+  if (pairs.length === 0) return originalLines.map(() => "");
+
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost, provider: opts.provider });
   const timeoutMs = opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
   const systemPrompt = buildRefineSystemPrompt({ lang: opts.lang, additional: opts.additional });
-  const pairs = originalLines.map((src, i) => ({ index: i, original: src, draft: pass1Lines[i] ?? "" }));
   const userPrompt =
     "Refine the 'draft' translations below. Return the result as an array of strings, " +
     "same length and order as input — one refined translation per item.\n\n" +
@@ -120,10 +124,12 @@ export async function refineChunk(
     if (usage) opts.onUsage(usage);
   };
 
-  const accept = (arr: unknown): string[] | null =>
-    Array.isArray(arr) && arr.length === originalLines.length && arr.every((s) => typeof s === "string")
-      ? (arr as string[])
-      : null;
+  const accept = (arr: unknown): string[] | null => {
+    if (!Array.isArray(arr) || arr.length !== pairs.length || !arr.every((s) => typeof s === "string")) return null;
+    const refined = originalLines.map(() => "");
+    for (let i = 0; i < pairs.length; i++) refined[pairs[i].index] = arr[i];
+    return refined;
+  };
 
   try {
     if (!opts.disableToolCalls) {

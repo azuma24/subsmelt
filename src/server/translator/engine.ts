@@ -320,6 +320,17 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     .map((text: string) => text.replace(/\n/g, " ").trim())
     .filter((text: string) => text.length > 0);
 
+  if (allTexts.length === 0) {
+    for (const cue of subtitle) {
+      if (cue.data) cue.data.translatedText = "";
+    }
+    const outputPath = checkedOutputPath();
+    saveTranslated(outputPath, parsed, outputExt, subtitle);
+    removePartialOutput(outputPath);
+    opts.onProgress?.(totalCues, totalCues);
+    return;
+  }
+
   let effectiveAdditional = opts.additional;
 
   // Series-Wide Memory (§2) — seed the context with prior files' glossary terms
@@ -477,7 +488,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   const translatedCues = new Map<number, string>();
   for (const cue of keptChunks.flat()) {
     const index = indexMap.get(cue) as number;
-    const text = savedCues.get(index) as string;
+    const text = cue.data?.text?.trim() ? (savedCues.get(index) as string) : "";
     if (cue.data) cue.data.translatedText = text;
     translatedCues.set(index, text);
   }
@@ -682,9 +693,6 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     }
 
     completedCues += chunkCompleted;
-    // Clamp: a cue counted here (string translatedText, incl. "") can also match
-    // the post-pass `untranslated` filter (which treats "" as untranslated),
-    // so without clamping progress could briefly exceed 100%.
     opts.onProgress?.(Math.min(completedCues, totalCues), totalCues);
 
     // Partial save — serialize via promise chain to prevent concurrent file writes.
@@ -784,9 +792,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // Launch `concurrency` workers in parallel
   await Promise.all(Array.from({ length: concurrency }, (_, i) => worker(i)));
 
-  // Fallback for untranslated — covers cues missed by the chunk + single-line
-  // passes (including empty-string translations the filter treats as missing).
-  const untranslated = subtitle.filter((l: SubtitleCue) => !l.data?.translatedText);
+  const untranslated = subtitle.filter((cue: SubtitleCue) => cue.data?.text?.trim() && !cue.data.translatedText);
   for (const cue of untranslated) {
     if (cue?.data) {
       try {

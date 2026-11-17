@@ -374,6 +374,14 @@ export async function translateChunk(
     onUsage?: (u: TokenUsage) => void;
   },
 ): Promise<string[]> {
+  const nonblankSubtitles = subtitles.filter((subtitle) => subtitle.trim());
+  if (nonblankSubtitles.length === 0) return subtitles.map(() => "");
+  if (nonblankSubtitles.length !== subtitles.length) {
+    const translated = await translateChunk(nonblankSubtitles, opts);
+    let index = 0;
+    return subtitles.map((subtitle) => (subtitle.trim() ? translated[index++] : ""));
+  }
+
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost, provider: opts.provider });
   const timeoutMs = opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
   const prefix = opts.contextPromptPrefix || "";
@@ -483,6 +491,8 @@ export async function translateSingle(
     onUsage?: (u: TokenUsage) => void;
   },
 ): Promise<string> {
+  if (!subtitle.trim()) return "";
+
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost, provider: opts.provider });
   const timeoutMs = opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
 
