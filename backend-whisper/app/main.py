@@ -10,22 +10,25 @@ import secrets
 import tempfile
 import threading
 import time
-from collections.abc import AsyncIterator, Callable, Iterator
+from collections.abc import AsyncIterator, Callable, Coroutine, Iterator
 from concurrent.futures import CancelledError as FutureCancelledError
 from concurrent.futures import TimeoutError as FutureTimeoutError
 from contextlib import asynccontextmanager
 from contextvars import copy_context
 from pathlib import Path
 
+import anyio
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi.routing import APIRoute
 from pydantic import BaseModel, ValidationError
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import Headers
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.formparsers import MultiPartException
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from .admission import admission, current_reservation, positive_env, run_blocking
+from .admission import admission, current_reservation, positive_env, run_blocking, wait_for_cleanup
 from .audio import AudioStreamSelectionError
 from .catalog import ADVERTISED_MODELS
 from .diarize import (
@@ -288,6 +291,66 @@ class _RequestGate:
 
 
 app.add_middleware(_RequestGate)
+
+
+class _UploadRoute(APIRoute):
+    def get_route_handler(self) -> Callable[[Request], Coroutine[None, None, Response]]:
+        handler = super().get_route_handler()
+        if self.path not in ("/transcribe/upload", "/transcribe/upload/stream"):
+            return handler
+
+        async def handle_upload(original: Request) -> Response:
+            receiving: asyncio.Task[Message] | None = None
+            cancelled = False
+            parsing = True
+
+            async def receive() -> Message:
+                nonlocal receiving
+                if not parsing:
+                    return await original.receive()
+                if cancelled:
+                    raise MultiPartException("Upload cancelled")
+                receiving = asyncio.create_task(original.receive())
+                try:
+                    return await receiving
+                except asyncio.CancelledError:
+                    # Let Starlette close partial forms after its last write.
+                    raise MultiPartException("Upload cancelled") from None
+                finally:
+                    receiving = None
+
+            def cancel_receive() -> None:
+                nonlocal cancelled
+                cancelled = True
+                if receiving is not None:
+                    receiving.cancel()
+
+            request = Request(original.scope, receive)
+
+            async def parse_form() -> None:
+                with anyio.CancelScope(shield=True):
+                    try:
+                        await request.form()
+                    except StarletteHTTPException:
+                        raise
+                    except Exception as exc:
+                        raise HTTPException(status_code=400, detail="There was an error parsing the body") from exc
+
+            try:
+                # The parser keeps ownership of disk writes even on Task.cancel().
+                await wait_for_cleanup(asyncio.create_task(parse_form()), cancel_receive)
+                parsing = False
+                return await handler(request)
+            except BaseException:
+                # A final body chunk can finish parsing without another receive.
+                with anyio.CancelScope(shield=True):
+                    await wait_for_cleanup(asyncio.create_task(request.close()))
+                raise
+
+        return handle_upload
+
+
+app.router.route_class = _UploadRoute
 
 
 def capabilities() -> dict:

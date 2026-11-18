@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import anyio
 from starlette.requests import ClientDisconnect
 
 import app.main as main
@@ -388,6 +389,142 @@ class RequestLimitsTests(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(opened)
                 self.assertTrue(all(file.closed for file in opened))
                 self.assertEqual(response(await request("/transcribe", [b"{}"]))[0], 422)
+
+    async def test_multipart_cancellation_waits_for_writes_and_closes_every_spool(self):
+        for route in TRANSCRIBE_ROUTES[2:4]:
+            for cancellation in ("asyncio", "anyio"):
+                for stage in ("receive", "write", "final_write"):
+                    with self.subTest(route=route, cancellation=cancellation, stage=stage):
+                        await self.assert_multipart_cancelled(route, cancellation, stage)
+
+    async def test_malformed_multipart_preserves_fastapi_bad_request_response(self):
+        for route in TRANSCRIBE_ROUTES[2:4]:
+            with self.subTest(route=route):
+                status, _, body = response(
+                    await request(
+                        route,
+                        [b"invalid boundary\r\n"],
+                        headers=((b"content-type", b"multipart/form-data; boundary=x"),),
+                    )
+                )
+                self.assertEqual(status, 400)
+                self.assertEqual(body["detail"], "There was an error parsing the body")
+
+    async def assert_multipart_cancelled(self, route, cancellation, stage):
+        import starlette.formparsers as forms
+
+        opened = []
+        close_states = []
+        receiving = asyncio.Event()
+        finish_receive = asyncio.Event()
+        receive_finished = asyncio.Event()
+        writing, finish_write, writer_finished = (threading.Event() for _ in range(3))
+        cancelled = asyncio.Event()
+        original_spool = forms.SpooledTemporaryFile
+        scopes = []
+        prefix = multipart().removesuffix(b"--x--\r\n") + (
+            b'--x\r\nContent-Disposition: form-data; name="extra"; filename="extra.wav"\r\n\r\n'
+        )
+        chunks = iter(
+            [
+                {"type": "http.request", "body": prefix + b"a" * 1200000, "more_body": True},
+                {
+                    "type": "http.request",
+                    "body": b"b" * 100 + (b"\r\n--x--\r\n" if stage == "final_write" else b""),
+                    "more_body": stage != "final_write",
+                },
+            ]
+        )
+
+        def spool(*args, **kwargs):
+            file = original_spool(*args, **kwargs)
+            opened.append(file)
+            original_write = file.write
+            original_close = file.close
+            self.addCleanup(original_close)
+
+            def write(data):
+                if file._rolled:
+                    writing.set()
+                    if not finish_write.wait(5):
+                        raise AssertionError("multipart writer was not released")
+                    try:
+                        return original_write(data)
+                    finally:
+                        writer_finished.set()
+                return original_write(data)
+
+            def close():
+                close_states.append((main.admission._active, not writing.is_set() or writer_finished.is_set()))
+                original_close()
+
+            file.write = write
+            file.close = close
+            return file
+
+        async def receive():
+            if stage != "receive" or not opened:
+                return next(chunks)
+            receiving.set()
+            try:
+                await finish_receive.wait()
+                return {"type": "http.disconnect"}
+            finally:
+                receive_finished.set()
+
+        async def upload():
+            with anyio.CancelScope() as scope:
+                scopes.append(scope)
+                try:
+                    await request(
+                        route,
+                        receive=receive,
+                        headers=((b"content-type", b"multipart/form-data; boundary=x"),),
+                    )
+                except asyncio.CancelledError:
+                    cancelled.set()
+                    raise
+
+        with mock.patch.object(forms, "SpooledTemporaryFile", spool):
+            active = asyncio.create_task(upload())
+            try:
+                if stage == "receive":
+                    await asyncio.wait_for(receiving.wait(), 3)
+                else:
+                    await wait(writing)
+                self.assertEqual(len(opened), 2)
+                self.assertTrue(opened[-1]._rolled)
+                if cancellation == "asyncio":
+                    active.cancel()
+                else:
+                    scopes[0].cancel()
+                if stage == "receive":
+                    await asyncio.wait_for(receive_finished.wait(), 3)
+                else:
+                    await asyncio.sleep(0)
+                    await self.assert_busy("/transcribe")
+                    self.assertFalse(active.done())
+                    self.assertFalse(cancelled.is_set())
+                    self.assertTrue(all(not file.closed for file in opened))
+                    if cancellation == "asyncio":
+                        active.cancel()
+            finally:
+                finish_receive.set()
+                finish_write.set()
+                if writing.is_set():
+                    await wait(writer_finished)
+                if cancellation == "asyncio":
+                    with self.assertRaises(asyncio.CancelledError):
+                        await asyncio.wait_for(active, 3)
+                else:
+                    await asyncio.wait_for(active, 3)
+            self.assertTrue(cancelled.is_set())
+            self.assertTrue(all(file.closed for file in opened))
+            self.assertEqual(close_states, [(1, True), (1, True)])
+            if stage != "receive":
+                self.assertTrue(writer_finished.is_set())
+        self.assertEqual(main.admission._active, 0)
+        self.assertEqual(response(await request("/transcribe", [b"{}"]))[0], 422)
 
     async def test_url_download_holds_admission_before_inference(self):
         entered, finish = threading.Event(), threading.Event()

@@ -65,15 +65,20 @@ current_reservation: ContextVar[Reservation | None] = ContextVar("transcription_
 
 
 async def run_blocking(func: Callable[..., T], *args, **kwargs) -> T:
+    return await wait_for_cleanup(asyncio.create_task(run_in_threadpool(func, *args, **kwargs)))
+
+
+async def wait_for_cleanup(worker: asyncio.Task[T], on_cancel: Callable[[], None] | None = None) -> T:
     """Do not let task cancellation race thread-owned files or release admission.
 
     AnyIO shields its own cancellation scopes; the task also shields direct
     asyncio cancellation, used by server shutdown and ASGI callers.
     """
-    worker = asyncio.create_task(run_in_threadpool(func, *args, **kwargs))
     try:
         return await asyncio.shield(worker)
     except asyncio.CancelledError:
+        if on_cancel is not None:
+            on_cancel()
         with anyio.CancelScope(shield=True):
             while not worker.done():
                 try:
