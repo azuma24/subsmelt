@@ -1,3 +1,4 @@
+import "./state-bootstrap.js";
 import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,7 +10,7 @@ import { transcriptionWork } from "./transcription/work.js";
 import { previewLibraryScan, scanAndEnqueue } from "./library-scan.js";
 import { logger } from "./logger.js";
 import { crossSiteGuard, createIngressGuard } from "./cross-site-guard.js";
-import db, { getLogs, clearLogs } from "./db.js";
+import db, { getLogs, clearLogs, resetInterruptedJobs } from "./db.js";
 import { addSSEClient } from "./sse.js";
 import { notifyTest } from "./notify.js";
 import { getWatcherStatus, syncWatcher } from "./watcher.js";
@@ -158,6 +159,7 @@ app.get("/{*splat}", (_req, res) => {
 });
 
 // ======== Start ========
+resetInterruptedJobs();
 app.listen(PORT, HOST, () => {
   // Reconcile any transcription attempts left "running" by a previous process
   // (e.g. crash/restart mid-transcription) so they no longer hang in history.

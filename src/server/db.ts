@@ -119,7 +119,6 @@ export function resetInterruptedJobs(): number {
     )
     .run().changes;
 }
-resetInterruptedJobs();
 
 // --- Row types (src/shared/jobs.ts: the client reads the same shapes) ---
 
