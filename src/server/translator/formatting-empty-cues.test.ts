@@ -6,6 +6,7 @@ import test, { type TestContext } from "node:test";
 import { cuesOf, parseSubtitle } from "./convert.js";
 import { loadCueProgress, saveCueProgress } from "./cue-progress.js";
 import { partialOutputPath, translateFile, type TranslateFileOptions } from "./engine.js";
+import { isBlankCueText } from "./subtitle-quality.js";
 
 (globalThis as { AI_SDK_LOG_WARNINGS?: boolean }).AI_SDK_LOG_WARNINGS = false;
 
@@ -103,6 +104,20 @@ const blankSources: Record<Format, string[]> = {
   ass: ["{\\an8}\\N\\h", "{\\i1}\\n{\\i0}"],
   ssa: ["{\\an8}\\N\\h", "{\\i1}\\n{\\i0}"],
 };
+
+test("blank classification follows the source format's entity rules", () => {
+  for (const ext of ["ass", "ssa"] as const) {
+    assert.equal(isBlankCueText("{\\i1}&nbsp;{\\i0}", ext), false);
+    assert.equal(isBlankCueText("&lrm;&rlm;&#32;", ext), false);
+  }
+  for (const ext of ["srt", "vtt"] as const) {
+    assert.equal(isBlankCueText("<i>&nbsp;&lrm;&rlm;</i>", ext), true);
+    assert.equal(isBlankCueText("&NBSP;&LRM;&RLM;", ext), false);
+    assert.equal(isBlankCueText("<i>&#32;&#160;&#xA0;&#x200E;</i>", ext), true);
+    assert.equal(isBlankCueText("<i>&#65;</i>", ext), false);
+    assert.equal(isBlankCueText("&#999999999;", ext), false);
+  }
+});
 
 for (const ext of ["srt", "vtt", "ass", "ssa"] as const) {
   test(`formatting-only ${ext} files preserve raw cues and timing without model requests`, async (t) => {

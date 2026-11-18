@@ -316,7 +316,6 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
 
   opts.onProgress?.(0, totalCues);
 
-  // Keep cue slots and raw formatting while blank display text skips every model pass.
   const translationTexts = subtitle.map((cue) => {
     const text = String(cue?.data?.text ?? "");
     return isBlankCueText(text, sourceExt) ? "" : text;

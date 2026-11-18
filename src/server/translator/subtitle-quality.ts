@@ -29,7 +29,15 @@ function normalizedCueText(text: string, ext: string): string {
 }
 
 export function isBlankCueText(text: string, ext: string): boolean {
-  return normalizedCueText(text, ext).length === 0;
+  let visible = visibleCueText(text, ext);
+  if (!isAssFormat(ext)) {
+    visible = visible.replace(/&(?:nbsp|lrm|rlm);/g, " ").replace(/&#(x[\da-f]+|\d+);/gi, (entity, value: string) => {
+      const hexadecimal = value[0].toLowerCase() === "x";
+      const point = Number.parseInt(hexadecimal ? value.slice(1) : value, hexadecimal ? 16 : 10);
+      return point <= 0x10ffff ? String.fromCodePoint(point) : entity;
+    });
+  }
+  return visible.replace(/[\u200e\u200f]/g, "").trim().length === 0;
 }
 
 export function inspectSubtitle(
