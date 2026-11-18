@@ -109,9 +109,17 @@ Values set by environment variables override the web UI and are never written to
 ```bash
 npm ci
 npm run dev        # API and Vite dev server
-npm run lint       # Biome, then both typechecks
+npm run lint       # Biome and TypeScript checks
 npm test
+npx playwright install chromium
+npm run test:browser
 ```
+
+Browser tests start isolated app instances with temporary state and a local model
+stub. They cover saving settings, failed saves, stop/cancel, and reconnect.
+
+The [backup and restore guide](docs/backup-restore.md) covers coherent snapshots
+of application state and interrupted translation progress.
 
 The Whisper backend is Python, in `backend-whisper/`: run
 `python -m pytest tests -q` and `ruff check .` there. CI runs both suites and

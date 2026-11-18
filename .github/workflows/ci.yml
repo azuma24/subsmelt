@@ -45,6 +45,37 @@ jobs:
       - name: Build
         run: npm run build
 
+  browser:
+    name: Browser workflows (Chromium)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.3
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Test browser workflows
+        run: npm run test:browser
+
+      - name: Upload failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-failures
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
   backend:
     name: Whisper backend (Python)
     runs-on: ubuntu-latest
