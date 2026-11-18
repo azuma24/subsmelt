@@ -16,6 +16,7 @@ import { awayFromDownMachines, createChunkHedger, type ChunkAttempt, type HedgeT
 import { runLineFallback, singleLineTimeoutMs } from "./fallback-policy.js";
 import { buildTranslationSystemPrompt } from "./prompt.js";
 import { refineChunk } from "./prompt.js";
+import { isBlankCueText } from "./subtitle-quality.js";
 import {
   analyzeSubtitlesForContext,
   buildChunkGlossary,
@@ -315,10 +316,13 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
 
   opts.onProgress?.(0, totalCues);
 
-  const allTexts = subtitle
-    .map((cue: SubtitleCue) => (cue?.data ? String(cue.data.text || "") : ""))
-    .map((text: string) => text.replace(/\n/g, " ").trim())
-    .filter((text: string) => text.length > 0);
+  // Keep cue slots and raw formatting while blank display text skips every model pass.
+  const translationTexts = subtitle.map((cue) => {
+    const text = String(cue?.data?.text ?? "");
+    return isBlankCueText(text, sourceExt) ? "" : text;
+  });
+  const flatTexts = translationTexts.map((text) => text.replace(/\n/g, " ").trim());
+  const allTexts = flatTexts.filter((text) => text.length > 0);
 
   const publishOutput = () => {
     if (abortSignal.aborted) throw controlledAbortError(abortSignal);
@@ -333,7 +337,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
 
   if (allTexts.length === 0) {
     for (const cue of subtitle) {
-      if (cue.data) cue.data.translatedText = "";
+      if (cue.data) cue.data.translatedText = cue.data.text ?? "";
     }
     publishOutput();
     opts.onProgress?.(totalCues, totalCues);
@@ -497,7 +501,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   const translatedCues = new Map<number, string>();
   for (const cue of keptChunks.flat()) {
     const index = indexMap.get(cue) as number;
-    const text = cue.data?.text?.trim() ? (savedCues.get(index) as string) : "";
+    const text = translationTexts[index] ? (savedCues.get(index) as string) : (cue.data?.text ?? "");
     if (cue.data) cue.data.translatedText = text;
     translatedCues.set(index, text);
   }
@@ -544,15 +548,9 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     // New approach: send context lines as read-only "preceding/following context"
     // in the prompt, send only core lines as the translation target.
     // Validation is now against coreText.length (always stable).
-    const contextBefore = subtitle
-      .slice(contextStart, coreStart)
-      .map((c: SubtitleCue) => (c?.data ? String(c.data.text).replace(/\n/g, " ").trim() : ""));
-    const contextAfter = subtitle
-      .slice(coreEnd + 1, contextEnd + 1)
-      .map((c: SubtitleCue) => (c?.data ? String(c.data.text).replace(/\n/g, " ").trim() : ""));
-    const coreText = subtitle
-      .slice(coreStart, coreEnd + 1)
-      .map((c: SubtitleCue) => (c?.data ? String(c.data.text).replace(/\n/g, " ").trim() : ""));
+    const contextBefore = flatTexts.slice(contextStart, coreStart);
+    const contextAfter = flatTexts.slice(coreEnd + 1, contextEnd + 1);
+    const coreText = flatTexts.slice(coreStart, coreEnd + 1);
     const hasSourceText = coreText.some((text) => text.length > 0);
 
     // Build context-aware prompt prefix
@@ -640,8 +638,11 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       // Bails out once the backend is clearly not answering, instead of walking
       // every line at one full timeout each (see fallback-policy.ts).
       const { translations } = await runLineFallback(
-        coreIndices.map((idx) => subtitle[idx]?.data?.text || ""),
-        { translateLine: (lineText) => translateSingleWithFallback(lineText, connOrder, attemptSignal) },
+        coreIndices.map((idx) => translationTexts[idx]),
+        {
+          translateLine: async (lineText) =>
+            lineText ? translateSingleWithFallback(lineText, connOrder, attemptSignal) : "",
+        },
       );
       translatedWindow = new Array(coreText.length).fill(null);
       coreIndices.forEach((idx, i) => {
@@ -697,7 +698,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       const idx = indexMap.get(cue) as number;
       if (typeof idx !== "number") continue;
       const offset = idx - coreStart;
-      const t = translatedWindow?.[offset];
+      const t = translationTexts[idx] ? translatedWindow?.[offset] : (cue.data?.text ?? "");
       if (cue?.data && typeof t === "string") {
         cue.data.translatedText = t;
         translatedCues.set(idx, t);
@@ -805,7 +806,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // Launch `concurrency` workers in parallel
   await Promise.all(Array.from({ length: concurrency }, (_, i) => worker(i)));
 
-  const untranslated = subtitle.filter((cue: SubtitleCue) => cue.data?.text?.trim() && !cue.data.translatedText);
+  const untranslated = subtitle.filter((cue, idx) => translationTexts[idx] && !cue.data?.translatedText);
   for (const cue of untranslated) {
     if (cue?.data) {
       try {

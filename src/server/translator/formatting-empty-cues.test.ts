@@ -56,15 +56,18 @@ function useModel(t: TestContext, reply?: (payload: Payload) => string) {
     globalThis.fetch = originalFetch;
   });
   const requests: string[] = [];
+  const prompts: string[] = [];
   const payloads: Payload[] = [];
   globalThis.fetch = (async (input: unknown, init?: RequestInit) => {
     requests.push(String(input));
     if (String(input).endsWith("/models")) return new Response("{}", { status: 200 });
     const body = JSON.parse(String(init?.body));
-    if (String(body.messages[0].content).includes("subtitle content analyst")) return completion("A greeting.");
     const prompt = String(body.messages.at(-1).content);
+    prompts.push(prompt);
+    if (String(body.messages[0].content).includes("subtitle content analyst")) return completion("A greeting.");
     const payload = JSON.parse(
-      prompt.split("\n\n").find((part) => part.startsWith('"') || part.startsWith('["') || part.startsWith('[{')) ?? "[]",
+      prompt.split("\n\n").find((part) => part.startsWith('"') || part.startsWith('["') || part.startsWith("[{")) ??
+        "[]",
     ) as Payload;
     payloads.push(payload);
     return completion(
@@ -74,7 +77,7 @@ function useModel(t: TestContext, reply?: (payload: Payload) => string) {
           : JSON.stringify(payload.map((line) => `T ${typeof line === "string" ? line : line.original}`))),
     );
   }) as typeof fetch;
-  return { requests, payloads };
+  return { requests, prompts, payloads };
 }
 
 function run(paths: Paths, extra: Partial<TranslateFileOptions> = {}) {
@@ -123,7 +126,7 @@ for (const ext of ["srt", "vtt", "ass", "ssa"] as const) {
         assert.ok(Array.isArray(payload));
         return JSON.stringify(payload.map((line) => `T ${typeof line === "string" ? line : line.original}`));
       });
-      await run(paths, { refinePass, contextSize: 1 });
+      await run(paths, { refinePass, contextSize: 1, savedAnalysis: undefined });
       const output = cues(paths.outputPath, ext);
       assert.deepEqual(
         output.map((cue) => cue.data?.text),
@@ -140,6 +143,12 @@ for (const ext of ["srt", "vtt", "ass", "ssa"] as const) {
         ),
         refinePass ? [styled, styled, "World", "World"] : [styled, "World"],
       );
+      for (const blank of blankSources[ext]) {
+        assert.ok(
+          model.prompts.every((prompt) => !prompt.includes(blank)),
+          "blank formatting stays out of model context",
+        );
+      }
     });
   }
 
@@ -164,20 +173,26 @@ for (const ext of ["srt", "vtt", "ass", "ssa"] as const) {
   });
 }
 
-test("failed chunks send only visible sources to line fallback", async (t) => {
-  const styled = "<i>Hello</i>";
-  const paths = files(t, "srt", [styled, ...blankSources.srt]);
-  const model = useModel(t, (payload) => (Array.isArray(payload) ? "[]" : `T ${payload}`));
-  await run(paths);
-  assert.deepEqual(
-    model.payloads.filter((payload) => typeof payload === "string"),
-    [styled],
-  );
-  assert.deepEqual(
-    cues(paths.outputPath, "srt").map((cue) => cue.data?.text),
-    [`T ${styled}`, ...blankSources.srt],
-  );
-});
+for (const recovery of ["line fallback", "leftover sweep"]) {
+  test(`${recovery} sends only visible sources after incomplete chunk output`, async (t) => {
+    const styled = "<i>Hello</i>";
+    const paths = files(t, "srt", [styled, ...blankSources.srt]);
+    const model = useModel(t, (payload) =>
+      Array.isArray(payload)
+        ? JSON.stringify(recovery === "line fallback" ? [] : payload.map(() => ""))
+        : `T ${payload}`,
+    );
+    await run(paths);
+    assert.deepEqual(
+      model.payloads.filter((payload) => typeof payload === "string"),
+      [styled],
+    );
+    assert.deepEqual(
+      cues(paths.outputPath, "srt").map((cue) => cue.data?.text),
+      [`T ${styled}`, ...blankSources.srt],
+    );
+  });
+}
 
 test("unfinished jobs cache raw formatting for completed blank chunks", async (t) => {
   const paths = files(t, "srt", [...blankSources.srt, "Hello"]);

@@ -21,6 +21,17 @@ export function visibleCueText(text: string, ext: string): string {
     .replace(/<(?:\d+:)?\d{2}:\d{2}\.\d{3}>/g, "");
 }
 
+function normalizedCueText(text: string, ext: string): string {
+  return visibleCueText(text, ext)
+    .replace(/&(?:nbsp|lrm|rlm);/gi, " ")
+    .replace(/&(?:amp|lt|gt|quot|apos|#\d+|#x[\da-f]+);/gi, "x")
+    .trim();
+}
+
+export function isBlankCueText(text: string, ext: string): boolean {
+  return normalizedCueText(text, ext).length === 0;
+}
+
 export function inspectSubtitle(
   content: string,
   ext: string,
@@ -50,10 +61,7 @@ export function inspectSubtitle(
       timed.push({ cue, start, end, layer });
     }
 
-    const text = visibleCueText(data?.text ?? "", ext)
-      .replace(/&(?:nbsp|lrm|rlm);/gi, " ")
-      .replace(/&(?:amp|lt|gt|quot|apos|#\d+|#x[\da-f]+);/gi, "x")
-      .trim();
+    const text = normalizedCueText(data?.text ?? "", ext);
     if (!text) {
       issues.push({ cue, code: "empty" });
       return;
