@@ -11,8 +11,8 @@ services:
   whisper-backend:
     build: ./backend-whisper
     container_name: subsmelt-whisper
-    ports:
-      - "8001:8001"
+    # Private sidecar: Subsmelt reaches port 8001 over the Compose network.
+    # See backend-whisper/README.md to publish an authenticated external endpoint.
     environment:
       - SUBSMELT_WHISPER_FAKE=${SUBSMELT_WHISPER_FAKE:-0}
     volumes:

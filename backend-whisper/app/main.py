@@ -11,7 +11,10 @@ import tempfile
 import threading
 import time
 from collections.abc import AsyncIterator, Callable, Iterator
+from concurrent.futures import CancelledError as FutureCancelledError
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from contextlib import asynccontextmanager
+from contextvars import copy_context
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
@@ -19,8 +22,10 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ValidationError
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import Headers
+from starlette.formparsers import MultiPartException
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from .admission import admission, current_reservation, positive_env, run_blocking
 from .audio import AudioStreamSelectionError
 from .catalog import ADVERTISED_MODELS
 from .diarize import (
@@ -109,6 +114,7 @@ DEFAULT_MAX_UPLOAD_MB = 5120
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
     _configured_token()  # An invalid mounted auth secret must prevent startup.
+    _request_limits()
     try:
         yield
     finally:
@@ -176,7 +182,7 @@ def _token_matches(presented: str) -> bool:
 
 
 def _max_upload_mb() -> int:
-    return int(os.environ.get("SUBSMELT_WHISPER_MAX_UPLOAD_MB") or DEFAULT_MAX_UPLOAD_MB)
+    return positive_env("SUBSMELT_WHISPER_MAX_UPLOAD_MB", DEFAULT_MAX_UPLOAD_MB)
 
 
 def _upload_too_large() -> HTTPException:
@@ -186,54 +192,102 @@ def _upload_too_large() -> HTTPException:
     )
 
 
-def _upload_refusal(headers: Headers) -> HTTPException | None:
-    if auth_required():
-        presented = _presented_token(headers.get("authorization"), headers.get("x-subsmelt-token"))
-        if not _token_matches(presented):
-            return _unauthorized()
-    length = headers.get("content-length") or ""
-    if length.isdigit() and int(length) > _max_upload_mb() * 1024 * 1024:
-        return _upload_too_large()
-    return None
+def _request_limits() -> tuple[int, int, int]:
+    _max_upload_mb()
+    return (
+        positive_env("SUBSMELT_WHISPER_MAX_ACTIVE_TRANSCRIPTIONS", 1),
+        positive_env("SUBSMELT_WHISPER_MAX_JSON_BYTES", 1024 * 1024),
+        positive_env("SUBSMELT_WHISPER_BUSY_RETRY_AFTER_SECONDS", 5),
+    )
 
 
-def _capped(receive: Receive, limit_bytes: int) -> Receive:
-    """A ``receive`` that refuses the request once more body than ``limit_bytes``
-    has arrived, for a chunked upload that carries no Content-Length."""
-    received = 0
-
-    async def capped() -> Message:
-        nonlocal received
-        message = await receive()
-        received += len(message.get("body") or b"")
-        if received > limit_bytes:
-            raise _upload_too_large()
-        return message
-
-    return capped
-
-
-class _UploadGate:
-    """Checks the token and the size cap on the upload routes before any of the
-    body is read. FastAPI parses a route's multipart body before its ``Depends``
-    run, so ``require_token`` alone fires only after a whole upload (of any
-    size) has been spooled to disk."""
+class _RequestGate:
+    """Authenticate, bound bodies, and reserve work before FastAPI reads them."""
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or not scope["path"].startswith("/transcribe/upload"):
+        path = scope.get("path", "").rstrip("/")
+        transcription = path == "/transcribe" or path.startswith("/transcribe/")
+        protected = transcription or path == "/preflight" or path == "/models" or path.startswith("/models/")
+        if scope["type"] != "http" or not protected:
             await self.app(scope, receive, send)
             return
-        refusal = _upload_refusal(Headers(scope=scope))
-        if refusal is not None:
-            await JSONResponse({"detail": refusal.detail}, status_code=refusal.status_code)(scope, receive, send)
+        headers = Headers(scope=scope)
+        if auth_required() and not _token_matches(
+            _presented_token(headers.get("authorization"), headers.get("x-subsmelt-token"))
+        ):
+            refusal = _unauthorized()
+            await JSONResponse({"detail": refusal.detail}, status_code=401)(scope, receive, send)
             return
-        await self.app(scope, _capped(receive, _max_upload_mb() * 1024 * 1024), send)
+        active_limit, json_limit, retry_after = _request_limits()
+        upload = path in ("/transcribe/upload", "/transcribe/upload/stream")
+        limit_bytes = _max_upload_mb() * 1024 * 1024 if upload else json_limit
+        too_large = (
+            _upload_too_large()
+            if upload
+            else HTTPException(
+                status_code=413,
+                detail={"code": "json_too_large", "message": f"JSON body exceeds {json_limit} bytes"},
+            )
+        )
+        length = headers.get("content-length", "")
+        if length.isdigit() and int(length) > limit_bytes:
+            await JSONResponse({"detail": too_large.detail}, status_code=413)(scope, receive, send)
+            return
+        reservation = admission.acquire(active_limit) if transcription and scope["method"] == "POST" else None
+        if transcription and scope["method"] == "POST" and reservation is None:
+            await JSONResponse(
+                {
+                    "detail": {
+                        "code": "backend_busy",
+                        "message": "Whisper backend is busy; retry after the current transcription finishes",
+                    }
+                },
+                status_code=503,
+                headers={"Retry-After": str(retry_after)},
+            )(scope, receive, send)
+            return
+        received = 0
+        exceeded = False
+        body_complete = False
+
+        async def capped_receive() -> Message:
+            nonlocal received, exceeded, body_complete
+            message = await receive()
+            if upload and not body_complete and message["type"] == "http.disconnect":
+                # Starlette closes partial multipart spools only on this exception.
+                raise MultiPartException("Upload disconnected")
+            if message["type"] == "http.request" and not message.get("more_body", False):
+                body_complete = True
+            received += len(message.get("body") or b"")
+            if received > limit_bytes:
+                exceeded = True
+                if upload:
+                    raise MultiPartException("Upload exceeds body limit")
+                raise too_large
+            return message
+
+        async def capped_send(message: Message) -> None:
+            if exceeded:
+                # Multipart parsing maps its cleanup exception to 400. Preserve
+                # the public 413 contract after the parser has closed its files.
+                if message["type"] == "http.response.start":
+                    await JSONResponse({"detail": too_large.detail}, status_code=413)(scope, receive, send)
+            else:
+                await send(message)
+
+        token = current_reservation.set(reservation)
+        try:
+            await self.app(scope, capped_receive, capped_send)
+        finally:
+            current_reservation.reset(token)
+            if reservation is not None:
+                reservation.release()
 
 
-app.add_middleware(_UploadGate)
+app.add_middleware(_RequestGate)
 
 
 def capabilities() -> dict:
@@ -474,61 +528,108 @@ class ModelDownloadRequest(BaseModel):
     model: str
 
 
-async def _ndjson_stream(
+STREAM_BUFFER_EVENTS = 16
+
+
+class _TranscriptionStreamResponse(StreamingResponse):
+    def __init__(self, stream: AsyncIterator[bytes], cancel_event: threading.Event, **kwargs) -> None:
+        super().__init__(stream, media_type="application/x-ndjson", **kwargs)
+        self.cancel_event = cancel_event
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            # ASGI 2.4 send errors can leave the iterator suspended at a yield.
+            self.cancel_event.set()
+            await self.body_iterator.aclose()
+
+
+def _ndjson_stream(
     gen: Iterator[dict],
-    cancel_event: asyncio.Event,
+    cancel_event: threading.Event,
     cleanup: Callable[[], None] | None = None,
 ) -> AsyncIterator[bytes]:
-    """Drive a blocking event generator on a worker thread, yielding NDJSON lines.
-
-    The worker thread owns the generator's whole lifetime: it iterates, closes it
-    and runs ``cleanup`` on every exit path. The loop side only forwards items;
-    when the client disconnects it sets ``cancel_event`` and leaves, and the
-    generator's own ``is_cancelled`` check ends the work at its next step.
-    Closing the generator from the loop while a step was executing on the thread
-    raised ``ValueError: generator already executing`` and skipped cleanup.
-    """
+    """A bounded, lossless bridge whose worker owns generator and file cleanup."""
     loop = asyncio.get_running_loop()
-    queue: asyncio.Queue = asyncio.Queue()
+    queue: asyncio.Queue = asyncio.Queue(maxsize=STREAM_BUFFER_EVENTS)
     done = object()
+    reservation = current_reservation.get()
+    if reservation is not None:
+        reservation.retain()
 
-    def post(item: object) -> None:
+    def post(item: object) -> bool:
+        if cancel_event.is_set() or loop.is_closed():
+            return False
+        put = queue.put(item)
         try:
-            loop.call_soon_threadsafe(queue.put_nowait, item)
-        except RuntimeError:  # loop closed (server shutdown): nobody is listening
-            pass
+            pending = asyncio.run_coroutine_threadsafe(put, loop)
+        except RuntimeError:
+            put.close()
+            return False
+        while True:
+            try:
+                pending.result(timeout=0.1)
+                return True
+            except FutureTimeoutError:
+                if cancel_event.is_set() or loop.is_closed():
+                    pending.cancel()
+                    return False
+            except FutureCancelledError:
+                return False
 
     def drive() -> None:
         try:
             for item in gen:
-                post(item)
+                if not post(item):
+                    break
         except TranscriptionCancelled:
-            pass  # client went away; nothing left to send
+            pass
         except Exception as exc:
             post(_stream_error_line(exc))
         finally:
             try:
                 gen.close()
+            except Exception:
+                log.exception("stream generator cleanup failed")
+            try:
                 if cleanup is not None:
                     cleanup()
             except Exception:
                 log.exception("stream cleanup failed")
             finally:
+                if reservation is not None:
+                    reservation.release()
                 post(done)
 
-    # A daemon thread, not the loop's default executor: the interpreter joins
-    # executor threads before the process may exit, so a download stuck on the
-    # network kept a stopping service alive. Work still running at shutdown is
-    # abandoned with the process, as a killed process would abandon it.
-    threading.Thread(target=drive, name="ndjson-stream", daemon=True).start()
+    # The worker owns cleanup even if sending response headers fails before
+    # iteration starts. Daemon threads cannot hold service shutdown hostage.
+    context = copy_context()
     try:
-        while True:
-            item = await queue.get()
-            if item is done:
-                break
-            yield (json.dumps(item) + "\n").encode("utf-8")
-    finally:
-        cancel_event.set()
+        threading.Thread(target=context.run, args=(drive,), name="ndjson-stream", daemon=True).start()
+    except BaseException:
+        try:
+            gen.close()
+        finally:
+            try:
+                if cleanup is not None:
+                    cleanup()
+            finally:
+                if reservation is not None:
+                    reservation.release()
+        raise
+
+    async def forward() -> AsyncIterator[bytes]:
+        try:
+            while True:
+                item = await queue.get()
+                if item is done:
+                    break
+                yield (json.dumps(item) + "\n").encode("utf-8")
+        finally:
+            cancel_event.set()
+
+    return forward()
 
 
 def _stream_error_line(exc: Exception) -> dict:
@@ -795,7 +896,11 @@ def validate_transcribe_request(request: TranscribeRequest, *, missing_input_sta
 
 
 @app.post("/transcribe", response_model=TranscribeResponse)
-def transcribe(request: TranscribeRequest, _auth: None = Depends(require_token)) -> TranscribeResponse:
+async def transcribe(request: TranscribeRequest, _auth: None = Depends(require_token)) -> TranscribeResponse:
+    return await run_blocking(_transcribe, request)
+
+
+def _transcribe(request: TranscribeRequest) -> TranscribeResponse:
     started = time.monotonic()
     input_path = validate_transcribe_request(request)
     timings = {"backendPreflight": elapsed_ms(started)}
@@ -831,11 +936,11 @@ async def transcribe_stream(
     # A 404 from this route reads as "no such route" to the client, which then
     # silently retries the JSON route, so a missing file is a 400 here.
     started = time.monotonic()
-    input_path = await run_in_threadpool(validate_transcribe_request, request, missing_input_status=400)
+    input_path = await run_blocking(validate_transcribe_request, request, missing_input_status=400)
     timings = {"backendPreflight": elapsed_ms(started)}
     deliver: Deliver = "content" if request.defer_publish else "path"
 
-    cancel_event = asyncio.Event()
+    cancel_event = threading.Event()
     if USE_FAKE_TRANSCRIBE:
         gen = fake_transcribe_streaming_for_tests(
             input_path, request, cancel_event.is_set, deliver=deliver, shared_input=True
@@ -844,7 +949,7 @@ async def transcribe_stream(
         gen = run_transcription_streaming(
             request, input_path, cancel_event.is_set, deliver=deliver, shared_input=True, initial_timings=timings
         )
-    return StreamingResponse(_ndjson_stream(gen, cancel_event), media_type="application/x-ndjson")
+    return _TranscriptionStreamResponse(_ndjson_stream(gen, cancel_event), cancel_event)
 
 
 # ===========================================================================
@@ -1009,12 +1114,16 @@ def _map_transcription_error(exc: Exception) -> HTTPException:
 
 
 @app.post("/transcribe/upload", response_model=UploadTranscribeResponse)
-def transcribe_upload(
+async def transcribe_upload(
     file: UploadFile = File(...),
     request: str = Form(...),
     _auth: None = Depends(require_token),
 ) -> UploadTranscribeResponse:
     """Upload transport (Model B): transcribe uploaded media, return content."""
+    return await run_blocking(_transcribe_upload, file, request)
+
+
+def _transcribe_upload(file: UploadFile, request: str) -> UploadTranscribeResponse:
     with tempfile.TemporaryDirectory(prefix="subsmelt-upload-") as tmp:
         tmp_dir = Path(tmp)
         digest = hashlib.sha256()
@@ -1047,7 +1156,7 @@ def _upload_stream_response(
 ) -> StreamingResponse:
     """Stream an upload-mode transcription; ``tmp_ctx`` is removed when it ends,
     including on a client disconnect."""
-    cancel_event = asyncio.Event()
+    cancel_event = threading.Event()
     if USE_FAKE_TRANSCRIBE:
         gen = fake_transcribe_streaming_for_tests(saved, parsed, cancel_event.is_set, deliver="content")
     else:
@@ -1061,7 +1170,7 @@ def _upload_stream_response(
         )
     stream = _ndjson_stream(gen, cancel_event, cleanup=tmp_ctx.cleanup)
     headers = {"Server-Timing": f"preflight;dur={timings['backendPreflight']}, save;dur={timings.get('uploadSave', 0)}"}
-    return StreamingResponse(stream, media_type="application/x-ndjson", headers=headers)
+    return _TranscriptionStreamResponse(stream, cancel_event, headers=headers)
 
 
 @app.post("/transcribe/upload/stream")
@@ -1083,12 +1192,12 @@ async def transcribe_upload_stream(
         # run them on the threadpool so the loop keeps serving other clients.
         digest = hashlib.sha256()
         started = time.monotonic()
-        saved = await run_in_threadpool(_save_upload, file, tmp_dir, digest.update)
+        saved = await run_blocking(_save_upload, file, tmp_dir, digest.update)
         timings = {"uploadSave": elapsed_ms(started)}
         started = time.monotonic()
         upload_size_mb = int(saved.stat().st_size / 1024 / 1024)
         parsed = parse_upload_request(request, str(saved))
-        await run_in_threadpool(validate_upload_request, parsed, upload_size_mb, tmp_dir)
+        await run_blocking(validate_upload_request, parsed, upload_size_mb, tmp_dir)
         timings["backendPreflight"] = elapsed_ms(started)
     except BaseException:
         tmp_ctx.cleanup()
@@ -1120,13 +1229,13 @@ async def transcribe_url_stream(
         started = time.monotonic()
         request_json = json.dumps({k: v for k, v in payload.items() if k != "url"})
         parsed = parse_upload_request(request_json, str(tmp_dir))
-        await run_in_threadpool(validate_upload_request, parsed, 0, tmp_dir)
+        await run_blocking(validate_upload_request, parsed, 0, tmp_dir)
         timings = {"backendPreflight": elapsed_ms(started)}
         started = time.monotonic()
         try:
             # yt-dlp is blocking — run it off the event loop so this async worker
             # keeps serving health/cancel/progress while a large URL downloads.
-            saved = await run_in_threadpool(download_url, url, tmp_dir)
+            saved = await run_blocking(download_url, url, tmp_dir)
         except UrlFetchUnavailableError as exc:
             raise HTTPException(status_code=400, detail={"code": "url_fetch_unavailable", "message": str(exc)}) from exc
         except UrlFetchError as exc:
