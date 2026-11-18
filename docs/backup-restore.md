@@ -18,14 +18,14 @@ The destination must not exist and must be outside the state and media directori
 
 For Docker Compose, stop the application service and run the command in a one-off container with the same state/media mounts and an additional writable backup mount. The equivalent command inside the image is `node scripts/state-backup.mjs backup --output /backups/subsmelt-2026-11-18`. Do not run the backup through a still-running application container.
 
-The output is a directory bundle. `manifest.json` records its format version, creation time, original roots, file sizes and SHA-256 checksums. Keep the whole directory together. It includes:
+The output is a directory bundle. `manifest.json` records its format version, creation time, original roots, file sizes, owner permissions, and SHA-256 checksums. Keep the whole directory together. It includes:
 
 - A consistent SQLite snapshot, including committed changes that were still in the source WAL.
 - Files under the data and configuration directories, including queue markers, transcription history, review/work state and saved URL transcription artifacts.
 - The configured conversion-batch directory, including external batch storage.
 - Existing `.part` and `.part.json` translation resume files associated with database jobs under `MEDIA_DIR`.
 
-It excludes ownership lock files and SQLite WAL/shared-memory files. It does not copy the media library, source subtitles, finished translated subtitles, external YouTube notes, external model caches, or environment/mounted-secret values. Back up those separately where needed. The bundle includes credentials saved in configuration and may contain subtitle text. Store it with the same access restrictions as the original state.
+It excludes ownership lock files and SQLite WAL/shared-memory files. It does not copy the media library, source subtitles, finished translated subtitles, external YouTube notes, external model caches, or environment/mounted-secret values. Back up those separately where needed. The bundle includes credentials saved in configuration and may contain subtitle text. Store it with the same access restrictions as the original state. Restored files use owner-only permissions, preserving owner execution for saved tools such as `data/bin/yt-dlp`.
 
 Symlinks inside captured state or resume paths are rejected instead of followed. If a database job has a resume file outside `MEDIA_DIR`, backup fails with that path so it cannot silently omit saved progress.
 

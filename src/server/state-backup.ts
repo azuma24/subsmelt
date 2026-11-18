@@ -12,6 +12,7 @@ interface BundleFile {
   path: string;
   size: number;
   sha256: string;
+  mode: 0o600 | 0o700;
 }
 export interface BackupManifest {
   format: "subsmelt-state";
@@ -180,19 +181,21 @@ export async function backupState(directories: StateDirectories, destination: st
     } finally {
       packed.close();
     }
+    fs.chmodSync(snapshot, 0o600);
     const manifest: BackupManifest = {
       format: "subsmelt-state",
       version: 1,
       createdAt: new Date().toISOString(),
       roots,
-      files: [{ scope: "data", path: "subsmelt.db", ...digest(snapshot) }],
+      files: [{ scope: "data", path: "subsmelt.db", mode: 0o600, ...digest(snapshot) }],
     };
     function copy(scope: Scope, relative: string, source: string) {
       const target = safeFile(path.join(output, scope), relative);
       fs.mkdirSync(path.dirname(target), { recursive: true, mode: 0o700 });
       fs.copyFileSync(source, target, fs.constants.COPYFILE_EXCL);
-      fs.chmodSync(target, 0o600);
-      manifest.files.push({ scope, path: relative, ...digest(target) });
+      const mode = fs.statSync(source).mode & 0o100 ? 0o700 : 0o600;
+      fs.chmodSync(target, mode);
+      manifest.files.push({ scope, path: relative, mode, ...digest(target) });
     }
     for (const scope of ["data", "config", "batches"] as const) {
       const skip = new Set<string>();
@@ -256,6 +259,7 @@ function readManifest(bundle: string): BackupManifest {
       !relativePath(entry.path) ||
       !Number.isSafeInteger(entry.size) ||
       entry.size < 0 ||
+      (entry.mode !== 0o600 && entry.mode !== 0o700) ||
       typeof entry.sha256 !== "string" ||
       !/^[a-f0-9]{64}$/.test(entry.sha256)
     ) {
@@ -387,7 +391,7 @@ export function restoreState(bundlePath: string, destinations: StateDirectories)
       const to = safeFile(stage, relative);
       fs.mkdirSync(path.dirname(to), { recursive: true, mode: 0o700 });
       fs.copyFileSync(safeFile(bundle, relative), to, fs.constants.COPYFILE_EXCL);
-      fs.chmodSync(to, 0o600);
+      fs.chmodSync(to, entry.mode);
       const actual = digest(to);
       if (actual.sha256 !== entry.sha256 || actual.size !== entry.size)
         throw new Error("Backup changed during restore");
@@ -402,6 +406,7 @@ export function restoreState(bundlePath: string, destinations: StateDirectories)
       assertEmpty(target.batches);
       const files = manifest.files.map((entry) => ({
         source: safeFile(stage, `${entry.scope}/${entry.path}`),
+        mode: entry.mode,
         destination: safeFile(target[entry.scope], entry.path),
       }));
       if (new Set(files.map((file) => file.destination)).size !== files.length) {
@@ -419,7 +424,7 @@ export function restoreState(bundlePath: string, destinations: StateDirectories)
       for (const file of files) {
         fs.mkdirSync(path.dirname(file.destination), { recursive: true, mode: 0o700 });
         fs.copyFileSync(file.source, file.destination, fs.constants.COPYFILE_EXCL);
-        fs.chmodSync(file.destination, 0o600);
+        fs.chmodSync(file.destination, file.mode);
       }
       verifyDatabase(path.join(target.data, "subsmelt.db"));
       verifyConfig(path.join(target.config, "config.json"));

@@ -20,6 +20,8 @@ function fixture() {
   });
   for (const dir of Object.values(dirs)) fs.mkdirSync(dir);
   fs.mkdirSync(path.join(dirs.media, "show"));
+  fs.mkdirSync(path.join(dirs.data, "bin"));
+  fs.writeFileSync(path.join(dirs.data, "bin/tool"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
   const source = path.join(dirs.media, "show/episode.srt");
   const output = path.join(dirs.media, "show/episode.eng.srt");
   fs.writeFileSync(source, "original media subtitle");
@@ -119,6 +121,7 @@ test("snapshot includes WAL, JSON, external batches and resume state; restore re
     );
     const target = destinations(f.root);
     restoreState(f.bundle, target);
+    assert.equal(fs.statSync(path.join(target.data, "bin/tool")).mode & 0o777, 0o700);
     assert.equal(savedJob(target).completed_cues, 42);
     assert.equal(savedJob(target).status, "translating");
     assert.equal(savedJob(target).srt_path, path.join(target.media, "show/episode.srt"));
@@ -255,6 +258,7 @@ test("importing db alone no longer performs interrupted-job recovery", () => {
 test("malformed, tampered, traversal, symlink and orphan-progress bundles are rejected", async (t) => {
   for (const attack of [
     "version",
+    "mode",
     "checksum",
     "traversal",
     "absolute",
@@ -272,6 +276,7 @@ test("malformed, tampered, traversal, symlink and orphan-progress bundles are re
         const manifest = JSON.parse(fs.readFileSync(file, "utf8"));
         const media = manifest.files.find((entry: any) => entry.scope === "media");
         if (attack === "version") manifest.version = 99;
+        if (attack === "mode") manifest.files[0].mode = 0o777;
         if (attack === "checksum") manifest.files[0].sha256 = "0".repeat(64);
         if (attack === "traversal") media.path = "../../escaped.part";
         if (attack === "absolute") media.path = "/tmp/escaped.part";
