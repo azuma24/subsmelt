@@ -6,6 +6,27 @@ under `whisper-v<version>` with the same version number.
 
 ## [Unreleased]
 
+## [0.9.3] — 2026-11-18
+
+### Translation
+
+- Formatting-only subtitle cues retain their original markup, timing and order while skipping model requests during analysis, translation, refinement and resume. Blank detection follows SRT, WebVTT, ASS and SSA formatting rules.
+
+### State and recovery
+
+- Startup acquires exclusive ownership of data, configuration and conversion-batch directories before loading or recovering state. Duplicate instances fail before changing saved work.
+- Offline backup and restore include configuration, a consistent SQLite snapshot, custom conversion batches and translation resume sidecars. Restore validates checksums, remaps local paths and rolls back its own files after a failed write so the same destinations can be retried.
+
+### Whisper backend
+
+- The same-Compose backend uses the internal network by default. External access can be configured with token authentication.
+- Transcription admission defaults to one active request per process. Busy requests receive HTTP 503 with a retry interval. JSON bodies, uploads and progress buffering are bounded.
+- Cancelled uploads retain their admission slot until multipart writes and temporary-file cleanup finish.
+
+### Verification
+
+- Added Chromium regressions for settings persistence, failed-save retry, Stop, Cancel and server reconnect, with TypeScript checks and CI execution.
+
 ## [0.9.2] — 2026-11-17
 
 ### Translation
