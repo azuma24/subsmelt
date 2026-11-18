@@ -48,7 +48,7 @@ If the media library moved, supply its new root with `--media-dir`. Restore maps
 
 After successful restore, start SubSmelt with the selected `DATA_DIR`, `CONFIG_DIR`, `MEDIA_DIR` and, if external, `CONVERT_BATCH_DIR`. On its first owned startup, interrupted translations return to pending and interrupted transcription attempts are reconciled. The saved resume sidecars remain available. Normal queue auto-resume settings still apply. Make the original media available before starting the server if you chose a new media root.
 
-An I/O error or a new destination-file conflict during copying can leave a partial restore. The command reports failure and does not start the app. Preserve those files for inspection and retry with fresh empty state destinations after resolving the cause.
+If copying fails, restore removes files and empty directories created by that attempt while retaining permanent ownership files. Existing media and concurrent file replacements are preserved. Resolve the reported cause and retry with the same destinations. If cleanup also reports an I/O error, inspect the named residual paths before retrying.
 
 ## State-directory ownership
 

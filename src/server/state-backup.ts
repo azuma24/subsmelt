@@ -316,7 +316,8 @@ function remapper(source: StateDirectories, target: StateDirectories): (value: s
 function remapState(stage: string, source: StateDirectories, target: StateDirectories): void {
   const remap = remapper(source, target);
   const isPath = (key: string) =>
-    /(?:path|dir|_from|_to)$/i.test(key) || ["input", "output_claim", "srt_name"].includes(key);
+    key !== "transcription_path_map_to" &&
+    (/(?:path|dir|_from|_to)$/i.test(key) || ["input", "output_claim", "srt_name"].includes(key));
   function remapJson(value: unknown, key = ""): unknown {
     if (typeof value === "string") return isPath(key) ? remap(value) : value;
     if (Array.isArray(value)) return value.map((item) => remapJson(item, key));
@@ -407,12 +408,18 @@ export function restoreState(bundlePath: string, destinations: StateDirectories)
       const files = manifest.files.map((entry) => ({
         source: safeFile(stage, `${entry.scope}/${entry.path}`),
         mode: entry.mode,
-        destination: safeFile(target[entry.scope], entry.path),
+        destination: safeFile(canonical[entry.scope], entry.path),
       }));
-      if (new Set(files.map((file) => file.destination)).size !== files.length) {
+      const destinationPaths = new Set(files.map((file) => file.destination));
+      if (destinationPaths.size !== files.length) {
         throw new Error("Backup files have overlapping restore destinations");
       }
       for (const file of files) {
+        let parent = path.dirname(file.destination);
+        while (parent !== path.dirname(parent)) {
+          if (destinationPaths.has(parent)) throw new Error("Backup files have overlapping restore destinations");
+          parent = path.dirname(parent);
+        }
         try {
           fs.lstatSync(file.destination);
           throw new Error(`Restore would overwrite an existing file: ${file.destination}`);
@@ -420,14 +427,87 @@ export function restoreState(bundlePath: string, destinations: StateDirectories)
           if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
         }
       }
-      // Each copy also refuses a file created after the conflict preflight.
-      for (const file of files) {
-        fs.mkdirSync(path.dirname(file.destination), { recursive: true, mode: 0o700 });
-        fs.copyFileSync(file.source, file.destination, fs.constants.COPYFILE_EXCL);
-        fs.chmodSync(file.destination, file.mode);
+      const createdFiles: Array<{ file: string; dev: number; ino: number }> = [];
+      const createdDirectories: Array<{ directory: string; dev: number; ino: number }> = [];
+      function createDirectory(directory: string): void {
+        try {
+          const stat = fs.lstatSync(directory);
+          if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(`Unsafe state directory: ${directory}`);
+          return;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        }
+        createDirectory(path.dirname(directory));
+        try {
+          fs.mkdirSync(directory, { mode: 0o700 });
+          const { dev, ino } = fs.lstatSync(directory);
+          createdDirectories.push({ directory, dev, ino });
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+          const stat = fs.lstatSync(directory);
+          if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(`Unsafe state directory: ${directory}`);
+        }
       }
-      verifyDatabase(path.join(target.data, "subsmelt.db"));
-      verifyConfig(path.join(target.config, "config.json"));
+      try {
+        const bytes = Buffer.allocUnsafe(1024 * 1024);
+        for (const file of files) {
+          createDirectory(path.dirname(file.destination));
+          const output = fs.openSync(
+            file.destination,
+            fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW,
+            file.mode,
+          );
+          try {
+            const { dev, ino } = fs.fstatSync(output);
+            createdFiles.push({ file: file.destination, dev, ino });
+            const input = fs.openSync(file.source, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+            try {
+              for (;;) {
+                const count = fs.readSync(input, bytes, 0, bytes.length, null);
+                if (count === 0) break;
+                let written = 0;
+                while (written < count) written += fs.writeSync(output, bytes, written, count - written);
+              }
+              fs.fchmodSync(output, file.mode);
+            } finally {
+              fs.closeSync(input);
+            }
+          } finally {
+            fs.closeSync(output);
+          }
+        }
+        verifyDatabase(path.join(target.data, "subsmelt.db"));
+        verifyConfig(path.join(target.config, "config.json"));
+      } catch (error) {
+        const residual: string[] = [];
+        for (const created of createdFiles.reverse()) {
+          try {
+            const stat = fs.lstatSync(created.file);
+            if (stat.dev === created.dev && stat.ino === created.ino) fs.unlinkSync(created.file);
+          } catch (cleanupError) {
+            if ((cleanupError as NodeJS.ErrnoException).code !== "ENOENT") residual.push(created.file);
+          }
+        }
+        for (const created of createdDirectories.reverse()) {
+          try {
+            const stat = fs.lstatSync(created.directory);
+            if (stat.dev === created.dev && stat.ino === created.ino) fs.rmdirSync(created.directory);
+          } catch (cleanupError) {
+            if (!["ENOENT", "ENOTEMPTY", "EEXIST"].includes((cleanupError as NodeJS.ErrnoException).code || "")) {
+              residual.push(created.directory);
+            }
+          }
+        }
+        if (residual.length) {
+          throw new Error(
+            `${error instanceof Error ? error.message : String(error)}\nRollback could not remove ${residual.join(", ")}`,
+            {
+              cause: error,
+            },
+          );
+        }
+        throw error;
+      }
     } finally {
       ownership.release();
     }

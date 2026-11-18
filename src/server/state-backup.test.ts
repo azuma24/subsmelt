@@ -158,10 +158,14 @@ test("snapshot includes WAL, JSON, external batches and resume state; restore re
     }
     assert.equal(savedJob(target).status, "pending");
     assert.equal(savedJob(target).completed_cues, 0);
-    assert.equal(
-      JSON.parse(fs.readFileSync(path.join(target.data, "transcription-history.json"), "utf8"))[0].status,
-      "failed",
-    );
+    const recoveryDeadline = Date.now() + 10000;
+    const historyFile = path.join(target.data, "transcription-history.json");
+    while (JSON.parse(fs.readFileSync(historyFile, "utf8"))[0].status !== "failed") {
+      if (app.exitCode !== null || Date.now() > recoveryDeadline) {
+        throw new Error(`Transcription recovery was not persisted\n${logs}`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    }
     assert.ok(fs.existsSync(path.join(target.media, "show/episode.eng.srt.part.json")));
   } finally {
     if (app && app.exitCode === null && app.signalCode === null) {
@@ -323,6 +327,139 @@ test("restore refuses a symlink within the media destination and nonempty state"
     fs.writeFileSync(path.join(target.data, "keep.txt"), "existing work");
     assert.throws(() => restoreState(f.bundle, target), /must be empty/);
     assert.equal(fs.readFileSync(path.join(target.data, "keep.txt"), "utf8"), "existing work");
+  } finally {
+    f.db.close();
+    fs.rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
+test("restore rolls back a partial media write and can retry the same destinations", async (t) => {
+  const f = fixture();
+  const originalOpen = fs.openSync;
+  const originalWrite = fs.writeSync;
+  let failingDescriptor = -1;
+  try {
+    await backupState(f.dirs, f.bundle);
+    const target = destinations(f.root);
+    fs.mkdirSync(target.media);
+    fs.writeFileSync(path.join(target.media, "keep.srt"), "existing media");
+    const failingPath = path.join(fs.realpathSync(target.media), "show/episode.eng.srt.part.json");
+    const open = t.mock.method(fs, "openSync", (...args: Parameters<typeof originalOpen>) => {
+      const [file, flags] = args;
+      const descriptor = originalOpen(...args);
+      if (file === failingPath && typeof flags === "number" && flags & fs.constants.O_EXCL) {
+        failingDescriptor = descriptor;
+      }
+      return descriptor;
+    });
+    const write = t.mock.method(fs, "writeSync", ((
+      descriptor: number,
+      bytes: NodeJS.ArrayBufferView,
+      offset: number,
+      length: number,
+      position?: number | null,
+    ) => {
+      if (descriptor === failingDescriptor) {
+        originalWrite(descriptor, bytes, offset, 1, position);
+        throw Object.assign(new Error("Injected partial-write failure"), { code: "ENOSPC" });
+      }
+      return originalWrite(descriptor, bytes, offset, length, position);
+    }) as typeof fs.writeSync);
+    assert.throws(() => restoreState(f.bundle, target), /Injected partial-write failure/);
+    open.mock.restore();
+    write.mock.restore();
+    assert.equal(fs.existsSync(path.join(target.data, "subsmelt.db")), false);
+    assert.equal(fs.existsSync(path.join(target.config, "config.json")), false);
+    assert.equal(fs.existsSync(path.join(target.batches, "saved-batch.json")), false);
+    assert.equal(fs.existsSync(path.join(target.media, "show")), false);
+    assert.equal(fs.readFileSync(path.join(target.media, "keep.srt"), "utf8"), "existing media");
+    restoreState(f.bundle, target);
+    assert.equal(savedJob(target).completed_cues, 42);
+    assert.equal(fs.readFileSync(path.join(target.media, "show/episode.eng.srt.part"), "utf8"), "translated subtitle");
+  } finally {
+    t.mock.restoreAll();
+    f.db.close();
+    fs.rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
+test("restore preserves late media conflicts and replacements while rolling back its own files", async (t) => {
+  const f = fixture();
+  const originalOpen = fs.openSync;
+  try {
+    await backupState(f.dirs, f.bundle);
+    const target = destinations(f.root);
+    const conflict = path.join(target.media, "show/episode.eng.srt.part.json");
+    const open = t.mock.method(fs, "openSync", (...args: Parameters<typeof originalOpen>) => {
+      const [file, flags] = args;
+      if (
+        String(file).endsWith("/restored-media/show/episode.eng.srt.part.json") &&
+        typeof flags === "number" &&
+        flags & fs.constants.O_EXCL
+      ) {
+        const previous = String(file).slice(0, -".json".length);
+        fs.renameSync(previous, `${previous}.moved`);
+        fs.writeFileSync(previous, "concurrent replacement");
+        fs.writeFileSync(file, "concurrent progress");
+      }
+      return originalOpen(...args);
+    });
+    assert.throws(() => restoreState(f.bundle, target), /EEXIST/);
+    open.mock.restore();
+    assert.equal(fs.readFileSync(conflict, "utf8"), "concurrent progress");
+    const previous = path.join(target.media, "show/episode.eng.srt.part");
+    assert.equal(fs.readFileSync(previous, "utf8"), "concurrent replacement");
+    assert.equal(fs.readFileSync(`${previous}.moved`, "utf8"), "translated subtitle");
+    assert.equal(fs.existsSync(path.join(target.data, "subsmelt.db")), false);
+    fs.unlinkSync(conflict);
+    fs.unlinkSync(previous);
+    restoreState(f.bundle, target);
+    assert.equal(savedJob(target).completed_cues, 42);
+  } finally {
+    t.mock.restoreAll();
+    f.db.close();
+    fs.rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
+test("restore rejects ancestor-file collisions between nested data and batches before copying", async () => {
+  const f = fixture();
+  try {
+    fs.mkdirSync(path.join(f.dirs.data, "convert-batches"));
+    fs.writeFileSync(path.join(f.dirs.data, "convert-batches/collision"), "data file");
+    fs.mkdirSync(path.join(f.dirs.batches, "collision"));
+    fs.writeFileSync(path.join(f.dirs.batches, "collision/batch.json"), "{}");
+    await backupState(f.dirs, f.bundle);
+    const target = destinations(f.root);
+    target.batches = path.join(target.data, "convert-batches");
+    assert.throws(() => restoreState(f.bundle, target), /overlapping restore destinations/);
+    assert.equal(fs.existsSync(path.join(target.data, "subsmelt.db")), false);
+    assert.equal(fs.existsSync(path.join(target.config, "config.json")), false);
+  } finally {
+    f.db.close();
+    fs.rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
+test("restore remaps the local transcription prefix and preserves the remote prefix and media alias", async () => {
+  const f = fixture();
+  try {
+    const configFile = path.join(f.dirs.config, "config.json");
+    const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
+    config.settings.transcription_path_map_from = f.dirs.media;
+    config.settings.transcription_path_map_to = f.dirs.media;
+    fs.writeFileSync(configFile, JSON.stringify(config));
+    await backupState(f.dirs, f.bundle);
+    const target = destinations(f.root);
+    const library = path.join(f.root, "existing-library");
+    fs.mkdirSync(library);
+    fs.symlinkSync(library, target.media);
+    restoreState(f.bundle, target);
+    const settings = JSON.parse(fs.readFileSync(path.join(target.config, "config.json"), "utf8")).settings;
+    assert.equal(settings.transcription_path_map_from, target.media);
+    assert.equal(settings.transcription_path_map_to, f.dirs.media);
+    assert.equal(savedJob(target).srt_path, path.join(target.media, "show/episode.srt"));
+    assert.equal(fs.readFileSync(path.join(library, "show/episode.eng.srt.part"), "utf8"), "translated subtitle");
   } finally {
     f.db.close();
     fs.rmSync(f.root, { recursive: true, force: true });
