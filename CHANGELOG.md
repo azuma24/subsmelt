@@ -6,6 +6,10 @@ under `whisper-v<version>` with the same version number.
 
 ## [Unreleased]
 
+### Library
+
+- A page opened just as a job starts no longer shows it as pending until the next poll: the page refreshes once its live-update stream connects.
+
 ## [0.9.3] — 2026-11-18
 
 ### Translation
