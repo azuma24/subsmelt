@@ -138,7 +138,7 @@ export function createWorkPlan(item: WorkInput, settings = getAllSettings()): Wo
     transcription_advanced_stt: JSON.stringify(baseline.advanced_options ?? {}),
     transcription_folder_defaults: "[]",
     transcription_low_ram_behavior: settings.transcription_low_ram_behavior || "ask",
-    transcription_audio_only_upload: settings.transcription_audio_only_upload || "0",
+    transcription_audio_only_upload: settings.transcription_audio_only_upload || "1",
     preferred_chinese: settings.preferred_chinese || "zh-TW",
     correction_rule_sets: JSON.stringify(
       parseCorrectionRuleSets(settings.correction_rule_sets ?? "[]").filter(

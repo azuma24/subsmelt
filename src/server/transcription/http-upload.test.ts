@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, stat, truncate, writeFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -207,4 +207,61 @@ test("automatic upload falls back to the original media when local packing fails
   assert.equal(result.content, "subtitle");
   assert.equal(typeof preparation, "number");
   assert.equal(asr, 3);
+});
+
+// Sparse files: 6 GB apparent size, almost nothing on disk.
+const OVERSIZED_BYTES = 6 * 1024 ** 3;
+
+test("media above the upload limit is sent as packed audio without the audio-only setting", {
+  skip: !ffmpegAvailable,
+}, async (t) => {
+  const directory = await temporaryDirectory(t);
+  const source = path.join(directory, "movie.mp4");
+  // The index sits at the front, so the padding after the samples is never read.
+  runFfmpeg(
+    "-f",
+    "lavfi",
+    "-i",
+    "sine=frequency=440:sample_rate=48000:duration=2",
+    "-c:a",
+    "aac",
+    "-movflags",
+    "+faststart",
+    source,
+  );
+  await truncate(source, OVERSIZED_BYTES);
+  const url = await backend(t, async (request, response) => {
+    assert.equal(request.url, "/transcribe/upload/stream");
+    const file = (await uploadForm(request)).get("file");
+    assert(file instanceof File);
+    assert.equal(file.name, "audio.flac");
+    response.setHeader("content-type", "application/x-ndjson");
+    response.end(`${JSON.stringify({ type: "result", ok: true, content: "subtitle" })}\n`);
+  });
+  let sentBytes = 0;
+  const result = await transcribeFileWithBackendUpload(url, transcriptionRequest(source), source, {
+    onUploadPrepared(bytes, audioOnly) {
+      assert.equal(audioOnly, true);
+      sentBytes = bytes;
+    },
+  });
+  assert.equal(result.content, "subtitle");
+  assert(sentBytes > 0 && sentBytes < 1024 ** 3);
+});
+
+test("media above the upload limit reports why its audio could not be extracted", async (t) => {
+  const directory = await temporaryDirectory(t);
+  const source = path.join(directory, "movie.mkv");
+  await writeFile(source, "unpackable media");
+  await truncate(source, OVERSIZED_BYTES);
+  let calls = 0;
+  const url = await backend(t, (_request, response) => {
+    calls += 1;
+    response.end("{}");
+  });
+  await assert.rejects(
+    transcribeFileWithBackendUpload(url, transcriptionRequest(source), source, {}),
+    /over the 5 GB upload limit and its audio could not be extracted \(.+\); check ffmpeg/,
+  );
+  assert.equal(calls, 0);
 });
