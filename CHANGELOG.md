@@ -6,6 +6,10 @@ under `whisper-v<version>` with the same version number.
 
 ## [Unreleased]
 
+### Transcription
+
+- Upload transport sends lossless audio for media above the 5 GB upload limit, whether or not **Upload audio only** is on. If the audio cannot be extracted, the job fails with the FFmpeg reason.
+
 ## [0.9.3] — 2026-11-18
 
 ### Translation

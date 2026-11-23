@@ -29,8 +29,9 @@ import {
   transcriptionAuthHeaders,
 } from "./http-shared.js";
 
-// Hard cap on upload-transport file size (5 GB). Larger files must use shared-FS
-// transport; uploading them risks exhausting memory/disk on either end.
+// Hard cap on upload-transport payload size (5 GB); a larger payload risks
+// exhausting memory/disk on either end. Media above the cap is sent as packed
+// audio, and needs shared-FS transport only when that cannot be prepared.
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024 * 1024;
 
 const runFfmpeg = promisify(execFile);
@@ -97,6 +98,17 @@ async function packAudio(
   });
 }
 
+/** The reason local packing failed, short enough to show beside a job. */
+function packFailureDetail(error: unknown): string {
+  const failure = error as { code?: unknown; stderr?: unknown; message?: unknown };
+  if (failure?.code === "ENOENT") return "ffmpeg was not found";
+  const lines = String(failure?.stderr ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return (lines.at(-1) || String(failure?.message ?? error)).slice(0, 300);
+}
+
 /** Prepare one payload and keep it for either the stream route or the older JSON route. */
 export async function transcribeFileWithBackendUpload(
   backendUrl: string,
@@ -110,7 +122,9 @@ export async function transcribeFileWithBackendUpload(
     let source = filePath;
     let size = Number(file.size);
     let outgoing = request;
-    if (options.audioOnlyUpload) {
+    // Media above the cap can only travel as packed audio, whatever the setting.
+    const oversized = file.size > BigInt(MAX_UPLOAD_BYTES);
+    if (options.audioOnlyUpload || oversized) {
       const started = performance.now();
       let packed: string | undefined;
       try {
@@ -118,8 +132,14 @@ export async function transcribeFileWithBackendUpload(
         const candidate = path.join(temp, "audio.flac");
         await packAudio(filePath, candidate, request.audio_stream_index, options);
         packed = candidate;
-      } catch {
+      } catch (error) {
         if (options.signal?.aborted) throw new Error("Transcription cancelled");
+        if (oversized) {
+          throw new Error(
+            `Media file is over the ${MAX_UPLOAD_BYTES / 1024 ** 3} GB upload limit and its audio could not be extracted ` +
+              `(${packFailureDetail(error)}); check ffmpeg on the SubSmelt host or use shared-filesystem transport instead`,
+          );
+        }
         // Local packing did not complete. Fall back before sending any bytes.
         // An explicit stream still needs support on the receiving backend.
       } finally {
