@@ -65,6 +65,25 @@ test("Cancel ends an individual translation and keeps its cancelled state", asyn
   expect((await app.jobs()).find((job) => job.id === id)?.status).toBe("error");
 });
 
+test("a job that started before live updates connected shows as running", async ({ page, app }) => {
+  const id = await app.enqueue("Early example.srt");
+  await expect.poll(app.heldCalls).toBeGreaterThan(0);
+  // The first list the page loads predates the start, whose event it never received.
+  await page.route(
+    "**/api/jobs",
+    async (route) => {
+      const response = await route.fetch();
+      const body = (await response.json()) as { jobs: { id: number; status: string }[] };
+      for (const job of body.jobs) if (job.id === id) job.status = "pending";
+      await route.fulfill({ response, json: body });
+    },
+    { times: 1 },
+  );
+  await page.goto(app.url);
+  const row = page.getByRole("row").filter({ hasText: "Early example.srt" });
+  await expect(row.getByRole("button", { name: "Cancel", exact: true })).toBeVisible();
+});
+
 test("the open browser reconciles job state after the server reconnects", async ({ page, app }) => {
   const id = await app.enqueue("Reconnect example.srt");
   await page.goto(app.url);

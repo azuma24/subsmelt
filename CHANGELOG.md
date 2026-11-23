@@ -11,6 +11,10 @@ under `whisper-v<version>` with the same version number.
 - **Upload audio only** is on by default for new installations. An existing installation keeps its saved setting.
 - Upload transport sends lossless audio for media above the 5 GB upload limit, whether or not **Upload audio only** is on. If the audio cannot be extracted, the job fails with the FFmpeg reason.
 
+### Library
+
+- A page opened just as a job starts no longer shows it as pending until the next poll: the page refreshes once its live-update stream connects.
+
 ## [0.9.3] — 2026-11-18
 
 ### Translation

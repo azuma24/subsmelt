@@ -342,12 +342,10 @@ function ensureSse(queryClient: ReturnType<typeof useQueryClient>): SseSingleton
 
   const open = (): EventSource => {
     const es = new EventSource("/api/events");
-    let opened = false;
-
     es.onopen = () => {
-      // Recover after an automatic reconnect or a retry that opened a new source.
-      if (opened || attempts > 0) refresh();
-      opened = true;
+      // Whatever was fetched before this stream opened may have missed an
+      // event: on the first open as much as after a reconnect or a retry.
+      refresh();
       setConnectionOpen(true);
       attempts = 0;
     };
