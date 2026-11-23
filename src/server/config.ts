@@ -143,7 +143,9 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   // mode when a token is set with no mapping (true remote). "shared" forces
   // path mode (Model A); "upload" forces multipart upload (Model B).
   transcription_transport: "auto",
-  transcription_audio_only_upload: "0",
+  // "1" packs the audio locally before an upload-transport send; "0" sends the
+  // media as it is. Media above the upload limit is packed either way.
+  transcription_audio_only_upload: "1",
   // "1" when Whisper and the translation model share one GPU: translation then
   // runs in batches after pending transcriptions (gpu-gate.ts).
   gpu_shared: "0",

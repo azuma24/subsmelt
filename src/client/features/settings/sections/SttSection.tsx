@@ -183,7 +183,7 @@ export function SttSection({
       <ToggleRow
         title={t("processing.audioOnly")}
         description={t("processing.audioOnlyHelp")}
-        checked={str(settings.transcription_audio_only_upload, "0") === "1"}
+        checked={str(settings.transcription_audio_only_upload, "1") === "1"}
         onChange={(checked) => update("transcription_audio_only_upload", checked ? "1" : "0")}
       />
 
