@@ -517,6 +517,31 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // either sets it to true (both pass the check in the same microtask tick).
   let saveChain = Promise.resolve();
 
+  /** Records a cue's translation, counting the cue the first time it gets one. */
+  function recordTranslation(index: number, text: string) {
+    const cue = subtitle[index];
+    if (!cue?.data) return;
+    cue.data.translatedText = text;
+    if (!translatedCues.has(index)) completedCues++;
+    translatedCues.set(index, text);
+  }
+
+  /** Reports progress and saves the partial output; saves are chained so writes never interleave. */
+  function publishProgress() {
+    opts.onProgress?.(Math.min(completedCues, totalCues), totalCues);
+    saveChain = saveChain.then(() => {
+      try {
+        const outputPath = checkedOutputPath();
+        saveTranslated(partialOutputPath(outputPath), parsed, outputExt, subtitle);
+        if (opts.resumeKey) saveCueProgress(outputPath, opts.resumeKey, translatedCues, [...contributingLabels]);
+      } catch (e) {
+        // Best-effort partial save — never throw (the final write at job end is
+        // authoritative), but don't swallow silently: surface it for operators.
+        logger.warn("translate", `Partial save failed for ${partialPath}: ${errorMessage(e) || e}`);
+      }
+    });
+  }
+
   /** Returns "requeue" when the chunk overflowed a context shared with its siblings. */
   async function processChunk(
     block: SubtitleCue[],
@@ -639,8 +664,15 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       const { translations } = await runLineFallback(
         coreIndices.map((idx) => translationTexts[idx]),
         {
-          translateLine: async (lineText) =>
-            lineText ? translateSingleWithFallback(lineText, connOrder, attemptSignal) : "",
+          translateLine: async (lineText, i) => {
+            const text = lineText ? await translateSingleWithFallback(lineText, connOrder, attemptSignal) : "";
+            // A raced chunk publishes only its winner's answer, so its lines wait for that.
+            if (lineText && !attempt) {
+              recordTranslation(coreIndices[i], text);
+              publishProgress();
+            }
+            return text;
+          },
         },
       );
       translatedWindow = new Array(coreText.length).fill(null);
@@ -692,35 +724,14 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
     }
 
     // Write translations back — offset is now relative to coreStart
-    let chunkCompleted = 0;
     for (const cue of block) {
       const idx = indexMap.get(cue) as number;
       if (typeof idx !== "number") continue;
       const offset = idx - coreStart;
       const t = translationTexts[idx] ? translatedWindow?.[offset] : (cue.data?.text ?? "");
-      if (cue?.data && typeof t === "string") {
-        cue.data.translatedText = t;
-        translatedCues.set(idx, t);
-        chunkCompleted++;
-      }
+      if (typeof t === "string") recordTranslation(idx, t);
     }
-
-    completedCues += chunkCompleted;
-    opts.onProgress?.(Math.min(completedCues, totalCues), totalCues);
-
-    // Partial save — serialize via promise chain to prevent concurrent file writes.
-    // Each processChunk call appends to the chain; writes never interleave.
-    saveChain = saveChain.then(() => {
-      try {
-        const outputPath = checkedOutputPath();
-        saveTranslated(partialOutputPath(outputPath), parsed, outputExt, subtitle);
-        if (opts.resumeKey) saveCueProgress(outputPath, opts.resumeKey, translatedCues, [...contributingLabels]);
-      } catch (e) {
-        // Best-effort partial save — never throw (the final write at job end is
-        // authoritative), but don't swallow silently: surface it for operators.
-        logger.warn("translate", `Partial save failed for ${partialPath}: ${errorMessage(e) || e}`);
-      }
-    });
+    publishProgress();
     return "done";
   }
 

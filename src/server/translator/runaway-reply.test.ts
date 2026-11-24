@@ -53,6 +53,7 @@ async function translateAgainst(replyTo: (lines: string[], requestNumber: number
 
   const chunkRequests: ChatRequest[] = [];
   const lineRequests: ChatRequest[] = [];
+  const progress: number[] = [];
   const originalFetch = globalThis.fetch;
   globalThis.fetch = streamable((async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
@@ -84,8 +85,9 @@ async function translateAgainst(replyTo: (lines: string[], requestNumber: number
       parallelChunks: 1,
       requestTimeoutMs: 5_000,
       disableToolCalls: true,
+      onProgress: (completed) => progress.push(completed),
     });
-    return { chunkRequests, lineRequests, output: fs.readFileSync(outputPath, "utf8") };
+    return { chunkRequests, lineRequests, progress, output: fs.readFileSync(outputPath, "utf8") };
   } finally {
     globalThis.fetch = originalFetch;
     fs.rmSync(dir, { recursive: true, force: true });
@@ -110,4 +112,12 @@ test("a chunk request to a self-hosted server limits the length of the reply", a
   for (const request of chunkRequests) {
     assert.ok((request.max_tokens ?? 0) > 0, `max_tokens is ${request.max_tokens}`);
   }
+});
+
+test("lines translated one at a time are counted as each one is done", async () => {
+  const { progress } = await translateAgainst((lines, requestNumber) =>
+    requestNumber <= 2 ? [...translated(lines), "one line too many"] : translated(lines),
+  );
+
+  assert.deepEqual([...new Set(progress)], [0, 1, 2, 3, 4, 5, 10]);
 });

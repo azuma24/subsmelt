@@ -12,6 +12,8 @@ under `whisper-v<version>` with the same version number.
 - A chunk answered with the wrong number of lines, or cut off before its answer, is requested once more, in smaller batches if the connection keeps failing at that size, before the job falls back to translating its lines one at a time.
 - Translation requests to a local or OpenAI-compatible server limit the length of the reply: 8,000 output tokens plus 400 for each line. A model that never stops generating is ended there. Before, it ran until the server's own limit and held up the job's other requests meanwhile.
 - A timeout message says how long the job went without a new line.
+- Lines translated one at a time, after a chunk failed, are counted and written to the partial subtitle as each one is done. Before, they appeared only when the whole chunk was finished. A chunk translated by several connections at once still appears whole.
+- Context analysis may use 16,000 output tokens, up from 6,000, so a model that reasons at length before answering reaches its summary and glossary.
 
 ## [0.9.5] — 2026-11-24
 

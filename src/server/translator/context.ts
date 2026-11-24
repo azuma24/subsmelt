@@ -76,11 +76,13 @@ function fewerAnalysisLines(current: number, contextTokens: number | null): numb
 }
 
 /**
- * Room for a 5-10 sentence summary, 50 glossary entries and some reasoning. A
- * model that spends it all reasoning returns no answer, and the file translates
- * without a glossary rather than holding every chunk back.
+ * Room for a 5-10 sentence summary, 50 glossary entries and the reasoning that
+ * comes before them: a model that reasons over the whole sample spent 6,000
+ * tokens without reaching its answer. A model that spends all of this
+ * reasoning returns no answer, and the file translates without a glossary
+ * rather than holding every chunk back.
  */
-const ANALYSIS_MAX_OUTPUT_TOKENS = 6000;
+const ANALYSIS_MAX_OUTPUT_TOKENS = 16_000;
 
 async function requestAnalysis(
   sample: string[],

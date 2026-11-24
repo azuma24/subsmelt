@@ -113,7 +113,7 @@ async function analysisOf(
 test("the analysis request limits its output", async (t) => {
   const seen: { body?: { max_tokens?: number } } = {};
   assert.equal(await analysisOf(t, completion({ content: "Summary." }), seen), "Summary.");
-  assert.equal(seen.body?.max_tokens, 6000);
+  assert.equal(seen.body?.max_tokens, 16_000);
 });
 
 test("a model cut off while reasoning yields no analysis, not its reasoning", async (t) => {
