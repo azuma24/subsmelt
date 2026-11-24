@@ -11,6 +11,7 @@ import {
   type TokenUsage,
 } from "./ai-client.js";
 import { refineChunk } from "./prompt.js";
+import { completionAsSse, wantsStream } from "./streaming-chat-fixture.js";
 
 (globalThis as { AI_SDK_LOG_WARNINGS?: boolean }).AI_SDK_LOG_WARNINGS = false;
 
@@ -42,22 +43,26 @@ async function withChatServer(
     });
     req.on("end", () => {
       const reply = typeof message === "function" ? message(JSON.parse(body) as ChatRequest) : message;
+      const completion = {
+        id: "chatcmpl-test",
+        object: "chat.completion",
+        created: 0,
+        model: "test-model",
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", ...reply },
+            finish_reason: reply.tool_calls ? "tool_calls" : "stop",
+          },
+        ],
+      };
+      if (wantsStream(body)) {
+        res.setHeader("content-type", "text/event-stream");
+        res.end(completionAsSse(completion));
+        return;
+      }
       res.setHeader("content-type", "application/json");
-      res.end(
-        JSON.stringify({
-          id: "chatcmpl-test",
-          object: "chat.completion",
-          created: 0,
-          model: "test-model",
-          choices: [
-            {
-              index: 0,
-              message: { role: "assistant", ...reply },
-              finish_reason: reply.tool_calls ? "tool_calls" : "stop",
-            },
-          ],
-        }),
-      );
+      res.end(JSON.stringify(completion));
     });
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -282,14 +287,52 @@ test("translateChunk: a tool-call timeout surfaces without a plain-text retry", 
   const outcome = await timedOutToolCall((apiHost) =>
     translateChunk(["source line"], { ...modelOpts(apiHost), requestTimeoutMs: 50 }),
   );
-  assert.deepEqual(outcome, { requests: 1, message: "Request timeout after 50ms" });
+  assert.deepEqual(outcome, { requests: 1, message: "Request timeout: no output for 50ms" });
 });
 
 test("translateSingle: a tool-call timeout surfaces without a plain-text retry", async () => {
   const outcome = await timedOutToolCall((apiHost) =>
     translateSingle("source line", { ...modelOpts(apiHost), requestTimeoutMs: 50 }),
   );
-  assert.deepEqual(outcome, { requests: 1, message: "Request timeout after 50ms" });
+  assert.deepEqual(outcome, { requests: 1, message: "Request timeout: no output for 50ms" });
+});
+
+test("translateChunk: a tool call that streams for longer than the timeout still completes", async () => {
+  const GAP_MS = 60;
+  const args = JSON.stringify({ translated: ["第一行", "第二行"] });
+  const pieces = args.match(/.{1,6}/gu) ?? [];
+  const chunk = (delta: object, finishReason: string | null = null) =>
+    `data: ${JSON.stringify({ id: "c", object: "chat.completion.chunk", created: 0, model: "test-model", choices: [{ index: 0, delta, finish_reason: finishReason }] })}\n\n`;
+  const toolDelta = (fn: object, id?: string) =>
+    chunk({ tool_calls: [{ index: 0, id, type: "function", function: fn }] });
+
+  const server = http.createServer((_req, res) => {
+    res.setHeader("content-type", "text/event-stream");
+    res.write(toolDelta({ name: "submit_translation", arguments: "" }, "call_1"));
+    let sent = 0;
+    const timer = setInterval(() => {
+      if (sent < pieces.length) {
+        res.write(toolDelta({ arguments: pieces[sent++] }));
+        return;
+      }
+      clearInterval(timer);
+      res.end(`${chunk({}, "tool_calls")}data: [DONE]\n\n`);
+    }, GAP_MS);
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address() as AddressInfo;
+  const requestTimeoutMs = 200;
+  assert.ok(pieces.length * GAP_MS > requestTimeoutMs, "the reply outlasts the timeout");
+  try {
+    const translated = await translateChunk(["first", "second"], {
+      ...modelOpts(`http://127.0.0.1:${port}/v1`),
+      requestTimeoutMs,
+    });
+    assert.deepEqual(translated, ["第一行", "第二行"]);
+  } finally {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  }
 });
 
 // ── parseRetryAfter ─────────────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { translateFile } from "./engine.js";
 import type { ResolvedConnection } from "../connections.js";
+import { streamable } from "./streaming-chat-fixture.js";
 
 (globalThis as any).AI_SDK_LOG_WARNINGS = false;
 
@@ -28,7 +29,7 @@ test("chunks avoid a busy machine and return to it once it is free", async (t) =
   let busy = true;
 
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+  globalThis.fetch = streamable((async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.endsWith("/models")) return new Response("{}", { status: 200 });
     const body = JSON.parse(String(init?.body));
@@ -43,7 +44,7 @@ test("chunks avoid a busy machine and return to it once it is free", async (t) =
     // The transcription finishes after the second chunk.
     if (servedBy.length === 2) busy = false;
     return chatCompletion(JSON.stringify(lines.map((line) => `T ${line}`)));
-  }) as typeof fetch;
+  }) as typeof fetch);
   t.after(() => {
     globalThis.fetch = originalFetch;
   });

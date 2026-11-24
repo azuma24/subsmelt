@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { once } from "node:events";
 import type { AddressInfo } from "node:net";
+import { streamable } from "../translator/streaming-chat-fixture.js";
 
 // config.ts, usage.ts and convert-batches.ts bind their folders at import.
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-convert-usage-"));
@@ -17,7 +18,7 @@ fs.mkdirSync(process.env.MEDIA_DIR, { recursive: true });
 (globalThis as { AI_SDK_LOG_WARNINGS?: boolean }).AI_SDK_LOG_WARNINGS = false;
 const realFetch = globalThis.fetch;
 // The LLM: answers every chat completion at once; other endpoints 404 so the context probe falls back.
-globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+globalThis.fetch = streamable((async (input: string | URL | Request, init?: RequestInit) => {
   const url = String(input instanceof Request ? input.url : input);
   if (!url.startsWith("http://llm.test")) return realFetch(input, init);
   if (url.endsWith("/v1/models")) return new Response('{"data":[]}', { status: 200 });
@@ -31,7 +32,7 @@ globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) =>
     usage: { prompt_tokens: 7, completion_tokens: 3, total_tokens: 10 },
   };
   return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
-}) as typeof fetch;
+}) as typeof fetch);
 
 const { default: express } = await import("express");
 const config = await import("../config.js");

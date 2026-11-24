@@ -56,11 +56,37 @@ test("a connection is dropped after the timeout limit and reported once", () => 
   // Further failures must not re-announce it.
   health.noteFailure(target, new Error("timeout"));
   assert.deepEqual(dropped, [
-    { id: "flaky", label: "flaky", error: "3 timeouts in this job — skipping for the rest of it" },
+    { id: "flaky", label: "flaky", error: "3 timeouts in a row — skipping for the rest of this job" },
   ]);
   // The per-job breaker is not an outage: the queue removes an unavailable
   // connection for the whole run, and this one only for this job.
   assert.deepEqual(unavailable, []);
+});
+
+test("a success between timeouts keeps a slow but answering connection", () => {
+  const health = createConnectionHealth();
+  const target = conn("slow");
+  const timeOut = () => health.noteFailure(target, new Error("Request timeout: no output for 300000ms"));
+
+  timeOut();
+  timeOut();
+  health.noteSuccess(target);
+  timeOut();
+  timeOut();
+  assert.equal(health.isDisabled("slow"), false, "four timeouts, never three in a row");
+
+  timeOut();
+  assert.equal(health.isDisabled("slow"), true, "three in a row");
+});
+
+test("a dropped connection stays dropped for the job after a late success", () => {
+  const health = createConnectionHealth();
+  const target = conn("gone");
+  for (let i = 0; i < CONNECTION_TIMEOUT_LIMIT; i++) health.noteFailure(target, new Error("timeout"));
+
+  health.noteSuccess(target);
+  assert.equal(health.isDisabled("gone"), true);
+  assert.deepEqual(health.live([target]), []);
 });
 
 test("schema failures never drop a connection, however many there are", () => {

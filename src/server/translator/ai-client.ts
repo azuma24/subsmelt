@@ -1,4 +1,4 @@
-import { generateText, tool } from "ai";
+import { type LanguageModel, type ToolSet, streamText, tool } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
@@ -13,6 +13,8 @@ import {
   extractReasoningText,
 } from "./utils.js";
 import { ContextOverflowError, toContextOverflow } from "./context-overflow.js";
+import { llmFetch } from "./llm-fetch.js";
+import { collectReply } from "./stream-reply.js";
 
 import type { LlmProvider } from "../../shared/llm.js";
 import { errorMessage, errorName, errorStatus } from "../errors.js";
@@ -21,7 +23,7 @@ import { errorMessage, errorName, errorStatus } from "../errors.js";
 export type CloudProvider = LlmProvider;
 
 /**
- * Token usage captured from a single generateText call, in the AI SDK's names.
+ * Token usage captured from a single LLM call, in the AI SDK's names.
  * Cache and reasoning counts are breakdowns: cache reads and writes are part of
  * `inputTokens`, reasoning is part of `outputTokens`.
  */
@@ -34,7 +36,7 @@ export type TokenUsage = {
 };
 
 /**
- * Defensively extract a normalised {@link TokenUsage} from a generateText result.
+ * Defensively extract a normalised {@link TokenUsage} from an LLM result.
  * Reads the AI SDK's `inputTokenDetails`/`outputTokenDetails` breakdowns and
  * falls back to the legacy `promptTokens`/`completionTokens` names, treating
  * missing fields as 0. Returns null when no input or output was reported.
@@ -59,7 +61,7 @@ export function extractUsage(result: unknown): TokenUsage | null {
   };
 }
 
-/** Fire an onUsage callback for a generateText result, swallowing extraction failures. */
+/** Fire an onUsage callback for an LLM result, swallowing extraction failures. */
 function reportUsage(result: unknown, onUsage?: (u: TokenUsage) => void): void {
   if (!onUsage) return;
   const usage = extractUsage(result);
@@ -161,11 +163,11 @@ export function assertHttpScheme(apiHost: string): void {
 export function getAi({ apiKey, apiHost, provider }: { apiKey: string; apiHost: string; provider?: CloudProvider }) {
   switch (provider) {
     case "openai":
-      return createOpenAI({ apiKey: apiKey || "" });
+      return createOpenAI({ apiKey: apiKey || "", fetch: llmFetch });
     case "anthropic":
-      return createAnthropic({ apiKey: apiKey || "" });
+      return createAnthropic({ apiKey: apiKey || "", fetch: llmFetch });
     case "gemini":
-      return createGoogleGenerativeAI({ apiKey: apiKey || "" });
+      return createGoogleGenerativeAI({ apiKey: apiKey || "", fetch: llmFetch });
     default:
       // Enforce http(s) on the user-configured baseURL before it reaches the
       // HTTP client. Keeps non-http schemes out; LAN/loopback hosts are allowed.
@@ -174,6 +176,9 @@ export function getAi({ apiKey, apiHost, provider }: { apiKey: string; apiHost: 
         name: "openai",
         apiKey: apiKey || "sk-dummy",
         baseURL: apiHost,
+        fetch: llmFetch,
+        // Streamed replies carry token usage only when the request asks for it.
+        includeUsage: true,
       });
   }
 }
@@ -185,7 +190,7 @@ export const REQUEST_TIMEOUT_MS = Math.max(
 );
 
 /**
- * Normalise a generateText result so callers never need to check reasoning.
+ * Normalise an LLM result so callers never need to check reasoning.
  *
  * Many local models (Gemma 4, Qwen3, DeepSeek-R1, …) route ALL output
  * through reasoning_content and leave `text` empty, regardless of whether
@@ -205,11 +210,10 @@ export function normalizeResult<T extends { text?: string; reasoning?: unknown }
   return result;
 }
 
-class RequestTimeoutError extends Error {
-  constructor(timeoutMs: number) {
-    super(`Request timeout after ${timeoutMs}ms`);
-  }
-}
+/** A streamed reply may run this many idle timeouts in total before it is cut off. */
+export const STREAM_TOTAL_TIMEOUT_FACTOR = 3;
+
+class RequestTimeoutError extends Error {}
 
 /**
  * The error an aborted signal should surface: a deliberate per-job cancel
@@ -221,23 +225,43 @@ export function controlledAbortError(signal: AbortSignal): Error {
   return reason instanceof Error && reason.message === "JOB_CANCELLED" ? reason : new Error("STOP_REQUESTED");
 }
 
-export async function withAbortTimeout<T>(
-  run: (signal: AbortSignal) => Promise<T>,
-  timeoutMs = REQUEST_TIMEOUT_MS,
+/** `idleMs` restarts on every `noteActivity()`; `totalMs` never restarts. */
+interface RequestLimits {
+  idleMs?: number;
+  totalMs: number;
+  totalMessage: string;
+}
+
+async function withRequestLimits<T>(
+  run: (signal: AbortSignal, noteActivity: () => void) => Promise<T>,
+  limits: RequestLimits,
   externalSignal?: AbortSignal,
 ): Promise<T> {
   // If external signal is already aborted, short-circuit immediately
   if (externalSignal?.aborted) throw new Error("STOP_REQUESTED");
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort("timeout"), timeoutMs);
+  let timeoutMessage = limits.totalMessage;
+  const expire = (message: string) => {
+    timeoutMessage = message;
+    controller.abort("timeout");
+  };
+  const totalTimer = setTimeout(() => expire(limits.totalMessage), limits.totalMs);
+  let idleTimer: ReturnType<typeof setTimeout> | undefined;
+  const noteActivity = () => {
+    if (limits.idleMs === undefined) return;
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => expire(`Request timeout: no output for ${limits.idleMs}ms`), limits.idleMs);
+  };
+  noteActivity();
 
   // Forward external abort into our controller so in-flight LLM calls cancel instantly
   const onExternalAbort = () => controller.abort(externalSignal!.reason);
   externalSignal?.addEventListener("abort", onExternalAbort, { once: true });
 
   try {
-    return await run(controller.signal);
+    // Awaited to its end even after an abort: the queue is released only once in-flight requests have settled.
+    return await run(controller.signal, noteActivity);
   } catch (error) {
     // Distinguish stop/cancel vs timeout: only a deliberate per-job cancel
     // keeps its identity.
@@ -247,7 +271,7 @@ export async function withAbortTimeout<T>(
     // external stop/cancel forwarded into it.
     if (errorMessage(error) === "JOB_CANCELLED" || errorMessage(error) === "STOP_REQUESTED") throw error;
     if (controller.signal.aborted || errorName(error) === "AbortError") {
-      throw new RequestTimeoutError(timeoutMs);
+      throw new RequestTimeoutError(timeoutMessage);
     }
     // Wrap non-object throws (plain strings, numbers) so they always have .message
     if (error !== null && typeof error !== "object") {
@@ -255,9 +279,54 @@ export async function withAbortTimeout<T>(
     }
     throw toContextOverflow(error) ?? error;
   } finally {
-    clearTimeout(timer);
+    clearTimeout(totalTimer);
+    clearTimeout(idleTimer);
     externalSignal?.removeEventListener("abort", onExternalAbort);
   }
+}
+
+/** Runs one request under a limit on its total duration. */
+export function withAbortTimeout<T>(
+  run: (signal: AbortSignal) => Promise<T>,
+  timeoutMs = REQUEST_TIMEOUT_MS,
+  externalSignal?: AbortSignal,
+): Promise<T> {
+  return withRequestLimits(
+    run,
+    { totalMs: timeoutMs, totalMessage: `Request timeout after ${timeoutMs}ms` },
+    externalSignal,
+  );
+}
+
+/** The streamText settings a translation call chooses; the rest are fixed by {@link streamReply}. */
+interface StreamRequest {
+  model: LanguageModel;
+  temperature: number;
+  system: string;
+  prompt: string;
+  tools?: ToolSet;
+  toolChoice?: "required";
+}
+
+/**
+ * Streams one reply and resolves with its final step. `timeoutMs` limits the
+ * time without output, the wait for the first part included, so a slow model
+ * that keeps producing is not cut off; {@link STREAM_TOTAL_TIMEOUT_FACTOR}
+ * times that ends a reply that never finishes.
+ */
+export function streamReply(request: StreamRequest, timeoutMs = REQUEST_TIMEOUT_MS, externalSignal?: AbortSignal) {
+  const totalMs = timeoutMs * STREAM_TOTAL_TIMEOUT_FACTOR;
+  return withRequestLimits(
+    (abortSignal, noteActivity) =>
+      // Errors reach the caller through collectReply; the SDK's default handler would also log them.
+      collectReply(streamText({ ...request, maxRetries: 0, abortSignal, onError: () => {} }), noteActivity),
+    {
+      idleMs: timeoutMs,
+      totalMs,
+      totalMessage: `Request timeout: reply still unfinished at the ${totalMs}ms total limit`,
+    },
+    externalSignal,
+  );
 }
 
 /**
@@ -370,7 +439,7 @@ export async function translateChunk(
     requestTimeoutMs?: number;
     /** Optional read-only context lines prepended to the prompt. */
     contextPromptPrefix?: string;
-    /** Fired after each successful generateText with that call's token usage. */
+    /** Fired after each successful LLM call with its token usage. */
     onUsage?: (u: TokenUsage) => void;
   },
 ): Promise<string[]> {
@@ -406,20 +475,17 @@ export async function translateChunk(
 
     try {
       const result = normalizeResult(
-        await withAbortTimeout(
-          (abortSignal) =>
-            generateText({
-              model: ai(opts.model),
-              temperature: opts.temperature,
-              tools,
-              toolChoice: "required",
-              system: opts.systemPrompt + "\nReturn ONLY using the tool, do not include any extra text.",
-              prompt:
-                `${prefix}Translate the following subtitles. Return the result via the tool as an array of strings with the exact same length and order as input.\n\n` +
-                JSON.stringify(subtitles),
-              maxRetries: 0,
-              abortSignal,
-            }),
+        await streamReply(
+          {
+            model: ai(opts.model),
+            temperature: opts.temperature,
+            tools,
+            toolChoice: "required",
+            system: opts.systemPrompt + "\nReturn ONLY using the tool, do not include any extra text.",
+            prompt:
+              `${prefix}Translate the following subtitles. Return the result via the tool as an array of strings with the exact same length and order as input.\n\n` +
+              JSON.stringify(subtitles),
+          },
           timeoutMs,
           opts.abortSignal,
         ),
@@ -448,18 +514,15 @@ export async function translateChunk(
   }
 
   const textResult = normalizeResult(
-    await withAbortTimeout(
-      (abortSignal) =>
-        generateText({
-          model: ai(opts.model),
-          temperature: opts.temperature,
-          system: opts.systemPrompt + "\nReturn only JSON array of strings. No markdown, no prose.",
-          prompt:
-            `${prefix}Translate the following subtitles. Return ONLY a JSON array of translated strings with the exact same length and order as input.\n\n` +
-            JSON.stringify(subtitles),
-          maxRetries: 0,
-          abortSignal,
-        }),
+    await streamReply(
+      {
+        model: ai(opts.model),
+        temperature: opts.temperature,
+        system: opts.systemPrompt + "\nReturn only JSON array of strings. No markdown, no prose.",
+        prompt:
+          `${prefix}Translate the following subtitles. Return ONLY a JSON array of translated strings with the exact same length and order as input.\n\n` +
+          JSON.stringify(subtitles),
+      },
       timeoutMs,
       opts.abortSignal,
     ),
@@ -488,7 +551,7 @@ export async function translateSingle(
     abortSignal?: AbortSignal;
     disableToolCalls?: boolean;
     requestTimeoutMs?: number;
-    /** Fired after each successful generateText with that call's token usage. */
+    /** Fired after each successful LLM call with its token usage. */
     onUsage?: (u: TokenUsage) => void;
   },
 ): Promise<string> {
@@ -514,20 +577,17 @@ export async function translateSingle(
 
     try {
       const result = normalizeResult(
-        await withAbortTimeout(
-          (abortSignal) =>
-            generateText({
-              model: ai(opts.model),
-              temperature: opts.temperature,
-              tools,
-              toolChoice: "required",
-              system: opts.systemPrompt + "\nReturn ONLY using the tool, do not include any extra text.",
-              prompt:
-                "Translate the following subtitle. Return the result via the tool as plain text only.\n\n" +
-                JSON.stringify(subtitle),
-              maxRetries: 0,
-              abortSignal,
-            }),
+        await streamReply(
+          {
+            model: ai(opts.model),
+            temperature: opts.temperature,
+            tools,
+            toolChoice: "required",
+            system: opts.systemPrompt + "\nReturn ONLY using the tool, do not include any extra text.",
+            prompt:
+              "Translate the following subtitle. Return the result via the tool as plain text only.\n\n" +
+              JSON.stringify(subtitle),
+          },
           timeoutMs,
           opts.abortSignal,
         ),
@@ -558,17 +618,14 @@ export async function translateSingle(
   }
 
   const textResult = normalizeResult(
-    await withAbortTimeout(
-      (abortSignal) =>
-        generateText({
-          model: ai(opts.model),
-          temperature: opts.temperature,
-          system: opts.systemPrompt + "\nReturn plain translated text only. No explanations, no markdown.",
-          prompt:
-            "Translate the following subtitle line and return only the translated text.\n\n" + JSON.stringify(subtitle),
-          maxRetries: 0,
-          abortSignal,
-        }),
+    await streamReply(
+      {
+        model: ai(opts.model),
+        temperature: opts.temperature,
+        system: opts.systemPrompt + "\nReturn plain translated text only. No explanations, no markdown.",
+        prompt:
+          "Translate the following subtitle line and return only the translated text.\n\n" + JSON.stringify(subtitle),
+      },
       timeoutMs,
       opts.abortSignal,
     ),

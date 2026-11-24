@@ -6,6 +6,7 @@ import path from "node:path";
 import { retryTranslate } from "./ai-client.js";
 import { translateFile } from "./engine.js";
 import type { ResolvedConnection } from "../connections.js";
+import { streamable } from "./streaming-chat-fixture.js";
 
 (globalThis as { AI_SDK_LOG_WARNINGS?: boolean }).AI_SDK_LOG_WARNINGS = false;
 
@@ -62,12 +63,12 @@ test("stopping a file whose chunk is waiting out a Retry-After ends at once", as
   t.after(() => {
     globalThis.fetch = originalFetch;
   });
-  globalThis.fetch = (async (input: string | URL | Request) => {
+  globalThis.fetch = streamable((async (input: string | URL | Request) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.endsWith("/models")) return new Response("{}", { status: 200 });
     setTimeout(() => controller.abort("stop_requested"), 20);
     return new Response('{"error":"slow down"}', { status: 429, headers: { "retry-after": "30" } });
-  }) as typeof fetch;
+  }) as typeof fetch);
 
   const connection: ResolvedConnection = {
     id: "a",

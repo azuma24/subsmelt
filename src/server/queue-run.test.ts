@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { EventEmitter } from "node:events";
 import type { Response as ExpressResponse } from "express";
+import { streamable } from "./translator/streaming-chat-fixture.js";
 
 // queue.ts pulls in db.ts, config.ts and scanner.ts, which bind their
 // directories at import, so point all three at scratch folders first.
@@ -43,7 +44,7 @@ const release: Array<(content?: string) => void> = [];
 const failingHosts = new Set<string>();
 let holdAbort: (() => void) | null = null;
 let deferAbort = false;
-globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+globalThis.fetch = streamable((async (input: string | URL | Request, init?: RequestInit) => {
   const url = String(input instanceof Request ? input.url : input);
   if (url.endsWith("/v1/models")) return new Response('{"data":[]}', { status: 200 });
   if (url.includes("broken.test") || failingHosts.has(new URL(url).host))
@@ -61,7 +62,7 @@ globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) =>
     );
     release.push((content = "Translated Title") => resolve(chatCompletion(content)));
   });
-}) as typeof fetch;
+}) as typeof fetch);
 
 async function waitFor(condition: () => boolean, what: string) {
   const deadline = Date.now() + 5_000;

@@ -6,6 +6,7 @@ import path from "node:path";
 import type { ResolvedConnection } from "../connections.js";
 import { cueProgressPath, loadCueProgress, saveCueProgress } from "./cue-progress.js";
 import { translateFile } from "./engine.js";
+import { streamable } from "./streaming-chat-fixture.js";
 
 (globalThis as { AI_SDK_LOG_WARNINGS?: boolean }).AI_SDK_LOG_WARNINGS = false;
 
@@ -30,7 +31,7 @@ function useLlm(t: { after(fn: () => void): void }, tag: string, failOn?: string
   t.after(() => {
     globalThis.fetch = original;
   });
-  globalThis.fetch = (async (input: string, init: RequestInit) => {
+  globalThis.fetch = streamable((async (input: string, init: RequestInit) => {
     if (String(input).endsWith("/models")) return new Response("{}", { status: 200 });
     const body = JSON.parse(String(init.body));
     if (String(body.messages[0].content).includes("subtitle content analyst")) return completion("Summary.");
@@ -39,7 +40,7 @@ function useLlm(t: { after(fn: () => void): void }, tag: string, failOn?: string
     if (failOn && lines.includes(failOn)) throw new Error("STOP_REQUESTED");
     sent.push(lines);
     return completion(JSON.stringify(lines.map((l) => `${tag}-${l}`)));
-  }) as unknown as typeof fetch;
+  }) as unknown as typeof fetch);
   return sent;
 }
 

@@ -11,6 +11,7 @@ import {
   type CorrectionRule,
   type CorrectionRuleSet,
 } from "../../shared/corrections.js";
+import { streamable } from "./streaming-chat-fixture.js";
 
 (globalThis as any).AI_SDK_LOG_WARNINGS = false;
 
@@ -67,7 +68,7 @@ test("source rules fix what the LLM reads and pin the term; output rules fix wha
 
   const chunkPrompts: string[] = [];
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+  globalThis.fetch = streamable((async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.endsWith("/models")) return new Response("{}", { status: 200 });
     const body = JSON.parse(String(init?.body));
@@ -76,7 +77,7 @@ test("source rules fix what the LLM reads and pin the term; output rules fix wha
     chunkPrompts.push(user);
     // The "model" gets the brand wrong in Chinese; the output rule fixes it.
     return chatCompletion(JSON.stringify(["賽瑞尼 製造 AnKor 設備"]));
-  }) as typeof fetch;
+  }) as typeof fetch);
 
   const reported: Array<[string, CorrectionCounts]> = [];
   try {
@@ -136,7 +137,7 @@ test("checked rules ask the LLM per match and replace only a confirmed one", asy
   const chunkPrompts: string[] = [];
   let checks = 0;
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+  globalThis.fetch = streamable((async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.endsWith("/models")) return new Response("{}", { status: 200 });
     const body = JSON.parse(String(init?.body));
@@ -151,7 +152,7 @@ test("checked rules ask the LLM per match and replace only a confirmed one", asy
     chunkPrompts.push(user);
     const lines = JSON.parse(user.slice(user.lastIndexOf("["))) as string[];
     return chatCompletion(JSON.stringify(lines.map((l) => `T ${l}`)));
-  }) as typeof fetch;
+  }) as typeof fetch);
 
   const checked: Array<[string, Record<string, number>, Record<string, number>]> = [];
   const usageKinds: string[] = [];
@@ -204,7 +205,7 @@ test("an offline first connection hands the check to the next one instead of fai
   const source = compileCorrectionsFor([set], "Talk.en.srt", "source");
   const checkedBy: string[] = [];
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+  globalThis.fetch = streamable((async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.startsWith("http://127.0.0.1:9/")) throw new TypeError("fetch failed: connect ECONNREFUSED");
     if (url.endsWith("/models")) return new Response("{}", { status: 200 });
@@ -219,7 +220,7 @@ test("an offline first connection hands the check to the next one instead of fai
     }
     const lines = JSON.parse(user.slice(user.lastIndexOf("["))) as string[];
     return chatCompletion(JSON.stringify(lines.map((l) => `T ${l}`)));
-  }) as typeof fetch;
+  }) as typeof fetch);
   try {
     await translateFile({
       srtPath,
