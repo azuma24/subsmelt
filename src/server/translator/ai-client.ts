@@ -15,6 +15,7 @@ import {
 import { ContextOverflowError, toContextOverflow } from "./context-overflow.js";
 import { llmFetch } from "./llm-fetch.js";
 import { collectReply } from "./stream-reply.js";
+import type { JobProgress } from "./job-progress.js";
 
 import type { LlmProvider } from "../../shared/llm.js";
 import { errorMessage, errorName, errorStatus } from "../errors.js";
@@ -230,6 +231,8 @@ interface RequestLimits {
   idleMs?: number;
   totalMs: number;
   totalMessage: string;
+  /** A limit reached while the job is still translating lines waits until the job stalls. */
+  progress?: JobProgress;
 }
 
 async function withRequestLimits<T>(
@@ -242,16 +245,27 @@ async function withRequestLimits<T>(
 
   const controller = new AbortController();
   let timeoutMessage = limits.totalMessage;
-  const expire = (message: string) => {
+  const expire = (message: string, checkAgainIn: (ms: number) => void) => {
+    const untilStalled = limits.progress?.msUntilStalled() ?? 0;
+    if (untilStalled > 0) {
+      checkAgainIn(untilStalled);
+      return;
+    }
     timeoutMessage = message;
     controller.abort("timeout");
   };
-  const totalTimer = setTimeout(() => expire(limits.totalMessage), limits.totalMs);
+  let totalTimer: ReturnType<typeof setTimeout> | undefined;
+  const armTotal = (ms: number) => {
+    totalTimer = setTimeout(() => expire(limits.totalMessage, armTotal), ms);
+  };
+  armTotal(limits.totalMs);
   let idleTimer: ReturnType<typeof setTimeout> | undefined;
-  const noteActivity = () => {
-    if (limits.idleMs === undefined) return;
+  const armIdle = (ms: number) => {
     clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => expire(`Request timeout: no output for ${limits.idleMs}ms`), limits.idleMs);
+    idleTimer = setTimeout(() => expire(`Request timeout: no output for ${limits.idleMs}ms`, armIdle), ms);
+  };
+  const noteActivity = () => {
+    if (limits.idleMs !== undefined) armIdle(limits.idleMs);
   };
   noteActivity();
 
@@ -312,9 +326,15 @@ interface StreamRequest {
  * Streams one reply and resolves with its final step. `timeoutMs` limits the
  * time without output, the wait for the first part included, so a slow model
  * that keeps producing is not cut off; {@link STREAM_TOTAL_TIMEOUT_FACTOR}
- * times that ends a reply that never finishes.
+ * times that ends a reply that never finishes. With `progress`, neither limit
+ * ends the request while the job is still translating lines.
  */
-export function streamReply(request: StreamRequest, timeoutMs = REQUEST_TIMEOUT_MS, externalSignal?: AbortSignal) {
+export function streamReply(
+  request: StreamRequest,
+  timeoutMs = REQUEST_TIMEOUT_MS,
+  externalSignal?: AbortSignal,
+  progress?: JobProgress,
+) {
   const totalMs = timeoutMs * STREAM_TOTAL_TIMEOUT_FACTOR;
   return withRequestLimits(
     (abortSignal, noteActivity) =>
@@ -324,6 +344,7 @@ export function streamReply(request: StreamRequest, timeoutMs = REQUEST_TIMEOUT_
       idleMs: timeoutMs,
       totalMs,
       totalMessage: `Request timeout: reply still unfinished at the ${totalMs}ms total limit`,
+      progress,
     },
     externalSignal,
   );
@@ -437,6 +458,8 @@ export async function translateChunk(
     abortSignal?: AbortSignal;
     disableToolCalls?: boolean;
     requestTimeoutMs?: number;
+    /** The job's line clock; see {@link streamReply}. */
+    progress?: JobProgress;
     /** Optional read-only context lines prepended to the prompt. */
     contextPromptPrefix?: string;
     /** Fired after each successful LLM call with its token usage. */
@@ -488,6 +511,7 @@ export async function translateChunk(
           },
           timeoutMs,
           opts.abortSignal,
+          opts.progress,
         ),
       );
       reportUsage(result, opts.onUsage);
@@ -525,6 +549,7 @@ export async function translateChunk(
       },
       timeoutMs,
       opts.abortSignal,
+      opts.progress,
     ),
   );
   reportUsage(textResult, opts.onUsage);
@@ -551,6 +576,8 @@ export async function translateSingle(
     abortSignal?: AbortSignal;
     disableToolCalls?: boolean;
     requestTimeoutMs?: number;
+    /** The job's line clock; see {@link streamReply}. */
+    progress?: JobProgress;
     /** Fired after each successful LLM call with its token usage. */
     onUsage?: (u: TokenUsage) => void;
   },
@@ -590,6 +617,7 @@ export async function translateSingle(
           },
           timeoutMs,
           opts.abortSignal,
+          opts.progress,
         ),
       );
       reportUsage(result, opts.onUsage);
@@ -628,6 +656,7 @@ export async function translateSingle(
       },
       timeoutMs,
       opts.abortSignal,
+      opts.progress,
     ),
   );
   reportUsage(textResult, opts.onUsage);

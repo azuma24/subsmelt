@@ -4,6 +4,7 @@ import { errorMessage } from "../errors.js";
 import { serverOf } from "../machine.js";
 import {
   InvalidChunkTranslationError,
+  REQUEST_TIMEOUT_MS,
   type TokenUsage,
   retryTranslate,
   translateChunk,
@@ -12,6 +13,7 @@ import {
 import type { ConnectionHealth } from "./connection-health.js";
 import { ContextOverflowError } from "./context-overflow.js";
 import { SINGLE_LINE_RETRIES } from "./fallback-policy.js";
+import { JobProgress } from "./job-progress.js";
 
 /** Per-attempt controls; an attempt of a chunk being raced has its own signal. */
 export interface ChunkCallHooks {
@@ -45,6 +47,8 @@ const isAbort = (error: unknown) => {
 /** The LLM calls of the chunk pass and the per-line fallback, each cascading through a connection order. */
 export function createChunkTranslator(deps: ChunkTranslatorDeps) {
   const { health, jobSignal } = deps;
+  // The job stalls after one Request Timeout without a newly translated line.
+  const progress = new JobProgress(deps.chunkTimeoutMs ?? REQUEST_TIMEOUT_MS);
 
   // Chunk requests in flight per server. Servers like LM Studio share one
   // context window across concurrent requests, so an overflow on a server that
@@ -114,6 +118,7 @@ export function createChunkTranslator(deps: ChunkTranslatorDeps) {
             abortSignal: signal,
             disableToolCalls: deps.disableToolCalls,
             requestTimeoutMs: deps.chunkTimeoutMs,
+            progress,
             contextPromptPrefix,
             onUsage: deps.usageFor("chunk", conn),
           }).finally(() => {
@@ -130,6 +135,7 @@ export function createChunkTranslator(deps: ChunkTranslatorDeps) {
             const batch = await retryTranslate((attempt) => requestBatch(cues, attempt), 2, 1000, deps.onRetry, signal);
             const limit = batchLimits.get(conn.id);
             if (limit?.size === attemptedSize) limit.failures = 0;
+            progress.noteLine();
             translations.push(...batch);
           }
           return translations;
@@ -177,6 +183,7 @@ export function createChunkTranslator(deps: ChunkTranslatorDeps) {
                     abortSignal: signal,
                     disableToolCalls: deps.disableToolCalls,
                     requestTimeoutMs: deps.singleLineTimeoutMs,
+                    progress,
                     onUsage: deps.usageFor("single", conn),
                   }),
                 SINGLE_LINE_RETRIES,
@@ -187,6 +194,7 @@ export function createChunkTranslator(deps: ChunkTranslatorDeps) {
             signal,
           );
           health.noteSuccess(conn);
+          progress.noteLine();
           deps.markUsed(conn);
           return result;
         } catch (error) {

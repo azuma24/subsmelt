@@ -607,7 +607,7 @@
       "parallelChunks": "Parallel Chunks",
       "parallelChunksHint": "Number of chunks to translate simultaneously (1–8). Higher = faster but uses more LLM tokens/context in parallel. Set to 1 to disable.",
       "requestTimeout": "Request Timeout (s)",
-      "requestTimeoutHint": "Seconds a translation request may go without new output from the LLM before it is abandoned. A reply that keeps arriving is allowed up to 3 times this value in total. Increase it for models that think for a long time before answering (e.g. 600).",
+      "requestTimeoutHint": "Seconds a translation request may go without new output from the LLM before it is abandoned. A reply that keeps arriving is allowed up to 3 times this value in total. Neither limit ends a request while the job has translated a new line within this many seconds. Increase it for models that think for a long time before answering (e.g. 600).",
       "disableToolCalls": "Disable tool calls (use plain-text mode)",
       "refinePass": "Refinement Pass (Pass 2)",
       "refinePassHint": "Runs a second LLM editing pass to make translations read more naturally — better quality, but ~2× the token cost and slower. Falls back to the first-pass translation if the edit fails. Default off.",
