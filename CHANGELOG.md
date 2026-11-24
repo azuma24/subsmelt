@@ -6,6 +6,8 @@ under `whisper-v<version>` with the same version number.
 
 ## [Unreleased]
 
+## [0.9.5] — 2026-11-24
+
 ### Translation
 
 - **Request Timeout** limits the time a translation request goes without new output from the model, not the length of the whole reply. Translation replies are streamed, so a slow model that keeps producing output is no longer marked as timed out. A reply still unfinished at 3 times the setting is stopped. Analysis, refinement and correction-check requests are not streamed: for them the setting still limits the whole request.
