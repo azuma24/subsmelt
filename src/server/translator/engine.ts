@@ -517,13 +517,18 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
   // either sets it to true (both pass the check in the same microtask tick).
   let saveChain = Promise.resolve();
 
-  /** Records a cue's translation, counting the cue the first time it gets one. */
-  function recordTranslation(index: number, text: string) {
+  // Cues shown and counted so far. A cue enters `translatedCues`, the resume
+  // checkpoint, only once its whole chunk is finished.
+  const shownCues = new Set<number>();
+
+  /** Puts a translation in the output, counting the cue the first time it gets one. */
+  function showTranslation(index: number, text: string): boolean {
     const cue = subtitle[index];
-    if (!cue?.data) return;
+    if (!cue?.data) return false;
     cue.data.translatedText = text;
-    if (!translatedCues.has(index)) completedCues++;
-    translatedCues.set(index, text);
+    if (!shownCues.has(index)) completedCues++;
+    shownCues.add(index);
+    return true;
   }
 
   /** Reports progress and saves the partial output; saves are chained so writes never interleave. */
@@ -668,7 +673,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
             const text = lineText ? await translateSingleWithFallback(lineText, connOrder, attemptSignal) : "";
             // A raced chunk publishes only its winner's answer, so its lines wait for that.
             if (lineText && !attempt) {
-              recordTranslation(coreIndices[i], text);
+              showTranslation(coreIndices[i], text);
               publishProgress();
             }
             return text;
@@ -729,7 +734,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
       if (typeof idx !== "number") continue;
       const offset = idx - coreStart;
       const t = translationTexts[idx] ? translatedWindow?.[offset] : (cue.data?.text ?? "");
-      if (typeof t === "string") recordTranslation(idx, t);
+      if (typeof t === "string" && showTranslation(idx, t)) translatedCues.set(idx, t);
     }
     publishProgress();
     return "done";

@@ -457,6 +457,12 @@ export async function retryTranslate<T>(
   throw new Error("Unreachable");
 }
 
+/**
+ * A reply that ran into the output limit holds no finished answer. What can be
+ * read out of it is a fragment, or a candidate the model was still weighing.
+ */
+const cutOff = (result: { finishReason: string }) => result.finishReason === "length";
+
 export class InvalidChunkTranslationError extends Error {
   constructor(expected: number, received: number | undefined, finishReason: string) {
     const receivedSummary = received === undefined ? "no array" : `${received} received`;
@@ -541,7 +547,7 @@ export async function translateChunk(
       const fromTool = toolResult.translated;
       if (fromTool?.length === subtitles.length) return fromTool;
 
-      const text = result.text || "";
+      const text = cutOff(result) ? "" : result.text || "";
       const fromText = coerceTranslatedArray(extractJsonFromText(text));
       if (fromText?.length === subtitles.length) return fromText;
       const fromNumbered = extractNumberedTranslations(text, subtitles.length);
@@ -577,7 +583,7 @@ export async function translateChunk(
   );
   reportUsage(textResult, opts.onUsage);
 
-  const text = textResult.text || "";
+  const text = cutOff(textResult) ? "" : textResult.text || "";
   const translated = coerceTranslatedArray(extractJsonFromText(text));
   if (translated?.length === subtitles.length) return translated;
 
@@ -650,7 +656,7 @@ export async function translateSingle(
       if (typeof toolResult === "string") return toolResult;
 
       // normalizeResult promoted reasoning→text; extract best answer
-      const text = result.text || "";
+      const text = cutOff(result) ? "" : result.text || "";
       if (text) {
         const final = extractFinalAnswerFromReasoning(text);
         if (final) return final;
@@ -687,6 +693,9 @@ export async function translateSingle(
   );
   reportUsage(textResult, opts.onUsage);
 
+  if (cutOff(textResult)) {
+    throw new Error("Model returned empty single-line translation text: the reply was cut off at the output limit");
+  }
   const rawText = textResult.text || "";
   const final = extractFinalAnswerFromReasoning(rawText);
   if (final) return final;

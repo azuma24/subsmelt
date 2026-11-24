@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { translateSingle } from "./ai-client.js";
+import { loadCueProgress } from "./cue-progress.js";
 import { translateFile } from "./engine.js";
 import { streamable } from "./streaming-chat-fixture.js";
 
@@ -18,13 +20,14 @@ function sourceSrt(): string {
   }).join("\n");
 }
 
-function chatCompletion(content: string): Response {
+function chatCompletion(content: string, finishReason = "stop", reasoning?: string): Response {
+  const message = { role: "assistant", content, ...(reasoning ? { reasoning_content: reasoning } : {}) };
   const body = {
     id: "chatcmpl-test",
     object: "chat.completion",
     created: 0,
     model: "test-model",
-    choices: [{ index: 0, message: { role: "assistant", content }, finish_reason: "stop" }],
+    choices: [{ index: 0, message, finish_reason: finishReason }],
     usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
   };
   return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
@@ -44,8 +47,17 @@ function sourceLines(prompt: string): string[] {
   return JSON.parse(prompt.slice(prompt.lastIndexOf("["))) as string[];
 }
 
-/** Translates the file against a fake server and returns the chunk and per-line requests it received. */
-async function translateAgainst(replyTo: (lines: string[], requestNumber: number) => string[]) {
+const RESUME_KEY = "work-key";
+
+/**
+ * Translates the file against a fake server and returns the chunk and per-line
+ * requests it received. `replyToLine` answers the per-line requests; by default
+ * each one is translated.
+ */
+async function translateAgainst(
+  replyTo: (lines: string[], requestNumber: number) => string[],
+  replyToLine: (requestNumber: number) => Response = () => chatCompletion("T line"),
+) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-runaway-"));
   const srtPath = path.join(dir, "Episode 01.srt");
   const outputPath = path.join(dir, "Episode 01.chi.srt");
@@ -62,13 +74,14 @@ async function translateAgainst(replyTo: (lines: string[], requestNumber: number
     const prompt = userPrompt(request);
     if (prompt.includes("Translate the following subtitle line")) {
       lineRequests.push(request);
-      return chatCompletion("T line");
+      return replyToLine(lineRequests.length);
     }
     if (!prompt.includes("Translate the following subtitles")) return chatCompletion("Summary: a test episode.");
     chunkRequests.push(request);
     return chatCompletion(JSON.stringify(replyTo(sourceLines(prompt), chunkRequests.length)));
   }) as typeof fetch);
 
+  let error: unknown;
   try {
     await translateFile({
       srtPath,
@@ -85,9 +98,14 @@ async function translateAgainst(replyTo: (lines: string[], requestNumber: number
       parallelChunks: 1,
       requestTimeoutMs: 5_000,
       disableToolCalls: true,
+      resumeKey: RESUME_KEY,
       onProgress: (completed) => progress.push(completed),
+    }).catch((reason: unknown) => {
+      error = reason;
     });
-    return { chunkRequests, lineRequests, progress, output: fs.readFileSync(outputPath, "utf8") };
+    const output = error ? "" : fs.readFileSync(outputPath, "utf8");
+    const checkpoint = loadCueProgress(outputPath, RESUME_KEY).cues;
+    return { chunkRequests, lineRequests, progress, output, error, checkpoint };
   } finally {
     globalThis.fetch = originalFetch;
     fs.rmSync(dir, { recursive: true, force: true });
@@ -120,4 +138,39 @@ test("lines translated one at a time are counted as each one is done", async () 
   );
 
   assert.deepEqual([...new Set(progress)], [0, 1, 2, 3, 4, 5, 10]);
+});
+
+test("lines of a chunk that never finished are not kept for the next run", async () => {
+  const alwaysMiscounted = (lines: string[]) => [...translated(lines), "one line too many"];
+  const { error, checkpoint } = await translateAgainst(alwaysMiscounted, (requestNumber) =>
+    requestNumber <= 2 ? chatCompletion("T line") : new Response("{}", { status: 401 }),
+  );
+
+  assert.match(String(error), /Per-line fallback aborted/);
+  assert.deepEqual([...checkpoint.keys()], []);
+});
+
+test("a single-line reply cut off at the output limit is not taken as the translation", async (t) => {
+  const originalFetch = globalThis.fetch;
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = streamable((async () =>
+    chatCompletion(
+      "",
+      "length",
+      'The line could be rendered as "an unfinished guess", but',
+    )) as unknown as typeof fetch);
+
+  await assert.rejects(
+    translateSingle("cue 01", {
+      apiKey: "",
+      apiHost: "http://127.0.0.1:9/v1",
+      model: "test-model",
+      systemPrompt: "Translate.",
+      temperature: 0.3,
+      disableToolCalls: true,
+    }),
+    /cut off at the output limit/,
+  );
 });
