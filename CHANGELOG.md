@@ -6,6 +6,8 @@ under `whisper-v<version>` with the same version number.
 
 ## [Unreleased]
 
+## [0.9.4] — 2026-11-24
+
 ### Transcription
 
 - **Upload audio only** is on by default for new installations. An existing installation keeps its saved setting.
