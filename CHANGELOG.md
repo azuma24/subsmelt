@@ -9,6 +9,9 @@ under `whisper-v<version>` with the same version number.
 ### Translation
 
 - A translation request that reaches the **Request Timeout** is no longer stopped while its job is still translating lines. The request is stopped once the job has gone one **Request Timeout** without a newly translated line. Before, a request waiting behind the job's other requests on a busy server was stopped, and three of those in a row failed a job that was still advancing. The 60-second limit of the per-line fallback and the 3-times limit on a whole reply follow the same rule.
+- A chunk answered with the wrong number of lines, or cut off before its answer, is requested once more, in smaller batches if the connection keeps failing at that size, before the job falls back to translating its lines one at a time.
+- Translation requests to a local or OpenAI-compatible server limit the length of the reply: 8,000 output tokens plus 400 for each line. A model that never stops generating is ended there. Before, it ran until the server's own limit and held up the job's other requests meanwhile.
+- A timeout message says how long the job went without a new line.
 
 ## [0.9.5] — 2026-11-24
 

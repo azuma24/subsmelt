@@ -251,7 +251,9 @@ async function withRequestLimits<T>(
       checkAgainIn(untilStalled);
       return;
     }
-    timeoutMessage = message;
+    timeoutMessage = limits.progress
+      ? `${message}, and the job translated no new line for ${limits.progress.stallMs}ms`
+      : message;
     controller.abort("timeout");
   };
   let totalTimer: ReturnType<typeof setTimeout> | undefined;
@@ -320,6 +322,24 @@ interface StreamRequest {
   prompt: string;
   tools?: ToolSet;
   toolChoice?: "required";
+  maxOutputTokens?: number;
+}
+
+/** Output a self-hosted model may spend on reasoning before it answers. */
+const REPLY_REASONING_OUTPUT_TOKENS = 8_000;
+/** Output allowed on top of that for each line to translate. */
+const REPLY_OUTPUT_TOKENS_PER_LINE = 400;
+
+/**
+ * The most output a translation reply of `lines` lines may use. A self-hosted
+ * server sets no limit of its own, so a model that never stops generates until
+ * its context is full, which holds up the server's other requests for as long.
+ * Cloud providers end such a reply at their model's own limit, which can be
+ * lower than this one.
+ */
+function replyOutputTokenCap(provider: CloudProvider | undefined, lines: number): number | undefined {
+  if (provider) return undefined;
+  return REPLY_REASONING_OUTPUT_TOKENS + REPLY_OUTPUT_TOKENS_PER_LINE * lines;
 }
 
 /**
@@ -478,6 +498,7 @@ export async function translateChunk(
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost, provider: opts.provider });
   const timeoutMs = opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
   const prefix = opts.contextPromptPrefix || "";
+  const maxOutputTokens = replyOutputTokenCap(opts.provider, subtitles.length);
 
   if (!opts.disableToolCalls) {
     const toolResult: { translated?: string[] } = {};
@@ -502,6 +523,7 @@ export async function translateChunk(
           {
             model: ai(opts.model),
             temperature: opts.temperature,
+            maxOutputTokens,
             tools,
             toolChoice: "required",
             system: opts.systemPrompt + "\nReturn ONLY using the tool, do not include any extra text.",
@@ -542,6 +564,7 @@ export async function translateChunk(
       {
         model: ai(opts.model),
         temperature: opts.temperature,
+        maxOutputTokens,
         system: opts.systemPrompt + "\nReturn only JSON array of strings. No markdown, no prose.",
         prompt:
           `${prefix}Translate the following subtitles. Return ONLY a JSON array of translated strings with the exact same length and order as input.\n\n` +
@@ -587,6 +610,7 @@ export async function translateSingle(
 
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost, provider: opts.provider });
   const timeoutMs = opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
+  const maxOutputTokens = replyOutputTokenCap(opts.provider, 1);
 
   let toolResult: string | null = null;
 
@@ -608,6 +632,7 @@ export async function translateSingle(
           {
             model: ai(opts.model),
             temperature: opts.temperature,
+            maxOutputTokens,
             tools,
             toolChoice: "required",
             system: opts.systemPrompt + "\nReturn ONLY using the tool, do not include any extra text.",
@@ -650,6 +675,7 @@ export async function translateSingle(
       {
         model: ai(opts.model),
         temperature: opts.temperature,
+        maxOutputTokens,
         system: opts.systemPrompt + "\nReturn plain translated text only. No explanations, no markdown.",
         prompt:
           "Translate the following subtitle line and return only the translated text.\n\n" + JSON.stringify(subtitle),

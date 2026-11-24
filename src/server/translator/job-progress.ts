@@ -7,7 +7,7 @@ export class JobProgress {
   private lastLineAt = Date.now();
 
   /** `stallMs` is how long the job may go without a new line before it counts as stalled. */
-  constructor(private readonly stallMs: number) {}
+  constructor(readonly stallMs: number) {}
 
   noteLine(): void {
     this.lastLineAt = Date.now();

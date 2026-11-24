@@ -128,11 +128,23 @@ export function createChunkTranslator(deps: ChunkTranslatorDeps) {
 
         async function translateBatches() {
           const translations: string[] = [];
+          let askedAgainAt = -1;
           while (translations.length < coreText.length) {
             const size = batchLimits.get(conn.id)?.size ?? deps.chunkSize;
             const cues = coreText.slice(translations.length, translations.length + size);
             attemptedSize = cues.length;
-            const batch = await retryTranslate((attempt) => requestBatch(cues, attempt), 2, 1000, deps.onRetry, signal);
+            let batch: string[];
+            try {
+              batch = await retryTranslate((attempt) => requestBatch(cues, attempt), 2, 1000, deps.onRetry, signal);
+            } catch (error) {
+              // A miscounted or cut-off reply is often a one-off, so the batch is asked for
+              // once more, at the reduced size if this failure reduced it.
+              const alreadyAskedAgain = askedAgainAt === translations.length;
+              if (!(error instanceof InvalidChunkTranslationError) || alreadyAskedAgain) throw error;
+              askedAgainAt = translations.length;
+              reduceBatchAfterFailure(conn.id, attemptedSize);
+              continue;
+            }
             const limit = batchLimits.get(conn.id);
             if (limit?.size === attemptedSize) limit.failures = 0;
             progress.noteLine();
