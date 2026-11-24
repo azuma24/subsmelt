@@ -11,6 +11,7 @@ import {
   translateFile,
 } from "./engine.js";
 import { retryTranslate } from "./ai-client.js";
+import { streamable } from "./streaming-chat-fixture.js";
 
 // The stubbed endpoint below trips the SDK's compatibility-mode warning on every call.
 (globalThis as any).AI_SDK_LOG_WARNINGS = false;
@@ -58,7 +59,7 @@ test("a failed chunk worker stops its siblings from calling the LLM and rewritin
   const chunkPrompts: string[] = [];
   const release: Array<() => void> = [];
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+  globalThis.fetch = streamable((async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.endsWith("/models")) return new Response("{}", { status: 200 });
     if (!url.endsWith("/chat/completions")) return new Response("{}", { status: 404 });
@@ -82,7 +83,7 @@ test("a failed chunk worker stops its siblings from calling the LLM and rewritin
       );
       release.push(() => resolve(chatCompletion(JSON.stringify(translationsFor(user)))));
     });
-  }) as typeof fetch;
+  }) as typeof fetch);
 
   try {
     await assert.rejects(

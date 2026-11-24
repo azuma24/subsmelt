@@ -449,7 +449,7 @@
       "parallelChunks": "平行區塊數",
       "parallelChunksHint": "Number of chunks to translate simultaneously (1–8). Higher = faster. Set to 1 to disable.",
       "requestTimeout": "請求逾時（秒）",
-      "requestTimeoutHint": "等待單次 LLM 回應的最長秒數。對於速度慢或較大的思考型模型請調高（例如 600）。",
+      "requestTimeoutHint": "翻譯請求中 LLM 沒有新輸出時最多等待的秒數。只要回應持續傳來，總時間最長可達此值的 3 倍。若模型在回答前會長時間思考，請調高（例如 600）。",
       "disableToolCalls": "停用工具呼叫（使用純文字模式）",
       "refinePass": "潤稿階段（第 2 遍）",
       "refinePassHint": "再執行一次 LLM 編輯，讓譯文更自然流暢——品質更好，但約需 2 倍的 token 成本且速度較慢。若編輯失敗，則回退至第一遍的譯文。預設關閉。",

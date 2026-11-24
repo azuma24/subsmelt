@@ -6,6 +6,12 @@ under `whisper-v<version>` with the same version number.
 
 ## [Unreleased]
 
+### Translation
+
+- **Request Timeout** limits the time a translation request goes without new output from the model, not the length of the whole reply. Translation replies are streamed, so a slow model that keeps producing output is no longer marked as timed out. A reply still unfinished at 3 times the setting is stopped. Analysis, refinement and correction-check requests are not streamed: for them the setting still limits the whole request.
+- A **Request Timeout** above 300 seconds takes effect. The HTTP client's own 300-second limits no longer end a request first.
+- A connection is dropped for the rest of a job after 3 timeouts in a row, not 3 timeouts anywhere in the job. A successful request resets the count.
+
 ## [0.9.4] — 2026-11-24
 
 ### Transcription

@@ -449,7 +449,7 @@
       "parallelChunks": "並列チャンク数",
       "parallelChunksHint": "Number of chunks to translate simultaneously (1–8). Higher = faster. Set to 1 to disable.",
       "requestTimeout": "リクエストタイムアウト（秒）",
-      "requestTimeoutHint": "1 回の LLM 応答を待つ最大秒数。低速または大規模な思考モデルでは大きくしてください（例: 600）。",
+      "requestTimeoutHint": "翻訳リクエストで LLM から新しい出力がないまま待つ最大秒数。応答が届き続けている間は、合計でこの値の 3 倍まで待ちます。回答前に長く考えるモデルでは大きくしてください（例: 600）。",
       "disableToolCalls": "ツール呼び出しを無効にする（プレーンテキストモード）",
       "refinePass": "推敲パス（2 回目）",
       "refinePassHint": "2 回目の LLM 編集を実行し、訳文をより自然にします。品質は向上しますが、トークン費用は約 2 倍で処理も遅くなります。編集に失敗した場合は 1 回目の訳文に戻ります。既定はオフ。",

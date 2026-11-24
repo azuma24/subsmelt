@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import type { ResolvedConnection } from "../connections.js";
 import { type TranslateFileOptions, translateFile } from "./engine.js";
+import { streamable } from "./streaming-chat-fixture.js";
 
 (globalThis as { AI_SDK_LOG_WARNINGS?: boolean }).AI_SDK_LOG_WARNINGS = false;
 
@@ -44,7 +45,7 @@ function useFetch(t: { after(fn: () => void): void }, chat: (call: Call) => Resp
     globalThis.fetch = original;
   });
   const calls: Call[] = [];
-  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+  globalThis.fetch = streamable((async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(String(input instanceof Request ? input.url : input));
     if (url.pathname.endsWith("/models")) return new Response('{"data":[]}', { status: 200 });
     const body = JSON.parse(String(init?.body ?? "{}"));
@@ -63,7 +64,7 @@ function useFetch(t: { after(fn: () => void): void }, chat: (call: Call) => Resp
       : { host: url.hostname, kind: "line", lines: [user.trim()], signal: init?.signal };
     calls.push(call);
     return chat(call);
-  }) as typeof fetch;
+  }) as typeof fetch);
   return calls;
 }
 

@@ -449,7 +449,7 @@
       "parallelChunks": "并行分块数",
       "parallelChunksHint": "Number of chunks to translate simultaneously (1–8). Higher = faster. Set to 1 to disable.",
       "requestTimeout": "请求超时（秒）",
-      "requestTimeoutHint": "等待单次 LLM 响应的最长秒数。对于速度慢或较大的思考型模型请调高（例如 600）。",
+      "requestTimeoutHint": "翻译请求中 LLM 没有新输出时最多等待的秒数。只要响应持续返回，总时间最长可达此值的 3 倍。如果模型在回答前会长时间思考，请调高（例如 600）。",
       "disableToolCalls": "禁用工具调用（使用纯文本模式）",
       "refinePass": "润色阶段（第 2 遍）",
       "refinePassHint": "再运行一次 LLM 编辑，让译文更自然流畅——质量更好，但约需 2 倍的 token 成本且速度更慢。若编辑失败，则退回第一遍的译文。默认关闭。",

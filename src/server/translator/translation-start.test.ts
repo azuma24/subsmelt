@@ -9,6 +9,7 @@ import { planJobContext } from "./context-probe.js";
 import { translateFile } from "./engine.js";
 import { planTranslation } from "./plan.js";
 import type { TypedSettings } from "../settings-schema.js";
+import { streamable } from "./streaming-chat-fixture.js";
 
 (globalThis as { AI_SDK_LOG_WARNINGS?: boolean }).AI_SDK_LOG_WARNINGS = false;
 
@@ -37,7 +38,7 @@ function stubFetch(t: { after(fn: () => void): void }, stub: typeof fetch) {
   t.after(() => {
     globalThis.fetch = original;
   });
-  globalThis.fetch = stub;
+  globalThis.fetch = streamable(stub);
 }
 
 function lmStudioWithWindow(contextTokens: number): typeof fetch {

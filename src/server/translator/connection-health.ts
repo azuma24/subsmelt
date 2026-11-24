@@ -12,7 +12,7 @@ import { controlledAbortError, isTransportFailure } from "./ai-client.js";
  * job, so it is created per call rather than shared at module level.
  */
 
-/** Timeouts on one connection before it is dropped for the rest of the job. */
+/** Timeouts in a row on one connection before it is dropped for the rest of the job. */
 export const CONNECTION_TIMEOUT_LIMIT = 3;
 /** Attempts made to reach a connection's /models endpoint before giving up. */
 export const OFFLINE_ATTEMPTS = 5;
@@ -45,6 +45,8 @@ export interface ConnectionHealthOptions {
 export interface ConnectionHealth {
   /** Record a failure; transport stalls count toward the breaker. */
   noteFailure(conn: ResolvedConnection, error: unknown): void;
+  /** Record an answered request: the breaker counts only stalls in a row. */
+  noteSuccess(conn: ResolvedConnection): void;
   /** The subset of `order` not yet dropped by the breaker. */
   live(order: ResolvedConnection[]): ResolvedConnection[];
   isDisabled(id: string): boolean;
@@ -118,9 +120,13 @@ export function createConnectionHealth(options: ConnectionHealthOptions = {}): C
       options.onConnectionDropped?.({
         id: conn.id,
         label: conn.label,
-        error: `${count} timeouts in this job — skipping for the rest of it`,
+        error: `${count} timeouts in a row — skipping for the rest of this job`,
       });
     }
+  }
+
+  function noteSuccess(conn: ResolvedConnection): void {
+    timeoutCounts.delete(conn.id);
   }
 
   async function ensureReady(conn: ResolvedConnection, signal = options.abortSignal): Promise<void> {
@@ -186,6 +192,7 @@ export function createConnectionHealth(options: ConnectionHealthOptions = {}): C
 
   return {
     noteFailure,
+    noteSuccess,
     live: (order) => order.filter((conn) => !disabled.has(conn.id)),
     isDisabled: (id) => disabled.has(id),
     isUnavailable: (id) => unavailable.has(id),

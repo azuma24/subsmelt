@@ -23,7 +23,7 @@ export interface ChunkCallHooks {
 }
 
 export interface ChunkTranslatorDeps {
-  health: Pick<ConnectionHealth, "live" | "noteFailure" | "withConnection">;
+  health: Pick<ConnectionHealth, "live" | "noteFailure" | "noteSuccess" | "withConnection">;
   jobSignal: AbortSignal;
   systemPrompt: string;
   temperature: number;
@@ -137,6 +137,7 @@ export function createChunkTranslator(deps: ChunkTranslatorDeps) {
 
         try {
           const result = await health.withConnection(conn, translateBatches, signal);
+          health.noteSuccess(conn);
           deps.markUsed(conn);
           return { result, conn };
         } catch (error) {
@@ -185,6 +186,7 @@ export function createChunkTranslator(deps: ChunkTranslatorDeps) {
               ),
             signal,
           );
+          health.noteSuccess(conn);
           deps.markUsed(conn);
           return result;
         } catch (error) {

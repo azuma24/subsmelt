@@ -450,7 +450,7 @@
       "parallelChunks": "Blocs en parallèle",
       "parallelChunksHint": "Number of chunks to translate simultaneously (1–8). Higher = faster. Set to 1 to disable.",
       "requestTimeout": "Délai d'expiration de la requête (s)",
-      "requestTimeoutHint": "Nombre maximal de secondes d'attente pour une réponse du LLM. Augmentez-le pour les modèles de raisonnement lents ou volumineux (p. ex. 600).",
+      "requestTimeoutHint": "Nombre maximal de secondes pendant lesquelles une requête de traduction peut rester sans nouvelle sortie du LLM. Tant que la réponse continue d'arriver, la durée totale peut atteindre 3 fois cette valeur. Augmentez-le pour les modèles qui réfléchissent longtemps avant de répondre (p. ex. 600).",
       "disableToolCalls": "Désactiver les appels d'outils (mode texte brut)",
       "refinePass": "Passe d'affinage (2e passe)",
       "refinePassHint": "Exécute une seconde passe d'édition par le LLM pour rendre les traductions plus naturelles : meilleure qualité, mais environ 2 fois le coût en jetons et plus lent. En cas d'échec de l'édition, la traduction de la première passe est conservée. Désactivé par défaut.",

@@ -5,6 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 
 import path from "node:path";
+import { streamable } from "./translator/streaming-chat-fixture.js";
 
 // queue.ts pulls in db.ts, config.ts and scanner.ts, which bind their
 // directories at import, so point all three at scratch folders first.
@@ -103,12 +104,12 @@ export function useSplitFetch(
   t: { after(fn: () => void): void },
   chat: (info: SplitInfo, init?: RequestInit) => Response | Promise<Response>,
 ) {
-  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+  globalThis.fetch = streamable((async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.endsWith("/models")) return new Response('{"data":[]}', { status: 200 });
     if (!url.endsWith("/chat/completions")) return new Response("{}", { status: 404 });
     return chat(splitRequestInfo(input, init), init);
-  }) as typeof fetch;
+  }) as typeof fetch);
   t.after(() => {
     globalThis.fetch = moduleFetch;
   });
@@ -208,7 +209,7 @@ export function useRawChat(
   first: (host: string, system: string) => Response | null,
   titleHosts: string[],
 ) {
-  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+  globalThis.fetch = streamable((async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(String(input instanceof Request ? input.url : input));
     if (url.pathname.endsWith("/models")) return new Response('{"data":[]}', { status: 200 });
     if (!url.pathname.endsWith("/chat/completions")) return new Response("{}", { status: 404 });
@@ -223,7 +224,7 @@ export function useRawChat(
     await new Promise((r) => setTimeout(r, 200));
     const lines = JSON.parse(user.slice(user.lastIndexOf("["))) as string[];
     return chatCompletion(JSON.stringify(lines.map((l) => `Z-${l}`)));
-  }) as typeof fetch;
+  }) as typeof fetch);
   t.after(() => {
     globalThis.fetch = moduleFetch;
   });

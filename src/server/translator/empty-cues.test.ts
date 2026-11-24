@@ -6,6 +6,7 @@ import test from "node:test";
 import { cueProgressPath, saveCueProgress } from "./cue-progress.js";
 import { partialOutputPath, translateFile } from "./engine.js";
 import { extractJsonFromText, parseSubtitle, type SubtitleCue } from "./utils.js";
+import { streamable } from "./streaming-chat-fixture.js";
 
 (globalThis as { AI_SDK_LOG_WARNINGS?: boolean }).AI_SDK_LOG_WARNINGS = false;
 
@@ -45,7 +46,7 @@ for (const refinement of ["off", "valid", "invalid"] as const) {
       globalThis.fetch = originalFetch;
     });
     const partials: string[][] = [];
-    globalThis.fetch = (async (input: unknown, init?: RequestInit) => {
+    globalThis.fetch = streamable((async (input: unknown, init?: RequestInit) => {
       if (String(input).endsWith("/models")) return new Response("{}", { status: 200 });
       const body = JSON.parse(String(init?.body));
       const prompt = String(body.messages.at(-1).content);
@@ -60,7 +61,7 @@ for (const refinement of ["off", "valid", "invalid"] as const) {
           }),
         ),
       );
-    }) as typeof fetch;
+    }) as typeof fetch);
 
     await translateFile({
       srtPath,
@@ -111,9 +112,9 @@ test("resuming discards invented translations saved for blank source cues", asyn
   t.after(() => {
     globalThis.fetch = originalFetch;
   });
-  globalThis.fetch = (async () => {
+  globalThis.fetch = streamable((async () => {
     throw new Error("Resumed cues need no model call");
-  }) as typeof fetch;
+  }) as typeof fetch);
 
   await translateFile({
     srtPath,
@@ -145,10 +146,10 @@ test("an entirely blank subtitle completes without contacting a model", async (t
     globalThis.fetch = originalFetch;
   });
   let requests = 0;
-  globalThis.fetch = (async () => {
+  globalThis.fetch = streamable((async () => {
     requests++;
     return completion('["Invented speech"]');
-  }) as typeof fetch;
+  }) as typeof fetch);
   const progress: number[] = [];
 
   await translateFile({

@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { translateFile } from "./engine.js";
+import { streamable } from "./streaming-chat-fixture.js";
 
 // The stubbed endpoint below trips the SDK's compatibility-mode warning on every call.
 (globalThis as any).AI_SDK_LOG_WARNINGS = false;
@@ -57,12 +58,12 @@ function messageContent(body: any, role: string): string {
 
 function stubFetch(handler: (body: any) => Promise<Response> | Response): () => void {
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+  globalThis.fetch = streamable((async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.endsWith("/models")) return new Response("{}", { status: 200 });
     if (!url.endsWith("/chat/completions")) return new Response("{}", { status: 404 });
     return handler(JSON.parse(String(init?.body)));
-  }) as typeof fetch;
+  }) as typeof fetch);
   return () => {
     globalThis.fetch = originalFetch;
   };
@@ -198,7 +199,7 @@ test("parallel workers sharing one server back off on overflow instead of fallin
   const inFlightByHost = new Map<string, number>();
   let perLineRequests = 0;
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+  globalThis.fetch = streamable((async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(String(input instanceof Request ? input.url : input));
     if (url.pathname.endsWith("/models")) return new Response("{}", { status: 200 });
     const body = JSON.parse(String(init?.body));
@@ -212,7 +213,7 @@ test("parallel workers sharing one server back off on overflow instead of fallin
     inFlightByHost.set(url.host, (inFlightByHost.get(url.host) ?? 1) - 1);
     const lines = JSON.parse(user.slice(user.lastIndexOf("["))) as string[];
     return chatCompletion(JSON.stringify(lines.map((line) => `T ${line}`)));
-  }) as typeof fetch;
+  }) as typeof fetch);
 
   try {
     const { srtPath, outputPath } = jobFiles(40);

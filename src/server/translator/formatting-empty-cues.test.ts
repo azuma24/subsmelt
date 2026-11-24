@@ -7,6 +7,7 @@ import { cuesOf, parseSubtitle } from "./convert.js";
 import { loadCueProgress, saveCueProgress } from "./cue-progress.js";
 import { partialOutputPath, translateFile, type TranslateFileOptions } from "./engine.js";
 import { isBlankCueText } from "./subtitle-quality.js";
+import { streamable } from "./streaming-chat-fixture.js";
 
 (globalThis as { AI_SDK_LOG_WARNINGS?: boolean }).AI_SDK_LOG_WARNINGS = false;
 
@@ -59,7 +60,7 @@ function useModel(t: TestContext, reply?: (payload: Payload) => string) {
   const requests: string[] = [];
   const prompts: string[] = [];
   const payloads: Payload[] = [];
-  globalThis.fetch = (async (input: unknown, init?: RequestInit) => {
+  globalThis.fetch = streamable((async (input: unknown, init?: RequestInit) => {
     requests.push(String(input));
     if (String(input).endsWith("/models")) return new Response("{}", { status: 200 });
     const body = JSON.parse(String(init?.body));
@@ -77,7 +78,7 @@ function useModel(t: TestContext, reply?: (payload: Payload) => string) {
           ? `T ${payload}`
           : JSON.stringify(payload.map((line) => `T ${typeof line === "string" ? line : line.original}`))),
     );
-  }) as typeof fetch;
+  }) as typeof fetch);
   return { requests, prompts, payloads };
 }
 

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { streamable } from "./translator/streaming-chat-fixture.js";
 
 // Same bootstrap contract as queue-run.test.ts: bind dirs before importing.
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "subsmelt-rename-"));
@@ -34,7 +35,7 @@ function chatCompletion(content: string): Response {
 
 const release: Array<() => void> = [];
 const realFetch = globalThis.fetch;
-globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+globalThis.fetch = streamable((async (input: string | URL | Request, init?: RequestInit) => {
   const url = String(input instanceof Request ? input.url : input);
   // The express app under test shares this global; loopback passes through.
   if (url.startsWith("http://127.0.0.1")) return realFetch(input as URL, init);
@@ -46,7 +47,7 @@ globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) =>
     });
     release.push(() => resolve(chatCompletion('["translated"]')));
   });
-}) as typeof fetch;
+}) as typeof fetch);
 
 async function waitFor(condition: () => boolean, what: string) {
   const deadline = Date.now() + 10_000;
