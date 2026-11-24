@@ -15,6 +15,7 @@ import {
 import { ContextOverflowError, toContextOverflow } from "./context-overflow.js";
 import { llmFetch } from "./llm-fetch.js";
 import { collectReply } from "./stream-reply.js";
+import type { JobProgress } from "./job-progress.js";
 
 import type { LlmProvider } from "../../shared/llm.js";
 import { errorMessage, errorName, errorStatus } from "../errors.js";
@@ -230,6 +231,8 @@ interface RequestLimits {
   idleMs?: number;
   totalMs: number;
   totalMessage: string;
+  /** A limit reached while the job is still translating lines waits until the job stalls. */
+  progress?: JobProgress;
 }
 
 async function withRequestLimits<T>(
@@ -242,16 +245,29 @@ async function withRequestLimits<T>(
 
   const controller = new AbortController();
   let timeoutMessage = limits.totalMessage;
-  const expire = (message: string) => {
-    timeoutMessage = message;
+  const expire = (message: string, checkAgainIn: (ms: number) => void) => {
+    const untilStalled = limits.progress?.msUntilStalled() ?? 0;
+    if (untilStalled > 0) {
+      checkAgainIn(untilStalled);
+      return;
+    }
+    timeoutMessage = limits.progress
+      ? `${message}, and the job translated no new line for ${limits.progress.stallMs}ms`
+      : message;
     controller.abort("timeout");
   };
-  const totalTimer = setTimeout(() => expire(limits.totalMessage), limits.totalMs);
+  let totalTimer: ReturnType<typeof setTimeout> | undefined;
+  const armTotal = (ms: number) => {
+    totalTimer = setTimeout(() => expire(limits.totalMessage, armTotal), ms);
+  };
+  armTotal(limits.totalMs);
   let idleTimer: ReturnType<typeof setTimeout> | undefined;
-  const noteActivity = () => {
-    if (limits.idleMs === undefined) return;
+  const armIdle = (ms: number) => {
     clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => expire(`Request timeout: no output for ${limits.idleMs}ms`), limits.idleMs);
+    idleTimer = setTimeout(() => expire(`Request timeout: no output for ${limits.idleMs}ms`, armIdle), ms);
+  };
+  const noteActivity = () => {
+    if (limits.idleMs !== undefined) armIdle(limits.idleMs);
   };
   noteActivity();
 
@@ -306,15 +322,39 @@ interface StreamRequest {
   prompt: string;
   tools?: ToolSet;
   toolChoice?: "required";
+  maxOutputTokens?: number;
+}
+
+/** Output a self-hosted model may spend on reasoning before it answers. */
+const REPLY_REASONING_OUTPUT_TOKENS = 8_000;
+/** Output allowed on top of that for each line to translate. */
+const REPLY_OUTPUT_TOKENS_PER_LINE = 400;
+
+/**
+ * The most output a translation reply of `lines` lines may use. A self-hosted
+ * server sets no limit of its own, so a model that never stops generates until
+ * its context is full, which holds up the server's other requests for as long.
+ * Cloud providers end such a reply at their model's own limit, which can be
+ * lower than this one.
+ */
+function replyOutputTokenCap(provider: CloudProvider | undefined, lines: number): number | undefined {
+  if (provider) return undefined;
+  return REPLY_REASONING_OUTPUT_TOKENS + REPLY_OUTPUT_TOKENS_PER_LINE * lines;
 }
 
 /**
  * Streams one reply and resolves with its final step. `timeoutMs` limits the
  * time without output, the wait for the first part included, so a slow model
  * that keeps producing is not cut off; {@link STREAM_TOTAL_TIMEOUT_FACTOR}
- * times that ends a reply that never finishes.
+ * times that ends a reply that never finishes. With `progress`, neither limit
+ * ends the request while the job is still translating lines.
  */
-export function streamReply(request: StreamRequest, timeoutMs = REQUEST_TIMEOUT_MS, externalSignal?: AbortSignal) {
+export function streamReply(
+  request: StreamRequest,
+  timeoutMs = REQUEST_TIMEOUT_MS,
+  externalSignal?: AbortSignal,
+  progress?: JobProgress,
+) {
   const totalMs = timeoutMs * STREAM_TOTAL_TIMEOUT_FACTOR;
   return withRequestLimits(
     (abortSignal, noteActivity) =>
@@ -324,6 +364,7 @@ export function streamReply(request: StreamRequest, timeoutMs = REQUEST_TIMEOUT_
       idleMs: timeoutMs,
       totalMs,
       totalMessage: `Request timeout: reply still unfinished at the ${totalMs}ms total limit`,
+      progress,
     },
     externalSignal,
   );
@@ -416,6 +457,12 @@ export async function retryTranslate<T>(
   throw new Error("Unreachable");
 }
 
+/**
+ * A reply that ran into the output limit holds no finished answer. What can be
+ * read out of it is a fragment, or a candidate the model was still weighing.
+ */
+const cutOff = (result: { finishReason: string }) => result.finishReason === "length";
+
 export class InvalidChunkTranslationError extends Error {
   constructor(expected: number, received: number | undefined, finishReason: string) {
     const receivedSummary = received === undefined ? "no array" : `${received} received`;
@@ -437,6 +484,8 @@ export async function translateChunk(
     abortSignal?: AbortSignal;
     disableToolCalls?: boolean;
     requestTimeoutMs?: number;
+    /** The job's line clock; see {@link streamReply}. */
+    progress?: JobProgress;
     /** Optional read-only context lines prepended to the prompt. */
     contextPromptPrefix?: string;
     /** Fired after each successful LLM call with its token usage. */
@@ -455,6 +504,7 @@ export async function translateChunk(
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost, provider: opts.provider });
   const timeoutMs = opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
   const prefix = opts.contextPromptPrefix || "";
+  const maxOutputTokens = replyOutputTokenCap(opts.provider, subtitles.length);
 
   if (!opts.disableToolCalls) {
     const toolResult: { translated?: string[] } = {};
@@ -479,6 +529,7 @@ export async function translateChunk(
           {
             model: ai(opts.model),
             temperature: opts.temperature,
+            maxOutputTokens,
             tools,
             toolChoice: "required",
             system: opts.systemPrompt + "\nReturn ONLY using the tool, do not include any extra text.",
@@ -488,6 +539,7 @@ export async function translateChunk(
           },
           timeoutMs,
           opts.abortSignal,
+          opts.progress,
         ),
       );
       reportUsage(result, opts.onUsage);
@@ -495,7 +547,7 @@ export async function translateChunk(
       const fromTool = toolResult.translated;
       if (fromTool?.length === subtitles.length) return fromTool;
 
-      const text = result.text || "";
+      const text = cutOff(result) ? "" : result.text || "";
       const fromText = coerceTranslatedArray(extractJsonFromText(text));
       if (fromText?.length === subtitles.length) return fromText;
       const fromNumbered = extractNumberedTranslations(text, subtitles.length);
@@ -518,6 +570,7 @@ export async function translateChunk(
       {
         model: ai(opts.model),
         temperature: opts.temperature,
+        maxOutputTokens,
         system: opts.systemPrompt + "\nReturn only JSON array of strings. No markdown, no prose.",
         prompt:
           `${prefix}Translate the following subtitles. Return ONLY a JSON array of translated strings with the exact same length and order as input.\n\n` +
@@ -525,11 +578,12 @@ export async function translateChunk(
       },
       timeoutMs,
       opts.abortSignal,
+      opts.progress,
     ),
   );
   reportUsage(textResult, opts.onUsage);
 
-  const text = textResult.text || "";
+  const text = cutOff(textResult) ? "" : textResult.text || "";
   const translated = coerceTranslatedArray(extractJsonFromText(text));
   if (translated?.length === subtitles.length) return translated;
 
@@ -551,6 +605,8 @@ export async function translateSingle(
     abortSignal?: AbortSignal;
     disableToolCalls?: boolean;
     requestTimeoutMs?: number;
+    /** The job's line clock; see {@link streamReply}. */
+    progress?: JobProgress;
     /** Fired after each successful LLM call with its token usage. */
     onUsage?: (u: TokenUsage) => void;
   },
@@ -560,6 +616,7 @@ export async function translateSingle(
 
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost, provider: opts.provider });
   const timeoutMs = opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
+  const maxOutputTokens = replyOutputTokenCap(opts.provider, 1);
 
   let toolResult: string | null = null;
 
@@ -581,6 +638,7 @@ export async function translateSingle(
           {
             model: ai(opts.model),
             temperature: opts.temperature,
+            maxOutputTokens,
             tools,
             toolChoice: "required",
             system: opts.systemPrompt + "\nReturn ONLY using the tool, do not include any extra text.",
@@ -590,6 +648,7 @@ export async function translateSingle(
           },
           timeoutMs,
           opts.abortSignal,
+          opts.progress,
         ),
       );
       reportUsage(result, opts.onUsage);
@@ -597,7 +656,7 @@ export async function translateSingle(
       if (typeof toolResult === "string") return toolResult;
 
       // normalizeResult promoted reasoning→text; extract best answer
-      const text = result.text || "";
+      const text = cutOff(result) ? "" : result.text || "";
       if (text) {
         const final = extractFinalAnswerFromReasoning(text);
         if (final) return final;
@@ -622,16 +681,21 @@ export async function translateSingle(
       {
         model: ai(opts.model),
         temperature: opts.temperature,
+        maxOutputTokens,
         system: opts.systemPrompt + "\nReturn plain translated text only. No explanations, no markdown.",
         prompt:
           "Translate the following subtitle line and return only the translated text.\n\n" + JSON.stringify(subtitle),
       },
       timeoutMs,
       opts.abortSignal,
+      opts.progress,
     ),
   );
   reportUsage(textResult, opts.onUsage);
 
+  if (cutOff(textResult)) {
+    throw new Error("Model returned empty single-line translation text: the reply was cut off at the output limit");
+  }
   const rawText = textResult.text || "";
   const final = extractFinalAnswerFromReasoning(rawText);
   if (final) return final;

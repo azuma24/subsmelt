@@ -2,6 +2,7 @@ import test, { mock } from "node:test";
 import assert from "node:assert/strict";
 import { MockLanguageModelV4 } from "ai/test";
 import { STREAM_TOTAL_TIMEOUT_FACTOR, isTransportFailure, streamReply } from "./ai-client.js";
+import { JobProgress } from "./job-progress.js";
 
 (globalThis as { AI_SDK_LOG_WARNINGS?: boolean }).AI_SDK_LOG_WARNINGS = false;
 
@@ -56,13 +57,18 @@ function modelEmitting(deltas: number, then: "finish" | "silence"): MockLanguage
   return new MockLanguageModelV4({ doStream: async ({ abortSignal }) => ({ stream: streamFor(abortSignal) }) });
 }
 
-/** Starts a reply under fake timers and reports how it ended and at what virtual time. */
-async function replyOutcome(model: MockLanguageModelV4, runForMs: number) {
-  mock.timers.enable({ apis: ["setTimeout"] });
+/**
+ * Starts a reply under fake timers and reports how it ended and at what virtual
+ * time. With `lastLineAtMs`, the reply belongs to a job that translates its
+ * last line at that time.
+ */
+async function replyOutcome(model: MockLanguageModelV4, runForMs: number, lastLineAtMs?: number) {
+  mock.timers.enable({ apis: ["setTimeout", "Date"] });
   try {
     let elapsedMs = 0;
     let outcome: { text?: string; error?: unknown; atMs: number } | undefined;
-    streamReply({ model, temperature: 0, system: "Translate.", prompt: "hello" }, IDLE_MS).then(
+    const progress = lastLineAtMs === undefined ? undefined : new JobProgress(IDLE_MS);
+    streamReply({ model, temperature: 0, system: "Translate.", prompt: "hello" }, IDLE_MS, undefined, progress).then(
       (step) => {
         outcome = { text: step.text, atMs: elapsedMs };
       },
@@ -75,6 +81,7 @@ async function replyOutcome(model: MockLanguageModelV4, runForMs: number) {
     while (!outcome && elapsedMs < runForMs) {
       mock.timers.tick(STEP_MS);
       elapsedMs += STEP_MS;
+      if (elapsedMs === lastLineAtMs) progress?.noteLine();
       await settle();
     }
     return outcome;
@@ -113,4 +120,21 @@ test("a reply that never stops arriving fails at the total limit", async () => {
   assert.match(String(outcome?.error), /Request timeout: reply still unfinished at the 300ms total limit/);
   assert.equal(isTransportFailure(outcome?.error), true);
   assert.equal(outcome?.atMs, IDLE_MS * STREAM_TOTAL_TIMEOUT_FACTOR);
+});
+
+test("a silent reply in a job that is still translating lines fails once the job has stalled", async () => {
+  const model = new MockLanguageModelV4({ doStream: ({ abortSignal }) => untilAborted(abortSignal) });
+  const lastLineAtMs = 60;
+  const outcome = await replyOutcome(model, 1_000, lastLineAtMs);
+
+  assert.match(String(outcome?.error), /Request timeout: no output for 100ms/);
+  assert.equal(outcome?.atMs, lastLineAtMs + IDLE_MS);
+});
+
+test("a reply that never stops arriving outlasts the total limit until the job has stalled", async () => {
+  const lastLineAtMs = 250;
+  const outcome = await replyOutcome(modelEmitting(Number.POSITIVE_INFINITY, "finish"), 1_000, lastLineAtMs);
+
+  assert.match(String(outcome?.error), /Request timeout: reply still unfinished at the 300ms total limit/);
+  assert.equal(outcome?.atMs, lastLineAtMs + IDLE_MS);
 });
