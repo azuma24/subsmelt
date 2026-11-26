@@ -6,9 +6,11 @@ under `whisper-v<version>` with the same version number.
 
 ## [Unreleased]
 
+## [0.9.7] — 2026-11-26
+
 ### Translation
 
-- A reply from a local or OpenAI-compatible server that is cut off at the output limit is requested once more on the same connection with reasoning effort `low`, before its lines go to another connection. A model that spent its whole allowance reasoning then answers itself. This applies to chunks, to lines translated one at a time and to context analysis. **If a reply runs out of room**, on each local connection under **Settings → LLM Connection**, selects another effort or turns the retry off. Which value makes a model reason less differs by server.
+- A reply from a local or OpenAI-compatible server that is cut off at the output limit is requested once more on the same connection with reasoning effort `low`, before its lines go to another connection. A model that spent its whole allowance reasoning then answers itself. This applies to chunks, to lines translated one at a time and to context analysis. **If a reply runs out of room**, on each local connection under **Settings → LLM Connection**, selects another effort or turns the retry off. Which value makes a model reason less differs by server. **Test** on the connection uses the selected effort.
 - The log notes a context probe to a private or loopback host once for each host. Before, it added the warning on every probe.
 
 ### Convert
