@@ -735,6 +735,9 @@
       "convertGpuSharedHelp": "從轉換頁面開始的翻譯會等待進行中的轉錄，轉錄也會等待這些翻譯。如果你的 GPU 能同時執行兩者，請保持關閉。"
     },
     "connections": {
+      "cutOffRetry": "回覆用盡輸出額度時",
+      "cutOffRetryOff": "改用下一個連線",
+      "cutOffRetryHelp": "模型可能把輸出額度全花在推理上而沒有作答。選擇一個推理強度後，這類回覆會先在此連線以該強度重新請求一次，然後才把字幕交給其他連線。哪個值能讓模型少推理因伺服器而異，請用「測試」逐一嘗試。",
       "mode": "連線模式",
       "modeSingle": "單一",
       "modeFallback": "備援",

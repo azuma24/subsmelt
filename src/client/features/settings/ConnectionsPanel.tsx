@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import { useTranslation } from "../../i18n";
 import * as api from "../../api";
 import type { LlmConnection, LlmMode, LlmProvider } from "../../types";
+import { CUT_OFF_RETRY_OFF, DEFAULT_CUT_OFF_RETRY_EFFORT, REASONING_EFFORTS } from "../../../shared/llm";
 import { Field, RowActionsMenu, Select } from "../../ui/primitives";
 import { FORM_CONTROL_CLS, FORM_LABEL_CLS } from "../../ui/form-classes";
 import { Icon } from "../../ui/Icon";
@@ -329,6 +330,7 @@ function ConnectionCard({
   const bodyId = useId();
   const providerGroupId = useId();
   const modelSelectId = useId();
+  const cutOffRetryId = useId();
 
   const providerLabel = t(`settings.llmConnection.provider_${c.provider}`);
   const summary = `${providerLabel} · ${c.model || t("settings.connections.noModel")}`;
@@ -508,6 +510,27 @@ function ConnectionCard({
               </p>
             )}
           </div>
+
+          {c.provider === "local" && (
+            <div>
+              <label htmlFor={cutOffRetryId} className="mb-2 block text-xs font-medium text-muted">
+                {t("settings.connections.cutOffRetry")}
+              </label>
+              <Select
+                id={cutOffRetryId}
+                value={c.cutOffRetryEffort ?? DEFAULT_CUT_OFF_RETRY_EFFORT}
+                onChange={(value) => onPatch({ cutOffRetryEffort: value })}
+              >
+                <option value={CUT_OFF_RETRY_OFF}>{t("settings.connections.cutOffRetryOff")}</option>
+                {REASONING_EFFORTS.map((effort) => (
+                  <option key={effort} value={effort}>
+                    {effort}
+                  </option>
+                ))}
+              </Select>
+              <p className="mt-1 text-xs leading-6 text-faint">{t("settings.connections.cutOffRetryHelp")}</p>
+            </div>
+          )}
 
           {/* Test */}
           <div className="flex items-center gap-3">

@@ -894,6 +894,9 @@
       "convertGpuSharedHelp": "Translations started on the Convert page wait for running transcriptions, and transcriptions wait for them. Leave this off if your GPU has room for both."
     },
     "connections": {
+      "cutOffRetry": "If a reply runs out of room",
+      "cutOffRetryOff": "Move on to the next connection",
+      "cutOffRetryHelp": "A model can spend its whole output allowance reasoning and never answer. Pick a reasoning effort and such a reply is asked for once more on this connection at that effort, before the lines go to another connection. Which value makes a model think less differs by server, so try them with Test.",
       "mode": "Connection mode",
       "modeSingle": "Single",
       "modeFallback": "Fallback",

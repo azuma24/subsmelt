@@ -8,6 +8,7 @@ import {
   withAbortTimeout,
   REQUEST_TIMEOUT_MS,
   extractUsage,
+  reasoningEffortSettings,
   type CloudProvider,
   type TokenUsage,
 } from "./ai-client.js";
@@ -30,6 +31,8 @@ export async function analyzeSubtitlesForContext(
     requestTimeoutMs?: number;
     /** Fired after the analysis generateText with its token usage. */
     onUsage?: (u: TokenUsage) => void;
+    /** Reasoning effort to ask a cut-off analysis for again. */
+    cutOffRetryEffort?: string;
   },
 ): Promise<string> {
   if (!opts.model || subtitles.length === 0) return "";
@@ -55,6 +58,11 @@ export async function analyzeSubtitlesForContext(
       sample = sampleLines(subtitles, fewer);
     }
   }
+}
+
+function reportAnalysisUsage(result: unknown, onUsage?: (u: TokenUsage) => void): void {
+  const usage = onUsage && extractUsage(result);
+  if (usage) onUsage(usage);
 }
 
 /** An evenly-spaced sample so early, mid, and late content is all represented. */
@@ -89,12 +97,14 @@ async function requestAnalysis(
   opts: Parameters<typeof analyzeSubtitlesForContext>[1],
 ): Promise<string> {
   const ai = getAi({ apiKey: opts.apiKey, apiHost: opts.apiHost, provider: opts.provider });
-  const raw = await withAbortTimeout(
-    (abortSignal) =>
-      generateText({
-        model: ai(opts.model),
-        temperature: opts.temperature ?? 0.3,
-        system: `# System Prompt
+  const request = (settings: Partial<ReturnType<typeof reasoningEffortSettings>> = {}) =>
+    withAbortTimeout(
+      (abortSignal) =>
+        generateText({
+          ...settings,
+          model: ai(opts.model),
+          temperature: opts.temperature ?? 0.3,
+          system: `# System Prompt
 
 You are a subtitle content analyst assisting a translation and glossary extraction system.
 
@@ -123,14 +133,19 @@ Use exactly this markdown structure:
 
 ### 📚 Glossary
 - term: ... | description: ... | category: ... | preferredTranslation: ... | notes: ...`,
-        prompt: `Produce plot summary in ${opts.lang} and glossary from this subtitle sample:\n` + sample.join("\n"),
-        maxRetries: 0,
-        maxOutputTokens: ANALYSIS_MAX_OUTPUT_TOKENS,
-        abortSignal,
-      }),
-    opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS,
-    opts.abortSignal,
-  );
+          prompt: `Produce plot summary in ${opts.lang} and glossary from this subtitle sample:\n` + sample.join("\n"),
+          maxRetries: 0,
+          maxOutputTokens: ANALYSIS_MAX_OUTPUT_TOKENS,
+          abortSignal,
+        }),
+      opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS,
+      opts.abortSignal,
+    );
+  let raw = await request();
+  if (raw.finishReason === "length" && opts.cutOffRetryEffort) {
+    reportAnalysisUsage(raw, opts.onUsage);
+    raw = await request(reasoningEffortSettings(opts.cutOffRetryEffort));
+  }
   // The token cap can land mid-reasoning, in the reasoning field or in the text
   // itself. A cut-off reply without the answer's headings is not an analysis, and
   // it would otherwise be sent with every chunk and saved for reuse.
@@ -139,10 +154,7 @@ Use exactly this markdown structure:
     logger.warn("translate", `Context analysis ran out of output tokens on ${opts.model}; continuing without it`);
   }
 
-  if (opts.onUsage) {
-    const usage = extractUsage(raw);
-    if (usage) opts.onUsage(usage);
-  }
+  reportAnalysisUsage(raw, opts.onUsage);
 
   if (cutOffReasoning) return "";
   const result = normalizeResult(raw);

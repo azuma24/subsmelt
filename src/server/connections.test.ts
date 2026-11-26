@@ -1,6 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { REDACTED_SECRET, parseConnections, resolveRequestApiKey, restoreRedactedApiKeys } from "./connections.js";
+import {
+  REDACTED_SECRET,
+  parseConnections,
+  resolveConnectionPool,
+  resolveRequestApiKey,
+  restoreRedactedApiKeys,
+} from "./connections.js";
 
 const LEGACY_LOCAL = {
   id: "local",
@@ -115,4 +121,41 @@ test("a saved cloud key is lent whatever endpoint the request carries, since the
   });
 
   assert.equal(resolveRequestApiKey({ connectionId: "c1", provider: "openai", endpoint: "" }, saved), "sk-c1");
+});
+
+test("a local connection retries a cut-off reply at low effort unless it says otherwise", () => {
+  const connection = (id: string, provider: string, cutOffRetryEffort?: string) => ({
+    id,
+    provider,
+    apiKey: "k",
+    model: "m",
+    endpoint: "http://llm.test/v1",
+    cutOffRetryEffort,
+  });
+  const { pool, all } = resolveConnectionPool({
+    llm_mode: "fallback",
+    llm_connections: JSON.stringify([
+      connection("unset", "local"),
+      connection("chosen", "local", "minimal"),
+      connection("off", "local", "off"),
+      connection("typo", "local", "lowest"),
+      connection("cloud", "openai", "low"),
+    ]),
+  });
+
+  assert.deepEqual(
+    pool.map((conn) => [conn.id, conn.cutOffRetryEffort]),
+    [
+      ["unset", "low"],
+      ["chosen", "minimal"],
+      ["off", undefined],
+      ["typo", "low"],
+      ["cloud", undefined],
+    ],
+  );
+  assert.deepEqual(
+    all.map((conn) => conn.cutOffRetryEffort),
+    [undefined, "minimal", "off", undefined, undefined],
+    "the stored choice is kept as stored",
+  );
 });

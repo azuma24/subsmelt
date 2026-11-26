@@ -323,6 +323,35 @@ interface StreamRequest {
   tools?: ToolSet;
   toolChoice?: "required";
   maxOutputTokens?: number;
+  cutOffRetry?: CutOffRetry;
+}
+
+/**
+ * What to do when a reply runs into the output limit: ask once more, on the
+ * same connection, at this reasoning effort. A model that reasoned its whole
+ * allowance away then answers itself, where the job would otherwise move the
+ * lines to another model.
+ */
+export interface CutOffRetry {
+  effort: string;
+  /** Receives the cut-off attempt's token usage; the caller reports the retry's. */
+  onUsage?: (u: TokenUsage) => void;
+}
+
+/** The retry for a call's options, or none when its connection sets no retry effort. */
+export function cutOffRetryFor(opts: {
+  cutOffRetryEffort?: string;
+  onUsage?: (u: TokenUsage) => void;
+}): CutOffRetry | undefined {
+  return opts.cutOffRetryEffort ? { effort: opts.cutOffRetryEffort, onUsage: opts.onUsage } : undefined;
+}
+
+/**
+ * Request settings that ask an OpenAI-compatible server for a reasoning effort.
+ * "openai" is the name {@link getAi} gives the compatible provider.
+ */
+export function reasoningEffortSettings(effort: string) {
+  return { providerOptions: { openai: { reasoningEffort: effort } } };
 }
 
 /** Output a self-hosted model may spend on reasoning before it answers. */
@@ -349,25 +378,30 @@ function replyOutputTokenCap(provider: CloudProvider | undefined, lines: number)
  * times that ends a reply that never finishes. With `progress`, neither limit
  * ends the request while the job is still translating lines.
  */
-export function streamReply(
-  request: StreamRequest,
+export async function streamReply(
+  { cutOffRetry, ...request }: StreamRequest,
   timeoutMs = REQUEST_TIMEOUT_MS,
   externalSignal?: AbortSignal,
   progress?: JobProgress,
 ) {
   const totalMs = timeoutMs * STREAM_TOTAL_TIMEOUT_FACTOR;
-  return withRequestLimits(
-    (abortSignal, noteActivity) =>
-      // Errors reach the caller through collectReply; the SDK's default handler would also log them.
-      collectReply(streamText({ ...request, maxRetries: 0, abortSignal, onError: () => {} }), noteActivity),
-    {
-      idleMs: timeoutMs,
-      totalMs,
-      totalMessage: `Request timeout: reply still unfinished at the ${totalMs}ms total limit`,
-      progress,
-    },
-    externalSignal,
-  );
+  const send = (settings: StreamRequest | (StreamRequest & ReturnType<typeof reasoningEffortSettings>)) =>
+    withRequestLimits(
+      (abortSignal, noteActivity) =>
+        // Errors reach the caller through collectReply; the SDK's default handler would also log them.
+        collectReply(streamText({ ...settings, maxRetries: 0, abortSignal, onError: () => {} }), noteActivity),
+      {
+        idleMs: timeoutMs,
+        totalMs,
+        totalMessage: `Request timeout: reply still unfinished at the ${totalMs}ms total limit`,
+        progress,
+      },
+      externalSignal,
+    );
+  const reply = await send(request);
+  if (!cutOffRetry || !cutOff(reply)) return reply;
+  reportUsage(reply, cutOffRetry.onUsage);
+  return send({ ...request, ...reasoningEffortSettings(cutOffRetry.effort) });
 }
 
 /**
@@ -490,6 +524,8 @@ export async function translateChunk(
     contextPromptPrefix?: string;
     /** Fired after each successful LLM call with its token usage. */
     onUsage?: (u: TokenUsage) => void;
+    /** Reasoning effort to ask a cut-off reply for again; see {@link CutOffRetry}. */
+    cutOffRetryEffort?: string;
   },
 ): Promise<string[]> {
   if (opts.abortSignal?.aborted) throw controlledAbortError(opts.abortSignal);
@@ -530,6 +566,7 @@ export async function translateChunk(
             model: ai(opts.model),
             temperature: opts.temperature,
             maxOutputTokens,
+            cutOffRetry: cutOffRetryFor(opts),
             tools,
             toolChoice: "required",
             system: opts.systemPrompt + "\nReturn ONLY using the tool, do not include any extra text.",
@@ -571,6 +608,7 @@ export async function translateChunk(
         model: ai(opts.model),
         temperature: opts.temperature,
         maxOutputTokens,
+        cutOffRetry: cutOffRetryFor(opts),
         system: opts.systemPrompt + "\nReturn only JSON array of strings. No markdown, no prose.",
         prompt:
           `${prefix}Translate the following subtitles. Return ONLY a JSON array of translated strings with the exact same length and order as input.\n\n` +
@@ -609,6 +647,8 @@ export async function translateSingle(
     progress?: JobProgress;
     /** Fired after each successful LLM call with its token usage. */
     onUsage?: (u: TokenUsage) => void;
+    /** Reasoning effort to ask a cut-off reply for again; see {@link CutOffRetry}. */
+    cutOffRetryEffort?: string;
   },
 ): Promise<string> {
   if (opts.abortSignal?.aborted) throw controlledAbortError(opts.abortSignal);
@@ -639,6 +679,7 @@ export async function translateSingle(
             model: ai(opts.model),
             temperature: opts.temperature,
             maxOutputTokens,
+            cutOffRetry: cutOffRetryFor(opts),
             tools,
             toolChoice: "required",
             system: opts.systemPrompt + "\nReturn ONLY using the tool, do not include any extra text.",
@@ -682,6 +723,7 @@ export async function translateSingle(
         model: ai(opts.model),
         temperature: opts.temperature,
         maxOutputTokens,
+        cutOffRetry: cutOffRetryFor(opts),
         system: opts.systemPrompt + "\nReturn plain translated text only. No explanations, no markdown.",
         prompt:
           "Translate the following subtitle line and return only the translated text.\n\n" + JSON.stringify(subtitle),

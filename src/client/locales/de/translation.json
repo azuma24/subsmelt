@@ -735,6 +735,9 @@
       "convertGpuSharedHelp": "Auf der Konvertieren-Seite gestartete Übersetzungen warten auf laufende Transkriptionen, und Transkriptionen warten auf sie. Ausgeschaltet lassen, wenn die GPU beides schafft."
     },
     "connections": {
+      "cutOffRetry": "Wenn eine Antwort das Ausgabelimit erreicht",
+      "cutOffRetryOff": "Zur nächsten Verbindung wechseln",
+      "cutOffRetryHelp": "Ein Modell kann sein gesamtes Ausgabelimit für Überlegungen verbrauchen und nie antworten. Mit einer gewählten Denkstufe wird eine solche Antwort einmal auf dieser Verbindung mit dieser Stufe neu angefordert, bevor die Zeilen an eine andere Verbindung gehen. Welcher Wert ein Modell weniger überlegen lässt, hängt vom Server ab. Probiere die Werte mit „Testen“ aus.",
       "mode": "Verbindungsmodus",
       "modeSingle": "Einzeln",
       "modeFallback": "Ausweichen",

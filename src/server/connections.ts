@@ -1,6 +1,12 @@
 import { logger } from "./logger.js";
 import type { CloudProvider } from "./translator.js";
-import type { LlmConnection, LlmMode } from "../shared/llm.js";
+import {
+  CUT_OFF_RETRY_OFF,
+  DEFAULT_CUT_OFF_RETRY_EFFORT,
+  REASONING_EFFORTS,
+  type LlmConnection,
+  type LlmMode,
+} from "../shared/llm.js";
 
 // ── Multi-connection model ────────────────────────────────────────────────
 //
@@ -24,6 +30,8 @@ export interface ResolvedConnection {
   apiKey: string;
   apiHost: string;
   model: string;
+  /** The effort a cut-off reply is asked for again at; unset when the connection turned the retry off. */
+  cutOffRetryEffort?: string;
 }
 
 const DEFAULT_LOCAL_ENDPOINT = "http://localhost:8000/v1";
@@ -82,6 +90,17 @@ export function migrateConnectionsFromFlat(s: Record<string, string>): LlmConnec
   return out;
 }
 
+/** The stored choice, kept as stored so saving a connection never turns "unset" into a value. */
+function cutOffRetryEffortOf(provider: CloudProvider, value: unknown): string | undefined {
+  if (provider !== "local") return undefined;
+  return value === CUT_OFF_RETRY_OFF ? CUT_OFF_RETRY_OFF : REASONING_EFFORTS.find((effort) => effort === value);
+}
+
+function effectiveCutOffRetryEffort(c: LlmConnection): string | undefined {
+  if (c.provider !== "local" || c.cutOffRetryEffort === CUT_OFF_RETRY_OFF) return undefined;
+  return c.cutOffRetryEffort ?? DEFAULT_CUT_OFF_RETRY_EFFORT;
+}
+
 function normalizeConnection(c: unknown, index: number): LlmConnection {
   const obj = (c && typeof c === "object" ? c : {}) as Record<string, unknown>;
   const provider = (ALL_PROVIDERS.includes(obj.provider as CloudProvider) ? obj.provider : "local") as CloudProvider;
@@ -94,6 +113,7 @@ function normalizeConnection(c: unknown, index: number): LlmConnection {
     endpoint: String(obj.endpoint || (provider === "local" ? DEFAULT_LOCAL_ENDPOINT : "")),
     enabled: obj.enabled !== false,
     order: typeof obj.order === "number" ? obj.order : index,
+    cutOffRetryEffort: cutOffRetryEffortOf(provider, obj.cutOffRetryEffort),
   };
 }
 
@@ -212,6 +232,7 @@ function toResolved(c: LlmConnection): ResolvedConnection {
     apiKey: c.apiKey,
     apiHost: c.endpoint || DEFAULT_LOCAL_ENDPOINT,
     model: c.model,
+    cutOffRetryEffort: effectiveCutOffRetryEffort(c),
   };
 }
 

@@ -737,6 +737,9 @@
       "convertGpuSharedHelp": "Les traductions lancées depuis la page Convertir attendent les transcriptions en cours, et les transcriptions les attendent. Laissez désactivé si votre GPU peut gérer les deux."
     },
     "connections": {
+      "cutOffRetry": "Si une réponse atteint la limite de sortie",
+      "cutOffRetryOff": "Passer à la connexion suivante",
+      "cutOffRetryHelp": "Un modèle peut consacrer toute sa limite de sortie au raisonnement sans jamais répondre. Si vous choisissez un niveau de raisonnement, une telle réponse est redemandée une fois sur cette connexion à ce niveau, avant que les lignes passent à une autre connexion. La valeur qui réduit le raisonnement dépend du serveur : essayez-les avec Tester.",
       "mode": "Mode de connexion",
       "modeSingle": "Unique",
       "modeFallback": "Repli",

@@ -6,6 +6,15 @@ under `whisper-v<version>` with the same version number.
 
 ## [Unreleased]
 
+### Translation
+
+- A reply from a local or OpenAI-compatible server that is cut off at the output limit is requested once more on the same connection with reasoning effort `low`, before its lines go to another connection. A model that spent its whole allowance reasoning then answers itself. This applies to chunks, to lines translated one at a time and to context analysis. **If a reply runs out of room**, on each local connection under **Settings → LLM Connection**, selects another effort or turns the retry off. Which value makes a model reason less differs by server.
+- The log notes a context probe to a private or loopback host once for each host. Before, it added the warning on every probe.
+
+### Convert
+
+- **Translate** on the Convert page is available whenever an LLM connection is set up. Before, the page checked only the settings of the original single connection, so with named connections it asked for an LLM connection and kept the button disabled.
+
 ## [0.9.6] — 2026-11-24
 
 ### Translation

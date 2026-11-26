@@ -373,6 +373,7 @@ export async function translateFile(opts: TranslateFileOptions): Promise<void> {
             apiHost: conn.apiHost,
             model: conn.model,
             provider: conn.provider,
+            cutOffRetryEffort: conn.cutOffRetryEffort,
             lang: opts.lang,
             temperature: 0.3,
             abortSignal,
