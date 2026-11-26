@@ -25,7 +25,6 @@ export type {
   LlmConnection,
   LlmConnectionState,
   LlmConnectionStatus,
-  LlmHealth,
   LlmMode,
   LlmProvider,
   LlmStatus,

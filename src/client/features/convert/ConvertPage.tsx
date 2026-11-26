@@ -5,7 +5,7 @@ import * as api from "../../api";
 import type { ConvertTargetFormat } from "../../api";
 import { ApiError } from "../../api";
 import { useToast } from "../../ui/Toast";
-import { useLlmHealthQuery, useIsMobile } from "../../hooks";
+import { useLlmStatusQuery, useIsMobile } from "../../hooks";
 import { ActionButton, PageHeader, Select } from "../../ui/primitives";
 import { InlineError } from "../../ui/QueryState";
 import { AUTO_SOURCE_LANG } from "../tasks/translation-defaults";
@@ -59,8 +59,9 @@ export function ConvertPage() {
   const [recents, setRecents] = useState<string[]>(() => (storage ? loadRecentTargets(storage) : []));
   const resolution = useMemo(() => resolveTargetLanguage(targetInput), [targetInput]);
   const resolvedTarget = resolution.status === "resolved" ? resolution.language : null;
-  const llmHealth = useLlmHealthQuery(translate);
-  const llmReady = Boolean(llmHealth.data?.ok);
+  // The pool the server translates with; the sidebar reads the same query.
+  const llmStatus = useLlmStatusQuery();
+  const llmMissing = translate && llmStatus.data?.connections.length === 0;
 
   // Detect each staged file's source language once translation is enabled.
   // Sequential and cancellable; results land per file as they arrive.
@@ -329,7 +330,7 @@ export function ConvertPage() {
                 </div>
               )}
 
-              {translate && llmHealth.isSuccess && !llmReady && (
+              {llmMissing && (
                 <p className="text-xs text-warning">
                   {t("convert.needLlm")}{" "}
                   <Link to="/settings" className="underline">
@@ -357,9 +358,7 @@ export function ConvertPage() {
             <ActionButton
               variant="primary"
               onClick={handleConvert}
-              disabled={
-                staged.length === 0 || (translate && !resolvedTarget) || (translate && llmHealth.isSuccess && !llmReady)
-              }
+              disabled={staged.length === 0 || (translate && !resolvedTarget) || llmMissing}
               busy={converting}
               className={isMobile ? "w-full" : ""}
             >

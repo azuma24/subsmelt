@@ -34,7 +34,7 @@ const MODELS_FETCH_TIMEOUT_MS = 10_000;
 
 // fetch() with an AbortController timeout. On timeout, surfaces a clear
 // "<label> timed out after Ns" error (mirrors fetchWithTimeout in
-// transcription-client.ts / the /api/llm-health AbortController pattern).
+// transcription-client.ts).
 async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number, label: string): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -194,77 +194,6 @@ function modelIds(data: ModelListResponse | null | undefined): string[] {
 }
 
 export function registerModelsRoutes(app: Express): void {
-  app.get("/api/llm-health", async (_req, res) => {
-    const settings = getAllSettings();
-    const endpoint = (settings.llm_endpoint || "").replace(/\/+$/, "");
-    const model = settings.model || "";
-    const apiKey = settings.api_key || "";
-
-    if (!endpoint) {
-      return res.json({
-        ok: false,
-        endpointReachable: false,
-        modelConfigured: Boolean(model),
-        modelAvailable: false,
-        reason: "endpoint-missing",
-      });
-    }
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    try {
-      const resp = await fetch(`${endpoint}/models`, {
-        headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-
-      if (!resp.ok) {
-        return res.json({
-          ok: false,
-          endpointReachable: false,
-          modelConfigured: Boolean(model),
-          modelAvailable: false,
-          status: resp.status,
-          reason: `http-${resp.status}`,
-        });
-      }
-
-      // The 5s timeout above only covers the headers; a stalled body would
-      // hang this route forever, so deadline the JSON read too.
-      const bodyTimer = setTimeout(() => controller.abort(), 5000);
-      let models: string[];
-      try {
-        models = modelIds((await resp.json()) as ModelListResponse);
-      } finally {
-        clearTimeout(bodyTimer);
-      }
-
-      const modelConfigured = Boolean(model);
-      const modelAvailable = modelConfigured ? models.includes(model) : false;
-
-      return res.json({
-        ok: modelConfigured && modelAvailable,
-        endpointReachable: true,
-        modelConfigured,
-        modelAvailable,
-        model,
-        modelCount: models.length,
-        reason: modelConfigured ? (modelAvailable ? "ok" : "model-missing") : "model-not-configured",
-      });
-    } catch (error) {
-      clearTimeout(timeout);
-      return res.json({
-        ok: false,
-        endpointReachable: false,
-        modelConfigured: Boolean(model),
-        modelAvailable: false,
-        reason: errorName(error) === "AbortError" ? "timeout" : "network-error",
-        message: errorMessage(error) || "unknown",
-      });
-    }
-  });
-
   // POST is the preferred path: the API key travels in the request body, never in
   // the URL/query string (which can leak via logs, proxies, Referer headers).
   app.post("/api/models", async (req, res) => {

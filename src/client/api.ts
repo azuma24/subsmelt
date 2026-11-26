@@ -7,7 +7,6 @@ import type {
   FolderNode,
   JobPreview,
   Job,
-  LlmHealth,
   LlmStatus,
   LogEntry,
   QueueStatus,
@@ -224,8 +223,6 @@ export const testConnection = (payload?: {
     method: "POST",
     body: JSON.stringify(payload ?? {}),
   });
-
-export const getLlmHealth = (opts?: FetchOpts) => fetchJSON<LlmHealth>("/llm-health", opts);
 
 export const getLlmStatus = (opts?: FetchOpts) => fetchJSON<LlmStatus>("/llm/status", opts);
 

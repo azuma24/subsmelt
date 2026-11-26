@@ -4,7 +4,6 @@ import { useSsePollInterval } from "./sse";
 import type {
   JobPreview,
   JobsResponse,
-  LlmHealth,
   LlmStatus,
   LogEntry,
   QueueStatus,
@@ -119,15 +118,6 @@ export function useLlmStatusQuery() {
     // Job events refetch it; the interval is what notices a host going down,
     // so it keeps polling, just less often while the stream is open.
     refetchInterval: useSsePollInterval(30_000, 60_000),
-  });
-}
-
-export function useLlmHealthQuery(enabled = true) {
-  return useQuery<LlmHealth>({
-    queryKey: ["llm-health"],
-    queryFn: ({ signal }) => api.getLlmHealth({ signal }),
-    enabled,
-    refetchInterval: enabled ? 15_000 : false,
   });
 }
 
