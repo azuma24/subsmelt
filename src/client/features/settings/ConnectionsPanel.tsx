@@ -160,6 +160,7 @@ export function ConnectionsPanel({ settings, update, addToast }: ConnectionsPane
         ...(c.apiKey !== REDACTED_SECRET ? { apiKey: c.apiKey } : {}),
         model: c.model,
         endpoint: c.endpoint,
+        cutOffRetryEffort: c.cutOffRetryEffort,
       });
       setTestResultByConn((s) => ({ ...s, [c.id]: result }));
       addToast(`${c.label}: ${result.message}`, result.ok ? "success" : "error");

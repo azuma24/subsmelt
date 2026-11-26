@@ -887,6 +887,7 @@ export async function testConnection(opts: {
   apiHost: string;
   model: string;
   provider?: CloudProvider;
+  cutOffRetryEffort?: string;
 }): Promise<{ ok: boolean; message: string }> {
   try {
     const result = await translateSingle("Hello, how are you?", {

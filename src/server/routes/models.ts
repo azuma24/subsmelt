@@ -1,7 +1,12 @@
 import type { Express } from "express";
 import { getAllSettings } from "../config.js";
 import { testConnection } from "../translator.js";
-import { parseConnections, resolveConnectionPool, resolveRequestApiKey } from "../connections.js";
+import {
+  effectiveCutOffRetryEffort,
+  parseConnections,
+  resolveConnectionPool,
+  resolveRequestApiKey,
+} from "../connections.js";
 import type { CloudProvider } from "../translator.js";
 import { logger } from "../logger.js";
 import { errorMessage, errorName } from "../errors.js";
@@ -228,11 +233,12 @@ export function registerModelsRoutes(app: Express): void {
       model?: string;
       endpoint?: string;
       connectionId?: string;
+      cutOffRetryEffort?: string;
     };
 
     // If the client passes explicit connection fields (e.g. a not-yet-saved
     // connection card), test those. Otherwise test the active connection.
-    let conn: { apiKey: string; apiHost: string; model: string; provider?: CloudProvider };
+    let conn: { apiKey: string; apiHost: string; model: string; provider?: CloudProvider; cutOffRetryEffort?: string };
     if (body.provider !== undefined || body.apiKey !== undefined || body.model !== undefined) {
       const provider = body.provider && body.provider !== "local" ? (body.provider as CloudProvider) : undefined;
       const apiHost = body.endpoint || settings.llm_endpoint || "http://localhost:8000/v1";
@@ -240,12 +246,24 @@ export function registerModelsRoutes(app: Express): void {
         { apiKey: body.apiKey, connectionId: body.connectionId, provider: provider ?? "local", endpoint: apiHost },
         parseConnections(settings),
       );
-      conn = { apiKey: apiKey || "", apiHost, model: body.model || "", provider };
+      conn = {
+        apiKey: apiKey || "",
+        apiHost,
+        model: body.model || "",
+        provider,
+        cutOffRetryEffort: effectiveCutOffRetryEffort(provider ?? "local", body.cutOffRetryEffort),
+      };
     } else {
       const { pool } = resolveConnectionPool(settings);
       const primary = pool[0];
       conn = primary
-        ? { apiKey: primary.apiKey, apiHost: primary.apiHost, model: primary.model, provider: primary.provider }
+        ? {
+            apiKey: primary.apiKey,
+            apiHost: primary.apiHost,
+            model: primary.model,
+            provider: primary.provider,
+            cutOffRetryEffort: primary.cutOffRetryEffort,
+          }
         : {
             apiKey: settings.api_key || "",
             apiHost: settings.llm_endpoint || "http://localhost:8000/v1",

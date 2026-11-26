@@ -218,6 +218,7 @@ export const testConnection = (payload?: {
   apiKey?: string;
   model?: string;
   endpoint?: string;
+  cutOffRetryEffort?: string;
 }) =>
   fetchJSON<{ ok: boolean; message: string }>("/test-connection", {
     method: "POST",

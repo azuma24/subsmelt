@@ -96,9 +96,11 @@ function cutOffRetryEffortOf(provider: CloudProvider, value: unknown): string | 
   return value === CUT_OFF_RETRY_OFF ? CUT_OFF_RETRY_OFF : REASONING_EFFORTS.find((effort) => effort === value);
 }
 
-function effectiveCutOffRetryEffort(c: LlmConnection): string | undefined {
-  if (c.provider !== "local" || c.cutOffRetryEffort === CUT_OFF_RETRY_OFF) return undefined;
-  return c.cutOffRetryEffort ?? DEFAULT_CUT_OFF_RETRY_EFFORT;
+/** The effort a connection's cut-off replies are asked for again at, from its stored choice; none when off or not local. */
+export function effectiveCutOffRetryEffort(provider: CloudProvider, stored: unknown): string | undefined {
+  const choice = cutOffRetryEffortOf(provider, stored);
+  if (provider !== "local" || choice === CUT_OFF_RETRY_OFF) return undefined;
+  return choice ?? DEFAULT_CUT_OFF_RETRY_EFFORT;
 }
 
 function normalizeConnection(c: unknown, index: number): LlmConnection {
@@ -232,7 +234,7 @@ function toResolved(c: LlmConnection): ResolvedConnection {
     apiKey: c.apiKey,
     apiHost: c.endpoint || DEFAULT_LOCAL_ENDPOINT,
     model: c.model,
-    cutOffRetryEffort: effectiveCutOffRetryEffort(c),
+    cutOffRetryEffort: effectiveCutOffRetryEffort(c.provider, c.cutOffRetryEffort),
   };
 }
 
