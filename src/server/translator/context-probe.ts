@@ -13,12 +13,15 @@ import { controlledAbortError } from "./ai-client.js";
  * localhost/LAN — so we deliberately do NOT hard-block private/loopback hosts
  * (that would break legitimate use). Instead we:
  *   - require an http(s) scheme (hard requirement), and
- *   - log a warning when the host resolves to a loopback/link-local/private
- *     range so the operator has visibility, while still allowing the request.
+ *   - log a warning the first time a host resolves to a loopback/link-local/
+ *     private range so the operator has visibility, while still allowing the
+ *     request. Once per host: every job probes, and a LAN endpoint is the norm.
  *
  * Returns false only when the scheme is invalid — the one case worth blocking
  * outright. Private-range hosts return true but emit a warning.
  */
+const warnedPrivateHosts = new Set<string>();
+
 export function isSafeHttpUrl(rawUrl: string): boolean {
   let parsed: URL;
   try {
@@ -38,7 +41,8 @@ export function isSafeHttpUrl(rawUrl: string): boolean {
     /^192\.168\./.test(host) ||
     /^169\.254\./.test(host) ||
     /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
-  if (isPrivate) {
+  if (isPrivate && !warnedPrivateHosts.has(host)) {
+    warnedPrivateHosts.add(host);
     logger.warn(
       "translate",
       `Model-context probe targets a private/loopback host (${host}); allowing (self-hosted endpoint), but verify this is intended.`,
